@@ -14,8 +14,9 @@ class TestCase(TestBase):
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIfRemote
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         # The path to our temporary target root that contains the temporary
         # module sources.

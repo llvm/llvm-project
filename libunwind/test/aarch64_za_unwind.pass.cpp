@@ -9,6 +9,11 @@
 // REQUIRES: target={{aarch64-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
+// Fails on targets that support SME but where the system libunwind is too old
+// to disable ZA before resuming from unwinding.
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-{{.*}}{{(11|12|13|14|15|26)(\.\d+)*}}
+
+#include <alloca.h>
 #include <libunwind.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,7 +34,7 @@
 static bool checkHasSME() {
   int has_sme = 0;
   size_t size = sizeof(has_sme);
-  if (!sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
+  if (sysctlbyname("hw.optional.arm.FEAT_SME", &has_sme, &size, NULL, 0))
     return false;
   return has_sme != 0;
 }
@@ -42,8 +47,9 @@ static bool checkHasSME() {
 #elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 static bool checkHasSME() {
   constexpr int hwcap2_sme = (1 << 23);
-  unsigned long hwcap2 = 0;
-  elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2));
+  unsigned long hwcap2;
+  if (elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2)) != 0)
+    return false;
   return (hwcap2 & hwcap2_sme) != 0;
 }
 #else

@@ -1,0 +1,61 @@
+# Test that DTLTO handles Unicode characters in paths and symbols for
+# archive members, thin archive members, and FatLTO inputs.
+
+REQUIRES: ld.lld, llvm-ar
+
+RUN: rm -rf %t && split-file %s %t && mkdir %t/📁 && cd %t/📁
+
+# Compile bitcode. -O2 is required for cross-module importing.
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c ../α.c ../β.c ../δ.c
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -ffat-lto-objects -c ../γ.c
+
+# Create an archive and a thin archive.
+RUN: llvm-ar rcs 🎁.a α.o
+RUN: llvm-ar rcsT 📦.a β.o
+
+# Build with DTLTO.
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -ffat-lto-objects \
+RUN:   -fuse-ld=lld -nostdlib -shared -fthinlto-distributor=%python \
+RUN:   -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--save-temps -Wl,--whole-archive 🎁.a 📦.a γ.o δ.o -o 💾.so
+
+# Check that the temporary file names preserve the Unicode symbols.
+RUN: ls | FileCheck %s --check-prefix=FILES
+
+# Archive member: 🎁.a(α.o).
+FILES-DAG: {{^}}🎁.a(α.o at [[#OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o{{$}}
+FILES-DAG: {{^}}🎁.a(α.o at [[#OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
+FILES-DAG: {{^}}🎁.a(α.o at [[#OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
+
+# Thin archive member: 📦.a(β.o).
+FILES-DAG: {{^}}β.2.[[#PID]].native.o{{$}}
+FILES-DAG: {{^}}β.2.[[#PID]].native.o.thinlto.bc{{$}}
+
+# FatLTO object: γ.o.
+FILES-DAG: {{^}}γ.o.3.[[#%X,HEXPID]].3.[[#PID]].native.o{{$}}
+FILES-DAG: {{^}}γ.o.3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
+FILES-DAG: {{^}}γ.o.3.[[#%X,HEXPID]].o{{$}}
+
+# Bitcode input: δ.o.
+FILES-DAG: {{^}}δ.4.[[#PID]].native.o{{$}}
+FILES-DAG: {{^}}δ.4.[[#PID]].native.o.thinlto.bc{{$}}
+
+# JSON file for the distributor.
+FILES-DAG: {{^}}💾.[[#PID]].dist-file.json{{$}}
+
+#--- α.c
+__attribute__((retain)) int alpha(int x) { return x; }
+
+#--- β.c
+__attribute__((retain)) int beta(int x) { return x; }
+
+#--- γ.c
+__attribute__((retain)) int gamma(int x) { return x; }
+
+#--- δ.c
+extern int alpha(int);
+extern int beta(int);
+extern int gamma(int);
+__attribute__((retain)) int delta(int x) {
+  return alpha(x) + beta(x) + gamma(x);
+}

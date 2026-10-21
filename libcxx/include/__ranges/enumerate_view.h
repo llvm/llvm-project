@@ -36,9 +36,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -325,9 +325,9 @@ namespace __enumerate {
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&& __range) noexcept(noexcept(/**/ enumerate_view<views::all_t<_Range>>(__range)))
-      -> decltype(/*-------------------------------*/ enumerate_view<views::all_t<_Range>>(__range)) {
-    return /*--------------------------------------*/ enumerate_view<views::all_t<_Range>>(__range);
+  operator()(_Range&& __range) noexcept(noexcept(enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range))))
+      -> decltype(/*--------------------------*/ enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range))) {
+    return /*---------------------------------*/ enumerate_view<views::all_t<_Range>>(std::forward<_Range>(__range));
   }
 };
 
@@ -341,9 +341,9 @@ inline constexpr auto enumerate = __enumerate::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

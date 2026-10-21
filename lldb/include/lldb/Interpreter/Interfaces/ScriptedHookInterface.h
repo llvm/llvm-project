@@ -13,8 +13,10 @@
 
 #include "ScriptedInterface.h"
 
+#include "llvm/Support/Errc.h"
+
 namespace lldb_private {
-class ScriptedHookInterface : public ScriptedInterface {
+class ScriptedHookInterface : virtual public ScriptedInterface {
 public:
   /// Describes which hook callback methods the Python class implements.
   struct SupportedHookMethods {
@@ -28,18 +30,22 @@ public:
   };
 
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) = 0;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::TargetSP target_sp) = 0;
 
   /// Check which hook callback methods the Python class implements.
   /// Called after CreatePluginObject to determine the trigger mask.
   virtual SupportedHookMethods GetSupportedMethods() { return {}; }
 
   /// Called when modules are loaded into the target.
-  virtual void HandleModuleLoaded(lldb::StreamSP &output_sp) {}
+  virtual llvm::Error HandleModuleLoaded(lldb::StreamSP &output_sp) {
+    return llvm::errorCodeToError(llvm::errc::not_supported);
+  }
 
   /// Called when modules are unloaded from the target. Optional.
-  virtual void HandleModuleUnloaded(lldb::StreamSP &output_sp) {}
+  virtual llvm::Error HandleModuleUnloaded(lldb::StreamSP &output_sp) {
+    return llvm::errorCodeToError(llvm::errc::not_supported);
+  }
 
   /// Called when the process stops. Returns "should_stop" if false, the
   /// process will continue. Defaults to true (stop on unimplemented).

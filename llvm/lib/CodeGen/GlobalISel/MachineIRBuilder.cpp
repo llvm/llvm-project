@@ -9,6 +9,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -108,6 +109,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     return &C;
   }();
 
+  bool IsIndirect = true;
+  int64_t GlobalOffset;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -119,12 +122,32 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
+  } else if (const GlobalValue *GV = getDescribableGlobalAddress(
+                 NumericConstant, GlobalOffset, getMF())) {
+    // The address of a global is a direct link-time constant. A displacement
+    // from it rides along in the expression rather than in the operand.
+    MIB.addGlobalAddress(GV);
+    if (GlobalOffset) {
+      SmallVector<uint64_t, 3> Ops;
+      DIExpression::appendOffset(Ops, GlobalOffset);
+      Expr = DIExpression::appendOpsToArg(cast<DIExpression>(Expr), Ops, 0,
+                                          /*StackValue=*/false);
+    }
+    IsIndirect = false;
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
   }
 
-  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  // DBG_VALUE spells an indirect location with a zero immediate offset operand
+  // and a direct one with $noreg. isIndirectDebugValue() ignores the offset for
+  // a non-register location operand, but isDebugOffsetImm() does not, and
+  // several consumers ask that instead.
+  if (IsIndirect)
+    MIB.addImm(0);
+  else
+    MIB.addReg(Register());
+  MIB.addMetadata(Variable).addMetadata(Expr);
   return insertInstr(MIB);
 }
 
@@ -248,7 +271,7 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
                                                           const SrcOp &Op0,
                                                           uint32_t NumBits) {
   LLT PtrTy = Res.getLLTTy(*getMRI());
-  LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT MaskTy = LLT::integer(PtrTy.getSizeInBits());
   Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
   buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
   return buildPtrMask(Res, Op0, MaskReg);
@@ -409,9 +432,11 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      double Val) {
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
-  auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
-  return buildFConstant(Res, *CFP);
+  APFloat APF(Val);
+  bool Ignored;
+  APF.convert(getFltSemanticForLLT(DstTy.getScalarType()),
+              APFloat::rmNearestTiesToEven, &Ignored);
+  return buildFConstant(Res, *ConstantFP::get(Ctx, APF));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,

@@ -33,7 +33,7 @@ namespace llvm {
 /// every attempt to be simpler. DCE of functions requires complex reasoning
 /// about comdat groups, etc. Instead, it is expected that other more focused
 /// passes be composed to achieve the same end result.
-class InlinerPass : public PassInfoMixin<InlinerPass> {
+class InlinerPass : public OptionalPassInfoMixin<InlinerPass> {
 public:
   InlinerPass(bool OnlyMandatory = false,
               ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
@@ -62,7 +62,7 @@ private:
 /// a given module. An InlineAdvisor is configured and kept alive for the
 /// duration of the ModuleInlinerWrapperPass::run.
 class ModuleInlinerWrapperPass
-    : public PassInfoMixin<ModuleInlinerWrapperPass> {
+    : public OptionalPassInfoMixin<ModuleInlinerWrapperPass> {
 public:
   LLVM_ABI ModuleInlinerWrapperPass(
       InlineParams Params = getInlineParams(), bool MandatoryFirst = true,

@@ -36,6 +36,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -240,18 +241,18 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   GPUSubgroupSizeOpToROCDL(const LLVMTypeConverter &converter,
-                           amdgpu::Chipset chipset)
-      : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>(converter),
-        chipset(chipset) {}
+                           const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>(converter), target(target) {
+  }
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     LLVM::ConstantRangeAttr bounds = nullptr;
-    bool isBeforeGfx10 = chipset.majorVersion < 10;
+    bool isWave64 = target.getWavefrontSize() == 64;
     if (auto upperBoundAttr = op.getUpperBoundAttr()) {
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
-          /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
+          /*bitWidth=*/32, /*lower=*/isWave64 ? 64 : 32,
           /*upper=*/op.getUpperBoundAttr().getInt() + 1);
     }
     Value wavefrontOp = ROCDL::WavefrontSizeOp::create(
@@ -262,16 +263,15 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
     return success();
   }
 
-  const amdgpu::Chipset chipset;
+  const ROCDL::TargetInfo target;
 };
 
 struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   GPUSubgroupIdOpToROCDL(const LLVMTypeConverter &converter,
-                         amdgpu::Chipset chipset)
-      : ConvertOpToLLVMPattern<gpu::SubgroupIdOp>(converter), chipset(chipset) {
-  }
+                         const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<gpu::SubgroupIdOp>(converter), target(target) {}
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupIdOp op, gpu::SubgroupIdOp::Adaptor adaptor,
@@ -280,7 +280,7 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
     auto int32Type = rewriter.getI32Type();
 
     Value subgroupId;
-    if (chipset.majorVersion >= 12) {
+    if (target.has(llvm::AMDGPU::FEAT_GFX12_INSTS)) {
       // For gfx12+, use the hardware wave.id register directly.
       LLVM::ConstantRangeAttr bounds;
       if (auto upperBoundAttr = op.getUpperBoundAttr())
@@ -301,7 +301,7 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
                     op, dim, std::nullopt,
                     gpu::index_lowering::IndexKind::Block,
                     gpu::index_lowering::IntrType::Id, 32))
-          tidOp->setAttr("range", range);
+          tidOp->setInherentAttr(rewriter.getStringAttr("range"), range);
       };
       setBoundFromContext(tidX, gpu::Dimension::x);
       setBoundFromContext(tidY, gpu::Dimension::y);
@@ -344,7 +344,7 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
     return success();
   }
 
-  const amdgpu::Chipset chipset;
+  const ROCDL::TargetInfo target;
 };
 
 static bool isSupportedReadLaneType(Type type) {
@@ -517,82 +517,202 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
+/// Emit an LLVM fence with MMRA metadata based on the given address spaces.
+/// If `addrSpaces` is nullopt, all memory is fenced (global + LDS).
+static void emitFences(std::optional<ArrayAttr> addrSpaces,
+                       ConversionPatternRewriter &rewriter, Location loc,
+                       StringRef scope, bool before) {
+  bool fenceGlobal = false;
+  bool fenceLDS = false;
+
+  if (addrSpaces) {
+    for (auto spaceAttr : addrSpaces->getAsRange<gpu::AddressSpaceAttr>()) {
+      switch (spaceAttr.getValue()) {
+      case gpu::AddressSpace::Global:
+        fenceGlobal = true;
+        break;
+      case gpu::AddressSpace::Workgroup:
+        fenceLDS = true;
+        break;
+      case gpu::AddressSpace::Private:
+      case gpu::AddressSpace::Constant:
+        break;
+      }
+    }
+  } else {
+    fenceGlobal = true;
+    fenceLDS = true;
+  }
+
+  if (!fenceGlobal && !fenceLDS)
+    return;
+
+  Attribute mmra;
+  if (fenceLDS && !fenceGlobal)
+    mmra =
+        rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
+  else if (fenceGlobal && !fenceLDS)
+    mmra =
+        rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "global");
+
+  auto ordering =
+      before ? LLVM::AtomicOrdering::release : LLVM::AtomicOrdering::acquire;
+  auto fence = LLVM::FenceOp::create(rewriter, loc, ordering, scope);
+  if (mmra)
+    fence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
+}
+
+static constexpr int32_t kWholeClusterBarrierId = -3;
+static constexpr int32_t kWholeWorkgroupBarrierId = -1;
 struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
   GPUBarrierOpLowering(const LLVMTypeConverter &converter,
-                       amdgpu::Chipset chipset)
-      : ConvertOpToLLVMPattern<gpu::BarrierOp>(converter), chipset(chipset) {}
+                       const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<gpu::BarrierOp>(converter), target(target) {}
 
-  amdgpu::Chipset chipset;
+  ROCDL::TargetInfo target;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
+    gpu::BarrierScope scope = op.getScope();
 
-    // Analyze the address_spaces attribute to determine fence behavior.
-    bool fenceGlobal = false;
-    bool fenceLDS = false;
-    std::optional<ArrayAttr> addrSpacesToFence = op.getAddressSpaces();
-
-    if (addrSpacesToFence) {
-      for (auto spaceAttr :
-           addrSpacesToFence->getAsRange<gpu::AddressSpaceAttr>()) {
-        switch (spaceAttr.getValue()) {
-        case gpu::AddressSpace::Global:
-          fenceGlobal = true;
-          break;
-        case gpu::AddressSpace::Workgroup:
-          fenceLDS = true;
-          break;
-        case gpu::AddressSpace::Private:
-        case gpu::AddressSpace::Constant:
-          // Private is thread-local, constant is read-only; no fencing needed.
-          break;
-        }
-      }
-    } else {
-      // Default semantics match __syncthreads() and fence both global and LDS.
-      fenceGlobal = true;
-      fenceLDS = true;
+    // Subgroup (wave) scope.
+    if (scope == gpu::BarrierScope::Subgroup) {
+      emitFences(op.getAddressSpaces(), rewriter, loc, "wavefront",
+                 /*before=*/true);
+      ROCDL::WaveBarrierOp::create(rewriter, loc);
+      emitFences(op.getAddressSpaces(), rewriter, loc, "wavefront",
+                 /*before=*/false);
+      rewriter.eraseOp(op);
+      return success();
     }
 
-    Attribute mmra;
-    if (fenceLDS && !fenceGlobal) {
-      mmra =
-          rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
-    } else if (fenceGlobal && !fenceLDS) {
-      mmra = rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as",
-                                                 "global");
+    // Cluster scope: gfx1250+ only, signal/wait with constant -3.
+    if (scope == gpu::BarrierScope::Cluster) {
+      if (!target.has(llvm::AMDGPU::FEAT_GFX1250_INSTS))
+        return op.emitOpError("cluster scope barriers require gfx1250+");
+      emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
+                 /*before=*/true);
+      ROCDL::BarrierSignalOp::create(rewriter, loc, kWholeClusterBarrierId);
+      ROCDL::BarrierWaitOp::create(
+          rewriter, loc, static_cast<int16_t>(kWholeClusterBarrierId));
+      emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
+                 /*before=*/false);
+      rewriter.eraseOp(op);
+      return success();
     }
 
-    constexpr llvm::StringLiteral scope = "workgroup";
+    // Workgroup scope (default).
+    assert(scope == gpu::BarrierScope::Workgroup && "unsupported scope");
 
-    bool emitFences = fenceGlobal || fenceLDS;
-    // Emit release fence if needed.
-    if (emitFences) {
-      auto relFence = LLVM::FenceOp::create(
-          rewriter, loc, LLVM::AtomicOrdering::release, scope);
-      if (mmra)
-        relFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
-                                     mmra);
+    // Named barrier path.
+    if (Value namedBarrier = adaptor.getNamedBarrier()) {
+      if (!target.has(llvm::AMDGPU::FEAT_GFX12_INSTS))
+        return op.emitOpError("named barriers require gfx12+");
+
+      emitFences(op.getAddressSpaces(), rewriter, loc, "workgroup",
+                 /*before=*/true);
+      // A wave must join the named barrier before it may signal it.
+      ROCDL::BarrierJoinOp::create(rewriter, loc, namedBarrier);
+      // Signal with memberCnt=0 retains the count from s.barrier.init.
+      ROCDL::BarrierSignalVarOp::create(rewriter, loc, namedBarrier,
+                                        /*memberCnt=*/0);
+      // id=1 selects the named-barrier wait class; the actual barrier waited
+      // on is the last one this wave joined.
+      ROCDL::BarrierWaitOp::create(rewriter, loc, static_cast<int16_t>(1));
+      emitFences(op.getAddressSpaces(), rewriter, loc, "workgroup",
+                 /*before=*/false);
+      rewriter.eraseOp(op);
+      return success();
     }
 
-    if (chipset.majorVersion < 12) {
+    // Regular workgroup barrier.
+    emitFences(op.getAddressSpaces(), rewriter, loc, "workgroup",
+               /*before=*/true);
+    if (!target.has(llvm::AMDGPU::FEAT_GFX12_INSTS)) {
       ROCDL::SBarrierOp::create(rewriter, loc);
     } else {
-      ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
-      ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
+      ROCDL::BarrierSignalOp::create(rewriter, loc, kWholeWorkgroupBarrierId);
+      ROCDL::BarrierWaitOp::create(
+          rewriter, loc, static_cast<int16_t>(kWholeWorkgroupBarrierId));
     }
-
-    if (emitFences) {
-      auto acqFence = LLVM::FenceOp::create(
-          rewriter, loc, LLVM::AtomicOrdering::acquire, scope);
-      if (mmra)
-        acqFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(),
-                                     mmra);
-    }
-
+    emitFences(op.getAddressSpaces(), rewriter, loc, "workgroup",
+               /*before=*/false);
     rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct GPUInitializeNamedBarrierOpLowering final
+    : ConvertOpToLLVMPattern<gpu::InitializeNamedBarrierOp> {
+  GPUInitializeNamedBarrierOpLowering(const LLVMTypeConverter &converter,
+                                      const ROCDL::TargetInfo &target)
+      : ConvertOpToLLVMPattern<gpu::InitializeNamedBarrierOp>(converter),
+        target(target) {}
+
+  ROCDL::TargetInfo target;
+
+  LogicalResult
+  matchAndRewrite(gpu::InitializeNamedBarrierOp op,
+                  gpu::InitializeNamedBarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!target.has(llvm::AMDGPU::FEAT_GFX12_INSTS))
+      return op.emitOpError("named barriers require gfx12+");
+
+    Location loc = op.getLoc();
+
+    // The count must be a constant for rocdl.s.barrier.init.
+    IntegerAttr countAttr;
+    if (!matchPattern(op.getMemberCount(), m_Constant(&countAttr)))
+      return op.emitOpError(
+          "named barrier member count must be a constant for ROCDL lowering");
+    int32_t count = countAttr.getInt();
+
+    // Place the global in the symbol-table scope enclosing the function-like
+    // op that contains this barrier (typically a module).
+    auto funcOp = op->getParentOfType<FunctionOpInterface>();
+    if (!funcOp)
+      return op.emitOpError("must be inside a function-like op");
+    Operation *symbolTableOp =
+        funcOp->getParentWithTrait<OpTrait::SymbolTable>();
+    if (!symbolTableOp)
+      return op.emitOpError(
+          "enclosing function-like op must have a symbol-table parent");
+
+    auto targetTy = LLVM::LLVMTargetExtType::get(
+        rewriter.getContext(), "amdgcn.named.barrier", {}, {0});
+    auto ptrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
+
+    // Build the global detached so SymbolTable::insert can both place it and
+    // rename it as needed without creating a transient name conflict in IR.
+    OpBuilder detachedBuilder(rewriter.getContext());
+    auto globalOp = LLVM::GlobalOp::create(
+        detachedBuilder, loc, targetTy, /*isConstant=*/false,
+        LLVM::Linkage::Internal, "__named_barrier", /*value=*/Attribute(),
+        /*alignment=*/0,
+        /*addrSpace=*/ROCDL::ROCDLDialect::kBarrierAddressSpace);
+    // Initialize with poison.
+    {
+      Region &region = globalOp.getInitializerRegion();
+      Block *block = detachedBuilder.createBlock(&region);
+      detachedBuilder.setInsertionPointToStart(block);
+      auto poison = LLVM::PoisonOp::create(detachedBuilder, loc, targetTy);
+      LLVM::ReturnOp::create(detachedBuilder, loc, poison);
+    }
+    // SymbolTable::insert places the op in the symbol-table body and renames
+    // the symbol to avoid collisions with any existing entries.
+    StringAttr globalName = SymbolTable(symbolTableOp).insert(globalOp);
+
+    // Get address of the global.
+    rewriter.setInsertionPoint(op);
+    auto addrOf = LLVM::AddressOfOp::create(rewriter, loc, ptrTy, globalName);
+
+    // Initialize the barrier.
+    ROCDL::BarrierInitOp::create(rewriter, loc, addrOf, count);
+
+    rewriter.replaceOp(op, addrOf.getResult());
     return success();
   }
 };
@@ -618,23 +738,29 @@ struct LowerGpuOpsToROCDLOpsPass final
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
-    auto llvmDataLayout = m->getAttrOfType<StringAttr>(
+    auto llvmDataLayout = m->getDiscardableAttrOfType<StringAttr>(
         LLVM::LLVMDialect::getDataLayoutAttrName());
     if (!llvmDataLayout) {
       llvmDataLayout = StringAttr::get(ctx, amdgcnDataLayout);
-      m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(), llvmDataLayout);
+      m->setDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+                            llvmDataLayout);
     }
-    // Request C wrapper emission.
+    // Request C wrapper emission for externally visible functions only. A
+    // private function cannot be called from outside its module, so its C
+    // interface wrapper is unreachable and would only anchor the wrapped
+    // function against dead-code elimination.
     for (auto func : m.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(ctx));
+      if (func.isPrivate())
+        continue;
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(ctx));
     }
 
-    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
-    if (failed(maybeChipset)) {
-      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+    FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+        ROCDL::resolveArchOption(arch, chipset), waveSize,
+        [&] { return emitError(UnknownLoc::get(ctx)); });
+    if (failed(targetInfo))
       return signalPassFailure();
-    }
 
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
@@ -665,7 +791,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns, *targetInfo);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
@@ -701,9 +827,9 @@ struct LowerGpuOpsToROCDLOpsPass final
     }
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
-                                            *maybeChipset);
+                                            *targetInfo);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime,
-                                         *maybeChipset);
+                                         *targetInfo);
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -751,7 +877,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    mlir::gpu::amd::Runtime runtime, amdgpu::Chipset chipset) {
+    mlir::gpu::amd::Runtime runtime, const ROCDL::TargetInfo &target) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
@@ -789,7 +915,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
                GPUSubgroupBroadcastOpToROCDL, GPUBallotOpToROCDL>(converter);
   patterns.add<GPUSubgroupIdOpToROCDL, GPUSubgroupSizeOpToROCDL,
-               GPUBarrierOpLowering>(converter, chipset);
+               GPUBarrierOpLowering, GPUInitializeNamedBarrierOpLowering>(
+      converter, target);
 
-  populateMathToROCDLConversionPatterns(converter, patterns, chipset);
+  populateMathToROCDLConversionPatterns(converter, patterns, target);
 }

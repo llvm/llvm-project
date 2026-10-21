@@ -56,6 +56,16 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
     %0 = spirv.IMul %arg0, %arg1 : vector<4xi32>
     spirv.Return
   }
+  spirv.func @isub_borrow(%arg0 : i32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.ISubBorrow {{%.*}}, {{%.*}} : !spirv.struct<(i32, i32)>
+    %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(i32, i32)>
+    spirv.Return
+  }
+  spirv.func @isub_borrow_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.ISubBorrow {{%.*}}, {{%.*}} : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+    %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+    spirv.Return
+  }
   spirv.func @udiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
     // CHECK: {{%.*}} = spirv.UDiv {{%.*}}, {{%.*}} : vector<4xi32>
     %0 = spirv.UDiv %arg0, %arg1 : vector<4xi32>

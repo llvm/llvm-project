@@ -195,7 +195,7 @@ void main() {
 // CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn float @_Z20__spirv_SpecConstantiDh(i32 8, float 0x4044333340000000)
+// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn float @_Z20__spirv_SpecConstantiDh(i32 8, float 4.040000e+01)
 // CHECK-NEXT:    store float [[TMP1]], ptr addrspace(10) @_ZL10half_const, align 4
 // CHECK-NEXT:    ret void
 //
@@ -213,7 +213,7 @@ void main() {
 // CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn double @_Z20__spirv_SpecConstantid(i32 9, double 0x40590CCCC0000000)
+// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn double @_Z20__spirv_SpecConstantid(i32 9, double f0x40590CCCC0000000)
 // CHECK-NEXT:    store double [[TMP1]], ptr addrspace(10) @_ZL12double_const, align 8
 // CHECK-NEXT:    ret void
 //

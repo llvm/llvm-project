@@ -332,7 +332,9 @@ namespace llvm {
                                        const SelectionDAG &DAG,
                                        unsigned Depth = 0) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
@@ -556,12 +558,14 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
@@ -703,6 +707,7 @@ namespace llvm {
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSADDO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -740,7 +745,9 @@ namespace llvm {
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABDU(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -769,6 +776,8 @@ namespace llvm {
 
     SDValue LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue LowerPartialReduce(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
@@ -857,6 +866,9 @@ namespace llvm {
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVecSplatSmallFP(SDValue Op, SelectionDAG &DAG,
+                                 bool BVNIsConstantSplat,
+                                 unsigned SplatBitSize) const;
 
     SDValue DAGCombineExtBoolTrunc(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue DAGCombineBuildVector(SDNode *N, DAGCombinerInfo &DCI) const;

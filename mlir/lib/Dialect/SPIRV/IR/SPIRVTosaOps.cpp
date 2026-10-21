@@ -281,6 +281,50 @@ LogicalResult verifyTransposeConv2DOutputShape(Operation *op,
   return success();
 }
 
+LogicalResult verifyConcatOutputShape(Operation *op, TypeRange inputTypes,
+                                      TensorArmType outputType, int32_t axis) {
+  constexpr StringLiteral errorMessage =
+      "failed to verify that shape of output must match the concatenation of "
+      "input1 along axis";
+  if (!outputType.hasRank())
+    return success();
+
+  if (llvm::any_of(inputTypes, [](Type type) {
+        return !cast<TensorArmType>(type).hasRank();
+      }))
+    return success();
+
+  for (int64_t dim = 0, rank = outputType.getRank(); dim < rank; ++dim) {
+    int64_t outputDim = outputType.getDimSize(dim);
+    if (ShapedType::isDynamic(outputDim))
+      continue;
+
+    if (dim != axis) {
+      for (Type type : inputTypes) {
+        int64_t inputDim = cast<TensorArmType>(type).getDimSize(dim);
+        if (ShapedType::isStatic(inputDim) && inputDim != outputDim)
+          return op->emitOpError(errorMessage);
+      }
+      continue;
+    }
+
+    int64_t concatDim = 0;
+    for (Type type : inputTypes) {
+      int64_t inputDim = cast<TensorArmType>(type).getDimSize(dim);
+      if (ShapedType::isDynamic(inputDim)) {
+        concatDim = ShapedType::kDynamic;
+        break;
+      }
+      concatDim += inputDim;
+    }
+
+    if (ShapedType::isStatic(concatDim) && concatDim != outputDim)
+      return op->emitOpError(errorMessage);
+  }
+
+  return success();
+}
+
 } // namespace
 
 LogicalResult TosaAvgPool2DOp::verify() {
@@ -315,6 +359,11 @@ LogicalResult TosaTransposeConv2DOp::verify() {
   return verifyTransposeConv2DOutputShape(getOperation(), getOutPad(),
                                           getStride(), getInputType(),
                                           getWeightType(), getResultType());
+}
+
+LogicalResult TosaConcatOp::verify() {
+  return verifyConcatOutputShape(getOperation(), getInput1Types(),
+                                 getResultType(), getAxis());
 }
 
 LogicalResult TosaSelectOp::verify() {

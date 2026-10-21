@@ -1,5 +1,5 @@
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
-; RUN:      -mtriple powerpc64-ibm-aix-xcoff < %s \
+; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s \
 ; RUN:      | FileCheck %s --check-prefixes=COMMONCM,CHECK-SMALLCM64
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large \

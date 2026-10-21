@@ -125,6 +125,10 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+def pop_state: F<"pop-state">,
+  HelpText<"Restore the states saved by --push-state">;
+def push_state: F<"push-state">,
+  HelpText<"Save the current state of --Bstatic/--Bdynamic and --whole-archive">;
 defm reloc_section: B_enable_disable<"reloc-section",
      "Enable base relocations", "Disable base relocations">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;

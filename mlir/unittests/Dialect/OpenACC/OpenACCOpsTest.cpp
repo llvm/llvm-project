@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -19,6 +20,16 @@
 using namespace mlir;
 using namespace mlir::acc;
 
+template <typename OpTy>
+static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, TypeRange{}, ValueRange{}, properties,
+                      /*discardableAttributes=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // Test Fixture
 //===----------------------------------------------------------------------===//
@@ -26,6 +37,9 @@ using namespace mlir::acc;
 class OpenACCOpsTest : public ::testing::Test {
 protected:
   OpenACCOpsTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         memref::MemRefDialect>();
   }
@@ -45,7 +59,7 @@ protected:
 template <typename Op>
 static void testAsyncOnly(OpBuilder &b, MLIRContext &context, Location loc,
                           llvm::SmallVector<DeviceType> &dtypes) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
   EXPECT_FALSE(op->hasAsyncOnly());
   for (auto d : dtypes)
     EXPECT_FALSE(op->hasAsyncOnly(d));
@@ -129,7 +143,7 @@ TEST_F(OpenACCOpsTest, asyncOnlyTestDataEntry) {
 template <typename Op>
 static void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
                            llvm::SmallVector<DeviceType> &dtypes) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
 
   mlir::Value empty;
   EXPECT_EQ(op->getAsyncValue(), empty);
@@ -200,7 +214,7 @@ static void
 testNumGangsValues(OpBuilder &b, MLIRContext &context, Location loc,
                    llvm::SmallVector<DeviceType> &dtypes,
                    llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
   EXPECT_EQ(op->getNumGangsValues().begin(), op->getNumGangsValues().end());
 
   OwningOpRef<arith::ConstantIndexOp> val1 =
@@ -267,7 +281,7 @@ TEST_F(OpenACCOpsTest, numGangsValuesTest) {
 template <typename Op>
 static void testVectorLength(OpBuilder &b, MLIRContext &context, Location loc,
                              llvm::SmallVector<DeviceType> &dtypes) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
 
   mlir::Value empty;
   EXPECT_EQ(op->getVectorLengthValue(), empty);
@@ -295,7 +309,7 @@ template <typename Op>
 static void testWaitOnly(OpBuilder &b, MLIRContext &context, Location loc,
                          llvm::SmallVector<DeviceType> &dtypes,
                          llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
   EXPECT_FALSE(op->hasWaitOnly());
   for (auto d : dtypes)
     EXPECT_FALSE(op->hasWaitOnly(d));
@@ -335,7 +349,7 @@ template <typename Op>
 static void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
                            llvm::SmallVector<DeviceType> &dtypes,
                            llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
-  OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<Op> op = createEmptyOp<Op>(b, loc);
   EXPECT_EQ(op->getWaitValues().begin(), op->getWaitValues().end());
 
   OwningOpRef<arith::ConstantIndexOp> val1 =
@@ -429,7 +443,7 @@ TEST_F(OpenACCOpsTest, waitValuesTest) {
 }
 
 TEST_F(OpenACCOpsTest, loopOpGangVectorWorkerTest) {
-  OwningOpRef<LoopOp> op = LoopOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<LoopOp> op = createEmptyOp<LoopOp>(b, loc);
   EXPECT_FALSE(op->hasGang());
   EXPECT_FALSE(op->hasVector());
   EXPECT_FALSE(op->hasWorker());
@@ -475,8 +489,7 @@ TEST_F(OpenACCOpsTest, loopOpGangVectorWorkerTest) {
 }
 
 TEST_F(OpenACCOpsTest, routineOpTest) {
-  OwningOpRef<RoutineOp> op =
-      RoutineOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<RoutineOp> op = createEmptyOp<RoutineOp>(b, loc);
 
   EXPECT_FALSE(op->hasSeq());
   EXPECT_FALSE(op->hasVector());
@@ -565,8 +578,7 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
 TEST_F(OpenACCOpsTest, routineOpGetBindNameValueOnlyBindStrOrOnlyBindId) {
   // getBindNameValue(DeviceType) must not dereference when only one of bind(id)
   // or bind(name) is set (the other has no device-type array).
-  OwningOpRef<RoutineOp> op =
-      RoutineOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<RoutineOp> op = createEmptyOp<RoutineOp>(b, loc);
 
   auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
   auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);

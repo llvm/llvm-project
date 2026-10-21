@@ -1,6 +1,6 @@
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
-; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
+; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
@@ -1408,10 +1408,10 @@ define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 }
 
 declare i32 @llvm.cttz.i32(i32, i1)
-define i32 @test_cttz_intrinsic_zero_undef(i32 %a) {
-; CHECK-LABEL: name: test_cttz_intrinsic_zero_undef
+define i32 @test_cttz_intrinsic_zero_poison(i32 %a) {
+; CHECK-LABEL: name: test_cttz_intrinsic_zero_poison
 ; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
-; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_UNDEF [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_POISON [[A]]
 ; CHECK: $w0 = COPY [[RES]]
   %res = call i32 @llvm.cttz.i32(i32 %a, i1 1)
   ret i32 %res
@@ -1458,6 +1458,26 @@ define i32 @test_fshr_intrinsic(i32 %a, i32 %b, i32 %c) {
 ; CHECK: [[RES:%[0-9]+]]:_(i32) = G_FSHR [[A]], [[B]], [[C]]
 ; CHECK: $w0 = COPY [[RES]]
   %res = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %res
+}
+
+define i32 @test_smulh_intrinsic(i32 %a, i32 %b) {
+; CHECK-LABEL: name: test_smulh_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(i32) = COPY $w1
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_SMULH [[A]], [[B]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.smulh.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_umulh_intrinsic(i32 %a, i32 %b) {
+; CHECK-LABEL: name: test_umulh_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(i32) = COPY $w1
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_UMULH [[A]], [[B]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.umulh.i32(i32 %a, i32 %b)
   ret i32 %res
 }
 
@@ -1728,7 +1748,7 @@ define float @test_different_call_conv_target(float %x) {
 ; CHECK-LABEL: name: test_different_call_conv
 ; CHECK: [[X:%[0-9]+]]:_(f32) = COPY $s0
 ; CHECK: $s8 = COPY [[X]]
-; CHECK: BL @different_call_conv_target, csr_aarch64_noregs, implicit-def $lr, implicit $sp, implicit $s8, implicit-def $s0
+; CHECK: BL @different_call_conv_target, csr_aarch64_noregs, implicit-def dead $lr, implicit $sp, implicit $s8, implicit-def $s0
   %res = call ghccc float @different_call_conv_target(float %x)
   ret float %res
 }
@@ -1828,7 +1848,7 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
 
 ; CHECK-LABEL: test_constant_vector
 ; CHECK: [[UNDEF:%[0-9]+]]:_(f16) = G_IMPLICIT_DEF
-; CHECK: [[F:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH3C00
+; CHECK: [[F:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
 ; CHECK: [[M:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UNDEF]](f16), [[UNDEF]](f16), [[UNDEF]](f16), [[F]](f16)
 ; CHECK: $d0 = COPY [[M]](<4 x f16>)
 define <4 x half> @test_constant_vector() {
@@ -2482,7 +2502,7 @@ define void @test.llvm.noalias.scope.decl(ptr %P, ptr %Q) nounwind ssp {
 
 !3 = !{ !4 }
 !4 = distinct !{ !4, !5, !"test1: var" }
-!5 = distinct !{ !5, !"test1" }
+!5 = distinct !{!5, i1 false, !"test1"}
 
 
 declare void @llvm.sideeffect()

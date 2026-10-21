@@ -6,31 +6,55 @@
 // RUN: | FileCheck %s
 
 func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
-  linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  linalg.elementwise <exp>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<log>
+  linalg.elementwise <log>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<abs>
+  linalg.elementwise <abs>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<ceil>
+  linalg.elementwise <ceil>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<floor>
+  linalg.elementwise <floor>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<negf>
+  linalg.elementwise <negf>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<reciprocal>
+  linalg.elementwise <reciprocal>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<round>
+  linalg.elementwise <round>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<sqrt>
+  linalg.elementwise <sqrt>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<rsqrt>
+  linalg.elementwise <rsqrt>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<square>
+  linalg.elementwise <square>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<tanh>
+  linalg.elementwise <tanh>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
-  linalg.elementwise kind=#linalg.elementwise_kind<erf>
+  linalg.elementwise <erf>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <sin>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <cos>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <tan>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <acos>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <acosh>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <asin>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <asinh>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <atan>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <atanh>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <log10>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <log1p>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise <log2>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   return
 }
@@ -38,43 +62,79 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK: linalg.elementwise <exp>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<log>
+// CHECK: linalg.elementwise <log>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<abs>
+// CHECK: linalg.elementwise <abs>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<ceil>
+// CHECK: linalg.elementwise <ceil>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<floor>
+// CHECK: linalg.elementwise <floor>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<negf>
+// CHECK: linalg.elementwise <negf>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<reciprocal>
+// CHECK: linalg.elementwise <reciprocal>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<round>
+// CHECK: linalg.elementwise <round>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sqrt>
+// CHECK: linalg.elementwise <sqrt>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<rsqrt>
+// CHECK: linalg.elementwise <rsqrt>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<square>
+// CHECK: linalg.elementwise <square>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<tanh>
+// CHECK: linalg.elementwise <tanh>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<erf>
+// CHECK: linalg.elementwise <erf>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <sin>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <cos>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <tan>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <acos>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <acosh>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <asin>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <asinh>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <atan>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <atanh>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <log10>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <log1p>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise <log2>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
@@ -82,7 +142,7 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 
 func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.elementwise
-    kind=#linalg.elementwise_kind<log>
+    <log>
     indexing_maps = [affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d1, d0)>]
     ins(%A : tensor<?xf32>) outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -93,9 +153,208 @@ func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> t
 // CHECK: unary_ops_non_identity
 // CHECK-SAME: %[[A:.+]]: tensor<?xf32>, %[[OUT:.+]]: tensor<?x?xf32>)
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<log>
+// CHECK: linalg.elementwise <log>
 // CHECK-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]]]
 // CHECK-SAME: ins(%[[A]] : tensor<?xf32>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+              
+func.func @binary_ops_int(%A: memref<10xi32>, %B: memref<10xi32>,
+                          %Out: memref<10xi32>) {
+  linalg.elementwise <add>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <sub>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <mul>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <div>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <div_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <max_signed>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <min_signed>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_int
+// CHECK-SAME: %[[A:.+]]: memref<10xi32>, %[[B:.+]]: memref<10xi32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <div_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <max_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <min_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+
+// -----
+              
+func.func @binary_ops_float(%A: memref<10xf32>, %B: memref<10xf32>,
+                            %Out: memref<10xf32>) {
+  linalg.elementwise <add>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <sub>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <mul>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <div>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <max_signed>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <min_signed>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.elementwise <powf>
+    ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_float
+// CHECK-SAME: %[[A:.+]]: memref<10xf32>, %[[B:.+]]: memref<10xf32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <max_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <min_signed>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.elementwise <powf>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+
+// -----
+              
+func.func @binary_ops_complex(%A: memref<10xcomplex<f32>>, %B: memref<10xcomplex<f32>>,
+                              %Out: memref<10xcomplex<f32>>) {
+  linalg.elementwise <add>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise <sub>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise <mul>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  linalg.elementwise <div>
+    ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+    outs(%Out : memref<10xcomplex<f32>>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_complex
+// CHECK-SAME: %[[A:.+]]: memref<10xcomplex<f32>>, %[[B:.+]]: memref<10xcomplex<f32>>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xcomplex<f32>>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise <sub>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise <mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.elementwise <div>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+
+// -----
+              
+func.func @binary_ops_bool(%A: memref<10xi1>, %B: memref<10xi1>,
+                           %Out: memref<10xi1>) {
+  linalg.elementwise <add>
+    ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  linalg.elementwise <mul>
+    ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_bool
+// CHECK-SAME: %[[A:.+]]: memref<10xi1>, %[[B:.+]]: memref<10xi1>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi1>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <add>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
+// CHECK: linalg.elementwise <mul>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
+
+// -----
+              
+func.func @binary_ops_uint(%A: memref<10xi32>, %B: memref<10xi32>,
+                           %Out: memref<10xi32>) {
+  linalg.elementwise <max_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.elementwise <min_unsigned>
+    ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_uint
+// CHECK-SAME: %[[A:.+]]: memref<10xi32>, %[[B:.+]]: memref<10xi32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <max_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.elementwise <min_unsigned>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+
+// -----
+
+func.func @binary_ops_non_identity(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
+                                   %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.elementwise
+    <add>
+    indexing_maps = [affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d1, d0)>,
+                     affine_map<(d0, d1) -> (d0, d1)>]
+    ins(%A, %B : tensor<?xf32>, tensor<?x?xf32>)
+    outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[MAP_BC:.+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK-DAG: #[[MAP_TP:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK-DAG: #[[MAP_ID:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: binary_ops_non_identity
+// CHECK-SAME: %[[A:.+]]: tensor<?xf32>, %[[B:.+]]: tensor<?x?xf32>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise <add>
+// CHECK-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]], #[[MAP_ID]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
@@ -124,6 +383,22 @@ func.func @contract_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
+func.func @contract_matmul_bool(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xi1>,
+    %arg2: tensor<?x?xi1>) -> tensor<?x?xi1> {
+  %0 = linalg.contract indexing_maps = [#map, #map1, #map2]
+    ins(%arg0, %arg1 : tensor<?x?xi1>, tensor<?x?xi1>)
+    outs(%arg2 : tensor<?x?xi1>) -> tensor<?x?xi1>
+  return %0 : tensor<?x?xi1>
+}
+
+// CHECK-LABEL: contract_matmul_bool
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xi1>, %[[B:.+]]: tensor<?x?xi1>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xi1>) -> tensor<?x?xi1>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xi1>, tensor<?x?xi1>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi1>) -> tensor<?x?xi1>
 
 func.func @contract_matmul_memref(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
     %arg2: memref<?x?xf32>) {

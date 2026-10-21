@@ -9,9 +9,11 @@ add_mlir_dialect_library(MLIRNVGPUDialect
   MLIRNVGPUEnumsIncGen
   MLIRNVGPUAttributesIncGen
   MLIRNVGPUTypesIncGen
+  MLIRNVGPUIncGen
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect
+  MLIRNVVMDialect
   MLIRIR
   MLIRSideEffectInterfaces
   )

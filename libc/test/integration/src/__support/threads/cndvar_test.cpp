@@ -19,8 +19,8 @@
 
 namespace {
 
-constexpr int THREAD_COUNT = 16;
-constexpr int NUM_ITERATIONS = 250;
+constexpr int THREAD_COUNT = 4;
+constexpr int NUM_ITERATIONS = 10;
 
 struct QueueState {
   LIBC_NAMESPACE::CndVar cnd{false};

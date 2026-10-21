@@ -76,9 +76,8 @@ ScriptedFrameProvider::CreateInstance(
                                      thread.shared_from_this()))
     return nullptr;
 
-  auto obj_or_err = interface_sp->CreatePluginObject(
-      scripted_metadata->GetClassName(), input_frames,
-      scripted_metadata->GetArgsSP());
+  auto obj_or_err =
+      interface_sp->CreatePluginObject(*scripted_metadata, input_frames);
   if (!obj_or_err)
     return obj_or_err.takeError();
 
@@ -180,10 +179,13 @@ ScriptedFrameProvider::GetFrameAtIndex(uint32_t idx) {
     if (real_frame_index < m_input_frames->GetNumFrames()) {
       StackFrameSP real_frame_sp =
           m_input_frames->GetFrameAtIndex(real_frame_index);
-      synth_frame_sp =
-          (real_frame_index == idx)
-              ? real_frame_sp
-              : std::make_shared<BorrowedStackFrame>(real_frame_sp, idx);
+      // Always wrap in a BorrowedStackFrame, even when the index is
+      // unchanged. FetchFramesUpTo below unconditionally overwrites
+      // frame_sp->m_frame_list_id to tag the frame as belonging to this
+      // synthetic list; reusing real_frame_sp directly would corrupt the
+      // parent list's cached frame (still m_input_frames' object) to claim
+      // it belongs to this list instead.
+      synth_frame_sp = std::make_shared<BorrowedStackFrame>(real_frame_sp, idx);
     }
   } else if (StructuredData::Dictionary *dict = obj_sp->GetAsDictionary()) {
     // Check if it's a dictionary describing a frame.

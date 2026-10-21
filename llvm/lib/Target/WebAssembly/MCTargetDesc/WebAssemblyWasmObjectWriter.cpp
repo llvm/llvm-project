@@ -152,7 +152,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
         llvm_unreachable("unimplemented R_WASM_SECTION_OFFSET_I64");
     }
     assert(SymA.isData());
-    return wasm::R_WASM_MEMORY_ADDR_I64;
+    return IsLocRel ? wasm::R_WASM_MEMORY_ADDR_LOCREL_I64
+                    : wasm::R_WASM_MEMORY_ADDR_I64;
   default:
     llvm_unreachable("unimplemented fixup kind");
   }

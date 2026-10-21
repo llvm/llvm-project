@@ -78,3 +78,17 @@ func.func @two_iters_with_reduce(%lb1: index, %lb2: index, %ub1: index, %ub2: in
   }
   return %0 : i32
 }
+
+// -----
+
+func.func private @callee(%i: index, %j: index)
+
+func.func @unsigned(%lb1: index, %lb2: index, %ub1: index, %ub2: index, %step1: index, %step2: index) {
+  scf.parallel unsigned (%i, %j) = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    func.call @callee(%i, %j) : (index, index) -> ()
+  }
+  // CHECK:           scf.for unsigned %[[VAL_0:.*]] = %[[ARG0:.*]] to %[[ARG2:.*]] step %[[ARG4:.*]] {
+  // CHECK:             scf.for unsigned %[[VAL_1:.*]] = %[[ARG1:.*]] to %[[ARG3:.*]] step %[[ARG5:.*]] {
+  // CHECK:               func.call @callee(%[[VAL_0]], %[[VAL_1]]) : (index, index) -> ()
+  return
+}

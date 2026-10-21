@@ -295,6 +295,7 @@ def t2addrmode_imm8s4_pre : T2AddrMode_Imm8s4 {
 def t2am_imm8s4_offset_asmoperand : AsmOperandClass { let Name = "Imm8s4"; }
 def t2am_imm8s4_offset : MemOperand {
   let PrintMethod = "printT2AddrModeImm8s4OffsetOperand";
+  let ParserMatchClass = t2am_imm8s4_offset_asmoperand;
   let EncoderMethod = "getT2ScaledImmOpValue<8,2>";
   let DecoderMethod = "DecodeT2Imm8S4";
 }
@@ -3556,6 +3557,8 @@ def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg rGPR:$Rm)),
             (t2CMNrr GPRnopc:$Rn, rGPR:$Rm)>;
 def : T2Pat<(ARMcmpZ GPRnopc:$Rn, (ineg t2_so_reg:$ShiftedRm)),
             (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
+def : T2Pat<(ARMcmpZ (ineg GPRnopc:$Rn), t2_so_reg:$ShiftedRm),
+            (t2CMNrs GPRnopc:$Rn, t2_so_reg:$ShiftedRm)>;
 
 defm t2TST  : T2I_cmp_irs<0b0000, "tst", rGPR,
                           IIC_iTSTi, IIC_iTSTr, IIC_iTSTsi,
@@ -4080,7 +4083,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
                    (ins thumb_br_target:$dst, pred:$p),
                    4, IIC_Br, [],
                    (t2B thumb_br_target:$dst, pred:$p)>,
-                 Requires<[IsThumb2]>, Sched<[WriteBr]>;
+                 Requires<[IsThumb, HasV8MBaseline]>, Sched<[WriteBr]>;
 }
 
 // IT block
@@ -4398,6 +4401,9 @@ def t2LDRLIT_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
                        Requires<[IsThumb, HasV8MBaseline, DontUseMovtInPic]>;
 }
+
+// Exception Handling
+def : T2Pat<(ARMLocalRecover mcsym:$sym), (t2MOVi32imm mcsym:$sym)>;
 
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),

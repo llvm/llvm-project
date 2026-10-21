@@ -29,10 +29,12 @@
 using namespace clang;
 
 /// PrintMacroDefinition - Print a macro definition in a form that will be
-/// properly accepted back as a definition.
-static void PrintMacroDefinition(const IdentifierInfo &II, const MacroInfo &MI,
+/// properly accepted back as a definition. If 'II' is nullptr, only the
+/// expansion will be printed.
+static void PrintMacroDefinition(const IdentifierInfo *II, const MacroInfo &MI,
                                  Preprocessor &PP, raw_ostream *OS) {
-  *OS << "#define " << II.getName();
+  if (II)
+    *OS << "#define " << II->getName();
 
   if (MI.isFunctionLike()) {
     *OS << '(';
@@ -182,6 +184,8 @@ public:
   void PragmaExecCharsetPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
+  void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
+                        std::uint64_t Value) override;
 
   /// Insert whitespace before emitting the next token.
   ///
@@ -258,11 +262,11 @@ void PrintPPOutputPPCallbacks::WriteLineInfo(unsigned LineNo,
   // Emit #line directives or GNU line markers depending on what mode we're in.
   if (UseLineDirectives) {
     *OS << "#line" << ' ' << LineNo << ' ' << '"';
-    OS->write_escaped(CurFilename);
+    *OS << CurFilename;
     *OS << '"';
   } else {
     *OS << '#' << ' ' << LineNo << ' ' << '"';
-    OS->write_escaped(CurFilename);
+    *OS << CurFilename;
     *OS << '"';
 
     if (ExtraLen)
@@ -559,22 +563,38 @@ void PrintPPOutputPPCallbacks::Ident(SourceLocation Loc, StringRef S) {
 /// MacroDefined - This hook is called whenever a macro definition is seen.
 void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
                                             const MacroDirective *MD) {
+  bool ShouldEmitDefine = true;
   const MacroInfo *MI = MD->getMacroInfo();
+  SourceLocation DefLoc = MI->getDefinitionLoc();
+
   // Print out macro definitions in -dD mode and when we have -fdirectives-only
   // for C++20 header units.
   if ((!DumpDefines && !DirectivesOnly) ||
       // Ignore __FILE__ etc.
-      MI->isBuiltinMacro())
-    return;
-
-  SourceLocation DefLoc = MI->getDefinitionLoc();
-  if (DirectivesOnly && !MI->isUsed()) {
+      MI->isBuiltinMacro()) {
+    ShouldEmitDefine = false;
+  } else if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
     if (SM.isInPredefinedFile(DefLoc))
-      return;
+      ShouldEmitDefine = false;
   }
+
+  IdentifierInfo *MacroName = MacroNameTok.getIdentifierInfo();
+  if (!ShouldEmitDefine) {
+    // Preserve macro definitions of macros that can be used with
+    // '#pragma clang __set_pp_state' as pragmas if printing '#define's
+    // is disabled.
+    if (PP.isPragmaSetPPStateMacro(MacroName)) {
+      MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
+      *OS << "#pragma clang __set_pp_state " << MacroName->getName();
+      PrintMacroDefinition(/*II=*/nullptr, *MI, PP, OS);
+      setEmittedDirectiveOnThisLine();
+    }
+    return;
+  }
+
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
-  PrintMacroDefinition(*MacroNameTok.getIdentifierInfo(), *MI, PP, OS);
+  PrintMacroDefinition(MacroName, *MI, PP, OS);
   setEmittedDirectiveOnThisLine();
 }
 
@@ -752,6 +772,15 @@ PragmaAssumeNonNullEnd(SourceLocation Loc) {
   setEmittedDirectiveOnThisLine();
 }
 
+void PrintPPOutputPPCallbacks::PragmaSetPPState(SourceLocation Loc,
+                                                IdentifierInfo *MacroName,
+                                                std::uint64_t Value) {
+  MoveToLine(Loc, /*RequireStartOfLine=*/true);
+  *OS << "#pragma clang __set_pp_state " << MacroName->getName() << " "
+      << Value;
+  setEmittedDirectiveOnThisLine();
+}
+
 void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
                                                          bool RequireSpace,
                                                          bool RequireSameLine) {
@@ -760,8 +789,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
-       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed) &&
-       !Tok.is(tok::annot_module_name)))
+       !Tok.is(tok::annot_embed) && !Tok.is(tok::annot_module_name)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -917,8 +945,6 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // -traditional-cpp the lexer keeps /all/ whitespace, including comments.
       PP.Lex(Tok);
       continue;
-    } else if (Tok.is(tok::annot_repl_input_end)) {
-      // Fall through to exit the loop.
     } else if (Tok.is(tok::eod)) {
       // Don't print end of directive tokens, since they are typically newlines
       // that mess up our line tracking. These come from unknown pre-processor
@@ -1012,6 +1038,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       IsCXXModuleDirective = false;
       IsStartOfLine = true;
       *Callbacks->OS << ';';
+      Callbacks->setEmittedTokensOnThisLine();
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {
@@ -1054,7 +1081,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     Callbacks->setEmittedTokensOnThisLine();
     IsStartOfLine = false;
 
-    if (Tok.is(tok::eof) || Tok.is(tok::annot_repl_input_end))
+    if (Tok.is(tok::eof))
       break;
 
     PP.Lex(Tok);
@@ -1081,11 +1108,10 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
-  for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();
-       I != E; ++I) {
-    auto *MD = I->second.getLatest();
+  for (const auto &M : PP.macros()) {
+    auto *MD = M.second.getLatest();
     if (MD && MD->isDefined())
-      MacrosByID.push_back(id_macro_pair(I->first, MD->getMacroInfo()));
+      MacrosByID.push_back(id_macro_pair(M.first, MD->getMacroInfo()));
   }
   llvm::array_pod_sort(MacrosByID.begin(), MacrosByID.end(), MacroIDCompare);
 
@@ -1094,7 +1120,7 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
     // Ignore computed macros like __LINE__ and friends.
     if (MI.isBuiltinMacro()) continue;
 
-    PrintMacroDefinition(*MacrosByID[i].first, MI, PP, OS);
+    PrintMacroDefinition(MacrosByID[i].first, MI, PP, OS);
     *OS << '\n';
   }
 }

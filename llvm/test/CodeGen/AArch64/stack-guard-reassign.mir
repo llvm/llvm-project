@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm64-apple-ios -start-before=localstackalloc -stop-after=prologepilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios -start-before=localstackalloc -stop-after=prolog-epilog -o - %s | FileCheck %s
 
 --- |
   @__stack_chk_guard = external global ptr

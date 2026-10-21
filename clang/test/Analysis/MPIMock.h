@@ -37,6 +37,7 @@ namespace std { template<class T> struct complex { T real; T imag; }; }
 #define MPI_COMM_WORLD 0
 #define MPI_STATUS_IGNORE 0
 #define MPI_STATUSES_IGNORE 0
+#define MPI_REQUEST_NULL 0
 #define MPI_SUM 0
 
 // mock functions
@@ -53,3 +54,9 @@ int MPI_Reduce(const void *, void *, int, MPI_Datatype, MPI_Op, int, MPI_Comm);
 int MPI_Ireduce(const void *, void *, int, MPI_Datatype, MPI_Op, int, MPI_Comm,
     MPI_Request *);
 int MPI_Bcast(void *, int count, MPI_Datatype, int, MPI_Comm);
+int MPI_Iscatterv(const void *, const int[], const int[], MPI_Datatype, void *,
+    int, MPI_Datatype, int, MPI_Comm, MPI_Request *);
+int MPI_Iscan(const void *, void *, int, MPI_Datatype, MPI_Op, MPI_Comm,
+    MPI_Request *);
+int MPI_Ireduce_scatter(const void *, void *, const int[], MPI_Datatype,
+    MPI_Op, MPI_Comm, MPI_Request *);

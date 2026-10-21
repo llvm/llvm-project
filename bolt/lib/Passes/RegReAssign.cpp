@@ -450,7 +450,7 @@ void RegReAssign::setupConservativePass(
 
 Error RegReAssign::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86()) {
-    BC.errs() << "BOLT-ERROR: reg-reassign is supported only on X86\n";
+    BC.errs() << "BOLT-ERROR: reg-reassign is specific to X86\n";
     exit(1);
   }
 

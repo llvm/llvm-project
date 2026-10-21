@@ -2,7 +2,8 @@
 // RUN: %llvm_jitlink -slab-allocate=20Mb %t
 //
 // REQUIRES: system-darwin && host-arch-compatible
-
+// UNSUPPORTED: host-jit-triple=arm64e-{{.*}}
+//
 // Test that we can throw and catch an exception through a large number of
 // stack frames. The number (1022) is chosen to force emission of multiple
 // unwind info second-level pages.

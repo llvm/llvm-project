@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -53,8 +54,7 @@ Module::Module(ModuleConstructorTag, StringRef Name,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
-    Parent->SubModules.push_back(this);
+    Parent->addSubmodule(Name, this);
   }
 }
 
@@ -106,6 +106,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("cplusplus20", LangOpts.CPlusPlus20)
                         .Case("cplusplus23", LangOpts.CPlusPlus23)
                         .Case("cplusplus26", LangOpts.CPlusPlus26)
+                        .Case("cplusplus29", LangOpts.CPlusPlus29)
                         .Case("c99", LangOpts.C99)
                         .Case("c11", LangOpts.C11)
                         .Case("c17", LangOpts.C17)
@@ -269,6 +270,27 @@ OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
   return std::nullopt;
 }
 
+/// Whether watching \p Ancestor recursively also covers \p Path.
+static bool coversPath(StringRef Ancestor, StringRef Path) {
+  return Path.starts_with(Ancestor) &&
+         (Path.size() == Ancestor.size() ||
+          llvm::sys::path::is_separator(Path[Ancestor.size()]));
+}
+
+void Module::addDirectoryDependency(StringRef Path) {
+  Module *TopLevel = getTopLevelModule();
+  std::vector<std::string> &Deps = TopLevel->DirectoryDependencies;
+  // These are recursive dependencies, so an entry under one already recorded
+  // adds nothing. Submodules contribute to the same list, and their umbrellas
+  // often nest.
+  for (StringRef Dep : Deps)
+    if (coversPath(Dep, Path))
+      return;
+  llvm::erase_if(Deps,
+                 [&](const std::string &Dep) { return coversPath(Path, Dep); });
+  Deps.emplace_back(Path);
+}
+
 void Module::addTopHeader(FileEntryRef File) {
   assert(File);
   TopHeaders.insert(File);
@@ -348,7 +370,7 @@ void Module::markUnavailable(bool Unimportable) {
   }
 }
 
-Module *Module::findSubmodule(StringRef Name) const {
+ModuleRef Module::findSubmodule(StringRef Name) const {
   if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
     return SubModules[It->second];
 

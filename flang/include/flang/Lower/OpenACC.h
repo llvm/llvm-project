@@ -18,6 +18,8 @@
 namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
+template <typename T>
+class SmallVectorImpl;
 class StringRef;
 } // namespace llvm
 
@@ -86,6 +88,15 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
+void declareExternalAccModuleDeclareActionRecipes(
+    AbstractConverter &, fir::FirOpBuilder &,
+    const Fortran::semantics::Symbol &);
+
+/// Declare a private func.func for each acc.routine bind(name) target in \p
+/// module (and its submodules) not already declared, cloning the decorated
+/// routine's type. Run after primary translation.
+void materializeOpenACCRoutineBindTargets(AbstractConverter &, mlir::ModuleOp);
+
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
@@ -120,9 +131,27 @@ bool isCollapsedDoConstruct(const Fortran::parser::DoConstruct &);
 /// Clear the collapsed DoConstruct tracking set.
 void clearCollapsedDoConstructs();
 
+/// Find the first nested DoConstruct evaluation directly under \p eval,
+/// skipping over any other sibling evaluations (e.g. a CompilerDirective
+/// such as !DIR$ IVDEP) that may appear between loop levels of a collapsed
+/// or tiled loop nest. Evaluations skipped over while searching are
+/// appended, in order, to \p skipped if it is non-null. Returns nullptr if
+/// no nested DoConstruct is found.
+pft::Evaluation *findNestedDoConstructEvaluation(
+    pft::Evaluation &eval,
+    llvm::SmallVectorImpl<pft::Evaluation *> *skipped = nullptr);
+
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
+
+/// Checks whether the current insertion point is inside an explicit
+/// `!$acc routine` function.
+bool isInsideOpenACCRoutine(fir::FirOpBuilder &);
+
+/// True when Fortran DO loops should be lowered as `acc.loop` for IV
+/// privatization.
+bool shouldLowerDoConstructAsAccLoop(fir::FirOpBuilder &);
 
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 

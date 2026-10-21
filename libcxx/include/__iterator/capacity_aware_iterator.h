@@ -37,16 +37,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // __capacity_aware_iterator is an iterator that wraps a contiguous iterator and encodes the maximum number of
 // elements that can appear in a range of such iterators. That maximum number of elements must be known at compile-time.
 // As of writing, the only standard library containers which fulfill these requirements are inplace_vector and optional.
-//
-// It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some
-// algorithms to detect this iterator and perform optimizations based on the added semantic information.
 
-template <class _Iter, class _Tag, size_t _RangeMaxElements>
+template <class _Iter, size_t _RangeMaxElements>
 class __capacity_aware_iterator {
 private:
   _Iter __iter_;
 
-  template <class, class, size_t>
+  template <class, size_t>
   friend class __capacity_aware_iterator;
 
 public:
@@ -66,17 +63,17 @@ public:
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator(
-      const __capacity_aware_iterator<_Iter2, _Tag, _RangeMaxElements>& __y) noexcept
+      const __capacity_aware_iterator<_Iter2, _RangeMaxElements>& __y) noexcept
       : __iter_(__y.__iter_) {}
 
-  template <class _It, class _Tag2, size_t _RangeMaxElems2>
+  template <class _It, size_t _RangeMaxElems2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept;
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __capacity_aware_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept { return std::__to_address(__iter_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator++() noexcept {
@@ -119,7 +116,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>(__n >= 0 ? __n : -__n) < _RangeMaxElements,
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
@@ -145,36 +142,36 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator+(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator+(difference_type __n, const __capacity_aware_iterator& __i) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator-(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp -= __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) noexcept {
     return difference_type(__x.__iter_ - __y.__iter_);
   }
 };
 
-template <class _It, class _Tag2, size_t _RangeMaxElems2>
+template <class _It, size_t _RangeMaxElems2>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
-  return __capacity_aware_iterator<_It, _Tag2, _RangeMaxElems2>(__iter);
+  return __capacity_aware_iterator<_It, _RangeMaxElems2>(__iter);
 }
 
 _LIBCPP_END_NAMESPACE_STD

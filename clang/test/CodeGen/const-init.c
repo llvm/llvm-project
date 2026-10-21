@@ -188,7 +188,7 @@ void g31(void) {
 
 // Clang should evaluate this in constant context, so floating point mode should
 // have no effect.
-// CHECK: @.compoundliteral = internal global [1 x float] [float 0x3FB99999A0000000], align 4
+// CHECK: @.compoundliteral = internal global [1 x float] [float 1.000000e-01], align 4
 struct { const float *floats; } compoundliteral = {
   (float[1]) { 0.1, },
 };

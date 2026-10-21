@@ -12,8 +12,6 @@
 // unordered containers changes when bounded unique_ptr is enabled.
 // UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <unordered_set>
 
@@ -66,10 +64,41 @@ public:
   friend bool operator!=(final_small_iter_allocator, final_small_iter_allocator) { return false; }
 };
 
+struct allocator_base {};
+
+// Make sure that types with a common base type don't get broken. See https://llvm.org/PR154146
+template <class T>
+struct common_base_allocator : allocator_base {
+  using value_type = T;
+
+  common_base_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  common_base_allocator(common_base_allocator<U>) TEST_NOEXCEPT {}
+
+  T* allocate(std::size_t n);
+  void deallocate(T* p, std::size_t);
+
+  friend bool operator==(common_base_allocator, common_base_allocator) { return true; }
+  friend bool operator!=(common_base_allocator, common_base_allocator) { return false; }
+};
+
 template <class T, class Alloc>
 using unordered_set_alloc = std::unordered_set<T, std::hash<T>, std::equal_to<T>, Alloc>;
 
+struct user_struct {
+  unordered_set_alloc<int, common_base_allocator<int> > v;
+  [[no_unique_address]] common_base_allocator<int> a;
+};
+
 #if __SIZE_WIDTH__ == 64
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
+static_assert(sizeof(user_struct) == 48, "");
+#  else
+static_assert(sizeof(user_struct) == 40, "");
+#  endif
+static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(unordered_set_alloc<int, std::allocator<int> >) == 40, "");
 static_assert(sizeof(unordered_set_alloc<int, min_allocator<int> >) == 40, "");
@@ -98,11 +127,22 @@ static_assert(TEST_ALIGNOF(unordered_set_alloc<char, final_small_iter_allocator<
 struct TEST_ALIGNAS(32) AlignedHash {};
 struct UnalignedEqualTo {};
 
-// This part of the ABI has been broken between LLVM 19 and LLVM 20.
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 64, "");
+#  else
+static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 96, "");
+#  endif
 static_assert(TEST_ALIGNOF(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
+static_assert(sizeof(user_struct) == 24, "");
+#  else
+static_assert(sizeof(user_struct) == 20, "");
+#  endif
+static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(unordered_set_alloc<int, std::allocator<int> >) == 20, "");
 static_assert(sizeof(unordered_set_alloc<int, min_allocator<int> >) == 20, "");
@@ -131,7 +171,12 @@ static_assert(TEST_ALIGNOF(unordered_set_alloc<char, final_small_iter_allocator<
 struct TEST_ALIGNAS(32) AlignedHash {};
 struct UnalignedEqualTo {};
 
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 64);
+#  else
+static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 96);
+#  endif
 static_assert(TEST_ALIGNOF(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 32);
 
 #else

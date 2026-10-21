@@ -11,7 +11,6 @@
 
 #include "llvm/Support/Error.h"
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 
@@ -44,11 +43,13 @@ public:
   /// 80x25. Also sets up the associated STDIN/STDOUT pipes and responds to
   /// the cursor-position query that ConPTY emits at startup.
   ///
+  /// \param req_cols, req_rows Optional terminal dimensions.
+  ///
   /// \return
   ///     An llvm::Error if the ConPTY could not be created, or if ConPTY is
   ///     not available on this version of Windows, llvm::Error::success()
   ///     otherwise.
-  llvm::Error OpenPseudoConsole();
+  llvm::Error OpenPseudoConsole(uint16_t req_cols = 0, uint16_t req_rows = 0);
 
   /// Creates a pair of anonymous pipes to use for stdio instead of a ConPTY.
   ///
@@ -58,7 +59,13 @@ public:
 
   /// Closes the ConPTY and invalidates its handle, without closing the STDIN
   /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
-  /// attached to it.
+  /// attached to it. The console host then writes its last frame to the STDOUT
+  /// pipe and closes its end, so reading the pipe up to EOF gets all of the
+  /// output.
+  ///
+  /// In pipe mode there is no ConPTY to close: this cancels the read pending
+  /// on the STDOUT pipe and marks the pipes closed, so IsConnected() returns
+  /// false from then on, as it does once a ConPTY is closed.
   void Close();
 
   /// Closes the STDIN and STDOUT pipe handles and invalidates them.
@@ -68,6 +75,10 @@ public:
   /// end) that were passed to CreateProcessW. Must be called after a successful
   /// CreateProcessW to avoid keeping the pipes alive indefinitely.
   void CloseAnonymousPipes();
+
+  /// Closes any open ConPTY/pipe handles and resets internal state to a
+  /// freshly-constructed PseudoConsole.
+  void Reset();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;
@@ -107,37 +118,21 @@ public:
 
   Mode GetMode() const { return m_mode; };
 
-  /// Returns a reference to the mutex used to synchronize access to the
-  /// ConPTY state.
-  std::mutex &GetMutex() { return m_mutex; };
-
-  /// Returns a reference to the condition variable used to signal state changes
-  /// to threads waiting on the ConPTY (e.g. waiting for output or shutdown).
-  std::condition_variable &GetCV() { return m_cv; };
-
-  /// Returns whether the ConPTY is in the process of shutting down.
-  ///
-  /// \return
-  ///     A reference to the atomic bool that is set to true when the ConPTY
-  ///     is stopping. Callers should check this in their read/write loops to
-  ///     exit gracefully.
-  bool IsStopping() const { return m_stopping.load(); };
-
-  /// Sets the stopping flag to \p value, signalling to threads waiting on the
-  /// ConPTY that they should stop.
-  void SetStopping(bool value) { m_stopping = value; };
-
 protected:
-  HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_output = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_output = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_input = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
-  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
-  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdin =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_pipe_child_stdout =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  // Pipe mode: set by Close(). Its CancelIoEx only reaches a read that is
+  // already pending, so a reader has to be able to tell that the pipes were
+  // closed before it starts the next one.
+  std::atomic<bool> m_pipes_closed = false;
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
-  std::condition_variable m_cv{};
-  std::atomic<bool> m_stopping = false;
 };
 } // namespace lldb_private
 

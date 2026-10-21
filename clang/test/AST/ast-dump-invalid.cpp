@@ -67,5 +67,5 @@ template<typename T> class A;
 template<typename T>
 template<typename U> using InvalidAlias = A<U>;
 // CHECK:      TypeAliasTemplateDecl {{.*}} invalid InvalidAlias
-// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 1 index 0 U
 }

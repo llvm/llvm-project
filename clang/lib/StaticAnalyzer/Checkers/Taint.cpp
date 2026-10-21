@@ -44,9 +44,8 @@ void taint::dumpTaint(ProgramStateRef State) {
 }
 
 ProgramStateRef taint::addTaint(ProgramStateRef State, const Expr *E,
-                                const LocationContext *LCtx,
-                                TaintTagType Kind) {
-  return addTaint(State, State->getSVal(E, LCtx), Kind);
+                                const StackFrame *SF, TaintTagType Kind) {
+  return addTaint(State, State->getSVal(E, SF), Kind);
 }
 
 ProgramStateRef taint::addTaint(ProgramStateRef State, SVal V,
@@ -146,8 +145,8 @@ ProgramStateRef taint::addPartialTaint(ProgramStateRef State,
 }
 
 bool taint::isTainted(ProgramStateRef State, const Expr *E,
-                      const LocationContext *LCtx, TaintTagType Kind) {
-  return !getTaintedSymbolsImpl(State, E, LCtx, Kind, /*ReturnFirstOnly=*/true)
+                      const StackFrame *SF, TaintTagType Kind) {
+  return !getTaintedSymbolsImpl(State, E, SF, Kind, /*ReturnFirstOnly=*/true)
               .empty();
 }
 
@@ -169,9 +168,9 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
                                                 const Expr *E,
-                                                const LocationContext *LCtx,
+                                                const StackFrame *SF,
                                                 TaintTagType Kind) {
-  return getTaintedSymbolsImpl(State, E, LCtx, Kind,
+  return getTaintedSymbolsImpl(State, E, SF, Kind,
                                /*ReturnFirstOnly=*/false);
 }
 
@@ -194,10 +193,10 @@ std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
 
 std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
                                                     const Expr *E,
-                                                    const LocationContext *LCtx,
+                                                    const StackFrame *SF,
                                                     TaintTagType Kind,
                                                     bool returnFirstOnly) {
-  SVal val = State->getSVal(E, LCtx);
+  SVal val = State->getSVal(E, SF);
   return getTaintedSymbolsImpl(State, val, Kind, returnFirstOnly);
 }
 

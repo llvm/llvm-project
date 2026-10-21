@@ -9,7 +9,7 @@ define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U:%.*]] = alloca [[STRUCT__1ANON:%.*]], align 8
-; CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[U]], align 8
+; CHECK-NEXT:    store double +inf, ptr [[U]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[U]], i64 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[TMP6]], 2146435072
@@ -22,7 +22,7 @@ define i32 @main() {
 ;
 entry:
   %u = alloca %struct..1anon, align 8
-  store double 0x7FF0000000000000, ptr %u
+  store double +inf, ptr %u
   %tmp5 = getelementptr %struct..0anon, ptr %u, i32 0, i32 1
   %tmp6 = load i32, ptr %tmp5
   %tmp7 = shl i32 %tmp6, 1

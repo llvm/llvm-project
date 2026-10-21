@@ -58,14 +58,16 @@ public:
     return *this;
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator& operator*() {
+    return *this;
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator& operator++() { return *this; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator operator++(int) { return *this; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(front_insert_iterator);
 
 template <class _Container>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator<_Container>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator<_Container>
 front_inserter(_Container& __x) {
   return front_insert_iterator<_Container>(__x);
 }

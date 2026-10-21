@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -33,11 +32,10 @@ bool ScriptedFrameProviderPythonInterface::AppliesToThread(
   // If there is any issue with this method, we will just assume it also applies
   // to this thread which is the default behavior.
   constexpr bool fail_value = true;
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "applies_to_thread", error, thread_sp);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "applies_to_thread", thread_sp),
+      LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return fail_value;
 
   return obj->GetBooleanValue(fail_value);
@@ -45,23 +43,20 @@ bool ScriptedFrameProviderPythonInterface::AppliesToThread(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedFrameProviderPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, lldb::StackFrameListSP input_frames,
-    StructuredData::DictionarySP args_sp) {
+    const ScriptedMetadata &scripted_metadata,
+    lldb::StackFrameListSP input_frames) {
   if (!input_frames)
     return llvm::createStringError("invalid frame list");
 
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     input_frames, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, nullptr, input_frames, scripted_metadata.GetArgsSP());
 }
 
 std::string ScriptedFrameProviderPythonInterface::GetDescription(
     llvm::StringRef class_name) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "get_description", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "get_description"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj->GetStringValue().str();
@@ -69,12 +64,9 @@ std::string ScriptedFrameProviderPythonInterface::GetDescription(
 
 std::optional<uint32_t>
 ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      CallStaticMethod(class_name, "get_priority", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      CallStaticMethod(class_name, "get_priority"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return std::nullopt;
 
   // Try to extract as unsigned integer. Return nullopt if Python returned None
@@ -87,11 +79,9 @@ ScriptedFrameProviderPythonInterface::GetPriority(llvm::StringRef class_name) {
 
 StructuredData::ObjectSP
 ScriptedFrameProviderPythonInterface::GetFrameAtIndex(uint32_t index) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_frame_at_index", error, index);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_frame_at_index", index), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   return obj;
@@ -118,7 +108,8 @@ void ScriptedFrameProviderPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       llvm::StringRef("Provide scripted stack frames for threads"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedFrameProvider,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedFrameProviderPythonInterface::Terminate() {

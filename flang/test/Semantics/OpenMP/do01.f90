@@ -31,3 +31,20 @@ subroutine f01
     end do
   end block
 end
+
+! Check DSA clause on a nested construct
+subroutine f02
+  integer :: i, j, k
+  !$omp parallel do private(i) shared(j)
+  do i = 1, 10
+    do j = 1, 10
+      !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a SHARED clause
+      !$omp parallel do default(none) shared(k)
+      !BECAUSE: 'k' is an iteration variable of an affected loop
+      do k = 1, 10
+      end do
+      !$omp end parallel do
+    end do
+  end do
+  !$omp end parallel do
+end

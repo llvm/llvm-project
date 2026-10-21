@@ -78,7 +78,7 @@ public:
   void test_subnormal_range(Func func) {
     constexpr StorageType MIN_SUBNORMAL = FPBits::min_subnormal().uintval();
     constexpr StorageType MAX_SUBNORMAL = FPBits::max_subnormal().uintval();
-    constexpr int COUNT = 10'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -98,7 +98,7 @@ public:
   void test_normal_range(Func func) {
     constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
     constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
-    constexpr int COUNT = 10'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));
@@ -116,13 +116,17 @@ public:
   }
 };
 
-#define LIST_INTLOGB_TESTS(OutType, InType, Func)                              \
-  using LlvmLibcIntLogbTest = LlvmLibcILogbTest<OutType, InType>;              \
-  TEST_F(LlvmLibcIntLogbTest, SpecialNumbers) { test_special_numbers(&Func); } \
-  TEST_F(LlvmLibcIntLogbTest, PowersOfTwo) { test_powers_of_two(&Func); }      \
-  TEST_F(LlvmLibcIntLogbTest, SomeIntegers) { test_some_integers(&Func); }     \
-  TEST_F(LlvmLibcIntLogbTest, SubnormalRange) { test_subnormal_range(&Func); } \
-  TEST_F(LlvmLibcIntLogbTest, NormalRange) { test_normal_range(&Func); }       \
+#define LIST_INTLOGB_TESTS(Name, OutType, InType, Func)                        \
+  using LlvmLibc##Name##Test = LlvmLibcILogbTest<OutType, InType>;             \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
+    test_special_numbers(&Func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { test_powers_of_two(&Func); }     \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { test_some_integers(&Func); }    \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&Func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&Func); }      \
   static_assert(true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H

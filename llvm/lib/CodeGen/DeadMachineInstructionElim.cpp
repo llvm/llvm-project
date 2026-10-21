@@ -105,6 +105,8 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
     // Now scan the instructions and delete dead ones, tracking physreg
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
+      if (MI.isDebugInstr())
+        continue;
       // If the instruction is dead, delete it!
       if (MI.isDead(*MRI, &LivePhysRegs)) {
         if (MI.isPHI()) {
@@ -120,6 +122,14 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
+
+      for (MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical() && !MO.isDead() && !MRI->isReserved(Reg) &&
+            LivePhysRegs.available(Reg))
+          MO.setIsDead();
+      }
+
       LivePhysRegs.stepBackward(MI);
     }
   }

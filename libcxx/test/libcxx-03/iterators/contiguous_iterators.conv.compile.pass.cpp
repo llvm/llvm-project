@@ -15,8 +15,6 @@
 
 // Verify that libc++-wrapped iterators do not permit slicing conversion or construction.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <array>
 #include <span>
 #include <type_traits>

@@ -76,7 +76,7 @@ int main(void) {
 // CHECK: %struct.T1 = type { ppc_fp128 }
 
 // CHECK: @arrgf = global [10 x ppc_fp128] zeroinitializer, align 16
-// CHECK: @gf = global ppc_fp128 0xM40080000000000000000000000000000, align 16
+// CHECK: @gf = global ppc_fp128 3.000000e+00, align 16
 // CHECK: @_ZN5CTest3scfE = external constant ppc_fp128, align 16
 
 // CHECK: define dso_local noundef ppc_fp128 @_Z10func_arithggg(ppc_fp128 noundef %a, ppc_fp128 noundef %b, ppc_fp128 noundef %c)

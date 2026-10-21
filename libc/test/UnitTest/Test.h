@@ -37,13 +37,4 @@
 #include "LibcTest.h"
 #endif
 
-// Some macro utility to append file names with LIBC_TEST macro's value to be
-// used in stdio tests.
-#undef STR
-#undef EVAL_THEN_STR
-#define STR(X) #X
-#define EVAL_THEN_STR(X) STR(X)
-
-#define APPEND_LIBC_TEST(X) X "." EVAL_THEN_STR(LIBC_TEST)
-
 #endif // LLVM_LIBC_TEST_UNITTEST_TEST_H

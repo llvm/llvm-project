@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcsncat,
                     size_t n)) {
   size_t size = internal::string_length(s1);
   size_t i = 0;
-  for (; s2[i] && i < n; ++i)
+  for (; i < n && s2[i]; ++i)
     s1[size + i] = s2[i];
   // Appending null character to the end of the result.
   s1[size + i] = L'\0';

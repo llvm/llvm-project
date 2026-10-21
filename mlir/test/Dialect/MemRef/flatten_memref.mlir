@@ -27,7 +27,7 @@ func.func @load_scalar_from_memref_dynamic_dim(%input: memref<?x?xf32, strided<[
 // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[STRIDES]]#0, %[[ARG1]], %[[STRIDES]]#1]
 // CHECK: %[[SIZE:.*]] = affine.max #[[MAP1]]()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[STRIDES]]#1, %[[SIZES]]#1]
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]]], strides: [1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[1], offset: ?>> 
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]]], strides: [1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
 // CHECK: memref.load %[[REINT]][%[[IDX]]]
 
 // -----
@@ -248,6 +248,32 @@ func.func @transfer_write_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %
 
 // -----
 
+func.func @negative_transfer_read_strided_memref(%input: memref<4x8xf32, strided<[18, 2]>>, %row: index, %col: index) -> vector<4xf32> {
+   %c0 = arith.constant 0.0 : f32
+   %0 = vector.transfer_read %input[%row, %col], %c0 {in_bounds = [true]} : memref<4x8xf32, strided<[18, 2]>>, vector<4xf32>
+   return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @negative_transfer_read_strided_memref
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[18, 2]>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK-NOT: memref.reinterpret_cast
+// CHECK: vector.transfer_read %[[ARG0]][%[[ARG1]], %[[ARG2]]]
+
+// -----
+
+func.func @negative_transfer_read_memref_2d_transfer(%input: memref<4x8xf32>, %row: index, %col: index) -> vector<2x4xf32> {
+   %c0 = arith.constant 0.0 : f32
+   %0 = vector.transfer_read %input[%row, %col], %c0 {in_bounds = [true, true]} : memref<4x8xf32>, vector<2x4xf32>
+   return %0 : vector<2x4xf32>
+}
+
+// CHECK-LABEL: func @negative_transfer_read_memref_2d_transfer
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK-NOT: memref.reinterpret_cast
+// CHECK: vector.transfer_read %[[ARG0]][%[[ARG1]], %[[ARG2]]]
+
+// -----
+
 func.func @alloc() -> memref<4x8xf32> {
   %0 = memref.alloc() : memref<4x8xf32>
   return %0 : memref<4x8xf32>
@@ -371,3 +397,44 @@ func.func @load_scalar_from_memref_static_dim_col_major(%input: memref<4x8xf32, 
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[1, 4], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
 // CHECK: memref.load %[[REINT]][%[[IDX]]] : memref<32xf32, strided<[1], offset: 100>>
+
+// -----
+
+func.func @prefetch_from_memref(%input: memref<4x8xf32>, %row: index, %col: index) {
+  memref.prefetch %input[%row, %col], read, locality<3>, data : memref<4x8xf32>
+  return
+}
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
+// CHECK: func @prefetch_from_memref
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [32], strides: [1] : memref<4x8xf32> to memref<32xf32, strided<[1]>>
+// CHECK: memref.prefetch %[[REINT]][%[[IDX]]], read, locality<3>, data : memref<32xf32, strided<[1]>>
+
+// -----
+
+func.func @dma_start_flatten_src_and_dst(
+    %src: memref<4x8xf32>,
+    %dst: memref<2x16xf32, 1>,
+    %tag: memref<1xi32>,
+    %num_elements: index,
+    %src_row: index,
+    %src_col: index,
+    %dst_row: index,
+    %dst_col: index) {
+  %c0 = arith.constant 0 : index
+  memref.dma_start %src[%src_row, %src_col], %dst[%dst_row, %dst_col], %num_elements, %tag[%c0] : memref<4x8xf32>, memref<2x16xf32, 1>, memref<1xi32>
+  return
+}
+
+// CHECK: #[[DMA_SRC_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
+// CHECK: #[[DMA_DST_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 16 + s1)>
+// CHECK: func @dma_start_flatten_src_and_dst
+// CHECK-SAME: (%[[SRC:.*]]: memref<4x8xf32>, %[[DST:.*]]: memref<2x16xf32, 1>, %[[TAG:.*]]: memref<1xi32>, %[[NUM:.*]]: index, %[[SRC_ROW:.*]]: index, %[[SRC_COL:.*]]: index, %[[DST_ROW:.*]]: index, %[[DST_COL:.*]]: index)
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[SRC_IDX:.*]] = affine.apply #[[DMA_SRC_MAP]]()[%[[SRC_ROW]], %[[SRC_COL]]]
+// CHECK: %[[SRC_FLAT:.*]] = memref.reinterpret_cast %[[SRC]] to offset: [0], sizes: [32], strides: [1]
+// CHECK: %[[DST_IDX:.*]] = affine.apply #[[DMA_DST_MAP]]()[%[[DST_ROW]], %[[DST_COL]]]
+// CHECK: %[[DST_FLAT:.*]] = memref.reinterpret_cast %[[DST]] to offset: [0], sizes: [32], strides: [1]
+// CHECK: memref.dma_start %[[SRC_FLAT]][%[[SRC_IDX]]], %[[DST_FLAT]][%[[DST_IDX]]], %[[NUM]], %[[TAG]][%[[C0]]]

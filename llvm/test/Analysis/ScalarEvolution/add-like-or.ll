@@ -37,16 +37,45 @@ define i8 @or-no-disjoint(i8 %x, i8 %y) {
   ret i8 %or
 }
 
-; FIXME: We could add nuw nsw flags here.
 define noundef i8 @or-disjoint-transfer-flags(i8 %x, i8 %y) {
 ; CHECK-LABEL: 'or-disjoint-transfer-flags'
 ; CHECK-NEXT:  Classifying expressions for: @or-disjoint-transfer-flags
 ; CHECK-NEXT:    %or = or disjoint i8 %x, %y
-; CHECK-NEXT:    --> (%x + %y) U: full-set S: full-set
+; CHECK-NEXT:    --> (%x + %y)<nuw><nsw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @or-disjoint-transfer-flags
 ;
   %or = or disjoint i8 %x, %y
   ret i8 %or
+}
+
+; or disjoint with zext: flags should enable zext simplification.
+define noundef i64 @or-disjoint-zext(i32 noundef %x) {
+; CHECK-LABEL: 'or-disjoint-zext'
+; CHECK-NEXT:  Classifying expressions for: @or-disjoint-zext
+; CHECK-NEXT:    %or = or disjoint i32 %x, 1
+; CHECK-NEXT:    --> (1 + %x)<nuw><nsw> U: [1,0) S: [-2147483647,-2147483648)
+; CHECK-NEXT:    %zext = zext i32 %or to i64
+; CHECK-NEXT:    --> (1 + (zext i32 %x to i64))<nuw><nsw> U: [1,4294967297) S: [1,4294967297)
+; CHECK-NEXT:  Determining loop execution counts for: @or-disjoint-zext
+;
+  %or = or disjoint i32 %x, 1
+  %zext = zext i32 %or to i64
+  ret i64 %zext
+}
+
+; or disjoint with larger constant and zext.
+define noundef i64 @or-disjoint-zext-7(i32 noundef %x) {
+; CHECK-LABEL: 'or-disjoint-zext-7'
+; CHECK-NEXT:  Classifying expressions for: @or-disjoint-zext-7
+; CHECK-NEXT:    %or = or disjoint i32 %x, 7
+; CHECK-NEXT:    --> (7 + %x)<nuw><nsw> U: [7,0) S: [-2147483641,-2147483648)
+; CHECK-NEXT:    %zext = zext i32 %or to i64
+; CHECK-NEXT:    --> (7 + (zext i32 %x to i64))<nuw><nsw> U: [7,4294967303) S: [7,4294967303)
+; CHECK-NEXT:  Determining loop execution counts for: @or-disjoint-zext-7
+;
+  %or = or disjoint i32 %x, 7
+  %zext = zext i32 %or to i64
+  ret i64 %zext
 }
 
 define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
@@ -61,13 +90,13 @@ define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
 ; CHECK-NEXT:    %i4 = or disjoint i64 1, %i3
 ; CHECK-NEXT:    --> (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw> U: [1,-14) S: [-9223372036854775807,9223372036854775794)
 ; CHECK-NEXT:    %i7 = phi i64 [ %i4, %bb ], [ %i8, %bb6 ]
-; CHECK-NEXT:    --> {(1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>) LoopDispositions: { %bb6: Computable }
+; CHECK-NEXT:    --> {(1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: (sext i32 %i to i64) LoopDispositions: { %bb6: Computable }
 ; CHECK-NEXT:    %i8 = add i64 %i7, 1
-; CHECK-NEXT:    --> {(2 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: (1 + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))<nsw> LoopDispositions: { %bb6: Computable }
+; CHECK-NEXT:    --> {(2 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: (1 + (sext i32 %i to i64))<nsw> LoopDispositions: { %bb6: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @mask-high
-; CHECK-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
+; CHECK-NEXT:  Loop %bb6: backedge-taken count is (-1 + (sext i32 %i to i64) + (-16 * (%arg /u 16)))
 ; CHECK-NEXT:  Loop %bb6: constant max backedge-taken count is i64 -9223372034707292162
-; CHECK-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
+; CHECK-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (sext i32 %i to i64) + (-16 * (%arg /u 16)))
 ; CHECK-NEXT:  Loop %bb6: Trip multiple is 1
 ;
 bb:

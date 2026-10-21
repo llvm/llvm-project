@@ -128,11 +128,8 @@ class ThreadLocalCache {
     /// Clear out any unused entries within the map. This method is not
     /// thread-safe, and should only be called by the same thread as the cache.
     void clearExpiredEntries() {
-      for (auto it = this->begin(), e = this->end(); it != e;) {
-        auto curIt = it++;
-        if (!curIt->second.ptr->second)
-          this->erase(curIt);
-      }
+      this->remove_if(
+          [](const auto &entry) { return !entry.second.ptr->second; });
     }
   };
 
@@ -142,6 +139,9 @@ public:
     // No cleanup is necessary here as the shared_pointer memory will go out of
     // scope and invalidate the weak pointers held by the thread_local caches.
   }
+
+  /// Invalidate and clear all thread-local cache entries for this instance.
+  void clear() { perInstanceState = std::make_shared<PerInstanceState>(); }
 
   /// Return an instance of the value type for the current thread.
   ValueT &get() {
@@ -162,8 +162,14 @@ public:
     // Before returning the new instance, take the chance to clear out any used
     // entries in the static map. The cache is only cleared within the same
     // thread to remove the need to lock the cache itself.
+    //
+    // `threadInstance` aliases a bucket in `staticCache`; clearExpiredEntries
+    // may erase from the map and invalidate that reference. The value itself
+    // lives in heap-stable storage reached through the shared `Observer::ptr`
+    // (not in the bucket), so load it out before clearing.
+    ValueT &value = *threadInstance.ptr->first;
     staticCache.clearExpiredEntries();
-    return *threadInstance.ptr->first;
+    return value;
   }
   ValueT &operator*() { return get(); }
   ValueT *operator->() { return &get(); }

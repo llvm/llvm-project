@@ -26,6 +26,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <functional>
 
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
+
 namespace Fortran::semantics {
 
 class DeclTypeSpec;
@@ -47,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
@@ -191,6 +196,8 @@ const Symbol *HasImpureFinal(
 bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have a pointer direct component?
+bool HasPointerDirectComponent(const DerivedTypeSpec &);
 // Does this type have any defined assignment at any level (or any polymorphic
 // allocatable)?
 bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
@@ -201,6 +208,8 @@ bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
@@ -230,6 +239,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
@@ -713,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();

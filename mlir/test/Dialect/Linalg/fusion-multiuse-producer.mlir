@@ -35,7 +35,7 @@ func.func @multi_use_producer(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 
 func.func @multi_use_producer_2(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> attributes {llvm.emit_c_interface} {
   %0 = llvm.mlir.constant(0.000000e+00 : f32) : f32
-  %1 = llvm.mlir.constant(31 : index) : i64
+  %1 = llvm.mlir.constant(31 : i64) : i64
   %2 = tensor.empty() : tensor<1x32x32x8xf32>
   %3 = tensor.empty() : tensor<1x32x32x8xindex>
   %4:2 = linalg.generic {
@@ -92,7 +92,7 @@ func.func @multi_use_producer_2(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x
 // CHECK-LABEL: func @multi_use_producer_2(
 // CHECK-SAME: %[[ARG0:[a-zA-Z0-9]+]]: tensor<1x32x32x8xf32>)
 // CHECK-SAME: -> tensor<1x32x32x8xf32>
-// CHECK: %[[C31:.+]] = llvm.mlir.constant(31 : index) : i64
+// CHECK: %[[C31:.+]] = llvm.mlir.constant(31 : i64) : i64
 // CHECK: %[[R0:.+]]:2 = linalg.generic {
 // CHECK-SAME: ins(%[[ARG0]], %[[ARG0]], %[[ARG0]], %[[ARG0]], %[[ARG0]] : tensor<1x32x32x8xf32>, tensor<1x32x32x8xf32>, tensor<1x32x32x8xf32>, tensor<1x32x32x8xf32>, tensor<1x32x32x8xf32>)
 // CHECK-SAME: outs(%[[INIT:.+]], %[[INIT_1:.+]] : tensor<1x32x32x8xf32>, tensor<1x32x32x8xi64>)

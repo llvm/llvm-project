@@ -37,9 +37,6 @@ public:
   // Determine the architecture of the thread given by its ID.
   static llvm::Expected<ArchSpec> DetermineArchitecture(lldb::tid_t tid);
 
-  // Invalidates cached values in register context data structures
-  virtual void InvalidateAllRegisters(){}
-
   struct SyscallData {
     /// The syscall instruction. If the architecture uses software
     /// single-stepping, the instruction should also be followed by a trap to

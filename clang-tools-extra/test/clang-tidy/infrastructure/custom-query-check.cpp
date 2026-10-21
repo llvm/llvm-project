@@ -10,7 +10,7 @@
 // RUN: clang-tidy --experimental-custom-checks %t/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SAME-DIR
 // RUN: clang-tidy --experimental-custom-checks %t/subdir/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-BASE
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-override/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-OVERRIDE
-// RUN: clang-tidy --experimental-custom-checks %t/subdir-empty/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --allow-no-checks | FileCheck %s --check-prefix=CHECK-SUB-DIR-EMPTY
+// RUN: clang-tidy --experimental-custom-checks %t/subdir-empty/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --allow-no-checks -- | count 0
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-APPEND
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --list-checks | FileCheck %s --check-prefix=LIST-CHECK
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/cqc-main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --dump-config | FileCheck %s --check-prefix=DUMP-CONFIG
@@ -20,8 +20,7 @@ long V;
 // CHECK-SAME-DIR: [[@LINE-1]]:1: warning: use 'int' instead of 'long' [custom-avoid-long-type]
 // CHECK-SUB-DIR-BASE: [[@LINE-2]]:1: warning: use 'int' instead of 'long' [custom-avoid-long-type]
 // CHECK-SUB-DIR-OVERRIDE: [[@LINE-3]]:1: warning: use 'int' instead of 'long' override [custom-avoid-long-type]
-// CHECK-SUB-DIR-EMPTY: No checks enabled.
-// CHECK-SUB-DIR-APPEND: [[@LINE-5]]:1: warning: use 'int' instead of 'long' [custom-avoid-long-type]
+// CHECK-SUB-DIR-APPEND: [[@LINE-4]]:1: warning: use 'int' instead of 'long' [custom-avoid-long-type]
 
 void f();
 // CHECK-SUB-DIR-APPEND: [[@LINE-1]]:1: warning: find function decl [custom-function-decl]

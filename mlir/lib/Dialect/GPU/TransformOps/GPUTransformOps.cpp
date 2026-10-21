@@ -13,9 +13,7 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
@@ -63,11 +61,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
-  // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  llvmTypeConverter.addConversion(
-      [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
+  configureGpuToNVVMTypeConverter(llvmTypeConverter);
   // Set higher benefit, so patterns will run before generic LLVM lowering.
   populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
                                       getBenefit());
@@ -113,21 +107,20 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
   amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  // The verifier has already rejected anything unparseable.
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0));
+  assert(llvm::succeeded(targetInfo) && "verifier accepted this target");
   populateGpuToROCDLConversionPatterns(
-      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *targetInfo);
 }
 
 LogicalResult
 transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
     transform::TypeConverterBuilderOpInterface builder) {
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  if (failed(maybeChipset)) {
-    return emitOpError("Invalid chipset name: " + getChipset());
-  }
+  if (failed(ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0),
+                                    [&] { return emitOpError(); })))
+    return failure();
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
@@ -143,16 +136,27 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  std::optional<StringRef> chipsetName = getChipset();
-  std::optional<amdgpu::Chipset> maybeChipset;
-  if (chipsetName) {
-    FailureOr<amdgpu::Chipset> parsedChipset =
-        amdgpu::Chipset::parse(*chipsetName);
-    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
-    maybeChipset = parsedChipset;
+  std::optional<StringRef> archName = getArch();
+  std::optional<ROCDL::TargetInfo> targetInfo;
+  if (archName) {
+    // The verifier has already rejected anything unparseable.
+    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(*archName);
+    assert(llvm::succeeded(parsed) && "verifier accepted this target");
+    targetInfo = *parsed;
   }
 
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, targetInfo);
+}
+
+LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
+  std::optional<StringRef> archName = getArch();
+  if (!archName)
+    return success();
+
+  if (failed(ROCDL::TargetInfo::get(*archName, /*waveSize=*/0,
+                                    [&] { return emitOpError(); })))
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

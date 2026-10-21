@@ -1,4 +1,4 @@
-; Fourth example from Doc/Coroutines.rst (coroutine promise)
+; Fourth example from Doc/Coroutines.md (coroutine promise)
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {

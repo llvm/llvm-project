@@ -51,7 +51,7 @@ define void @arm_correlate_f16(ptr nocapture noundef readonly %pSrcA, i32 nounde
 ; CHECK-NEXT:    br label [[FOR_BODY16:%.*]]
 ; CHECK:       for.body16:
 ; CHECK-NEXT:    [[J_074:%.*]] = phi i32 [ 0, [[FOR_COND14_PREHEADER]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[SUM_073:%.*]] = phi half [ 0xH0000, [[FOR_COND14_PREHEADER]] ], [ [[SUM_1:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[SUM_073:%.*]] = phi half [ 0.000000e+00, [[FOR_COND14_PREHEADER]] ], [ [[SUM_1:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[SUB17:%.*]] = sub i32 [[I_077]], [[J_074]]
 ; CHECK-NEXT:    [[CMP18:%.*]] = icmp ult i32 [[SUB17]], [[SRCBLEN_ADDR_0]]
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp ult i32 [[J_074]], [[SRCALEN_ADDR_0]]

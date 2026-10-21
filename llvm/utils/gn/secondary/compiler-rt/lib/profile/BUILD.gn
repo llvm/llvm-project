@@ -1,6 +1,9 @@
 import("//compiler-rt/target.gni")
 
 static_library("profile") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+
   output_dir = crt_current_out_dir
   if (current_os == "mac") {
     output_name = "clang_rt.profile_osx"
@@ -44,6 +47,7 @@ static_library("profile") {
     "InstrProfilingPlatformGPU.c",
     "InstrProfilingPlatformLinux.c",
     "InstrProfilingPlatformOther.c",
+    "InstrProfilingPlatformROCm.cpp",
     "InstrProfilingPlatformWindows.c",
     "InstrProfilingPort.h",
     "InstrProfilingRuntime.cpp",

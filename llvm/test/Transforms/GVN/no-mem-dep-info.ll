@@ -17,9 +17,9 @@ define <8 x float> @foo1(ptr noalias readonly %arr.ptr, ptr noalias readonly %vi
 ; CHECK-NEXT:  [[ALLOCAS:.*:]]
 ; CHECK-NEXT:    [[VIX:%.*]] = load <8 x i32>, ptr [[VIX_PTR]], align 4
 ; CHECK-NEXT:    [[T1_PTR:%.*]] = getelementptr i8, ptr [[ARR_PTR]], i8 4
-; CHECK-NEXT:    [[V1:%.*]] = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr [[ARR_PTR]], <8 x i32> [[VIX]], <8 x float> splat (float 0xFFFFFFFFE0000000), i8 1)
+; CHECK-NEXT:    [[V1:%.*]] = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr [[ARR_PTR]], <8 x i32> [[VIX]], <8 x float> splat (float -nan(0x3FFFFF)), i8 1)
 ; CHECK-NEXT:    store i8 1, ptr [[T1_PTR]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr [[ARR_PTR]], <8 x i32> [[VIX]], <8 x float> splat (float 0xFFFFFFFFE0000000), i8 1)
+; CHECK-NEXT:    [[V2:%.*]] = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr [[ARR_PTR]], <8 x i32> [[VIX]], <8 x float> splat (float -nan(0x3FFFFF)), i8 1)
 ; CHECK-NEXT:    [[RES:%.*]] = fadd <8 x float> [[V1]], [[V2]]
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;

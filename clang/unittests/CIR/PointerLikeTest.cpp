@@ -76,7 +76,7 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), ty);
 
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        cir::AllocaOp::create(b, loc, ptrTy, ty, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     mlir::Value val = varPtrOp.get();
     mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
@@ -110,7 +110,7 @@ protected:
 
     // Create an alloca for the array
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        cir::AllocaOp::create(b, loc, ptrTy, arrTy, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     // Verify that the type category is array.
     mlir::Value val = varPtrOp.get();
@@ -161,12 +161,17 @@ protected:
   }
 
   // Structures and unions are accessed in the same way, so use a common test.
-  void testRecordType(mlir::Type ty1, mlir::Type ty2,
-                      cir::RecordType::RecordKind kind) {
-    // Build the structure pointer type.
-    cir::RecordType structTy =
-        cir::RecordType::get(&context, getUniqueRecordName("S"), kind);
-    structTy.complete({ty1, ty2}, false, false);
+  void testRecordType(mlir::Type ty1, mlir::Type ty2, bool is_union) {
+    // Build the structure/union type.
+    cir::RecordType structTy;
+    if (is_union)
+      structTy = cir::UnionType::get(&context, getUniqueRecordName("S"));
+    else
+      structTy = cir::StructType::get(&context, getUniqueRecordName("S"),
+                                      /*is_class=*/false);
+    mlir::Type members[] = {ty1, ty2};
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
     // Verify that the pointer points to the structure type.
@@ -175,8 +180,8 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), structTy);
 
     // Create an alloca for the array
-    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
-        b, loc, ptrTy, structTy, "", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     // Verify that the type category is composite.
     mlir::Value val = varPtrOp.get();
@@ -223,11 +228,11 @@ protected:
   }
 
   void testStructType(mlir::Type ty1, mlir::Type ty2) {
-    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Struct);
+    testRecordType(ty1, ty2, /*is_union=*/false);
   }
 
   void testUnionType(mlir::Type ty1, mlir::Type ty2) {
-    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Union);
+    testRecordType(ty1, ty2, /*is_union=*/true);
   }
 
   // This is testing a case like this:
@@ -246,14 +251,16 @@ protected:
     // type.
     mlir::Type ptrTy = cir::PointerType::get(ty);
     cir::RecordType structTy =
-        cir::RecordType::get(&context, getUniqueRecordName("S"),
-                             cir::RecordType::RecordKind::Struct);
-    structTy.complete({ptrTy, ptrTy}, false, false);
+        cir::StructType::get(&context, getUniqueRecordName("S"),
+                             /*is_class=*/false);
+    mlir::Type members[] = {ptrTy, ptrTy};
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
-    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
-        b, loc, structPptrTy, structTy, "S", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        cir::AllocaOp::create(b, loc, structPptrTy, "S", getAlignOne(&context));
     mlir::Value val = varPtrOp.get();
 
     // Get a pointer to the second member.
@@ -355,8 +362,11 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToArrayMember) {
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  cir::RecordType structTy = cir::RecordType::get(
-      &context, getUniqueRecordName("S"), cir::RecordType::RecordKind::Struct);
-  structTy.complete({i32Ty, i32Ty}, false, false);
+  cir::RecordType structTy =
+      cir::StructType::get(&context, getUniqueRecordName("S"),
+                           /*is_class=*/false);
+  mlir::Type members[] = {i32Ty, i32Ty};
+  structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                    cir::RecordType::getAllDataKinds(members));
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }

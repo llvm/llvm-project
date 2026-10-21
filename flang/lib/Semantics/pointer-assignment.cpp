@@ -23,9 +23,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 // Semantic checks for pointer assignment.
 

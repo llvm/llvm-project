@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_FCHMODAT_H
 #define LLVM_LIBC_SRC_SYS_STAT_FCHMODAT_H
 
+#include "hdr/types/mode_t.h"
 #include "src/__support/macros/config.h"
-#include <sys/stat.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

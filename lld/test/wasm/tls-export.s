@@ -1,6 +1,6 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/define-tls.o %t/define-tls.s
-# RUN: wasm-ld -shared --experimental-pic -o %t/define-tls.so %t/define-tls.o
+# RUN: wasm-ld -shared -o %t/define-tls.so %t/define-tls.o
 # RUN: obj2yaml %t/define-tls.so | FileCheck %s
 
 #--- define-tls.s
@@ -46,6 +46,8 @@ _start:
   .ascii "mutable-globals"
 
 
+#      CHECK:    Name:            dylink.0
+# CHECK-NEXT:    TargetArch:      wasm32
 #      CHECK:    ExportInfo:
 # CHECK-NEXT:      - Name:            tls1
 # CHECK-NEXT:        Flags:           [ TLS ]

@@ -22,7 +22,8 @@
 #include <__ranges/size.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/remove_cvref.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -67,7 +68,8 @@ __distance(_InputIter __first, _Sent __last) {
 }
 
 template <class _InputIter>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InputIter>::difference_type
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
+typename iterator_traits<_InputIter>::difference_type
 distance(_InputIter __first, _InputIter __last) {
   return std::__distance(__first, __last);
 }
@@ -80,21 +82,22 @@ namespace ranges {
 struct __distance {
   template <class _Ip, sentinel_for<_Ip> _Sp>
     requires(!sized_sentinel_for<_Sp, _Ip>)
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip __first, _Sp __last) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip __first, _Sp __last) const {
     return std::__distance(std::move(__first), std::move(__last));
   }
 
   template <class _Ip, sized_sentinel_for<decay_t<_Ip>> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip&& __first, _Sp __last) const {
-    if constexpr (sized_sentinel_for<_Sp, __remove_cvref_t<_Ip>>) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<decay_t<_Ip>>
+  operator()(_Ip&& __first, _Sp __last) const {
+    if constexpr (!is_array_v<remove_reference_t<_Ip>>) {
       return __last - __first;
     } else {
-      return __last - decay_t<_Ip>(__first);
+      return __last - static_cast<decay_t<_Ip>>(__first);
     }
   }
 
   template <range _Rp>
-  _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Rp> operator()(_Rp&& __r) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Rp> operator()(_Rp&& __r) const {
     if constexpr (sized_range<_Rp>) {
       return static_cast<range_difference_t<_Rp>>(ranges::size(__r));
     } else {

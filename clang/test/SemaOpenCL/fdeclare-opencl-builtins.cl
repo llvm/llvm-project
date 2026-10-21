@@ -117,7 +117,7 @@ kernel void test_enum_args(volatile global atomic_int *global_p, global int *exp
 #endif
 
 #if defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200
-void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsigned long long *values) {
+void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsigned long *values) {
   capture_event_profiling_info(evt, CLK_PROFILING_COMMAND_EXEC_TIME, values);
 
   atomic_flag_clear(flg);

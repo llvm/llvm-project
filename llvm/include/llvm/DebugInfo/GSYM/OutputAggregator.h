@@ -27,15 +27,22 @@ protected:
   // in a predictable order.
   std::map<std::string, unsigned> Aggregation;
   raw_ostream *Out;
+  // Whether to suppress printing the detail messages passed to Report().
+  // Anything written through operator<< is unaffected, as is the aggregated
+  // summary.
+  bool Quiet;
 
 public:
-  OutputAggregator(raw_ostream *out) : Out(out) {}
+  OutputAggregator(raw_ostream *out, bool Quiet = false)
+      : Out(out), Quiet(Quiet) {}
 
   size_t GetNumCategories() const { return Aggregation.size(); }
 
+  bool IsQuiet() const { return Quiet; }
+
   void Report(StringRef s, std::function<void(raw_ostream &o)> detailCallback) {
     Aggregation[std::string(s)]++;
-    if (GetOS())
+    if (GetOS() && !Quiet)
       detailCallback(*Out);
   }
 

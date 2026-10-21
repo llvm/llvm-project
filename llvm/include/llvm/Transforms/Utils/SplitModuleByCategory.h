@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 
 #include <memory>
 #include <optional>
@@ -52,12 +53,12 @@ class Function;
 ///    there is a function B with signature S. An "A" -> "B" edge will be added
 ///    to the graph;
 ///
-/// FIXME: For now, the algorithm assumes no recursion in the input Module. This
-/// will be addressed in the near future.
-LLVM_ABI void splitModuleTransitiveFromEntryPoints(
+/// Recursion and other cycles in the input Module (e.g. directly or mutually
+/// recursive functions, or self-referencing global variables) are supported.
+LLVM_ABI Error splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
     function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,
-    function_ref<void(std::unique_ptr<Module> Part)> Callback);
+    function_ref<Error(std::unique_ptr<Module> Part)> Callback);
 
 } // namespace llvm
 

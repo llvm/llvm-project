@@ -205,11 +205,13 @@ class DebugCommunication(object):
         send: BinaryIO,
         init_commands: Optional[List[str]] = None,
         spawn_helper: Optional[SpawnHelperCallback] = None,
+        socket: Optional[socket.socket] = None,
     ):
         self._log = Log()
         self.send = send
         self.recv = recv
         self.spawn_helper = spawn_helper
+        self.socket = socket
 
         # Packets that have been received and processed but have not yet been
         # requested by a test case.
@@ -1643,6 +1645,12 @@ class DebugCommunication(object):
         return self._send_recv(command_dict)
 
     def terminate(self):
+        if self.socket:
+            try:
+                self.socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # Ignore "already disconnected" errors.
+                pass
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
@@ -1706,6 +1714,7 @@ class DebugAdapterServer(DebugCommunication):
                 s.makefile("wb"),
                 init_commands,
                 spawn_helper,
+                socket=s,
             )
             self.connection = connection
         else:

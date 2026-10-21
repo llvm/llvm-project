@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX9
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx1201' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX12
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu9.50-amd-amdhsa' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX9
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu12.01-amd-amdhsa' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX12
 
 gpu.module @test_module {
 // CHECK-LABEL: func @barrier_default()
@@ -77,4 +77,22 @@ func.func @barrier_constant_only() {
   gpu.barrier memfence [#gpu.address_space<constant>]
   func.return
 }
+
+// CHECK-LABEL: func @barrier_subgroup_scope
+func.func @barrier_subgroup_scope() {
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") release
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NEXT: llvm.fence syncscope("wavefront") acquire
+  gpu.barrier scope <subgroup>
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_subgroup_scope_no_fence
+func.func @barrier_subgroup_scope_no_fence() {
+  // CHECK-NEXT: rocdl.wave.barrier
+  // CHECK-NOT: llvm.fence
+  gpu.barrier scope <subgroup> memfence []
+  func.return
+}
+
 }

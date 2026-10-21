@@ -26,7 +26,7 @@
 
 namespace llvm {
 class AMDGPUUnifyDivergentExitNodesPass
-    : public PassInfoMixin<AMDGPUUnifyDivergentExitNodesPass> {
+    : public RequiredPassInfoMixin<AMDGPUUnifyDivergentExitNodesPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

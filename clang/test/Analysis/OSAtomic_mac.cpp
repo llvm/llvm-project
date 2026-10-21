@@ -18,3 +18,23 @@ int rdar9339920_test() {
   return 0;
 }
 
+// Regression test for issue #197211
+// When the user-declared OSAtomicCompareAndSwap* prototype has mismatched
+// oldValue/ newValue/ *theValue types, BodyFarm previously asserted while
+// synthesizing the body. It should bail out gracefully and let the analyzer
+// fall back to generic call semantics.
+bool OSAtomicCompareAndSwap(char32_t __oldValue, int __newValue,
+                            volatile int *_theValue);
+int gh197211_flag;
+void gh197211_test() {
+  // Adding the func inside if block just to replicate the original issue.
+  if (OSAtomicCompareAndSwap(0, 0, &gh197211_flag))
+    ;
+}
+
+bool OSAtomicCompareAndSwapMismatchedPointee(int __oldValue, int __newValue,
+                                             volatile long *_theValue);
+long gh197211_long_flag;
+void gh197211_test2() {
+  OSAtomicCompareAndSwapMismatchedPointee(0, 0, &gh197211_long_flag);
+}

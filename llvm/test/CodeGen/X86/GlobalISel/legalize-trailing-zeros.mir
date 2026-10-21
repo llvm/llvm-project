@@ -17,8 +17,8 @@ body:             |
     ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738368
     ; X64-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
-    ; X64-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTTZ_ZERO_UNDEF [[OR]](s64)
-    ; X64-NEXT: RET 0, implicit [[CTTZ_ZERO_UNDEF]](s64)
+    ; X64-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(s64) = G_CTTZ_ZERO_POISON [[OR]](s64)
+    ; X64-NEXT: RET 0, implicit [[CTTZ_ZERO_POISON]](s64)
     ;
     ; X86-LABEL: name: test_cttz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
@@ -28,15 +28,15 @@ body:             |
     ; X86-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[C]]
     ; X86-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV1]], [[C1]]
     ; X86-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(eq), [[OR]](s32), [[C]]
-    ; X86-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR1]](s32)
+    ; X86-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[OR1]](s32)
     ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C2]]
+    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[CTTZ_ZERO_POISON]], [[C2]]
     ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s8) = G_UADDE [[C]], [[C]], [[UADDO1]]
-    ; X86-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
+    ; X86-NEXT: [[CTTZ_ZERO_POISON1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[OR]](s32)
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
     ; X86-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
-    ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_UNDEF1]]
+    ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_POISON1]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDE]], [[C]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; X86-NEXT: RET 0, implicit [[MV]](s64)
@@ -61,8 +61,8 @@ body:             |
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[DEF]](s8)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[ANYEXT]], [[C]]
-    ; CHECK-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[OR]](s16)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[CTTZ_ZERO_UNDEF]](s16)
+    ; CHECK-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_POISON [[OR]](s16)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[CTTZ_ZERO_POISON]](s16)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY [[TRUNC]](s8)
     ; CHECK-NEXT: RET 0, implicit [[COPY]](s8)
     %0:_(s8) = IMPLICIT_DEF
@@ -95,11 +95,11 @@ body:             |
     ; X86-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[CTTZ]], [[C1]]
     ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s8) = G_UADDE [[C]], [[C]], [[UADDO1]]
-    ; X86-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s32)
+    ; X86-NEXT: [[CTTZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[UV]](s32)
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
     ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
-    ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_UNDEF]]
+    ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_POISON]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDE]], [[C]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; X86-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[MV]](s64)

@@ -83,7 +83,7 @@ static std::string LocationIDForStop(StopInfoSP stop_info_sp, uint32_t idx) {
 //  by the members of the range.
 
 llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
-    Args &old_args, ExecutionContext &exe_ctx, bool allow_locations,
+    Args &old_args, const ExecutionContext &exe_ctx, bool allow_locations,
     BreakpointName::Permissions ::PermissionKinds purpose, Args &new_args) {
   Target *target = exe_ctx.GetTargetPtr();
   llvm::StringRef range_from;
@@ -287,9 +287,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
     // Remove any names that aren't visible for this purpose:
     auto iter = names_found.begin();
     while (iter != names_found.end()) {
-      BreakpointName *bp_name = target->FindBreakpointName(ConstString(*iter),
-                                                           true,
-                                                           error);
+      BreakpointName *bp_name = target->FindBreakpointName(*iter, true, error);
       if (bp_name && !bp_name->GetPermission(purpose))
         iter = names_found.erase(iter);
       else

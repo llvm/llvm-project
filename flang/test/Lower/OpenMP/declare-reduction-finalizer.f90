@@ -25,7 +25,7 @@ contains
 
 end module m1
 
-! CHECK-LABEL: omp.declare_reduction @plus_t{{.*}} : !fir.ref<{{.*}}>
+! CHECK-LABEL: omp.declare_reduction @_QQFplus_t{{.*}} byref_element_type({{.*}}) : !fir.ref<{{.*}}>
 !
 ! -- alloc region
 ! CHECK:        alloc {
@@ -35,19 +35,18 @@ end module m1
 ! -- init region: must store 100 (from initializer clause), not -999 (default)
 ! CHECK:        } init {
 ! CHECK:        ^bb0(%[[INIT_ARG0:.*]]: !fir.ref<{{.*}}>, %[[INIT_ARG1:.*]]: !fir.ref<{{.*}}>):
-! CHECK:          %{{.*}}:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_orig"}
-! CHECK:          %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[INIT_ARG1]] {uniq_name = "omp_priv"}
+! CHECK:          %{{.*}}:2 = hlfir.declare %[[INIT_ARG0]] uniq_name("omp_orig")
+! CHECK:          %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[INIT_ARG1]] uniq_name("omp_priv")
 ! CHECK:          %[[INIT_ADDR:.*]] = fir.address_of(@_QQro._QMm1Tt.0)
 ! CHECK:          %[[INIT_DECL:.*]]:2 = hlfir.declare %[[INIT_ADDR]]
-! CHECK:          %[[INIT_VAL:.*]] = fir.load %[[INIT_DECL]]#0
-! CHECK:          fir.store %[[INIT_VAL]] to %[[INIT_ARG1]]
+! CHECK:          hlfir.assign %[[INIT_DECL]]#0 to %[[PRIV_DECL]]#0
 ! CHECK:          omp.yield(%[[INIT_ARG1]] :
 !
 ! -- combiner region
 ! CHECK:        } combiner {
 ! CHECK:        ^bb0(%[[LHS:.*]]: !fir.ref<{{.*}}>, %[[RHS:.*]]: !fir.ref<{{.*}}>):
-! CHECK:          %{{.*}}:2 = hlfir.declare %[[RHS]] {uniq_name = "omp_in"}
-! CHECK:          %{{.*}}:2 = hlfir.declare %[[LHS]] {uniq_name = "omp_out"}
+! CHECK:          %{{.*}}:2 = hlfir.declare %[[RHS]] uniq_name("omp_in")
+! CHECK:          %{{.*}}:2 = hlfir.declare %[[LHS]] uniq_name("omp_out")
 ! CHECK:          hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 ! CHECK:          omp.yield(%[[LHS]] :
 ! -- cleanup region: calls runtime destroy (which dispatches to the finalizer)

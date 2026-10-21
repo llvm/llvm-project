@@ -1,6 +1,6 @@
 // Checks that the ASan debugging API for getting report information reports
 // memory overlap error details.
-// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %if MSVC %{ /Oi %} %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>

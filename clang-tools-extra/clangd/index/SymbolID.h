@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
@@ -81,14 +82,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
 namespace llvm {
 // Support SymbolIDs as DenseMap keys.
 template <> struct DenseMapInfo<clang::clangd::SymbolID> {
-  static inline clang::clangd::SymbolID getEmptyKey() {
-    static clang::clangd::SymbolID EmptyKey("EMPTYKEY");
-    return EmptyKey;
-  }
-  static inline clang::clangd::SymbolID getTombstoneKey() {
-    static clang::clangd::SymbolID TombstoneKey("TOMBSTONEKEY");
-    return TombstoneKey;
-  }
   static unsigned getHashValue(const clang::clangd::SymbolID &Sym) {
     return hash_value(Sym);
   }

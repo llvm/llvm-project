@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LINUX_ABORT_UTILS_H
 #define LLVM_LIBC_SRC_STDLIB_LINUX_ABORT_UTILS_H
 
-#include "hdr/types/sigset_t.h"
 #include "hdr/types/struct_sigaction.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/raise.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -43,7 +43,7 @@ namespace abort_utils {
   // Now unblock the signal. The pending abort signal is now unblocked and
   // should be delivered to its default handler.
   // If this fails, there is still no meaningful recovery path while aborting.
-  unblock_signal(SIGABRT);
+  (void)signals::unblock(SIGABRT);
 
   internal::exit(127);
 }

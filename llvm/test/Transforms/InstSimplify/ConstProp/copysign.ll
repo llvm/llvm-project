@@ -57,7 +57,7 @@ define double @f64_03() {
 
 define bfloat @bf16_01() {
 ; CHECK-LABEL: @bf16_01(
-; CHECK-NEXT:    ret bfloat 0xRBF80
+; CHECK-NEXT:    ret bfloat -1.000000e+00
 ;
   %x = call bfloat @llvm.copysign.bf16(bfloat 1.0, bfloat -2.0)
   ret bfloat %x
@@ -65,7 +65,7 @@ define bfloat @bf16_01() {
 
 define bfloat @bf16_02() {
 ; CHECK-LABEL: @bf16_02(
-; CHECK-NEXT:    ret bfloat 0xR4000
+; CHECK-NEXT:    ret bfloat 2.000000e+00
 ;
   %x = call bfloat @llvm.copysign.bf16(bfloat -2.0, bfloat 1.0)
   ret bfloat %x
@@ -73,7 +73,7 @@ define bfloat @bf16_02() {
 
 define bfloat @bf16_03() {
 ; CHECK-LABEL: @bf16_03(
-; CHECK-NEXT:    ret bfloat 0xRC000
+; CHECK-NEXT:    ret bfloat -2.000000e+00
 ;
   %x = call bfloat @llvm.copysign.bf16(bfloat -2.0, bfloat -1.0)
   ret bfloat %x
@@ -81,7 +81,7 @@ define bfloat @bf16_03() {
 
 define fp128 @f128_01() {
 ; CHECK-LABEL: @f128_01(
-; CHECK-NEXT:    ret fp128 0xL00000000000000008000000000000001
+; CHECK-NEXT:    ret fp128 f0x80000000000000010000000000000000
 ;
   %x = call fp128 @llvm.copysign.f128(fp128 0xL00000000000000000000000000000001, fp128 0xL00000000000000008000000000000002)
   ret fp128 %x
@@ -89,7 +89,7 @@ define fp128 @f128_01() {
 
 define fp128 @f128_02() {
 ; CHECK-LABEL: @f128_02(
-; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000003
+; CHECK-NEXT:    ret fp128 f0x00000000000000030000000000000000
 ;
   %x = call fp128 @llvm.copysign.f128(fp128 0xL00000000000000008000000000000003, fp128 0xL00000000000000000000000000000004)
   ret fp128 %x
@@ -97,7 +97,7 @@ define fp128 @f128_02() {
 
 define fp128 @f128_03() {
 ; CHECK-LABEL: @f128_03(
-; CHECK-NEXT:    ret fp128 0xL00000000000000008000000000000005
+; CHECK-NEXT:    ret fp128 f0x80000000000000050000000000000000
 ;
   %x = call fp128 @llvm.copysign.f128(fp128 0xL00000000000000008000000000000005, fp128 0xL00000000000000008000000000000006)
   ret fp128 %x
@@ -105,7 +105,7 @@ define fp128 @f128_03() {
 
 define ppc_fp128 @ppc128_01() {
 ; CHECK-LABEL: @ppc128_01(
-; CHECK-NEXT:    ret ppc_fp128 0xM80000000000000008000000000000001
+; CHECK-NEXT:    ret ppc_fp128 f0x80000000000000018000000000000000
 ;
   %x = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 0xM00000000000000000000000000000001, ppc_fp128 0xM80000000000000000000000000000002)
   ret ppc_fp128 %x
@@ -113,7 +113,7 @@ define ppc_fp128 @ppc128_01() {
 
 define ppc_fp128 @ppc128_02() {
 ; CHECK-LABEL: @ppc128_02(
-; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000008000000000000003
+; CHECK-NEXT:    ret ppc_fp128 f0x80000000000000030000000000000000
 ;
   %x = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 0xM80000000000000000000000000000003, ppc_fp128 0xM00000000000000000000000000000004)
   ret ppc_fp128 %x
@@ -121,7 +121,7 @@ define ppc_fp128 @ppc128_02() {
 
 define ppc_fp128 @ppc128_03() {
 ; CHECK-LABEL: @ppc128_03(
-; CHECK-NEXT:    ret ppc_fp128 0xM80000000000000000000000000000005
+; CHECK-NEXT:    ret ppc_fp128 f0x00000000000000058000000000000000
 ;
   %x = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 0xM80000000000000000000000000000005, ppc_fp128 0xM80000000000000000000000000000006)
   ret ppc_fp128 %x

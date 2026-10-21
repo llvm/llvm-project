@@ -29,7 +29,7 @@ cc_library(
             "Generators.cpp",
             "HTMLGenerator.cpp",
             "MDGenerator.cpp",
-            "YAMLGenerator.cpp",
+            "JSONGenerator.cpp",
         ],
     ),
     hdrs = glob(["*.h"]),
@@ -53,8 +53,8 @@ cc_library(
     srcs = [
         "Generators.cpp",
         "HTMLGenerator.cpp",
+        "JSONGenerator.cpp",
         "MDGenerator.cpp",
-        "YAMLGenerator.cpp",
     ],
     hdrs = ["Generators.h"],
     includes = ["."],

@@ -92,6 +92,17 @@
 # CHECKC-NEXT: <b0>:
 # CHECKC-NEXT:   c:    addi.d $a0, $a1, 1
 
+## A weaker offset-0 ALIGN must not suppress synthesizing the stronger ALIGN required
+## by the subsequent .option norelax .balign 16 (which emits no relocation).
+## https://sourceware.org/bugzilla/show_bug.cgi?id=33236#c4
+# RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax e.s -o e.o
+# RUN: ld.lld -r a.o e.o -o ae.ro
+# RUN: llvm-readelf -r ae.ro | FileCheck %s --check-prefix=CHECK3-REL
+
+# CHECK3-REL:      Relocation section '.rela.text' {{.*}} contains 6 entries:
+# CHECK3-REL:      R_LARCH_ALIGN{{ +}}c
+# CHECK3-REL-NEXT: R_LARCH_ALIGN{{ +}}4
+
 #--- a.s
 .globl _start
 _start:
@@ -145,3 +156,17 @@ c0:
 .balign 8
 d0:
   addi.d $a0, $a1, 5
+
+#--- e.s
+## Mimick `.balign 8` that generates a NOP padding associated with
+## R_LARCH_ALIGN (addend 4 => align 8) when assembled by an assembler
+## without the redundant-ALIGN optimization.
+.reloc ., R_LARCH_ALIGN, 4
+nop
+
+.option push
+.option norelax
+.balign 16
+e0:
+  .word 0x3a393837
+.option pop

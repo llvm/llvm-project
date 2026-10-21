@@ -12,13 +12,12 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/DWP/DWP.h"
 #include "llvm/DWP/DWPError.h"
-#include "llvm/DWP/DWPStringPool.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <optional>
@@ -35,25 +34,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class DwpOptTable : public opt::GenericOptTable {
+class DwpOptTable : public opt::OptTable {
 public:
-  DwpOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  DwpOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 
@@ -239,7 +226,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     OS = &*BOS;
   }
 
-  // Use DWPWriter for direct ELF output, bypassing MCStreamer.
+  // Use DWPWriter for direct ELF output
   DWPWriter Writer;
 
   if (auto Err = write(Writer, DWOFilenames, OverflowOptValue,

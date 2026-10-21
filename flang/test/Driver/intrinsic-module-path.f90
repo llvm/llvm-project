@@ -1,23 +1,73 @@
 ! Ensure argument -fintrinsic-modules-path works as expected.
 ! WITHOUT the option, the default location for the module is checked and no error generated.
-! With the option GIVEN, the module with the same name is PREPENDED, and considered over the
-! default one, causing an error.
+! With the option WRONG and GIVEN, find the module in the first
+! -fintrinsic-modules-path that contains a matching file.
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
-! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
-! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path=%S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: not %flang_fc1 %s -fsyntax-only \
+! RUN:     %s 2>&1 | FileCheck %s --check-prefix=WITHOUT
+!
+! RUN: not %flang_fc1 %s -fsyntax-only \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     2>&1 | FileCheck %s --check-prefix=WRONG
+!
+! RUN: not %flang_fc1 %s -fsyntax-only \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --check-prefix=WRONG
+!
+! RUN:     %flang_fc1 %s -fsyntax-only \
+! RUN:     -fintrinsic-modules-path=%S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
+!
+! RUN:     %flang_fc1 %s -fsyntax-only \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
+!
+! RUN:     %flang_fc1 %s -fsyntax-only \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
 
-! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
-! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
+!-----------------------------------------
+! BURNSIDE BRIDGE COMPILER (bbc)
+!-----------------------------------------
+! RUN: not bbc %s \
+! RUN:     2>&1 | FileCheck %s --check-prefix=WITHOUT
+!
+! RUN: not bbc %s \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     2>&1 | FileCheck %s --check-prefix=WRONG
+!
+! RUN: not bbc %s \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --check-prefix=WRONG
+!
+! RUN:     bbc %s \
+! RUN:     -fintrinsic-modules-path=%S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
+!
+! RUN:     bbc %s \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
+!
+! RUN:     bbc %s \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir-one \
+! RUN:     -fintrinsic-modules-path %S/Inputs/module-dir \
+! RUN:     2>&1 | FileCheck %s --allow-empty --check-prefix=GIVEN
 
-! GIVEN: error: Cannot read module file for module 'ieee_arithmetic': 'ieee_arithmetic.mod' is not a module file for this compiler
-! GIVEN: error: Cannot read module file for module 'iso_fortran_env': 'iso_fortran_env.mod' is not a module file for this compiler
+
+! WITHOUT: error: Cannot parse module file for module 'basictestmoduleone': Source file 'basictestmoduleone.mod' was not found
+
+! WRONG: error: 't1' not found in module 'basictestmoduleone'
+
+! Do not emit any message about the absence of basictestmoduleone
+! GIVEN-NOT: basictestmoduleone
 
 
-program test_intrinsic_module_path
-   use ieee_arithmetic, only: ieee_round_type
-   use iso_fortran_env, only: team_type, event_type, lock_type
+program test_intrinsic_modules_path
+   use basictestmoduleone, only: t1
 end program

@@ -13,6 +13,7 @@
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -42,7 +43,7 @@ struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
     populateEmitCSizeTTypeConversions(typeConverter);
     populateSCFToEmitCConversionPatterns(patterns, typeConverter);
   }
@@ -292,7 +293,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, OpAdaptor adaptor,
 // Lower scf::index_switch to emitc::switch, implementing result values as
 // emitc::variable's updated within the case and default regions.
 struct IndexSwitchOpLowering : public OpConversionPattern<IndexSwitchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(IndexSwitchOp indexSwitchOp, OpAdaptor adaptor,
@@ -344,7 +345,7 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
 // across iterations. The do-while structure ensures the condition is evaluated
 // after each iteration, matching SCF while semantics.
 struct WhileLowering : public OpConversionPattern<WhileOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(WhileOp whileOp, OpAdaptor adaptor,
@@ -519,13 +520,7 @@ void mlir::populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
 
 void SCFToEmitCPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  TypeConverter typeConverter;
-  // Fallback for other types.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!emitc::isSupportedEmitCType(type))
-      return {};
-    return type;
-  });
+  EmitCTypeConverter typeConverter(&getContext());
   populateEmitCSizeTTypeConversions(typeConverter);
   populateSCFToEmitCConversionPatterns(patterns, typeConverter);
 

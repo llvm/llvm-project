@@ -13,6 +13,7 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/is_generic_transparent_comparator.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __equal_to {
   template <class _T1, class _T2>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _T1& __x, const _T2& __y) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _T1& __x, const _T2& __y) const {
     return __x == __y;
   }
 };
@@ -38,7 +39,7 @@ struct __less {};
 template <>
 struct __less<void, void> {
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __lhs, const _Up& __rhs) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __lhs, const _Up& __rhs) const {
     return __lhs < __rhs;
   }
 };
@@ -47,7 +48,8 @@ template <class _Tp>
 inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
 
 template <class _Tp>
-inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> = is_integral<_Tp>::value;
+inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> =
+    is_integral<__remove_cvref_t<_Tp> >::value;
 
 template <>
 inline const bool __is_generic_transparent_comparator_v<__less<> > = true;

@@ -24,7 +24,6 @@
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -364,14 +363,13 @@ protected:
 };
 
 class AMDGPUNextUseAnalysisPrinterPass
-    : public PassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit AMDGPUNextUseAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

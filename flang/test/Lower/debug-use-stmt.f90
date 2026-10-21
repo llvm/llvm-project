@@ -73,8 +73,8 @@ end subroutine
 ! NO_DEBUG-NOT: fir.use_stmt
 
 ! WITH_DEBUG-LABEL: func.func @_QPtest_only_rename()
-! WITH_DEBUG-DAG: fir.use_stmt "mod1" only_symbols{{\[}}[@_QMmod1Ec]] renames{{\[}}[#fir.use_rename<"local_b", @_QMmod1Eb>, #fir.use_rename<"local_a", @_QMmod1Ea>]]
-! WITH_DEBUG-DAG: fir.use_stmt "mod2" renames{{\[}}[#fir.use_rename<"local_x", @_QMmod2Ex>, #fir.use_rename<"local_y", @_QMmod2Ey>]]
+! WITH_DEBUG-DAG: fir.use_stmt "mod1" only_symbols{{\[}}[@_QMmod1Ec]] renames{{\[}}[#fir.use_rename<"local_b", @_QMmod1Eb>, #fir.use_rename<"local_a", @_QMmod1Ea>]] hasOnlyWithRenames true
+! WITH_DEBUG-DAG: fir.use_stmt "mod2" renames{{\[}}[#fir.use_rename<"local_x", @_QMmod2Ex>, #fir.use_rename<"local_y", @_QMmod2Ey>]] hasOnlyWithRenames true
 
 ! NO_DEBUG-LABEL: func.func @_QPtest_only_rename()
 ! NO_DEBUG-NOT: fir.use_stmt

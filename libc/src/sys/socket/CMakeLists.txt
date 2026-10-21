@@ -38,6 +38,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpeername
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpeername
+)
+
+add_entrypoint_object(
+  getsockname
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getsockname
+)
+
+add_entrypoint_object(
   getsockopt
   ALIAS
   DEPENDS
@@ -80,6 +94,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sendmmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sendmmsg
+)
+
+add_entrypoint_object(
   sendmsg
   ALIAS
   DEPENDS
@@ -108,8 +129,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  recvmmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvmmsg
+)
+
+
+add_entrypoint_object(
   shutdown
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.shutdown
+)
+
+add_entrypoint_object(
+  sockatmark
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sockatmark
 )

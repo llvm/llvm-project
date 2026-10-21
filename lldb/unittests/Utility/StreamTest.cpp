@@ -745,3 +745,12 @@ TEST_F(StreamTest, PutCStringColorHighlightedMultipleMatches) {
   s.PutCStringColorHighlighted("foo bar boo", settings);
   EXPECT_EQ("f[o][o] bar b[o][o]", TakeValue());
 }
+
+TEST_F(StreamTest, BoolOperator) {
+  s << true;
+  EXPECT_EQ("true", TakeValue());
+  s << false;
+  EXPECT_EQ("false", TakeValue());
+  s << "x=" << true << " y=" << false;
+  EXPECT_EQ("x=true y=false", TakeValue());
+}

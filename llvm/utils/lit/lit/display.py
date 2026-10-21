@@ -29,7 +29,7 @@ def create_display(opts, tests, total_tests, workers):
     return Display(opts, tests, header, progress_bar)
 
 
-class ProgressPredictor(object):
+class ProgressPredictor:
     def __init__(self, tests):
         self.completed = 0
         self.time_elapsed = 0.0
@@ -71,7 +71,7 @@ class ProgressPredictor(object):
         return 0
 
 
-class NopDisplay(object):
+class NopDisplay:
     def print_header(self):
         pass
 
@@ -92,7 +92,7 @@ def shouldPrintInfo(infoOption, test):
     return False
 
 
-class Display(object):
+class Display:
     def __init__(
         self,
         opts: Namespace,

@@ -6,7 +6,7 @@
 
 
 // CHECK-LABEL: define dso_local void @test_dmxvi8gerx4(
-// CHECK-SAME: ptr noundef readnone captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4(<256 x i1> [[TMP0]], <16 x i8> [[VC]])
@@ -14,7 +14,7 @@
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxvi8gerx4(
-// AIX-SAME: ptr noundef readnone captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// AIX-SAME: ptr nofree noundef readnone captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5:![0-9]+]]
 // AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4(<256 x i1> [[TMP0]], <16 x i8> [[VC]])
@@ -29,7 +29,7 @@ void test_dmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigned 
 }
 
 // CHECK-LABEL: define dso_local void @test_pmdmxvi8gerx4(
-// CHECK-SAME: ptr noundef readnone captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4(<256 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -37,7 +37,7 @@ void test_dmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigned 
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_pmdmxvi8gerx4(
-// AIX-SAME: ptr noundef readnone captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readnone captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
 // AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4(<256 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -52,7 +52,7 @@ void test_pmdmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxvi8gerx4pp(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -61,7 +61,7 @@ void test_pmdmxvi8gerx4(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxvi8gerx4pp(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -77,7 +77,7 @@ void test_dmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 }
 
 // CHECK-LABEL: define dso_local void @test_pmdmxvi8gerx4pp(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -86,7 +86,7 @@ void test_dmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsigne
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_pmdmxvi8gerx4pp(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -102,7 +102,7 @@ void test_pmdmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsig
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxvi8gerx4spp(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -111,7 +111,7 @@ void test_pmdmxvi8gerx4pp(unsigned char *vdmrp, unsigned char *vpp, vector unsig
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxvi8gerx4spp(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -127,7 +127,7 @@ void test_dmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsign
 }
 
 // CHECK-LABEL: define dso_local void @test_pmdmxvi8gerx4spp(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -136,7 +136,7 @@ void test_dmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsign
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_pmdmxvi8gerx4spp(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], ptr noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], ptr nofree noundef readonly captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA5]]
@@ -152,7 +152,7 @@ void test_pmdmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsi
 }
 
 // CHECK-LABEL: define dso_local void @test_dmf_basic(
-// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr noundef captures(none) [[RES2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr nofree noundef captures(none) [[RES2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsetdmrz()
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmmr(<1024 x i1> [[TMP0]])
@@ -164,7 +164,7 @@ void test_pmdmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsi
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmf_basic(
-// AIX-SAME: ptr noundef readonly captures(none) [[P:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr noundef captures(none) [[RES2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr nofree noundef captures(none) [[RES2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsetdmrz()
 // AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmmr(<1024 x i1> [[TMP0]])
@@ -183,7 +183,7 @@ void test_dmf_basic(char *p, char *res1, char *res2) {
 }
 
 // CHECK-LABEL: define dso_local void @test_dmf_basic2(
-// CHECK-SAME: ptr noundef readonly captures(none) [[P1:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES2:%.*]], ptr noundef readonly captures(none) [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES2:%.*]], ptr nofree noundef readonly captures(none) [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[V]], align 16, !tbaa [[CHAR_TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.build.dmr(<16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]])
@@ -193,7 +193,7 @@ void test_dmf_basic(char *p, char *res1, char *res2) {
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmf_basic2(
-// AIX-SAME: ptr noundef readonly captures(none) [[P1:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RES2:%.*]], ptr noundef readonly captures(none) [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES1:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RES2:%.*]], ptr nofree noundef readonly captures(none) [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[V]], align 16, !tbaa [[CHAR_TBAA9:![0-9]+]]
 // AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.build.dmr(<16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]])
@@ -210,89 +210,89 @@ void test_dmf_basic2(char *p1, char *res1, char *res2,
 }
 
 // CHECK-LABEL: define dso_local void @test_dmsha2hash(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmsha2hash(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
 // AIX-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_dmsha2hash(unsigned char *vdmrp1, unsigned char *vdmrp2, unsigned char *resp) {
   __dmr1024 vdmr1 = *((__dmr1024 *)vdmrp1);
   __dmr1024 vdmr2 = *((__dmr1024 *)vdmrp2);
-  __builtin_mma_dmsha2hash(&vdmr1, &vdmr2, 1);
+  __builtin_dmsha2hash(&vdmr1, &vdmr2, 1);
   *((__dmr1024 *)resp) = vdmr1;
 }
 
 // CHECK-LABEL: define dso_local void @test_dmsha3hash(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
 // CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmsha3hash(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10:![0-9]+]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 4)
 // AIX-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // AIX-NEXT:    ret void
 //
 void test_dmsha3hash(unsigned char *vdmrpp,  unsigned char *resp) {
   __dmr2048 vdmrp = *((__dmr2048 *)vdmrpp);
-  __builtin_mma_dmsha3hash(&vdmrp, 4);
+  __builtin_dmsha3hash(&vdmrp, 4);
   *((__dmr2048 *)resp) = vdmrp;
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxshapad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 5)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 3)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxshapad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 5)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 1, i32 3)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
 void test_dmxxshapad(unsigned char *vdmrp, vector unsigned char vc, unsigned char *resp) {
   __dmr1024 vdmr = *((__dmr1024 *)vdmrp);
-  __builtin_mma_dmxxshapad(&vdmr, vc, 2, 1, 5);
+  __builtin_dmxxshapad(&vdmr, vc, 2, 1, 3);
   *((__dmr1024 *)resp) = vdmr;
 }
 
 // CHECK-LABEL: define dso_local void @test_dmsha256hash(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmsha256hash(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 0)
+// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 0)
 // AIX-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -304,20 +304,20 @@ void test_dmsha256hash(unsigned char *vdmrp1, unsigned char *vdmrp2, unsigned ch
 }
 
 // CHECK-LABEL: define dso_local void @test_dmsha512hash(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
 // CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmsha512hash(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP1:%.*]], ptr noundef readonly captures(none) [[VDMRP2:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP1:%.*]], ptr nofree noundef readonly captures(none) [[VDMRP2:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP1]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    [[TMP1:%.*]] = load <1024 x i1>, ptr [[VDMRP2]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
+// AIX-NEXT:    [[TMP2:%.*]] = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> [[TMP0]], <1024 x i1> [[TMP1]], i32 1)
 // AIX-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -329,18 +329,18 @@ void test_dmsha512hash(unsigned char *vdmrp1, unsigned char *vdmrp2, unsigned ch
 }
 
 // CHECK-LABEL: define dso_local void @test_dmsha3dw(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 0)
 // CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmsha3dw(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 0)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 0)
 // AIX-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // AIX-NEXT:    ret void
 //
@@ -351,18 +351,18 @@ void test_dmsha3dw(unsigned char *vdmrpp,  unsigned char *resp) {
 }
 
 // CHECK-LABEL: define dso_local void @test_dmcryshash(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 12)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 12)
 // CHECK-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmcryshash(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRPP:%.*]], ptr noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRPP:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 256)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <2048 x i1>, ptr [[VDMRPP]], align 256, !tbaa [[__DMR2048_TBAA10]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> [[TMP0]], i32 12)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> [[TMP0]], i32 12)
 // AIX-NEXT:    store <2048 x i1> [[TMP1]], ptr [[RESP]], align 256, !tbaa [[__DMR2048_TBAA10]]
 // AIX-NEXT:    ret void
 //
@@ -373,18 +373,18 @@ void test_dmcryshash(unsigned char *vdmrpp,  unsigned char *resp) {
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha3512pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha3512pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -395,18 +395,18 @@ void test_dmxxsha3512pad(unsigned char *vdmrp, vector unsigned char vc, unsigned
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha3384pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 1)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha3384pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 1)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 1)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -417,18 +417,18 @@ void test_dmxxsha3384pad(unsigned char *vdmrp, vector unsigned char vc, unsigned
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha3256pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 2)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 2)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha3256pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 2)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 0, i32 2)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -439,18 +439,18 @@ void test_dmxxsha3256pad(unsigned char *vdmrp, vector unsigned char vc, unsigned
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha3224pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 3)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 3)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha3224pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 3)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 0, i32 1, i32 3)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -461,18 +461,18 @@ void test_dmxxsha3224pad(unsigned char *vdmrp, vector unsigned char vc, unsigned
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxshake256pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 0, i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxshake256pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 0, i32 0)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 0, i32 0)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -483,18 +483,18 @@ void test_dmxxshake256pad(unsigned char *vdmrp, vector unsigned char vc, unsigne
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxshake128pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 1, i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 1, i32 1)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxshake128pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 1, i32 1)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 1, i32 1, i32 1)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -505,18 +505,18 @@ void test_dmxxshake128pad(unsigned char *vdmrp, vector unsigned char vc, unsigne
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha384512pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 0, i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha384512pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 0, i32 0)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 2, i32 0, i32 0)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //
@@ -527,18 +527,18 @@ void test_dmxxsha384512pad(unsigned char *vdmrp, vector unsigned char vc, unsign
 }
 
 // CHECK-LABEL: define dso_local void @test_dmxxsha224256pad(
-// CHECK-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 3, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 3, i32 0, i32 0)
 // CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // CHECK-NEXT:    ret void
 //
 // AIX-LABEL: define void @test_dmxxsha224256pad(
-// AIX-SAME: ptr noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-SAME: ptr nofree noundef readonly captures(none) [[VDMRP:%.*]], <16 x i8> noundef [[VC:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 128)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AIX-NEXT:  [[ENTRY:.*:]]
 // AIX-NEXT:    [[TMP0:%.*]] = load <1024 x i1>, ptr [[VDMRP]], align 128, !tbaa [[__DMR1024_TBAA7]]
-// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 3, i32 0, i32 0)
+// AIX-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> [[TMP0]], <16 x i8> [[VC]], i32 3, i32 0, i32 0)
 // AIX-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RESP]], align 128, !tbaa [[__DMR1024_TBAA7]]
 // AIX-NEXT:    ret void
 //

@@ -2,9 +2,7 @@
 ; RUN: opt -S -passes=instcombine %s | FileCheck %s
 ; RUN: opt -S -passes=instcombine %s \
 ; RUN:   -use-constant-int-for-fixed-length-splat \
-; RUN    -use-constant-fp-for-fixed-length-splat \
-; RUN:   -use-constant-int-for-scalable-splat \
-; RUN:   -use-constant-fp-for-scalable-splat | FileCheck %s
+; RUN:   -use-constant-int-for-scalable-splat | FileCheck %s
 
 define <vscale x 4 x i32> @insert_div() {
 ; CHECK-LABEL: @insert_div(

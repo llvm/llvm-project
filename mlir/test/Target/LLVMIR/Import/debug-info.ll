@@ -819,15 +819,17 @@ define void @string_type() !dbg !3 {
 !3 = distinct !DISubprogram(name: "string_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !9}
-!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10)
+!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10, charType: !12)
 !7 = !DILocalVariable(scope: !3, name: "string_size", file: !2, type: !11)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
 !9 = !DIStringType()
 !10 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!12 = !DIBasicType(name: "character(kind=4)", size: 32, encoding: DW_ATE_UTF)
 
 ; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
-; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK-DAG: #[[CHARTYPE:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "character(kind=4)", sizeInBits = 32, encoding = DW_ATE_UTF>
+; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #[[CHARTYPE]]>
 ; CHECK-DAG: #[[STR2:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type>
 ; CHECK-DAG: #llvm.di_subroutine_type<types = #[[STR1]], #[[STR2]]>
 
@@ -986,3 +988,101 @@ define void @test() !dbg !3 {
 !12 = !DIFile(filename: "cu.hpp", directory: "/build")
 !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !17 = !{i32 2, !"Debug Info Version", i32 3}
+
+; // -----
+
+; CHECK-DAG: #[[DISC:.+]] = #llvm.di_derived_type<{{.*}}name = "discriminator"{{.*}}flags = Artificial>
+; CHECK-DAG: #[[ELEM_INT:.+]] = #llvm.di_derived_type<{{.*}}name = "_int64"{{.*}}extraData = 1 : i8>
+; CHECK-DAG: #[[ELEM_FLOAT:.+]] = #llvm.di_derived_type<{{.*}}name = "_float64"{{.*}}extraData = 2 : i8>
+; CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_variant_part{{.*}}identifier = "variant-id"{{.*}}discriminator = #[[DISC]]{{.*}}elements = #[[ELEM_INT]], #[[ELEM_FLOAT]]
+
+define void @variant_part_import() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "foo.mlir", directory: "/tmp")
+!3 = distinct !DISubprogram(name: "variant_part_import", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!8}
+!6 = !DIBasicType(name: "uint8", size: 8, encoding: DW_ATE_unsigned)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "discriminator", baseType: !6, size: 8, flags: DIFlagArtificial)
+!8 = !DICompositeType(tag: DW_TAG_variant_part, name: "variant_part", file: !2, size: 64, elements: !9, identifier: "variant-id", discriminator: !7)
+!9 = !{!12, !13}
+!10 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!11 = !DIBasicType(name: "float64", size: 64, encoding: DW_ATE_float)
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "_int64", baseType: !10, size: 64, offset: 64, extraData: i8 1)
+!13 = !DIDerivedType(tag: DW_TAG_member, name: "_float64", baseType: !11, size: 64, offset: 64, extraData: i8 2)
+
+; // -----
+
+; Test that static local DIGlobalVariable listed in DISubprogram's retainedNodes does not get duplicated after import.
+
+; CHECK-DAG: #[[LVAR:.+]] = #llvm.di_local_variable<{{.*}}name = "unused_local"{{.*}}>
+; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "fn_with_static_local"{{.*}}retainedNodes = [#[[LVAR]]]>
+; CHECK-DAG: #[[GVAR:.+]] = #llvm.di_global_variable<scope = #[[SP]], name = "static_local"{{.*}}>
+; CHECK-DAG: #[[GEXPR:.+]] = #llvm.di_global_variable_expression<var = #[[GVAR]], expr = <>>
+; CHECK-DAG-COUNT-1: {{#llvm\.di_global_variable_expression<}}
+; CHECK-DAG-COUNT-1: {{#llvm\.di_global_variable<}}
+
+@static_local = internal global i64 0, align 8, !dbg !0
+
+define void @fn_with_static_local() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!7}
+!llvm.module.flags = !{!10}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "static_local", linkageName: "static_local", scope: !3, file: !4, line: 121, type: !9, isLocal: true, isDefinition: true)
+!3 = distinct !DISubprogram(name: "fn_with_static_local", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7, type: !13, retainedNodes: !11)
+!4 = !DIFile(filename: "test.c", directory: "")
+!7 = distinct !DICompileUnit(language: DW_LANG_C, file: !4)
+!9 = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !{!0, !12}
+!12 = !DILocalVariable(name: "unused_local", scope: !3, file: !4, line: 122, type: !9)
+!13 = !DISubroutineType(types: !14)
+!14 = !{null}
+
+; // -----
+
+; CHECK-DAG: #[[DIALECT_FILE:.+]] = #llvm.di_file<"dialect.ll" in "/">
+; CHECK-DAG: #[[DIALECT_CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_tile>, file = #[[DIALECT_FILE]]>
+
+define void @fn_cu_dialect() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, dialect: DW_LLVM_LANG_DIALECT_tile)
+!2 = !DIFile(filename: "dialect.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "fn_cu_dialect", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null}
+
+; // -----
+
+; CHECK-DAG: #[[LNAME_FILE:.+]] = #llvm.di_file<"language-name.cpp" in "/test/">
+; CHECK-DAG: #[[LNAME_CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<name = DW_LNAME_C_plus_plus, version = 202002, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #[[LNAME_FILE]]>
+
+define void @fn_cu_source_language_name() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 202002, file: !2, dialect: DW_LLVM_LANG_DIALECT_simt)
+!2 = !DIFile(filename: "language-name.cpp", directory: "/test/")
+!3 = distinct !DISubprogram(name: "fn_cu_source_language_name", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null}

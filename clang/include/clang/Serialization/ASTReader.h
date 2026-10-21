@@ -246,7 +246,7 @@ public:
     return true;
   }
 
-  /// Similiar to member function of \c visitInputFile but should
+  /// Similar to member function of \c visitInputFile but should
   /// be defined when there is a distinction between the file name
   /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.
@@ -418,14 +418,13 @@ struct LookupBlockOffsets : VisibleLookupBlockOffsets {
 /// The AST reader provides lazy de-serialization of declarations, as
 /// required when traversing the AST. Only those AST nodes that are
 /// actually required will be de-serialized.
-class ASTReader
-  : public ExternalPreprocessorSource,
-    public ExternalPreprocessingRecordSource,
-    public ExternalHeaderFileInfoSource,
-    public ExternalSemaSource,
-    public IdentifierInfoLookup,
-    public ExternalSLocEntrySource
-{
+class ASTReader : public ExternalPreprocessorSource,
+                  public ExternalPreprocessingRecordSource,
+                  public ExternalHeaderFileInfoSource,
+                  public ExternalSemaSource,
+                  public IdentifierInfoLookup,
+                  public ExternalSLocEntrySource,
+                  public ExternalSubmoduleSource {
 public:
   /// Types of AST files.
   friend class ASTDeclMerger;
@@ -647,10 +646,6 @@ private:
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
 
-  /// Map from numbering information for lambdas to the corresponding lambdas.
-  llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
-      LambdaDeclarationsForMerging;
-
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.
   using LETemporaryKey = std::pair<Decl *, unsigned>;
@@ -819,32 +814,6 @@ private:
   /// A mapping from each of the hidden submodules to the deserialized
   /// declarations in that submodule that could be made visible.
   HiddenNamesMapType HiddenNamesMap;
-
-  /// A module import, export, or conflict that hasn't yet been resolved.
-  struct UnresolvedModuleRef {
-    /// The file in which this module resides.
-    ModuleFile *File;
-
-    /// The module that is importing or exporting.
-    Module *Mod;
-
-    /// The kind of module reference.
-    enum { Import, Export, Conflict, Affecting } Kind;
-
-    /// The local ID of the module that is being exported.
-    unsigned ID;
-
-    /// Whether this is a wildcard export.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsWildcard : 1;
-
-    /// String data.
-    StringRef String;
-  };
-
-  /// The set of module imports and exports that still need to be
-  /// resolved.
-  SmallVector<UnresolvedModuleRef, 2> UnresolvedModuleRefs;
 
   /// A vector containing selectors that have already been loaded.
   ///
@@ -1082,6 +1051,9 @@ private:
 
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
+  /// OpenMP 'requires' directives read from the AST file.
+  SmallVector<GlobalDeclID> OpenMPRequiresDecls;
 
   /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
   SmallVector<bool, 3> RISCVVecIntrinsicPragma;
@@ -1612,8 +1584,10 @@ private:
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
-  llvm::Error ReadSubmoduleBlock(ModuleFile &F,
-                                 unsigned ClientLoadCapabilities);
+
+  void ReadDirectoryDependencies(const RecordData &Record, ModuleFile &F);
+  bool isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain);
+
   static bool ParseLanguageOptions(const RecordData &Record,
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
@@ -1995,12 +1969,6 @@ public:
   /// Update the state of Sema after loading some additional modules.
   void UpdateSema();
 
-  /// Add in-memory (virtual file) buffer.
-  void addInMemoryBuffer(StringRef &FileName,
-                         std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    ModuleMgr.addInMemoryBuffer(FileName, std::move(Buffer));
-  }
-
   /// Finalizes the AST reader's state before writing an AST file to
   /// disk.
   ///
@@ -2352,7 +2320,7 @@ public:
   void ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) override;
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   void ReadDeclsToCheckForDeferredDiags(
       llvm::SmallSetVector<Decl *, 4> &Decls) override;
@@ -2376,8 +2344,6 @@ public:
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
-
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
@@ -2444,8 +2410,7 @@ public:
                                                   unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
-  ///
-  Module *getSubmodule(serialization::SubmoduleID GlobalID);
+  Module *getSubmodule(uint32_t GlobalID) override;
 
   /// Retrieve the module that corresponds to the given module ID.
   ///
@@ -2501,6 +2466,18 @@ public:
     return SourceLocationEncoding::decode(Raw);
   }
 
+  /// Read a source location offset from \p Record at \p Idx, returning it
+  /// together with a chain anchored at that offset + \p InitialDelta for delta
+  /// decoding the locations that follow.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                           SourceLocation::UIntTy InitialDelta);
+
+  /// Read an SLocEntry record's first field, returning it together with a
+  /// chain anchored at that entry.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadEntryOffset(const RecordDataImpl &Record);
+
   /// Read a source location from raw form.
   SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
@@ -2514,6 +2491,12 @@ public:
            "Run out source location space");
 
     return TranslateSourceLocation(*OwningModuleFile, Loc);
+  }
+
+  /// Read a source location from delta-encoded form.
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
+                                    SourceLocationEncoding::Chain &Chain) {
+    return ReadSourceLocation(MF, Chain.deltaDecode(Raw));
   }
 
   /// Translate a source location from another module file's source

@@ -11,6 +11,7 @@
 
 #include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/File/file_io_result.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -18,19 +19,6 @@
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-// TODO: Deduplicate this with __support/File/file.h.
-struct FileIOResult {
-  size_t value;
-  int error;
-
-  constexpr FileIOResult(size_t val) : value(val), error(0) {}
-  constexpr FileIOResult(size_t val, int error) : value(val), error(error) {}
-
-  constexpr bool has_error() { return error != 0; }
-
-  constexpr operator size_t() { return value; }
-};
 
 // ungetc handling.
 int push_ungetc_value(::FILE *stream, int c);

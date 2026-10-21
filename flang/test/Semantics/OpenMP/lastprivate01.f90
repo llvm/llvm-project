@@ -15,8 +15,7 @@ program omp_lastprivate
   a = 10
   b = 20
 
-  !ERROR: Variable 'k' on the LASTPRIVATE clause is not definable
-  !BECAUSE: 'k' is not a variable
+  !ERROR: 'k' must be a variable list item
   !$omp parallel do lastprivate(k)
   do i = 1, 10
     c(i) = a(i) + b(i) + k

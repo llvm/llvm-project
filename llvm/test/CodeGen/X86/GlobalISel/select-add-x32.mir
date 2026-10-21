@@ -32,7 +32,7 @@ body:             |
     ; X32-NEXT: [[DEF3:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; X32-NEXT: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[DEF]], [[DEF2]], implicit-def $eflags
     ; X32-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-    ; X32-NEXT: CMP8ri [[SETCCr]], 1, implicit-def $eflags
+    ; X32-NEXT: [[NEG8r:%[0-9]+]]:gr8 = NEG8r [[SETCCr]], implicit-def $eflags
     ; X32-NEXT: [[ADC32rr:%[0-9]+]]:gr32 = ADC32rr [[DEF1]], [[DEF3]], implicit-def $eflags, implicit $eflags
     ; X32-NEXT: [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; X32-NEXT: $eax = COPY [[ADD32rr]]

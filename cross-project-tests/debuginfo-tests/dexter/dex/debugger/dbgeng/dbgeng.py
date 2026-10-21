@@ -8,6 +8,7 @@
 import sys
 import os
 import platform
+from typing import List
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -166,6 +167,14 @@ class DbgEng(DebuggerBase):
             stop_reason=StopReason.STEP,
             program_state=ProgramState(state_frames),
         )
+
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
+
+    def collect_watches(
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
+    ):
+        raise NotImplementedError("--use-heuristic required for dbgeng.")
 
     @property
     def is_running(self):

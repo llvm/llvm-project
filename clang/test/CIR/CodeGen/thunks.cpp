@@ -91,6 +91,33 @@ void C::g(int x) {}
 
 } // namespace Test4
 
+namespace Test5 {
+// Non-virtual this-adjusting thunk for a method that returns an aggregate
+// with no trivial copy/move.
+
+struct NonTrivial {
+  int x;
+  NonTrivial();
+  NonTrivial(const NonTrivial &);
+  NonTrivial &operator=(const NonTrivial &);
+};
+
+struct A {
+  virtual NonTrivial h();
+};
+
+struct B {
+  virtual NonTrivial h();
+};
+
+struct C : A, B {
+  NonTrivial h() override;
+};
+
+NonTrivial C::h() { return NonTrivial(); }
+
+} // namespace Test5
+
 namespace CovariantReturn {
 // Covariant return with virtual inheritance: return-adjusting thunks use a
 // null check for pointer returns (classic PerformReturnAdjustment).
@@ -124,22 +151,28 @@ void C::f(int x, ...) {}
 // In CIR, all globals are emitted before functions.
 
 // Test1 vtable: C's vtable references the thunk for B's entry.
-// CIR-DAG: cir.global "private" external @_ZTVN5Test11CE = #cir.vtable<{
+// CIR-DAG: cir.global "private" constant external @_ZTVN5Test11CE = #cir.vtable<{
 // CIR-DAG:   #cir.global_view<@_ZN5Test11C1fEv> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZThn8_N5Test11C1fEv> : !cir.ptr<!u8i>
 
 // Test2 vtable: C's vtable references the thunk for B's entry.
-// CIR-DAG: cir.global "private" external @_ZTVN5Test21CE = #cir.vtable<{
+// CIR-DAG: cir.global "private" constant external @_ZTVN5Test21CE = #cir.vtable<{
 // CIR-DAG:   #cir.global_view<@_ZN5Test21C1gEv> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZThn8_N5Test21C1gEv> : !cir.ptr<!u8i>
 
+// Test5 vtable: C's vtable references the aggregate-return thunk for B's
+// entry.
+// CIR-DAG: cir.global "private" constant external @_ZTVN5Test51CE = #cir.vtable<{
+// CIR-DAG:   #cir.global_view<@_ZN5Test51C1hEv> : !cir.ptr<!u8i>
+// CIR-DAG:   #cir.global_view<@_ZThn8_N5Test51C1hEv> : !cir.ptr<!u8i>
+
 // Test4 vtable: C's vtable references the thunk for B's entry.
-// CIR-DAG: cir.global "private" external @_ZTVN5Test41CE = #cir.vtable<{
+// CIR-DAG: cir.global "private" constant external @_ZTVN5Test41CE = #cir.vtable<{
 // CIR-DAG:   #cir.global_view<@_ZN5Test41C1gEi> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZThn8_N5Test41C1gEi> : !cir.ptr<!u8i>
 
 // Test3 vtable: D's vtable references D1, D0, and their thunks.
-// CIR-DAG: cir.global "private" external @_ZTVN5Test31DE = #cir.vtable<{
+// CIR-DAG: cir.global "private" constant external @_ZTVN5Test31DE = #cir.vtable<{
 // CIR-DAG:   #cir.global_view<@_ZN5Test31DD1Ev> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZN5Test31DD0Ev> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZThn8_N5Test31DD1Ev> : !cir.ptr<!u8i>
@@ -151,7 +184,7 @@ void C::f(int x, ...) {}
 
 // The thunk adjusts 'this' by -8 bytes and calls C::f().
 // CIR: cir.func {{.*}} @_ZThn8_N5Test11C1fEv(%arg0: !cir.ptr<
-// CIR:   %[[T1_THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:   %[[T1_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %arg0, %[[T1_THIS_ADDR]]
 // CIR:   %[[T1_THIS:.*]] = cir.load %[[T1_THIS_ADDR]]
 // CIR:   %[[T1_CAST:.*]] = cir.cast bitcast %[[T1_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
@@ -213,6 +246,23 @@ void C::f(int x, ...) {}
 // CIR:   cir.call @_ZN5Test41C1gEi(%[[T4_RESULT]], %[[T4_ARG]])
 // CIR:   cir.return
 
+// --- Test5: aggregate non-trivial return type thunk ---
+
+// CIR: cir.func {{.*}} @_ZN5Test51C1hEv
+
+// CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<!rec_Test53A3ANonTrivial> {{.*}}llvm.sret = !rec_Test53A3ANonTrivial{{.*}}, %arg1: !cir.ptr<
+// CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR:   cir.store %arg1, %[[T5_THIS_ADDR]]
+// CIR:   %[[T5_THIS:.*]] = cir.load %[[T5_THIS_ADDR]]
+// CIR:   %[[T5_CAST:.*]] = cir.cast bitcast %[[T5_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
+// CIR:   %[[T5_OFFSET:.*]] = cir.const #cir.int<-8> : !s64i
+// CIR:   %[[T5_ADJUSTED:.*]] = cir.ptr_stride %[[T5_CAST]], %[[T5_OFFSET]]
+// CIR:   %[[T5_RESULT:.*]] = cir.cast bitcast %[[T5_ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<
+// CIR:   cir.call @_ZN5Test51C1hEv(%arg0, %[[T5_RESULT]])
+// CIR:   cir.return
+// CIR-NOT: cir.trap
+// CIR-NOT: cir.unreachable
+
 // --- CovariantReturn: return adjustment with null check on pointer return ---
 
 // CIR-LABEL: cir.func {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
@@ -232,24 +282,29 @@ void C::f(int x, ...) {}
 
 // --- LLVM checks ---
 
-// LLVM: @_ZTVN5Test11CE = global { [3 x ptr], [3 x ptr] } {
+// LLVM: @_ZTVN5Test11CE = constant { [3 x ptr], [3 x ptr] } {
 // LLVM-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test11C1fEv],
 // LLVM-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test11C1fEv]
 // LLVM-SAME: }
 
-// LLVM: @_ZTVN5Test21CE = global { [3 x ptr], [3 x ptr] } {
+// LLVM: @_ZTVN5Test21CE = constant { [3 x ptr], [3 x ptr] } {
 // LLVM-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test21C1gEv],
 // LLVM-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test21C1gEv]
 // LLVM-SAME: }
 
-// LLVM: @_ZTVN5Test31DE = global { [4 x ptr], [4 x ptr] } {
+// LLVM: @_ZTVN5Test31DE = constant { [4 x ptr], [4 x ptr] } {
 // LLVM-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test31DD1Ev, ptr @_ZN5Test31DD0Ev],
 // LLVM-SAME: [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test31DD1Ev, ptr @_ZThn8_N5Test31DD0Ev]
 // LLVM-SAME: }
 
-// LLVM: @_ZTVN5Test41CE = global { [4 x ptr], [3 x ptr] } {
+// LLVM: @_ZTVN5Test41CE = constant { [4 x ptr], [3 x ptr] } {
 // LLVM-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test41A1fEv, ptr @_ZN5Test41C1gEi],
 // LLVM-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test41C1gEi]
+// LLVM-SAME: }
+
+// LLVM: @_ZTVN5Test51CE = constant { [3 x ptr], [3 x ptr] } {
+// LLVM-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test51C1hEv],
+// LLVM-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test51C1hEv]
 // LLVM-SAME: }
 
 // LLVM: define {{.*}} void @_ZThn8_N5Test11C1fEv(ptr{{.*}})
@@ -277,6 +332,12 @@ void C::f(int x, ...) {}
 // LLVM:   %[[L4_ADJ:.*]] = getelementptr i8, ptr %[[L4_THIS]], i64 -8
 // LLVM:   %[[L4_ARG:.*]] = load i32, ptr
 // LLVM:   call void @_ZN5Test41C1gEi(ptr{{.*}} %[[L4_ADJ]], i32{{.*}} %[[L4_ARG]])
+
+// LLVM: define {{.*}} void @_ZThn8_N5Test51C1hEv(ptr dead_on_unwind noalias writable sret(%"struct.Test5::NonTrivial") align 4 %[[L5_AGG:[^,)]+]], ptr{{[^,)]*}})
+// LLVM:   %[[L5_THIS:.*]] = load ptr, ptr
+// LLVM:   %[[L5_ADJ:.*]] = getelementptr i8, ptr %[[L5_THIS]], i64 -8
+// LLVM:   call void @_ZN5Test51C1hEv(ptr dead_on_unwind writable sret(%"struct.Test5::NonTrivial") align 4 %[[L5_AGG]], ptr{{.*}} %[[L5_ADJ]])
+// LLVM:   ret void
 
 // LLVM-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
 // LLVM:       call {{.*}} @_ZN15CovariantReturn1C1fEv
@@ -308,6 +369,11 @@ void C::f(int x, ...) {}
 // OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test41C1gEi]
 // OGCG-SAME: }
 
+// OGCG: @_ZTVN5Test51CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
+// OGCG-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test51C1hEv],
+// OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test51C1hEv]
+// OGCG-SAME: }
+
 // OGCG: define {{.*}} void @_ZThn8_N5Test11C1fEv(ptr{{.*}})
 // OGCG:   %[[O1_THIS:.*]] = load ptr, ptr
 // OGCG:   %[[O1_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O1_THIS]], i64 -8
@@ -333,6 +399,11 @@ void C::f(int x, ...) {}
 // OGCG:   %[[O4_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O4_THIS]], i64 -8
 // OGCG:   %[[O4_ARG:.*]] = load i32, ptr
 // OGCG:   {{.*}}call void @_ZN5Test41C1gEi(ptr{{.*}} %[[O4_ADJ]], i32{{.*}} %[[O4_ARG]])
+
+// OGCG: define {{.*}} void @_ZThn8_N5Test51C1hEv(ptr {{[^,]*}}sret(%"struct.Test5::NonTrivial"){{[^,]*}}, ptr{{.*}})
+// OGCG:   %[[O5_THIS:.*]] = load ptr, ptr
+// OGCG:   %[[O5_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O5_THIS]], i64 -8
+// OGCG:   {{.*}}call void @_ZN5Test51C1hEv(ptr {{.*}}sret(%"struct.Test5::NonTrivial"){{.*}}, ptr{{.*}} %[[O5_ADJ]])
 
 // OGCG-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
 // OGCG:       {{.*}}call {{.*}} @_ZN15CovariantReturn1C1fEv

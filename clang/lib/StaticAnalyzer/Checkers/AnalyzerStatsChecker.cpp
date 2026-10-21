@@ -44,16 +44,16 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   const SourceManager &SM = B.getSourceManager();
   llvm::SmallPtrSet<const CFGBlock*, 32> reachable;
 
-  const LocationContext *LC = Eng.getRootLocationContext();
+  const StackFrame *RootSF = Eng.getRootStackFrame();
 
-  const Decl *D = LC->getDecl();
+  const Decl *D = RootSF->getDecl();
 
   // Iterate over the exploded graph.
   for (const ExplodedNode &N : G.nodes()) {
     const ProgramPoint &P = N.getLocation();
 
     // Only check the coverage in the top level function (optimization).
-    if (D != P.getLocationContext()->getDecl())
+    if (D != P.getStackFrame()->getDecl())
       continue;
 
     if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
@@ -63,7 +63,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   }
 
   // Get the CFG and the Decl of this block.
-  C = LC->getCFG();
+  C = RootSF->getCFG();
 
   unsigned total = 0, unreachable = 0;
 
@@ -112,8 +112,8 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
 
   // Emit warning for each block we bailed out on.
   const CoreEngine &CE = Eng.getCoreEngine();
-  for (const BlockEdge &BE : make_first_range(CE.exhausted_blocks())) {
-    const CFGBlock *Exit = BE.getDst();
+  for (const BlockEntrance &BE : make_first_range(CE.exhausted_blocks())) {
+    const CFGBlock *Exit = BE.getBlock();
     if (Exit->empty())
       continue;
     const CFGElement &CE = Exit->front();
@@ -124,7 +124,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
                  ": The analyzer generated a sink at this point";
       B.EmitBasicReport(
           D, this, "Sink Point", "Internal Statistics", outputI.str(),
-          PathDiagnosticLocation::createBegin(CS->getStmt(), SM, LC));
+          PathDiagnosticLocation::createBegin(CS->getStmt(), SM, RootSF));
     }
   }
 }

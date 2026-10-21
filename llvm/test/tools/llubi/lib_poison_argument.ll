@@ -10,6 +10,6 @@ define i32 @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %1 = call i32 @puts(ptr poison) at @main
+; CHECK-NEXT: #0   %1 = call i32 @puts(ptr poison) at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: Poison argument passed to a library call at argument index 0.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

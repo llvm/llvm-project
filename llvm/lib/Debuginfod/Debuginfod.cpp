@@ -39,9 +39,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/xxhash.h"
 
-#include <atomic>
 #include <optional>
 #include <thread>
 
@@ -260,8 +258,10 @@ Expected<std::string> getCachedOrDownloadArtifact(
       HTTPRequest Request(ArtifactUrl);
       Request.Headers = getHeaders();
       Error Err = Client.perform(Request, Handler);
-      if (Err)
+      if (Err) {
+        consumeError(Handler.abort());
         return std::move(Err);
+      }
       if ((Err = Handler.commit()))
         return std::move(Err);
 
@@ -274,7 +274,13 @@ Expected<std::string> getCachedOrDownloadArtifact(
         parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
     if (!PruningPolicyOrErr)
       return PruningPolicyOrErr.takeError();
-    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+
+    Expected<bool> PrunedOrErr =
+        pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+    // Log the error but continue execution: failure to prune the cache is not
+    // fatal.
+    if (!PrunedOrErr)
+      logAllUnhandledErrors(PrunedOrErr.takeError(), WithColor::warning());
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

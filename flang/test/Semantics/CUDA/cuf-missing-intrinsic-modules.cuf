@@ -1,0 +1,10 @@
+! RUN: not %flang_fc1 -module-suffix missingmod %s 2>&1 | FileCheck %s
+
+module m
+contains
+  attributes(device) subroutine devsubr()
+  end subroutine
+end module
+
+! CHECK: error: Cannot read required CUDA intrinsic module 'cudadevice'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules
+! CHECK: error: Cannot read required CUDA intrinsic module '__cuda_builtins'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules

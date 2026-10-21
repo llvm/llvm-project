@@ -28,6 +28,12 @@ tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
 tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
 
+set(LLVM_TARGET_DEFINITIONS AArch64Options.td)
+tablegen(LLVM AArch64Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/AArch64MCOptions.td)
+tablegen(LLVM AArch64MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(AArch64CommonTableGen)
 
 add_llvm_target(AArch64CodeGen
@@ -42,6 +48,7 @@ add_llvm_target(AArch64CodeGen
   GISel/AArch64PostSelectOptimize.cpp
   GISel/AArch64RegisterBankInfo.cpp
   AArch64A57FPLoadBalancing.cpp
+  AArch64CodeLayoutOpt.cpp
   AArch64AdvSIMDScalarPass.cpp
   AArch64Arm64ECCallLowering.cpp
   AArch64AsmPrinter.cpp
@@ -72,10 +79,13 @@ add_llvm_target(AArch64CodeGen
   AArch64MacroFusion.cpp
   AArch64MIPeepholeOpt.cpp
   AArch64MCInstLower.cpp
+  AArch64PerfectShuffle.cpp
   AArch64PointerAuth.cpp
   AArch64PostCoalescerPass.cpp
   AArch64PromoteConstant.cpp
+  AArch64PTrueCoalescing.cpp
   AArch64PBQPRegAlloc.cpp
+  AArch64PredicateAsCounterLoopRewrites.cpp
   AArch64RegisterInfo.cpp
   AArch64SMEAttributes.cpp
   AArch64SLSHardening.cpp
@@ -89,7 +99,7 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
   SMEPeepholeOpt.cpp
-  SVEIntrinsicOpts.cpp
+  SVEShuffleOpts.cpp
   MachineSMEABIPass.cpp
   AArch64SRLTDefineSuperRegs.cpp
   AArch64SIMDInstrOpt.cpp
@@ -110,6 +120,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Option
   Passes
   Scalar
   SelectionDAG

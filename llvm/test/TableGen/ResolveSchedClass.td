@@ -72,11 +72,24 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:   if (CPUID == {{.*}}) { // SchedModel_A
 // CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo))
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResA
-// CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0)
+// CHECK-NEXT:     if (STI.hasFeature(TestTarget::FeatureFoo) && (MI->getOperand(1).isImm() && MI->getOperand(1).getImm() == 0))
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResC
-// CHECK-NEXT:     if (!(MI->getOperand(3).getImm() == 0 && !STI.hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT:     if (!((MI->getOperand(3).isImm() && MI->getOperand(3).getImm() == 0) && !STI.hasFeature(TestTarget::FeatureFoo)))
 // CHECK-NEXT: 	     return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:     return {{.*}}; // SchedWriteResB
+
+// CHECK: ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,
+// CHECK-NEXT:     unsigned CPUID) {
+// CHECK-NEXT:   switch (SchedClass) {
+// CHECK-NEXT:   case {{.*}}: // Inst_A
+// CHECK-NEXT:     if (CPUID == {{.*}}) { // SchedModel_A
+// CHECK-NEXT:       static const unsigned Targets[] = {{\{[0-9]+}} /* SchedWriteResA */, {{[0-9]+}} /* SchedWriteResB */, {{[0-9]+}} /* SchedWriteResC */, {{[0-9]+}} /* SchedWriteResD */, {{[0-9]+}} /* SchedWriteResE */};
+// CHECK-NEXT:       return Targets;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     break;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }
 
 // CHECK: unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-NEXT:    const MCInst *MI, const MCInstrInfo *MCII,
@@ -91,10 +104,10 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:     if (SchedModel->getProcessorID() == {{.*}}) { // SchedModel_A
 // CHECK-NEXT:       if (this->hasFeature(TestTarget::FeatureFoo))
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResA
-// CHECK-NEXT:       if (this->hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0)
+// CHECK-NEXT:       if (this->hasFeature(TestTarget::FeatureFoo) && (MI->getOperand(1).isImm() && MI->getOperand(1).getImm() == 0))
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResC
-// CHECK-NEXT:       if ((this->hasFeature(TestTarget::FeatureFoo) && MI->getOperand(1).getImm() == 0) || !(this->hasFeature(TestTarget::FeatureBar) || (/*hello=*/false)))
+// CHECK-NEXT:       if ((this->hasFeature(TestTarget::FeatureFoo) && (MI->getOperand(1).isImm() && MI->getOperand(1).getImm() == 0)) || !(this->hasFeature(TestTarget::FeatureBar) || (/*hello=*/false)))
 // CHECK-NEXT:         return {{.*}}; // SchedWriteResD
-// CHECK-NEXT:       if (!(MI->getOperand(3).getImm() == 0 && !this->hasFeature(TestTarget::FeatureFoo)))
+// CHECK-NEXT:       if (!((MI->getOperand(3).isImm() && MI->getOperand(3).getImm() == 0) && !this->hasFeature(TestTarget::FeatureFoo)))
 // CHECK-NEXT: 	       return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:       return {{.*}}; // SchedWriteResB

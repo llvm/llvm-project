@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+fast-bextr | FileCheck %s --check-prefixes=X64,X64-FAST-BEXTR
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+fast-bextr,+egpr --show-mc-encoding | FileCheck %s --check-prefix=EGPR
 
-define i32 @andn32(i32 %x, i32 %y)   {
+define i32 @andn32(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: andn32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -28,7 +28,7 @@ define i32 @andn32(i32 %x, i32 %y)   {
   ret i32 %tmp2
 }
 
-define i32 @andn32_load(i32 %x, ptr %y)   {
+define i32 @andn32_load(i32 %x, ptr %y) nounwind {
 ; X86-LABEL: andn32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -51,7 +51,7 @@ define i32 @andn32_load(i32 %x, ptr %y)   {
   ret i32 %tmp2
 }
 
-define i64 @andn64(i64 %x, i64 %y)   {
+define i64 @andn64(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: andn64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -75,7 +75,7 @@ define i64 @andn64(i64 %x, i64 %y)   {
 }
 
 ; Don't choose a 'test' if an 'andn' can be used.
-define i1 @andn_cmp(i32 %x, i32 %y) {
+define i1 @andn_cmp(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: andn_cmp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -92,7 +92,6 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
 ; EGPR-LABEL: andn_cmp:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %notx = xor i32 %x, -1
@@ -102,7 +101,7 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
 }
 
 ; Recognize a disguised andn in the following 4 tests.
-define i1 @and_cmp1(i32 %x, i32 %y) {
+define i1 @and_cmp1(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: and_cmp1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -119,7 +118,6 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp1:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %x, %y
@@ -127,7 +125,7 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-define i1 @and_cmp2(i32 %x, i32 %y) {
+define i1 @and_cmp2(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: and_cmp2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -144,7 +142,6 @@ define i1 @and_cmp2(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp2:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %y, %x
@@ -152,7 +149,7 @@ define i1 @and_cmp2(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-define i1 @and_cmp3(i32 %x, i32 %y) {
+define i1 @and_cmp3(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: and_cmp3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -169,7 +166,6 @@ define i1 @and_cmp3(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp3:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %x, %y
@@ -177,7 +173,7 @@ define i1 @and_cmp3(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-define i1 @and_cmp4(i32 %x, i32 %y) {
+define i1 @and_cmp4(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: and_cmp4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -194,7 +190,6 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp4:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %y, %x
@@ -204,7 +199,7 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 
 ; A mask and compare against constant is ok for an 'andn' too
 ; even though the BMI instruction doesn't have an immediate form.
-define i1 @and_cmp_const(i32 %x) {
+define i1 @and_cmp_const(i32 %x) nounwind {
 ; X86-LABEL: and_cmp_const:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -232,7 +227,7 @@ define i1 @and_cmp_const(i32 %x) {
 }
 
 ; But don't use 'andn' if the mask is a power-of-two.
-define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
+define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: and_cmp_const_power_of_two:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -259,7 +254,7 @@ define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
 }
 
 ; Don't transform to 'andn' if there's another use of the 'and'.
-define i32 @and_cmp_not_one_use(i32 %x) {
+define i32 @and_cmp_not_one_use(i32 %x) nounwind {
 ; X86-LABEL: and_cmp_not_one_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -295,7 +290,7 @@ define i32 @and_cmp_not_one_use(i32 %x) {
 }
 
 ; Verify that we're not transforming invalid comparison predicates.
-define i1 @not_an_andn1(i32 %x, i32 %y) {
+define i1 @not_an_andn1(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: not_an_andn1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -323,7 +318,7 @@ define i1 @not_an_andn1(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-define i1 @not_an_andn2(i32 %x, i32 %y) {
+define i1 @not_an_andn2(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: not_an_andn2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -352,7 +347,7 @@ define i1 @not_an_andn2(i32 %x, i32 %y) {
 }
 
 ; Don't choose a 'test' if an 'andn' can be used.
-define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
+define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: andn_cmp_swap_ops:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -372,7 +367,6 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; EGPR-LABEL: andn_cmp_swap_ops:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnq %rsi, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xc0,0xf2,0xc6]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %notx = xor i64 %x, -1
@@ -381,8 +375,8 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
-define i1 @andn_cmp_i8(i8 %x, i8 %y) {
+; Keep the byte test idiom when the AND result feeds a SETCC.
+define i1 @andn_cmp_i8(i8 %x, i8 %y) nounwind {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -411,7 +405,7 @@ define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 }
 
 ; PR48768 - 'andn' clears the overflow flag, so we don't need a separate 'test'.
-define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) {
+define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: andn_cmp_i32_overflow:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -428,7 +422,6 @@ define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) {
 ; EGPR-LABEL: andn_cmp_i32_overflow:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %edi, %esi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf2,0xc7]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setle %al # encoding: [0x0f,0x9e,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %noty = xor i32 %y, -1
@@ -439,7 +432,7 @@ define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) {
 
 declare i32 @llvm.x86.bmi.bextr.32(i32, i32)
 
-define i32 @bextr32(i32 %x, i32 %y)   {
+define i32 @bextr32(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: bextr32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -459,7 +452,7 @@ define i32 @bextr32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @bextr32_load(ptr %x, i32 %y)   {
+define i32 @bextr32_load(ptr %x, i32 %y) nounwind {
 ; X86-LABEL: bextr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -481,7 +474,7 @@ define i32 @bextr32_load(ptr %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @bextr32b(i32 %x)  uwtable  ssp {
+define i32 @bextr32b(i32 %x)  uwtable  ssp nounwind {
 ; X86-SLOW-BEXTR-LABEL: bextr32b:
 ; X86-SLOW-BEXTR:       # %bb.0:
 ; X86-SLOW-BEXTR-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -520,7 +513,7 @@ define i32 @bextr32b(i32 %x)  uwtable  ssp {
 }
 
 ; Make sure we still use AH subreg trick to extract 15:8
-define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
+define i32 @bextr32_subreg(i32 %x)  uwtable  ssp nounwind {
 ; X86-LABEL: bextr32_subreg:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -542,7 +535,7 @@ define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
   ret i32 %2
 }
 
-define i32 @bextr32b_load(ptr %x)  uwtable  ssp {
+define i32 @bextr32b_load(ptr %x)  uwtable  ssp nounwind {
 ; X86-SLOW-BEXTR-LABEL: bextr32b_load:
 ; X86-SLOW-BEXTR:       # %bb.0:
 ; X86-SLOW-BEXTR-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -584,7 +577,7 @@ define i32 @bextr32b_load(ptr %x)  uwtable  ssp {
 }
 
 ; PR34042
-define i32 @bextr32c(i32 %x, i16 zeroext %y) {
+define i32 @bextr32c(i32 %x, i16 zeroext %y) nounwind {
 ; X86-LABEL: bextr32c:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
@@ -605,7 +598,7 @@ define i32 @bextr32c(i32 %x, i16 zeroext %y) {
   ret i32 %tmp1
 }
 
-define i32 @non_bextr32(i32 %x) {
+define i32 @non_bextr32(i32 %x) nounwind {
 ; X86-LABEL: non_bextr32:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -632,7 +625,7 @@ entry:
   ret i32 %and
 }
 
-define i32 @blsi32(i32 %x)   {
+define i32 @blsi32(i32 %x) nounwind {
 ; X86-LABEL: blsi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
@@ -652,7 +645,7 @@ define i32 @blsi32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsi32_load(ptr %x)   {
+define i32 @blsi32_load(ptr %x) nounwind {
 ; X86-LABEL: blsi32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -693,7 +686,6 @@ define i32 @blsi32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsi32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -724,7 +716,6 @@ define i32 @blsi32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsil %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xdf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovnel %edx, %eax # encoding: [0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -757,7 +748,6 @@ define i32 @blsi32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsil %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xdf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -767,12 +757,10 @@ define i32 @blsi32_sle(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %t3
 }
 
-define i64 @blsi64(i64 %x)   {
+define i64 @blsi64(i64 %x) nounwind {
 ; X86-LABEL: blsi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %edx, %edx
@@ -782,7 +770,6 @@ define i64 @blsi64(i64 %x)   {
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi64:
@@ -830,7 +817,6 @@ define i64 @blsi64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsi64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -872,7 +858,6 @@ define i64 @blsi64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsiq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xdf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovneq %rdx, %rax # encoding: [0x48,0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -915,7 +900,6 @@ define i64 @blsi64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsiq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xdf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -925,7 +909,7 @@ define i64 @blsi64_sle(i64 %a, i64 %b, i64 %c) nounwind {
   ret i64 %t3
 }
 
-define i32 @blsmsk32(i32 %x)   {
+define i32 @blsmsk32(i32 %x) nounwind {
 ; X86-LABEL: blsmsk32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
@@ -945,7 +929,7 @@ define i32 @blsmsk32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsmsk32_load(ptr %x)   {
+define i32 @blsmsk32_load(ptr %x) nounwind {
 ; X86-LABEL: blsmsk32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -986,7 +970,6 @@ define i32 @blsmsk32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsmsk32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1047,7 +1030,6 @@ define i32 @blsmsk32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsmskl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xd7]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1057,12 +1039,10 @@ define i32 @blsmsk32_sle(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %t3
 }
 
-define i64 @blsmsk64(i64 %x)   {
+define i64 @blsmsk64(i64 %x) nounwind {
 ; X86-LABEL: blsmsk64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %ecx, %eax
@@ -1072,7 +1052,6 @@ define i64 @blsmsk64(i64 %x)   {
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    xorl %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsmsk64:
@@ -1120,7 +1099,6 @@ define i64 @blsmsk64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsmsk64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsmskq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xd7]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1204,7 +1182,6 @@ define i64 @blsmsk64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsmskq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xd7]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1214,7 +1191,7 @@ define i64 @blsmsk64_sle(i64 %a, i64 %b, i64 %c) nounwind {
   ret i64 %t3
 }
 
-define i32 @blsr32(i32 %x)   {
+define i32 @blsr32(i32 %x) nounwind {
 ; X86-LABEL: blsr32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
@@ -1234,7 +1211,7 @@ define i32 @blsr32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsr32_load(ptr %x)   {
+define i32 @blsr32_load(ptr %x) nounwind {
 ; X86-LABEL: blsr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1275,7 +1252,6 @@ define i32 @blsr32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsr32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xcf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1306,7 +1282,6 @@ define i32 @blsr32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsrl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xcf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovnel %edx, %eax # encoding: [0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1337,7 +1312,6 @@ define i32 @blsr32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsrl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xcf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1347,12 +1321,10 @@ define i32 @blsr32_sle(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %t3
 }
 
-define i64 @blsr64(i64 %x)   {
+define i64 @blsr64(i64 %x) nounwind {
 ; X86-LABEL: blsr64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %ecx, %eax
@@ -1362,7 +1334,6 @@ define i64 @blsr64(i64 %x)   {
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsr64:
@@ -1410,7 +1381,6 @@ define i64 @blsr64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsr64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xcf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1452,7 +1422,6 @@ define i64 @blsr64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsrq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xcf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovneq %rdx, %rax # encoding: [0x48,0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1495,7 +1464,6 @@ define i64 @blsr64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsrq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xcf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1507,7 +1475,7 @@ define i64 @blsr64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 
 ; PR35792 - https://bugs.llvm.org/show_bug.cgi?id=35792
 
-define i64 @blsr_disguised_constant(i64 %x) {
+define i64 @blsr_disguised_constant(i64 %x) nounwind {
 ; X86-LABEL: blsr_disguised_constant:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
@@ -1534,7 +1502,7 @@ define i64 @blsr_disguised_constant(i64 %x) {
 
 ; The add here used to get shrunk, but the and did not thus hiding the blsr pattern.
 ; We now use the knowledge that upper bits of the shift guarantee the and result has 0s in the upper bits to reduce it too.
-define i64 @blsr_disguised_shrunk_add(i64 %x) {
+define i64 @blsr_disguised_shrunk_add(i64 %x) nounwind {
 ; X86-LABEL: blsr_disguised_shrunk_add:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1560,7 +1528,7 @@ define i64 @blsr_disguised_shrunk_add(i64 %x) {
   ret i64 %c
 }
 
-define void @pr40060(i32, i32) {
+define void @pr40060(i32, i32) nounwind {
 ; X86-LABEL: pr40060:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1597,12 +1565,10 @@ define void @pr40060(i32, i32) {
   ret void
 }
 
-define i32 @blsr32_branch(i32 %x) {
+define i32 @blsr32_branch(i32 %x) nounwind {
 ; X86-LABEL: blsr32_branch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    jne .LBB53_2
 ; X86-NEXT:  # %bb.1:
@@ -1610,14 +1576,11 @@ define i32 @blsr32_branch(i32 %x) {
 ; X86-NEXT:  .LBB53_2:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsr32_branch:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsrl %edi, %ebx
 ; X64-NEXT:    jne .LBB53_2
 ; X64-NEXT:  # %bb.1:
@@ -1625,14 +1588,11 @@ define i32 @blsr32_branch(i32 %x) {
 ; X64-NEXT:  .LBB53_2:
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsr32_branch:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    pushq %rbx # encoding: [0x53]
-; EGPR-NEXT:    .cfi_def_cfa_offset 16
-; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrl %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xcf]
 ; EGPR-NEXT:    jne .LBB53_2 # encoding: [0x75,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB53_2, kind: FK_PCRel_1
@@ -1642,7 +1602,6 @@ define i32 @blsr32_branch(i32 %x) {
 ; EGPR-NEXT:  .LBB53_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
-; EGPR-NEXT:    .cfi_def_cfa_offset 8
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i32 %x, 1
   %tmp2 = and i32 %x, %tmp
@@ -1654,15 +1613,11 @@ define i32 @blsr32_branch(i32 %x) {
   ret i32 %tmp2
 }
 
-define i64 @blsr64_branch(i64 %x) {
+define i64 @blsr64_branch(i64 %x) nounwind {
 ; X86-LABEL: blsr64_branch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %esi
@@ -1680,16 +1635,12 @@ define i64 @blsr64_branch(i64 %x) {
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsr64_branch:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsrq %rdi, %rbx
 ; X64-NEXT:    jne .LBB54_2
 ; X64-NEXT:  # %bb.1:
@@ -1697,14 +1648,11 @@ define i64 @blsr64_branch(i64 %x) {
 ; X64-NEXT:  .LBB54_2:
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsr64_branch:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    pushq %rbx # encoding: [0x53]
-; EGPR-NEXT:    .cfi_def_cfa_offset 16
-; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xcf]
 ; EGPR-NEXT:    jne .LBB54_2 # encoding: [0x75,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB54_2, kind: FK_PCRel_1
@@ -1714,7 +1662,6 @@ define i64 @blsr64_branch(i64 %x) {
 ; EGPR-NEXT:  .LBB54_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
-; EGPR-NEXT:    .cfi_def_cfa_offset 8
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i64 %x, 1
   %tmp2 = and i64 %x, %tmp
@@ -1726,12 +1673,10 @@ define i64 @blsr64_branch(i64 %x) {
   ret i64 %tmp2
 }
 
-define i32 @blsi32_branch(i32 %x) {
+define i32 @blsi32_branch(i32 %x) nounwind {
 ; X86-LABEL: blsi32_branch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    jne .LBB55_2
 ; X86-NEXT:  # %bb.1:
@@ -1739,14 +1684,11 @@ define i32 @blsi32_branch(i32 %x) {
 ; X86-NEXT:  .LBB55_2:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi32_branch:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsil %edi, %ebx
 ; X64-NEXT:    jne .LBB55_2
 ; X64-NEXT:  # %bb.1:
@@ -1754,14 +1696,11 @@ define i32 @blsi32_branch(i32 %x) {
 ; X64-NEXT:  .LBB55_2:
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsi32_branch:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    pushq %rbx # encoding: [0x53]
-; EGPR-NEXT:    .cfi_def_cfa_offset 16
-; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsil %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xdf]
 ; EGPR-NEXT:    jne .LBB55_2 # encoding: [0x75,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB55_2, kind: FK_PCRel_1
@@ -1771,7 +1710,6 @@ define i32 @blsi32_branch(i32 %x) {
 ; EGPR-NEXT:  .LBB55_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
-; EGPR-NEXT:    .cfi_def_cfa_offset 8
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i32 0, %x
   %tmp2 = and i32 %x, %tmp
@@ -1783,15 +1721,11 @@ define i32 @blsi32_branch(i32 %x) {
   ret i32 %tmp2
 }
 
-define i64 @blsi64_branch(i64 %x) {
+define i64 @blsi64_branch(i64 %x) nounwind {
 ; X86-LABEL: blsi64_branch:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %esi, %esi
@@ -1809,16 +1743,12 @@ define i64 @blsi64_branch(i64 %x) {
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi64_branch:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsiq %rdi, %rbx
 ; X64-NEXT:    jne .LBB56_2
 ; X64-NEXT:  # %bb.1:
@@ -1826,14 +1756,11 @@ define i64 @blsi64_branch(i64 %x) {
 ; X64-NEXT:  .LBB56_2:
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsi64_branch:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    pushq %rbx # encoding: [0x53]
-; EGPR-NEXT:    .cfi_def_cfa_offset 16
-; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsiq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xdf]
 ; EGPR-NEXT:    jne .LBB56_2 # encoding: [0x75,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB56_2, kind: FK_PCRel_1
@@ -1843,7 +1770,6 @@ define i64 @blsi64_branch(i64 %x) {
 ; EGPR-NEXT:  .LBB56_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
-; EGPR-NEXT:    .cfi_def_cfa_offset 8
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i64 0, %x
   %tmp2 = and i64 %x, %tmp
@@ -1857,7 +1783,7 @@ define i64 @blsi64_branch(i64 %x) {
 
 declare dso_local void @bar()
 
-define void @pr42118_i32(i32 %x) {
+define void @pr42118_i32(i32 %x) nounwind {
 ; X86-LABEL: pr42118_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
@@ -1875,7 +1801,6 @@ define void @pr42118_i32(i32 %x) {
 ; EGPR-LABEL: pr42118_i32:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xcf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
@@ -1892,12 +1817,10 @@ define void @pr42118_i32(i32 %x) {
   ret void
 }
 
-define void @pr42118_i64(i64 %x) {
+define void @pr42118_i64(i64 %x) nounwind {
 ; X86-LABEL: pr42118_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %edx
@@ -1910,12 +1833,9 @@ define void @pr42118_i64(i64 %x) {
 ; X86-NEXT:    jne .LBB58_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp bar # TAILCALL
 ; X86-NEXT:  .LBB58_1:
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr42118_i64:
@@ -1928,7 +1848,6 @@ define void @pr42118_i64(i64 %x) {
 ; EGPR-LABEL: pr42118_i64:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xcf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
@@ -1967,8 +1886,7 @@ define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 ; EGPR-LABEL: blsi_cflag_32:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
-; EGPR-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
+; EGPR-NEXT:    cmovael %esi, %eax # encoding: [0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -2012,8 +1930,7 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; EGPR-LABEL: blsi_cflag_64:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
-; EGPR-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
+; EGPR-NEXT:    cmovaeq %rsi, %rax # encoding: [0x48,0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i64 %x, 0
   %sub = sub nsw i64 0, %x
@@ -2079,4 +1996,281 @@ define i32 @blsi32_not(i32 %x) nounwind {
   %not = xor i32 %and, -1
   ret i32 %not
 }
+define i8 @blsi8(i8 %x) nounwind {
+; X86-LABEL: blsi8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i8 0, %x
+  %and = and i8 %x, %neg
+  ret i8 %and
+}
 
+define i16 @blsi16(i16 %x) nounwind {
+; X86-LABEL: blsi16:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i16 0, %x
+  %and = and i16 %x, %neg
+  ret i16 %and
+}
+
+define i8 @blsi8_trunc(i32 %x) nounwind {
+; X86-LABEL: blsi8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %neg = sub i8 0, %t
+  %and = and i8 %t, %neg
+  ret i8 %and
+}
+
+define i16 @blsi16_trunc(i32 %x) nounwind {
+; X86-LABEL: blsi16_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i16
+  %neg = sub i16 0, %t
+  %and = and i16 %t, %neg
+  ret i16 %and
+}
+
+define i8 @andn8(i8 %x, i8 %y) nounwind {
+; X86-LABEL: andn8:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8:
+; X64:       # %bb.0:
+; X64-NEXT:    andnl %esi, %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not = xor i8 %x, 255
+  %and = and i8 %not, %y
+  ret i8 %and
+}
+
+define i8 @andn8_v8i1(<8 x i1> %x, i8 %y) nounwind {
+; X86-LABEL: andn8_v8i1:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shlb $3, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %al, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    andb $3, %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shlb $3, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    andb $1, %ah
+; X86-NEXT:    orb %dl, %ah
+; X86-NEXT:    andb $3, %ah
+; X86-NEXT:    orb %cl, %ah
+; X86-NEXT:    andb $15, %ah
+; X86-NEXT:    orb %al, %ah
+; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8_v8i1:
+; X64:       # %bb.0:
+; X64-NEXT:    psllw $15, %xmm0
+; X64-NEXT:    packsswb %xmm0, %xmm0
+; X64-NEXT:    pmovmskb %xmm0, %eax
+; X64-NEXT:    andnl %edi, %eax, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8_v8i1:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    psllw $15, %xmm0 # encoding: [0x66,0x0f,0x71,0xf0,0x0f]
+; EGPR-NEXT:    packsswb %xmm0, %xmm0 # encoding: [0x66,0x0f,0x63,0xc0]
+; EGPR-NEXT:    pmovmskb %xmm0, %eax # encoding: [0x66,0x0f,0xd7,0xc0]
+; EGPR-NEXT:    andnl %edi, %eax, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf2,0xc7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not.mask = xor <8 x i1> %x,
+      <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  %not = bitcast <8 x i1> %not.mask to i8
+  %and = and i8 %not, %y
+  ret i8 %and
+}
+
+define i8 @andn8_commuted(i8 %x, i8 %y) nounwind {
+; X86-LABEL: andn8_commuted:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8_commuted:
+; X64:       # %bb.0:
+; X64-NEXT:    andnl %edi, %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8_commuted:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    andnl %edi, %esi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf2,0xc7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not = xor i8 %y, 255
+  %and = and i8 %x, %not
+  ret i8 %and
+}
+
+; Make sure a regular i8 AND is not promoted by the ANDN combine.
+define i8 @and8(i8 %x, i8 %y) nounwind {
+; X86-LABEL: and8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: and8:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: and8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; EGPR-NEXT:    andl %esi, %eax # encoding: [0x21,0xf0]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %and = and i8 %x, %y
+  ret i8 %and
+}
+
+define i8 @blsmsk8(i8 %x) nounwind {
+; X86-LABEL: blsmsk8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %y = add i8 %x, -1
+  %z = xor i8 %x, %y
+  ret i8 %z
+}
+
+define i8 @blsmsk8_trunc(i32 %x) nounwind {
+; X86-LABEL: blsmsk8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %y = add i8 %t, -1
+  %z = xor i8 %t, %y
+  ret i8 %z
+}

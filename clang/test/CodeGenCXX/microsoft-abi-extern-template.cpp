@@ -3,7 +3,7 @@
 // Even though Foo<int> has an extern template declaration, we have to emit our
 // own copy the vftable when emitting the available externally constructor.
 
-// CHECK: @"??_7?$Foo@H@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [
+// CHECK: @"??_7?$Foo@H@@6B@" = linkonce_odr constant { [1 x ptr] } { [1 x ptr] [
 // CHECK-SAME:   ptr @"??_E?$Foo@H@@UEAAPEAXI@Z"
 // CHECK-SAME: ] }, comdat
 

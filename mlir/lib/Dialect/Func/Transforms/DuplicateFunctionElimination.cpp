@@ -31,7 +31,8 @@ struct DuplicateFuncOpEquivalenceInfo
     llvm::hash_code hash = {};
     func::FuncOp func = const_cast<func::FuncOp &>(cFunc);
     StringAttr symNameAttrName = func.getSymNameAttrName();
-    for (NamedAttribute namedAttr : cFunc->getAttrs()) {
+    for (NamedAttribute namedAttr :
+         cFunc->getDiscardableAttrDictionary().getValue()) {
       StringAttr attrName = namedAttr.getName();
       if (attrName == symNameAttrName)
         continue;
@@ -53,10 +54,6 @@ struct DuplicateFuncOpEquivalenceInfo
   static bool isEqual(func::FuncOp lhs, func::FuncOp rhs) {
     if (lhs == rhs)
       return true;
-    if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
-        rhs == getTombstoneKey() || rhs == getEmptyKey())
-      return false;
-
     if (lhs.isDeclaration() || rhs.isDeclaration())
       return false;
 
@@ -105,12 +102,12 @@ struct DuplicateFunctionEliminationPass
 
     // Update all symbol uses to reference unique func op
     // representants and erase redundant func ops.
-    SymbolTableCollection symbolTable;
-    SymbolUserMap userMap(symbolTable, module);
     for (auto it : toBeErased) {
       StringAttr oldSymbol = it.getSymNameAttr();
       StringAttr newSymbol = getRepresentant[oldSymbol].getSymNameAttr();
-      userMap.replaceAllUsesWith(it, newSymbol);
+      if (failed(
+              SymbolTable::replaceAllSymbolUses(oldSymbol, newSymbol, module)))
+        return signalPassFailure();
       it.erase();
     }
   }

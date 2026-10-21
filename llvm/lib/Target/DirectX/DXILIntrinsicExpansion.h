@@ -14,7 +14,8 @@
 namespace llvm {
 
 /// A pass that transforms DXIL Intrinsics that don't have DXIL opCodes
-class DXILIntrinsicExpansion : public PassInfoMixin<DXILIntrinsicExpansion> {
+class DXILIntrinsicExpansion
+    : public OptionalPassInfoMixin<DXILIntrinsicExpansion> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

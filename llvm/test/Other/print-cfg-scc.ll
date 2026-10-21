@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=print-cfg-sccs -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='print<cfg-sccs>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: SCC #1: %UnifiedExitNode
 ; CHECK: SCC #2: %loopexit.5, %loopexit.6, %loopentry.7, %loopentry.6, %loopentry.5, %endif.2

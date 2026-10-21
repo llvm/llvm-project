@@ -109,3 +109,16 @@ define i33 @test_fshr_non_pow2_bitwidth(i33 %x, i33 %y, i33 %z) {
   %r = and i33 %f, 65535
   ret i33 %r
 }
+
+; CHECK-LABEL: Printing analysis 'Demanded Bits Analysis' for function 'test_clmul':
+; CHECK-DAG: DemandedBits: 0xffff for   %x2 = or i32 %x, 1
+; CHECK-DAG: DemandedBits: 0xffff for   %y2 = or i32 %y, 1
+; CHECK-DAG: DemandedBits: 0xff00 for   %z = call i32 @llvm.clmul.i32(i32 %x2, i32 %y2)
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and i32 %z, 65280
+define i32 @test_clmul(i32 %x, i32 %y) {
+  %x2 = or i32 %x, 1
+  %y2 = or i32 %y, 1
+  %z = call i32 @llvm.clmul.i32(i32 %x2, i32 %y2)
+  %r = and i32 %z, 65280
+  ret i32 %r
+}

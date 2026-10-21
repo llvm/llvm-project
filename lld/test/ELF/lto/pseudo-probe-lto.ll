@@ -19,7 +19,7 @@ entry:
   ret void
 }
 
-; CHECK:      .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK:      .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo.{{[0-9a-f]+}},comdat
 ; CHECK-NEXT: .quad [[#GUID]]
 ; CHECK-NEXT: .quad [[#HASH:]]
 ; CHECK-NEXT: .byte  3

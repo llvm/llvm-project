@@ -46,7 +46,7 @@ define half @test_reg_bitcast_to_half(i16 %in) {
 ; CHECK-LABEL: test_reg_bitcast_to_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
   %val = bitcast i16 %in to half
   ret half %val

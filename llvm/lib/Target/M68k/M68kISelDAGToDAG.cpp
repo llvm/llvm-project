@@ -310,6 +310,8 @@ private:
   bool SelectAL(SDNode *Parent, SDValue N, SDValue &Sym);
   bool SelectPCD(SDNode *Parent, SDValue N, SDValue &Imm);
   bool SelectPCI(SDNode *Parent, SDValue N, SDValue &Imm, SDValue &Index);
+  bool SelectPCIBD(SDNode *Parent, SDValue N, SDValue &Imm, SDValue &Index,
+                   SDValue &Scale);
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintID,
@@ -1038,6 +1040,16 @@ bool M68kDAGToDAGISel::SelectPCI(SDNode *Parent, SDValue N, SDValue &Disp,
   return true;
 }
 
+bool M68kDAGToDAGISel::SelectPCIBD(SDNode *Parent, SDValue N, SDValue &Disp,
+                                   SDValue &Index, SDValue &Scale) {
+  // TODO: Implement the actual selection logic on SCALE. Currently this is
+  // just a placeholder.
+  if (SelectPCI(Parent, N, Disp, Index)) {
+    Scale = CurDAG->getTargetConstant(1, SDLoc(N), MVT::i8);
+    return true;
+  }
+  return false;
+}
 bool M68kDAGToDAGISel::SelectARI(SDNode *Parent, SDValue N, SDValue &Base) {
   LLVM_DEBUG(dbgs() << "Selecting AddrType::ARI: ");
   M68kISelAddressMode AM(M68kISelAddressMode::AddrType::ARI);

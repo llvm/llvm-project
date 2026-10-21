@@ -272,7 +272,7 @@ void CMOVConversion::runOnFunction(BinaryFunction &Function) {
 
 Error CMOVConversion::runOnFunctions(BinaryContext &BC) {
   if (!BC.isX86()) {
-    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
     exit(1);
   }
 

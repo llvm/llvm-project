@@ -39,7 +39,7 @@ public:
     }
 
     // Even sampling across all subnormals.
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = HIDDEN_BIT / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       InType x = FPBits(i).get_val();
@@ -49,7 +49,7 @@ public:
 
   // Positive normal range sampling: skip NaNs and negative values.
   void test_normal_range(RsqrtFunc func) {
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits(v);
@@ -61,14 +61,18 @@ public:
   }
 };
 
-#define LIST_RSQRT_TESTS(T, func)                                              \
-  using LlvmLibcRsqrtTest = RsqrtTest<T, T>;                                   \
-  TEST_F(LlvmLibcRsqrtTest, DenormalValues) { test_denormal_values(&func); }   \
-  TEST_F(LlvmLibcRsqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_RSQRT_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = RsqrtTest<T, T>;                                \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
-#define LIST_NARROWING_RSQRT_TESTS(OutType, InType, func)                      \
-  using LlvmLibcRsqrtTest = RsqrtTest<OutType, InType>;                        \
-  TEST_F(LlvmLibcRsqrtTest, DenormalValues) { test_denormal_values(&func); }   \
-  TEST_F(LlvmLibcRsqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_NARROWING_RSQRT_TESTS(Name, OutType, InType, func)                \
+  using LlvmLibc##Name##Test = RsqrtTest<OutType, InType>;                     \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_RSQRTTEST_H

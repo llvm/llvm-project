@@ -6,11 +6,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @barney() gc "statepoint-example" {
 ; CHECK-LABEL: define void @barney() gc "statepoint-example" {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 16, i64 8>
-; CHECK-NEXT:    [[EXTRACTELEMENT_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> zeroinitializer, i32 0, !is_base_value !0
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x i64> <i64 16, i64 8>
+; CHECK-NEXT:    [[EXTRACTELEMENT_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> zeroinitializer, i32 0, !is_base_value [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <2 x ptr addrspace(1)> [[GETELEMENTPTR]], i32 0
-; CHECK-NEXT:    [[INSERTELEMENT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[EXTRACTELEMENT_BASE]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[EXTRACTELEMENT]], i32 0
+; CHECK-NEXT:    [[INSERTELEMENT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[EXTRACTELEMENT_BASE]], i32 0, !is_base_value [[META0]]
+; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = insertelement <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), ptr addrspace(1) [[EXTRACTELEMENT]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i8 ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[INSERTELEMENT]], <2 x ptr addrspace(1)> [[INSERTELEMENT_BASE]]) ]
 ; CHECK-NEXT:    [[INSERTELEMENT_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
 ; CHECK-NEXT:    [[INSERTELEMENT_BASE_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
@@ -31,12 +31,12 @@ bb:
 define void @bart() gc "statepoint-example" {
 ; CHECK-LABEL: define void @bart() gc "statepoint-example" {
 ; CHECK-NEXT:  always_continue:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 16, i64 8>
-; CHECK-NEXT:    [[BASE_EE:%.*]] = extractelement <2 x ptr addrspace(1)> zeroinitializer, i32 0, !is_base_value !0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x i64> <i64 16, i64 8>
+; CHECK-NEXT:    [[BASE_EE:%.*]] = extractelement <2 x ptr addrspace(1)> zeroinitializer, i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr addrspace(1)> [[TMP0]], i32 0
-; CHECK-NEXT:    [[BASE_IE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE_EE]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[TMP1]], i32 0
-; CHECK-NEXT:    [[OTHER_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> [[BASE_IE]], ptr addrspace(1) [[BASE_EE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[BASE_IE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE_EE]], i32 0, !is_base_value [[META0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), ptr addrspace(1) [[TMP1]], i32 0
+; CHECK-NEXT:    [[OTHER_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> [[BASE_IE]], ptr addrspace(1) [[BASE_EE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = insertelement <2 x ptr addrspace(1)> [[TMP2]], ptr addrspace(1) [[TMP1]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i8 ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[OTHER]], <2 x ptr addrspace(1)> [[OTHER_BASE]]) ]
 ; CHECK-NEXT:    [[OTHER_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)

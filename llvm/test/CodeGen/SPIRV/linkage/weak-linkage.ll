@@ -1,18 +1,18 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
-; TODO: enable validation when SPIR-V Headers patch is merged
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_AMD_weak_linkage %s -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-EXT: Capability Linkage
+; CHECK-SPIRV-EXT-DAG: Capability Linkage
+; CHECK-SPIRV-EXT-DAG: Capability WeakLinkageAMD
 ; CHECK-SPIRV-EXT: Extension "SPV_AMD_weak_linkage"
-; CHECK-SPIRV-EXT-DAG: OpDecorate %[[#]] LinkageAttributes "GV" Weak
-; CHECK-SPIRV-EXT-DAG: OpDecorate %[[#]] LinkageAttributes "square" Weak
+; CHECK-SPIRV-EXT-DAG: OpDecorate %[[#]] LinkageAttributes "GV" WeakAMD
+; CHECK-SPIRV-EXT-DAG: OpDecorate %[[#]] LinkageAttributes "square" WeakAMD
 
 ; CHECK-SPIRV-NOT: OpExtension "SPV_AMD_weak_linkage"
-; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "GV" Weak
-; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "square" Weak
+; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "GV" WeakAMD
+; CHECK-SPIRV-NOT: OpDecorate %[[#]] LinkageAttributes "square" WeakAMD
 ; CHECK-SPIRV-DAG: OpDecorate %[[#]] LinkageAttributes "GV" Export
 ; CHECK-SPIRV-DAG: OpDecorate %[[#]] LinkageAttributes "square" Export
 

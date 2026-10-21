@@ -2,7 +2,7 @@
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMNFS,ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMNFS,ASM64 %s
 
@@ -11,7 +11,7 @@
 ; RUN:     -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMFS,ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 \
 ; RUN:     -function-sections < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASMFS,ASM64 %s

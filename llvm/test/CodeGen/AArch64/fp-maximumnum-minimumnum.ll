@@ -137,6 +137,7 @@
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v8f16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v9f16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for min_v16f16
+;
 
 ;;;;;;;;;;;;;;;;  max_f64
 define double @max_nnan_f64(double %a, double %b) {
@@ -173,9 +174,8 @@ define <3 x double> @max_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fmaxnm v2.2d, v2.2d, v5.2d
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.maximumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -710,9 +710,8 @@ define <3 x double> @min_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fminnm v2.2d, v2.2d, v5.2d
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    fminnm v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.minimumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -1316,9 +1315,8 @@ define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; CHECK-NEXT:    fmaxnm v2.2d, v2.2d, v1.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
 entry:
@@ -1685,42 +1683,42 @@ define <9 x half> @max_v9f16(<9 x half> %a, <9 x half> %b) {
 ; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP16-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP16-NEXT:    // kill: def $h2 killed $h2 def $q2
-; CHECK-FP16-NEXT:    add x9, sp, #16
 ; CHECK-FP16-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP16-NEXT:    // kill: def $h4 killed $h4 def $q4
-; CHECK-FP16-NEXT:    add x10, sp, #40
+; CHECK-FP16-NEXT:    add x9, sp, #40
+; CHECK-FP16-NEXT:    add x10, sp, #48
 ; CHECK-FP16-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; CHECK-FP16-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP16-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-FP16-NEXT:    ldr h1, [sp, #8]
+; CHECK-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP16-NEXT:    ldr h2, [x9]
+; CHECK-FP16-NEXT:    add x9, sp, #16
 ; CHECK-FP16-NEXT:    ld1 { v1.h }[1], [x9]
 ; CHECK-FP16-NEXT:    add x9, sp, #24
-; CHECK-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP16-NEXT:    ld1 { v2.h }[1], [x10]
+; CHECK-FP16-NEXT:    add x10, sp, #56
+; CHECK-FP16-NEXT:    mov v0.h[3], v3.h[0]
 ; CHECK-FP16-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-FP16-NEXT:    add x9, sp, #32
-; CHECK-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-FP16-NEXT:    ld1 { v1.h }[3], [x9]
-; CHECK-FP16-NEXT:    ldr h2, [x10]
-; CHECK-FP16-NEXT:    add x9, sp, #48
+; CHECK-FP16-NEXT:    ld1 { v2.h }[2], [x10]
+; CHECK-FP16-NEXT:    add x10, sp, #64
 ; CHECK-FP16-NEXT:    ldr h3, [sp, #72]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[1], [x9]
-; CHECK-FP16-NEXT:    add x9, sp, #56
+; CHECK-FP16-NEXT:    ld1 { v1.h }[3], [x9]
 ; CHECK-FP16-NEXT:    fminnm v3.8h, v3.8h, v3.8h
 ; CHECK-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[2], [x9]
-; CHECK-FP16-NEXT:    add x9, sp, #64
-; CHECK-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[3], [x9]
+; CHECK-FP16-NEXT:    ld1 { v2.h }[3], [x10]
 ; CHECK-FP16-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-FP16-NEXT:    ldr h2, [sp]
-; CHECK-FP16-NEXT:    mov v0.h[6], v6.h[0]
+; CHECK-FP16-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; CHECK-FP16-NEXT:    fminnm v1.8h, v1.8h, v1.8h
-; CHECK-FP16-NEXT:    mov v0.h[7], v7.h[0]
+; CHECK-FP16-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP16-NEXT:    fmaxnm v2.8h, v2.8h, v3.8h
-; CHECK-FP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-FP16-NEXT:    mov v0.h[7], v7.h[0]
 ; CHECK-FP16-NEXT:    str h2, [x8, #16]
+; CHECK-FP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
 ; CHECK-FP16-NEXT:    str q0, [x8]
 ; CHECK-FP16-NEXT:    ret
@@ -1960,9 +1958,8 @@ define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-NEXT:    fminnm v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; CHECK-NEXT:    fminnm v2.2d, v2.2d, v1.2d
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
 entry:
@@ -2329,42 +2326,42 @@ define <9 x half> @min_v9f16(<9 x half> %a, <9 x half> %b) {
 ; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-FP16-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-FP16-NEXT:    // kill: def $h2 killed $h2 def $q2
-; CHECK-FP16-NEXT:    add x9, sp, #16
 ; CHECK-FP16-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP16-NEXT:    // kill: def $h4 killed $h4 def $q4
-; CHECK-FP16-NEXT:    add x10, sp, #40
+; CHECK-FP16-NEXT:    add x9, sp, #40
+; CHECK-FP16-NEXT:    add x10, sp, #48
 ; CHECK-FP16-NEXT:    // kill: def $h5 killed $h5 def $q5
 ; CHECK-FP16-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP16-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-FP16-NEXT:    ldr h1, [sp, #8]
+; CHECK-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP16-NEXT:    ldr h2, [x9]
+; CHECK-FP16-NEXT:    add x9, sp, #16
 ; CHECK-FP16-NEXT:    ld1 { v1.h }[1], [x9]
 ; CHECK-FP16-NEXT:    add x9, sp, #24
-; CHECK-FP16-NEXT:    mov v0.h[2], v2.h[0]
+; CHECK-FP16-NEXT:    ld1 { v2.h }[1], [x10]
+; CHECK-FP16-NEXT:    add x10, sp, #56
+; CHECK-FP16-NEXT:    mov v0.h[3], v3.h[0]
 ; CHECK-FP16-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-FP16-NEXT:    add x9, sp, #32
-; CHECK-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-FP16-NEXT:    ld1 { v1.h }[3], [x9]
-; CHECK-FP16-NEXT:    ldr h2, [x10]
-; CHECK-FP16-NEXT:    add x9, sp, #48
+; CHECK-FP16-NEXT:    ld1 { v2.h }[2], [x10]
+; CHECK-FP16-NEXT:    add x10, sp, #64
 ; CHECK-FP16-NEXT:    ldr h3, [sp, #72]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[1], [x9]
-; CHECK-FP16-NEXT:    add x9, sp, #56
+; CHECK-FP16-NEXT:    ld1 { v1.h }[3], [x9]
 ; CHECK-FP16-NEXT:    fminnm v3.8h, v3.8h, v3.8h
 ; CHECK-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[2], [x9]
-; CHECK-FP16-NEXT:    add x9, sp, #64
-; CHECK-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-FP16-NEXT:    ld1 { v2.h }[3], [x9]
+; CHECK-FP16-NEXT:    ld1 { v2.h }[3], [x10]
 ; CHECK-FP16-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-FP16-NEXT:    ldr h2, [sp]
-; CHECK-FP16-NEXT:    mov v0.h[6], v6.h[0]
+; CHECK-FP16-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP16-NEXT:    fminnm v2.8h, v2.8h, v2.8h
 ; CHECK-FP16-NEXT:    fminnm v1.8h, v1.8h, v1.8h
-; CHECK-FP16-NEXT:    mov v0.h[7], v7.h[0]
+; CHECK-FP16-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP16-NEXT:    fminnm v2.8h, v2.8h, v3.8h
-; CHECK-FP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-FP16-NEXT:    mov v0.h[7], v7.h[0]
 ; CHECK-FP16-NEXT:    str h2, [x8, #16]
+; CHECK-FP16-NEXT:    fminnm v0.8h, v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    fminnm v0.8h, v0.8h, v1.8h
 ; CHECK-FP16-NEXT:    str q0, [x8]
 ; CHECK-FP16-NEXT:    ret

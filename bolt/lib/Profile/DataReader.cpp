@@ -14,6 +14,7 @@
 #include "bolt/Profile/DataReader.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/MCF.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -84,8 +85,6 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
     }
   }
   llvm::stable_sort(Data);
-  ExecutionCount += FBD.ExecutionCount;
-  ExternEntryCount += FBD.ExternEntryCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
     auto NewElmt = EntryData.insert(EntryData.end(), *I);
@@ -102,6 +101,23 @@ uint64_t FuncBranchData::getNumExecutedBranches() const {
     ExecutedBranches += BranchCount;
   }
   return ExecutedBranches;
+}
+
+void FuncBranchData::setEntryCounts(BinaryFunction &BF) const {
+  uint64_t ExecCount = 0;
+  uint64_t ExternEntryCount = 0;
+  // If destination is the function start - update execution count.
+  // NB: the data is skewed since we cannot tell tail recursion from
+  //     branches to the function start.
+  for (const BranchInfo &BI : EntryData) {
+    if (BI.To.Offset != 0)
+      continue;
+    ExecCount += BI.Branches;
+    if (!BI.From.IsSymbol)
+      ExternEntryCount += BI.Branches;
+  }
+  BF.setExecutionCount(ExecCount);
+  BF.setExternEntryCount(ExternEntryCount);
 }
 
 void BasicSampleInfo::mergeWith(const BasicSampleInfo &SI) { Hits += SI.Hits; }
@@ -228,6 +244,22 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
   if (opts::DumpData)
     dump();
 
+  if (SymbolsMode) {
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      for (StringRef Name : Function.getNames()) {
+        auto It = NamesToBranches.find(NameResolver::restore(Name));
+        if (It == NamesToBranches.end())
+          continue;
+        setBranchData(Function, &It->second);
+        It->second.setEntryCounts(Function);
+        It->second.Used = true;
+        break;
+      }
+    }
+    return Error::success();
+  }
+
   if (collectedInBoltedBinary())
     outs() << "BOLT-INFO: profile collection done on a binary already "
               "processed by BOLT\n";
@@ -240,8 +272,7 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
     }
     if (FuncBranchData *FuncData = getBranchDataForNames(Function.getNames())) {
       setBranchData(Function, FuncData);
-      Function.ExecutionCount = FuncData->ExecutionCount;
-      Function.ExternEntryCount = FuncData->ExternEntryCount;
+      FuncData->setEntryCounts(Function);
       FuncData->Used = true;
     }
   }
@@ -324,8 +355,9 @@ std::error_code DataReader::parseInput() {
   if (std::error_code EC = parse())
     return EC;
 
-  Diag << "WARNING: invalid profile data detected at line " << Line
-       << ". Possibly corrupted profile.\n";
+  if (!ParsingBuf.empty())
+    Diag << "WARNING: invalid profile data detected at line " << Line
+         << ". Possibly corrupted profile.\n";
 
   buildLTONameMaps();
 
@@ -333,6 +365,10 @@ std::error_code DataReader::parseInput() {
 }
 
 void DataReader::readProfile(BinaryFunction &BF) {
+  // Set entry counts for the common case.
+  if (FuncBranchData *FBD = getBranchData(BF))
+    FBD->setEntryCounts(BF);
+
   if (BF.empty())
     return;
 
@@ -350,6 +386,10 @@ void DataReader::readProfile(BinaryFunction &BF) {
   FuncBranchData *FBD = getBranchData(BF);
   if (!FBD)
     return;
+
+  // Re-set entry counts in case FBD was swapped (LTO) or merged
+  // (fetchProfileForOtherEntryPoints).
+  FBD->setEntryCounts(BF);
 
   // Assign basic block counts to function entry points. These only include
   // counts for outside entries.
@@ -397,8 +437,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     if (BF.ProfileMatchRatio == 1.0f) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
-        BF.ExecutionCount = FBD->ExecutionCount;
-        BF.ExternEntryCount = FBD->ExternEntryCount;
         BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
@@ -428,8 +466,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     // Update function profile data with the new set.
     setBranchData(BF, NewBranchData);
     NewBranchData->Used = true;
-    BF.ExecutionCount = NewBranchData->ExecutionCount;
-    BF.ExternEntryCount = NewBranchData->ExternEntryCount;
     BF.ProfileMatchRatio = 1.0f;
     break;
   }
@@ -1041,13 +1077,14 @@ ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
   return true;
 }
 
-ErrorOr<bool> DataReader::maybeParseBATFlag() {
-  if (!ParsingBuf.consume_front("boltedcollection"))
+/// Return if \p Flag line was present in the line.
+ErrorOr<bool> DataReader::maybeParseFlag(StringRef Flag) {
+  if (!ParsingBuf.consume_front(Flag))
     return false;
-  Col += 16;
+  Col += Flag.size();
 
   if (!checkAndConsumeNewLine()) {
-    reportError("malformed boltedcollection line");
+    reportError((Twine("malformed ") + Flag + " line").str());
     return make_error_code(llvm::errc::io_error);
   }
   return true;
@@ -1119,6 +1156,25 @@ std::error_code DataReader::parseInNoLBRMode() {
   return std::error_code();
 }
 
+std::error_code DataReader::parseInSymbolsMode() {
+  while (!ParsingBuf.empty()) {
+    ErrorOr<StringRef> NameOrErr = parseString('\n');
+    if (std::error_code EC = NameOrErr.getError())
+      return EC;
+    StringRef Name = NameOrErr.get();
+    if (Name.empty())
+      continue;
+    // Use branch entry data rather since basic samples only apply in no_lbr
+    // mode.
+    FuncBranchData &FBD = NamesToBranches.try_emplace(Name, Name).first->second;
+    FBD.EntryData.emplace_back(Location(0),
+                               Location(/*IsSymbol=*/true, Name, 0),
+                               /*Mispreds=*/0, /*Branches=*/1);
+  }
+
+  return std::error_code();
+}
+
 std::error_code DataReader::parse() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
     return NamesToBranches.try_emplace(Name, Name).first;
@@ -1130,12 +1186,21 @@ std::error_code DataReader::parse() {
 
   Col = 0;
   Line = 1;
+  ErrorOr<bool> SymbolsFlagOrErr = maybeParseFlag("symbols");
+  if (!SymbolsFlagOrErr)
+    return SymbolsFlagOrErr.getError();
+  SymbolsMode = *SymbolsFlagOrErr;
+
+  // Symbols mode ignores other headers.
+  if (SymbolsMode)
+    return parseInSymbolsMode();
+
   ErrorOr<bool> FlagOrErr = maybeParseNoLBRFlag();
   if (!FlagOrErr)
     return FlagOrErr.getError();
   NoLBRMode = *FlagOrErr;
 
-  ErrorOr<bool> BATFlagOrErr = maybeParseBATFlag();
+  ErrorOr<bool> BATFlagOrErr = maybeParseFlag("boltedcollection");
   if (!BATFlagOrErr)
     return BATFlagOrErr.getError();
   BATMode = *BATFlagOrErr;
@@ -1167,16 +1232,6 @@ std::error_code DataReader::parse() {
     if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.EntryData.emplace_back(std::move(BI));
-    }
-
-    // If destination is the function start - update execution count.
-    // NB: the data is skewed since we cannot tell tail recursion from
-    //     branches to the function start.
-    if (BI.To.IsSymbol && BI.To.Offset == 0) {
-      I = GetOrCreateFuncEntry(BI.To.Name);
-      I->second.ExecutionCount += BI.Branches;
-      if (!BI.From.IsSymbol)
-        I->second.ExternEntryCount += BI.Branches;
     }
   }
 

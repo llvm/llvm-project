@@ -53,8 +53,8 @@
 ; RUN: llvm-dis -o - %t1.out | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-dis -o - %t2.out | FileCheck %s --check-prefix=EXPORT
 
-; IMPORT: define available_externally i32 @g() !thinlto_src_module
-; IMPORT: define available_externally void @analias() !thinlto_src_module
+; IMPORT: define available_externally i32 @g(){{.*}} !thinlto_src_module
+; IMPORT: define available_externally void @analias(){{.*}} !thinlto_src_module
 ; EXPORT: @G.llvm.
 
 target triple = "x86_64-unknown-linux-gnu"

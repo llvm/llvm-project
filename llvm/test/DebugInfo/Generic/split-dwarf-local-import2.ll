@@ -26,7 +26,7 @@ lbl:
 !3 = !DIFile(filename: "b.cc", directory: "")
 !4 = !{!5}
 !5 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !6, entity: !7)
-!6 = !DISubprogram(scope: null, spFlags: DISPFlagOptimized, retainedNodes: !4)
+!6 = !DISubprogram(scope: null, spFlags: DISPFlagOptimized, retainedNodes: !4, type: !8)
 !7 = !DINamespace(scope: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{}
@@ -35,10 +35,10 @@ lbl:
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = distinct !DISubprogram(scope: null, type: !8, spFlags: DISPFlagDefinition, unit: !0)
 !16 = !DILocation(line: 0, scope: !17, inlinedAt: !18)
-!17 = distinct !DISubprogram(scope: null, unit: !10)
+!17 = distinct !DISubprogram(scope: null, unit: !10, type: !8)
 !18 = !DILocation(line: 0, scope: !21)
 !21 = !DILexicalBlockFile(scope: !13, discriminator: 0)
 !22 = distinct !DISubprogram(scope: null, type: !8, spFlags: DISPFlagDefinition, unit: !0)
 !23 = !DILocation(line: 0, scope: !24, inlinedAt: !25)
-!24 = distinct !DISubprogram(scope: null, unit: !2)
+!24 = distinct !DISubprogram(scope: null, unit: !2, type: !8)
 !25 = !DILocation(line: 0, scope: !22)

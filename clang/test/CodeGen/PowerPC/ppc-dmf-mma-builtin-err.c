@@ -25,9 +25,9 @@ void test_mma(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp, v
   __builtin_dmxor(&vdmr, (__dmr1024*)vpp);
   __builtin_build_dmr(&vdmr, vc, vc, vc, vc, vc, vc, vc, vc);
   __builtin_disassemble_dmr(vdmrp, &vdmr);
-  __builtin_mma_dmsha2hash(&vdmr, &vdmr, 0);
-  __builtin_mma_dmsha3hash(&vdmrpair, 0);
-  __builtin_mma_dmxxshapad(&vdmr, vc, 0, 0, 0);
+  __builtin_dmsha2hash(&vdmr, &vdmr, 0);
+  __builtin_dmsha3hash(&vdmrpair, 0);
+  __builtin_dmxxshapad(&vdmr, vc, 0, 0, 0);
   __builtin_dmsha256hash(&vdmr, &vdmr);
   __builtin_dmsha512hash(&vdmr, &vdmr);
   __builtin_dmsha3dw(&vdmrpair);
@@ -52,9 +52,9 @@ void test_mma(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp, v
 // ISA_FUTURE: error: '__builtin_dmxor' needs target feature mma,isa-future-instructions
 // ISA_FUTURE: error: '__builtin_build_dmr' needs target feature mma,isa-future-instructions
 // ISA_FUTURE: error: '__builtin_disassemble_dmr' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_dmsha2hash' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_dmsha3hash' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_dmxxshapad' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmsha2hash' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmsha3hash' needs target feature mma,isa-future-instructions
+// CHECK: error: '__builtin_dmxxshapad' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_dmsha256hash' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_dmsha512hash' needs target feature mma,isa-future-instructions
 // CHECK: error: '__builtin_dmsha3dw' needs target feature mma,isa-future-instructions
