@@ -1,6 +1,6 @@
 // Needs chmod
 // UNSUPPORTED: system-windows
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_fail %t/
