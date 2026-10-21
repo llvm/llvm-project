@@ -246,7 +246,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
 }
 
-CIRGenModule::~CIRGenModule() = default;
+CIRGenModule::~CIRGenModule() { theModule->erase(); }
 
 void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
   theModule->setAttr(
@@ -629,7 +629,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       // change linkage, make sure that it's emitted.
       if (astContext.getInlineVariableDefinitionKind(vd) ==
           ASTContext::InlineVariableDefinitionKind::Strong)
-        getAddrOfGlobalVar(vd);
+        getOrCreateCIRGlobal(vd, /*ty=*/{}, NotForDefinition);
       // Otherwise, we can ignore this declaration. The variable will be emitted
       // on its first use.
       return;
@@ -757,7 +757,7 @@ void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   // If we have a definition, this might be a deferred decl. If the
   // instantiation is explicit, make sure we emit it at the end.
   if (vd->getDefinition() && tsk == TSK_ExplicitInstantiationDefinition)
-    getAddrOfGlobalVar(vd);
+    getOrCreateCIRGlobal(vd, /*ty=*/{}, NotForDefinition);
 
   emitTopLevelDecl(vd);
 }
