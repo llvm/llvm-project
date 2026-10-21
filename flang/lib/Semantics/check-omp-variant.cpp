@@ -781,11 +781,13 @@ void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
         continue;
       }
       const auto &modifiers{OmpGetModifiers(*when)};
-      auto *selector{OmpGetUniqueModifier<parser::OmpContextSelector>(modifiers)};
+      auto *selector{
+          OmpGetUniqueModifier<parser::OmpContextSelector>(modifiers)};
       if (!MayVariantBeSelected(selector, context_, matchContext)) {
         continue;
       }
-      using DirSpecType = common::Indirection<parser::OmpDirectiveSpecification>;
+      using DirSpecType =
+          common::Indirection<parser::OmpDirectiveSpecification>;
       if (auto &maybeSpec{std::get<std::optional<DirSpecType>>(when->t)}) {
         const parser::OmpDirectiveSpecification &spec{maybeSpec->value()};
         llvm::omp::Directive dirId{spec.DirId()};
