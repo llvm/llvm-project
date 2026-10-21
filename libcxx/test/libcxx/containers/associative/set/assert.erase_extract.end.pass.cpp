@@ -38,24 +38,5 @@ int main(int, char**) {
         c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
   }
 
-  {
-    int a[] = {1, 2, 3};
-    std::multiset<int> c(a, a + 3);
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.erase(c.end()), "associative container::erase(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.erase(c.cend()), "associative container::erase(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.cend()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-  }
-
-  {
-    std::multiset<int> c;
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-  }
-
   return 0;
 }

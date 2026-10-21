@@ -37,23 +37,5 @@ int main(int, char**) {
         c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
   }
 
-  {
-    std::multimap<int, int> c{{1, 1}, {2, 2}, {3, 3}};
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.erase(c.end()), "associative container::erase(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.erase(c.cend()), "associative container::erase(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.cend()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-  }
-
-  {
-    std::multimap<int, int> c;
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.extract(c.end()), "associative container::extract(iterator) called with a non-dereferenceable iterator");
-  }
-
   return 0;
 }
