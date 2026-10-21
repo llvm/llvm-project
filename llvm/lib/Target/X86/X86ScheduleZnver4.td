@@ -538,12 +538,13 @@ defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLa
 // neither form applies there. A vmovdqa refills it instead. Scatter latency is
 // estimated, since a scatter has no data result to time.
 //
-// VPGATHERDDZ, VPGATHERDDY and VPSCATTERDDZ let their FP1/FP2 uops use FP3 as
-// well, since llvm-mca does not terminate on a write holding both Zn4FPU01 and
-// Zn4FPU12. That works around the tool and does not describe the hardware.
-// Restore the Zn4FPU12 charge on those three once
-// https://github.com/llvm/llvm-project/issues/224248 is fixed. znver5 and
-// znver6 inherit these Zen 4 numbers unmeasured.
+// VPGATHERDDZ, VPGATHERDDY and VPSCATTERDDZ fold their measured FP1/FP2 uop
+// into the FP1/FP2/FP3 count. Charging it separately leaves the write holding
+// Zn4FPU01, Zn4FPU12, Zn4FPU123 and Zn4FPU23, four groups none of which
+// contains another, and llvm-mca does not terminate on that. That works around
+// the tool and does not describe the hardware. Split the Zn4FPU12 charge back
+// out once https://github.com/llvm/llvm-project/issues/224248 is fixed.
+// znver5 and znver6 inherit these Zen 4 numbers unmeasured.
 
 // Columns run: addressing, the memory pipe, the FP pipes that move the data,
 // the FP0-3 pipes the uops can issue to, then Zn4UcodeGS. Gathers use Zn4Load
