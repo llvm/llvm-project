@@ -407,6 +407,7 @@ class BlockLivenessTracker {
   const BlockToRPOMap &BBToOrder;
   BitVector CanRevisit;
   SmallVector<unsigned, 16> RemainingReads;
+  SmallPtrSet<const BasicBlock *, 16> Visited;
 
   void computeCanRevisit(const RPOToBlockMap &OrderToBB, unsigned NumBlocks) {
     SmallVector<unsigned, 16> Worklist;
@@ -456,6 +457,14 @@ public:
 
   bool canRevisit(unsigned RPO) const { return CanRevisit.test(RPO); }
 
+  bool canRevisit(const BasicBlock &BB) const {
+    return canRevisit(BBToOrder.lookup(&BB));
+  }
+
+  bool isVisited(const BasicBlock *BB) const { return Visited.contains(BB); }
+
+  bool markVisited(const BasicBlock *BB) { return Visited.insert(BB).second; }
+
   bool hasRemainingReads(unsigned RPO) const { return RemainingReads[RPO] > 0; }
 
   /// Return true if \p Pred has no other remaining readers, allowing its
@@ -467,11 +476,9 @@ public:
   /// Decrement remaining read counts for visited predecessors of an acyclic
   /// block \p BB and erase any predecessor LiveOut with no remaining readers.
   template <typename LiveOutMapTy>
-  void retireVisitedPreds(const BasicBlock &BB,
-                          const SmallPtrSet<BasicBlock *, 16> &Visited,
-                          LiveOutMapTy &LiveOut) {
+  void retireVisitedPreds(const BasicBlock &BB, LiveOutMapTy &LiveOut) {
     for (const BasicBlock *Pred : predecessors(&BB)) {
-      if (!Visited.contains(Pred))
+      if (!isVisited(Pred))
         continue;
       unsigned PredRPO = BBToOrder.lookup(Pred);
       if (RemainingReads[PredRPO] != UnboundedReads &&
@@ -689,11 +696,12 @@ class MemLocFragmentFill {
     });
   }
 
-  bool meet(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited,
-            bool SingleVisit, bool StoreLiveIn,
-            const BlockLivenessTracker &Liveness, VarFragMap &LiveSet) {
+  bool meet(const BasicBlock &BB, const BlockLivenessTracker &Liveness,
+            VarFragMap &LiveSet) {
     LLVM_DEBUG(dbgs() << "meet block info from preds of " << BB.getName()
                       << "\n");
+    bool SingleVisit = !Liveness.canRevisit(BB);
+    bool StoreLiveIn = !SingleVisit && BB.hasNPredecessorsOrMore(2);
 
     VarFragMap BBLiveIn;
     bool FirstMeet = true;
@@ -703,7 +711,7 @@ class MemLocFragmentFill {
       // Ignore preds that haven't been processed yet. This is essentially the
       // same as initialising all variables to implicit top value (⊤) which is
       // the identity value for the meet operation.
-      if (!Visited.count(Pred))
+      if (!Liveness.isVisited(Pred))
         continue;
 
       auto PredLiveOut = LiveOut.find(Pred);
@@ -1061,7 +1069,6 @@ public:
     // This dataflow is essentially working on maps of sets and at each meet we
     // intersect the maps and the mapped sets. So, initialized live-in maps
     // monotonically decrease in value throughout the dataflow.
-    SmallPtrSet<BasicBlock *, 16> Visited;
     while (!Worklist.empty() || !Pending.empty()) {
       LLVM_DEBUG(dbgs() << "Processing Worklist\n");
       while (!Worklist.empty()) {
@@ -1069,14 +1076,12 @@ public:
         BasicBlock *BB = OrderToBB[RPO];
         LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
         bool SingleVisit = !Liveness.canRevisit(RPO);
-        bool StoreLiveIn = !SingleVisit && BB->hasNPredecessorsOrMore(2);
         VarFragMap LiveSet;
-        bool InChanged =
-            meet(*BB, Visited, SingleVisit, StoreLiveIn, Liveness, LiveSet);
+        bool InChanged = meet(*BB, Liveness, LiveSet);
         if (SingleVisit)
-          Liveness.retireVisitedPreds(*BB, Visited, LiveOut);
+          Liveness.retireVisitedPreds(*BB, LiveOut);
         // Always consider LiveIn changed on the first visit.
-        InChanged |= Visited.insert(BB).second;
+        InChanged |= Liveness.markVisited(BB);
         if (InChanged) {
           LLVM_DEBUG(dbgs()
                      << BB->getName() << " has new InLocs, process it\n");
@@ -1433,15 +1438,14 @@ private:
     return FnVarLocs->insertVariable(Var);
   }
 
-  /// Join the LiveOut values of preds that are contained in \p Visited into
+  /// Join the LiveOut values of visited preds (tracked in \p Liveness) into
   /// \p LiveSet (and into LiveIn[BB] when \p BB may be revisited, or moving
   /// from a single visited predecessor when it has no other remaining readers).
   /// Return true if the live-in value has changed. LiveIn[BB] values
   /// monotonically increase. See the @link joinMethods join methods @endlink
   /// documentation for more info.
-  bool join(const BasicBlock &BB, unsigned RPO,
-            const SmallPtrSet<BasicBlock *, 16> &Visited,
-            const BlockLivenessTracker &Liveness, BlockInfo &LiveSet);
+  bool join(const BasicBlock &BB, const BlockLivenessTracker &Liveness,
+            BlockInfo &LiveSet);
 
   /// Store \p LiveSet into LiveOut[&BB] if any successor may still read it.
   /// Return true if LiveOut changed and successors should be queued.
@@ -2200,11 +2204,10 @@ AssignmentTrackingLowering::joinBlockInfo(const BlockInfo &A,
   return BlockInfo::join(A, B, TrackedVariablesVectorSize);
 }
 
-bool AssignmentTrackingLowering::join(
-    const BasicBlock &BB, unsigned RPO,
-    const SmallPtrSet<BasicBlock *, 16> &Visited,
-    const BlockLivenessTracker &Liveness, BlockInfo &LiveSet) {
-  bool StoreLiveIn = Liveness.canRevisit(RPO);
+bool AssignmentTrackingLowering::join(const BasicBlock &BB,
+                                      const BlockLivenessTracker &Liveness,
+                                      BlockInfo &LiveSet) {
+  bool StoreLiveIn = Liveness.canRevisit(BB);
 
   SmallVector<const BasicBlock *> VisitedPreds;
   // Ignore backedges if we have not visited the predecessor yet. As the
@@ -2215,7 +2218,7 @@ bool AssignmentTrackingLowering::join(
   // is essentially the same as initialising all LocKinds and Assignments to
   // an implicit ⊥ value which is the identity value for the join operation.
   for (const BasicBlock *Pred : predecessors(&BB)) {
-    if (Visited.count(Pred))
+    if (Liveness.isVisited(Pred))
       VisitedPreds.push_back(Pred);
   }
 
@@ -2618,7 +2621,6 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // involved are made up of join-semilattices; LiveIn(n) can only
   // monotonically increase in value throughout the dataflow.
   //
-  SmallPtrSet<BasicBlock *, 16> Visited;
   while (!Worklist.empty() || !Pending.empty()) {
     LLVM_DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
@@ -2627,12 +2629,12 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
 
       BlockInfo LiveSet;
-      bool InChanged = join(*BB, RPO, Visited, Liveness, LiveSet);
+      bool InChanged = join(*BB, Liveness, LiveSet);
       if (!Liveness.canRevisit(RPO))
-        Liveness.retireVisitedPreds(*BB, Visited, LiveOut);
+        Liveness.retireVisitedPreds(*BB, LiveOut);
 
       // Always consider LiveIn changed on the first visit.
-      InChanged |= Visited.insert(BB).second;
+      InChanged |= Liveness.markVisited(BB);
       if (InChanged) {
         LLVM_DEBUG(dbgs() << BB->getName() << " has new InLocs, process it\n");
         // Process the instructions in the block. After calling process
