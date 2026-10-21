@@ -31,5 +31,8 @@ ANCHOR(SharedLexicalRepresentationJSONFormatAnchorSource)
 ANCHOR(UnsafeBufferUsageAnalysisAnchorSource)
 ANCHOR(UnsafeBufferUsageExtractorAnchorSource)
 ANCHOR(UnsafeBufferUsageJSONFormatAnchorSource)
+ANCHOR(VirtualMethodEntityExtractorAnchorSource)
+ANCHOR(VirtualMethodFamilyAnalysisAnchorSource)
+ANCHOR(VirtualMethodFamilyJSONFormatAnchorSource)
 
 #undef ANCHOR

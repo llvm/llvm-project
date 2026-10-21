@@ -32,7 +32,7 @@ public:
   static void DebuggerInitialize(Debugger &debugger);
   static void Terminate();
 
-  static llvm::StringRef GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "wasm"; }
   static llvm::StringRef GetPluginDescriptionStatic();
 
   llvm::StringRef GetPluginName() override;

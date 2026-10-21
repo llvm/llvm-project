@@ -1227,10 +1227,10 @@ llvm.func @rocdl.s.barrier() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.init
-  // CHECK: rocdl.s.barrier.init %{{.*}} member_cnt = 1 : !llvm.ptr<3>
-  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.init %{{.*}} member_cnt = 1 : !llvm.ptr<15>
+  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1241,17 +1241,17 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.signal.var
-  // CHECK: rocdl.s.barrier.signal.var %{{.*}} member_cnt = 1 : !llvm.ptr<3>
-  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.signal.var %{{.*}} member_cnt = 1 : !llvm.ptr<15>
+  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.join
-  // CHECK: rocdl.s.barrier.join %{{.*}} : !llvm.ptr<3>
-  rocdl.s.barrier.join %ptr : !llvm.ptr<3>
+  // CHECK: rocdl.s.barrier.join %{{.*}} : !llvm.ptr<15>
+  rocdl.s.barrier.join %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1283,17 +1283,17 @@ llvm.func @rocdl.s.get.barrier.state() {
   llvm.return
 }
 
-llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.get.named.barrier.state
-  // CHECK: rocdl.s.get.named.barrier.state %{{.*}} : !llvm.ptr<3> -> i32
-  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+  // CHECK: rocdl.s.get.named.barrier.state %{{.*}} : !llvm.ptr<15> -> i32
+  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
   llvm.return
 }
 
-llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.wakeup.barrier
-  // CHECK: rocdl.s.wakeup.barrier %{{.*}} : !llvm.ptr<3>
-  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
+  // CHECK: rocdl.s.wakeup.barrier %{{.*}} : !llvm.ptr<15>
+  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1852,6 +1852,44 @@ module {
   // expected-error@+2 {{expected one of [any, relaxed, strict] for ROCDL buffer out-of-bounds mode}}
   // expected-error@+1 {{failed to parse ROCDL_BufferOOBModeModuleFlagAttr parameter 'value'}}
   llvm.module_flags [#rocdl.buffer_oob_mode_flag<invalid>]
+}
+
+// -----
+
+// CHECK-LABEL: module @module_target_id_settings
+// CHECK-SAME: attributes {rocdl.sramecc = false, rocdl.xnack = true}
+module @module_target_id_settings attributes {
+    rocdl.xnack = true, rocdl.sramecc = false} {
+}
+
+// -----
+
+// CHECK-LABEL: gpu.module @gpu_module_target_id_settings
+// CHECK-SAME: attributes {rocdl.sramecc = true, rocdl.xnack = false}
+gpu.module @gpu_module_target_id_settings attributes {
+    rocdl.xnack = false, rocdl.sramecc = true} {
+}
+
+// -----
+
+// expected-error@below {{"rocdl.xnack" is only supported on modules}}
+llvm.func private @xnack_on_func() attributes {rocdl.xnack = true}
+
+// -----
+
+// expected-error@below {{"rocdl.sramecc" is only supported on modules}}
+llvm.func private @sramecc_on_func() attributes {rocdl.sramecc = true}
+
+// -----
+
+// expected-error@below {{"rocdl.xnack" must be a boolean}}
+module attributes {rocdl.xnack = "on"} {
+}
+
+// -----
+
+// expected-error@below {{"rocdl.sramecc" must be a boolean}}
+module attributes {rocdl.sramecc = 1 : i32} {
 }
 
 // -----

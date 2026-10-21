@@ -32,12 +32,14 @@ int main(int, char**)
                                 std::regex_constants::syntax_option_type>::value), "");
     static_assert((std::is_same<std::basic_regex<char>::locale_type, std::locale>::value), "");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     static_assert((std::is_same<std::basic_regex<wchar_t>::value_type, wchar_t>::value), "");
     static_assert((std::is_same<std::basic_regex<wchar_t>::traits_type, std::regex_traits<wchar_t> >::value), "");
     static_assert((std::is_same<std::basic_regex<wchar_t>::string_type, std::basic_string<wchar_t> >::value), "");
     static_assert((std::is_same<std::basic_regex<wchar_t>::flag_type,
                                 std::regex_constants::syntax_option_type>::value), "");
     static_assert((std::is_same<std::basic_regex<wchar_t>::locale_type, std::locale>::value), "");
+#endif
 
-  return 0;
+    return 0;
 }

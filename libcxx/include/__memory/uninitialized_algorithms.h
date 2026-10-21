@@ -10,10 +10,8 @@
 #ifndef _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 #define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
-#include <__algorithm/copy.h>
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__algorithm/unwrap_range.h>
 #include <__config>
 #include <__fwd/memory.h>
 #include <__iterator/iterator_traits.h>
@@ -23,7 +21,9 @@
 #include <__memory/construct_at.h>
 #include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_always_bitcastable.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
@@ -358,13 +358,13 @@ private:
 //
 // The caller has to ensure that __first2 can hold at least N uninitialized elements. If an exception is thrown the
 // already copied elements are destroyed in reverse order of their construction.
-template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
+template <class _Alloc, class _Iter1, class _Size, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
-__uninitialized_allocator_copy_impl(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+__uninitialized_allocator_copy_n_impl(_Alloc& __alloc, _Iter1 __first1, _Size __count, _Iter2 __first2) {
   auto __destruct_first = __first2;
   auto __guard =
       std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Iter2>(__alloc, __destruct_first, __first2));
-  while (__first1 != __last1) {
+  for (_Size __i = 0; __i != __count; ++__i) {
     allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__first2), *__first1);
     ++__first1;
     ++__first2;
@@ -381,31 +381,33 @@ inline const bool __allocator_has_trivial_copy_construct_v<allocator<_Type>, _Ty
 
 template <class _Alloc,
           class _In,
+          class _Size,
           class _Out,
-          __enable_if_t<is_trivially_copy_constructible<_In>::value && is_trivially_assignable<_Out&, _In&>::value &&
+          __enable_if_t<__is_always_bitcastable<_In, _Out>::value && is_trivially_constructible<_Out, _In>::value &&
+                            is_trivially_assignable<_Out&, _In&>::value &&
                             is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
                             __allocator_has_trivial_copy_construct_v<_Alloc, _In>,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
-__uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
+__uninitialized_allocator_copy_n_impl(_Alloc&, _In* __first1, _Size __count, _Out* __first2) {
   if (__libcpp_is_constant_evaluated()) {
-    while (__first1 != __last1) {
+    for (_Size __i = 0; __i != __count; ++__i) {
       std::__construct_at(std::__to_address(__first2), *__first1);
       ++__first1;
       ++__first2;
     }
     return __first2;
   } else {
-    return std::copy(__first1, __last1, __first2);
+    std::__constexpr_memmove(__first2, __first1, __element_count(__count));
+    return __first2 + __count;
   }
 }
 
-template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
+template <class _Alloc, class _Iter1, class _Size, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
-__uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
-  auto __unwrapped_range = std::__unwrap_range(std::move(__first1), std::move(__last1));
-  auto __result          = std::__uninitialized_allocator_copy_impl(
-      __alloc, std::move(__unwrapped_range.first), std::move(__unwrapped_range.second), std::__unwrap_iter(__first2));
+__uninitialized_allocator_copy_n(_Alloc& __alloc, _Iter1 __first1, _Size __count, _Iter2 __first2) {
+  auto __result = std::__uninitialized_allocator_copy_n_impl(
+      __alloc, std::__unwrap_iter(std::move(__first1)), __count, std::__unwrap_iter(__first2));
   return std::__rewrap_iter(__first2, __result);
 }
 

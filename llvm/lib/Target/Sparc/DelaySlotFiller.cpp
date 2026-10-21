@@ -20,19 +20,12 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "delay-slot-filler"
 
 STATISTIC(FilledSlots, "Number of delay slots filled");
-
-static cl::opt<bool> DisableDelaySlotFiller(
-  "disable-sparc-delay-filler",
-  cl::init(false),
-  cl::desc("Disable the Sparc delay slot filler."),
-  cl::Hidden);
 
 namespace {
   struct Filler : public MachineFunctionPass {
@@ -80,8 +73,6 @@ namespace {
     MachineBasicBlock::iterator
     findDelayInstr(MachineBasicBlock &MBB, MachineBasicBlock::iterator slot);
 
-    bool needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize);
-
     bool tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI);
 
@@ -103,16 +94,16 @@ FunctionPass *llvm::createSparcDelaySlotFillerPass() {
 bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   Subtarget = &MBB.getParent()->getSubtarget<SparcSubtarget>();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  const SparcInstrInfo *TII = Subtarget->getInstrInfo();
 
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ) {
     MachineBasicBlock::iterator MI = I;
     ++I;
 
     // If MI is restore, try combining it with previous inst.
-    if (!DisableDelaySlotFiller &&
-        (MI->getOpcode() == SP::RESTORErr
-         || MI->getOpcode() == SP::RESTOREri)) {
+    if (!Subtarget->getCLOpts().disable_sparc_delay_filler &&
+        (MI->getOpcode() == SP::RESTORErr ||
+         MI->getOpcode() == SP::RESTOREri)) {
       Changed |= tryCombineRestoreWithPrevInst(MBB, MI);
       continue;
     }
@@ -133,7 +124,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
 
     MachineBasicBlock::iterator D = MBB.end();
 
-    if (!DisableDelaySlotFiller)
+    if (!Subtarget->getCLOpts().disable_sparc_delay_filler)
       D = findDelayInstr(MBB, MI);
 
     ++FilledSlots;
@@ -145,7 +136,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       MBB.splice(I, &MBB, D);
 
     unsigned structSize = 0;
-    if (needsUnimp(MI, structSize)) {
+    if (TII->needsUnimp(*MI, structSize)) {
       MachineBasicBlock::iterator J = MI;
       ++J; // skip the delay filler.
       assert (J != MBB.end() && "MI needs a delay instruction.");
@@ -366,37 +357,6 @@ bool Filler::IsRegInSet(SmallSet<unsigned, 32>& RegSet, unsigned Reg)
     if (RegSet.count(*AI))
       return true;
   return false;
-}
-
-bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
-{
-  if (!I->isCall())
-    return false;
-
-  unsigned structSizeOpNum = 0;
-  switch (I->getOpcode()) {
-  default: llvm_unreachable("Unknown call opcode.");
-  case SP::CALL:
-    structSizeOpNum = 1;
-    break;
-  case SP::CALLrr:
-  case SP::CALLri:
-    structSizeOpNum = 2;
-    break;
-  case SP::TLS_CALL: return false;
-  case SP::TAIL_CALLri:
-  case SP::TAIL_CALL: return false;
-  }
-
-  const MachineOperand &MO = I->getOperand(structSizeOpNum);
-  if (!MO.isImm())
-    return false;
-
-  // A zero-sized return value has nothing for the callee to copy, so GCC emits
-  // no unimp for it and returns to the instruction right after the delay slot.
-  // We replicate this behavior here.
-  StructSize = MO.getImm();
-  return StructSize != 0;
 }
 
 static bool combineRestoreADD(MachineBasicBlock &MBB,

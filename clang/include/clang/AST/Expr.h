@@ -584,7 +584,7 @@ public:
   /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
   /// are not valid per the specification.
   // FIXME: Add proper documentation about the constructs we allow.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
+  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                            bool AllowRelaxedEval = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
@@ -779,6 +779,10 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
@@ -5175,7 +5179,7 @@ struct EmbedDataStorage {
 ///  { {EE(9th and 10th element), { zeroinitializer }}}
 ///
 /// EmbedExpr inside of a semantic initializer list and referencing more than
-/// one element can only appear for arrays of scalars.
+/// one element can only appear for arrays of integer or floating-point type.
 class EmbedExpr final : public Expr {
   SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
@@ -5389,7 +5393,7 @@ public:
   unsigned getNumInitsWithEmbedExpanded() const {
     unsigned Sum = InitExprs.size();
     for (auto *IE : InitExprs)
-      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+      if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
   }

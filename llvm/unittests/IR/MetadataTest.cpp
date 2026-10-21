@@ -21,16 +21,12 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <optional>
 #include <type_traits>
 using namespace llvm;
-
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> PickMergedSourceLocations;
-} // namespace llvm
 
 namespace {
 
@@ -44,7 +40,8 @@ TEST(ContextAndReplaceableUsesTest, FromContext) {
 
 TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
   LLVMContext Context;
-  ContextAndReplaceableUses CRU(std::make_unique<ReplaceableMetadataImpl>(Context));
+  ContextAndReplaceableUses CRU(
+      std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -53,7 +50,7 @@ TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
 TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
   LLVMContext Context;
   ContextAndReplaceableUses CRU(Context);
-  CRU.makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(Context));
+  CRU.makeReplaceable(std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -61,7 +58,7 @@ TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
 
 TEST(ContextAndReplaceableUsesTest, takeReplaceableUses) {
   LLVMContext Context;
-  auto ReplaceableUses = std::make_unique<ReplaceableMetadataImpl>(Context);
+  auto ReplaceableUses = std::make_unique<ReplaceableUsesWithContext>(Context);
   auto *Ptr = ReplaceableUses.get();
   ContextAndReplaceableUses CRU(std::move(ReplaceableUses));
   ReplaceableUses = CRU.takeReplaceableUses();
@@ -120,6 +117,13 @@ protected:
   }
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
+  }
+  /// Uses of \a ConstantData are not tracked, so tests that replace or delete
+  /// a constant need one with a use list.
+  ConstantAsMetadata *getGlobalAsMetadata() {
+    return ConstantAsMetadata::get(new GlobalVariable(
+        M, Type::getInt8Ty(Context), false, GlobalValue::ExternalLinkage,
+        nullptr, "g" + Twine(Counter++)));
   }
   DIType *getCompositeType() {
     return DICompositeType::getDistinct(Context, dwarf::DW_TAG_structure_type,
@@ -282,15 +286,11 @@ TEST_F(MDNodeTest, Print) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "<" << (void *)N << "> = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null";
-    MDNode *Nodes[] = {N0, N1, N2};
-    for (auto *Node : Nodes)
-      OS << ", <" << (void *)Node << ">";
-    OS << "}";
+    OS << ", null, !0, !1, !2}";
   }
 
   std::string Actual;
@@ -319,9 +319,9 @@ TEST_F(MDNodeTest, PrintTemporary) {
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("named");
   NMD->addOperand(N);
 
-  EXPECT_PRINTER_EQ("!0 = !{!1}", N->print(OS, &M));
-  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!2}", Temp->print(OS, &M));
-  EXPECT_PRINTER_EQ("!2 = !{}", Arg->print(OS, &M));
+  EXPECT_PRINTER_EQ("!2 = !{!1}", N->print(OS, &M));
+  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!0}", Temp->print(OS, &M));
+  EXPECT_PRINTER_EQ("!0 = !{}", Arg->print(OS, &M));
 
   // Cleanup.
   Temp->replaceAllUsesWith(Arg);
@@ -343,11 +343,11 @@ TEST_F(MDNodeTest, PrintFromModule) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "!0 = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null, !1, !2, !3}";
+    OS << ", null, !0, !1, !2}";
   }
 
   EXPECT_PRINTER_EQ(Expected, N->print(OS, &M));
@@ -1455,7 +1455,9 @@ TEST_F(DILocationTest, Merge) {
   {
     // If PickMergedSourceLocation is enabled, when one source location is null
     // we should return the valid location.
-    PickMergedSourceLocations = true;
+    const char *Pick[] = {"prog", "-pick-merged-source-locations"};
+    ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Pick,
+                                            "", &nulls()));
     auto *A = DILocation::get(Context, 2, 7, N);
     auto *M1 = DILocation::getMergedLocation(A, nullptr);
     ASSERT_NE(nullptr, M1);
@@ -1468,7 +1470,9 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(2u, M2->getLine());
     EXPECT_EQ(7u, M2->getColumn());
     EXPECT_EQ(N, M2->getScope());
-    PickMergedSourceLocations = false;
+    const char *NoPick[] = {"prog", "-pick-merged-source-locations=false"};
+    ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), NoPick,
+                                            "", &nulls()));
   }
 
 #define EXPECT_ATOM(Loc, Group, Rank)                                          \
@@ -4448,6 +4452,14 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_VALID(dwarf::DW_OP_lit0);
+  EXPECT_VALID(dwarf::DW_OP_lit31);
+  EXPECT_VALID(dwarf::DW_OP_lit7, dwarf::DW_OP_plus);
+  EXPECT_VALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+               dwarf::DW_OP_xderef_size, 4);
+  EXPECT_VALID(dwarf::DW_OP_deref_size, 255);
+  EXPECT_VALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+               dwarf::DW_OP_xderef_size, 255);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
@@ -4463,6 +4475,11 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5,
                  dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_INVALID(dwarf::DW_OP_xderef_size);
+  // The size operand is encoded in a single byte.
+  EXPECT_INVALID(dwarf::DW_OP_deref_size, 256);
+  EXPECT_INVALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+                 dwarf::DW_OP_xderef_size, 256);
 
   // A valid operation doesn't make a malformed suffix valid.
   EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_stack_value,
@@ -4549,6 +4566,113 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT
+}
+
+TEST_F(DIExpressionTest, isConstant) {
+#define EXPECT_CONSTANT(Kind, Value, ...)                                      \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    DIExpression *Expr = DIExpression::get(Context, Elements);                 \
+    EXPECT_EQ(Expr->isConstant(), DIExpression::Kind);                         \
+    EXPECT_EQ(Expr->getConstantValue(), Value);                                \
+  } while (false)
+#define EXPECT_NOT_CONSTANT(...)                                               \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    EXPECT_FALSE(DIExpression::get(Context, Elements)->isConstant());          \
+  } while (false)
+
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_constu, 5,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(SignedConstant, uint64_t(-3), dwarf::DW_OP_consts,
+                  uint64_t(-3), dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(SignedConstant, 7u, dwarf::DW_OP_consts, 7);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_constu, 5,
+                  dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 0, 32);
+
+  // DW_OP_lit<n> is shorthand for DW_OP_constu n.
+  EXPECT_CONSTANT(UnsignedConstant, 0u, dwarf::DW_OP_lit0,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(UnsignedConstant, 31u, dwarf::DW_OP_lit31,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_lit5);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_lit5,
+                  dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 0, 32);
+
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_deref);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_constu, 5, dwarf::DW_OP_plus);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_lit5, dwarf::DW_OP_plus);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_lit5, dwarf::DW_OP_lit6,
+                      dwarf::DW_OP_stack_value);
+  EXPECT_FALSE(DIExpression::get(Context, {})->isConstant());
+
+#undef EXPECT_CONSTANT
+#undef EXPECT_NOT_CONSTANT
+}
+
+TEST_F(DIExpressionTest, isLitOp) {
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit0));
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit5));
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit31));
+  // The neighbouring opcodes on either side of the range.
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_lit0 - 1));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_lit31 + 1));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_reg0));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_constu));
+}
+
+TEST_F(DIExpressionTest, extractAddressClass) {
+  unsigned AddrClass;
+  auto Extract = [&](ArrayRef<uint64_t> Elements) {
+    AddrClass = ~0u;
+    const DIExpression *Expr = DIExpression::get(Context, Elements);
+    const DIExpression *Result =
+        DIExpression::extractAddressClass(Expr, AddrClass);
+    return std::make_pair(Expr, Result);
+  };
+
+  // The whole expression is the address space sequence.
+  for (const SmallVector<uint64_t, 6> &Elements :
+       {SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_lit8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef_size, 4},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_lit8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef_size, 4}}) {
+    auto [Expr, Result] = Extract(Elements);
+    EXPECT_EQ(Result, nullptr);
+    EXPECT_EQ(AddrClass, 8u);
+  }
+
+  // A preceding address computation is kept; the sequence is a suffix.
+  {
+    auto [Expr, Result] =
+        Extract({dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_lit3,
+                 dwarf::DW_OP_swap, dwarf::DW_OP_xderef});
+    EXPECT_EQ(AddrClass, 3u);
+    ASSERT_NE(Result, nullptr);
+    EXPECT_EQ(Result->getElements(),
+              ArrayRef<uint64_t>({dwarf::DW_OP_plus_uconst, 4}));
+  }
+
+  // Not an address space sequence: the expression is returned unchanged.
+  for (const SmallVector<uint64_t, 6> &Elements :
+       {SmallVector<uint64_t, 6>{},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_deref},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef, dwarf::DW_OP_plus_uconst,
+                                 4},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_consts, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        // The operand of DW_OP_constu must not be mistaken for an opcode.
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef}}) {
+    auto [Expr, Result] = Extract(Elements);
+    EXPECT_EQ(Result, Expr);
+    EXPECT_EQ(AddrClass, ~0u);
+  }
 }
 
 TEST_F(DIExpressionTest, extractLeadingOffset) {
@@ -5212,9 +5336,12 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV0.get());
   ASSERT_TRUE(GV0->use_empty());
 
+  TrackingMDRef Ref(MD);
   std::unique_ptr<GlobalVariable> GV1(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  // RAUW updates `Ref`.
   GV0->replaceAllUsesWith(GV1.get());
+  MD = cast<ValueAsMetadata>(Ref.get());
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
@@ -5222,18 +5349,18 @@ TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
   // Test that handleRAUW supports type changes.
   // This is helpful in cases where poison values are used to encode
   // types in metadata, e.g. in type annotations.
-  // Changing the type stored in metadata requires to change the type of
-  // the stored poison value.
-  auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
   auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
-  auto *MD = ConstantAsMetadata::get(I32Poison);
+  auto *MD = getGlobalAsMetadata();
+  Value *GV = MD->getValue();
+  TrackingMDRef Ref(MD);
 
-  EXPECT_EQ(MD->getValue(), I32Poison);
+  EXPECT_EQ(MD->getValue(), GV);
   EXPECT_NE(MD->getValue(), I64Poison);
 
-  ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+  ValueAsMetadata::handleRAUW(GV, I64Poison);
+  MD = cast<ConstantAsMetadata>(Ref.get());
 
-  EXPECT_NE(MD->getValue(), I32Poison);
+  EXPECT_NE(MD->getValue(), GV);
   EXPECT_EQ(MD->getValue(), I64Poison);
 }
 
@@ -5256,8 +5383,7 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
 
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
-  ConstantAsMetadata *CI =
-      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+  ConstantAsMetadata *CI = getGlobalAsMetadata();
 
   // Create a temporary to prevent nodes from resolving.
   auto Temp = MDTuple::getTemporary(Context, {});
@@ -5618,7 +5744,7 @@ typedef MetadataTest MDTupleAllocationTest;
 TEST_F(MDTupleAllocationTest, Tracking) {
   // Make sure that the move constructor and move assignment op
   // for MDOperand correctly adjust tracking information.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = MDTuple::getDistinct(Context, {Value1, Value1});
   EXPECT_EQ(A->getOperand(0), Value1);
   EXPECT_EQ(A->getOperand(1), Value1);
@@ -5634,7 +5760,7 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value1));
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value1));
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);
@@ -5727,7 +5853,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
 
 TEST_F(MDTupleAllocationTest, Tracking2) {
   // Resize a tuple and check that we can still RAUW one of its operands.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = getTuple();
   A->push_back(Value1);
   A->push_back(Value1);
@@ -5736,7 +5862,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
   EXPECT_EQ(A->getOperand(1), Value1);
   EXPECT_EQ(A->getOperand(2), Value1);
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);

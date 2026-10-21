@@ -396,7 +396,7 @@ class OpenMP_DoacrossClauseSkip<
   );
 
   let reqAssemblyFormat = [{
-    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_type` `(` enum($doacross_depend_type)^ `)` )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
     ( `num_loops` `(` $doacross_num_loops^ `)` )?
@@ -821,16 +821,21 @@ class OpenMP_LinearClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins Variadic<AnyType>:$linear_vars,
       Variadic<AnyInteger>:$linear_step_vars,
       OptionalAttr<ArrayAttr>:$linear_var_types,
-      OptionalAttr<ArrayAttr>:$linear_modifiers);
+      OptionalAttr<ArrayAttr>:$linear_modifiers,
+      OptionalAttr<SymbolRefArrayAttr>:$linear_syms);
 
   let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
-                           $linear_modifiers) `)`
+                           $linear_modifiers, $linear_syms) `)`
       ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
@@ -843,6 +848,10 @@ class OpenMP_LinearClauseSkip<
     The `linear_modifiers` attribute optionally specifies a per-variable
     linear-modifier: `val`, `ref`, or `uval`. When omitted, the default
     modifier is determined by the language semantics.
+
+    On operations with a region, `linear_syms` names the `omp.private`
+    declaration of `linear` type that privatizes each linear variable, and each
+    linear variable defines an entry block argument for its private copy.
   }];
 }
 
@@ -1006,6 +1015,36 @@ class OpenMP_MergeableClauseSkip<
 def OpenMP_MergeableClause : OpenMP_MergeableClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [7.6.2] `nocontext` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NocontextClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$nocontext
+  );
+
+  let optAssemblyFormat = [{
+    `nocontext` `(` $nocontext `)`
+  }];
+
+  let description = [{
+    When parameter to `nocontext` evaluates to `true`, the dispatch construct is
+    not added to the OpenMP context, so a function variant that would be selected
+    only because of the enclosing dispatch construct is not selected.
+
+    At the dialect level this operand carries no semantics of its own. The
+    producer of the region is responsible for materializing the base/variant
+    selection, and the LLVM IR translation deliberately ignores this operand.
+  }];
+}
+
+def OpenMP_NocontextClause : OpenMP_NocontextClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.7] `nogroup` clause
 //===----------------------------------------------------------------------===//
 
@@ -1079,6 +1118,38 @@ class OpenMP_NotinbranchClauseSkip<
   }];
 }
 def OpenMP_NotinbranchClause : OpenMP_NotinbranchClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [7.6.1] `novariants` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NovariantsClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$novariants
+  );
+
+  let optAssemblyFormat = [{
+    `novariants` `(` $novariants `)`
+  }];
+
+  let description = [{
+    When a `novariants` clause is present and its expression evaluates to
+    `true`, no function variant is selected for the target call of the dispatch
+    region, even if one would be selected normally. The use of a variable in a
+    `novariants` clause expression causes an implicit reference to the variable
+    in all enclosing constructs.
+
+    At the dialect level this operand carries no semantics of its own. The
+    producer of the region is responsible for materializing the base/variant
+    selection, and the LLVM IR translation deliberately ignores this operand.
+  }];
+}
+
+def OpenMP_NovariantsClause : OpenMP_NovariantsClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [15.6] `nowait` clause
@@ -1715,6 +1786,33 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.0: [14.8] `threadset` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_ThreadsetClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<ThreadsetPolicyAttr>:$threadset
+  );
+
+  let optAssemblyFormat = [{
+    `threadset` `(` custom<ClauseAttr>($threadset) `)`
+  }];
+
+  let description = [{
+    The `threadset` clause specifies the set of threads that may execute the
+    generated task. When the policy is `omp_pool`, the task is eligible to be
+    executed by a free-agent thread. When the policy is `omp_team`, the task
+    may only be executed by a thread in the current team.
+  }];
+}
+
+def OpenMP_ThreadsetClause : OpenMP_ThreadsetClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [9.1.1] `sizes` clause

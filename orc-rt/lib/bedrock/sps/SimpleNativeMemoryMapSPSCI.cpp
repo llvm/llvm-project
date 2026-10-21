@@ -15,7 +15,6 @@
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt/support/sps/SPSAllocAction.h"
 #include "orc-rt/support/sps/SPSMemoryFlags.h"
-#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 namespace orc_rt {
 
@@ -62,33 +61,35 @@ public:
 
 namespace sps_ci {
 
-ORC_RT_SPS_WRAPPER(
+ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_SimpleNativeMemoryMap_reserve,
     SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize),
     WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve))
 
-ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple,
-                   SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
-                   WrapperFunction::handleWithAsyncMethod(
-                       &SimpleNativeMemoryMap::releaseMultiple))
+ORC_RT_SPS_WRAPPER_IMPL(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple,
+                        SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
+                        WrapperFunction::handleWithAsyncMethod(
+                            &SimpleNativeMemoryMap::releaseMultiple))
 
-ORC_RT_SPS_WRAPPER(
+ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_SimpleNativeMemoryMap_initialize,
     SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
                                  SPSSimpleNativeMemoryMapInitializeRequest),
     WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::initialize))
 
-ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple,
-                   SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
-                   WrapperFunction::handleWithAsyncMethod(
-                       &SimpleNativeMemoryMap::deinitializeMultiple))
+ORC_RT_SPS_WRAPPER_IMPL(
+    orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple,
+    SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
+    WrapperFunction::handleWithAsyncMethod(
+        &SimpleNativeMemoryMap::deinitializeMultiple))
 
-static std::pair<const char *, const void *>
+static std::pair<SymbolNameSpec, const void *>
     orc_rt_ci_SimpleNativeMemoryMap_sps_interface[] = {
-        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
-        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple),
-        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize),
-        ORC_RT_SYMTAB_PAIR(
+        ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
+        ORC_RT_SYMTAB_C_PAIR(
+            orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple),
+        ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize),
+        ORC_RT_SYMTAB_C_PAIR(
             orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple)};
 
 Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST) {

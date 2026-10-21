@@ -927,7 +927,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   // Keep a list of allocas which has been affected by the remap.
   SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
 
-  for (const std::pair<int, int> &SI : SlotRemap) {
+  for (const auto &SI : SlotRemap) {
     const AllocaInst *From = MFI->getObjectAllocation(SI.first);
     const AllocaInst *To = MFI->getObjectAllocation(SI.second);
     assert(To && From && "Invalid allocation object");
@@ -1070,9 +1070,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (MMO->getAAInfo()) {
           if (const Value *MMOV = MMO->getValue()) {
             SmallVector<Value *, 4> Objs;
-            getUnderlyingObjectsForCodeGen(MMOV, Objs);
 
-            if (Objs.empty())
+            if (!getUnderlyingObjectsForCodeGen(MMOV, Objs) || Objs.empty())
               MayHaveConflictingAAMD = true;
             else
               for (Value *V : Objs) {
@@ -1196,7 +1195,9 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF)) {
+  bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
+                           shouldSkipOptimizationForOptBisect(MF.getFunction());
+  if (SC.run(MF, OnlyRemoveMarkers)) {
     auto PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserve<MachineRegisterClassAnalysis>();
     return PA;

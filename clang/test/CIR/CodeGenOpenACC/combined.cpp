@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_combined(int N, int cond) {
   // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i {{.*}}, %[[ARG_COND:.*]]: !s32i {{.*}}) {{.*}}{

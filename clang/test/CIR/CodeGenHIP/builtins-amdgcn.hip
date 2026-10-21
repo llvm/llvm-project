@@ -112,6 +112,50 @@ __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out)
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
 }
 
+// CIR-LABEL: @_Z14test_grid_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.dispatch.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u32i, target_address_space(4)>
+// CIR: cir.load invariant align(4) %[[PTR]]
+// CIR: cir.const #cir.int<16> : !u64i
+// CIR: cir.const #cir.int<20> : !u64i
+// LLVM-LABEL: @_Z14test_grid_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i{{32|64}} 12
+// LLVM: load i32, ptr addrspace(4) [[GEP]], align 4, {{.*}}!invariant.load
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 16
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 20
+__device__ void test_grid_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_grid_size_x();
+  out[1] = __builtin_amdgcn_grid_size_y();
+  out[2] = __builtin_amdgcn_grid_size_z();
+}
+
+// CIR-LABEL: @_Z19test_workgroup_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u16i, target_address_space(4)>
+// CIR: %[[SIZE:.*]] = cir.load invariant align(2) %[[PTR]]
+// CIR: cir.cast integral %[[SIZE]] : !u16i -> !u32i
+// CIR: cir.const #cir.int<14> : !u64i
+// CIR: cir.const #cir.int<16> : !u64i
+// LLVM-LABEL: @_Z19test_workgroup_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr{{.*}} i8, ptr addrspace(4) [[P]], i64 12
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, {{.*}}!invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 14
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 16
+// LLVM-NOT: @llvm.amdgcn.workgroup.id
+// LLVM: ret void
+__device__ void test_workgroup_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_workgroup_size_x();
+  out[1] = __builtin_amdgcn_workgroup_size_y();
+  out[2] = __builtin_amdgcn_workgroup_size_z();
+}
+
 // CIR-LABEL: @_Z12test_rcp_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z12test_rcp_f32Pff
@@ -224,6 +268,82 @@ __device__ void test_frexp_mant_f64(double* out, double a) {
   *out = __builtin_amdgcn_frexp_mant(a);
 }
 
+// CIR-LABEL: @_Z14test_fract_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fract" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_fract_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.fract.f32(float %{{.+}})
+__device__ void test_fract_f32(float* out, float a) {
+  *out = __builtin_amdgcn_fractf(a);
+}
+
+// CIR-LABEL: @_Z14test_fract_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.fract" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z14test_fract_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.fract.f64(double %{{.+}})
+__device__ void test_fract_f64(double* out, double a) {
+  *out = __builtin_amdgcn_fract(a);
+}
+
+// CIR-LABEL: @_Z14test_sicmp_i32Pmii
+// CIR: [[CMP:%.+]] = cir.cmp eq %{{.+}}, %{{.+}} : !s32i
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z14test_sicmp_i32Pmii
+// LLVM: [[CMP:%.+]] = icmp eq i32 %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_sicmp_i32(unsigned long* out, int a, int b) {
+  *out = __builtin_amdgcn_sicmp(a, b, 32);
+}
+
+// CIR-LABEL: @_Z14test_uicmp_i32Pmjj
+// CIR: [[CMP:%.+]] = cir.cmp eq %{{.+}}, %{{.+}} : !u32i
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z14test_uicmp_i32Pmjj
+// LLVM: [[CMP:%.+]] = icmp eq i32 %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_uicmp_i32(unsigned long* out, unsigned a, unsigned b) {
+  *out = __builtin_amdgcn_uicmp(a, b, 32);
+}
+
+// CIR-LABEL: @_Z14test_sicmp_i64Pmll
+// CIR: [[CMP:%.+]] = cir.cmp gt %{{.+}}, %{{.+}} : !s64i
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z14test_sicmp_i64Pmll
+// LLVM: [[CMP:%.+]] = icmp sgt i64 %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_sicmp_i64(unsigned long* out, long a, long b) {
+  *out = __builtin_amdgcn_sicmpl(a, b, 39 - 1);
+}
+
+// CIR-LABEL: @_Z14test_uicmp_i64Pmmm
+// CIR: [[CMP:%.+]] = cir.cmp ge %{{.+}}, %{{.+}} : !u64i
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z14test_uicmp_i64Pmmm
+// LLVM: [[CMP:%.+]] = icmp uge i64 %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_uicmp_i64(unsigned long* out, unsigned long a, unsigned long b) {
+  *out = __builtin_amdgcn_uicmpl(a, b, 30 + 5);
+}
+
+// CIR-LABEL: @_Z13test_fcmp_f32Pmff
+// CIR: [[CMP:%.+]] = cir.cmp le %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z13test_fcmp_f32Pmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ole float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 5);
+}
+
+// CIR-LABEL: @_Z13test_fcmp_f64Pmdd
+// CIR: [[CMP:%.+]] = cir.cmp one %{{.+}}, %{{.+}} : !cir.double
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z13test_fcmp_f64Pmdd
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}one double %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f64(unsigned long* out, double a, double b) {
+  *out = __builtin_amdgcn_fcmp(a, b, 3 + 3);
+}
+
 // CIR-LABEL: @_Z19test_trig_preop_f32Pffi
 // CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.float, !s32i) -> !cir.float
 // LLVM: define{{.*}} void @_Z19test_trig_preop_f32Pffi
@@ -254,4 +374,64 @@ __device__ void test_ldexp_f32(float* out, float a, int b) {
 // LLVM: call{{.*}} double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
 __device__ void test_ldexp_f64(double* out, double a, int b) {
   *out = __builtin_amdgcn_ldexp(a, b);
+}
+
+// CIR-LABEL: @_Z14test_class_f32Pbfi
+// CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.float, !s32i) -> !cir.bool
+// LLVM: define{{.*}} void @_Z14test_class_f32Pbfi
+// LLVM: call{{.*}} i1 @llvm.amdgcn.class.f32(float %{{.*}}, i32 %{{.*}})
+__device__ void test_class_f32(bool* out, float a, int b) {
+  *out = __builtin_amdgcn_classf(a, b);
+}
+
+// CIR-LABEL: @_Z14test_class_f64Pbdi
+// CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.double, !s32i) -> !cir.bool
+// LLVM: define{{.*}} void @_Z14test_class_f64Pbdi
+// LLVM: call{{.*}} i1 @llvm.amdgcn.class.f64(double %{{.*}}, i32 %{{.*}})
+__device__ void test_class_f64(bool* out, double a, int b) {
+  *out = __builtin_amdgcn_class(a, b);
+}
+
+// CIR-LABEL: @_Z14test_fmed3_f32Pffff
+// CIR: cir.call_llvm_intrinsic "amdgcn.fmed3" {{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_fmed3_f32Pffff
+// LLVM: call{{.*}} float @llvm.amdgcn.fmed3.f32(float %{{.+}}, float %{{.+}}, float %{{.+}})
+__device__ void test_fmed3_f32(float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
+
+// CIR-LABEL: @_Z9test_lerpPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.lerp" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_lerpPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.lerp(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_lerp(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_lerp(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z9test_ubfePjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.ubfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_ubfePjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ubfe.i32(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_ubfe(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_ubfe(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z9test_sbfePjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.sbfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_sbfePjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.sbfe.i32(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_sbfe(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z17test_wave_shufflePiii
+// CIR: cir.call_llvm_intrinsic "amdgcn.wave.shuffle" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z17test_wave_shufflePiii
+// LLVM: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_wave_shuffle(int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
 }

@@ -116,7 +116,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp.procbindkind<spread>} : (i1, i32) -> ()
 
   // CHECK: omp.parallel
   omp.parallel {
@@ -157,6 +157,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
 }
 
 omp.private {type = private} @parallel_allocate_private : memref<i32>
+omp.private {type = private} @parallel_allocate_associated_private : memref<i32>
 
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
@@ -201,6 +202,16 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: allocate_private_indices([0, 1])
+ // CHECK-SAME: private(@parallel_allocate_private %[[STORAGE:.*]] -> {{.*}}, @parallel_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>,
+                       %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+     private(@parallel_allocate_private %data_var -> %private.x,
+             @parallel_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+   omp.terminator
+ }
+
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
  omp.parallel {
@@ -214,6 +225,32 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
  omp.parallel num_threads(%num_threads : i32) if(%if_cond) proc_bind(close) {
    omp.terminator
  }
+
+  return
+}
+
+omp.private {type = private} @scope_allocate_private : memref<i32>
+omp.private {type = private} @scope_allocate_associated_private : memref<i32>
+
+// CHECK-LABEL: omp_scope_pretty
+func.func @omp_scope_pretty(%data_var : memref<i32>, %allocator : si32) -> () {
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_alignments([64]) allocate_private_indices([0])
+  // CHECK-SAME: private(
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>) allocate_alignments([64]) allocate_private_indices([0])
+      private(@scope_allocate_private %data_var -> %private : memref<i32>) {
+    omp.terminator
+  }
+
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_private_indices([0, 1])
+  // CHECK-SAME: private(@scope_allocate_private %[[STORAGE:.*]] -> {{.*}}, @scope_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>,
+                     %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+      private(@scope_allocate_private %data_var -> %private.x,
+              @scope_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+    omp.terminator
+  }
 
   return
 }
@@ -466,6 +503,8 @@ func.func @omp_loop_nest_pretty_multiple_collapse_tiles(%lb1 : i32, %ub1 : i32, 
   return
 }
 
+omp.private {type = linear} @lin.i32 : i32
+
 // CHECK-LABEL: omp_wsloop
 func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32>, %linear_var : i32, %chunk_var : i32) -> () {
 
@@ -478,33 +517,36 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, ordered = 1} :
     () -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>,
-     linear_var_types = [i32]} : (memref<i32>, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp.schedulekind<static>,
+     linear_var_types = [i32], linear_syms = [@lin.i32]} : (memref<i32>, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32, %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32, i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32, @lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32, i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %data_var, %linear_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>, %l1: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp<schedulekind static>,
-     linear_var_types = [i32,i32]} :
+  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp.schedulekind<static>,
+     linear_var_types = [i32,i32], linear_syms = [@lin.i32, @lin.i32]} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}}) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}}) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var, %chunk_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2,
-     linear_var_types = [i32]} : (memref<i32>, i32, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp.schedulekind<dynamic>, ordered = 2,
+     linear_var_types = [i32], linear_syms = [@lin.i32]} : (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop nowait schedule(auto) {
   // CHECK-NEXT: omp.loop_nest
@@ -512,7 +554,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, nowait, schedule_kind = #omp<schedulekind auto>} :
+  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, nowait, schedule_kind = #omp.schedulekind<auto>} :
     () -> ()
 
   // CHECK: omp.wsloop {
@@ -540,42 +582,42 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop schedule(static) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
+  omp.wsloop schedule(static) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32), val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop schedule(static) linear(val(%data_var : memref<i32> = %linear_var : i32),
-                                     val(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32, i32]) {
+  omp.wsloop schedule(static) linear(val(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32),
+                                     val(@lin.i32 %data_var -> %l1 : memref<i32> = %linear_var : i32)) linear_var_types([i32, i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(static = %{{.*}} : i32) {
+  // CHECK: omp.wsloop ordered(2) schedule(static = %{{.*}} : i32) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(static = %chunk_var : i32) {
+  omp.wsloop ordered(2) schedule(static = %chunk_var : i32) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(dynamic = %chunk_var : i32, nonmonotonic) {
+  omp.wsloop ordered(2) schedule(dynamic = %chunk_var : i32, nonmonotonic) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step)  {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(dynamic = %chunk_var2 : i16, monotonic) {
+  omp.wsloop ordered(2) schedule(dynamic = %chunk_var2 : i16, monotonic) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -780,8 +822,8 @@ func.func @omp_simd_pretty_order(%lb : index, %ub : index, %step : index) -> () 
 // CHECK-LABEL: omp_simd_linear_val
 func.func @omp_simd_linear_val(%lb : index, %ub : index, %step : index,
                                %data_var : memref<i32>, %linear_var : i32) -> () {
-  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32])
-  omp.simd linear(val(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
+  // CHECK: omp.simd linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32])
+  omp.simd linear(val(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -793,9 +835,9 @@ func.func @omp_simd_linear_val(%lb : index, %ub : index, %step : index,
 func.func @omp_simd_linear_val_multiple(%lb : index, %ub : index, %step : index,
                                         %d1 : memref<i32>, %d2 : memref<i32>,
                                         %s1 : i32, %s2 : i32) -> () {
-  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32])
-  omp.simd linear(val(%d1 : memref<i32> = %s1 : i32),
-                  val(%d2 : memref<i32> = %s2 : i32)) linear_var_types([i32, i32]) {
+  // CHECK: omp.simd linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32), val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32])
+  omp.simd linear(val(@lin.i32 %d1 -> %l0 : memref<i32> = %s1 : i32),
+                  val(@lin.i32 %d2 -> %l1 : memref<i32> = %s2 : i32)) linear_var_types([i32, i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -895,7 +937,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {kernel_type = #omp<kernel_type(generic)>, nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {kernel_type = #omp.kernel_type<generic>, nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) name("") -> memref<?xi32>
@@ -2486,6 +2528,23 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
     omp.terminator
   }
 
+  // Checking `threadset` clause
+  // CHECK: omp.task threadset(omp_pool) {
+  omp.task threadset(omp_pool) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.task threadset(omp_team) {
+  omp.task threadset(omp_team) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Checking `in_reduction` clause
   %c1 = arith.constant 1 : i32
   // CHECK: %[[redn_var1:.*]] = llvm.alloca %{{.*}} x f32 : (i32) -> !llvm.ptr
@@ -3015,6 +3074,30 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     omp.terminator
   } {omp.combined}
 
+  // CHECK: omp.taskloop.context threadset(omp_pool) {
+  omp.taskloop.context threadset(omp_pool) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+
+  // CHECK: omp.taskloop.context threadset(omp_team) {
+  omp.taskloop.context threadset(omp_team) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // CHECK: omp.taskloop.context in_reduction(@add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
@@ -3204,16 +3287,16 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 }
 
 // CHECK: func.func @omp_requires_one
-// CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload>
+// CHECK-SAME: omp.requires = #omp.clause_requires<reverse_offload>
 func.func @omp_requires_one() -> ()
-    attributes {omp.requires = #omp<clause_requires reverse_offload>} {
+    attributes {omp.requires = #omp.clause_requires<reverse_offload>} {
   return
 }
 
 // CHECK: func.func @omp_requires_multiple
-// CHECK-SAME: omp.requires = #omp<clause_requires unified_address|dynamic_allocators>
+// CHECK-SAME: omp.requires = #omp.clause_requires<unified_address|dynamic_allocators>
 func.func @omp_requires_multiple() -> ()
-    attributes {omp.requires = #omp<clause_requires unified_address|dynamic_allocators>} {
+    attributes {omp.requires = #omp.clause_requires<unified_address|dynamic_allocators>} {
   return
 }
 
@@ -4192,6 +4275,27 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_multi_block
+func.func @omp_iterator_multi_block(%a : !llvm.ptr, %b : !llvm.ptr) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[C:.*]] = arith.cmpi eq, %[[IV]], %{{.*}} : index
+  // CHECK:   cf.cond_br %[[C]], ^[[BB1:.*]](%{{.*}} : !llvm.ptr), ^[[BB1]](%{{.*}} : !llvm.ptr)
+  // CHECK: ^[[BB1]](%[[P:.*]]: !llvm.ptr):
+  // CHECK:   omp.yield(%[[P]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %c = arith.cmpi eq, %iv, %lb : index
+    cf.cond_br %c, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
+  ^bb1(%p : !llvm.ptr):
+    omp.yield(%p : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {
@@ -4425,14 +4529,14 @@ func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
 
 // CHECK-LABEL: func.func @omp_interop_init
 func.func @omp_interop_init(%obj : !llvm.ptr, %device : i32) -> () {
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(target)>])
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(target)>])
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<target>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<target>])
 
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>])
 
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%device : i32) nowait
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>, #omp.interop_type<target>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>, #omp.interop_type<target>]) prefer_type([1, 6]) device(%device : i32) nowait
   return
 }
 
@@ -4464,13 +4568,155 @@ func.func @omp_interop_destroy(%obj : !llvm.ptr, %device : i32) -> () {
 
 // CHECK-LABEL: func.func @omp_interop_depend
 func.func @omp_interop_depend(%obj : !llvm.ptr, %dep : !llvm.ptr) -> () {
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %dep : !llvm.ptr)
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>]) depend(taskdependinout -> %dep : !llvm.ptr)
 
   // CHECK: omp.interop.use %{{.*}} : !llvm.ptr depend(taskdependin -> %{{.*}} : !llvm.ptr)
   omp.interop.use %obj : !llvm.ptr depend(taskdependin -> %dep : !llvm.ptr)
 
   // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr depend(taskdependout -> %{{.*}} : !llvm.ptr)
   omp.interop.destroy %obj : !llvm.ptr depend(taskdependout -> %dep : !llvm.ptr)
+  return
+}
+
+// -----
+
+// Variant selection (e.g. from Fortran `declare variant`) is resolved by the
+// producer of the region, so at the MLIR level the dispatch region simply wraps
+// a call to the selected variant procedure.
+
+// CHECK-LABEL: func.func @omp_dispatch
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch(%x : memref<i32>) -> () {
+  // CHECK: omp.dispatch {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// Test that the generic form of omp.dispatch roundtrips to pretty-printed form.
+// CHECK-LABEL: func.func @omp_dispatch_generic_to_pretty
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_generic_to_pretty(%x : memref<i32>) -> () {
+  // A plain call (outside any dispatch region) is left untouched.
+  // CHECK: call @omp_dispatch(%[[X]]) : (memref<i32>) -> ()
+  func.call @omp_dispatch(%x) : (memref<i32>) -> ()
+  // CHECK: omp.dispatch {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  "omp.dispatch" () ({
+    func.call @variant(%x) : (memref<i32>) -> ()
+    "omp.terminator" () : () -> ()
+  }) : () -> ()
+  return
+}
+
+// Test the nowait clause on omp.dispatch.
+// CHECK-LABEL: func.func @omp_dispatch_nowait
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nowait(%x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nowait {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nowait {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// novariants clause round-trip; the producer of the region materializes the
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// novariants and nowait together.
+// CHECK-LABEL: func.func @omp_dispatch_novariants_nowait
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants_nowait(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) nowait {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) nowait {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// nocontext clause round-trip; the producer of the region materializes the
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// nocontext and novariants together.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func private @variant(memref<i32>)
+func.func private @variant(memref<i32>) -> ()
+
+// CHECK-LABEL: omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg1 : !llvm.ptr)
+// CHECK: } data_address {
+} data_address {
+// CHECK: ^bb0(%{{.*}}: !llvm.ptr):
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+  // CHECK: omp.yield(%{{.*}} : !llvm.ptr)
+  omp.yield(%0 : !llvm.ptr)
+}
+
+// CHECK-LABEL: func @simd_linear_privatizer
+func.func @simd_linear_privatizer(%x : !llvm.ptr, %y : !llvm.ptr, %lb : i32, %ub : i32, %step : i32) {
+  // CHECK: omp.simd linear(@linear.privatizer %{{.*}} -> %{{.*}} : !llvm.ptr = %{{.*}} : i32) linear_var_types([i32]) private(@x.privatizer %{{.*}} -> %{{.*}} : !llvm.ptr)
+  omp.simd linear(@linear.privatizer %x -> %arg0 : !llvm.ptr = %step : i32) linear_var_types([i32]) private(@x.privatizer %y -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
   return
 }

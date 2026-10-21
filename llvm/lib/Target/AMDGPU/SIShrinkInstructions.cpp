@@ -11,11 +11,9 @@
 #include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -1118,10 +1116,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // Copy extra operands not present in the instruction definition.
       copyExtraImplicitOps(*Inst32, MI);
-
-      // Copy deadness from the old explicit vcc def to the new implicit def.
-      if (SDst && SDst->isDead())
-        Inst32->findRegisterDefOperand(VCCReg, /*TRI=*/nullptr)->setIsDead();
 
       MI.eraseFromParent();
       foldImmediates(*Inst32);

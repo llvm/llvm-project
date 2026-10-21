@@ -19,6 +19,10 @@
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
@@ -32,8 +36,6 @@
 #include "llvm/Transforms/CFGuard.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> X86EnableMachineCombinerPass;
 
 namespace {
 
@@ -53,9 +55,15 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
   void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
-  void addILPOpts(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
   void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
+  void addILPOpts(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
@@ -125,19 +133,45 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
+Error X86CodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
 void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
+  return Error::success();
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass)
+  if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
-}
-
-void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
@@ -149,6 +183,7 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(LiveRangeShrinkPass(), PMW);
     addMachineFunctionPass(X86FixupSetCCPass(), PMW);
+    addMachineFunctionPass(X86OptimizeLEAsPass(), PMW);
     addMachineFunctionPass(X86CallFrameOptimizationPass(), PMW);
     addMachineFunctionPass(X86AvoidStoreForwardingBlocksPass(), PMW);
   }
@@ -201,6 +236,9 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
   addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
+
+  if (TM.getTargetTriple().isLFI())
+    addMachineFunctionPass(X86LFIRewritePass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
@@ -251,8 +289,18 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
-  // ported.
+  addMachineFunctionPass(
+      UnpackMachineBundlesPass([&TT](const MachineFunction &MF) {
+        // Only run bundle expansion if the module uses kcfi, or there are
+        // relevant ObjC runtime functions present in the module.
+        const Function &F = MF.getFunction();
+        const Module *M = F.getParent();
+        return M->getModuleFlag("kcfi") ||
+               (TT.isOSDarwin() &&
+                (M->getFunction("objc_retainAutoreleasedReturnValue") ||
+                 M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
+      }),
+      PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.

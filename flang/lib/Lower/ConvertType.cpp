@@ -535,11 +535,6 @@ struct TypeBuilderImpl {
     llvm_unreachable("unknown character kind");
   }
 
-  template <typename A>
-  Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
-    return fir::SequenceType::getUnknownExtent();
-  }
-
   template <typename T>
   Fortran::lower::LenParameterTy
   getCharacterLength(const Fortran::evaluate::FunctionRef<T> &funcRef) {

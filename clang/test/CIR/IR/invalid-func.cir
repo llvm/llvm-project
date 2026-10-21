@@ -62,3 +62,60 @@ module {
 module {
   cir.func private @l0(!rec_U) // expected-error {{expected all types in the function signature to be CIR types}}
 }
+
+// -----
+
+module {
+  cir.func comdat align(2) @f() { // expected-error {{custom op 'cir.func' expected valid '@'-identifier for symbol name}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat alignment(-1) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat alignment(0) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+// -----
+
+module {
+  cir.func comdat alignment 0 @f() { // expected-error {{expected '('}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat preferred_alignment(-1) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat preferred_alignment(0) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+// -----
+
+module {
+  cir.func comdat preferred_alignment 0 @f() { // expected-error {{expected '('}}
+    cir.return
+}
+
+// -----
+
+// The inner function type is built while S is still incomplete; the purity
+// cache must not keep that answer once S completes with a non-CIR member.
+!rec_S = !cir.struct<"S" {data !cir.ptr<!cir.func<(!cir.ptr<!cir.struct<"S">>)>>, data i32}>
+
+module {
+  cir.func private @l0(!cir.ptr<!rec_S>) // expected-error {{expected all types in the function signature to be CIR types}}
+}

@@ -30,15 +30,17 @@ namespace {
 
 // Saves and restores the host floating-point environment so tests do not
 // leak exception flags into each other or into the rest of the suite.
+// Omit std qualifier on fegetenv, fesetenv: FreeBSD 15.1 defines them as
+// macros.
 class FenvScope {
 public:
   FenvScope() {
     FLANG_FP_TRAP_ON
-    std::fegetenv(&saved_);
+    fegetenv(&saved_);
   }
   ~FenvScope() {
     FLANG_FP_TRAP_ON
-    std::fesetenv(&saved_);
+    fesetenv(&saved_);
   }
 
 private:
@@ -140,5 +142,23 @@ TEST(Exceptions, ClearOneLeavesOthersAlone) {
   EXPECT_NE(RTNAME(fetestexcept)(FE_INVALID), 0u);
 #else
   GTEST_SKIP() << "FE_OVERFLOW and FE_INVALID required for this test";
+#endif
+}
+
+TEST(Exceptions, GetStatusTypeSizeMatchesPlatformLayout) {
+  const std::size_t sz{RTNAME(GetStatusTypeSize)()};
+#if defined(_AIX)
+  // The size must match the value (20) hardocded in IntrinsicCall.cpp
+  EXPECT_EQ(sizeof(std::fenv_t), 20u) << "expected size(fenv_t)=20";
+  EXPECT_EQ(sz, sizeof(std::fenv_t) + sizeof(double))
+      << "expected sizeof(fenv_t)+sizeof(double)="
+      << sizeof(std::fenv_t) + sizeof(double);
+  // The size must fit in ieee_status_type.__data as integer(4) with
+  // extent _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT.
+  EXPECT_LE(sz, 32u)
+      << "GetStatusTypeSize exceeds the 32-byte ieee_status_type.__data field";
+#else
+  EXPECT_EQ(sz, sizeof(std::fenv_t))
+      << "expected sizeof(fenv_t)=" << sizeof(std::fenv_t);
 #endif
 }

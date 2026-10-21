@@ -158,4 +158,4 @@ integration documentation can be found in the [myst-parser docs].
 
 ## Generating the documentation
 
-see [Sphinx Quickstart Template](project:SphinxQuickstartTemplate.md#Generating the documentation)
+see [Sphinx Quickstart Template](SphinxQuickstartTemplate.md#generating-the-documentation)

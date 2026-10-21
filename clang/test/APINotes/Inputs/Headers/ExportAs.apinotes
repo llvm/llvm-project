@@ -3,3 +3,18 @@ Globals:
   - Name: globalInt
     Availability: none
     AvailabilityMsg: "oh no"
+  - Name: sliceGroupProbe
+    SwiftPrivate: true
+Functions:
+  - Name: sliceGroupOrderProbe
+    SwiftName: 'exportBroad(_:)'
+  - Name: sliceGroupOrderProbe
+    Where:
+      Parameters:
+        - int
+    SwiftName: 'exportExact(_:)'
+SwiftVersions:
+  - Version: 4.0
+    Globals:
+      - Name: sliceGroupProbe
+        SwiftPrivate: false

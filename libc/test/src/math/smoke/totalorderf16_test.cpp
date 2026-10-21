@@ -10,4 +10,4 @@
 
 #include "src/math/totalorderf16.h"
 
-LIST_TOTALORDER_TESTS(float16, LIBC_NAMESPACE::totalorderf16)
+LIST_TOTALORDER_TESTS(Totalorderf16, float16, LIBC_NAMESPACE::totalorderf16)

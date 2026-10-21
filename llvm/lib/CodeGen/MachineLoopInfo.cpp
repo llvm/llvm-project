@@ -202,9 +202,6 @@ MDNode *MachineLoop::getLoopID() const {
     if (!BB)
       return nullptr;
     const auto *TI = BB->getTerminator();
-    if (!TI)
-      return nullptr;
-
     MDNode *MD = TI->getMetadata(LLVMContext::MD_loop);
     if (!MD)
       return nullptr;
@@ -269,7 +266,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
         // then this use is safe to hoist.
         if (!isLoopInvariantImplicitPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;

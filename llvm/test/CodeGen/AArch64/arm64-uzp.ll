@@ -140,3 +140,31 @@ define <8 x i16> @vuzpQi16_undef012(<8 x i16> %A, <8 x i16> %B) nounwind {
   %tmp5 = xor <8 x i16> %tmp3, %tmp4
   ret <8 x i16> %tmp5
 }
+
+; For valid masks, VUZP should be generated for shuffles with poisons:
+
+define <8 x i8> @vuzpDi8_poison(<8 x i8> %A) {
+; CHECK-LABEL: vuzpDi8_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1.8b v1, v0, v0
+; CHECK-NEXT:    uzp2.8b v0, v0, v0
+; CHECK-NEXT:    eor.8b v0, v1, v0
+; CHECK-NEXT:    ret
+    %tmp3 = shufflevector <8 x i8> %A, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 0, i32 2, i32 4, i32 6>
+    %tmp4 = shufflevector <8 x i8> %A, <8 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 1, i32 3, i32 5, i32 7>
+    %tmp5 = xor <8 x i8> %tmp3, %tmp4
+    ret <8 x i8> %tmp5
+}
+
+define <8 x i16> @vuzpQi16_poison(<8 x i16> %A) {
+; CHECK-LABEL: vuzpQi16_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-NEXT:    uzp2.8h v0, v0, v0
+; CHECK-NEXT:    eor.16b v0, v1, v0
+; CHECK-NEXT:    ret
+    %tmp3 = shufflevector <8 x i16> %A, <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 0, i32 2, i32 4, i32 6>
+    %tmp4 = shufflevector <8 x i16> %A, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 1, i32 3, i32 5, i32 7>
+    %tmp5 = xor <8 x i16> %tmp3, %tmp4
+    ret <8 x i16> %tmp5
+}

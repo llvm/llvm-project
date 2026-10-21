@@ -4,7 +4,7 @@
 ; RUN: %if ptxas-sm_100 && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx86 | %ptxas-verify -arch=sm_100 %}
 ; RUN: %if ptxas-sm_100 && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx86 -target-abi=shortptr | %ptxas-verify -arch=sm_100 %}
 
-declare void @llvm.nvvm.st.bulk(ptr, i64, i64)
+declare void @llvm.nvvm.st.bulk.p0.i64(ptr, i64, i64)
 define void @st_bulk(ptr %dest_addr, i64 %size) {
 ; CHECK-LABEL: st_bulk(
 ; CHECK:       {
@@ -15,11 +15,11 @@ define void @st_bulk(ptr %dest_addr, i64 %size) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [st_bulk_param_1];
 ; CHECK-NEXT:    st.bulk [%rd1], %rd2, 0;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.st.bulk(ptr %dest_addr, i64 %size, i64 0)
+  call void @llvm.nvvm.st.bulk.p0.i64(ptr %dest_addr, i64 %size, i64 0)
   ret void
 }
 
-declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3), i64, i64)
+declare void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3), i64, i64)
 define void @st_bulk_shared_cta(ptr addrspace(3) %dest_addr, i64 %size) {
 ; CHECK-PTX64-LABEL: st_bulk_shared_cta(
 ; CHECK-PTX64:       {
@@ -41,6 +41,6 @@ define void @st_bulk_shared_cta(ptr addrspace(3) %dest_addr, i64 %size) {
 ; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [st_bulk_shared_cta_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    st.bulk.shared::cta [%r1], %rd1, 0;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-   call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dest_addr, i64 %size, i64 0)
+   call void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3) %dest_addr, i64 %size, i64 0)
    ret void
 }

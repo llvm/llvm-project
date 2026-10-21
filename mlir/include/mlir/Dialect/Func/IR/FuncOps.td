@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_FUNC_IR_FUNCOPS_TD
 
 include "mlir/IR/EnumAttr.td"
+include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -120,7 +121,8 @@ def CallOp : Func_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)` prop-dict attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -197,7 +199,12 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
   let hasCanonicalizeMethod = 1;
   let assemblyFormat = [{
-    $callee `(` $callee_operands `)` attr-dict `:` type($callee)
+    $callee `(` $callee_operands `)`
+    oilist<`,`>(
+        `arg_attrs` `=` $arg_attrs
+      | `res_attrs` `=` $res_attrs
+    )
+    attr-dict `:` type($callee)
   }];
 }
 
@@ -250,7 +257,7 @@ def ConstantOp : Func_Op<"constant",
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope,
   SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
-  OpAsmOpInterface
+  OpAsmOpInterface, DLTIQueryOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -265,7 +272,10 @@ def FuncOp : Func_Op<"func", [
     the region.
 
     Only dialect attribute names may be specified in the attribute dictionaries
-    for function arguments, results, or the function itself.
+    for function arguments, results, or the function itself. The function may
+    also have an inherent `dlti` attribute implementing `DLTIQueryInterface`.
+    Its values are available to scoped DLTI queries on the function and nested
+    operations, unless a closer scope answers the same key.
 
     Example:
 
@@ -296,7 +306,9 @@ def FuncOp : Func_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
-                       UnitAttr:$no_inline);
+                       UnitAttr:$no_inline,
+                       OptionalAttr<DLTIQueryAttr>:$dlti);
+  let useCustomPropertiesEncoding = 1;
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins

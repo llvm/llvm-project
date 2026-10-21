@@ -6,19 +6,19 @@
 // UNSUPPORTED: system-windows
 
 // The device compilation job layout is a property of the driver, not of the
-// registered targets: an RDC device compile stays a single -cc1 invocation
-// that emits the object directly, rather than being split into a separate
-// -emit-llvm-bc job plus a backend job.
+// registered targets: an RDC device compile emits bitcode and defers the
+// SPIR-V emission to clang-linker-wrapper.
 
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu --offload=spirv64 \
-// RUN:   --no-offload-new-driver -fgpu-rdc --hip-path=%S/Inputs/hipspv \
+// RUN:   -fgpu-rdc --hip-path=%S/Inputs/hipspv \
 // RUN:   -nohipwrapperinc %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck --check-prefix=RDC-JOB %s
 
 // RDC-JOB: "-cc1" "-triple" "spirv64"
 // RDC-JOB-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// RDC-JOB-SAME: "-emit-obj"
+// RDC-JOB-SAME: "-emit-llvm-bc"
 // RDC-JOB-SAME: "-fcuda-is-device"
+// RDC-JOB: {{".*clang-linker-wrapper.*"}}
 
 // -fno-integrated-objemitter selects the external llvm-spirv translator, and
 // it is accepted in either configuration.

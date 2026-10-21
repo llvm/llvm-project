@@ -34,7 +34,7 @@ define void @func_illegal_agpr_use_asm() #0 {
 ; GFX908: v_accvgpr_write_b32
 ; GFX90A-NOT: v_accvgpr_write_b32
 
-; GFX908: NumVgprs: 5
+; GFX908: NumVgprs: 30
 ; GFX908: NumAgprs: 32
 ; GFX90A: NumVgprs: 35
 ; GFX90A: NumAgprs: 0

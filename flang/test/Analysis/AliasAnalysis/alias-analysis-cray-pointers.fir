@@ -168,12 +168,12 @@ func.func @_QPtest() {
   %0 = fir.alloca !fir.box<!fir.ptr<f32>>
   %1 = fir.dummy_scope : !fir.dscope
   %2 = fir.alloca i64 {bindc_name = "p", uniq_name = "_QFtestEp"}
-  %3:2 = hlfir.declare %2 {test.ptr = "p", fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtestEp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEp") fortran_attrs<cray_pointer> {test.ptr = "p"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
   %4 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
-  %5:2 = hlfir.declare %4 {test.ptr = "b", uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QFtestEb") {test.ptr = "b"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %6 = fir.alloca f32 {bindc_name = "c", uniq_name = "_QFtestEc"}
-  %7:2 = hlfir.declare %6 {test.ptr = "c", uniq_name = "_QFtestEc"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  %8:2 = hlfir.declare %0 {test.ptr = "a", fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtestEc") {test.ptr = "c"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %8:2 = hlfir.declare %0 uniq_name("_QFtestEa") fortran_attrs<pointer, cray_pointee> {test.ptr = "a"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %9 = fir.zero_bits !fir.ptr<f32>
   %10 = fir.embox %9 : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
   fir.store %10 to %8#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>

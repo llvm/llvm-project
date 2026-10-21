@@ -559,8 +559,8 @@ define <4 x i32> @not_sign_4xi32_select_false_breaks_pattern(<4 x i32> %a) {
 ;
 ; CHECK-AVX512-LABEL: not_sign_4xi32_select_false_breaks_pattern:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpnltd %xmm1, %xmm0, %k1
 ; CHECK-AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967295,4294967295,4294967295,1]
 ; CHECK-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 {%k1} = [1,1,1,1]
 ; CHECK-AVX512-NEXT:    retq

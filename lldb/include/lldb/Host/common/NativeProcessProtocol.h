@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/ProcessAddress.h"
@@ -97,6 +98,10 @@ public:
   virtual Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                                      MemoryRegionInfo &range_info);
 
+  /// Served over the "jAddressSpacesInfo" packet.
+  virtual std::vector<AddressSpaceInfo> GetAddressSpaces() { return {}; }
+
+  /// Plugins without address spaces should error on a non-default one.
   virtual Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                             size_t &bytes_read) = 0;
 
@@ -109,7 +114,7 @@ public:
   virtual Status WriteMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                                  const std::vector<uint8_t> &tags);
 
-  /// Reads a null terminated string from memory.
+  /// Reads a null-terminated string from memory.
   ///
   /// Reads up to \p max_size bytes of memory until it finds a '\0'.
   /// If a '\0' is not found then it reads max_size-1 bytes as a string and a
@@ -300,8 +305,9 @@ public:
     siginfo_read = (1u << 8),
     libraries = (1u << 9),
     accelerator_plugins = (1u << 10),
+    address_spaces = (1u << 11),
 
-    LLVM_MARK_AS_BITMASK_ENUM(accelerator_plugins)
+    LLVM_MARK_AS_BITMASK_ENUM(address_spaces)
   };
 
   class Manager {

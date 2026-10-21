@@ -150,6 +150,13 @@ llvm.func @kernel_func_waves_per_eu()
   llvm.return
 }
 
+llvm.func @kernel_func_waves_per_eu_range()
+    attributes {rocdl.kernel, rocdl.waves_per_eu = "1,1"} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_waves_per_eu_range()
+  // CHECK: #[[$KERNEL_WAVES_PER_EU_RANGE_ATTR:[0-9]+]]
+  llvm.return
+}
+
 llvm.func @kernel_func_unsafe_fp_atomics()
     attributes {rocdl.kernel, rocdl.unsafe_fp_atomics = true} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func_unsafe_fp_atomics()
@@ -278,10 +285,10 @@ llvm.func @rocdl.wave_barrier() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.init
-  // CHECK: call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %{{.*}}, i32 1)
-  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %{{.*}}, i32 1)
+  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
@@ -292,17 +299,17 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.signal.var
-  // CHECK: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %{{.*}}, i32 1)
-  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %{{.*}}, i32 1)
+  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.join
-  // CHECK: call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %{{.*}})
-  rocdl.s.barrier.join %ptr : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) %{{.*}})
+  rocdl.s.barrier.join %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -334,17 +341,17 @@ llvm.func @rocdl.s.get.barrier.state() {
   llvm.return
 }
 
-llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.get.named.barrier.state
-  // CHECK: %{{.*}} = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %{{.*}})
-  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+  // CHECK: %{{.*}} = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %{{.*}})
+  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
   llvm.return
 }
 
-llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.wakeup.barrier
-  // CHECK: call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %{{.*}})
-  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) %{{.*}})
+  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -1962,7 +1969,7 @@ llvm.func @rocdl_4_bit_floats(
 llvm.func @rocdl_atomic_attrs(%ptr: !llvm.ptr<1>, %data: f32) {
   // CHECK-LABEL: @rocdl_atomic_attrs
   // CHECK: atomicrmw
-  // CHECK-SAME: !amdgpu.ignore.denormal.mode
+  // CHECK-SAME: !atomic.ignore.denormal.mode
   // CHECK-SAME: !amdgpu.no.fine.grained.memory
   // CHECK-SAME: !amdgpu.no.remote.memory
   llvm.atomicrmw fadd %ptr, %data monotonic {
@@ -2252,4 +2259,5 @@ llvm.func @rocdl_dot_fp8_family(%i32: i32, %f32: f32) -> f32 {
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
 // CHECK-DAG: ![[$REQD_BLOCK_SIZE]] = !{i32 8, i32 4, i32 2}
 // CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size" }
+// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_RANGE_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,1" "uniform-work-group-size" }
 // CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size" }

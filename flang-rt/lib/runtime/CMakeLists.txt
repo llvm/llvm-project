@@ -193,6 +193,7 @@ set(gpu_sources
   type-info.cpp
   utf.cpp
   work-queue.cpp
+  stl-overrides.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp
@@ -314,20 +315,12 @@ if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   return ()
 endif ()
 
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
-endif ()
-
-# Include the Fortran OpenMP module implementation (omp_lib.o) in
-# libflang_rt.runtime when the OpenMP runtime is also being built.
-# Skip for GPU-default targets: omp_lib is a host-side Fortran module.
-if (TARGET libomp-mod AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx"
-    AND NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
-  list(APPEND sources "$<TARGET_OBJECTS:libomp-mod>")
 endif ()
 
 
@@ -340,11 +333,6 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt.runtime "${sources}")
-
-  if (TARGET libomp-mod AND TARGET flang_rt.runtime.shared AND TARGET omp)
-    # Resolve bind(c) references from omp_lib when building the shared runtime.
-    target_link_libraries(flang_rt.runtime.shared PUBLIC omp)
-  endif ()
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)

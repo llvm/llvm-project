@@ -12,7 +12,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %addr = fir.address_of(@g1_) : !fir.ref<!fir.array<16xi8>>
     %0 = fir.coordinate_of %addr, %c0 : (!fir.ref<!fir.array<16xi8>>, index) -> !fir.ref<i8>
     %1 = fir.convert %0 : (!fir.ref<i8>) -> !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
-    %2 = fir.declare %1 storage(%addr[0]) {uniq_name = "_QPtest_recordEv"} : (!fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>, !fir.ref<!fir.array<16xi8>>) -> !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
+    %2 = fir.declare %1 storage(%addr[0]) uniq_name("_QPtest_recordEv") : (!fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>, !fir.ref<!fir.array<16xi8>>) -> !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
     %3 = fir.load %2 : !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
     fir.store %3 to %2 : !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
     return
@@ -37,7 +37,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %0 = fir.coordinate_of %addr, %c0 : (!fir.ref<!fir.array<160xi8>>, index) -> !fir.ref<i8>
     %1 = fir.convert %0 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>
     %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-    %2 = fir.declare %1(%shape) storage(%addr[0]) {uniq_name = "_QPtest_sequenceEv"} : (!fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>, !fir.shape<1>, !fir.ref<!fir.array<160xi8>>) -> !fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>
+    %2 = fir.declare %1(%shape) storage(%addr[0]) uniq_name("_QPtest_sequenceEv") : (!fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>, !fir.shape<1>, !fir.ref<!fir.array<160xi8>>) -> !fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>
     %3 = fir.array_coor %2(%shape) %c1 : (!fir.ref<!fir.array<10x!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
     %4 = fir.load %3 : !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>
     fir.store %4 to %3 : !fir.ref<!fir.type<t_rec{proc:!fir.boxproc<()->()>}>>

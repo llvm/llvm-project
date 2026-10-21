@@ -587,5 +587,6 @@ def gentbl_sharded_op_defs(name, source_file, shard_count):
             srcs = [source_file],
             outs = [out_file],
             cmd = "echo -e \"#define GET_OP_DEFS_" + str(i) + "\n$$(cat $(SRCS))\" > $(OUTS)",
+            cmd_bat = ">$(OUTS) echo #define GET_OP_DEFS_" + str(i) + "&& >>$(OUTS) type $(SRCS)",
         )
     return copies

@@ -7,7 +7,7 @@
 //   * the parent which now has the attach map type is still passed as a kernel
 //     argument (OMP_MAP_TARGET_PARAM), unlike normal attach maps.
 
-module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp<clause_requires none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 52>} {
+module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp.clause_requires<none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 52>} {
   llvm.func @assumed_shape_array_priv_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %member = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
     %parent = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(target_param, private, attach) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) members(%member : [0] : !llvm.ptr) name("arr_read_write") -> !llvm.ptr

@@ -38,6 +38,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -78,7 +79,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   uint64_t Minor = *Version.getMinor();
 
   auto &Ctx = M.getContext();
-  IRBuilder<> B(M.getContext());
+  IRBuilder<> B(M);
   MDNode *Val = MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Major)),
                                   ConstantAsMetadata::get(B.getInt32(Minor))});
   StringRef DXILValKey = "dx.valver";
@@ -91,7 +92,7 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
                         llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(M, Elements);
   MDNode *RootSignature = RSBuilder.BuildRootSignature();
 
   ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
@@ -102,6 +103,23 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+Expected<unsigned> packSemanticSignature(
+    MutableArrayRef<llvm::hlsl::SemanticSignatureElement> Elements,
+    llvm::Triple::EnvironmentType Stage, llvm::hlsl::IOType IOTy,
+    CodeGenOptions::HLSLSemanticSignaturePackingMode Mode,
+    bool UseNative16BitTypes) {
+  using namespace llvm::hlsl;
+  // Vertex inputs and pixel outputs have fixed packing rules, independent of
+  // the packing mode used between programmable stages.
+  if (Stage == llvm::Triple::Vertex && IOTy == IOType::In)
+    return packSignatureStacked(Elements, Stage, IOTy);
+  if (Stage == llvm::Triple::Pixel && IOTy == IOType::Out)
+    return packSignatureIndexed(Elements, Stage, IOTy);
+  if (Mode == CodeGenOptions::HLSLSemanticSignaturePackingMode::Optimized)
+    return packSignatureOptimized(Elements, Stage, IOTy, UseNative16BitTypes);
+  return packSignaturePrefixStable(Elements, Stage, IOTy, UseNative16BitTypes);
 }
 
 MDNode *buildSemanticSignatureMD(
@@ -1061,21 +1079,24 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
+  // Compute ID intrinsics return i32 components, but the semantic may use
+  // 16-bit integers. Narrow each component before assembling the input.
   if (const auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Value *Result = PoisonValue::get(Ty);
     for (unsigned I = 0; I < VT->getNumElements(); ++I) {
       Value *Elt = B.CreateCall(F, {B.getInt32(I)});
+      Elt = B.CreateTrunc(Elt, VT->getElementType());
       Result = B.CreateInsertElement(Result, Elt, I);
     }
     return Result;
   }
-  return B.CreateCall(F, {B.getInt32(0)});
+  return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
                                       unsigned BuiltIn) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
+  IRBuilder<> B(*GV->getParent());
   MDNode *Operands = MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
@@ -1086,7 +1107,7 @@ static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
+  IRBuilder<> B(*GV->getParent());
   MDNode *Operands =
       MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
                         ConstantAsMetadata::get(B.getInt32(Location))});
@@ -1299,9 +1320,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
     SemanticIndices.push_back(FirstSemanticIndex + I);
 
   // The remaining members keep their default value and will be filled at a
-  // later stage, either during packing or analysis of usage
-  //
-  // FIXME #189762: Element.InterpMode is to be set
+  // later stage, either during packing or analysis of usage. Interpolation
+  // is set by the load/store traversal after visiting each leaf.
   return llvm::hlsl::SemanticSignatureElement(
       SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
       llvm::hlsl::getSemanticKind(Name), SemanticIndices,
@@ -1323,7 +1343,7 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1376,8 +1396,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_store_output,
-      {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_store_output, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1435,18 +1454,36 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
-    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
-    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index, SemanticSignatures &Signature) {
-
-  std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_GROUPINDEX") {
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic,
+    llvm::dxbc::PSV::SemanticKind SemanticKind,
+    llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
+    SemanticSignatures &Signature) {
+  switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupIndex is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupIndex is not yet implemented for this shader "
+           "stage");
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
-
-  if (SemanticName == "SV_DISPATCHTHREADID") {
+  case llvm::dxbc::PSV::SemanticKind::DispatchThreadID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_DispatchThreadID is in an unavailable stage and should have "
+           "been diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_DispatchThreadID is not yet implemented for this "
+           "shader stage");
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1454,8 +1491,16 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
-
-  if (SemanticName == "SV_GROUPTHREADID") {
+  case llvm::dxbc::PSV::SemanticKind::GroupThreadID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupThreadID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupThreadID is not yet implemented for this shader "
+           "stage");
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1463,8 +1508,15 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
-
-  if (SemanticName == "SV_GROUPID") {
+  case llvm::dxbc::PSV::SemanticKind::GroupID: {
+    assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
+                               llvm::Triple::Amplification},
+                              Stage) &&
+           "SV_GroupID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Mesh &&
+           Stage != llvm::Triple::Amplification &&
+           "FIXME: SV_GroupID is not yet implemented for this shader stage");
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1472,38 +1524,50 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
-
-  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
-
-  if (SemanticName == "SV_POSITION") {
-    if (ST == Triple::EnvironmentType::Pixel) {
-      if (CGM.getTarget().getTriple().isSPIRV())
-        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                      Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::FragCoord */ 15);
-      if (CGM.getTarget().getTriple().isDXIL())
-        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
-                                        Signature);
-    }
-
-    if (ST == Triple::EnvironmentType::Vertex) {
-      return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index,
-                                  Signature);
-    }
-  }
-
-  if (SemanticName == "SV_VERTEXID") {
-    if (ST == Triple::EnvironmentType::Vertex) {
-      if (CGM.getTarget().getTriple().isSPIRV())
-        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                      Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::VertexIndex */ 42);
-      else
-        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
-                                        Signature);
-    }
+  case llvm::dxbc::PSV::SemanticKind::Position:
+    assert(llvm::is_contained({llvm::Triple::Hull, llvm::Triple::Domain,
+                               llvm::Triple::Geometry, llvm::Triple::Pixel},
+                              Stage) &&
+           "SV_Position is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry &&
+           "FIXME: loading SV_Position is not yet implemented for this "
+           "shader stage");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::FragCoord */ 15);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::VertexID:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_VertexID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::VertexIndex */ 42);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::InstanceID:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_InstanceID is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::InstanceIndex */ 43);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  default:
+    break;
   }
 
   llvm_unreachable(
@@ -1524,30 +1588,43 @@ static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
   B.CreateStore(Source, GV);
 }
 
-void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
-                                            const clang::DeclaratorDecl *Decl,
-                                            HLSLAppliedSemanticAttr *Semantic,
-                                            std::optional<unsigned> Index,
-                                            SemanticSignatures &Signature) {
-
-  std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_POSITION") {
+void CGHLSLRuntime::emitSystemSemanticStore(
+    IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic,
+    llvm::dxbc::PSV::SemanticKind SemanticKind,
+    llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
+    SemanticSignatures &Signature) {
+  switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::Position:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_Position is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry && Stage != llvm::Triple::Mesh &&
+           "FIXME: storing SV_Position is not yet implemented for this "
+           "shader stage");
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
       return;
     }
-
     if (CGM.getTarget().getTriple().isSPIRV()) {
       createSPIRVBuiltinStore(B, CGM.getModule(), Source,
                               Semantic->getAttrName()->getName(),
                               /* BuiltIn::Position */ 0);
       return;
     }
-  }
-
-  if (SemanticName == "SV_TARGET") {
+    break;
+  case llvm::dxbc::PSV::SemanticKind::Target:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Target is in an unavailable stage and should have been "
+           "diagnosed by Sema");
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
+  default:
+    break;
   }
 
   llvm_unreachable(
@@ -1560,10 +1637,19 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     SemanticSignatures &Signature) {
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
-  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index,
-                                  Signature);
-  return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
+  llvm::dxbc::PSV::SemanticKind SemanticKind =
+      llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::hlsl::SemanticInterpretation Interpretation =
+      llvm::hlsl::getInterpretationKind(SemanticKind, ShaderAttr->getType(),
+                                        llvm::hlsl::IOType::In);
+  assert(Interpretation != llvm::hlsl::SemanticInterpretation::Invalid &&
+         "invalid semantic should have been diagnosed by Sema");
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
+    return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
+  return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind,
+                                ShaderAttr->getType(), Index, Signature);
 }
 
 void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
@@ -1573,10 +1659,21 @@ void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
                                               HLSLAppliedSemanticAttr *Semantic,
                                               SemanticSignatures &Signature) {
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
-  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    emitSystemSemanticStore(B, Source, Decl, Semantic, Index, Signature);
-  else
-    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+  llvm::dxbc::PSV::SemanticKind SemanticKind =
+      llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+
+  llvm::hlsl::SemanticInterpretation Interpretation =
+      llvm::hlsl::getInterpretationKind(SemanticKind, ShaderAttr->getType(),
+                                        llvm::hlsl::IOType::Out);
+  assert(Interpretation != llvm::hlsl::SemanticInterpretation::Invalid &&
+         "invalid semantic should have been diagnosed by Sema");
+
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
+    return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+  emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind,
+                          ShaderAttr->getType(), Index, Signature);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
@@ -1585,7 +1682,8 @@ CGHLSLRuntime::handleStructSemanticLoad(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
@@ -1596,7 +1694,7 @@ CGHLSLRuntime::handleStructSemanticLoad(
   for (unsigned I = 0; I < ST->getNumElements(); ++I) {
     auto [ChildValue, NextAttr] =
         handleSemanticLoad(B, FD, ST->getElementType(I), *FieldDecl, AttrBegin,
-                           AttrEnd, Signature);
+                           AttrEnd, Signature, Modifiers);
     AttrBegin = NextAttr;
     assert(ChildValue);
     Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
@@ -1612,7 +1710,8 @@ CGHLSLRuntime::handleStructSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
 
   const llvm::StructType *ST = cast<StructType>(Source->getType());
 
@@ -1629,7 +1728,7 @@ CGHLSLRuntime::handleStructSemanticStore(
   for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin = handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin,
-                                    AttrEnd, Signature);
+                                    AttrEnd, Signature, Modifiers);
   }
 
   return AttrBegin;
@@ -1641,16 +1740,33 @@ CGHLSLRuntime::handleSemanticLoad(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   assert(AttrBegin != AttrEnd);
+  // Pass the enclosing declaration's mask down the traversal, replacing (not
+  // merging) it when an inner field has its own interpolation modifiers.
+  if (const auto *A = Decl->getAttr<HLSLInterpolationModifierAttr>())
+    Modifiers =
+        static_cast<llvm::hlsl::InterpolationModifier>(A->getModifiers());
   if (Type->isStructTy())
     return handleStructSemanticLoad(B, FD, Type, Decl, AttrBegin, AttrEnd,
-                                    Signature);
+                                    Signature, Modifiers);
 
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
-  return std::make_pair(
-      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature), AttrBegin);
+  size_t PreviousSize = Signature.size();
+  llvm::Value *Value =
+      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature);
+  // Intrinsic-only system values and SPIR-V loads do not add DXIL signature
+  // elements. Non-pixel inputs retain Undefined.
+  if (Signature.size() != PreviousSize) {
+    auto &Element = Signature.back();
+    Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
+        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::In);
+  }
+  return std::make_pair(Value, AttrBegin);
 }
 
 specific_attr_iterator<HLSLAppliedSemanticAttr>
@@ -1659,15 +1775,28 @@ CGHLSLRuntime::handleSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   assert(AttrBegin != AttrEnd);
+  // An inner field overrides the enclosing return declaration's modifiers.
+  if (const auto *A = Decl->getAttr<HLSLInterpolationModifierAttr>())
+    Modifiers =
+        static_cast<llvm::hlsl::InterpolationModifier>(A->getModifiers());
   if (Source->getType()->isStructTy())
     return handleStructSemanticStore(B, FD, Source, Decl, AttrBegin, AttrEnd,
-                                     Signature);
+                                     Signature, Modifiers);
 
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
+  size_t PreviousSize = Signature.size();
   handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature);
+  if (Signature.size() != PreviousSize) {
+    auto &Element = Signature.back();
+    Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
+        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::Out);
+  }
   return AttrBegin;
 }
 
@@ -1784,6 +1913,36 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       auto *RSDecl = RSAttr->getSignatureDecl();
       addRootSignatureMD(RSDecl->getVersion(), RSDecl->getRootElements(),
                          EntryFn, M);
+    }
+  }
+
+  if (CGM.getTarget().getTriple().isDXIL()) {
+    // Use the entry's shader stage, not the target environment, which may be
+    // 'library' when compiling multiple entry points.
+    auto Stage = FD->getAttr<HLSLShaderAttr>()->getType();
+    using PackingMode = CodeGenOptions::HLSLSemanticSignaturePackingMode;
+    auto Mode = CGM.getCodeGenOpts().getHLSLSemanticSignaturePacking();
+    for (auto IOTy : {llvm::hlsl::IOType::In, llvm::hlsl::IOType::Out}) {
+      bool IsOutput = IOTy == llvm::hlsl::IOType::Out;
+      auto &Signature = IsOutput ? OutputSignature : InputSignature;
+      auto Packed = packSemanticSignature(Signature, Stage, IOTy, Mode,
+                                          CGM.getLangOpts().NativeHalfType);
+      if (!Packed) {
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::err_hlsl_signature_packing)
+            << IsOutput << llvm::toString(Packed.takeError());
+        return;
+      }
+      // Library entry points retain stage-specific packing without warnings.
+      if (Mode != PackingMode::Default &&
+          CGM.getTarget().getTriple().getEnvironment() !=
+              llvm::Triple::Library &&
+          ((Stage == llvm::Triple::Vertex && !IsOutput) ||
+           (Stage == llvm::Triple::Pixel && IsOutput)))
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::warn_hlsl_signature_packing_ignored)
+            << (Mode == PackingMode::Optimized ? "optimized" : "prefix-stable")
+            << IsOutput;
     }
   }
 

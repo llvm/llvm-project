@@ -103,7 +103,10 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OL);
-  MPM.addPass(PrintModulePass(OS));
+  MPM.addPass(PrintModulePass(OS, /*Banner=*/"",
+                              /*ShouldPreserveUseListOrder=*/false,
+                              /*EmitSummaryIndex=*/false,
+                              /*ShouldRenumberMetadata=*/true));
 
   MPM.run(M, MAM);
 }

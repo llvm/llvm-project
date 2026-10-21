@@ -9,9 +9,9 @@ module test_prefetch_mod
 end module test_prefetch_mod
 
 subroutine test_prefetch_01()
-  ! HLFIR: %[[H_A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_prefetch_01Ea"} : (!fir.ref<!fir.array<256xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<256xi32>>, !fir.ref<!fir.array<256xi32>>)
-  ! HLFIR: %[[H_I:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_prefetch_01Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! HLFIR: %[[H_J:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_prefetch_01Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! HLFIR: %[[H_A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_prefetch_01Ea") : (!fir.ref<!fir.array<256xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<256xi32>>, !fir.ref<!fir.array<256xi32>>)
+  ! HLFIR: %[[H_I:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_prefetch_01Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! HLFIR: %[[H_J:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_prefetch_01Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   integer :: i, j
   integer :: a(256)
@@ -39,8 +39,8 @@ end subroutine test_prefetch_01
 
 subroutine test_prefetch_02(t1)
   use test_prefetch_mod
-  ! HLFIR: %[[H_A:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_prefetch_02Ea"}
-  ! HLFIR: %[[H_ARG0:.*]]:2 = hlfir.declare {{.*}} dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFtest_prefetch_02Et1"}
+  ! HLFIR: %[[H_A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_prefetch_02Ea") fortran_attrs<allocatable>
+  ! HLFIR: %[[H_ARG0:.*]]:2 = hlfir.declare {{.*}} dummy_scope {{.*}} uniq_name("_QFtest_prefetch_02Et1") fortran_attrs<intent_inout>
   type(t), intent(inout) :: t1
   integer, allocatable :: a(:, :)
 

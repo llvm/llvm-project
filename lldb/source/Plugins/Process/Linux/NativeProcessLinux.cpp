@@ -403,7 +403,10 @@ void NativeProcessLinux::Manager::SigchldHandler() {
     // vice-versa. This means that if the child event arrives first, it may not
     // be handled by any process (because it doesn't know the thread belongs to
     // it).
-    bool handled = llvm::any_of(m_processes, [&](NativeProcessLinux *process) {
+    // The loop below may modify m_processes (create or delete entries), so
+    // operate on a temporary copy.
+    auto processes = llvm::to_vector(m_processes);
+    bool handled = llvm::any_of(processes, [&](NativeProcessLinux *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
     if (!handled) {
@@ -764,7 +767,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
                "received error while checking for watchpoint hits, pid = "
                "{0}, error = {1}",
                thread.GetID(), error);
-    if (wp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && wp_index != LLDB_INVALID_INDEX32) {
       MonitorWatchpoint(thread, wp_index);
       break;
     }
@@ -777,7 +780,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       LLDB_LOG(log, "received error while checking for hardware "
                     "breakpoint hits, pid = {0}, error = {1}",
                thread.GetID(), error);
-    if (bp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && bp_index != LLDB_INVALID_INDEX32) {
       MonitorBreakpoint(thread);
       break;
     }

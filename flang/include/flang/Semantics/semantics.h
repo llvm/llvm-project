@@ -56,6 +56,10 @@ class Symbol;
 class CommonBlockMap;
 using CommonBlockList = std::vector<std::pair<SymbolRef, std::size_t>>;
 
+namespace omp {
+struct SemanticOverrides;
+}
+
 using ConstructNode = std::variant<const parser::AssociateConstruct *,
     const parser::BlockConstruct *, const parser::CaseConstruct *,
     const parser::ChangeTeamConstruct *, const parser::CriticalConstruct *,
@@ -287,6 +291,9 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  // Like FindScope(), but returns null rather than dying when the source is
+  // not in the scope index, as is the case while it is still being built.
+  const Scope *FindScopeIfAny(parser::CharBlock) const;
   void UpdateScopeIndex(Scope &, parser::CharBlock);
   void DumpScopeIndex(llvm::raw_ostream &) const;
 
@@ -341,6 +348,15 @@ public:
   // linker).
   void MapCommonBlockAndCheckConflicts(const Symbol &);
 
+  // After DATA statement initializations have been compiled into
+  // symbol initializer values, check any pending conflicts recorded by
+  // MapCommonBlockAndCheckConflicts() that could not be resolved earlier
+  // because the initializer values were not yet known: a duplicate
+  // initialization (identical values) of a COMMON block appearing in more
+  // than one program unit is accepted as an extension, but a conflicting
+  // one is a hard error.
+  void CheckCommonBlockInitializationConflicts();
+
   // Get the list of common blocks appearing in the program. If a common block
   // appears in several subprograms, only one of its appearance is returned in
   // the list alongside the biggest byte size of all its appearances.
@@ -356,6 +372,11 @@ public:
   // initialized common symbol without extending its size, or have some other
   // behavior.
   CommonBlockList GetCommonBlocks() const;
+
+  // True when any structured OpenACC data construct maps an object, which is
+  // what makes it worth looking for such a mapping at a call site.
+  void NoteOpenACCDataMapping() { anyOpenACCDataMapping_ = true; }
+  bool AnyOpenACCDataMapping() const { return anyOpenACCDataMapping_; }
 
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
@@ -377,6 +398,10 @@ public:
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
+  const std::list<parser::Program> &GetModFileParseTrees() {
+    return modFileParseTrees_;
+  }
+
   // Label analysis classifies every labeled statement, and only some of those
   // classifications may be named by a statement that branches.  Lowering needs
   // the same distinction when it records the targets of a branch, so the
@@ -389,6 +414,8 @@ public:
   bool IsRecordedBranchTarget(parser::CharBlock statementPosition) const {
     return branchTargets_.find(statementPosition) != branchTargets_.end();
   }
+
+  omp::SemanticOverrides &GetOmpSemanticOverrides();
 
 private:
   struct ScopeIndexComparator {
@@ -450,6 +477,8 @@ private:
   UnorderedSymbolSet isDefined_;
   UnorderedSymbolSet isUsed_;
   std::set<const parser::AccObject *> accObjectDuplicates_;
+  bool anyOpenACCDataMapping_{false};
+  std::unique_ptr<omp::SemanticOverrides> ompOverrides_;
   std::list<ProgramTree> programTrees_;
 };
 

@@ -12,8 +12,9 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -38,6 +39,9 @@ protected:
     DialectRegistry registry;
     arith::registerValueBoundsOpInterfaceExternalModels(registry);
     context.appendDialectRegistry(registry);
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         func::FuncDialect, scf::SCFDialect, gpu::GPUDialect,
                         memref::MemRefDialect, DLTIDialect>();
@@ -276,6 +280,22 @@ TEST_F(OpenACCUtilsCGTest, activeParDimsOperationAttributes) {
       &context, {GPUParallelDimAttr::threadXDim(&context)});
   setActiveParDimsAttr(op, threadAttr);
   EXPECT_EQ(getActiveParDimsAttr(op), threadAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, chunkSizeAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+
+  EXPECT_FALSE(hasChunkSizeAttr(op));
+  EXPECT_FALSE(getChunkSize(op).has_value());
+
+  setChunkSizeAttr(op, 32);
+  EXPECT_TRUE(hasChunkSizeAttr(op));
+  EXPECT_EQ(getChunkSize(op), 32);
+  EXPECT_EQ(getChunkSizeAttr(op).getChunkSize(), 32);
+
+  setChunkSizeAttr(op, ChunkSizeAttr::get(&context, 64));
+  EXPECT_EQ(getChunkSize(op), 64);
 }
 
 //===----------------------------------------------------------------------===//

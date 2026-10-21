@@ -619,7 +619,7 @@ void NativeProcessProtocol::FixupBreakpointPCAsNeeded(
     // We didn't find one at a software probe location.  Nothing to do.
     LLDB_LOG(log,
              "pid {0} no lldb software breakpoint found at current pc with "
-             "adjustment: {1}",
+             "adjustment: {1:x}",
              GetID(), breakpoint_addr);
     return;
   }
@@ -801,7 +801,7 @@ NativeProcessProtocol::ReadCStringFromMemory(lldb::addr_t addr, char *buffer,
 
   string_size = total_bytes_read - 1;
 
-  // Make sure we return a null terminated string.
+  // Make sure we return a null-terminated string.
   if (bytes_left == 0 && max_size > 0 && buffer[max_size - 1] != '\0') {
     buffer[max_size - 1] = '\0';
     total_bytes_read--;

@@ -3,6 +3,55 @@
 global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:-64
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+;; VOPD dot2acc instructions
+
+v_dual_dot2acc_f32_f16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_f16 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_dual_dot2acc_f32_bf16 v0, v1, v2 :: v_dual_add_f32 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_add_f32 v0, v1, v2 :: v_dual_dot2acc_f32_bf16 v3, v4, v5
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+;; GFX12 SWMMAC instructions
+
+v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f32_16x16x32_bf16 v[12:19], v[0:3], v[4:11], v20
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_bf16_16x16x32_bf16 v[12:15], v[0:3], v[4:11], v16
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_i32_16x16x32_iu8 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_i32_16x16x32_iu4 v[3:10], v0, v[1:2], v11
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_i32_16x16x64_iu4 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f32_16x16x32_fp8_fp8 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f32_16x16x32_fp8_bf8 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f32_16x16x32_bf8_fp8 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_swmmac_f32_16x16x32_bf8_bf8 v[6:13], v[0:1], v[2:5], v14
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; DOT4_F32_*, DOT2_F32_*, DOT2_F16 and DOT2_BF16
 
 v_dot4_f32_fp8_fp8 v0, v1, v2, v3

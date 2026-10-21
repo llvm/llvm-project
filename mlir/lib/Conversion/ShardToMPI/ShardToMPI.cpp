@@ -13,7 +13,7 @@
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -108,7 +108,7 @@ Value multiToLinearIndex(Location loc, OpBuilder b, ValueRange multiIndex,
 
 /// Replace GetShardingOp with related/dependent ShardingOp.
 struct ConvertGetShardingOp : public OpConversionPattern<GetShardingOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(GetShardingOp op, OpAdaptor adaptor,
@@ -129,7 +129,7 @@ struct ConvertGetShardingOp : public OpConversionPattern<GetShardingOp> {
 ///   (SplitAxes, HaloSizes, ShardedDimsOffsets)
 /// as defined by type converter.
 struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ShardingOp op, OpAdaptor adaptor,
@@ -258,7 +258,7 @@ class ConvertProcessLinearIndexOp
     : public OpConversionPattern<ProcessLinearIndexOp> {
 
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ProcessLinearIndexOp op, OpAdaptor adaptor,
@@ -281,7 +281,7 @@ public:
 
 struct ConvertNeighborsLinearIndicesOp
     : public OpConversionPattern<NeighborsLinearIndicesOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(NeighborsLinearIndicesOp op, OpAdaptor adaptor,
@@ -346,7 +346,7 @@ struct ConvertNeighborsLinearIndicesOp
 };
 
 struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ShardShapeOp op, OneToNOpAdaptor adaptor,
@@ -911,7 +911,7 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
 };
 
 struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(UpdateHaloOp op, OpAdaptor adaptor,

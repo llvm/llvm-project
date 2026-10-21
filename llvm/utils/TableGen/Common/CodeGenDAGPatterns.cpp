@@ -651,14 +651,22 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
   auto IsSubVec = [](MVT B, MVT P) -> bool {
     if (!B.isVector() || !P.isVector())
       return false;
-    // Logically a <4 x i32> is a valid subvector of <n x 4 x i32>
-    // but until there are obvious use-cases for this, keep the
-    // types separate.
-    if (B.isScalableVector() != P.isScalableVector())
+    // You cannot extract a scalable vector from a fixed length vector.
+    // You cannot insert a scalable vector into a fixed length vector.
+    if (B.isScalableVector() && !P.isScalableVector())
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // If the subvector and vector are both fixed or both scalable, require
+    // the minimum element count to be smaller.
+    if (B.isScalableVector() == P.isScalableVector())
+      return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+
+    // If the subvector is fixed and the vector is scalable, allow the
+    // minimum number of elements to be less than or equal. Note, if vscale is
+    // known to be greater than 1, the subvector could have more than the
+    // minimum number of elements, but that would probably require custom isel.
+    return B.getVectorMinNumElements() <= P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
@@ -960,22 +968,25 @@ std::string TreePredicateFn::getPredCode() const {
         getAddressSpaces() == nullptr && getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsStore cannot be used by itself");
-  } else {
-    if (isNonTruncStore())
+  } else if (!isAtomic()) {
+    if (isNonTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonTruncStore requires IsStore");
-    if (isTruncStore())
+                      "IsNonTruncStore requires IsStore or IsAtomic");
+    }
+
+    if (isTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsTruncStore requires IsStore");
+                      "IsTruncStore requires IsStore or IsAtomic");
+    }
   }
 
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
         !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
-        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
+        !isSignExtLoad() && !isNonTruncStore() && !isTruncStore() &&
+        !isAtomicOrderingMonotonic() && !isAtomicOrderingAcquire() &&
+        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1099,6 +1110,24 @@ std::string TreePredicateFn::getPredCode() const {
     if (isZeroExtLoad())
       Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
               "return false;\n";
+
+    if ((isNonTruncStore() + isTruncStore()) > 1) {
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonTruncStore, and IsTruncStore are mutually exclusive");
+    }
+
+    if (isNonTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() != "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
+
+    if (isTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() == "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
   }
 
   if (isLoad() || isStore()) {
@@ -4003,8 +4032,12 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
 
     // Check that it exists in InstResults.
     auto InstResultIter = InstResults.find(OpName);
-    if (InstResultIter == InstResults.end() || !InstResultIter->second)
-      I.error("Operand $" + OpName + " does not exist in operand list!");
+    if (InstResultIter == InstResults.end() || !InstResultIter->second) {
+      I.dump();
+      PrintFatalError(CGI.TheDef, "In " + CGI.TheDef->getName() +
+                                      ": Operand $" + OpName +
+                                      " does not exist in operand list!");
+    }
 
     TreePatternNodePtr RNode = InstResultIter->second;
     const Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();

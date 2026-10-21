@@ -185,16 +185,20 @@ public:
   /// Find breakpoint sites that in any way overlap the range starting at
   /// \a lower_bound and ending at \a upper_bound (but not including it).
   /// Zero sized sites are treated as never overlapping.
+  ///
+  /// \return
+  ///   \b true if any sites were added to \a bp_site_list, \b false otherwise.
   bool FindInRange(lldb::addr_t lower_bound, lldb::addr_t upper_bound,
                    StopPointSiteList &bp_site_list) const {
     if (lower_bound > upper_bound)
       return false;
 
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (m_site_list.empty())
+      return false;
+
     typename collection::const_iterator lower, upper, pos;
     lower = m_site_list.lower_bound(lower_bound);
-    if (lower == m_site_list.end() || (*lower).first >= upper_bound)
-      return false;
 
     // This is one tricky bit.  The site might overlap the bottom end of
     // the range.  So we grab the site prior to the lower bound, and check
@@ -209,13 +213,16 @@ public:
         bp_site_list.Add(prev_site);
     }
 
+    if (lower != m_site_list.end() && lower->first >= upper_bound)
+      return !bp_site_list.IsEmpty();
+
     upper = m_site_list.upper_bound(upper_bound);
 
     for (pos = lower; pos != upper; pos++)
       if (pos->second->GetByteSize() != 0)
         bp_site_list.Add(pos->second);
 
-    return true;
+    return !bp_site_list.IsEmpty();
   }
 
   typedef void (*StopPointSiteSPMapFunc)(StopPointSite &site, void *baton);
