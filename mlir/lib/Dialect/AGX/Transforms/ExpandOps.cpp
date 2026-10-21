@@ -136,11 +136,17 @@ struct ExpandMMA : OpRewritePattern<MMAOp> {
 };
 
 /// The tile product as fragment loads and agx.mma, each A and B fragment
-/// loaded once per step of k.
+/// loaded once per step of k. Where agx.mma is emulated with shuffles, each
+/// thread instead loads the row of A and the two columns of B that the
+/// shuffles would gather for its elements, and accumulates them with the same
+/// fused multiply-adds in the same order of k.
 struct ExpandMMATile : OpRewritePattern<MMATileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  ExpandMMATile(MLIRContext *ctx, const ChipInfo &chip)
+      : OpRewritePattern(ctx), chip(chip) {}
   LogicalResult matchAndRewrite(MMATileOp op,
                                 PatternRewriter &rewriter) const override {
+    if (chip.matrixUnit == MatrixUnit::Emulated)
+      return expandDirect(op, rewriter);
     Location loc = op.getLoc();
     int64_t mt = op.getM() / 8, nt = op.getN() / 8, kt = op.getK() / 8;
     Type inElt = op.getA().getType().getElementType();
@@ -181,6 +187,62 @@ struct ExpandMMATile : OpRewritePattern<MMATileOp> {
     rewriter.replaceOp(op, result);
     return success();
   }
+
+  LogicalResult expandDirect(MMATileOp op, PatternRewriter &rewriter) const {
+    Location loc = op.getLoc();
+    int64_t mt = op.getM() / 8, nt = op.getN() / 8, kt = op.getK() / 8;
+    Type accElt = op.getAcc().getType().getElementType();
+    auto [r, c] = fragmentPosition(rewriter, loc);
+    auto add = [&](Value x, Value y) {
+      return arith::AddIOp::create(rewriter, loc, x, y).getResult();
+    };
+    auto offset = [&](Value base, int64_t v) -> Value {
+      if (v == 0)
+        return base;
+      return add(base, arith::ConstantIndexOp::create(rewriter, loc, v));
+    };
+    auto load = [&](Value base, Value i, Value j) -> Value {
+      Value x = memref::LoadOp::create(rewriter, loc, base, ValueRange{i, j});
+      if (x.getType() != accElt)
+        x = arith::ExtFOp::create(rewriter, loc, accElt, x);
+      return x;
+    };
+    SmallVector<Value> acc;
+    for (int64_t f = 0; f < mt * nt; ++f)
+      for (int64_t e = 0; e < 2; ++e)
+        acc.push_back(vector::ExtractOp::create(rewriter, loc, op.getAcc(),
+                                                ArrayRef<int64_t>{2 * f + e}));
+    Value bCol = add(op.getBCol(), c);
+    for (int64_t k = 0; k < kt; ++k) {
+      // as[i][kk] = A(row of element, k), bs[j][e][kk] = B(k, column of e).
+      SmallVector<SmallVector<Value, 8>> as(mt), bs(2 * nt);
+      for (int64_t i = 0; i < mt; ++i) {
+        Value row = add(offset(op.getARow(), 8 * i), r);
+        for (int64_t kk = 0; kk < 8; ++kk)
+          as[i].push_back(
+              load(op.getA(), row, offset(op.getACol(), 8 * k + kk)));
+      }
+      for (int64_t kk = 0; kk < 8; ++kk) {
+        Value row = offset(op.getBRow(), 8 * k + kk);
+        for (int64_t j = 0; j < nt; ++j)
+          for (int64_t e = 0; e < 2; ++e)
+            bs[2 * j + e].push_back(
+                load(op.getB(), row, offset(bCol, 8 * j + e)));
+      }
+      for (int64_t i = 0; i < mt; ++i)
+        for (int64_t j = 0; j < nt; ++j)
+          for (int64_t e = 0; e < 2; ++e) {
+            Value &d = acc[2 * (i * nt + j) + e];
+            for (int64_t kk = 0; kk < 8; ++kk)
+              d = math::FmaOp::create(rewriter, loc, as[i][kk],
+                                      bs[2 * j + e][kk], d);
+          }
+    }
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, op.getAcc().getType(),
+                                                        acc);
+    return success();
+  }
+  ChipInfo chip;
 };
 
 /// shuffle_up(a, shift) * b + c within segments: lanes below `shift` in
@@ -296,7 +358,7 @@ struct AGXExpandOpsPass
 void mlir::agx::populateAGXExpandOpsPatterns(RewritePatternSet &patterns,
                                              const ChipInfo &chip) {
   MLIRContext *ctx = patterns.getContext();
-  patterns.add<ExpandMatrixLoad, ExpandMatrixStore, ExpandMMATile,
-               InlineUniformRegion>(ctx);
-  patterns.add<ExpandMMA, ExpandFMALaneShift, ExpandBlockBarrier>(ctx, chip);
+  patterns.add<ExpandMatrixLoad, ExpandMatrixStore, InlineUniformRegion>(ctx);
+  patterns.add<ExpandMMA, ExpandMMATile, ExpandFMALaneShift,
+               ExpandBlockBarrier>(ctx, chip);
 }

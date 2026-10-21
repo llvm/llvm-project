@@ -14,15 +14,19 @@ func.func @load(%A: memref<?x?xf32>, %i: index) -> vector<2xf32> {
 
 // -----
 
-// A 16x16x16 tile: 2 k steps, each loading 2 A and 2 B fragments and doing
-// 4 same-type products (the f16 inputs are extended for the f32 accumulator).
+// A 16x16x16 tile where agx.mma is emulated: 2 k steps, each loading the
+// 8-element rows of the 2 A blocks and the 8-element columns of the two B
+// columns of each thread (48 loads, extended for the f32 accumulator), then 8
+// fused multiply-adds for each of the 8 accumulator elements; no shuffles.
 // CHECK-LABEL: @tile
 // CHECK-NOT: agx.mma_tile
-// CHECK-COUNT-8: memref.load
-// CHECK-COUNT-4: agx.mma %{{.*}} * %{{.*}} + %{{.*}} : vector<2xf32>, vector<2xf32>
-// CHECK-COUNT-8: memref.load
-// CHECK-COUNT-4: agx.mma
+// CHECK-COUNT-48: memref.load
+// CHECK-COUNT-64: math.fma
+// CHECK-COUNT-48: memref.load
+// CHECK-COUNT-64: math.fma
 // CHECK-NOT: agx.mma
+// CHECK-NOT: agx.shuffle
+// CHECK: vector.from_elements {{.*}} : vector<8xf32>
 func.func @tile(%A: memref<?x?xf16>, %B: memref<?x?xf16>, %acc: vector<8xf32>, %i: index) -> vector<8xf32> {
   %0 = agx.mma_tile %A[%i, %i] * %B[%i, %i] + %acc tile(16, 16, 16)
       : memref<?x?xf16>, memref<?x?xf16>, vector<8xf32>
