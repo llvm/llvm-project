@@ -714,7 +714,7 @@ to:</p>
     call was modeled, eg. <tt>SymbolConjured::getStmt</tt> is nullable.</li>
   <li><tt>CallEvent::getDecl</tt> is nullable - for example, it returns null for a
       call of symbolic function pointer.</li>
-  <li><tt>addTransition</tt>, <tt>generateSink</tt>, <tt>generateNonFatalErrorNode</tt>,
+  <li><tt>addTransition</tt>, <tt>addSink</tt>, <tt>generateNonFatalErrorNode</tt>,
     <tt>generateErrorNode</tt> are nullable because you can transition to a node that you have already visited.</li>
   <li>Methods of <tt>CallExpr</tt>/<tt>FunctionDecl</tt>/<tt>CallEvent</tt> that
     return arguments crash when the argument is out-of-bounds. If you checked the function name,
