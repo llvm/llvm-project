@@ -7751,7 +7751,8 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
 
   // A shape with no row -- a sub-dword element, or a cost kind the rows do not
   // supply -- falls back to the flat break-even overhead plus body, charged
-  // once per legalized part. A mask known at compile time does not reduce it.
+  // once per legalized part. A constant mask does not reduce it, bar an
+  // all-zero one, which returned zero above without reaching here.
   const int GSOverhead = IsLoad ? getGatherOverhead() : getScatterOverhead();
   return SplitFactor * GSOverhead +
          VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(), Alignment,
