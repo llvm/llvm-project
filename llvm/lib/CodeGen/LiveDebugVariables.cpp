@@ -484,7 +484,7 @@ public:
   void rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                         const TargetInstrInfo &TII,
                         const TargetRegisterInfo &TRI,
-                        SpillOffsetMap &SpillOffsets);
+                        SpillOffsetMap &SpillOffsets, bool PreserveUnassigned);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
@@ -684,7 +684,7 @@ public:
   void canonicalizeIndexes(const SlotIndexes &SI);
 
   /// Recreate DBG_VALUE instruction from data structures.
-  void emitDebugValues(VirtRegMap *VRM);
+  void emitDebugValues(VirtRegMap *VRM, bool PreserveUnassigned);
 
   void print(raw_ostream&);
 };
@@ -1689,7 +1689,8 @@ void LiveDebugVariables::canonicalizeIndexes(const SlotIndexes &SI) {
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                                  const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
-                                 SpillOffsetMap &SpillOffsets) {
+                                 SpillOffsetMap &SpillOffsets,
+                                 bool PreserveUnassigned) {
   // Build a set of new locations with new numbers so we can coalesce our
   // IntervalMap if two vreg intervals collapse to the same physical location.
   // Use MapVector instead of SetVector because MapVector::insert returns the
@@ -1725,7 +1726,8 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
 
         Loc = MachineOperand::CreateFI(VRM.getStackSlot(VirtReg));
         Spilled = true;
-      } else {
+      } else if (!PreserveUnassigned ||
+                 MF.getRegInfo().reg_nodbg_empty(VirtReg)) {
         Loc.setReg(0);
         Loc.setSubReg(0);
       }
@@ -1985,7 +1987,8 @@ void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
+void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM,
+                                                  bool PreserveUnassigned) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
@@ -1998,7 +2001,8 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   SpillOffsetMap SpillOffsets;
   for (auto &userValue : userValues) {
     LLVM_DEBUG(userValue->print(dbgs(), TRI));
-    userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets,
+                                PreserveUnassigned);
     userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets,
                                BBSkipInstsMap);
   }
@@ -2059,6 +2063,11 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
         dbgs() << "DBG_PHI for " << printReg(Reg, TRI, SubReg)
                << " has nonzero offset\n";
       });
+    } else if (PreserveUnassigned && !MF->getRegInfo().reg_nodbg_empty(Reg)) {
+      BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
+              TII->get(TargetOpcode::DBG_PHI))
+          .addReg(Reg, {}, SubReg)
+          .addImm(InstNum);
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.
@@ -2136,9 +2145,10 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   BBSkipInstsMap.clear();
 }
 
-void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
+void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM,
+                                         bool PreserveUnassigned) {
   if (PImpl)
-    PImpl->emitDebugValues(VRM);
+    PImpl->emitDebugValues(VRM, PreserveUnassigned);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
