@@ -274,8 +274,6 @@ private:
 
   bool HasDeclaredAPushConstant = false;
 
-  bool PreciseUsed = false;
-
   // Information about the current subtree being flattened.
   struct SemanticInfo {
     HLSLParsedSemanticAttr *Semantic;

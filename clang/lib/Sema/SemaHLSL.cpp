@@ -2919,7 +2919,10 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
-  PreciseUsed = true;
+  auto *TU = getASTContext().getTranslationUnitDecl();
+  if (!TU->hasAttr<HLSLPreciseAttr>())
+    TU->addAttr(HLSLPreciseAttr::CreateImplicit(getASTContext()));
+
   HLSLPreciseAttr *NewAttr = HLSLPreciseAttr::Create(getASTContext(), AL);
   if (NewAttr)
     D->addAttr(NewAttr);

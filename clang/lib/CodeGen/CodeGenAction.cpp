@@ -177,6 +177,34 @@ bool BackendConsumer::LinkInModules(llvm::Module *M) {
 }
 
 void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
+  if (LangOpts.HLSL && C.getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>() &&
+      !Diags.hasErrorOccurred()) {
+    auto &Opts = CI.getLangOpts();
+    bool SupportsStrictFP = CI.getTarget().hasStrictFP() || Opts.ExpStrictFP;
+    auto ExceptionMode =
+        SupportsStrictFP ? LangOptions::FPE_Strict : LangOptions::FPE_Ignore;
+    bool AlreadyStrict =
+        Opts.getDefaultFPContractMode() == LangOptions::FPM_Off &&
+        Opts.getComplexRange() == LangOptions::CX_Full &&
+        Opts.RoundingMath == SupportsStrictFP &&
+        Opts.getFPExceptionMode() == ExceptionMode;
+
+    // Match -Gis, including the target's existing strict-FP fallback.
+    Opts.MathErrno = true;
+    Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
+    Opts.setComplexRange(LangOptions::CX_Full);
+    if (!AlreadyStrict) {
+      Opts.RoundingMath = true;
+      Opts.setFPExceptionMode(LangOptions::FPE_Strict);
+      if (!SupportsStrictFP) {
+        Diags.Report(diag::warn_fe_backend_unsupported_fp_rounding);
+        Opts.RoundingMath = false;
+        Diags.Report(diag::warn_fe_backend_unsupported_fp_exceptions);
+        Opts.setFPExceptionMode(LangOptions::FPE_Ignore);
+      }
+    }
+  }
+
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");

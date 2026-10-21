@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -finclude-default-header -ast-dump -verify %s | FileCheck %s
 // expected-no-diagnostics
 
+// CHECK-LABEL: TranslationUnitDecl
+// CHECK-NEXT: HLSLPreciseAttr {{.*}} Implicit
+
 // CHECK-LABEL: TypedefDecl {{.*}} pfloat 'float'
 // CHECK-NEXT: BuiltinType {{.*}} 'float'
 // CHECK-NEXT: HLSLPreciseAttr
