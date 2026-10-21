@@ -706,6 +706,81 @@ def : Pat<(f16 (fma (AGXFPSrc16 f16:$a, i32:$am), (AGXFPSrc16 f16:$b, i32:$bm),
                     (AGXFPSrc16 f16:$c, i32:$cm))),
           (FMADD16_F16 $am, $a, $bm, $b, $cm, $c)>;
 
+// Single precision operations convert half precision sources exactly, so an
+// extension from half precision is folded into its uses (as Mesa's
+// agx_optimizer_fmov folds f2f32): FADD32_M<a><b> and FMADD32_M<a><b><c>
+// read 16-bit registers where a size is 16.
+class FPSrcOp<int size> {
+  RegisterOperand op = !if(!eq(size, 16), Src16Op, Src32Op);
+}
+foreach s0 = [16, 32] in
+foreach s1 = [16, 32] in {
+  if !or(!eq(s0, 16), !eq(s1, 16)) then {
+    def FADD32_M#s0#s1 : AGXALUPseudo<FADD32_g13, (outs GPR32:$dst),
+                                      (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                           SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1),
+                                      [], [WriteFP]>;
+    def FMUL32_M#s0#s1 : AGXALUPseudo<FMUL32_g13, (outs GPR32:$dst),
+                                      (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                           SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1),
+                                      [], [WriteFP]>;
+  }
+  foreach s2 = [16, 32] in
+  if !or(!eq(s0, 16), !eq(s1, 16), !eq(s2, 16)) then
+  def FMADD32_M#s0#s1#s2 : AGXALUPseudo<FMADD32_g13, (outs GPR32:$dst),
+                                        (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                             SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1,
+                                             SrcMods:$src2_mods, FPSrcOp<s2>.op:$src2),
+                                        [], [WriteFP]>;
+}
+
+def : Pat<(f32 (fadd (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FADD32_M1616 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fadd (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (AGXFPSrc32 f32:$b, i32:$bm))),
+          (FADD32_M1632 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fadd (AGXFPSrc32 f32:$a, i32:$am),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FADD32_M3216 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FMUL32_M1616 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (AGXFPSrc32 f32:$b, i32:$bm))),
+          (FMUL32_M1632 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (AGXFPSrc32 f32:$a, i32:$am),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FMUL32_M3216 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M161616 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M161632 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M163216 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M163232 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M321616 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M321632 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M323216 $am, $a, $bm, $b, $cm, $c)>;
+
 multiclass FUnaryPseudo<Instruction real, SDPatternOperator node,
                         list<SchedReadWrite> sched = [WriteFRound]> {
   def _F32 : AGXALUPseudo<real, (outs GPR32:$dst),

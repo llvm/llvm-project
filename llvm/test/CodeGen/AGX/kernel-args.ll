@@ -7,15 +7,14 @@
 define agx_kernel void @args(ptr addrspace(1) %out, i16 %a, i32 %b, i64 %c, half %d, float %e) {
 ; CHECK-LABEL: args:
 ; CHECK:         // uniform registers: 22 x 16-bit (threadgroups_per_grid at u8)
-; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 3 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    bitop 0101, r1, u2l, 0
 ; CHECK-NEXT:    iadd r1, r1, u3
-; CHECK-NEXT:    fadd32 r2, u6l, -0.0
 ; CHECK-NEXT:    iadd r1, r1, u4
-; CHECK-NEXT:    fadd32 r2, r2, u7
+; CHECK-NEXT:    fadd32 r2, u6l, u7
 ; CHECK-NEXT:    iadd r1, r1, r2
 ; CHECK-NEXT:    iadd r1, r1, u9
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
