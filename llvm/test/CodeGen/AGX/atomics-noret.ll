@@ -29,3 +29,14 @@ define agx_kernel void @used(ptr addrspace(1) %p, ptr addrspace(1) %o, i32 %v) {
   store i32 %old, ptr addrspace(1) %o
   ret void
 }
+
+; The G14 float add without a used result writes no register either
+; (red.add.f32, ptx-re-blockers B24).
+; RUN: llc -mtriple=agx -mcpu=agx-g14c -verify-machineinstrs < %s | FileCheck %s --check-prefix=FADD
+; FADD-LABEL: fsum:
+; FADD:         atomic sub, 0, _, u0_u1, 0, signed, r{{[0-9]+}}, 1
+; FADD-NEXT:    stop
+define agx_kernel void @fsum(ptr addrspace(1) %p, float %v) {
+  %old = atomicrmw fadd ptr addrspace(1) %p, float %v monotonic
+  ret void
+}

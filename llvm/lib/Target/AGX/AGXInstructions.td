@@ -1178,13 +1178,25 @@ def agx_atomic_fadd_device
   let AddressSpaces = DeviceAS;
 }
 
+def agx_atomic_fadd_device_noret
+    : PatFrag<(ops node:$ptr, node:$val), (atomic_load_fadd node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty();
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = f32;
+  let AddressSpaces = DeviceAS;
+}
+
 // The float32 add is the sub opcode with bit 45 (the coherent operand) set.
-// The float add keeps its result register even when unused: the form
-// without one (red.add.f32) has not been run on hardware yet
-// (ptx-re-blockers B24).
-let Predicates = [HasDeviceAtomicFAdd] in
+// Without a used result it writes no register (red.add.f32), which behaves
+// as the returning form on the M2 Max (ptx-re-blockers B24).
+let Predicates = [HasDeviceAtomicFAdd] in {
+let AddedComplexity = 10 in
+def : Pat<(f32 (agx_atomic_fadd_device_noret i64:$ptr, f32:$val)),
+          (DEVICE_ATOMIC_NORET AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
 def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
           (DEVICE_ATOMIC AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
+}
 
 // u64 min / max whose old value is unused: cmpxchg with bit 45 set, bit 46
 // clear for min (mode 3) and set for max (mode 1).

@@ -21,7 +21,7 @@
 ; BIT45-0-SAME: encoding: [0xd5,0x08,0x00,0x8d,0x00,0xd0,0x04,0x00]
 ; BIT45-1-SAME: encoding: [0xd5,0x08,0x00,0x8d,0x00,0xf0,0x04,0x00]
 ; NATIVE-LABEL: fadd:
-; NATIVE: atomic sub, 0, r1, u0_u1, 0, signed, r1, 1
+; NATIVE: atomic sub, 0, _, u0_u1, 0, signed, r1, 1
 define void @fadd(ptr addrspace(1) %p, float %v) {
   %r = atomicrmw fadd ptr addrspace(1) %p, float %v monotonic
   ret void
