@@ -174,6 +174,17 @@ FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
   return std::make_shared<FuncUnwinders>(*this, start_addr, std::move(ranges));
 }
 
+Address
+UnwindTable::GetFunctionStartFromObjectFileUnwindInfo(const Address &addr) {
+  Initialize();
+
+  AddressRange range;
+  if (!m_object_file_unwind_up ||
+      !m_object_file_unwind_up->GetAddressRange(addr, range))
+    return Address();
+  return range.GetBaseAddress();
+}
+
 void UnwindTable::Dump(Stream &s) {
   std::lock_guard<std::mutex> guard(m_mutex);
   s.Format("UnwindTable for '{0}':\n", m_module.GetFileSpec());

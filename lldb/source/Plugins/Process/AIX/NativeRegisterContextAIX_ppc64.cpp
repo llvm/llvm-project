@@ -10,7 +10,7 @@
 
 #include "NativeRegisterContextAIX_ppc64.h"
 #include "NativeThreadAIX.h"
-#include "Plugins/Process/Utility/RegisterInfo_ppc64.h"
+#include "Register/Common/RegisterInfo_ppc64.h"
 #include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb;
