@@ -205,6 +205,8 @@ ToolChain::findMultilibsYAML(const llvm::opt::ArgList &Args, const Driver &D,
 
   const auto getMultilibYaml =
       [&](StringRef Dir) -> std::optional<std::string> {
+    if (Dir.empty())
+      return std::nullopt;
     SmallString<128> MultilibPath(Dir);
     llvm::sys::path::append(MultilibPath, "multilib.yaml");
     if (!D.getVFS().exists(MultilibPath))
