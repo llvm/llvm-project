@@ -4107,6 +4107,67 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
 Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
 
 //===----------------------------------------------------------------------===//
+// Canonicalization for LLVM::IntToPtrOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Replaces `inttoptr(ptrtoint(x))` with `x` when the intermediate integer is
+/// wide enough to hold every bit of the pointer, so that the round trip is
+/// lossless. This mirrors the ptrtoint/inttoptr case of
+/// `llvm::CastInst::isEliminableCastPair`.
+struct FoldIntToPtrOfPtrToInt : public OpRewritePattern<IntToPtrOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IntToPtrOp intToPtr,
+                                PatternRewriter &rewriter) const override {
+    // Folding would drop the dereferenceability information attached to the
+    // cast; be conservative and keep the cast in that case.
+    if (intToPtr.getDereferenceableAttr())
+      return failure();
+
+    auto ptrToInt = intToPtr.getArg().getDefiningOp<PtrToIntOp>();
+    if (!ptrToInt)
+      return failure();
+
+    // Requiring identical types guarantees that the address spaces and the
+    // vector shapes (if any) match.
+    Value ptr = ptrToInt.getArg();
+    if (ptr.getType() != intToPtr.getType())
+      return failure();
+
+    // The pointer bit-width can only be determined from a data layout. Do not
+    // rewrite if no data layout scope is reachable (e.g., the operation is
+    // not nested in a module yet), as the default layout would be used
+    // otherwise, which may disagree with the layout the operation eventually
+    // ends up in.
+    Operation *scope = intToPtr->getParentOp();
+    while (scope && !isa<ModuleOp, DataLayoutOpInterface>(scope))
+      scope = scope->getParentOp();
+    if (!scope)
+      return failure();
+
+    // Compare per-element widths so that fixed and scalable vectors are
+    // handled uniformly.
+    DataLayout dataLayout = DataLayout::closest(intToPtr);
+    llvm::TypeSize ptrSize = dataLayout.getTypeSizeInBits(
+        extractVectorElementType(intToPtr.getType()));
+    auto intType = cast<IntegerType>(
+        extractVectorElementType(intToPtr.getArg().getType()));
+    if (ptrSize.isScalable() || intType.getWidth() < ptrSize.getFixedValue())
+      return failure();
+
+    rewriter.replaceOp(intToPtr, ptr);
+    return success();
+  }
+};
+} // namespace
+
+void IntToPtrOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                             MLIRContext *context) {
+  patterns.add<FoldIntToPtrOfPtrToInt>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
 

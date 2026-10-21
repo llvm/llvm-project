@@ -549,3 +549,130 @@ llvm.func @metadata_as_value_dedup() -> i32 {
   %4 = llvm.add %2, %3 : i32
   llvm.return %4 : i32
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @fold_inttoptr_ptrtoint
+// CHECK-SAME: (%[[PTR:.*]]: !llvm.ptr)
+llvm.func @fold_inttoptr_ptrtoint(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  // CHECK: llvm.return %[[PTR]] : !llvm.ptr
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @fold_inttoptr_ptrtoint_wider_int
+// CHECK-SAME: (%[[PTR:.*]]: !llvm.ptr)
+llvm.func @fold_inttoptr_ptrtoint_wider_int(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  // CHECK: llvm.return %[[PTR]] : !llvm.ptr
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i128
+  %1 = llvm.inttoptr %0 : i128 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @fold_inttoptr_ptrtoint_vector
+// CHECK-SAME: (%[[PTR:.*]]: vector<2x!llvm.ptr>)
+llvm.func @fold_inttoptr_ptrtoint_vector(%ptr: vector<2x!llvm.ptr>) -> vector<2x!llvm.ptr> {
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  // CHECK: llvm.return %[[PTR]] : vector<2x!llvm.ptr>
+  %0 = llvm.ptrtoint %ptr : vector<2x!llvm.ptr> to vector<2xi64>
+  %1 = llvm.inttoptr %0 : vector<2xi64> to vector<2x!llvm.ptr>
+  llvm.return %1 : vector<2x!llvm.ptr>
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @fold_inttoptr_ptrtoint_scalable_vector
+// CHECK-SAME: (%[[PTR:.*]]: vector<[2]x!llvm.ptr>)
+llvm.func @fold_inttoptr_ptrtoint_scalable_vector(%ptr: vector<[2]x!llvm.ptr>) -> vector<[2]x!llvm.ptr> {
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  // CHECK: llvm.return %[[PTR]] : vector<[2]x!llvm.ptr>
+  %0 = llvm.ptrtoint %ptr : vector<[2]x!llvm.ptr> to vector<[2]xi64>
+  %1 = llvm.inttoptr %0 : vector<[2]xi64> to vector<[2]x!llvm.ptr>
+  llvm.return %1 : vector<[2]x!llvm.ptr>
+}
+
+// -----
+
+// The intermediate integer is narrower than the (default, 64-bit) pointer.
+
+// CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint_narrow_int
+llvm.func @no_fold_inttoptr_ptrtoint_narrow_int(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %{{.*}} : !llvm.ptr to i32
+  // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] : i32 to !llvm.ptr
+  // CHECK: llvm.return %[[RES]]
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i32
+  %1 = llvm.inttoptr %0 : i32 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint_dereferenceable
+llvm.func @no_fold_inttoptr_ptrtoint_dereferenceable(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %{{.*}} : !llvm.ptr to i64
+  // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] dereferenceable<bytes = 8> : i64 to !llvm.ptr
+  // CHECK: llvm.return %[[RES]]
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i64
+  %1 = llvm.inttoptr %0 dereferenceable<bytes = 8> : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint_addrspace
+llvm.func @no_fold_inttoptr_ptrtoint_addrspace(%ptr: !llvm.ptr<1>) -> !llvm.ptr {
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %{{.*}} : !llvm.ptr<1> to i64
+  // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] : i64 to !llvm.ptr
+  // CHECK: llvm.return %[[RES]]
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr<1> to i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// With 32-bit pointers, a 32-bit intermediate integer is sufficient.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 32]> : vector<3xi64>>
+>} {
+  // CHECK-LABEL: llvm.func @fold_inttoptr_ptrtoint_32bit_ptr
+  // CHECK-SAME: (%[[PTR:.*]]: !llvm.ptr)
+  llvm.func @fold_inttoptr_ptrtoint_32bit_ptr(%ptr: !llvm.ptr) -> !llvm.ptr {
+    // CHECK-NOT: llvm.ptrtoint
+    // CHECK-NOT: llvm.inttoptr
+    // CHECK: llvm.return %[[PTR]] : !llvm.ptr
+    %0 = llvm.ptrtoint %ptr : !llvm.ptr to i32
+    %1 = llvm.inttoptr %0 : i32 to !llvm.ptr
+    llvm.return %1 : !llvm.ptr
+  }
+}
+
+// -----
+
+// With 128-bit pointers, a 64-bit intermediate integer truncates the pointer.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[128, 128, 128]> : vector<3xi64>>
+>} {
+  // CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint_128bit_ptr
+  llvm.func @no_fold_inttoptr_ptrtoint_128bit_ptr(%ptr: !llvm.ptr) -> !llvm.ptr {
+    // CHECK: %[[INT:.*]] = llvm.ptrtoint %{{.*}} : !llvm.ptr to i64
+    // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] : i64 to !llvm.ptr
+    // CHECK: llvm.return %[[RES]]
+    %0 = llvm.ptrtoint %ptr : !llvm.ptr to i64
+    %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+    llvm.return %1 : !llvm.ptr
+  }
+}

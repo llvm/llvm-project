@@ -672,7 +672,9 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
 }
 def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>,
-                                  LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
+                                  LLVM_ScalarOrVectorOf<LLVM_AnyPointer>> {
+  let hasCanonicalizer = 1;
+}
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
