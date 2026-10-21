@@ -152,6 +152,16 @@ LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
                                      LLVMCodeModel CodeModel);
 
 /**
+ * Make the target machine read the library options of C, which must outlive
+ * the target machine.
+ *
+ * @see LLVMContextParseCommandLineOptions()
+ */
+LLVM_C_ABI void
+LLVMTargetMachineOptionsSetLibraryOptions(LLVMTargetMachineOptionsRef Options,
+                                          LLVMContextRef C);
+
+/**
  * Create a new llvm::TargetMachine.
  *
  * \param T the target to create a machine for.

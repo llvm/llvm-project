@@ -14,6 +14,7 @@
 #include "llvm-c/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -39,6 +40,7 @@ struct LLVMTargetMachineOptions {
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
   bool JIT;
+  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
 };
 
 } // namespace llvm
@@ -196,12 +198,18 @@ void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
   unwrap(Options)->CM = CM;
 }
 
+void LLVMTargetMachineOptionsSetLibraryOptions(
+    LLVMTargetMachineOptionsRef Options, LLVMContextRef C) {
+  unwrap(Options)->LibraryOptions = &unwrap(C)->getLibraryOptions();
+}
+
 LLVMTargetMachineRef
 LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
                                    LLVMTargetMachineOptionsRef Options) {
   auto *Opt = unwrap(Options);
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
+  TO.MCOptions.LibraryOptions = Opt->LibraryOptions;
   return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
                                              Opt->Features, TO, Opt->RM,
                                              Opt->CM, Opt->OL, Opt->JIT));

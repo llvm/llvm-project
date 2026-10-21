@@ -2975,6 +2975,14 @@ void cl::ResetAllOptionOccurrences() {
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
-                                    &llvm::nulls());
+  ParseCommandLineOptions(argc, argv, Overview, &errs());
+
+  // Library options set their global values, which passes do not read.
+  LibraryOptionsContext C;
+  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &nulls());
+  if (!C.args().empty())
+    errs() << sys::path::filename(argv[0])
+           << ": warning: library options are not set in any LLVMContext; use "
+              "LLVMContextParseCommandLineOptions: "
+           << join(C.args(), " ") << '\n';
 }
