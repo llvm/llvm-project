@@ -883,9 +883,6 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addMachineFunctionPass(
       RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
