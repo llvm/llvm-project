@@ -62,6 +62,9 @@ Alexander Yermolovich
 
 The following people have graciously spent time performing maintainership duties but are no longer active in that role. Thank you for all your help with the success of the project!
 
+Paschalis Mpeis
+[paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
+
 Rafael Auler
 [rafaelauler](https://github.com/rafaelauler) (GitHub)
 
