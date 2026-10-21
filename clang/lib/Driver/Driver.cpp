@@ -3906,8 +3906,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP
-/// or CUDA architecture.
+/// Returns the canonical name for the offloading architecture when using a HIP,
+/// CUDA or Intel GPU architecture.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
@@ -3938,7 +3938,9 @@ static StringRef getCanonicalArchString(Compilation &C,
     }
   }
 
-  if (Arch.isNVPTX())
+  // An Intel GPU has several spellings, e.g. "xe-bmg-g21" and "xe_20.1.0". Use
+  // one, so that both build one device job with one label.
+  if (Arch.isNVPTX() || Arch.isIntelGPU())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
