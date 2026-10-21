@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <assert.h>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <queue>
 #include <sstream>
@@ -339,7 +340,98 @@ static bool shouldCoalesceFragments(Function &F) {
   llvm_unreachable("Unknown boolOrDefault value");
 }
 
+/// Maps Reverse Post-Order (RPO) numbers to BasicBlocks and vice versa.
+using RPOToBlockMap = DenseMap<unsigned, BasicBlock *>;
+using BlockToRPOMap = DenseMap<BasicBlock *, unsigned>;
+
+/// Min-heap of RPO numbers for RPO dataflow worklists.
+using RPOWorklist = std::priority_queue<unsigned, std::vector<unsigned>,
+                                        std::greater<unsigned>>;
+
 namespace {
+/// Tracks block revisitability (reachability from CFG backedges) and remaining
+/// successor reads so acyclic dataflow states can be retired early.
+class BlockLivenessTracker {
+  static constexpr unsigned UnboundedReads =
+      std::numeric_limits<unsigned>::max();
+
+  const BlockToRPOMap &BBToOrder;
+  BitVector CanRevisit;
+  SmallVector<unsigned, 16> RemainingReads;
+
+  void computeCanRevisit(const RPOToBlockMap &OrderToBB, unsigned NumBlocks) {
+    SmallVector<unsigned, 16> Worklist;
+    for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+      for (BasicBlock *Succ : successors(OrderToBB.lookup(RPO))) {
+        unsigned SuccRPO = BBToOrder.lookup(Succ);
+        if (SuccRPO <= RPO && !CanRevisit.test(SuccRPO)) {
+          CanRevisit.set(SuccRPO);
+          Worklist.push_back(SuccRPO);
+        }
+      }
+    }
+    while (!Worklist.empty()) {
+      unsigned RPO = Worklist.pop_back_val();
+      for (BasicBlock *Succ : successors(OrderToBB.lookup(RPO))) {
+        unsigned SuccRPO = BBToOrder.lookup(Succ);
+        if (!CanRevisit.test(SuccRPO)) {
+          CanRevisit.set(SuccRPO);
+          Worklist.push_back(SuccRPO);
+        }
+      }
+    }
+  }
+
+  void computeRemainingReads(const RPOToBlockMap &OrderToBB,
+                             unsigned NumBlocks) {
+    for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+      for (BasicBlock *Succ : successors(OrderToBB.lookup(RPO))) {
+        if (CanRevisit.test(BBToOrder.lookup(Succ))) {
+          RemainingReads[RPO] = UnboundedReads;
+          break;
+        }
+        ++RemainingReads[RPO];
+      }
+    }
+  }
+
+public:
+  BlockLivenessTracker(const RPOToBlockMap &OrderToBB,
+                       const BlockToRPOMap &BBToOrder)
+      : BBToOrder(BBToOrder), CanRevisit(OrderToBB.size()),
+        RemainingReads(OrderToBB.size(), 0) {
+    unsigned NumBlocks = OrderToBB.size();
+    computeCanRevisit(OrderToBB, NumBlocks);
+    computeRemainingReads(OrderToBB, NumBlocks);
+  }
+
+  bool canRevisit(unsigned RPO) const { return CanRevisit.test(RPO); }
+
+  bool hasRemainingReads(unsigned RPO) const { return RemainingReads[RPO] > 0; }
+
+  /// Return true if \p Pred has no other remaining readers, allowing its
+  /// LiveOut entry to be moved into its sole remaining successor.
+  bool canMoveLiveOut(const BasicBlock *Pred) const {
+    return RemainingReads[BBToOrder.lookup(Pred)] == 1;
+  }
+
+  /// Decrement remaining read counts for visited predecessors of an acyclic
+  /// block \p BB and erase any predecessor LiveOut with no remaining readers.
+  template <typename LiveOutMapTy>
+  void retireVisitedPreds(const BasicBlock &BB,
+                          const SmallPtrSet<BasicBlock *, 16> &Visited,
+                          LiveOutMapTy &LiveOut) {
+    for (const BasicBlock *Pred : predecessors(&BB)) {
+      if (!Visited.count(Pred))
+        continue;
+      unsigned PredRPO = BBToOrder.lookup(Pred);
+      if (RemainingReads[PredRPO] != UnboundedReads &&
+          --RemainingReads[PredRPO] == 0)
+        LiveOut.erase(Pred);
+    }
+  }
+};
+
 /// In dwarf emission, the following sequence
 ///    1. dbg.value ... Fragment(0, 64)
 ///    2. dbg.value ... Fragment(0, 32)
@@ -548,8 +640,8 @@ class MemLocFragmentFill {
     });
   }
 
-  bool meet(const BasicBlock &BB,
-            const SmallPtrSet<BasicBlock *, 16> &Visited) {
+  bool meet(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited,
+            bool StoreLiveIn, VarFragMap &LiveSet) {
     LLVM_DEBUG(dbgs() << "meet block info from preds of " << BB.getName()
                       << "\n");
 
@@ -584,12 +676,18 @@ class MemLocFragmentFill {
         break;
     }
 
+    if (!StoreLiveIn) {
+      LiveSet = std::move(BBLiveIn);
+      return /*Changed=*/true;
+    }
+
     // If there's no LiveIn entry for the block yet, add it.
     auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
     if (Inserted) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      CurrentLiveInEntry->second = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = BBLiveIn;
+      LiveSet = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -597,7 +695,8 @@ class MemLocFragmentFill {
     // true.
     if (!varFragMapsAreEqual(BBLiveIn, CurrentLiveInEntry->second)) {
       LLVM_DEBUG(dbgs() << "change=true on meet on " << BB.getName() << "\n");
-      CurrentLiveInEntry->second = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = BBLiveIn;
+      LiveSet = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -830,6 +929,48 @@ class MemLocFragmentFill {
     }
   }
 
+  /// Store \p LiveSet into LiveOut[&\p BB] if any successor may still read it.
+  /// Return true if successors should be queued for re-evaluation.
+  bool updateLiveOut(const BasicBlock &BB, unsigned RPO, bool SingleVisit,
+                     const BlockLivenessTracker &Liveness,
+                     VarFragMap &&LiveSet) {
+    if (!Liveness.hasRemainingReads(RPO))
+      return false;
+    if (SingleVisit) {
+      LiveOut[&BB] = std::move(LiveSet);
+      return false;
+    }
+    // Relatively expensive check: has anything changed in LiveOut for BB?
+    auto [OutIt, OutInserted] = LiveOut.try_emplace(&BB);
+    if (!OutInserted && varFragMapsAreEqual(OutIt->second, LiveSet))
+      return false;
+    OutIt->second = std::move(LiveSet);
+    return true;
+  }
+
+  static void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
+                                const BlockToRPOMap &BBToOrder,
+                                BitVector &OnWorklist, BitVector &OnPending,
+                                RPOWorklist &Worklist, RPOWorklist &Pending) {
+    LLVM_DEBUG(dbgs() << BB.getName()
+                      << " has new OutLocs, add succs to worklist: [ ");
+    for (BasicBlock *Succ : successors(&BB)) {
+      unsigned SuccRPO = BBToOrder.lookup(Succ);
+      if (SuccRPO > RPO) {
+        if (!OnWorklist.test(SuccRPO)) {
+          LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+          OnWorklist.set(SuccRPO);
+          Worklist.push(SuccRPO);
+        }
+      } else if (!OnPending.test(SuccRPO)) {
+        LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+        OnPending.set(SuccRPO);
+        Pending.push(SuccRPO);
+      }
+    }
+    LLVM_DEBUG(dbgs() << "]\n");
+  }
+
 public:
   MemLocFragmentFill(Function &Fn,
                      const DenseSet<DebugAggregate> *VarsWithStackSlot,
@@ -866,25 +1007,23 @@ public:
     // Prepare for traversal.
     //
     ReversePostOrderTraversal<Function *> RPOT(&Fn);
-    std::priority_queue<unsigned int, std::vector<unsigned int>,
-                        std::greater<unsigned int>>
-        Worklist;
-    std::priority_queue<unsigned int, std::vector<unsigned int>,
-                        std::greater<unsigned int>>
-        Pending;
-    DenseMap<unsigned int, BasicBlock *> OrderToBB;
-    DenseMap<BasicBlock *, unsigned int> BBToOrder;
+    RPOWorklist Worklist;
+    RPOWorklist Pending;
+    RPOToBlockMap OrderToBB;
+    BlockToRPOMap BBToOrder;
     { // Init OrderToBB and BBToOrder.
-      unsigned int RPONumber = 0;
+      unsigned RPONumber = 0;
       for (BasicBlock *BB : RPOT) {
         OrderToBB[RPONumber] = BB;
         BBToOrder[BB] = RPONumber;
         Worklist.push(RPONumber);
         ++RPONumber;
       }
-      LiveIn.reserve(RPONumber);
-      LiveOut.reserve(RPONumber);
     }
+    BlockLivenessTracker Liveness(OrderToBB, BBToOrder);
+    unsigned NumBlocks = OrderToBB.size();
+    BitVector OnWorklist(NumBlocks, true);
+    BitVector OnPending(NumBlocks, false);
 
     // Perform the traversal.
     //
@@ -897,49 +1036,40 @@ public:
     // monotonically decrease in value throughout the dataflow.
     SmallPtrSet<BasicBlock *, 16> Visited;
     while (!Worklist.empty() || !Pending.empty()) {
-      // We track what is on the pending worklist to avoid inserting the same
-      // thing twice.  We could avoid this with a custom priority queue, but
-      // this is probably not worth it.
-      SmallPtrSet<BasicBlock *, 16> OnPending;
       LLVM_DEBUG(dbgs() << "Processing Worklist\n");
       while (!Worklist.empty()) {
-        BasicBlock *BB = OrderToBB[Worklist.top()];
+        unsigned RPO = Worklist.top();
+        BasicBlock *BB = OrderToBB[RPO];
         LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
         Worklist.pop();
-        bool InChanged = meet(*BB, Visited);
+        OnWorklist.reset(RPO);
+        bool SingleVisit = !Liveness.canRevisit(RPO);
+        bool StoreLiveIn = !SingleVisit && BB->hasNPredecessorsOrMore(2);
+        VarFragMap LiveSet;
+        bool InChanged = meet(*BB, Visited, StoreLiveIn, LiveSet);
+        if (SingleVisit)
+          Liveness.retireVisitedPreds(*BB, Visited, LiveOut);
         // Always consider LiveIn changed on the first visit.
         InChanged |= Visited.insert(BB).second;
         if (InChanged) {
           LLVM_DEBUG(dbgs()
                      << BB->getName() << " has new InLocs, process it\n");
-          //  Mutate a copy of LiveIn while processing BB. Once we've processed
-          //  the terminator LiveSet is the LiveOut set for BB.
-          //  This is an expensive copy!
-          VarFragMap LiveSet = LiveIn[BB];
-
           // Process the instructions in the block.
           process(*BB, LiveSet);
-
-          // Relatively expensive check: has anything changed in LiveOut for BB?
-          if (!varFragMapsAreEqual(LiveOut[BB], LiveSet)) {
-            LLVM_DEBUG(dbgs() << BB->getName()
-                              << " has new OutLocs, add succs to worklist: [ ");
-            LiveOut[BB] = std::move(LiveSet);
-            for (BasicBlock *Succ : successors(BB)) {
-              if (OnPending.insert(Succ).second) {
-                LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-                Pending.push(BBToOrder[Succ]);
-              }
-            }
-            LLVM_DEBUG(dbgs() << "]\n");
-          }
+          if (updateLiveOut(*BB, RPO, SingleVisit, Liveness,
+                            std::move(LiveSet)))
+            enqueueSuccessors(*BB, RPO, BBToOrder, OnWorklist, OnPending,
+                              Worklist, Pending);
         }
       }
       Worklist.swap(Pending);
+      std::swap(OnWorklist, OnPending);
       // At this point, pending must be empty, since it was just the empty
       // worklist
       assert(Pending.empty() && "Pending should be empty");
     }
+    LiveIn.clear();
+    LiveOut.clear();
 
     // Insert new location defs.
     for (auto &Pair : BBInsertBeforeMap) {
@@ -1280,10 +1410,24 @@ private:
   }
 
   /// Join the LiveOut values of preds that are contained in \p Visited into
-  /// LiveIn[BB]. Return True if LiveIn[BB] has changed as a result. LiveIn[BB]
-  /// values monotonically increase. See the @link joinMethods join methods
-  /// @endlink documentation for more info.
-  bool join(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited);
+  /// \p LiveSet (and into LiveIn[BB] when \p BB may be revisited, or moving
+  /// from a single visited predecessor when it has no other remaining readers).
+  /// Return true if the live-in value has changed. LiveIn[BB] values
+  /// monotonically increase. See the @link joinMethods join methods @endlink
+  /// documentation for more info.
+  bool join(const BasicBlock &BB, unsigned RPO,
+            const SmallPtrSet<BasicBlock *, 16> &Visited,
+            const BlockLivenessTracker &Liveness, BlockInfo &LiveSet);
+
+  /// Store \p LiveSet into LiveOut[&\p BB] if any successor may still read it.
+  /// Return true if LiveOut changed and successors should be queued.
+  bool updateLiveOut(const BasicBlock &BB, unsigned RPO,
+                     const BlockLivenessTracker &Liveness, BlockInfo &&LiveSet);
+
+  static void enqueueSuccessors(BasicBlock &BB, unsigned RPO, bool FirstPass,
+                                const BlockToRPOMap &BBToOrder,
+                                SmallPtrSet<BasicBlock *, 16> &OnPending,
+                                RPOWorklist &Pending);
   ///@name joinMethods
   /// Functions that implement `join` (the least upper bound) for the
   /// join-semilattice types used in the dataflow. There is an explicit bottom
@@ -2037,7 +2181,10 @@ AssignmentTrackingLowering::joinBlockInfo(const BlockInfo &A,
 }
 
 bool AssignmentTrackingLowering::join(
-    const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited) {
+    const BasicBlock &BB, unsigned RPO,
+    const SmallPtrSet<BasicBlock *, 16> &Visited,
+    const BlockLivenessTracker &Liveness, BlockInfo &LiveSet) {
+  bool StoreLiveIn = Liveness.canRevisit(RPO);
 
   SmallVector<const BasicBlock *> VisitedPreds;
   // Ignore backedges if we have not visited the predecessor yet. As the
@@ -2054,24 +2201,42 @@ bool AssignmentTrackingLowering::join(
 
   // No preds visited yet.
   if (VisitedPreds.empty()) {
+    if (!StoreLiveIn) {
+      LiveSet.init(TrackedVariablesVectorSize);
+      return /*Changed*/ true;
+    }
     auto It = LiveIn.try_emplace(&BB, BlockInfo());
     bool DidInsert = It.second;
-    if (DidInsert)
+    if (DidInsert) {
       It.first->second.init(TrackedVariablesVectorSize);
+      LiveSet = It.first->second;
+    }
     return /*Changed*/ DidInsert;
   }
 
-  // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
+  // Exactly one visited pred. Copy (or move) the LiveOut from that pred into
+  // BB LiveIn.
   if (VisitedPreds.size() == 1) {
-    const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
+    auto PredIt = LiveOut.find(VisitedPreds[0]);
+    if (!StoreLiveIn) {
+      if (Liveness.canMoveLiveOut(VisitedPreds[0]))
+        LiveSet = std::move(PredIt->second);
+      else
+        LiveSet = PredIt->second;
+      return /*Changed*/ true;
+    }
+    const BlockInfo &PredLiveOut = PredIt->second;
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
     auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
-    if (Inserted)
+    if (Inserted) {
+      LiveSet = CurrentLiveInEntry->second;
       return /*Changed*/ true;
+    }
     if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
+      LiveSet = CurrentLiveInEntry->second;
       return /*Changed*/ true;
     }
     return /*Changed*/ false;
@@ -2092,17 +2257,58 @@ bool AssignmentTrackingLowering::join(
     BBLiveIn = joinBlockInfo(std::move(BBLiveIn), PredLiveOut->second);
   }
 
+  if (!StoreLiveIn) {
+    LiveSet = std::move(BBLiveIn);
+    return /*Changed*/ true;
+  }
+
   // Save the joined result for BB.
   auto CurrentLiveInEntry = LiveIn.find(&BB);
   // Check if there isn't an entry, or there is but the LiveIn set has changed
   // (expensive check).
-  if (CurrentLiveInEntry == LiveIn.end())
+  if (CurrentLiveInEntry == LiveIn.end()) {
+    LiveSet = BBLiveIn;
     LiveIn.try_emplace(&BB, std::move(BBLiveIn));
-  else if (BBLiveIn != CurrentLiveInEntry->second)
+  } else if (BBLiveIn != CurrentLiveInEntry->second) {
+    LiveSet = BBLiveIn;
     CurrentLiveInEntry->second = std::move(BBLiveIn);
-  else
+  } else {
     return /*Changed*/ false;
+  }
   return /*Changed*/ true;
+}
+
+bool AssignmentTrackingLowering::updateLiveOut(
+    const BasicBlock &BB, unsigned RPO, const BlockLivenessTracker &Liveness,
+    BlockInfo &&LiveSet) {
+  if (!Liveness.hasRemainingReads(RPO))
+    return false;
+  // Relatively expensive check: has anything changed in LiveOut for BB?
+  auto [OutIt, OutInserted] = LiveOut.try_emplace(&BB);
+  if (!OutInserted && OutIt->second == LiveSet)
+    return false;
+  OutIt->second = std::move(LiveSet);
+  return true;
+}
+
+void AssignmentTrackingLowering::enqueueSuccessors(
+    BasicBlock &BB, unsigned RPO, bool FirstPass,
+    const BlockToRPOMap &BBToOrder, SmallPtrSet<BasicBlock *, 16> &OnPending,
+    RPOWorklist &Pending) {
+  LLVM_DEBUG(dbgs() << BB.getName()
+                    << " has new OutLocs, add succs to worklist: [ ");
+  for (BasicBlock *Succ : successors(&BB)) {
+    unsigned SuccRPO = BBToOrder.lookup(Succ);
+    // On the first pass, forward successors (SuccRPO > RPO) are already in
+    // Worklist and will be visited in RPO order.
+    if (FirstPass && SuccRPO > RPO)
+      continue;
+    if (OnPending.insert(Succ).second) {
+      LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+      Pending.push(SuccRPO);
+    }
+  }
+  LLVM_DEBUG(dbgs() << "]\n");
 }
 
 /// Return true if A fully contains B.
@@ -2386,25 +2592,21 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
-  std::priority_queue<unsigned int, std::vector<unsigned int>,
-                      std::greater<unsigned int>>
-      Worklist;
-  std::priority_queue<unsigned int, std::vector<unsigned int>,
-                      std::greater<unsigned int>>
-      Pending;
-  DenseMap<unsigned int, BasicBlock *> OrderToBB;
-  DenseMap<BasicBlock *, unsigned int> BBToOrder;
+  RPOWorklist Worklist;
+  RPOWorklist Pending;
+  RPOToBlockMap OrderToBB;
+  BlockToRPOMap BBToOrder;
   { // Init OrderToBB and BBToOrder.
-    unsigned int RPONumber = 0;
+    unsigned RPONumber = 0;
     for (BasicBlock *BB : RPOT) {
       OrderToBB[RPONumber] = BB;
       BBToOrder[BB] = RPONumber;
       Worklist.push(RPONumber);
       ++RPONumber;
     }
-    LiveIn.reserve(RPONumber);
-    LiveOut.reserve(RPONumber);
   }
+
+  BlockLivenessTracker Liveness(OrderToBB, BBToOrder);
 
   // Perform the traversal.
   //
@@ -2417,47 +2619,42 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // monotonically increase in value throughout the dataflow.
   //
   SmallPtrSet<BasicBlock *, 16> Visited;
+  bool FirstPass = true;
   while (!Worklist.empty()) {
     // We track what is on the pending worklist to avoid inserting the same
     // thing twice.
     SmallPtrSet<BasicBlock *, 16> OnPending;
     LLVM_DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
-      BasicBlock *BB = OrderToBB[Worklist.top()];
+      unsigned RPO = Worklist.top();
+      BasicBlock *BB = OrderToBB[RPO];
       LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
       Worklist.pop();
-      bool InChanged = join(*BB, Visited);
+
+      BlockInfo LiveSet;
+      bool InChanged = join(*BB, RPO, Visited, Liveness, LiveSet);
+      if (!Liveness.canRevisit(RPO))
+        Liveness.retireVisitedPreds(*BB, Visited, LiveOut);
+
       // Always consider LiveIn changed on the first visit.
       InChanged |= Visited.insert(BB).second;
       if (InChanged) {
         LLVM_DEBUG(dbgs() << BB->getName() << " has new InLocs, process it\n");
-        // Mutate a copy of LiveIn while processing BB. After calling process
+        // Process the instructions in the block. After calling process
         // LiveSet is the LiveOut set for BB.
-        BlockInfo LiveSet = LiveIn[BB];
-
-        // Process the instructions in the block.
         process(*BB, &LiveSet);
-
-        // Relatively expensive check: has anything changed in LiveOut for BB?
-        if (LiveOut[BB] != LiveSet) {
-          LLVM_DEBUG(dbgs() << BB->getName()
-                            << " has new OutLocs, add succs to worklist: [ ");
-          LiveOut[BB] = std::move(LiveSet);
-          for (BasicBlock *Succ : successors(BB)) {
-            if (OnPending.insert(Succ).second) {
-              LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-              Pending.push(BBToOrder[Succ]);
-            }
-          }
-          LLVM_DEBUG(dbgs() << "]\n");
-        }
+        if (updateLiveOut(*BB, RPO, Liveness, std::move(LiveSet)))
+          enqueueSuccessors(*BB, RPO, FirstPass, BBToOrder, OnPending, Pending);
       }
     }
+    FirstPass = false;
     Worklist.swap(Pending);
     // At this point, pending must be empty, since it was just the empty
     // worklist
     assert(Pending.empty() && "Pending should be empty");
   }
+  LiveIn.clear();
+  LiveOut.clear();
 
   // That's the hard part over. Now we just have some admin to do.
 
