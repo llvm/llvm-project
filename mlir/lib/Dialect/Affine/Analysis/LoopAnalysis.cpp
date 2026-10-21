@@ -311,9 +311,12 @@ bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
     return memoryOp.emitError("NYI: non-trivial layout map"), false;
 
   int uniqueVaryingIndexAlongIv = -1;
-  auto accessMap = memoryOp.getAffineMap();
-  SmallVector<Value, 4> mapOperands(memoryOp.getMapOperands());
+  AffineValueMap valueMap(memoryOp.getAffineMap(), memoryOp.getMapOperands());
+  valueMap.composeSimplifyAndCanonicalize();
+  auto accessMap = valueMap.getAffineMap();
+  auto mapOperands = valueMap.getOperands();
   unsigned numDims = accessMap.getNumDims();
+  unsigned numSymbols = accessMap.getNumSymbols();
   for (unsigned i = 0, e = memRefType.getRank(); i < e; ++i) {
     // Gather map operands used in result expr 'i' in 'exprOperands'.
     SmallVector<Value, 4> exprOperands;
@@ -333,6 +336,25 @@ bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
         }
         uniqueVaryingIndexAlongIv = i;
       }
+    }
+    if (uniqueVaryingIndexAlongIv == static_cast<int>(i)) {
+      SmallVector<AffineExpr> nextDims;
+      SmallVector<AffineExpr> nextSymbols;
+      for (unsigned dim = 0; dim < numDims; ++dim) {
+        AffineExpr next = getAffineDimExpr(dim, iv.getContext());
+        if (mapOperands[dim] == iv)
+          next = next + 1;
+        nextDims.push_back(next);
+      }
+      for (unsigned symbol = 0; symbol < numSymbols; ++symbol) {
+        AffineExpr next = getAffineSymbolExpr(symbol, iv.getContext());
+        if (mapOperands[numDims + symbol] == iv)
+          next = next + 1;
+        nextSymbols.push_back(next);
+      }
+      AffineExpr next = resultExpr.replaceDimsAndSymbols(nextDims, nextSymbols);
+      if (simplifyAffineExpr(next - resultExpr, numDims, numSymbols) != 1)
+        return false;
     }
   }
 
