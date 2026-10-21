@@ -576,24 +576,16 @@ static std::error_code realPathFromHandle(HANDLE H,
   return std::error_code();
 }
 
-// Returns true if the volume holding handle is known to be a fixed local
-// disk. Returns false if it is not or if that could not be determined.
-static bool isLocalByQueryVolumeInformationFile(HANDLE Handle) {
-  IO_STATUS_BLOCK IoStatus;
-  FILE_FS_DEVICE_INFORMATION Info;
-  if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
-                                     FileFsDeviceInformation) < 0)
-    return false;
-
-  return (Info.DeviceType == FILE_DEVICE_DISK ||
-          Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
-         !(Info.Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE));
-}
-
 static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
   // Fast path for the common case: an ordinary local disk, one system call on
   // the handle. Everything else goes through the path-based check below.
-  if (isLocalByQueryVolumeInformationFile(Handle)) {
+  IO_STATUS_BLOCK IoStatus;
+  FILE_FS_DEVICE_INFORMATION Info;
+  if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
+                                     FileFsDeviceInformation) >= 0 &&
+      (Info.DeviceType == FILE_DEVICE_DISK ||
+       Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+      !(Info.Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE))) {
     Result = true;
     return std::error_code();
   }
