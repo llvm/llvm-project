@@ -359,6 +359,11 @@ convertFramePointerKindToLLVMIR(cir::FramePointerKind kind) {
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  // Opaque pointer conversion does not validate the pointee's memory layout.
+  mlir::Type pointeeType = op.getType().getPointee();
+  if (!convertTypeForMemory(*getTypeConverter(), dataLayout, pointeeType))
+    return emitTypeConversionError(op, pointeeType);
+
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
       rewriter, op.getLoc(), rewriter.getI64Type(),
@@ -1932,6 +1937,8 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type targetType = convertTy(ptrTy);
     mlir::Type elementTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
                                                 ptrTy.getPointee());
+    if (!elementTy)
+      return emitTypeConversionError(castOp, ptrTy.getPointee());
     llvm::SmallVector<mlir::LLVM::GEPArg> offset{0};
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         castOp, targetType, elementTy, sourceValue, offset);
@@ -2225,6 +2232,8 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
 
   mlir::Type elementTy =
       convertTypeForMemory(*tc, dataLayout, ptrStrideOp.getElementType());
+  if (!elementTy)
+    return emitTypeConversionError(ptrStrideOp, ptrStrideOp.getElementType());
 
   // void and function types doesn't really have a layout to use in GEPs,
   // make it i8 instead.
@@ -2251,6 +2260,8 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
           mlir::dyn_cast<cir::ArrayType>(op.getBaseType().getPointee())) {
     const mlir::TypeConverter *converter = getTypeConverter();
     const mlir::Type llArrayTy = converter->convertType(arrayTy);
+    if (!llArrayTy)
+      return emitTypeConversionError(op, arrayTy);
     const mlir::Type llResultTy = converter->convertType(op.getType());
     mlir::Type elementTy =
         convertTypeForMemory(*converter, dataLayout, op.getElementType());
@@ -2285,6 +2296,8 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(baseClassOp.getType());
+  if (!resultType)
+    return emitTypeConversionError(baseClassOp, baseClassOp.getType());
   mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
       adaptor.getOffset().getZExtValue()};
@@ -2317,6 +2330,8 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(derivedClassOp.getType());
+  if (!resultType)
+    return emitTypeConversionError(derivedClassOp, derivedClassOp.getType());
   mlir::Value baseAddr = adaptor.getSrcAddr();
   // The offset is set in the operation as an unsigned value, but it must be
   // applied as a negative offset.
@@ -2405,6 +2420,8 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
            << "NYI: lowering alloca of a type with no memory representation";
   mlir::Type resultTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
                                              op.getType(), isForHLSL);
+  if (!resultTy)
+    return emitTypeConversionError(op, op.getType());
 
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
@@ -2661,6 +2678,8 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
     cir::FrameAddrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmPtrTy = getTypeConverter()->convertType(op.getType());
+  if (!llvmPtrTy)
+    return emitTypeConversionError(op, op.getType());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.frameaddress", llvmPtrTy,
                                    adaptor.getOperands());
   return mlir::success();
@@ -2683,6 +2702,8 @@ mlir::LogicalResult CIRToLLVMAddrOfReturnAddrOpLowering::matchAndRewrite(
     cir::AddrOfReturnAddrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmPtrTy = getTypeConverter()->convertType(op.getType());
+  if (!llvmPtrTy)
+    return emitTypeConversionError(op, op.getType());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.addressofreturnaddress",
                                    llvmPtrTy, adaptor.getOperands());
   return mlir::success();
@@ -2694,8 +2715,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   const mlir::Type llvmTy =
       convertTypeForLoadStore(*getTypeConverter(), dataLayout, op.getType());
   if (!llvmTy)
-    return op.emitError()
-           << "NYI: lowering load of a type with no memory representation";
+    return emitTypeConversionError(op, op.getType());
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
@@ -2976,6 +2996,10 @@ mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
     cir::PtrDiffOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type pointeeType = op.getLhs().getType().getPointee();
+  if (!convertTypeForMemory(*getTypeConverter(), dataLayout, pointeeType))
+    return emitTypeConversionError(op, pointeeType);
+
   auto dstTy = mlir::cast<cir::IntType>(op.getType());
   mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
 
@@ -2987,9 +3011,8 @@ mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
   auto diff =
       mlir::LLVM::SubOp::create(rewriter, op.getLoc(), llvmDstTy, lhs, rhs);
 
-  cir::PointerType ptrTy = op.getLhs().getType();
   assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
-  uint64_t typeSize = getTypeAllocSize(ptrTy.getPointee(), *op);
+  uint64_t typeSize = getTypeAllocSize(pointeeType, *op);
 
   // Avoid silly division by 1.
   mlir::Value resultVal = diff.getResult();
@@ -3265,6 +3288,8 @@ mlir::LogicalResult CIRToLLVMGetGlobalOpLowering::matchAndRewrite(
   }
 
   mlir::Type type = getTypeConverter()->convertType(op.getType());
+  if (!type)
+    return emitTypeConversionError(op, op.getType());
   mlir::Operation *newop = mlir::LLVM::AddressOfOp::create(
       rewriter, op.getLoc(), type, op.getName());
 
@@ -4306,6 +4331,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
     unsigned numericAS = 0;
 
+    if (mlir::isa_and_present<cir::LangAddressSpaceAttr>(addrSpaceAttr))
+      return {};
+
     if (auto targetAsAttr =
             mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
                 addrSpaceAttr))
@@ -4341,6 +4369,8 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
         intTy && intTy.isBitInt())
       return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
+    if (!ty)
+      return {};
     return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
   });
   converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
@@ -4943,6 +4973,8 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     cir::GetMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type llResTy = getTypeConverter()->convertType(op.getType());
+  if (!llResTy)
+    return emitTypeConversionError(op, op.getType());
   mlir::Type pointee = op.getAddrTy().getPointee();
 
   if (mlir::isa<cir::UnionType>(pointee)) {
@@ -4961,6 +4993,8 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{
       0, static_cast<int32_t>(structTy.getLLVMFieldIndex(op.getIndex()))};
   const mlir::Type elementTy = getTypeConverter()->convertType(structTy);
+  if (!elementTy)
+    return emitTypeConversionError(op, structTy);
   // Struct member accesses are always inbounds and nuw: the base pointer
   // is valid and the member offset is a positive, constant offset within
   // the struct layout, so it cannot wrap. This matches LLVM's
@@ -5335,6 +5369,8 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
     cir::VTableGetVirtualFnAddrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type targetType = getTypeConverter()->convertType(op.getType());
+  if (!targetType)
+    return emitTypeConversionError(op, op.getType());
   auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
       llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
@@ -5348,6 +5384,8 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     cir::VTTAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
   mlir::Type eltType;
   mlir::Value llvmAddr = adaptor.getSymAddr();
@@ -6107,6 +6145,8 @@ mlir::LogicalResult CIRToLLVMComplexImagPtrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   cir::PointerType operandTy = op.getOperand().getType();
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  if (!resultLLVMTy)
+    return emitTypeConversionError(op, op.getType());
   mlir::Type elementLLVMTy =
       getTypeConverter()->convertType(operandTy.getPointee());
 
@@ -6124,6 +6164,8 @@ mlir::LogicalResult CIRToLLVMComplexRealPtrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   cir::PointerType operandTy = op.getOperand().getType();
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  if (!resultLLVMTy)
+    return emitTypeConversionError(op, op.getType());
   mlir::Type elementLLVMTy =
       getTypeConverter()->convertType(operandTy.getPointee());
 
@@ -6222,8 +6264,11 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
 
     llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
     cir::PointerType typ = mlir::cast<cir::PointerType>(cirOp.getType());
-    mlir::TypeAttr typAttr = mlir::TypeAttr::get(convertTypeForMemory(
-        *getTypeConverter(), dataLayout, typ.getPointee()));
+    mlir::Type elementTy =
+        convertTypeForMemory(*getTypeConverter(), dataLayout, typ.getPointee());
+    if (!elementTy)
+      return emitTypeConversionError(op, typ.getPointee());
+    mlir::TypeAttr typAttr = mlir::TypeAttr::get(elementTy);
 
     attrs.push_back(rewriter.getNamedAttr(llvmAttrName, typAttr));
     mlir::DictionaryAttr newDict = rewriter.getDictionaryAttr(attrs);
