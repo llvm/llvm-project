@@ -525,35 +525,18 @@ defm : Zn4WriteResInt<WriteLoad, [Zn4AGU012, Zn4Load], !add(Znver4Model.LoadLate
 // Does not cost anything by itself, only has latency, matching that of the WriteLoad,
 defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLatency, 1), [], 0>;
 
-// AVX-512 masked GATHER and SCATTER are microcoded. The default vector load
-// and store writes describe one uop, so they are out by an order of magnitude.
-// Records distinguish three dimensions: element count, data width, and index
-// width. Per-pipe occupancy comes from uops.info. Zn4UcodeGS holds the rest.
-//
-// Measured on Znver4 with every mask bit set. The throughput fit uses a fixed
-// unit-stride index, so every instruction touches one L1-resident cache line.
-// Latency predates that fit and comes from a unit-stride walk over an
-// L2-resident buffer, so the two columns do not share a condition. The gather
-// latencies still land at or under the uops.info Zen 4 index-to-destination
-// records, so the walk did not inflate them. One kxnor writes the mask before
-// each, which is what llc emits. With kmovd instead, the short
-// shapes measure higher and the two four-lane rows stop agreeing. The AVX2
-// gathers below take their mask in a vector register, not a mask register, so
-// neither form applies there. A vmovdqa refills it instead. A scatter has no
-// data result, so its latency is the writeback of the mask it rewrites, and
-// that is what delays a later mask read. The two- and four-lane rows carry a
-// measured upper bound for it. The wider rows are still estimates. The
-// uops.info mask-to-mask record is not a substitute: its chain feeds the
-// rewritten mask back without re-arming it, and a scatter clears the bits it
-// stores through, so every instruction after the first runs fully masked off.
-//
+// AVX-512 masked GATHER and SCATTER are microcoded, so the default load and
+// store writes are out by an order of magnitude. Measured on Znver4, all mask
+// bits set, one kxnor before each. Throughput was fit on an L1-resident
+// unit-stride index. Latency predates that fit and comes from an L2-resident
+// walk, so the two columns do not share a condition. A scatter's latency is
+// its mask writeback, measured on the two- and four-lane rows and estimated
+// above them. znver5 and znver6 inherit all of it unmeasured.
+
 // VPGATHERDDZ, VPGATHERDDY and VPSCATTERDDZ fold their measured FP1/FP2 uop
-// into the FP1/FP2/FP3 count. Charging it separately leaves the write holding
-// Zn4FPU01, Zn4FPU12, Zn4FPU123 and Zn4FPU23, four groups none of which
-// contains another, and llvm-mca does not terminate on that. That works around
-// the tool and does not describe the hardware. Split the Zn4FPU12 charge back
-// out once https://github.com/llvm/llvm-project/issues/224248 is fixed.
-// znver5 and znver6 inherit these Zen 4 numbers unmeasured.
+// into the FP1/FP2/FP3 count. Split out, the write holds four ProcResGroups
+// none of which contains another, and llvm-mca hangs. Restore it once
+// https://github.com/llvm/llvm-project/issues/224248 is fixed.
 
 // Columns run: addressing, the memory pipe, the FP pipes that move the data,
 // the FP0-3 pipes the uops can issue to, then Zn4UcodeGS. Gathers use Zn4Load
