@@ -2810,7 +2810,7 @@ bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
     if (L->getTopBlock() != L->getBottomBlock())
       continue;
     runOnLoop(MF, *L);
-    return false;
+    return true;
   }
   return false;
 }
