@@ -2303,6 +2303,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (Instruction *I = foldMaxMulShift(I1, I0))
         return I;
     }
+    const APInt *C1,*C2,*C3;
+
+    //matches max(max(x,c1)<<c2,c3)
+    if(match(II,m_c_UMax(m_OneUse(m_Shl(m_OneUse(m_c_UMax(m_Value(X), m_APInt(C1))),m_APInt(C2))),m_APInt(C3)))){
+      if(C2->ult(C1->getBitWidth())){
+        bool overflow;
+        APInt shiftedC1 = C1->ushl_ov(*C2,overflow);
+        if(!overflow && C3->uge(shiftedC1)){
+          Value *NewShl = Builder.CreateShl(X, ConstantInt::get(II->getType(),*C2));
+          Value *NewMax = Builder.CreateBinaryIntrinsic(Intrinsic::umax, NewShl, ConstantInt::get(II->getType(),*C3));
+          return replaceInstUsesWith(*II, NewMax);
+        }
+      }
+    }
 
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
