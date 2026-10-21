@@ -12,6 +12,8 @@ define void @soa_accumulators(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    br i1 [[CMP170]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
+; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <2 x i32> [[TMP12]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP38:%.*]], [[TMP39:%.*]]
@@ -33,26 +35,24 @@ define void @soa_accumulators(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> poison, i64 [[INDVARS_IV]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP41:%.*]] = or disjoint <2 x i64> [[TMP14]], <i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX47:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[TMP11]]
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp samesign ult i64 [[TMP10]], [[TMP0]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[ARRAYIDX9]], align 1
-; CHECK-NEXT:    [[CMP11:%.*]] = icmp eq i8 [[TMP13]], 0
-; CHECK-NEXT:    [[AND13167:%.*]] = and i1 [[CMP5]], [[CMP11]]
-; CHECK-NEXT:    [[CMP17:%.*]] = icmp samesign ult i64 [[TMP11]], [[TMP0]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX21]], align 1
-; CHECK-NEXT:    [[CMP23:%.*]] = icmp eq i8 [[TMP14]], 0
-; CHECK-NEXT:    [[AND25168:%.*]] = and i1 [[CMP17]], [[CMP23]]
-; CHECK-NEXT:    [[CMP29:%.*]] = icmp samesign ult i64 [[TMP12]], [[TMP0]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX33]], align 1
+; CHECK-NEXT:    [[CMP29:%.*]] = icmp samesign ult i64 [[TMP10]], [[TMP0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX9]], align 1
 ; CHECK-NEXT:    [[CMP35:%.*]] = icmp eq i8 [[TMP15]], 0
 ; CHECK-NEXT:    [[AND37169:%.*]] = and i1 [[CMP29]], [[CMP35]]
+; CHECK-NEXT:    [[TMP42:%.*]] = zext <2 x i32> [[TMP40]] to <2 x i64>
+; CHECK-NEXT:    [[TMP43:%.*]] = icmp samesign ult <2 x i64> [[TMP41]], [[TMP42]]
+; CHECK-NEXT:    [[TMP44:%.*]] = load <2 x i8>, ptr [[ARRAYIDX21]], align 1
+; CHECK-NEXT:    [[TMP45:%.*]] = icmp eq <2 x i8> [[TMP44]], zeroinitializer
+; CHECK-NEXT:    [[TMP28:%.*]] = and <2 x i1> [[TMP43]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x float>, ptr [[ARRAYIDX41]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x float>, ptr [[ARRAYIDX47]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <2 x float>, ptr [[ARRAYIDX52]], align 4
@@ -61,15 +61,14 @@ define void @soa_accumulators(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i1> [[TMP20]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP18]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP23:%.*]] = select <2 x i1> [[TMP21]], <2 x float> [[TMP22]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i1> poison, i1 [[AND13167]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i1> poison, i1 [[AND37169]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i1> [[TMP24]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP18]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP27:%.*]] = select <2 x i1> [[TMP25]], <2 x float> [[TMP26]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x i1> poison, i1 [[AND25168]], i64 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <2 x i1> [[TMP28]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <2 x float> [[TMP17]], <2 x float> [[TMP19]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP31:%.*]] = select <2 x i1> [[TMP29]], <2 x float> [[TMP30]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i1> poison, i1 [[AND37169]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <2 x i1> [[TMP28]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <2 x i1> [[TMP32]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x float> [[TMP17]], <2 x float> [[TMP19]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP35:%.*]] = select <2 x i1> [[TMP33]], <2 x float> [[TMP34]], <2 x float> zeroinitializer
@@ -183,6 +182,8 @@ define void @soa_accumulators_phis(ptr %r, ptr %x, ptr %y, i32 %n, ptr %o0, ptr 
 ; CHECK-NEXT:    br i1 [[CMP167]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP40:%.*]], [[TMP41:%.*]]
@@ -207,26 +208,24 @@ define void @soa_accumulators_phis(ptr %r, ptr %x, ptr %y, i32 %n, ptr %o0, ptr 
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> poison, i64 [[INDVARS_IV]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i64> [[TMP15]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP42:%.*]] = or disjoint <2 x i64> [[TMP16]], <i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP13:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX47:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[TMP13]]
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp samesign ult i64 [[TMP12]], [[TMP0]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX9]], align 1
-; CHECK-NEXT:    [[CMP11:%.*]] = icmp eq i8 [[TMP15]], 0
-; CHECK-NEXT:    [[AND13164:%.*]] = and i1 [[CMP5]], [[CMP11]]
-; CHECK-NEXT:    [[CMP17:%.*]] = icmp samesign ult i64 [[TMP13]], [[TMP0]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX21]], align 1
-; CHECK-NEXT:    [[CMP23:%.*]] = icmp eq i8 [[TMP16]], 0
-; CHECK-NEXT:    [[AND25165:%.*]] = and i1 [[CMP17]], [[CMP23]]
-; CHECK-NEXT:    [[CMP29:%.*]] = icmp samesign ult i64 [[TMP14]], [[TMP0]]
-; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX33]], align 1
+; CHECK-NEXT:    [[CMP29:%.*]] = icmp samesign ult i64 [[TMP12]], [[TMP0]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX9]], align 1
 ; CHECK-NEXT:    [[CMP35:%.*]] = icmp eq i8 [[TMP17]], 0
 ; CHECK-NEXT:    [[AND37166:%.*]] = and i1 [[CMP29]], [[CMP35]]
+; CHECK-NEXT:    [[TMP43:%.*]] = zext <2 x i32> [[TMP6]] to <2 x i64>
+; CHECK-NEXT:    [[TMP44:%.*]] = icmp samesign ult <2 x i64> [[TMP42]], [[TMP43]]
+; CHECK-NEXT:    [[TMP45:%.*]] = load <2 x i8>, ptr [[ARRAYIDX21]], align 1
+; CHECK-NEXT:    [[TMP46:%.*]] = icmp eq <2 x i8> [[TMP45]], zeroinitializer
+; CHECK-NEXT:    [[TMP30:%.*]] = and <2 x i1> [[TMP44]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <2 x float>, ptr [[ARRAYIDX41]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = load <2 x float>, ptr [[ARRAYIDX47]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = load <2 x float>, ptr [[ARRAYIDX52]], align 4
@@ -235,15 +234,14 @@ define void @soa_accumulators_phis(ptr %r, ptr %x, ptr %y, i32 %n, ptr %o0, ptr 
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i1> [[TMP22]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x float> [[TMP18]], <2 x float> [[TMP20]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP25:%.*]] = select <2 x i1> [[TMP23]], <2 x float> [[TMP24]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <2 x i1> poison, i1 [[AND13164]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <2 x i1> poison, i1 [[AND37166]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x i1> [[TMP26]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x float> [[TMP18]], <2 x float> [[TMP20]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP29:%.*]] = select <2 x i1> [[TMP27]], <2 x float> [[TMP28]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i1> poison, i1 [[AND25165]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x i1> [[TMP30]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <2 x float> [[TMP19]], <2 x float> [[TMP21]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP33:%.*]] = select <2 x i1> [[TMP31]], <2 x float> [[TMP32]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <2 x i1> poison, i1 [[AND37166]], i64 0
+; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <2 x i1> [[TMP30]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <2 x i1> [[TMP34]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <2 x float> [[TMP19]], <2 x float> [[TMP21]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP37:%.*]] = select <2 x i1> [[TMP35]], <2 x float> [[TMP36]], <2 x float> zeroinitializer
