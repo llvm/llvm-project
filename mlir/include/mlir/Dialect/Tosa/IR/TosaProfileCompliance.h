@@ -62,9 +62,9 @@ struct VersionedTypeInfo {
                     SpecificationVersion version);
   VersionedTypeInfo(SmallVector<TypeInfo> types, SpecificationVersion version);
   VersionedTypeInfo(const VersionedTypeInfo &other);
-  VersionedTypeInfo(VersionedTypeInfo &&other) noexcept;
+  VersionedTypeInfo(VersionedTypeInfo &&other);
   VersionedTypeInfo &operator=(const VersionedTypeInfo &other);
-  VersionedTypeInfo &operator=(VersionedTypeInfo &&other) noexcept;
+  VersionedTypeInfo &operator=(VersionedTypeInfo &&other);
   ~VersionedTypeInfo();
 };
 
@@ -84,9 +84,9 @@ struct OpComplianceInfo {
                    SmallVector<VersionedTypeInfo> operandTypeInfoSet,
                    CheckCondition condition = CheckCondition::anyOf);
   OpComplianceInfo(const OpComplianceInfo &other);
-  OpComplianceInfo(OpComplianceInfo &&other) noexcept;
+  OpComplianceInfo(OpComplianceInfo &&other);
   OpComplianceInfo &operator=(const OpComplianceInfo &other);
-  OpComplianceInfo &operator=(OpComplianceInfo &&other) noexcept;
+  OpComplianceInfo &operator=(OpComplianceInfo &&other);
   ~OpComplianceInfo();
 };
 
