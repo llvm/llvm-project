@@ -1604,8 +1604,8 @@ public:
           Base.uge(N) ? 0 : (N - Base).getLimitedValue(Len);
       std::vector<AnyValue> Res;
       Res.reserve(Len);
-      for (uint32_t I = 0; I != Len; ++I)
-        Res.push_back(AnyValue::boolean(I < NumActive));
+      Res.insert(Res.end(), NumActive, AnyValue::boolean(true));
+      Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
       return std::move(Res);
     }
     case Intrinsic::vector_reduce_fadd:
