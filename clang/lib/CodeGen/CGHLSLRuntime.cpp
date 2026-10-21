@@ -1574,9 +1574,15 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                       Signature);
     break;
   case llvm::dxbc::PSV::SemanticKind::ShadingRate:
-    assert(Stage == llvm::Triple::Pixel &&
-           "FIXME: loading SV_ShadingRate is only implemented for pixel "
-           "shaders (other stages are valid per the signature table)");
+    assert(llvm::is_contained({llvm::Triple::Hull, llvm::Triple::Domain,
+                               llvm::Triple::Geometry, llvm::Triple::Pixel},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry &&
+           "FIXME: loading SV_ShadingRate is not yet implemented for this "
+           "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
       // Non-float pixel inputs cannot be interpolated and must be Flat.
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
@@ -1645,9 +1651,16 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
   case llvm::dxbc::PSV::SemanticKind::ShadingRate:
-    assert(Stage == llvm::Triple::Vertex &&
-           "FIXME: storing SV_ShadingRate is only implemented for vertex "
-           "shaders (other stages are valid per the signature table)");
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry && Stage != llvm::Triple::Mesh &&
+           "FIXME: storing SV_ShadingRate is not yet implemented for this "
+           "shader stage");
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
       return;
