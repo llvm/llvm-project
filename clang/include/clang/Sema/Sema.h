@@ -2556,14 +2556,26 @@ public:
                                    bool UpdateFlags = true);
 
   /// Check a counted_by-family attribute in type position and initialize
-  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
-  /// and function declarator chunks enclosing the attribute.
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer and
+  /// array declarator chunks enclosing the attribute, up to the nearest
+  /// function chunk. \p OnReturnType is true if a function chunk encloses it,
+  /// i.e. the attribute is in a function's return type.
   ///
   /// \returns false after diagnosing an attribute that must be dropped (see
   /// ValidateBoundsAttrTypeShape).
   bool ValidateBoundsAttrTypeForTypePosition(
       QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
-      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+      SourceRange AttrRange, unsigned PointerNestLevel, bool OnReturnType,
+      BoundsAttrFlags &Flags);
+
+  /// Check where a counted_by-family attribute of kind \p Kind sits in its
+  /// declarator, as described by \p PointerNestLevel and \p OnReturnType (see
+  /// ValidateBoundsAttrTypeForTypePosition).
+  ///
+  /// \returns false after diagnosing an attribute in an unsupported position.
+  bool ValidateBoundsAttrPosition(BoundsAttributedType::BoundsAttrKind Kind,
+                                  SourceLocation AttrLoc, SourceRange AttrRange,
+                                  unsigned PointerNestLevel, bool OnReturnType);
 
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
