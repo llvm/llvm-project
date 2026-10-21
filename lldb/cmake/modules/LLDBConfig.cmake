@@ -62,7 +62,7 @@ add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" Curse
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 VERSION ${LLDB_LIBXML2_VERSION})
-# 0.25.0 is the first version where "treesitter generate" has the "--output" option.
+# 0.25.0 is the first version where "tree-sitter generate" has the "--output" option.
 add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter VERSION "0.25.0")
 
 # liblzma comes from LLVM, and a standalone build cannot change how LLVM was
