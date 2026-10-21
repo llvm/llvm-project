@@ -291,7 +291,7 @@
 "`LWG4453 <https://wg21.link/LWG4453>`__","``atomic_ref<cv T>::required_alignment`` should be the same as for ``T``","2026-03 (Croydon)","","","`#189833 <https://github.com/llvm/llvm-project/issues/189833>`__",""
 "`LWG4454 <https://wg21.link/LWG4454>`__","``assert`` should forbid ``co_await`` and ``co_yield``","2026-03 (Croydon)","","","`#189834 <https://github.com/llvm/llvm-project/issues/189834>`__",""
 "`LWG4457 <https://wg21.link/LWG4457>`__","freestanding for ``stable_sort``, ``stable_partition`` and ``inplace_merge``","2026-03 (Croydon)","","","`#189835 <https://github.com/llvm/llvm-project/issues/189835>`__",""
-"`LWG4460 <https://wg21.link/LWG4460>`__","Missing *Throws:* for last ``variant`` constructor","2026-03 (Croydon)","","","`#189836 <https://github.com/llvm/llvm-project/issues/189836>`__",""
+"`LWG4460 <https://wg21.link/LWG4460>`__","Missing *Throws:* for last ``variant`` constructor","2026-03 (Croydon)","|Nothing To Do|","","`#189836 <https://github.com/llvm/llvm-project/issues/189836>`__",""
 "`LWG4467 <https://wg21.link/LWG4467>`__","``hive::splice`` can throw ``bad_alloc``","2026-03 (Croydon)","","","`#189837 <https://github.com/llvm/llvm-project/issues/189837>`__",""
 "`LWG4468 <https://wg21.link/LWG4468>`__","§[const.wrap.class] ""``operator decltype(auto)``"" is ill-formed","2026-03 (Croydon)","|Complete|","23","`#189838 <https://github.com/llvm/llvm-project/issues/189838>`__",""
 "`LWG4469 <https://wg21.link/LWG4469>`__","Names of parameters of addressable function shall remain unspecified","2026-03 (Croydon)","","","`#189839 <https://github.com/llvm/llvm-project/issues/189839>`__",""

@@ -1272,6 +1272,13 @@ public:
   }
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(VMT->getSubExpr());
+        ICE && ICE->getCastKind() == CK_NoOp &&
+        ICE->getType().isConstQualified()) {
+      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(ICE->getSubExpr());
+          BTE && isNullSmartPtr(BTE->getSubExpr()))
+        return Visit(BTE->getSubExpr());
+    }
     return Visit(VMT->getSubExpr());
   }
 
@@ -1330,8 +1337,7 @@ public:
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     if (auto *Temp = BTE->getTemporary()) {
-      if (!isNullSmartPtr(BTE->getSubExpr()) &&
-          !IsFunctionTrivial(Temp->getDestructor()))
+      if (!IsFunctionTrivial(Temp->getDestructor()))
         return false;
     }
     return Visit(BTE->getSubExpr());

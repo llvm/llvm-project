@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
@@ -268,6 +269,17 @@ LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
     // Process decoration attributes of arguments.
     auto funcOp = cast<FunctionOpInterface>(*op);
     for (auto argAttr : funcOp.getArgAttrs(idx)) {
+      if (argAttr.getName() == spirv::getFuncParamAlignmentAttrName() ||
+          argAttr.getName() == spirv::getFuncParamAttrName()) {
+        auto decoration =
+            argAttr.getName() == spirv::getFuncParamAlignmentAttrName()
+                ? Decoration::Alignment
+                : Decoration::FuncParamAttr;
+        if (failed(processDecorationAttr(op.getLoc(), argValueID, decoration,
+                                         argAttr.getValue())))
+          return failure();
+        continue;
+      }
       if (argAttr.getName() != DecorationAttr::name)
         continue;
 
@@ -312,6 +324,13 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   operands.push_back(static_cast<uint32_t>(op.getFunctionControl()));
   operands.push_back(fnTypeID);
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
+
+  if (!resultTypes.empty()) {
+    if (Attribute attr = op.getResultAttr(0, spirv::getFuncParamAttrName()))
+      if (failed(processDecorationAttr(op.getLoc(), funcID,
+                                       Decoration::FuncParamAttr, attr)))
+        return failure();
+  }
 
   // Add function name.
   if (failed(processName(funcID, op.getName()))) {
@@ -1095,6 +1114,9 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
     valueIDMap[op.getResult(0)] = funcCallID;
 
   encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionCall, operands);
+  for (auto attr : op->getDiscardableAttrs())
+    if (failed(processDecoration(op.getLoc(), funcCallID, attr)))
+      return failure();
   return success();
 }
 

@@ -2194,7 +2194,6 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -4881,8 +4880,13 @@ void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
   unsigned Idx = 0;
   unsigned N = Record[Idx++];
   F.DirectoryDependencies.reserve(N);
-  for (unsigned I = 0; I != N; ++I)
-    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+  for (unsigned I = 0; I != N; ++I) {
+    // The base directory is relative if the module was found through a
+    // relative search path, and empty with -fmodule-file-home-is-cwd.
+    SmallString<256> Dir(ReadPath(F, Record, Idx));
+    ModuleMap::canonicalizeDirectoryDependency(FileMgr, Dir);
+    F.DirectoryDependencies.push_back(std::string(Dir));
+  }
 }
 
 bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {

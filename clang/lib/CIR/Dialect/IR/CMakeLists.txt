@@ -15,6 +15,9 @@ add_clang_library(MLIRCIR
   MLIRCIROpInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
 
+  LINK_COMPONENTS
+  TargetParser
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRCIRInterfaces

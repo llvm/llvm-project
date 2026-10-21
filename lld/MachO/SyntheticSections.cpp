@@ -2547,9 +2547,21 @@ void ChainedFixupsSection::finalizeContents() {
   else
     importFormat = DYLD_CHAINED_IMPORT;
 
-  for (Location &loc : locations)
-    loc.offset =
+  const uint64_t pageSize = target->getPageSize();
+  for (Location &loc : locations) {
+    uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+    if (offset % pageSize + target->wordSize > pageSize) {
+      std::string msg = loc.isec->getLocation(loc.offset) +
+                        ": fixup straddles page boundary; stop packing structs "
+                        "containing pointers or link with -no_fixup_chains";
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        msg += "\n>>> defined at " + src;
+      error(msg);
+    }
+    loc.offset = offset;
+  }
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     const OutputSegment *segA = a.isec->parent->parent;
@@ -2563,7 +2575,6 @@ void ChainedFixupsSection::finalizeContents() {
     return a.isec->parent->parent == b.isec->parent->parent;
   };
 
-  const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
     fixupSegments.emplace_back(firstLoc.isec->parent->parent);

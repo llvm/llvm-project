@@ -623,9 +623,12 @@ class raw_ostream;
       // prevMBB.
       IndexListEntry *startEntry = createEntry(nullptr, 0);
       IndexListEntry *endEntry = getMBBEndIdx(&*prevMBB).listEntry();
+      // Debug and pseudo probe instructions have no index.
+      MachineBasicBlock::iterator FirstIndexed = mbb->getFirstNonDebugInstr();
       IndexListEntry *insEntry =
-          mbb->empty() ? endEntry
-                       : getInstructionIndex(mbb->front()).listEntry();
+          FirstIndexed == mbb->end()
+              ? endEntry
+              : getInstructionIndex(*FirstIndexed).listEntry();
       IndexList::iterator newItr =
           indexList.insert(insEntry->getIterator(), *startEntry);
 

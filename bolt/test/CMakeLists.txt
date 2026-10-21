@@ -54,6 +54,7 @@ list(APPEND BOLT_TEST_DEPS
   llvm-strip
   llvm-objcopy
   merge-fdata
+  merge-fdata-for-test
   not
   split-file
   yaml2obj
