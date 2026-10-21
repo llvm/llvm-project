@@ -37,6 +37,7 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
+#include "Program.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
@@ -87,6 +88,21 @@ struct KernelLaunchInfoTy {
   }
 };
 
+/// Device properties that drive the computation of the launch geometry of a
+/// kernel.
+struct DeviceGeometryPropsTy {
+  /// Number of threads in a warp/wavefront.
+  uint32_t WarpSize = 0;
+  /// Maximum number of threads a block can be launched with.
+  uint32_t ThreadLimit = 0;
+  /// Number of threads per block to use when the user does not request one.
+  uint32_t DefaultNumThreads = 0;
+  /// Number of blocks to use when the user does not request one.
+  uint32_t DefaultNumBlocks = 0;
+  /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
+  uint64_t MaxBlockSharedMemSize = 0;
+};
+
 struct PluginManager;
 
 struct DeviceTy {
@@ -117,7 +133,14 @@ struct DeviceTy {
   /// Whether this device executes kernels on the host CPU.
   bool isHostDevice() const { return IsHostDevice; }
 
-  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
+  /// Load \p Img onto the device and return the resulting program.
+  llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
+
+  /// Resolve the device address of the global variable \p Name in \p Program,
+  /// recording it for kernel record/replay if recording is currently active.
+  llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
+                                                   const char *Name,
+                                                   size_t ExpectedSize);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -252,6 +275,42 @@ struct DeviceTy {
     return Value;
   }
 
+  /// Get string information from the device into \p Out, which is left empty
+  /// if the information cannot be obtained. \p Out is always null terminated.
+  template <unsigned N>
+  void getInfoString(DeviceInfo Info, llvm::SmallString<N> &Out) const {
+    auto Prop = static_cast<ol_device_info_t>(Info);
+    size_t Size = 0;
+    if (!olGetDeviceInfoSize(DeviceHandle, Prop, &Size) && Size > 0) {
+      Out.resize(Size);
+      if (olGetDeviceInfo(DeviceHandle, Prop, Size, Out.data()))
+        Out.clear();
+      else
+        // Drop the null terminator from the length, c_str() puts it back.
+        Out.pop_back();
+    } else {
+      Out.clear();
+    }
+    // Make sure the data can be handed out as a C string.
+    Out.c_str();
+  }
+
+  /// Return the maximum number of threads per team this device supports,
+  /// further limited by OMP_TEAMS_THREAD_LIMIT if the user set it.
+  uint32_t getThreadLimit() const;
+
+  /// Return the number of threads per team to use when the user does not
+  /// request one.
+  uint32_t getDefaultNumThreads() const {
+    return GeometryProps.DefaultNumThreads;
+  }
+
+  /// Return the maximum amount of shared memory, in bytes, a team can use in
+  /// any kernel.
+  uint64_t getMaxBlockSharedMemSize() const {
+    return GeometryProps.MaxBlockSharedMemSize;
+  }
+
   /// Record the launch-geometry properties for the kernel at \p KernelPtr,
   /// read once at registration time from its "<name>_kernel_environment"
   /// device global.
@@ -267,8 +326,14 @@ struct DeviceTy {
   }
 
 private:
+  /// Query the properties used to compute the launch geometry of a kernel.
+  llvm::Error initGeometryProps();
+
   /// Unique identifier of the device.
   llvm::SmallString<32> Uid;
+
+  /// Properties used to compute the launch geometry of a kernel.
+  DeviceGeometryPropsTy GeometryProps;
 
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
