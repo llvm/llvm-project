@@ -1,15 +1,13 @@
 // clang-format off
-// This test verifies the AMDGPU grid heuristic for cross-team reduction
-// kernels under a low trip count: the kernel is launched with 32 threads per
-// team and the team count is capped at 4 x #CUs (2048 max threads per CU
-// divided by the 512 block size). The expected team count below therefore
-// depends on the device: 416 == 4 x 104 CUs on gfx90a.
+// This test verifies the result of a fast cross-team reduction kernel under a
+// low trip count. A fast reduction has no reduction data, so its grid is that
+// of a plain SPMD kernel, which depends on the device.
 //
 // Cross-team reductions are emitted as plain SPMD kernels (SGN:2) since the
 // downstream Xteam reduction execution mode (SGN:8) was removed.
 //
 // RUN: %libomptarget-compile-generic -fopenmp-target-fast -fopenmp-target-fast-reduction
-// RUN: env LIBOMPTARGET_KERNEL_TRACE=1 LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT=15360 LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS=32 \
+// RUN: env LIBOMPTARGET_KERNEL_TRACE=1 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 // UNSUPPORTED: nvptx64-nvidia-cuda
@@ -43,7 +41,6 @@ int main() {
 }
 // clang-format off
 /// CHECK: DEVID:[[S:[ ]*]][[DEVID:[0-9]+]] SGN:2
-/// CHECK-SAME: teamsXthrds:( 416X 32)
 /// CHECK-SAME: tripcount:15360
 /// CHECK: sum1=117957120.000000
 
