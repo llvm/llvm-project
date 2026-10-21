@@ -35,7 +35,7 @@ endprogram
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<3x3xf64> <{bindc_name = ".tmp", uniq_name = ""}>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x3xf64>>, !fir.heap<!fir.array<3x3xf64>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) uniq_name(".tmp") : (!fir.heap<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x3xf64>>, !fir.heap<!fir.array<3x3xf64>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<3x3xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
@@ -97,11 +97,11 @@ endprogram
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFEarray"} : (!fir.ref<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf64>>, !fir.ref<!fir.array<3x3xf64>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) uniq_name("_QFEarray") : (!fir.ref<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x3xf64>>, !fir.ref<!fir.array<3x3xf64>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = fir.alloca f64 <{bindc_name = "scalar", uniq_name = "_QFEscalar"}>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFEscalar"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFEscalar") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f64
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_8]]#0 : f64, !fir.ref<f64>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0.000000e+00 : f64
@@ -115,9 +115,9 @@ endprogram
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_13:.*]] : !fir.ref<i32>) reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_20:.*]]) : i32 = (%[[VAL_15]]) to (%[[VAL_16]]) inclusive step (%[[VAL_17]]) {
-! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEscalar"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFEarray"} : (!fir.ref<!fir.box<!fir.array<3x3xf64>>>) -> (!fir.ref<!fir.box<!fir.array<3x3xf64>>>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
+! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] uniq_name("_QFEscalar") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_19]] uniq_name("_QFEarray") : (!fir.ref<!fir.box<!fir.array<3x3xf64>>>) -> (!fir.ref<!fir.box<!fir.array<3x3xf64>>>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 ! CHECK:                 hlfir.assign %[[VAL_20]] to %[[VAL_14]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (i32) -> f64

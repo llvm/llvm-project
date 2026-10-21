@@ -328,14 +328,14 @@ value llvm_set_target_triple(value Trip, value M) {
   return Val_unit;
 }
 
-/* llmodule -> string */
+/* llmodule -> DataLayout.t */
 value llvm_data_layout(value M) {
-  return caml_copy_string(LLVMGetDataLayout(Module_val(M)));
+  return llvm_alloc_data_layout(LLVMGetModuleDataLayout(Module_val(M)));
 }
 
-/* string -> llmodule -> unit */
+/* DataLayout.t -> llmodule -> unit */
 value llvm_set_data_layout(value Layout, value M) {
-  LLVMSetDataLayout(Module_val(M), String_val(Layout));
+  LLVMSetModuleDataLayout(Module_val(M), DataLayout_val(Layout));
   return Val_unit;
 }
 
@@ -1195,24 +1195,26 @@ value llvm_const_xor(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_gep(value Ty, value ConstantVal, value Indices) {
-  mlsize_t Length = Wosize_val(Indices);
-  LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
-  free(Temp);
+/* llvalue -> llvalue -> int -> llvalue */
+value llvm_const_ptradd(value ConstantVal, value ConstantOffset,
+                        value NoWrapFlags) {
+  LLVMValueRef Value = LLVMConstPtrAdd(
+      Value_val(ConstantVal), Value_val(ConstantOffset), Int_val(NoWrapFlags));
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_in_bounds_gep(value Ty, value ConstantVal, value Indices) {
+/* DataLayout.t -> lltype -> llvalue -> llvalue array -> int ->
+ * llvalue option */
+value llvm_const_ptradd_from_indices(value DataLayout, value Ty,
+                                     value ConstantVal, value Indices,
+                                     value NoWrapFlags) {
   mlsize_t Length = Wosize_val(Indices);
   LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstInBoundsGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
+  LLVMValueRef Value = LLVMConstPtrAddFromIndices(
+      DataLayout_val(DataLayout), Type_val(Ty), Value_val(ConstantVal), Temp,
+      Length, Int_val(NoWrapFlags));
   free(Temp);
-  return to_val(Value);
+  return ptr_to_option(Value);
 }
 
 /* llvalue -> lltype -> llvalue */
@@ -2779,8 +2781,6 @@ value llvm_memorybuffer_dispose(value MemBuf) {
 }
 
 /*===---- Data Layout -----------------------------------------------------===*/
-
-#define DataLayout_val(v) (*(LLVMTargetDataRef *)(Data_custom_val(v)))
 
 static void llvm_finalize_data_layout(value DataLayout) {
   LLVMDisposeTargetData(DataLayout_val(DataLayout));

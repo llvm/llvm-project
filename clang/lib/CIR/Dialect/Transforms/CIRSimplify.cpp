@@ -311,9 +311,16 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     };
 
     for (CaseOp c : cases) {
-      if (!cascadingCases.empty() &&
-          !isa_and_nonnull<CaseOp>(c->getPrevNode())) {
+      // Cascading cases must be textually adjacent to the previously
+      // collected cascading case. This is false when something is in the
+      // way (e.g. a goto) or when the previous cascading case was found
+      // nested inside a sibling case's body (e.g. a case label that falls
+      // through into a compound statement) rather than next to `c`.
+      bool isAdjacentToLastCascadingCase =
+          !cascadingCases.empty() &&
+          c->getPrevNode() == cascadingCases.back().getOperation();
 
+      if (!cascadingCases.empty() && !isAdjacentToLastCascadingCase) {
         if (cascadingCases.size() > 1)
           mergeLastCascadingAndFlush();
         else
@@ -364,7 +371,12 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
         !mlir::isa_and_nonnull<cir::FPAttr>(value))
       return mlir::failure();
 
-    cir::VectorType resultType = op.getResult().getType();
+    // FIXME(CIR): We should consider making a matrix constant attribute so that
+    // we can simplify it here too.
+    assert(!MissingFeatures::matrixType());
+    auto resultType = mlir::dyn_cast<cir::VectorType>(op.getResult().getType());
+    if (!resultType)
+      return mlir::failure();
     SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
         resultType, mlir::ArrayAttr::get(getContext(), elements));

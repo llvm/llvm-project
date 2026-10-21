@@ -97,7 +97,10 @@ public:
                     const std::shared_ptr<ContextImpl> &Context,
                     DeviceImpl &Device);
 
+  /// This method is thread-safe.
   /// \return kernel info for the kernel with the specified name.
+  /// \throw sycl::exception with sycl::errc::runtime if no registered device
+  /// image provides a kernel with the specified name.
   DeviceKernelInfo &getDeviceKernelInfo(std::string_view KernelName);
 
   /// Release device image managers and corresponding resources.

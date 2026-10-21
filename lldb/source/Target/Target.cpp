@@ -196,7 +196,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_target_session_name(
           llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
-          std::make_unique<StackFrameRecognizerManager>()) {
+          std::make_unique<StackFrameRecognizerManager>()),
+      m_target_groups(debugger, debugger.GetTargetGroupList().m_mutex) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
@@ -387,6 +388,7 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
 }
 
 void Target::Destroy() {
+  m_target_groups.RemoveTarget(shared_from_this());
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_valid = false;
   DeleteCurrentProcess();
@@ -409,6 +411,18 @@ void Target::Destroy() {
   m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
+}
+
+std::vector<TargetGroupSP> Target::GetTargetGroups() const {
+  return m_target_groups.GetGroups();
+}
+
+void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
+  m_target_groups.Add(group_sp);
+}
+
+void Target::RemoveTargetGroup(const TargetGroup *group) {
+  m_target_groups.Remove(group);
 }
 
 llvm::StringRef Target::GetABIName() const {
@@ -450,6 +464,10 @@ BreakpointSP Target::GetBreakpointByID(break_id_t break_id) {
 lldb::BreakpointSP
 lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
   ModuleSP main_module_sp = GetExecutableModule();
+  if (!main_module_sp) {
+    error = Status::FromErrorString("target has no executable\n");
+    return lldb::BreakpointSP();
+  }
   FileSpecList shared_lib_filter;
   shared_lib_filter.Append(main_module_sp->GetFileSpec());
   llvm::SetVector<std::string, std::vector<std::string>,
@@ -1635,18 +1653,28 @@ ModuleSP Target::GetExecutableModule() {
       return module_sp;
   }
 
-  // If there is none, fall back return the first module loaded.
-  return m_images.GetModuleAtIndex(0);
+  // If there is none, fall back to the module marked as the executable.
+  ModuleSP executable_sp = m_executable_module_wp.lock();
+  if (executable_sp &&
+      m_images.GetIndexForModule(executable_sp.get()) != LLDB_INVALID_INDEX32)
+    return executable_sp;
+  return nullptr;
 }
 
 Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
+void Target::MarkExecutableModule(const ModuleSP &module_sp) {
+  std::lock_guard<std::recursive_mutex> lock(m_images.GetMutex());
+  m_executable_module_wp = module_sp;
+}
+
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
   m_images.Clear();
+  MarkExecutableModule(nullptr);
   m_scratch_type_system_map.Clear();
 }
 
@@ -1656,8 +1684,8 @@ void Target::DidExec() {
   m_internal_breakpoint_list.RemoveInvalidLocations(m_arch.GetSpec());
 }
 
-void Target::SetExecutableModule(ModuleSP &executable_sp,
-                                 LoadDependentFiles load_dependent_files) {
+void Target::RebuildModuleListWithExecutable(
+    ModuleSP &executable_sp, LoadDependentFiles load_dependent_files) {
   telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
       &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
@@ -1683,10 +1711,14 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());
-    LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
-                       executable_sp->GetFileSpec().GetPath().c_str());
+    LLDB_SCOPED_TIMERF(
+        "Target::RebuildModuleListWithExecutable (executable = '%s')",
+        executable_sp->GetFileSpec().GetPath().c_str());
 
     const bool notify = true;
+    // Mark it before appending, because the append notifies observers that
+    // may ask for the executable.
+    MarkExecutableModule(executable_sp);
     m_images.Append(executable_sp,
                     notify); // The first image is our executable file
 
@@ -1695,7 +1727,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
       LLDB_LOG(log,
-               "Target::SetExecutableModule setting architecture to {0} ({1}) "
+               "Target::RebuildModuleListWithExecutable setting architecture "
+               "to {0} ({1}) "
                "based on executable file",
                m_arch.GetSpec().GetArchitectureName(),
                m_arch.GetSpec().GetTriple().getTriple());
@@ -1869,7 +1902,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
-      SetExecutableModule(executable_sp, eLoadDependentsYes);
+      RebuildModuleListWithExecutable(executable_sp, eLoadDependentsYes);
       return true;
     }
   }
@@ -2449,7 +2482,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool invoke_symbol_locators) {
   ModuleSP module_sp;
 
   Status error;
@@ -2509,16 +2543,16 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // suitable image.
       if (m_image_search_paths.GetSize()) {
         ModuleSpec transformed_spec(module_spec);
-        ConstString transformed_dir;
+        std::string transformed_dir;
         if (m_image_search_paths.RemapPath(
-                ConstString(module_spec.GetFileSpec().GetDirectory()),
-                transformed_dir)) {
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
           transformed_spec.SetTarget(shared_from_this());
-          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &old_modules, &did_create_module);
+          error = ModuleList::GetSharedModule(
+              transformed_spec, module_sp, &old_modules, &did_create_module,
+              /*invoke_locate_callback=*/true, invoke_symbol_locators);
         }
       }
     }
@@ -2534,11 +2568,12 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(
+            module_spec, module_sp, &old_modules, &did_create_module,
+            /*invoke_locate_callback=*/true, invoke_symbol_locators);
       }
 
-      if (!module_sp) {
+      if (!module_sp && invoke_symbol_locators) {
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {
@@ -2709,7 +2744,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
   Target *target = (Target *)baton;
   ModuleSP exe_module_sp(target->GetExecutableModule());
   if (exe_module_sp)
-    target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
+    target->RebuildModuleListWithExecutable(exe_module_sp, eLoadDependentsYes);
 }
 
 llvm::Expected<lldb::TypeSystemSP>

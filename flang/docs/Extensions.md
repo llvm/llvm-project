@@ -360,6 +360,16 @@ end
   before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
   it acquires the type it would have had under implicit typing rules (F2023 8.7),
   and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
+* An inquiry function whose result depends only on the declared type, kind
+  type parameters, or rank of its argument, such as `KIND` or `DIGITS`, can
+  appear in a constant expression when that argument is a conditional
+  argument, as in `integer, parameter :: k = kind((flag ? a : b))`.
+  F2023 10.1.12 item (6) admits only a constant expression or a variable as
+  the argument of such a specification inquiry, and a conditional argument
+  is neither. All consequent-args have the same declared type and kind type
+  parameters (C1538) and, unless all are assumed-rank, the same rank
+  (C1539), so the result doesn't depend on the condition. Flang accepts
+  `kind(a + b)` in a constant expression on the same terms.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -461,6 +471,21 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * When a name is brought into a scope by multiple ways,
   such as USE-association as well as an `IMPORT` from its host,
   it's an error only if the resolution is ambiguous.
+* When USE association brings an equivalent external procedure interface
+  and a legacy BLAS generic from the intrinsic `cublas` or `cublas_v2`
+  module into the same scope under the same local name, Flang selects
+  the intrinsic module's generic, regardless of the order of the two USE
+  statements. A generic already merged from both `cublas` and `cublas_v2`
+  is not covered, including when it is re-exported by another module.
+  The generic must contain a same-named host specific with characteristics
+  equal to those of the external interface, and at least one specific
+  with a CUDA dummy data attribute.
+  Generic names beginning with `cublas` are excluded.
+  A warning is emitted by default, including with `-pedantic`.
+  Use `-Wno-prefer-intrinsic-module-use-association` to suppress the warning,
+  or `-fno-prefer-intrinsic-module-use-association` to disable the extension.
+  This extension is deprecated and may be removed at any time; it was added
+  to support BerkeleyGW.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
 * `INCLUDE` lines can start in any column, can be preceded in
@@ -572,6 +597,16 @@ end program
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
 
+### `SIMPLE` classification of extensions
+
+The following extensions are `SIMPLE`: `IARGC`, `INT2`, `INT8`, `INT_PTR_KIND`, `ISNAN`,
+`IZEXT`, `JZEXT`, `LNBLNK`, `LOC`, `SELECTED_UNSIGNED_KIND`, `SIZEOF`, `UINT`, `UMASKL`,
+and `UMASKR`. All specific intrinsic extensions are also `SIMPLE`.
+
+The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ETIME`,
+`FSEEK`, `FTELL`, `GETCWD`, `GETGID`, `GETPID`, `GETUID`, `HOSTNM`, `IRAND`, `MALLOC`,
+`PUTENV`, `RAND`, `RENAME`, `RTC`, `SECNDS`, `SECOND`, `SYSTEM`, `TIME`, `TIMEF`, and `UNLINK`.
+
 ### Extensions supported when enabled by options
 
 * C-style backslash escape sequences in quoted CHARACTER literals
@@ -595,6 +630,19 @@ end program
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Treat a subprogram in a submodule as if it had a missing `MODULE` prefix
+  when its name matches a separate module procedure interface in an ancestor
+  module [-fimplicit-module-prefix]. This extension is disabled by default
+  because the unprefixed subprogram can instead be a conforming local
+  procedure. Without this extension, `-pedantic` or `-Wportability` diagnoses
+  a likely missing prefix without changing the program. When the extension
+  is enabled, `-Wimplicit-module-prefix` or `-pedantic` reports each repaired
+  prefix. Since the extension cannot distinguish a missing prefix from an
+  intentionally local procedure with the same name as an ancestor interface,
+  it can reject a conforming program when that interface is implemented in a
+  different submodule. This behavior is compatible with gfortran. Only
+  definitions in the current source are repaired; a module file keeps the
+  interpretation chosen when it was compiled.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
@@ -650,6 +698,7 @@ end program
   multiple modules, the name must refer to a generic interface; PGI
   allows a name to be a procedure from one module and a generic interface
   from another.
+  Flang supports the limited intrinsic CUBLAS exception described above.
 * Type parameter declarations must come first in a derived type definition;
   some compilers allow them to follow `PRIVATE`, or be intermixed with the
   component declarations.

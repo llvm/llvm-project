@@ -68,7 +68,8 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
+/// Returns -partial-unrolling-threshold if specified.
+LLVM_ABI std::optional<unsigned> getPartialUnrollingThreshold();
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -330,7 +331,8 @@ private:
     }
 
     // Find associated libcall.
-    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    RTLIB::LibcallImpl LibcallImpl =
+        getTLI()->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
     if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
@@ -678,21 +680,6 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
-  bool haveFastClmul(IntegerType *Ty) const override {
-    // FIXME: clmul should really be Promote for any bitwidth under the largest
-    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
-    // around that shortcoming.
-    const DataLayout &DL = thisT()->DL;
-    IntegerType *IndexTy =
-        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
-    if (Ty->getBitWidth() > IndexTy->getBitWidth())
-      return false;
-
-    const TargetLoweringBase *TLI = getTLI();
-    EVT VT = TLI->getValueType(DL, IndexTy);
-    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
-  }
-
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
   InstructionCost getFPOpCost(Type *Ty) const override {
@@ -763,8 +750,8 @@ public:
 
     unsigned MaxOps;
     const TargetSubtargetInfo *ST = getST();
-    if (PartialUnrollingThreshold.getNumOccurrences() > 0)
-      MaxOps = PartialUnrollingThreshold;
+    if (std::optional<unsigned> Threshold = getPartialUnrollingThreshold())
+      MaxOps = *Threshold;
     else if (ST->getSchedModel().LoopMicroOpBufferSize > 0)
       MaxOps = ST->getSchedModel().LoopMicroOpBufferSize;
     else
@@ -2572,6 +2559,37 @@ public:
     case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::vector_partial_reduce_add:
+    case Intrinsic::vector_partial_reduce_fadd: {
+      VectorType *AccTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      VectorType *InTy = cast<VectorType>(ICA.getArgTypes()[1]);
+      // TODO: See if something better can be done for scalable-to-fixed
+      //       partial reductions.
+      if (AccTy->isScalableTy() != InTy->isScalableTy())
+        return InstructionCost::getInvalid();
+
+      unsigned Opcode = 0;
+      switch (IID) {
+      default:
+        llvm_unreachable("Unexpected partial reduction");
+        break;
+      case Intrinsic::vector_partial_reduce_add:
+        Opcode = Instruction::Add;
+        break;
+      case Intrinsic::vector_partial_reduce_fadd:
+        Opcode = Instruction::FAdd;
+        break;
+      }
+
+      // TODO: Factor in subvector extract costs if the types are different
+      //       sizes. We get some ridiculously high costs for vector_extract
+      //       at present, so fix that first.
+      // For a type-only query, model as (possibly multiple) basic instructions
+      // for the accumulator type.
+      return InTy->getElementCount().getKnownScalarFactor(
+                 AccTy->getElementCount()) *
+             thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
+    }
     case Intrinsic::experimental_vector_match: {
       auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);

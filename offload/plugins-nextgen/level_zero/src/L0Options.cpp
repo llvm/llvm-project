@@ -26,6 +26,9 @@ void L0OptionsTy::processEnvironmentVars() {
   Flags.UseCopyOffloadHint =
       BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
 
+  // Always print the full module build/link log, not only on failure.
+  Flags.ShowBuildLog = BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_SHOW_BUILD_LOG", false);
+
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
   //  <Option>       := 0 | <PoolInfoList>

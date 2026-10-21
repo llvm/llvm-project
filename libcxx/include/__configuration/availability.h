@@ -38,6 +38,8 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
@@ -72,6 +74,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 24
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 23
 // TODO: Fill this in
@@ -252,6 +259,17 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of the free function std::__thread_hardware_concurrency().
+// It has the same semantics as std::[j]thread::hardware_concurrency(), but allows to query this information
+// without depending on std::thread itself.
+#define _LIBCPP_AVAILABILITY_HAS_HARDWARE_CONCURRENCY_FREE_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_HARDWARE_CONCURRENCY_FREE_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
+
+// This controls the availability of the C++26 debugging functions.
+// The platform specific implementation is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
 // This determines whether we assume that the internal std::__bad_variant_access_with_msg class
 // (which carries a message describing the cause of the failure in bad_variant_access::what())

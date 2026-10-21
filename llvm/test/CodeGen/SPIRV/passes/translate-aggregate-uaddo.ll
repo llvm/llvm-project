@@ -18,7 +18,7 @@
 ; Origin data type of the value.
 ; CHECK-IR-DAG: ![[#MD2]] = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=ir-translator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
 ; Required info succeeded to get through IRTranslator.
 ; CHECK-GMIR: %[[phires:.*]]:_(s32) = G_PHI
 ; CHECK-GMIR: %[[math:.*]]:id(s32), %[[ov:.*]]:_(s1) = G_UADDO %[[phires]]:_, %[[#]]:_

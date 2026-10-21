@@ -27,10 +27,6 @@
 
 using namespace llvm;
 
-cl::opt<uint32_t> PreferredLandingPadLabel(
-    "riscv-landing-pad-label", cl::ReallyHidden,
-    cl::desc("Use preferred fixed label for all labels"));
-
 namespace {
 class RISCVIndirectBranchTracking : public MachineFunctionPass {
 public:
@@ -73,11 +69,11 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   uint32_t FixedLabel = 0;
-  if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-    if (!isUInt<20>(PreferredLandingPadLabel))
+  if (std::optional<uint32_t> Label = Subtarget.getCLOpts().landing_pad_label) {
+    if (!isUInt<20>(*Label))
       report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
                          "unsigned 20-bits");
-    FixedLabel = PreferredLandingPadLabel;
+    FixedLabel = *Label;
   }
 
   bool Changed = false;
