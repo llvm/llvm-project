@@ -42,3 +42,23 @@ end
 ! ESCAPES-DAG: fir.string_lit "('''''')"(8)
 ! DEFAULT-DAG: fir.string_lit "(1x, 'inline\\path')"(19)
 ! ESCAPES-DAG: fir.string_lit "(1x, 'inlinepath')"(18)
+
+! The prescanner and FORMAT grammar can disagree about Hollerith boundaries.
+! In default mode remove only the backslashes the prescanner actually inserted.
+subroutine format_hollerith_boundaries
+  write (*, 10)
+  write (*, 20)
+  write (*, 30)
+10 format (1 2hab'xxxxxxxxx, 'zz,3h\nb,1h')
+20 format (x2h'a', 3h\nb, 1h')
+! This cooks to the same text as the macro case in format-backslash-macros.F90,
+! but the backslash before n was doubled by the prescanner in this case.
+30 format (12h'abxxxxxxxxx, 'zz,3h\nb,1h')
+end
+
+! DEFAULT-DAG: fir.string_lit "(1 2hab'xxxxxxxxx, 'zz,3h\\nb,1h')"(33)
+! ESCAPES-DAG: fir.string_lit "(1 2hab'xxxxxxxxx, 'zz,3h\0Ab,1h')"(32)
+! DEFAULT-DAG: fir.string_lit "(x2h'a', 3h\\nb, 1h')"(20)
+! ESCAPES-DAG: fir.string_lit "(x2h'a', 3h\0Ab, 1h')"(19)
+! DEFAULT-DAG: fir.string_lit "(12h'abxxxxxxxxx, 'zz,3h\\nb,1h')"(32)
+! ESCAPES-DAG: fir.string_lit "(12h'abxxxxxxxxx, 'zz,3h\0Ab,1h')"(31)

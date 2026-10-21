@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/provenance.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
@@ -1419,10 +1420,8 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   return {buff, len, kind};
 }
 
-/// Decode escapes in the quoted strings of a cooked FORMAT statement. The
-/// prescanner doubles backslashes when escapes are disabled, so these strings
-/// must be decoded just like CHARACTER literals before passing them to the
-/// runtime. Hollerith strings and edit descriptors are already literal text.
+/// Decode escapes in the quoted strings of a cooked FORMAT statement when
+/// -fbackslash is enabled. Hollerith strings do not process escapes.
 static std::string decodeFormatString(llvm::StringRef text) {
   std::string result;
   char quote = '\0';
@@ -1471,6 +1470,31 @@ static std::string decodeFormatString(llvm::StringRef text) {
   return result;
 }
 
+/// Undo only the backslashes inserted by the prescanner when escapes are
+/// disabled. Its interpretation of quoted and Hollerith strings can differ
+/// from the FORMAT grammar, so re-lexing the cooked text is not sufficient.
+static std::string
+removeInsertedBackslashes(llvm::StringRef text,
+                          const Fortran::parser::AllCookedSources *cooked) {
+  if (!cooked)
+    return text.str();
+  std::string result;
+  for (const char &ch : text) {
+    if (ch == '\\') {
+      if (auto provenance =
+              cooked->GetProvenanceRange(Fortran::parser::CharBlock{&ch, 1})) {
+        if (!cooked->allSources().GetSourceFile(provenance->start()))
+          continue;
+      }
+    }
+    result += ch;
+  }
+  // FIXME: Macro expansion replaces character provenance, so an inserted
+  // backslash in a macro expansion cannot be distinguished from source text.
+  // Preserve such backslashes until the preprocessor retains that information.
+  return result;
+}
+
 /// Pass the body of the FORMAT statement in as if it were a CHARACTER literal
 /// constant. NB: This is the prescribed manner in which the front-end passes
 /// this information to lowering.
@@ -1480,7 +1504,13 @@ lowerSourceTextAsStringLit(Fortran::lower::AbstractConverter &converter,
                            mlir::Type strTy, mlir::Type lenTy) {
   text = text.drop_front(text.find('('));
   text = text.take_front(text.rfind(')') + 1);
-  std::string decoded = decodeFormatString(text);
+  bool backslashEscapes =
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::BackslashEscapes);
+  std::string decoded =
+      backslashEscapes
+          ? decodeFormatString(text)
+          : removeInsertedBackslashes(text, converter.getCookedSource());
   text = decoded;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value addrGlobalStringLit =
