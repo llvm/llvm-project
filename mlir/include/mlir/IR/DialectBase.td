@@ -99,6 +99,11 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
+
+  // If set, operations of this dialect that do not have exactly one fixed
+  // result declare `OpFoldResults fold(FoldAdaptor)` instead of the legacy
+  // `LogicalResult fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &)`.
+  bit useOpFoldResults = 0;
 }
 
 #endif // DIALECTBASE_TD

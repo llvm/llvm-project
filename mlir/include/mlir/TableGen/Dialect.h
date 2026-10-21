@@ -92,6 +92,10 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
+  /// Returns true if operations of this dialect that do not have exactly one
+  /// fixed result declare `OpFoldResults fold(FoldAdaptor)`.
+  bool useOpFoldResults() const;
+
   const llvm::DagInit *getDiscardableAttributes() const;
 
   const llvm::Record *getDef() const { return def; }
