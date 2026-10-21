@@ -52,14 +52,14 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
 
 define void @test2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A1]], align 8
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds i64, ptr [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i64, ptr [[B1:%.*]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A1]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a1 = getelementptr inbounds i64, ptr %a, i64 1
@@ -78,14 +78,14 @@ define void @test2(ptr %a, ptr %b) {
 
 define void @test3(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr <2 x ptr> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A1]], align 8
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds i64, ptr [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i64, ptr [[B1:%.*]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr <2 x ptr> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A1]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a1 = getelementptr inbounds i64, ptr %a, i64 1

@@ -431,7 +431,8 @@ def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 // AIX assembler may not be modern enough to support some extended mne.
 def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
-                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
+                 AssemblerPredicate<(any_of (none_of AIXOS),
+                                            FeatureModernAIXAs)>;
 def IsAIX : Predicate<"Subtarget->isAIXABI()">;
 def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
 

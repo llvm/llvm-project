@@ -430,6 +430,26 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
+static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
+  StringRef DeferSpelling =
+      S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
+  if (DeferSpelling.empty())
+    DeferSpelling = "_Defer";
+  return DeferSpelling;
+}
+
+// Diagnose if the given statement is a redundant _Defer statement.
+static bool CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+  Stmt *Inner = Body->stripLabelLikeStatements();
+  if (isa<DeferStmt>(Inner)) {
+    SourceLocation DeferLoc = Inner->getBeginLoc();
+    S.Diag(DeferLoc, diag::warn_redundant_defer)
+        << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
+    return true;
+  }
+  return false;
+}
+
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
@@ -462,13 +482,33 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   }
 
   // Check for suspicious empty body (null statement) in `for' and `while'
-  // statements.  Don't do anything for template instantiations, this just adds
+  // statements, for example:
+  //
+  //   for (;;); <- warning: for loop has empty body
+  //     foo();
+  //
+  // Don't do anything for template instantiations, this just adds
   // noise.
   if (NumElts != 0 && !CurrentInstantiationScope &&
       getCurCompoundScope().HasEmptyLoopBodies) {
     for (unsigned i = 0; i != NumElts - 1; ++i)
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
+
+  // Find defer statements that immediately precede a `break`/`continue`
+  // or a plain `return` statement.
+  if (NumElts > 1) {
+    for (unsigned i = 0; i != NumElts - 1; ++i) {
+      Stmt *Inner = Elts[i + 1]->stripLabelLikeStatements();
+      if (isa<BreakStmt, ContinueStmt>(Inner) ||
+          (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
+        CheckRedundantDeferStmt(*this, Elts[i]);
+    }
+  }
+
+  // Check for defer as last statement.
+  if (NumElts > 0)
+    CheckRedundantDeferStmt(*this, Elts[NumElts - 1]);
 
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
@@ -996,6 +1036,12 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
 
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
+
+  if (CheckRedundantDeferStmt(*this, thenStmt))
+    Diag(thenStmt->getBeginLoc(), diag::note_redundant_defer_if)
+        << GetDeferKeywordSpelling(*this, thenStmt->getBeginLoc());
+  if (elseStmt)
+    CheckRedundantDeferStmt(*this, elseStmt);
 
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
@@ -1814,17 +1860,36 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
       << DstType.getUnqualifiedType();
 }
 
+// Checks for issues that are common to `for`/`while` statements.
+static void CheckLoopBody(Sema &S, Expr *CondExpr, Stmt *Body) {
+  // Check for comma operator misuse.
+  if (CondExpr &&
+      !S.Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
+    CommaVisitor(S).Visit(CondExpr);
+
+  if (isa<NullStmt>(Body)) {
+    // Tell Sema::ActOnCompoundStmt to perform a check on
+    // this suspicious empty `for`/`while` loop when
+    // processing the compound statement that contains this loop.
+    //
+    // The actual check cannot be done here directly as it may
+    // depend on other statements following the `for`/`while`
+    // loop, in the outer enclosing CompoundStmt; see the
+    // comment in Sema::ActOnCompoundStmt for an example
+    // of when this happens.
+    //
+    // This does not apply for `if` statements and range-`for`
+    // loops which call DiagnoseEmptyStmtBody() directly.
+    S.getCurCompoundScope().setHasEmptyLoopBodies();
+  } else
+    CheckRedundantDeferStmt(S, Body);
+}
+
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
                                 SourceLocation LParenLoc, ConditionResult Cond,
                                 SourceLocation RParenLoc, Stmt *Body) {
   if (Cond.isInvalid())
     return StmtError();
-
-  auto CondVal = Cond.get();
-
-  if (CondVal.second &&
-      !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
-    CommaVisitor(*this).Visit(CondVal.second);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1835,8 +1900,9 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     Body = new (Context) NullStmt(Body->getBeginLoc());
   }
 
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  auto CondVal = Cond.get();
+
+  CheckLoopBody(*this, CondVal.second, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2320,14 +2386,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                      Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  if (Second.get().second &&
-      !Diags.isIgnored(diag::warn_comma_operator,
-                       Second.get().second->getExprLoc()))
-    CommaVisitor(*this).Visit(Second.get().second);
+  CheckLoopBody(*this, Second.get().second, Body);
 
-  Expr *Third  = third.release().getAs<Expr>();
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  Expr *Third = third.release().getAs<Expr>();
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4038,6 +4099,7 @@ StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+  CheckRedundantDeferStmt(*this, Body);
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }
@@ -4300,11 +4362,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
         return StmtError();
       }
       RetValExp = Res.getAs<Expr>();
-
-      // A returned HLSL matrix may need its layout reconciled with the
-      // function's row_major/column_major return type.
-      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
-        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
 
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to

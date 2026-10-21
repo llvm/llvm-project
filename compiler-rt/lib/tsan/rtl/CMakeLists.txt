@@ -284,14 +284,14 @@ else()
       PARENT_TARGET tsan)
     add_sanitizer_rt_symbols(clang_rt.tsan
       ARCHS ${arch}
+      PARENT_TARGET tsan
       EXTRA tsan.syms.extra)
     add_sanitizer_rt_symbols(clang_rt.tsan_cxx
       ARCHS ${arch}
+      PARENT_TARGET tsan
       EXTRA tsan.syms.extra)
     add_dependencies(tsan clang_rt.tsan-${arch}
-                          clang_rt.tsan_cxx-${arch}
-                          clang_rt.tsan-${arch}-symbols
-                          clang_rt.tsan_cxx-${arch}-symbols)
+                          clang_rt.tsan_cxx-${arch})
   endforeach()
 endif()
 

@@ -33,7 +33,8 @@ class CppUnionStaticMembersTestCase(TestBase):
             result_children=[ValueCheck(name="val", value="137")],
         )
 
-    @expectedFailureWindows
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_expr_union_static_members(self):
         """Tests that frame variable and expr work
         for union static data members"""

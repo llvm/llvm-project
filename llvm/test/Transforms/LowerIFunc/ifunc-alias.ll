@@ -37,7 +37,7 @@ define float @call_alias_of_ifunc(i64 %arg) {
 ;
 ; CHECK-LABEL: define float @call_ifunc_aliasee(
 ; CHECK-SAME: i64 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds ([3 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call float [[TMP1]](i64 [[ARG]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
@@ -52,8 +52,8 @@ define float @call_alias_of_ifunc(i64 %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @resolver()
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr @[[GLOB0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @resolver()
-; CHECK-NEXT:    store ptr [[TMP2]], ptr getelementptr inbounds ([3 x ptr], ptr @[[GLOB0]], i32 0, i32 1), align 8
+; CHECK-NEXT:    store ptr [[TMP2]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 8), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @resolver()
-; CHECK-NEXT:    store ptr [[TMP3]], ptr getelementptr inbounds ([3 x ptr], ptr @[[GLOB0]], i32 0, i32 2), align 8
+; CHECK-NEXT:    store ptr [[TMP3]], ptr getelementptr inbounds (i8, ptr @[[GLOB0]], i64 16), align 8
 ; CHECK-NEXT:    ret void
 ;

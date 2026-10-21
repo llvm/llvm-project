@@ -159,9 +159,9 @@ _LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt,
 #    endif // _LIBCPP_HAS_UNICODE
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+template <class _Void = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void println(ostream& __os) {
-  std::print(__os, "\n");
+  std::print(__os, (_Void(), "\n"));
 }
 
 #  endif // _LIBCPP_STD_VER >= 23
