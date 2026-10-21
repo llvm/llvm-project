@@ -3176,8 +3176,14 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          LocalDoesConsume, Depth);
       DoesConsume = LocalDoesConsume;
-      if (IsLogical)
-        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+      if (IsLogical) {
+        Value *InvertedLogicalOp =
+            Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+        if (Builder)
+          if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
+            setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+        return InvertedLogicalOp;
+      }
       return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
     }
 
