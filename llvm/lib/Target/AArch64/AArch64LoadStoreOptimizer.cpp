@@ -2384,6 +2384,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
       ++Count;
 
     Flags.setSExtIdx(-1);
+    // Reset base-adjust flags: a previous candidate may have set them but
+    // failed to pair, and stale flags would corrupt the next merge.
+    Flags.setRequiresBaseAdjust(false);
+    Flags.setBaseAdjustByteOffset(0);
+    Flags.setBaseAdjustScratchReg(AArch64::NoRegister);
     if (areCandidatesToMergeOrPair(FirstMI, MI, Flags, TII) &&
         AArch64InstrInfo::getLdStOffsetOp(MI).isImm()) {
       assert(MI.mayLoadOrStore() && "Expected memory operation.");
@@ -2635,7 +2640,15 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                           << "' not modified: "
                           << (RtNotModified ? "true" : "false") << "\n");
 
-        if (RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
+        // Base-adjust forces MergeForward=false (the pair is placed at
+        // FirstMI's position so the ADDXri precedes it). The MergeForward=true
+        // path below does not verify that MI's destination (Reg1) is unused
+        // between the paired instructions, which is a prerequisite for moving
+        // MI's write ahead of those interleaved uses. Skip it entirely when
+        // base-adjust is active; the MergeForward=false path above already
+        // checked RtNotUsed.
+        if (!Flags.getRequiresBaseAdjust() &&
+            RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
             Flags.clearRenameReg();
