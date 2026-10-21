@@ -190,6 +190,46 @@ kernel("grid-in-bounds", GRID_COPY, lambda: [("buf", words(4 * N)), ("buf", byte
        (4 * N, 1, 1), (N, 1, 1), None, check=lambda r: u32s(r.buffers[1]) == tuple(2 * i for i in range(4 * N)))
 
 
+# .file and .loc: the report names the store in the inlined function and the call in the kernel
+INLINED = """
+.file 1 "/work/inl.cu"
+.file 2 "/work/put.h"
+.func put(.param .u64 p, .param .u32 v)
+{
+  .reg .b32 %r<2>;
+  .reg .b64 %rd<2>;
+  ld.param.u64 %rd1, [p];
+  ld.param.u32 %r1, [v];
+  .loc 2 3 7
+  st.global.u32 [%rd1], %r1;
+  ret;
+}
+.visible .entry k(.param .u64 out)
+{
+  .reg .b32 %r<3>;
+  .reg .b64 %rd<5>;
+  ld.param.u64 %rd1, [out];
+  mov.u32 %r1, %tid.x;
+  cvta.to.global.u64 %rd2, %rd1;
+  mul.wide.u32 %rd3, %r1, 4;
+  add.s64 %rd4, %rd2, %rd3;
+  .loc 1 12 5
+  {
+  .param .b64 a0;
+  st.param.b64 [a0], %rd4;
+  .param .b32 a1;
+  st.param.b32 [a1], %r1;
+  call put, (a0, a1);
+  }
+  ret;
+}
+"""
+
+kernel("source-location", INLINED, lambda: [("buf", bytes(4 * (N - 1)))], (N, 1, 1), (N, 1, 1),
+       dict(kind=1, store=True, thread=(N - 1, 0, 0)),
+       check=lambda r: r.site_text() == "store 4\tput put.h:3:7\tk inl.cu:12:5")
+
+
 def compile_ptx(name, ptx, zoc, cpu, strict, checked, tmp):
     d = os.path.join(tmp, "%s-%s-%d-%d" % (name, cpu, strict, checked))
     os.makedirs(d, exist_ok=True)
