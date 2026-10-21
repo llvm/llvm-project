@@ -13,12 +13,12 @@
 // identify the corresponding counter.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugInfoMetadata.h"
