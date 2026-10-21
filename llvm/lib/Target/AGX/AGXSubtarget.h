@@ -18,6 +18,7 @@
 #include "AGXInstrInfo.h"
 #include "AGXSelectionDAGInfo.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -98,6 +99,18 @@ public:
   // accesses in the DAG combiner and the machine scheduler.
   bool useAA() const override { return true; }
   bool enablePostRAScheduler() const override { return false; }
+  // In large regions, scheduling from both ends keeps fewer values live
+  // across the long shuffle and multiply-add sequences of tiled matrix
+  // products than the default bottom-up order (sgemm 64x64 tile: 153 spill
+  // instructions to 68). Small regions keep bottom-up, which issues their
+  // loads earlier.
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           const SchedRegion &Region) const override {
+    if (Region.NumRegionInstrs > 200) {
+      Policy.OnlyTopDown = false;
+      Policy.OnlyBottomUp = false;
+    }
+  }
   // Local reassignment makes the greedy allocator try every other register
   // for each interfering live range. With the AGX register file (overlapping
   // 16-bit to 128-bit classes over 256 halves) that dominates the compile time
