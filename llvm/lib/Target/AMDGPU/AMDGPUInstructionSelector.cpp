@@ -2886,7 +2886,7 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
     Cst = stripCopy(Cst, MRI);
     if (mi_match(Cst, MRI, m_SpecificICst(16))) {
       Register Result = stripBitCast(LShlSrc, MRI);
-      // V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel. If the
+      // op_sel can only select the high half of a 32-bit source. If the
       // shift source is wider (e.g. a 64-bit D16 image sample result), we
       // cannot fold it directly. Do not assign Out before this check since
       // the caller may pass the same register for both In and Out.
