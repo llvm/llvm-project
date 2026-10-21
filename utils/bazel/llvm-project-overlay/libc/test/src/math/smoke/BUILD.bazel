@@ -520,13 +520,20 @@ math_test(
     ],
 )
 
-math_test(name = "exp2")
+math_test(
+    name = "exp2",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp2_double_eval",
+    ],
+)
 
 math_test(
     name = "exp2f",
     deps = [
         "//libc:__support_math_exp2f_double_eval",
         "//libc:__support_math_exp2f_float_eval",
+        "//libc:__support_math_exp2f_integer_eval",
     ],
 )
 

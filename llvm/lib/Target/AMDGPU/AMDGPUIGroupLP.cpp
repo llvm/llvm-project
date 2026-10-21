@@ -791,7 +791,7 @@ bool PipelineSolver::solveExact() {
   CurrCost += MissPenalty;
   advancePosition();
 
-  LLVM_DEBUG(dbgs() << "NOT Assigned (" << CurrSU.first->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "NOT Assigned " << *CurrSU.first << "\n");
 
   bool FinishedExploring = false;
   if (CurrCost < BestCost || BestCost == -1) {
