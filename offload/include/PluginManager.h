@@ -138,6 +138,9 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const;
 
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;

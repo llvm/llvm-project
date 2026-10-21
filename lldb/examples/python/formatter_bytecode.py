@@ -522,16 +522,77 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
 ################################################################################
 
 
+# A replacement in an llvm::formatv format string, as supported by formatter
+# bytecode. Replacements are automatically indexed, so there is no index.
+_FMT_REPLACEMENT = r"""
+    \{
+    (?: , [^{}:]* )?  # optional layout, which may not contain "{", "}", or ":"
+    (?: : [^{}]* )?   # optional options, which may not contain "{" or "}"
+    \}
+"""
+
+# Tokens of an llvm::formatv format string, as supported by formatter bytecode.
+# Every character of a format string is part of exactly one token. The
+# replacement pattern is inserted with %, since the braces in the pattern would
+# each need to be escaped in an f-string.
+_FMT_TOKEN = re.compile(
+    r"""
+      \{\{      # escaped brace
+    | (?: %s )  # replacement
+    | \{        # invalid replacement
+    | [^{]+     # literal text
+    """
+    % _FMT_REPLACEMENT,
+    re.VERBOSE,
+)
+
+
+def _parse_fmt(fmt: str) -> list[Union[str, int]]:
+    """Parse an llvm::formatv format string into literals (str) and
+    replacement indexes (int). Adjacent literals are merged, so two items in a
+    row are never both literals.
+
+    As in version 2 of the bytecode, replacements are automatically indexed:
+
+        "{" [ "," layout ] [ ":" options ] "}"
+
+    Explicit indexes are not supported. Layouts and options are accepted, but
+    are not yet supported, and are ignored."""
+
+    items: list[Union[str, int]] = []
+    literal = ""
+    next_index = 0
+    for match in _FMT_TOKEN.finditer(fmt):
+        token = match.group()
+        if token == "{{":
+            literal += "{"
+        elif token == "{":
+            raise ValueError(
+                f"invalid replacement in format string at offset {match.start()}"
+            )
+        elif token.startswith("{"):
+            if literal:
+                items.append(literal)
+                literal = ""
+            items.append(next_index)
+            next_index += 1
+        else:
+            literal += token
+    if literal:
+        items.append(literal)
+    return items
+
+
 def count_fmt_params(fmt: str) -> int:
     """Count the number of parameters in a format string"""
-    from string import Formatter
+    return sum(isinstance(item, int) for item in _parse_fmt(fmt))
 
-    f = Formatter()
-    n = 0
-    for _, name, _, _ in f.parse(fmt):
-        if name > n:
-            n = name
-    return n
+
+def formatv(fmt: str, args: list) -> str:
+    """Format args with an llvm::formatv format string"""
+    return "".join(
+        item if isinstance(item, str) else str(args[item]) for item in _parse_fmt(fmt)
+    )
 
 
 def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False):
@@ -761,10 +822,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             elif sel == sel_fmt:
                 fmt = data.pop()
                 n = count_fmt_params(fmt)
-                args = []
-                for i in range(n):
-                    args.append(data.pop())
-                data.append(fmt.format(*args))
+                # The first argument is the deepest on the stack.
+                args = data[len(data) - n :]
+                del data[len(data) - n :]
+                data.append(formatv(fmt, args))
             else:
                 print("not implemented: " + selector[sel])
                 assert False
@@ -833,6 +894,12 @@ _METHOD_SIGS = {
     "get_child_at_index": "@get_child_at_index",
     "get_value": "@get_value",
 }
+
+
+def _string_literal(s: str) -> str:
+    """Quote a string as an assembly string literal."""
+    escaped = s.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 class CompilerError(Exception):
@@ -1031,13 +1098,39 @@ class Compiler(ast.NodeVisitor):
 
     def visit_Constant(self, node: ast.Constant) -> None:
         if isinstance(node.value, str):
-            self._output(f'"{node.value}"')
+            self._output(_string_literal(node.value))
         elif isinstance(node.value, bool):
             self._output(int(node.value))
         elif node.value is None:
             self._output("null")
         else:
             self._output(node.value)
+
+    def visit_JoinedStr(self, node: ast.JoinedStr) -> None:
+        """
+        f-strings are compiled to @fmt, which formats using llvm::formatv. The
+        formatted values are pushed in order, followed by the format string.
+        """
+
+        fmt = ""
+        for child in node.values:
+            if isinstance(child, ast.Constant):
+                string = str(child.value)
+                # formatv escapes a literal "{" as "{{". A "}" is a literal as is.
+                fmt += string.replace("{", "{{")
+            else:
+                self.visit(child)
+                fmt += "{}"
+
+        self._output(_string_literal(fmt))
+        self._output("@fmt call")
+
+    def visit_FormattedValue(self, node: ast.FormattedValue) -> None:
+        if node.conversion != -1:
+            raise CompilerError("unsupported format conversion", node)
+        if node.format_spec:
+            raise CompilerError("unsupported format spec", node)
+        self.visit(node.value)
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
@@ -1319,6 +1412,52 @@ if __name__ == "__main__":
                 interpret(assemble('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
             )
 
+        def test_fmt(self):
+            def fmt(asm):
+                return interpret(assemble(f"{asm} @fmt call"), [], [])
+
+            # Arguments are in stack order, the first is the deepest.
+            self.assertEqual(fmt('1 2 "{}-{}"'), "1-2")
+            self.assertEqual(fmt('"no args"'), "no args")
+            # Like llvm::formatv, "{{" is a literal "{", and "}" is a literal.
+            self.assertEqual(fmt('1 "{{{}}"'), "{1}")
+            self.assertEqual(count_fmt_params("{} {}"), 2)
+            self.assertEqual(count_fmt_params("{{}"), 0)
+            self.assertEqual(formatv("{}{}", ["a", "b"]), "ab")
+            self.assertEqual(formatv("{{{}}", [1]), "{1}")
+            # A "}" outside of a replacement is always a literal, even if it
+            # follows a replacement, or another "}". Unlike "{{", "}}" is not an
+            # escape. This differs from Python's str.format.
+            self.assertEqual(formatv("}", []), "}")
+            self.assertEqual(formatv("{}}", ["A"]), "A}")
+            self.assertEqual(formatv("}}", []), "}}")
+
+            # Adjacent literals, including escaped braces, are merged.
+            self.assertEqual(_parse_fmt(""), [])
+            self.assertEqual(_parse_fmt("abc"), ["abc"])
+            self.assertEqual(_parse_fmt("a{{b}c"), ["a{b}c"])
+            self.assertEqual(_parse_fmt("{}"), [0])
+            self.assertEqual(
+                _parse_fmt("x={}, {{y}}={}!"), ["x=", 0, ", {y}}=", 1, "!"]
+            )
+            self.assertEqual(_parse_fmt("{}{}"), [0, 1])
+            self.assertEqual(_parse_fmt("}"), ["}"])
+            self.assertEqual(_parse_fmt("{}}"), [0, "}"])
+
+            # Layouts and options are accepted, but ignored.
+            self.assertEqual(formatv("[{,8}]", ["ab"]), "[ab]")
+            self.assertEqual(formatv("[{,*=8:x}]", ["ab"]), "[ab]")
+            self.assertEqual(formatv("[{:a:b,c}]", ["ab"]), "[ab]")
+            self.assertEqual(_parse_fmt("{}{,8}{:x}"), [0, 1, 2])
+
+            # Explicit indexes and malformed replacements are errors.
+            bad = ["{0}", "ab{1,8}", "{x}", "{", "{{{", "{,8", "{:x", "{,a{}", "{:a{}"]
+            for fmt_string in bad:
+                with self.assertRaisesRegex(ValueError, "invalid replacement"):
+                    _parse_fmt(fmt_string)
+            with self.assertRaisesRegex(ValueError, "at offset 2"):
+                _parse_fmt("ab{1,8}")
+
         def test_assemble_file(self):
             def run_assemble(type_name, asm):
                 out = io.BytesIO()
@@ -1502,6 +1641,62 @@ if __name__ == "__main__":
             self.assertIs(self_dict["storage"], storage)
             self.assertEqual(interpret(methods["update"], [], [self_dict]), 0)
             self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 3)
+
+        def test_fstring(self):
+            def compile_fstring(expr):
+                methods = self.compile_methods(
+                    f"""
+                    class Synthetic:
+                        def get_child_index(self, name):
+                            return {expr}
+                    """
+                )
+                return methods["get_child_index"]
+
+            def run(expr, name="x", valobj=None):
+                self_dict = {"valobj": valobj or self.FakeValue(42)}
+                return interpret(compile_fstring(expr), [], [self_dict, name])
+
+            # Only the formatted values are pushed, followed by the format string.
+            self.assertEqual(
+                compile_fstring('f"a{name}b"'),
+                assemble('1 pick "a{}b" @fmt call return'),
+            )
+            self.assertEqual(run('f"a{name}b"'), "axb")
+
+            # Multiple values, including attributes and selector calls.
+            self.assertEqual(
+                run('f"{name}: {self.valobj.GetValueAsUnsigned()}"'), "x: 42"
+            )
+            self.assertEqual(run('f"{name}{name}"'), "xx")
+
+            # An f-string without replacements.
+            self.assertEqual(run('f"plain"'), "plain")
+
+            # Literal braces are escaped for formatv.
+            self.assertEqual(
+                compile_fstring('f"{{{name}}}"'),
+                assemble('1 pick "{{{}}" @fmt call return'),
+            )
+            self.assertEqual(run('f"{{{name}}}"'), "{x}")
+            # The f-string escape "}}" is a literal "}", which formatv
+            # doesn't escape.
+            self.assertEqual(
+                compile_fstring('f"{name}}}"'),
+                assemble('1 pick "{}}" @fmt call return'),
+            )
+            self.assertEqual(run('f"{name}}}"'), "x}")
+            self.assertEqual(run('f"}}"'), "}")
+
+            # Quotes and backslashes are escaped in the assembly.
+            self.assertEqual(run(r"""f'"{name}"\\'"""), '"x"\\')
+            self.assertEqual(run(r"""'say "hi"'"""), 'say "hi"')
+
+            # Conversions and format specs are not supported.
+            with self.assertRaisesRegex(CompilerError, "unsupported format conversion"):
+                compile_fstring('f"{name!r}"')
+            with self.assertRaisesRegex(CompilerError, "unsupported format spec"):
+                compile_fstring('f"{name:>8}"')
 
         def test_errors(self):
             with self.assertRaisesRegex(CompilerError, "unknown attribute: missing"):

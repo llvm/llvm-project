@@ -5,6 +5,6 @@ add_clang_library(MLIRCIRAnalysis
   LINK_LIBS PUBLIC
   MLIRCIR
   MLIRIR
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRSideEffectInterfaces
 )

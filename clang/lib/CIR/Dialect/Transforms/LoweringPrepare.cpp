@@ -131,12 +131,13 @@ struct LoweringPreparePass
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
-  // Function that generates the guard global variable, get-global, and 'if'
-  // condition for global TLS init function generation. This inserts an 'if'
-  // with the store at the beginning of the 'then' region, so inserts into the
-  // body should happen after that.
-  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
-                                     mlir::Location loc, cir::GlobalOp guard);
+  // Function that generates the get-global and 'if' condition on a guard
+  // variable for an init function that must run once: the global TLS init
+  // function, or the initializer of a C++20 named-module interface unit. This
+  // inserts an 'if' with the store at the beginning of the 'then' region, so
+  // inserts into the body should happen after that.
+  cir::IfOp buildInitGuardCheck(CIRBaseBuilderTy &builder, mlir::Location loc,
+                                cir::GlobalOp guard, bool threadLocal);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
@@ -148,19 +149,26 @@ struct LoweringPreparePass
 
   /// Build a function named `fnName` with the given linkage that calls each
   /// of `initializers` in order, then returns, and register it in
-  /// `globalCtorList` under `priority`. Shared by the default
-  /// `_GLOBAL__sub_I_*` initializer function and the per-priority
-  /// `_GLOBAL__I_<priority>` initializer functions.
-  cir::FuncOp buildGlobalInitCallerFunc(
-      llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-      llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority);
+  /// `globalCtorList` under `priority`. With a `guard` byte, the calls run
+  /// only when it is still zero and set it first. Shared by the default
+  /// `_GLOBAL__sub_I_*` initializer function, the C++20 named-module
+  /// initializer, and the per-priority `_GLOBAL__I_<priority>` initializer
+  /// functions.
+  cir::FuncOp
+  buildGlobalInitCallerFunc(llvm::StringRef fnName,
+                            cir::GlobalLinkageKind linkage,
+                            llvm::ArrayRef<cir::FuncOp> initializers,
+                            uint32_t priority, cir::GlobalOp guard = {});
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
   /// Build one `_GLOBAL__I_<priority>` function per distinct priority found
   /// in `prioritizedDynamicInitializers`, in ascending priority order, and
-  /// register each with `globalCtorList`.
-  void buildCXXGlobalPriorityInitFuncs();
+  /// register each with `globalCtorList`. The first of them, the highest
+  /// priority, calls `importedInits` before its own initializers and takes
+  /// them out of the vector, as classic CodeGen does.
+  void buildCXXGlobalPriorityInitFuncs(
+      llvm::SmallVectorImpl<cir::FuncOp> &importedInits);
   // Build an init function for all of the ordered global thread local storage
   // variables.
   void buildCXXGlobalTlsFunc();
@@ -1430,12 +1438,13 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 
   cir::IfOp guardIf;
   if (needsTlsGuard) {
-    guardIf = buildGlobalTlsGuardCheck(
+    guardIf = buildInitGuardCheck(
         builder, op.getLoc(),
         getOrCreateStaticLocalDeclGuardAddress(
             builder, op, op.getTlsRefs()->getGuardName().getValue(),
             /*isLocalVarDecl=*/false,
-            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()),
+        /*threadLocal=*/true);
     builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
   }
 
@@ -2138,9 +2147,11 @@ LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
   return g;
 }
 
-cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
-    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
-  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+cir::IfOp LoweringPreparePass::buildInitGuardCheck(CIRBaseBuilderTy &builder,
+                                                   mlir::Location loc,
+                                                   cir::GlobalOp guard,
+                                                   bool threadLocal) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, threadLocal);
   mlir::Value getGuardValue = getGuard;
 
   // Classic codegen always just loads the first byte of the guard instead of
@@ -2178,8 +2189,9 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   mlir::Block *entryBB = tlsInit.addEntryBlock();
   builder.setInsertionPointToStart(entryBB);
 
-  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
-      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+  cir::IfOp ifOperation = buildInitGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc),
+      /*threadLocal=*/true);
 
   // Emit the body of the guarded spot.
   builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
@@ -2205,23 +2217,38 @@ static std::string getPrioritySuffix(unsigned priority) {
 
 cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
     llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority) {
+    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority,
+    cir::GlobalOp guard) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp fn = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
                                         fnType, linkage);
   builder.setInsertionPointToStart(fn.addEntryBlock());
-  for (cir::FuncOp init : initializers)
-    builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
-                         /*argAttrs=*/{}, /*resAttrs=*/{},
-                         init.getCallingConv());
-  cir::ReturnOp::create(builder, fn.getLoc());
+  mlir::Location loc = fn.getLoc();
+  auto emitCalls = [&] {
+    for (cir::FuncOp init : initializers)
+      builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
+                           /*argAttrs=*/{}, /*resAttrs=*/{},
+                           init.getCallingConv());
+  };
+  if (guard) {
+    cir::IfOp guardIf =
+        buildInitGuardCheck(builder, loc, guard, /*threadLocal=*/false);
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+    emitCalls();
+    cir::YieldOp::create(builder, loc);
+    builder.setInsertionPointAfter(guardIf);
+  } else {
+    emitCalls();
+  }
+  cir::ReturnOp::create(builder, loc);
   globalCtorList.emplace_back(fnName, priority);
   return fn;
 }
 
-void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
+void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs(
+    llvm::SmallVectorImpl<cir::FuncOp> &importedInits) {
   // std::map keeps priorities in ascending order, so each group is already
   // ready to emit into its own function, named after its priority so that
   // the functions are naturally ordered relative to one another.
@@ -2230,40 +2257,89 @@ void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
     fnName += "_GLOBAL__I_";
     fnName += getPrioritySuffix(priority);
 
+    llvm::SmallVector<cir::FuncOp> calls(importedInits.begin(),
+                                         importedInits.end());
+    calls.append(initializers.begin(), initializers.end());
+    importedInits.clear();
     buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
-                              initializers, priority);
+                              calls, priority);
   }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
-  buildCXXGlobalPriorityInitFuncs();
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
+  mlir::Location loc = mlirModule.getLoc();
 
-  if (dynamicInitializers.empty())
-    return;
+  // The initializers of the imported C++20 named modules, recorded by CIRGen
+  // as the mangled names of functions this translation unit declares, at the
+  // location of the import, and calls before its own initializers.
+  llvm::SmallVector<cir::FuncOp> importedInits;
+  if (auto inits = mlirModule->getAttrOfType<mlir::ArrayAttr>(
+          cir::CIRDialect::getCXXModuleImportedInitsAttrName()))
+    for (auto init : inits.getAsRange<cir::CXXModuleInitAttr>())
+      importedInits.push_back(
+          buildRuntimeFunction(builder, init.getName().getValue(),
+                               init.getLoc(), builder.getVoidFnTy()));
 
-  SmallString<256> fnName;
-  cir::GlobalLinkageKind linkage;
-  // Include the filename in the symbol name. Including "sub_" matches gcc
-  // and makes sure these symbols appear lexicographically behind the symbols
-  // with priority (TBD).  Module implementation units behave the same
-  // way as a non-modular TU with imports.
   // The C++20 named-module init function name is precomputed by CIRGen and
   // stored as a module-level attribute.  Its presence is what marks this
   // module as a named-module interface unit, so the name and the external
   // linkage that goes with it both come from the attribute and this pass needs
   // no live ASTContext.  Modules built directly from textual CIR can opt in to
   // the module-init form by setting the same attribute.
-  if (auto fnNameAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+  if (auto moduleInitFnName = mlirModule->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
-    fnName += fnNameAttr.getValue();
-    linkage = cir::GlobalLinkageKind::ExternalLinkage;
-  } else {
-    fnName += "_GLOBAL__sub_I_";
-    fnName += getTransformedFileName(mlirModule);
-    linkage = cir::GlobalLinkageKind::InternalLinkage;
+    // As in classic CodeGen's EmitCXXModuleInitFunc, an interface unit gets
+    // one initializer function, even with nothing to run, since importing
+    // translation units may call it. It runs the imported modules'
+    // initializers, then the unit's own in priority order, which get no
+    // `_GLOBAL__I_<priority>` function of their own. The global ctor entry
+    // and every importing translation unit call it, so a guard byte makes
+    // the initializers run once; there is none when there is nothing to run.
+    llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                                importedInits.end());
+    for (const auto &[priority, inits] : prioritizedDynamicInitializers)
+      initializers.append(inits.begin(), inits.end());
+    initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+    llvm::StringRef fnName = moduleInitFnName.getValue();
+    cir::GlobalOp guard;
+    if (!initializers.empty()) {
+      cir::IntType guardTy = builder.getSIntNTy(8);
+      guard =
+          createGuardGlobalOp(builder, loc, (fnName + "__in_chrg").str(),
+                              guardTy, cir::GlobalLinkageKind::InternalLinkage);
+      guard.setAlignment(clang::CharUnits::One().getAsAlign().value());
+      guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+    }
+    buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::ExternalLinkage,
+                              initializers,
+                              cir::GlobalCtorAttr::getDefaultPriority(), guard);
+    return;
   }
 
-  buildGlobalInitCallerFunc(fnName, linkage, dynamicInitializers,
+  // Any other translation unit, as in classic CodeGen's
+  // EmitCXXGlobalInitFunc: one function per priority, the imported modules'
+  // initializers in front of the first, then the default-priority function
+  // for the rest, only when there is something left to call.
+  buildCXXGlobalPriorityInitFuncs(importedInits);
+  if (importedInits.empty() && dynamicInitializers.empty())
+    return;
+
+  llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                              importedInits.end());
+  initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority (TBD).  Module implementation units behave the same
+  // way as a non-modular TU with imports.
+  SmallString<256> fnName;
+  fnName += "_GLOBAL__sub_I_";
+  fnName += getTransformedFileName(mlirModule);
+  buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
+                            initializers,
                             cir::GlobalCtorAttr::getDefaultPriority());
 }
 

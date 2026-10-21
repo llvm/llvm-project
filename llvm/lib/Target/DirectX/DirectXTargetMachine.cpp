@@ -194,7 +194,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     PM.add(createDXILPrettyPrinterLegacyPass(Out));
     break;
   case CodeGenFileType::ObjectFile:
-    if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (PassConfig->willCompleteCodeGenPipeline()) {
       PM.add(createDXILEmbedderPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.

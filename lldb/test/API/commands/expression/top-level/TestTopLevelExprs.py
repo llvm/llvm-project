@@ -48,7 +48,6 @@ class TopLevelExpressionsTestCase(TestBase):
 
     @add_test_categories(["pyapi"])
     @skipIf(debug_info="gmodules")  # not relevant
-    @skipIf(oslist=["windows"])  # Error in record layout on Windows
     def test_top_level_expressions(self):
         self.build_and_run()
 
