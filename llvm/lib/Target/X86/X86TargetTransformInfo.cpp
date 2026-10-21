@@ -7701,11 +7701,15 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
         if (!Total || !NativeBody)
           return std::nullopt;
         // Some rows clear their body by only a few cycles, so a retune can
-        // cross one. A crossed row would price the shape at its body alone and
-        // go on answering queries.
+        // cross one. Both operands are unsigned, so a crossed row wraps rather
+        // than going negative, and the shape would be priced in billions.
+        // Assert in debug, and otherwise decline the row so the caller falls
+        // through to the flat overhead below.
         assert(*Total > *NativeBody &&
                "calibrated total must exceed the body it is measured against; "
                "the row needs recalibrating against the retuned schedule");
+        if (*Total <= *NativeBody)
+          return std::nullopt;
         return *Total - *NativeBody;
       };
 
