@@ -369,11 +369,19 @@ public:
 
 } // namespace
 
-// The loop directive with a bind clause will be mapped to a different
-// directive with corresponding semantics.
+// Map `loop` with a bind clause, `teams loop`, and `target teams loop` to the
+// construct CodeGen emits.
 static OpenMPDirectiveKind
 getEffectiveDirectiveKind(const OMPExecutableDirective &S) {
   OpenMPDirectiveKind Kind = S.getDirectiveKind();
+
+  if (Kind == OMPD_teams_loop)
+    return OMPD_teams_distribute;
+  if (Kind == OMPD_target_teams_loop)
+    return cast<OMPTargetTeamsGenericLoopDirective>(S).canBeParallelFor()
+               ? OMPD_target_teams_distribute_parallel_for
+               : OMPD_target_teams_distribute;
+
   if (Kind != OMPD_loop)
     return Kind;
 
@@ -6595,6 +6603,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
   CGOpenMPRuntime &RT = CGM.getOpenMPRuntime();
 
+  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
   bool HasLastprivateClause = false;
   // Check pre-condition.
   {
@@ -6622,15 +6631,13 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
     {
       // Emit helper vars inits.
       LValue LB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(
-                     (isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                          ? S.getCombinedLowerBoundVariable()
-                          : S.getLowerBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedLowerBoundVariable()
+                                       : S.getLowerBoundVariable()));
       LValue UB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>(
-                     (isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                          ? S.getCombinedUpperBoundVariable()
-                          : S.getUpperBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedUpperBoundVariable()
+                                       : S.getUpperBoundVariable()));
       LValue ST =
           EmitOMPHelperVar(*this, cast<DeclRefExpr>(S.getStrideVariable()));
       LValue IL =
@@ -6677,48 +6684,46 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
       // GPU fused schedule: omit the outer distribute loop and let the inner
       // worksharing loop schedule the flattened team/thread iteration space.
-      if (canEmitGPUFusedDistSchedule(CGM, S, S.getDirectiveKind())) {
+      if (canEmitGPUFusedDistSchedule(CGM, S, EKind)) {
         JumpDest LoopExit =
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         CodeGenLoop(*this, S, LoopExit);
         EmitBlock(LoopExit.getBlock());
       } else {
-      // OpenMP [2.10.8, distribute Construct, Description]
-      // If dist_schedule is specified, kind must be static. If specified,
-      // iterations are divided into chunks of size chunk_size, chunks are
-      // assigned to the teams of the league in a round-robin fashion in the
-      // order of the team number. When no chunk_size is specified, the
-      // iteration space is divided into chunks that are approximately equal
-      // in size, and at most one chunk is distributed to each team of the
-      // league. The size of the chunks is unspecified in this case.
-      bool StaticChunked =
-          RT.isStaticChunked(ScheduleKind, /* Chunked */ Chunk != nullptr) &&
-          isOpenMPLoopBoundSharingDirective(S.getDirectiveKind());
-      if (RT.isStaticNonchunked(ScheduleKind,
-                                /* Chunked */ Chunk != nullptr) ||
-          StaticChunked) {
-        CGOpenMPRuntime::StaticRTInput StaticInit(
-            IVSize, IVSigned, /* Ordered = */ false, IL.getAddress(),
-            LB.getAddress(), UB.getAddress(), ST.getAddress(),
-            StaticChunked ? Chunk : nullptr);
-        RT.emitDistributeStaticInit(*this, S.getBeginLoc(), ScheduleKind,
-                                    StaticInit);
-        JumpDest LoopExit =
-            getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
-        // UB = min(UB, GlobalUB);
-        EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                  ? S.getCombinedEnsureUpperBound()
-                  : S.getEnsureUpperBound());
-                  
-        // IV = LB;
-        EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                            ? S.getCombinedInit()
-                            : S.getInit());
+        // OpenMP [2.10.8, distribute Construct, Description]
+        // If dist_schedule is specified, kind must be static. If specified,
+        // iterations are divided into chunks of size chunk_size, chunks are
+        // assigned to the teams of the league in a round-robin fashion in the
+        // order of the team number. When no chunk_size is specified, the
+        // iteration space is divided into chunks that are approximately equal
+        // in size, and at most one chunk is distributed to each team of the
+        // league. The size of the chunks is unspecified in this case.
+        bool StaticChunked =
+            RT.isStaticChunked(ScheduleKind, /* Chunked */ Chunk != nullptr) &&
+            isOpenMPLoopBoundSharingDirective(EKind);
+        if (RT.isStaticNonchunked(ScheduleKind,
+                                  /* Chunked */ Chunk != nullptr) ||
+            StaticChunked) {
+          CGOpenMPRuntime::StaticRTInput StaticInit(
+              IVSize, IVSigned, /* Ordered = */ false, IL.getAddress(),
+              LB.getAddress(), UB.getAddress(), ST.getAddress(),
+              StaticChunked ? Chunk : nullptr);
+          RT.emitDistributeStaticInit(*this, S.getBeginLoc(), ScheduleKind,
+                                      StaticInit);
+          JumpDest LoopExit =
+              getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
+          // UB = min(UB, GlobalUB);
+          EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(EKind)
+                              ? S.getCombinedEnsureUpperBound()
+                              : S.getEnsureUpperBound());
+          // IV = LB;
+          EmitIgnoredExpr(isOpenMPLoopBoundSharingDirective(EKind)
+                              ? S.getCombinedInit()
+                              : S.getInit());
 
-        const Expr *Cond =
-            isOpenMPLoopBoundSharingDirective(S.getDirectiveKind())
-                ? S.getCombinedCond()
-                : S.getCond();
+          const Expr *Cond = isOpenMPLoopBoundSharingDirective(EKind)
+                                 ? S.getCombinedCond()
+                                 : S.getCond();
 
         if (StaticChunked)
           Cond = S.getCombinedDistCond();
