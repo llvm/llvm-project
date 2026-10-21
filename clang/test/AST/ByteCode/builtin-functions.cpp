@@ -1911,6 +1911,11 @@ namespace WMemCpy {
                                                                     // both-note {{source of 'wmemcpy' is nullptr}}
   static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                     // both-note {{destination of 'wmemcpy' is nullptr}}
+
+  static_assert(__builtin_wmemcpy(L"foobar", L"bazqux", 6), ""); // both-warning {{conversion from string literal}} \
+                                                                 // both-error {{}} \
+                                                                 // both-note {{assignment to object}} \
+                                                                 // both-note {{temporary created here}}
 }
 
 namespace WMemMove {

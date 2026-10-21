@@ -578,7 +578,9 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
     : Options(std::move(Opts)) {}
 
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  AllocToken Pass(InstrumentationOptions::Global, Options, M, MAM);
+  const InstrumentationOptions &CLOpts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  AllocToken Pass(CLOpts, Options, M, MAM);
   bool Modified = false;
 
   for (Function &F : M) {

@@ -17,6 +17,7 @@ else()
     SRCS
       shared_math_test.cpp
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.math.acos
