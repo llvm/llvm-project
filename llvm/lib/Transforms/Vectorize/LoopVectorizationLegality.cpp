@@ -662,17 +662,30 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       return false;
   }
 
-  // Like for inner loops, the widest integer induction type is used for the
-  // canonical IV and trip count, so at least one integer induction is required.
-  if (!WidestIndTy) {
+  // Like for inner loops, the widest induction type is used for the canonical
+  // IV and trip count.
+  if (!canDetermineWidestInductionType())
+    return false;
+
+  return Result;
+}
+
+bool LoopVectorizationLegality::canDetermineWidestInductionType() {
+  if (Inductions.empty()) {
     reportVectorizationFailure(
         "Did not find one integer induction var",
         "loop induction variable could not be identified",
         "NoInductionVariable", ORE, TheLoop);
     return false;
   }
-
-  return Result;
+  if (!WidestIndTy) {
+    reportVectorizationFailure(
+        "Did not find one integer induction var",
+        "integer loop induction variable could not be identified",
+        "NoIntegerInductionVariable", ORE, TheLoop);
+    return false;
+  }
+  return true;
 }
 
 void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
@@ -790,20 +803,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   }
 
   if (!PrimaryInduction) {
-    if (Inductions.empty()) {
-      reportVectorizationFailure(
-          "Did not find one integer induction var",
-          "loop induction variable could not be identified",
-          "NoInductionVariable", ORE, TheLoop);
+    if (!canDetermineWidestInductionType())
       return false;
-    }
-    if (!WidestIndTy) {
-      reportVectorizationFailure(
-          "Did not find one integer induction var",
-          "integer loop induction variable could not be identified",
-          "NoIntegerInductionVariable", ORE, TheLoop);
-      return false;
-    }
     LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
   }
 
