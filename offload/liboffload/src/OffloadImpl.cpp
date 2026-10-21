@@ -1173,10 +1173,10 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 }
 
 /// Copy \p Size bytes from \p SrcPtr to \p DstPtr, as controlled by \p Flags.
-Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
-                    ol_device_handle_t DstDevice, const void *SrcPtr,
-                    ol_device_handle_t SrcDevice, size_t Size,
-                    ol_memcpy_flags_t Flags) {
+static Error memcpyImpl(ol_queue_handle_t Queue, void *DstPtr,
+                        ol_device_handle_t DstDevice, const void *SrcPtr,
+                        ol_device_handle_t SrcDevice, size_t Size,
+                        ol_memcpy_flags_t Flags) {
   // A null device handle means the pointer belongs to the host.
   bool IsDstHost =
       !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
