@@ -170,7 +170,10 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
       os << arg->getSpelling();
-      if (arg->getOption().getRenderStyle() == opt::Option::RenderSeparateStyle)
+      if (opt::Option::RenderStyleKind style =
+              arg->getOption().getRenderStyle();
+          style == opt::Option::RenderSeparateStyle ||
+          style == opt::Option::RenderEqStyle)
         os << ' ';
       os << quote(path::filename(arg->getValue())) << '\n';
       break;

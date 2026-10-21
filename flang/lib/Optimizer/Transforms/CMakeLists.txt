@@ -21,6 +21,7 @@ add_flang_library(FIRTransforms
   CUDA/CUFOpConversion.cpp
   CUDA/CUFOpConversionLate.cpp
   CUDA/CUFPredefinedVarToGPU.cpp
+  CUDA/CUFSharedTypeInfo.cpp
   CharacterConversion.cpp
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
@@ -85,7 +86,7 @@ add_flang_library(FIRTransforms
 
   MLIR_LIBS
   MLIRAffineUtils
-  MLIRAnalysis
+  MLIRAnalysisDataFlow
   MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect

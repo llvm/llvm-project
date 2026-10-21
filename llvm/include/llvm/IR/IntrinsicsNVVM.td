@@ -151,6 +151,10 @@ def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
+// A RangeList is a RangeSet with singleton closed ranges for each listed value.
+class RangeList<ArgIndex idx, list<int> values>
+    : RangeSet<idx, !foreach(value, values, [value, value])>;
+
 //
 // MISC
 //
@@ -1342,6 +1346,13 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
+class NVVM_SP_IDX_ARGPROPS<ArgIndex IdxSizeIdx> {
+  list<IntrinsicProperty> Prop = [
+    RangeList<IdxSizeIdx, [2, 4]>,
+    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">]>
+  ];
+}
+
 // For im2col mode the number of offsets is (dim - 2).
 // For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
 // irrespective of dim.
@@ -1680,24 +1691,19 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
-
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_mul_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-
-      def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
   }
+
+  foreach ftz = ["", "_ftz"] in
+    foreach sat = ["", "_sat"] in
+      def int_nvvm_fmul # ftz # sat :
+        DefaultAttrsIntrinsicFlags<[llvm_anyfloat_ty],
+                                   [LLVMMatchType<0>, LLVMMatchType<0>],
+                                   [llvm_i32_ty], // rnd
+                      [IntrNoMem, IntrSpeculatable, Commutative,
+                       IntrNoCreateUndefOrPoison, Range<ArgIndex<2>, 0, 4>,
+                       ArgInfo<ArgIndex<2>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
   //
   // Div
@@ -3566,6 +3572,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
 
+  def int_nvvm_prefetch_L1_32B_valid_addr
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.prefetch.L1.32B.valid_addr">;
+
   def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
 
@@ -4267,5 +4276,42 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+
+//
+// spcompress intrinsics
+//
+
+class SPCompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_any_vector_int_ty,  // data
+     llvm_i32_ty],            // spdesc
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [4]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spcompress : SPCompress;
+
+//
+// spdecompress intrinsics
+//
+
+class SPDecompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_any_vector_int_ty], // data
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [2, 4, 8, 16]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spdecompress : SPDecompress;
 
 } // let TargetPrefix = "nvvm"

@@ -94,7 +94,7 @@ that can help developers, generally they must have code available.
   errors, fixit hints). See also [http://l.rw.rw/clang_plugin](http://l.rw.rw/clang_plugin) for
   step-by-step instructions."
 
-[https://phabricator.kde.org/source/clazy](https://phabricator.kde.org/source/clazy)
+[https://invent.kde.org/sdk/clazy](https://invent.kde.org/sdk/clazy)
 
 : "clazy is a compiler plugin which allows clang to understand Qt semantics.
   You get more than 50 Qt related compiler warnings, ranging from unneeded

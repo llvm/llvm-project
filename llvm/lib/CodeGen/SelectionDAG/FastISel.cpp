@@ -2240,10 +2240,10 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (!LoadReg)
     return false;
 
-  // We can't fold if this vreg has no uses or more than one use.  Multiple uses
-  // may mean that the instruction got lowered to multiple MIs, or the use of
-  // the loaded value ended up being multiple operands of the result.
-  if (!MRI.hasOneUse(LoadReg))
+  // We can't fold if this vreg has no uses or more than one non-debug use.
+  // Multiple uses may mean that the instruction got lowered to multiple MIs, or
+  // the use of the loaded value ended up being multiple operands of the result.
+  if (!MRI.hasOneNonDBGUse(LoadReg))
     return false;
 
   // If the register has fixups, there may be additional uses through a
@@ -2251,7 +2251,7 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (FuncInfo.RegsWithFixups.contains(LoadReg))
     return false;
 
-  MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LoadReg);
+  MachineRegisterInfo::use_nodbg_iterator RI = MRI.use_nodbg_begin(LoadReg);
   MachineInstr *User = RI->getParent();
 
   // Set the insertion point properly.  Folding the load can cause generation of
@@ -2261,7 +2261,12 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   FuncInfo.MBB = User->getParent();
 
   // Ask the target to try folding the load.
-  return tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI);
+  if (!tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI))
+    return false;
+
+  // The loaded value no longer lives in LoadReg.
+  MRI.markUsesInDebugValueAsUndef(LoadReg);
+  return true;
 }
 
 bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {

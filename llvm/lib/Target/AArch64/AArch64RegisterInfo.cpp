@@ -75,7 +75,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const auto &F = MF->getFunction();
   const auto *TLI = MF->getSubtarget<AArch64Subtarget>().getTargetLowering();
   const bool Darwin = MF->getSubtarget<AArch64Subtarget>().isTargetDarwin();
-  const bool Windows = MF->getSubtarget<AArch64Subtarget>().isTargetWindows();
+  const bool Windows =
+      MF->getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI();
 
   if (TLI->supportSwiftError() &&
       F.getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
@@ -691,7 +692,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
-    if (STI.isTargetWindows()) {
+    if (STI.isTargetWindowsOrUEFI()) {
       if (IsVarArg)
         return HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
       switch (CC) {
@@ -737,7 +738,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
-    if (STI.isTargetWindows())
+    if (STI.isTargetWindowsOrUEFI())
       return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);
   }

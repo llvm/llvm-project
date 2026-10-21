@@ -958,6 +958,19 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
                                            data_dir_exception.vmsize);
 }
 
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  if (m_binary->is64()) {
+    if (m_binary->getTLSDirectory64())
+      addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
+  } else if (m_binary->getTLSDirectory32())
+    addr = m_binary->getTLSDirectory32()->AddressOfIndex.value();
+
+  if (addr == 0)
+    addr = LLDB_INVALID_ADDRESS;
+  return addr;
+}
+
 bool ObjectFilePECOFF::IsStripped() {
   // TODO: determine this for COFF
   return false;

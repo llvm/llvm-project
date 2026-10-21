@@ -1767,14 +1767,8 @@ void CXXNameMangler::mangleUnqualifiedName(
     break;
 
   case DeclarationName::CXXOperatorName:
-    if (ND && Arity == UnknownArity) {
-      Arity = cast<FunctionDecl>(ND)->getNumParams();
-
-      // If we have a member function, we need to include the 'this' pointer.
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-        if (MD->isImplicitObjectMemberFunction())
-          Arity++;
-    }
+    if (ND && Arity == UnknownArity)
+      Arity = cast<FunctionDecl>(ND)->getNumParamsIncludingThis();
     [[fallthrough]];
   case DeclarationName::CXXConversionFunctionName:
   case DeclarationName::CXXLiteralOperatorName:
@@ -4951,7 +4945,13 @@ void CXXNameMangler::mangleCastExpression(const Expr *E, StringRef CastEncoding)
   const ExplicitCastExpr *ECE = cast<ExplicitCastExpr>(E);
   Out << CastEncoding;
   mangleType(ECE->getType());
-  mangleExpression(ECE->getSubExpr());
+  if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(ECE->getSubExpr())) {
+    ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+    assert(Inits.size() == 1 && "cast must have exactly one operand");
+    mangleExpression(Inits.front());
+  } else {
+    mangleExpression(ECE->getSubExpr());
+  }
 }
 
 void CXXNameMangler::mangleInitListElements(const InitListExpr *InitList) {
@@ -5350,6 +5350,9 @@ recurse:
                                                   E = CCE->arg_end();
              I != E; ++I)
           mangleExpression(*I);
+      } else if (const auto *PLE = dyn_cast<CXXParenListInitExpr>(Init)) {
+        for (const Expr *Arg : PLE->getUserSpecifiedInitExprs())
+          mangleExpression(Arg);
       } else if (const ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init)) {
         for (unsigned i = 0, e = PLE->getNumExprs(); i != e; ++i)
           mangleExpression(PLE->getExpr(i));
@@ -5776,7 +5779,17 @@ recurse:
         Sub = CCE->getArg(0)->IgnoreImplicit();
     if (auto *StdInitList = dyn_cast<CXXStdInitializerListExpr>(Sub))
       Sub = StdInitList->getSubExpr()->IgnoreImplicit();
-    if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
+    if (auto *PLIE = dyn_cast<CXXParenListInitExpr>(Sub)) {
+      ArrayRef<Expr *> Inits = PLIE->getUserSpecifiedInitExprs();
+      Out << "cv";
+      mangleType(E->getType());
+      if (Inits.size() != 1)
+        Out << '_';
+      for (const Expr *Init : Inits)
+        mangleExpression(Init);
+      if (Inits.size() != 1)
+        Out << 'E';
+    } else if (auto *IL = dyn_cast<InitListExpr>(Sub)) {
       Out << "tl";
       mangleType(E->getType());
       mangleInitListElements(IL);

@@ -1263,6 +1263,7 @@ FunDecl:
     LLVMTypeRef Ty = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
 
     auto F = LLVMAddFunction(M, Name, Ty);
+    LLVMSetDSOLocal(F, LLVMIsDSOLocal(Cur));
 
     // Copy attributes
     for (int i = LLVMAttributeFunctionIndex, c = LLVMCountParams(F);
@@ -1432,6 +1433,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     LLVMSetSection(G, LLVMGetSection(Cur));
     LLVMSetVisibility(G, LLVMGetVisibility(Cur));
     LLVMSetUnnamedAddress(G, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(G, LLVMIsDSOLocal(Cur));
     LLVMSetAlignment(G, LLVMGetAlignment(Cur));
 
     Next = LLVMGetNextGlobal(Cur);
@@ -1534,6 +1536,7 @@ AliasClone:
 
     LLVMSetLinkage(Alias, LLVMGetLinkage(Cur));
     LLVMSetUnnamedAddress(Alias, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(Alias, LLVMIsDSOLocal(Cur));
 
     Next = LLVMGetNextGlobalAlias(Cur);
     if (Next == nullptr) {

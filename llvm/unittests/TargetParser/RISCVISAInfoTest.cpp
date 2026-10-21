@@ -37,12 +37,44 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
   }
 }
 
+TEST(ParseNormalizedArchString, RejectsConflictingBaseISAs) {
+  for (StringRef Input : {"rv32i2p0_e2p0", "rv64i2p1_m2p0_e2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'i' and 'e'");
+  }
+  for (StringRef Input : {"rv32e2p0_i2p0", "rv64e2p0_m2p0_i2p1"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'e' and 'i'");
+  }
+}
+
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
   }
+
+  for (StringRef Input : {"rv32im2p0", "rv32i2p0_im2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'i' is missing version number");
+  }
+
+  for (StringRef Input : {"rv64ea2p0", "rv32i2p0_em2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'e' is missing version number");
+  }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv32i2p0_ma2p0")
+                         .takeError()),
+            "extension 'm' is missing version number");
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv64i2p0_fd2p0")
+                         .takeError()),
+            "extension 'f' is missing version number");
 
   for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0"}) {
     EXPECT_EQ(
@@ -943,12 +975,6 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rva23p1s64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rva23p1s64'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rvb23p1s64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rvb23p1s64'");
-  EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
       "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
@@ -1722,16 +1748,16 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
+    rva23p1s64
     rva23s64
     rva23u64
+    rvb23p1s64
     rvb23s64
     rvb23u64
     rvi20u32
     rvi20u64
 
 Experimental Profiles
-    rva23p1s64
-    rvb23p1s64
     rvm23u32
 
 Use -march to specify the target's extension.

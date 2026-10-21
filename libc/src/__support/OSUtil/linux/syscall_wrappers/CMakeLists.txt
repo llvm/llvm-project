@@ -39,6 +39,42 @@ add_header_library(
 )
 
 add_header_library(
+  getcpu
+  HDRS
+    getcpu.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_get_priority_max
+  HDRS
+    sched_get_priority_max.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_get_priority_min
+  HDRS
+    sched_get_priority_min.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_getaffinity
   HDRS
     sched_getaffinity.h
@@ -53,9 +89,9 @@ add_header_library(
 )
 
 add_header_library(
-  sched_setscheduler
+  sched_getparam
   HDRS
-    sched_setscheduler.h
+    sched_getparam.h
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
@@ -80,12 +116,66 @@ add_header_library(
 )
 
 add_header_library(
-  sched_getparam
+  sched_rr_get_interval
   HDRS
-    sched_getparam.h
+    sched_rr_get_interval.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setaffinity
+  HDRS
+    sched_setaffinity.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setparam
+  HDRS
+    sched_setparam.h
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setscheduler
+  HDRS
+    sched_setscheduler.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_yield
+  HDRS
+    sched_yield.h
+  DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -577,6 +667,19 @@ add_header_library(
 )
 
 add_header_library(
+  pipe2
+  HDRS
+    pipe2.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.include.sys_syscall
+)
+
+add_header_library(
   posix_fadvise
   HDRS
     posix_fadvise.h
@@ -790,6 +893,21 @@ add_header_library(
 )
 
 add_header_library(
+  lchown
+  HDRS
+    lchown.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ftruncate
   HDRS
     ftruncate.h
@@ -845,6 +963,32 @@ add_header_library(
   setuid
   HDRS
     setuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setresgid
+  HDRS
+    setresgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setresuid
+  HDRS
+    setresuid.h
   DEPENDS
     libc.hdr.types.uid_t
     libc.include.sys_syscall
@@ -1053,6 +1197,29 @@ add_header_library(
   fsync
   HDRS
     fsync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sync
+  HDRS
+    sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  syncfs
+  HDRS
+    syncfs.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
@@ -1365,6 +1532,22 @@ add_header_library(
 )
 
 add_header_library(
+  waitid
+  HDRS
+    waitid.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.hdr.types.idtype_t
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   execve
   HDRS
     execve.h
@@ -1558,3 +1741,83 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  inotify_init
+  HDRS
+    inotify_init.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_init1
+  HDRS
+    inotify_init1.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_add_watch
+  HDRS
+    inotify_add_watch.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_rm_watch
+  HDRS
+    inotify_rm_watch.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit
+  HDRS
+    exit.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit_group
+  HDRS
+    exit_group.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  execveat
+  HDRS
+    execveat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)

@@ -513,8 +513,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
+        IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -4295,10 +4295,13 @@ public:
   ///
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
-  ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///  - \p BodyGen may freely emit instructions and introduce control flow
+  ///    within the loop body.
+  ///  - If the body leaves exactly one block without a terminator after
+  ///    \p BodyGen returns, a branch to the latch is inserted there. Otherwise,
+  ///    some block of the body must already branch to the latch.
+  ///  - The body must not branch to blocks that existed before \p BodyGen ran,
+  ///    other than the body block and the latch.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.
