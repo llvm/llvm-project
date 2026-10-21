@@ -36,7 +36,7 @@ void fork_and_execvpe_slash_path() {
         nullptr,
     };
     LIBC_NAMESPACE::execvpe(path, argv, envp);
-    LIBC_NAMESPACE::_exit(libc_errno);
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -63,7 +63,7 @@ void fork_and_execvpe_path_search() {
         nullptr,
     };
     LIBC_NAMESPACE::execvpe(file, argv, envp);
-    LIBC_NAMESPACE::_exit(libc_errno);
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -92,7 +92,7 @@ void fork_and_execvpe_caller_path_not_envp() {
         nullptr,
     };
     LIBC_NAMESPACE::execvpe(file, argv, envp);
-    LIBC_NAMESPACE::_exit(libc_errno);
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -119,7 +119,7 @@ void fork_and_execvpe_skips_eacces() {
         nullptr,
     };
     LIBC_NAMESPACE::execvpe(file, argv, envp);
-    LIBC_NAMESPACE::_exit(libc_errno);
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;

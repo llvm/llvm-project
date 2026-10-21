@@ -14,6 +14,7 @@
 #include "src/unistd/execvpe.h"
 
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/unistd/linux/exec_utils.h"
@@ -26,7 +27,12 @@ LLVM_LIBC_FUNCTION(int, execvpe,
   LIBC_CRASH_ON_NULLPTR(argv);
   LIBC_CRASH_ON_NULLPTR(envp);
 
-  return internal::execvpe(file, argv, envp);
+  auto ret = internal::execvpe(file, argv, envp);
+  if (!ret) {
+    libc_errno = ret.error();
+    return -1;
+  }
+  return *ret;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

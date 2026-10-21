@@ -1,9 +1,14 @@
-//===-- Linux implementation helpers for exec -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation helpers for exec.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_UNISTD_LINUX_EXEC_UTILS_H
@@ -15,7 +20,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/execve.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/environ_internal.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -27,26 +32,21 @@ namespace internal {
 // using the system shell (as if by `sh -- file args...`). The kernel only
 // handles ELF, "#!" scripts, and binfmt_misc formats, so shebang-less scripts
 // currently fail with ENOEXEC instead of being run by /bin/sh.
-LIBC_INLINE int execvpe(const char *file, char *const argv[],
-                        char *const envp[]) {
-  cpp::string_view file_sv(file);
-  if (file_sv.empty()) {
-    libc_errno = ENOENT;
-    return -1;
-  }
+LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
+                                 char *const envp[]) {
+  if (file.empty())
+    return Error(ENOENT);
 
   // If there's a / in file, treat it as a path.
-  if (file_sv.find_first_of('/') != cpp::string_view::npos) {
-    auto ret = linux_syscalls::execve(file, argv, envp);
-    if (!ret) {
-      libc_errno = ret.error();
-      return -1;
-    }
-    return *ret;
-  }
+  if (file.find_first_of('/') != cpp::string_view::npos)
+    return linux_syscalls::execve(file.data(), argv, envp);
 
   // Otherwise treat file as the name of a file in a directory, search the
   // directories listed in PATH.
+  //
+  // Per POSIX.1-2024 and Linux specifications, the search path is taken from
+  // the caller's environment (via EnvironmentManager), not from the `envp`
+  // argument passed to execvpe.
   constexpr cpp::string_view DEFAULT_PATH = "/bin:/usr/bin";
   const char *env_path =
       internal::EnvironmentManager::get_instance().get("PATH");
@@ -64,19 +64,19 @@ LIBC_INLINE int execvpe(const char *file, char *const argv[],
     if (dir.empty())
       dir = ".";
 
-    if (dir.size() + 1 + file_sv.size() >= PATH_MAX) {
+    if (dir.size() + 1 + file.size() >= PATH_MAX) {
       last_error = ENAMETOOLONG;
       continue;
     }
 
     inline_memcpy(buf, dir.data(), dir.size());
     buf[dir.size()] = '/';
-    inline_memcpy(buf + dir.size() + 1, file_sv.data(), file_sv.size());
-    buf[dir.size() + 1 + file_sv.size()] = '\0';
+    inline_memcpy(buf + dir.size() + 1, file.data(), file.size());
+    buf[dir.size() + 1 + file.size()] = '\0';
 
     auto ret = linux_syscalls::execve(buf, argv, envp);
     if (ret)
-      return *ret;
+      return ret;
 
     int err = ret.error();
     if (err == EACCES) {
@@ -84,13 +84,11 @@ LIBC_INLINE int execvpe(const char *file, char *const argv[],
     } else if (err == ENOENT || err == ENOTDIR) {
       last_error = err;
     } else {
-      libc_errno = err;
-      return -1;
+      return Error(err);
     }
   }
 
-  libc_errno = seen_eacces ? EACCES : last_error;
-  return -1;
+  return Error(seen_eacces ? EACCES : last_error);
 }
 
 } // namespace internal
