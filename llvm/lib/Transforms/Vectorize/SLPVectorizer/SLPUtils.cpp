@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPUtils.h"
+#include "SLPMemoryUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -186,8 +187,9 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
+  // The trunc X to i1 lanes of a compare have the single operand X.
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    return Cmp->isCommutative();
+    return isa<CmpInst>(ValWithUses) && Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub && ValWithUses->hasUseList() &&
@@ -605,7 +607,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
 /// ShuffleVectorInst/getShuffleCost?
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC) {
+                     AssumptionCache *AC, SLPAnalysisCache &Cache) {
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
@@ -622,7 +624,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
                                 Value *Vec = EE->getVectorOperand();
                                 if (isa<UndefValue>(Vec))
                                   return false;
-                                return isGuaranteedNotToBePoison(Vec, AC);
+                                return Cache.isGuaranteedNotToBePoison(Vec, AC);
                               });
     return *HasNonUndefVec;
   };

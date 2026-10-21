@@ -59,11 +59,10 @@ define <4 x float> @testv4f32_1(<4 x float> noundef %vec) {
 ;
 ; CHECK-GI-LABEL: testv4f32_1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-GI-NEXT:    movi d31, #0000000000000000
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x float> %vec, <4 x i32> <i32 4, i32 0, i32 0, i32 0>
@@ -175,11 +174,9 @@ define <4 x half> @testv4f16_1(<4 x half> noundef %vec) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI9_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    dup v1.4h, v1.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <4 x half> <half 0.000000e+00, half poison, half poison, half poison>, <4 x half> %vec, <4 x i32> <i32 4, i32 0, i32 0, i32 0>
@@ -253,11 +250,9 @@ define <4 x bfloat> @testv4bf16_1(<4 x bfloat> noundef %vec) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    dup v1.4h, v1.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <4 x bfloat> <bfloat 0.000000e+00, bfloat poison, bfloat poison, bfloat poison>, <4 x bfloat> %vec, <4 x i32> <i32 4, i32 0, i32 0, i32 0>
@@ -320,9 +315,10 @@ define <4 x i32> @testv4i32_1(<4 x i32> noundef %vec) {
 ;
 ; CHECK-GI-LABEL: testv4i32_1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> %vec, <4 x i32> <i32 4, i32 0, i32 0, i32 0>
@@ -416,11 +412,9 @@ define <4 x i16> @testv4i16_1(<4 x i16> noundef %vec) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI23_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    dup v1.4h, v1.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <4 x i16> <i16 0, i16 poison, i16 poison, i16 poison>, <4 x i16> %vec, <4 x i32> <i32 4, i32 0, i32 0, i32 0>

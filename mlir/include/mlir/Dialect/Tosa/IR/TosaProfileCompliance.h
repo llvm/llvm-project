@@ -16,9 +16,8 @@
 
 #include "mlir/Support/TypeID.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
-
+namespace mlir {
+namespace tosa {
 //===----------------------------------------------------------------------===//
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
@@ -174,5 +173,7 @@ private:
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H

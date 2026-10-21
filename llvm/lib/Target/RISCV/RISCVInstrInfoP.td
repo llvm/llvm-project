@@ -1925,6 +1925,12 @@ def riscv_pm2waddu
     : RVSDNode<"PM2WADDU", SDT_RISCVPackedWideningHorizontalAdd>;
 def riscv_pm2waddsu
     : RVSDNode<"PM2WADDSU", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wadd_x
+    : RVSDNode<"PM2WADD_X", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wsub
+    : RVSDNode<"PM2WSUB", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wsub_x
+    : RVSDNode<"PM2WSUB_X", SDT_RISCVPackedWideningHorizontalAdd>;
 
 // Packed widening multiply-accumulate operations.
 def SDT_RISCVPackedWideningAcc
@@ -2177,8 +2183,10 @@ class RISCVSatWidthLeaf<int bitsNum>
 
 def sati_width4  : RISCVSatWidthLeaf<4>;
 def sati_width5  : RISCVSatWidthLeaf<5>;
+def sati_width6  : RISCVSatWidthLeaf<6>;
 def usati_width4 : RISCVUSatWidthLeaf<4>;
 def usati_width5 : RISCVUSatWidthLeaf<5>;
+def usati_width6 : RISCVUSatWidthLeaf<6>;
 
 def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                     SDTCisVT<1, i32>,
@@ -2539,10 +2547,10 @@ let append Predicates = [IsRV32] in {
 
   def : PatGpr<bitreverse, REV_RV32>;
 
-  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
-            (SATI_RV32 GPR:$rs1, timm:$imm)>;
-  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
-            (USATI_RV32 GPR:$rs1, timm:$imm)>;
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, sati_width5:$imm)),
+            (SATI_RV32 GPR:$rs1, sati_width5:$imm)>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, usati_width5:$imm)),
+            (USATI_RV32 GPR:$rs1, usati_width5:$imm)>;
 
   def : PatGprGpr<saddsat, SADD>;
   def : PatGprGpr<ssubsat, SSUB>;
@@ -2736,6 +2744,12 @@ let append Predicates = [IsRV32] in {
             (PM2WADDU_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDSU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wadd_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADD_HX GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUB_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsub_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUB_HX GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiplication with widening horizontal addition and accumulate
   // patterns.
@@ -3261,10 +3275,10 @@ let append Predicates = [IsRV64] in {
                                             (v2i32 GPR:$rs1), GPR:$rs2)),
             (MQRACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
-  def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
-            (SATI_RV64 GPR:$rs1, timm:$imm)>;
-  def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
-            (USATI_RV64 GPR:$rs1, timm:$imm)>;
+  def : Pat<(XLenVT (riscv_sati GPR:$rs1, sati_width6:$imm)),
+            (SATI_RV64 GPR:$rs1, sati_width6:$imm)>;
+  def : Pat<(XLenVT (riscv_usati GPR:$rs1, usati_width6:$imm)),
+            (USATI_RV64 GPR:$rs1, usati_width6:$imm)>;
 
   // Word multiply patterns where one operand is a sext.w or zext.w and
   // the other is a sext.w or zext.w or is known to be sign/zero-extended. We

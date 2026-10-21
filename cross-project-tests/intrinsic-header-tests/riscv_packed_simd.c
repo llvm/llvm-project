@@ -132,6 +132,26 @@ uint32_t test_abs_u32(int32_t a) { return __riscv_abs_u32(a); }
 uint64_t test_abs_u64(int64_t a) { return __riscv_abs_u64(a); }
 #endif
 
+// CHECK-LABEL: test_sati_i32:
+// RV32:        sati{{[[:space:]]}}
+// RV64:        psati.w
+int32_t test_sati_i32(int32_t a) { return __riscv_sati_i32(a, 16); }
+
+// CHECK-LABEL: test_usati_u32:
+// RV32:        usati{{[[:space:]]}}
+// RV64:        pusati.w
+uint32_t test_usati_u32(int32_t a) { return __riscv_usati_u32(a, 16); }
+
+#if __riscv_xlen == 64
+// RV64-LABEL: test_sati_i64:
+// RV64:        sati{{[[:space:]]}}
+int64_t test_sati_i64(int64_t a) { return __riscv_sati_i64(a, 16); }
+
+// RV64-LABEL: test_usati_u64:
+// RV64:        usati{{[[:space:]]}}
+uint64_t test_usati_u64(int64_t a) { return __riscv_usati_u64(a, 16); }
+#endif
+
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs
 uint8x4_t test_pmv_s_u8x4(uint8_t x) { return __riscv_pmv_s_u8x4(x); }
@@ -4508,6 +4528,56 @@ uint64_t test_pm4addu_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
 // RV64:        pm4addsu.h
 int64_t test_pm4addsu_i16x4(int16x4_t rs1, uint16x4_t rs2) {
   return __riscv_pm4addsu_i16x4(rs1, rs2);
+}
+
+// Packed Multiplication with Widening Horizontal Addition.
+// CHECK-LABEL: test_pm2wadd_i64:
+// RV32:        pm2wadd.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4add.h
+int64_t test_pm2wadd_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wadd_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wadd_x_i64:
+// RV32:        pm2wadd.hx
+// RV64:        pack{{[[:space:]]}}
+// RV64:        ppairoe.h
+// RV64:        pm4add.h
+int64_t test_pm2wadd_x_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wadd_x_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2waddu_u64:
+// RV32:        pm2waddu.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4addu.h
+uint64_t test_pm2waddu_u64(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2waddu_u64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wsub_i64:
+// RV32:        pm2wsub.h
+// RV64:        pm2sub.h
+// RV64:        sext.w
+int64_t test_pm2wsub_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wsub_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wsub_x_i64:
+// RV32:        pm2wsub.hx
+// RV64:        pm2sub.hx
+// RV64:        sext.w
+int64_t test_pm2wsub_x_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wsub_x_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2waddsu_i64:
+// RV32:        pm2waddsu.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4addsu.h
+int64_t test_pm2waddsu_i64(int16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2waddsu_i64(rs1, rs2);
 }
 
 // Packed Multiply Parts.

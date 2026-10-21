@@ -1,3 +1,26 @@
+add_mlir_library(MLIRGPUBase
+  IR/GPUBase.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
+
+  DEPENDS
+  MLIRGPUOpsIncGen
+  MLIRGPUOpsAttributesIncGen
+  MLIRGPUOpsEnumsGen
+  MLIRGPUOpInterfacesIncGen
+  MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRParallelLoopMapperEnumsGen
+  MLIRGPUDeviceMapperEnumsGen
+  MLIRDeviceMappingInterfacesIncGen
+  intrinsics_gen
+
+  LINK_LIBS PUBLIC
+  MLIRFunctionInterfaces
+  MLIRIR
+  MLIRSupport
+  )
+
 add_mlir_dialect_library(MLIRGPUDialect
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
@@ -18,6 +41,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   intrinsics_gen
 
   LINK_LIBS PUBLIC
+  MLIRGPUBase
   MLIRArithDialect
   MLIRDLTIDialect
   MLIRControlFlowInterfaces
