@@ -83,6 +83,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParser;
+  friend struct StandaloneDWARFLineTableInfo;
 
   // Static Functions
   static void Initialize();
@@ -520,9 +521,8 @@ protected:
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   bool MissingDebugInfo();
-  uint32_t CountStandaloneCompileUnits();
 
-  /// This may return nullptr if this DWARF file has .debug_info.
+  /// This may return nullptr if there is no standalone line-table information.
   StandaloneDWARFLineTableInfo *GetStandaloneLineTableInfo();
 
   void FindDwpSymbolFile();
