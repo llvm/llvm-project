@@ -7407,8 +7407,11 @@ int X86TTIImpl::getScatterOverhead() const {
 }
 
 // Count the lanes a compile-time constant mask leaves live, and the groups of
-// GroupSize consecutive lanes that hold at least one of them. Returns nullopt
-// when the mask is not known at compile time, which is the common case.
+// GroupSize consecutive lanes that hold at least one of them. CodeGen folds
+// away a group with no live lane, so a v24i32 gather masked to its first eight
+// lanes emits one instruction and not three. Returns nullopt when the mask is
+// not known at compile time, which is the common case. VP operations do not
+// reach this: getMemIntrinsicInstrCost dispatches only masked_*.
 static std::optional<std::pair<unsigned, unsigned>>
 getActiveGSLanesAndGroups(const Value *Mask, unsigned VF, unsigned GroupSize) {
   const auto *CMask = dyn_cast_or_null<Constant>(Mask);
@@ -7568,30 +7571,6 @@ X86TTIImpl::getGSIndexSizeInBits(const Value *Ptr, unsigned PtrSizeInBits,
   return (unsigned)32;
 }
 
-// How many GroupSize-lane groups a compile-time mask leaves live. CodeGen
-// folds away a group with no active lane, so a v24i32 gather masked to its
-// first eight lanes emits one instruction and not three. Returns nullopt
-// where the mask is not a readable constant and every group must be assumed
-// live. VP operations do not reach this -- getMemIntrinsicInstrCost
-// dispatches only masked_*.
-static std::optional<unsigned> getActiveGSGroups(const Value *Mask, unsigned VF,
-                                                 unsigned GroupSize) {
-  const auto *CMask = dyn_cast_or_null<Constant>(Mask);
-  if (!CMask || !GroupSize)
-    return std::nullopt;
-  unsigned Active = 0;
-  for (unsigned Base = 0; Base < VF; Base += GroupSize) {
-    for (unsigned I = Base, E = std::min(Base + GroupSize, VF); I != E; ++I) {
-      const Constant *Elt = CMask->getAggregateElement(I);
-      if (!Elt || !Elt->isNullValue()) {
-        ++Active;
-        break;
-      }
-    }
-  }
-  return Active;
-}
-
 // Price a gather or scatter on a subtarget carrying TuningPreferGSCostTable
 // (AMD znver4+) from the per-shape rows and the schedule model. Reached only
 // through the feature test in getGSVectorCost, so nothing here can move the
@@ -7648,8 +7627,9 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
                               MaxRegBits / std::max(EltBits, IndexSize)));
     unsigned Parts = divideCeil(VF, PartVF);
     EmittedParts = IsLoad || !VariableMask ? Parts : PowerOf2Ceil(Parts);
-    if (std::optional<unsigned> Active = getActiveGSGroups(Mask, VF, PartVF))
-      EmittedParts = std::min<InstructionCost::CostType>(EmittedParts, *Active);
+    if (auto Active = getActiveGSLanesAndGroups(Mask, VF, PartVF))
+      EmittedParts =
+          std::min<InstructionCost::CostType>(EmittedParts, Active->second);
   }
 
   // A mask with no live lane leaves nothing to gather, and CodeGen folds the
@@ -7679,8 +7659,8 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
     // the same lanes are gathered either way. A lane a constant mask turns off
     // has no scalar load to measure against and pays nothing.
     unsigned ActiveLanes = VF;
-    if (std::optional<unsigned> Live = getActiveGSGroups(Mask, VF, 1))
-      ActiveLanes = *Live;
+    if (auto Live = getActiveGSLanesAndGroups(Mask, VF, 1))
+      ActiveLanes = Live->first;
 
     // Price a given number of live lanes spread over a given number of emitted
     // instructions. Where the mask places its live lanes decides the second --
