@@ -154,10 +154,14 @@ TEST_F(TargetGroupTest, TargetDestructionRemovesEveryMembership) {
   target_sp->Destroy();
 
   EXPECT_TRUE(target_sp->GetTargetGroups().empty());
+  EXPECT_EQ(std::vector<TargetGroupSP>{second_group_sp}, groups.GetGroups());
   EXPECT_EQ(std::nullopt, first_group_sp->GetRole(target_sp));
   EXPECT_EQ(std::nullopt, second_group_sp->GetRole(target_sp));
   EXPECT_EQ(std::optional(TargetGroup::Role::CPU),
             second_group_sp->GetRole(survivor_sp));
+
+  survivor_sp->Destroy();
+  EXPECT_TRUE(groups.GetGroups().empty());
 }
 
 TEST_F(TargetGroupTest, RejectsTargetFromAnotherDebugger) {

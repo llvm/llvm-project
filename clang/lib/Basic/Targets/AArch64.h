@@ -320,6 +320,20 @@ public:
   MinGWARM64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 };
 
+// ARM64 UEFI target
+class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
+    : public UEFITargetInfo<AArch64leTargetInfo> {
+public:
+  UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY AArch64beTargetInfo : public AArch64TargetInfo {
 public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);

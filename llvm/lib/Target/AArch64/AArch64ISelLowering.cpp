@@ -1171,10 +1171,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(4));
   // Set preferred alignments.
 
-  // Don't align loops on Windows. The SEH unwind info generation needs to
-  // know the exact length of functions before the alignments have been
-  // expanded.
-  if (!Subtarget->isTargetWindows())
+  // Don't align loops on Windows and UEFI. The SEH unwind info generation
+  // needs to know the exact length of functions before the alignments have
+  // been expanded.
+  if (!Subtarget->isTargetWindowsOrUEFI())
     setPrefLoopAlignment(STI.getPrefLoopAlignment());
   setMaxBytesForAlignment(STI.getMaxBytesForLoopAlignment());
   setPrefFunctionAlignment(STI.getPrefFunctionAlignment());
@@ -4135,6 +4135,18 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
     // of a SUB operation can be reused.
     PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
                                     {Val->getOperand(0), Val->getOperand(1)});
+    // The first comparison supports the full 12-bit CMP/CMN immediate range,
+    // while subsequent CCMP/CCMN comparisons only support a 5-bit immediate [0,
+    // 31]. Prefer a wider-immediate comparison first to avoid materializing
+    // constants.
+    if (!PreferFirst && VT.isInteger()) {
+      if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(1))) {
+        APInt CVal = C->getAPIntValue();
+        if (CVal.abs().ugt(31) &&
+            AArch64_AM::isLegalArithImmed(CVal.abs().getZExtValue()))
+          PreferFirst = true;
+      }
+    }
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -9228,7 +9240,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
   case CallingConv::GRAAL:
-    if (Subtarget->isTargetWindows()) {
+    if (Subtarget->isTargetWindowsOrUEFI()) {
       if (IsVarArg) {
         if (Subtarget->isWindowsArm64EC())
           return CC_AArch64_Arm64EC_VarArg;
@@ -9732,7 +9744,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
+  if (Subtarget->isTargetWindowsOrUEFI() || hasInlineStackProbe(MF)) {
     SDValue Size;
     if (Attrs.hasZAState()) {
       SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
@@ -10096,7 +10108,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // When using the Windows calling convention on a non-windows OS, we want
   // to back up and restore X18 in such functions; we can't do a tail call
   // from those functions.
-  if (CallerCC == CallingConv::Win64 && !Subtarget->isTargetWindows() &&
+  if (CallerCC == CallingConv::Win64 && !Subtarget->isTargetWindowsOrUEFI() &&
       CalleeCC != CallingConv::Win64)
     return false;
 
@@ -10142,7 +10154,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     const GlobalValue *GV = G->getGlobal();
     const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
+         TT.isOSBinFormatMachO()))
       return false;
   }
 
@@ -13760,14 +13773,10 @@ SDValue AArch64TargetLowering::LowerVASTART(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
                                            SelectionDAG &DAG) const {
-  // AAPCS has three pointers and two ints (= 32 bytes), Darwin has single
-  // pointer.
   SDLoc DL(Op);
-  unsigned PtrSize = Subtarget->isTargetILP32() ? 4 : 8;
-  unsigned VaListSize =
-      (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
-          ? PtrSize
-          : Subtarget->isTargetILP32() ? 20 : 32;
+  const DataLayout &DataL = DAG.getDataLayout();
+  unsigned PtrSize = DataL.getPointerSize();
+  unsigned VaListSize = getVaListSizeInBits(DataL) / 8;
   const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
@@ -18534,7 +18543,7 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
-  if (Subtarget->isTargetWindows())
+  if (Subtarget->isTargetWindowsOrUEFI())
     return LowerWindowsDYNAMIC_STACKALLOC(Op, DAG);
   else if (hasInlineStackProbe(MF))
     return LowerInlineDYNAMIC_STACKALLOC(Op, DAG);
@@ -33859,7 +33868,7 @@ TargetLowering::ShiftLegalizationStrategy
 AArch64TargetLowering::preferredShiftLegalizationStrategy(
     SelectionDAG &DAG, SDNode *N, unsigned int ExpansionFactor) const {
   if (DAG.getMachineFunction().getFunction().hasMinSize() &&
-      !Subtarget->isTargetWindows() && !Subtarget->isTargetDarwin())
+      !Subtarget->isTargetWindowsOrUEFI() && !Subtarget->isTargetDarwin())
     return ShiftLegalizationStrategy::LowerToLibcall;
   return TargetLowering::preferredShiftLegalizationStrategy(DAG, N,
                                                             ExpansionFactor);
@@ -34020,10 +34029,13 @@ bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
 
 unsigned
 AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
-  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
-    return getPointerTy(DL).getSizeInBits();
+  // Darwin and Windows use a single pointer. AAPCS has three pointers and two
+  // ints.
+  unsigned PtrBits = DL.getPointerSizeInBits();
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindowsOrUEFI())
+    return PtrBits;
 
-  return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
+  return 3 * PtrBits + 2 * 32;
 }
 
 void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
@@ -35787,6 +35799,10 @@ AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
   SDValue Val = Op.getOperand(0);
   EVT SrcVT = Val.getValueType();
 
+  // Let common code split the operation.
+  if (!isTypeLegal(SrcVT))
+    return SDValue();
+
   // FIXME: Saturating to smaller type isn't properly supported yet.
   if (VT.bitsLT(SrcVT) && IsSaturating)
     return SDValue();
@@ -36582,7 +36598,7 @@ unsigned AArch64TargetLowering::getVectorTypeBreakdownForCallingConv(
 
 bool AArch64TargetLowering::hasInlineStackProbe(
     const MachineFunction &MF) const {
-  return !Subtarget->isTargetWindows() &&
+  return !Subtarget->isTargetWindowsOrUEFI() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
 }
 
