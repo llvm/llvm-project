@@ -640,21 +640,20 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
-    // Move any debug/pseudo and auxiliary instructions that were in-between the
-    // select group to the newly-created end block.
-    SmallVector<Instruction *, 2> SinkInstrs;
+    // Hoist any pseudo and auxiliary instructions that were in-between the
+    // select group before the group, since the true/false values may use them.
+    SmallVector<Instruction *, 2> HoistInstrs;
     auto DIt = SI.getI()->getIterator();
     auto NIt = ASI.Selects.begin();
     while (&*DIt != LastSI.getI()) {
       if (NIt != ASI.Selects.end() && &*DIt == NIt->getI())
         ++NIt;
       else
-        SinkInstrs.push_back(&*DIt);
+        HoistInstrs.push_back(&*DIt);
       DIt++;
     }
-    auto InsertionPoint = EndBlock->getFirstInsertionPt();
-    for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(InsertionPoint);
+    for (auto *HI : HoistInstrs)
+      HI->moveBefore(SI.getI()->getIterator());
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -742,7 +741,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Use reverse iterator because later select may use the value of the
     // earlier select, and we need to propagate value through earlier select
     // to get the PHI operand.
-    InsertionPoint = EndBlock->begin();
+    auto InsertionPoint = EndBlock->begin();
     for (SelectLike &SI : ASI.Selects) {
       // The select itself is replaced with a PHI Node.
       PHINode *PN = PHINode::Create(SI.getType(), 2, "");
