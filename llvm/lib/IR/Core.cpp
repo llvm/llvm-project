@@ -3466,7 +3466,9 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
 /*===-- Instruction builders ----------------------------------------------===*/
 
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(new IRBuilder<>(*unwrap(C)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
