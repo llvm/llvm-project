@@ -3,6 +3,8 @@
 ; RUN: opt -mtriple=powerpc64-unknown-linux-gnu -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=LIBMVEC -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-AARCH64
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
+; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=LLVM -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LLVM-AARCH64
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LLVM -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LLVM-X86
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI_RISCV
@@ -95,6 +97,14 @@
 ; LIBMVEC-X86-SAME: [2 x ptr] [
 ; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
 ; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin
+; LLVM-AARCH64-SAME: [3 x ptr] [
+; LLVM-AARCH64-SAME:   ptr @_LMVnN4v_coshf,
+; LLVM-AARCH64-SAME:   ptr @_LMVnN4v_exp10f,
+; LLVM-AARCH64-SAME:   ptr @_LMVnN4v_log10f
+; LLVM-X86-SAME:    [3 x ptr] [
+; LLVM-X86-SAME:      ptr @_LMVdN8v_coshf,
+; LLVM-X86-SAME:      ptr @_LMVdN8v_exp10f,
+; LLVM-X86-SAME:      ptr @_LMVdN8v_log10f
 ; SLEEFGNUABI-SAME: [32 x ptr] [
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8_modf,
@@ -329,6 +339,8 @@ define float @cosh_f32(float %in) {
 ; MASSV:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; ACCELERATE:         call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; LLVM-AARCH64:       call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; LLVM-X86:           call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; SLEEFGNUABI:        call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
 ; ARMPL:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
   %call = tail call float @coshf(float %in)
@@ -353,6 +365,8 @@ define float @exp10_f32(float %in) {
 ; COMMON-LABEL:       @exp10_f32(
 ; AMDLIBM:            call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; LLVM-AARCH64:       call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; LLVM-X86:           call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; SLEEFGNUABI:        call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
 ; ARMPL:              call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
   %call = tail call float @exp10f(float %in)
@@ -367,6 +381,8 @@ define float @call_llvm.log10.f32(float %in) {
 ; AMDLIBM:            call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; LIBMVEC-AARCH64:    call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; LIBMVEC-X86:        call float @llvm.log10.f32(float %{{.*}})
+; LLVM-AARCH64:       call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
+; LLVM-X86:           call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; MASSV:              call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:         call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; SLEEFGNUABI:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -466,6 +482,14 @@ declare double @ldexp(double, i32 signext) #0
 
 ; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
 ; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
+
+; LLVM-AARCH64: declare aarch64_vector_pcs <4 x float> @_LMVnN4v_coshf(<4 x float>)
+; LLVM-AARCH64: declare aarch64_vector_pcs <4 x float> @_LMVnN4v_exp10f(<4 x float>)
+; LLVM-AARCH64: declare aarch64_vector_pcs <4 x float> @_LMVnN4v_log10f(<4 x float>)
+
+; LLVM-X86: declare <8 x float> @_LMVdN8v_coshf(<8 x float>)
+; LLVM-X86: declare <8 x float> @_LMVdN8v_exp10f(<8 x float>)
+; LLVM-X86: declare <8 x float> @_LMVdN8v_log10f(<8 x float>)
 
 ; ACCELERATE: declare <4 x float> @vcoshf(<4 x float>)
 ; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
@@ -654,6 +678,20 @@ attributes #0 = { nounwind readnone }
 ; LIBMVEC-X86:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
 ; LIBMVEC-X86-SAME:   _ZGV_LLVM_N4v_sin(_ZGVdN4v_sin)" }
+
+; LLVM-AARCH64:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; LLVM-AARCH64-SAME:   _ZGV_LLVM_N4v_coshf(_LMVnN4v_coshf)" }
+; LLVM-AARCH64:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; LLVM-AARCH64-SAME:   _ZGV_LLVM_N4v_exp10f(_LMVnN4v_exp10f)" }
+; LLVM-AARCH64:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; LLVM-AARCH64-SAME:   _ZGV_LLVM_N4v_llvm.log10.f32(_LMVnN4v_log10f)" }
+
+; LLVM-X86:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; LLVM-X86-SAME:   _ZGV_LLVM_N8v_coshf(_LMVdN8v_coshf)" }
+; LLVM-X86:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; LLVM-X86-SAME:   _ZGV_LLVM_N8v_exp10f(_LMVdN8v_exp10f)" }
+; LLVM-X86:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; LLVM-X86-SAME:   _ZGV_LLVM_N8v_llvm.log10.f32(_LMVdN8v_log10f)" }
 
 ; SLEEFGNUABI:      attributes #[[MODF]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2vl8_modf(_ZGVnN2vl8_modf),

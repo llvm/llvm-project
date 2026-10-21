@@ -2,6 +2,7 @@
 ; RUN: opt -vector-library=SVML -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
 ; RUN: opt -vector-library=AMDLIBM -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,AMDLIBM
 ; RUN: opt -vector-library=LIBMVEC -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
+; RUN: opt -vector-library=LLVM -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,LLVM
 ; RUN: opt -vector-library=MASSV -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
 ; RUN: opt -vector-library=Accelerate -replace-with-veclib -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
 
@@ -23,6 +24,11 @@ define <4 x double> @exp_v4(<4 x double> %in) {
 ; LIBMVEC-X86-SAME: (<4 x double> [[IN:%.*]]) {
 ; LIBMVEC-X86-NEXT:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_exp(<4 x double> [[IN]])
 ; LIBMVEC-X86-NEXT:    ret <4 x double> [[TMP1]]
+;
+; LLVM-LABEL: define {{[^@]+}}@exp_v4
+; LLVM-SAME: (<4 x double> [[IN:%.*]]) {
+; LLVM-NEXT:    [[CALL:%.*]] = call <4 x double> @llvm.exp.v4f64(<4 x double> [[IN]])
+; LLVM-NEXT:    ret <4 x double> [[CALL]]
 ;
 ; MASSV-LABEL: define {{[^@]+}}@exp_v4
 ; MASSV-SAME: (<4 x double> [[IN:%.*]]) {
@@ -55,6 +61,11 @@ define <4 x float> @exp_f32(<4 x float> %in) {
 ; LIBMVEC-X86-SAME: (<4 x float> [[IN:%.*]]) {
 ; LIBMVEC-X86-NEXT:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_expf(<4 x float> [[IN]])
 ; LIBMVEC-X86-NEXT:    ret <4 x float> [[TMP1]]
+;
+; LLVM-LABEL: define {{[^@]+}}@exp_f32
+; LLVM-SAME: (<4 x float> [[IN:%.*]]) {
+; LLVM-NEXT:    [[CALL:%.*]] = call <4 x float> @llvm.exp.v4f32(<4 x float> [[IN]])
+; LLVM-NEXT:    ret <4 x float> [[CALL]]
 ;
 ; MASSV-LABEL: define {{[^@]+}}@exp_f32
 ; MASSV-SAME: (<4 x float> [[IN:%.*]]) {
