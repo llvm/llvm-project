@@ -1881,8 +1881,10 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
 
 bool AArch64EpilogueEmitter::hasEpilogueUnwindOps() const {
   // The return address is authenticated by an unwind op that the
-  // AArch64PointerAuth pass adds later.
-  if (AFI->shouldSignReturnAddress(MF) && !AuthenticatedReturnAddressEarly)
+  // AArch64PointerAuth pass adds later, or, if it was authenticated early, the
+  // epilogue's unwind codes are what keep the prologue's pac_sign_lr from being
+  // applied again, even if there is nothing else in them.
+  if (AFI->shouldSignReturnAddress(MF))
     return true;
   return std::any_of(std::next(SEHEpilogueStartI), MBB.end(),
                      [](const MachineInstr &MI) {

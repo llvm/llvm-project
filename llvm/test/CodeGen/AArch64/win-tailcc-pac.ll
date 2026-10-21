@@ -183,7 +183,9 @@ define swifttailcc void @pac_csr(i64 %a) "sign-return-address"="all" {
   ret void
 }
 
-; The return address is never spilled, so it is still in LR.
+; The return address is never spilled, so it is still in LR. The epilogue
+; has no instructions, but its unwind codes still pop the tail callee's
+; arguments.
 ; CHECK-LABEL: pac_leaf:
 ; HINT:          hint #27
 ; PAUTH:         pacibsp
@@ -195,6 +197,8 @@ define swifttailcc void @pac_csr(i64 %a) "sign-return-address"="all" {
 ; HINT-NEXT:     mov x30, x17
 ; PAUTH:         autib x30, x16
 ; CHECK:         .seh_startepilogue
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @pac_leaf(i64 %a) "sign-return-address"="all" {
@@ -254,5 +258,30 @@ define swifttailcc void @pac_leaf(i64 %a) "sign-return-address"="all" {
 ; UNWIND-NEXT:    add sp, #64
 ; UNWIND-NEXT:    end_c
 ; UNWIND-NEXT:    add sp, #32
+; UNWIND-NEXT:    end
+; UNWIND-NEXT:  ]
+
+; The epilogue has no instructions of its own here, as the tail callee's
+; arguments take all of the frame, but its unwind codes must still pop the
+; callee's arguments after end_c. They replace the prologue's, which would
+; authenticate the return address again.
+declare swifttailcc void @callee15(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
+
+; CHECK-LABEL: pac_leaf_grow:
+; CHECK:         .seh_endprologue
+; CHECK:         .seh_startepilogue
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 64
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    b callee15
+define swifttailcc void @pac_leaf_grow(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) "sign-return-address"="all" {
+  musttail call swifttailcc void @callee15(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a)
+  ret void
+}
+
+; UNWIND-LABEL: Function: pac_leaf_grow (
+; UNWIND:       Opcodes [
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #64
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
