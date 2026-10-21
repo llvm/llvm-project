@@ -209,11 +209,7 @@ infrastructure are described first, followed by tool-specific sections.
       encloses the inner `if`.
 
     - Fixed false negatives when two variables are present on both sides
-      of logical AND(`&&`) in `if` like `a && b`. Previously, it was only evaluated for 
-      first variable `a` and completely ignored the second variable `b` for redundant
-      branch condition.For example, In `(x && y) { if (y){} if(x){} }` a warning was
-      only generated for nested `if` with x(`if(x){}`) and never generated for nested `if`
-      with y(`if (y){}`).
+      of logical AND (`&&`) in `if` like `a && b`.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
