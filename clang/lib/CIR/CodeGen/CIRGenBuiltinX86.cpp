@@ -1097,7 +1097,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(unsigned builtinID,
         // TODO: forward or reverse scan
         if (builtinID == X86::BI_BitScanForward ||
             builtinID == X86::BI_BitScanForward64) {
-          auto zeroCount =
+          mlir::Value zeroCount =
               cir::BitCtzOp::create(builder, loc, argValue, true).getResult();
           mlir::Value castCount = builder.createCast(
               loc, cir::CastKind::integral, zeroCount, indexType);
@@ -1107,7 +1107,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(unsigned builtinID,
           mlir::Value argTypeLastIndex =
               builder.getConstantInt(loc, indexType, argWidth - 1);
 
-          auto zeroCount =
+          mlir::Value zeroCount =
               cir::BitClzOp::create(builder, loc, argValue, true).getResult();
           mlir::Value castCount = builder.createCast(
               loc, cir::CastKind::integral, zeroCount, indexType);
