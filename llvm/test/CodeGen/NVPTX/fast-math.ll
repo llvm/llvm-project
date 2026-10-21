@@ -523,7 +523,7 @@ define float @frem_ftz(float %a, float %b) #1 {
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_ftz_param_1];
 ; CHECK-NEXT:    div.rn.ftz.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.ftz.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.ftz.f32 %r5, %r4;
+; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.ftz.f32 %r6, %r5, %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;

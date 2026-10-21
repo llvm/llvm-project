@@ -2674,12 +2674,17 @@ foreach ftz = ["", "ftz"] in
     def StrJoin<"_", ["SUB", !toupper(ftz), !toupper(sat), "F32"]>.ret :
       BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b), (ins FPRoundingMode:$rnd),
         StrJoin<".", ["sub.${rnd}", ftz, sat, "f32"]>.ret, [(set f32:$dst,
-          (add_intrin f32:$a, (f32 (fneg f32:$b)), timm:$rnd))]>;
+          (add_intrin f32:$a, (f32 (nvptx_fneg f32:$b)), timm:$rnd))]>;
+    def : Pat<(f32 (add_intrin f32:$a, (fneg_xor_f32 B32:$b), timm:$rnd)),
+              (!cast<Instruction>(StrJoin<"_", ["SUB", !toupper(ftz), !toupper(sat), "F32"]>.ret)
+                $a, $b, $rnd)>;
   }
 
 def SUB_F64 : BasicFlagsNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
     (ins FPRoundingMode:$rnd), "sub.${rnd}.f64",
-    [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), timm:$rnd))]>;
+    [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (nvptx_fneg f64:$b)), timm:$rnd))]>;
+def : Pat<(f64 (int_nvvm_fadd f64:$a, (fneg_xor_f64 B64:$b), timm:$rnd)),
+          (SUB_F64 $a, $b, $rnd)>;
 
 // Mixed Precision
 
@@ -2687,12 +2692,17 @@ foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
   foreach sat = ["", "sat"] in
-    foreach type = [f16, bf16] in
+    foreach type = [f16, bf16] in {
       def SUB_ # !toupper(StrJoin<"_", [rnd, sat, "f32", type.LLVMName]>.ret) :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
           StrJoin<".", ["sub", rnd, sat, "f32", type.LLVMName]>.ret, [(set f32:$dst,
            (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", sat]>.ret) (f32 (fpextend type:$a)),
-             (f32 (fneg f32:$b)), rnd_imm))]>, Requires<[SM100]>;
+             (f32 (nvptx_fneg f32:$b)), rnd_imm))]>, Requires<[SM100]>;
+      def : Pat<(f32 (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", sat]>.ret)
+                  (f32 (fpextend type:$a)), (fneg_xor_f32 B32:$b), rnd_imm)),
+                (!cast<Instruction>("SUB_" # !toupper(StrJoin<"_", [rnd, sat, "f32", type.LLVMName]>.ret))
+                  $a, $b)>, Requires<[SM100]>;
+    }
 
   let Predicates = [hasFP16x2MixedPrecisionSupport] in {
     foreach t = [F16X2RT, BF16X2RT] in {
