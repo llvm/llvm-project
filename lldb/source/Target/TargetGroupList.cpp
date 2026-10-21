@@ -15,14 +15,8 @@ using namespace lldb_private;
 
 TargetGroupList::~TargetGroupList() { Clear(); }
 
-TargetGroupSP
-TargetGroupList::CreateTargetGroup(llvm::StringRef description,
-                                   TargetGroup::TargetValidator validator) {
-  std::lock_guard<std::recursive_mutex> guard(*m_mutex);
-  TargetGroupSP group_sp(new TargetGroup(m_debugger.shared_from_this(),
-                                         description, m_mutex, validator));
-  m_groups.push_back(group_sp);
-  return group_sp;
+TargetGroupSP TargetGroupList::CreateTargetGroup(llvm::StringRef description) {
+  return CreateTargetGroup<TargetGroup>(description);
 }
 
 bool TargetGroupList::DeleteTargetGroup(const TargetGroupSP &group_sp) {

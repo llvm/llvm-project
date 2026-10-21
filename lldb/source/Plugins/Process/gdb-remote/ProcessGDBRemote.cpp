@@ -107,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -4329,24 +4330,6 @@ public:
       std::unique_ptr<AcceleratorBreakpointHitArgs> data)
       : TypedBaton(std::move(data)) {}
 };
-
-llvm::Error ValidateCPUAndAcceleratorTargetGroup(const TargetGroup &group,
-                                                 const TargetSP &,
-                                                 TargetGroup::Role role) {
-  switch (role) {
-  case TargetGroup::Role::CPU:
-    if (!group.GetTargets().empty())
-      return llvm::createStringError(
-          "the CPU target must be the first target in the group");
-    break;
-  case TargetGroup::Role::Accelerator:
-    if (group.GetTargets(TargetGroup::Role::CPU).size() != 1)
-      return llvm::createStringError(
-          "the group must contain one CPU target before adding accelerators");
-    break;
-  }
-  return llvm::Error::success();
-}
 } // namespace
 
 llvm::Error
@@ -4419,8 +4402,7 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   TargetGroupSP group_sp;
   for (const TargetGroupSP &candidate_group_sp :
        native_target_sp->GetTargetGroups()) {
-    if (!candidate_group_sp->UsesTargetValidator(
-            ValidateCPUAndAcceleratorTargetGroup) ||
+    if (!llvm::isa<TargetGroupCPUAndAccelerator>(candidate_group_sp.get()) ||
         candidate_group_sp->GetRole(native_target_sp) != TargetGroup::Role::CPU)
       continue;
     if (group_sp)
@@ -4432,8 +4414,9 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
 
   bool created_group = !group_sp;
   if (created_group) {
-    group_sp = debugger.GetTargetGroupList().CreateTargetGroup(
-        "CPU and accelerator targets", ValidateCPUAndAcceleratorTargetGroup);
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerator>(
+                       "CPU and accelerator targets");
   }
 
   llvm::scope_exit restore_target_group([&] {

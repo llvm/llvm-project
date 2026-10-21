@@ -12,35 +12,32 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace lldb_private {
+
+class TargetGroupList;
 
 /// A group of related targets and the roles they play in that relationship.
 ///
 /// Target::Destroy() automatically removes a target from all its groups;
 /// clients do not need to remove memberships during target destruction.
-class TargetGroup : public std::enable_shared_from_this<TargetGroup> {
+class TargetGroup : public llvm::RTTIExtends<TargetGroup, llvm::RTTIRoot>,
+                    public std::enable_shared_from_this<TargetGroup> {
 public:
+  static char ID;
+
   /// Describes the part a target plays in this group.
   enum class Role {
     CPU,
     Accelerator,
   };
-
-  /// Validate adding a target to a group. AddTarget calls the validator while
-  /// holding the membership lock, before changing the group's membership. The
-  /// validator may inspect the group's existing members. Success accepts the
-  /// addition; an error rejects it without modifying the group. Removing a
-  /// target is not validated.
-  using TargetValidator = llvm::Error (*)(const TargetGroup &,
-                                          const lldb::TargetSP &, Role);
 
   /// Target groups have identity and maintain backlinks in their member
   /// targets, so they cannot be copied or moved. Create one with
@@ -49,14 +46,9 @@ public:
   TargetGroup &operator=(const TargetGroup &) = delete;
   TargetGroup(TargetGroup &&) = delete;
   TargetGroup &operator=(TargetGroup &&) = delete;
-  ~TargetGroup();
+  ~TargetGroup() override;
 
   llvm::StringRef GetDescription() const { return m_description; }
-
-  /// Return true if this group uses \p validator.
-  bool UsesTargetValidator(TargetValidator validator) const {
-    return validator && m_target_validator == validator;
-  }
 
   /// Add \p target_sp to the group with \p role. Adding an existing member
   /// succeeds only when its role matches \p role.
@@ -74,6 +66,16 @@ public:
   /// Return targets whose role is \p role.
   std::vector<lldb::TargetSP> GetTargets(Role role) const;
 
+protected:
+  TargetGroup(TargetGroupList &group_list, llvm::StringRef description);
+
+  /// Validate a new membership while the membership lock is held. Success
+  /// accepts the addition; an error rejects it without modifying the group.
+  /// Overrides may inspect existing members through GetTargets or GetRole.
+  /// Removing a target is not validated.
+  virtual llvm::Error ValidateTargetAddition(const lldb::TargetSP &target_sp,
+                                             Role role) const;
+
 private:
   friend class TargetGroupList;
 
@@ -82,18 +84,30 @@ private:
     Role role;
   };
 
-  TargetGroup(const lldb::DebuggerSP &debugger_sp, llvm::StringRef description,
-              std::shared_ptr<std::recursive_mutex> mutex,
-              TargetValidator target_validator)
-      : m_debugger_wp(debugger_sp), m_description(description),
-        m_mutex(std::move(mutex)), m_target_validator(target_validator) {}
-
   lldb::DebuggerWP m_debugger_wp;
   std::string m_description;
   std::shared_ptr<std::recursive_mutex> m_mutex;
-  TargetValidator m_target_validator;
   /// Targets are weakly held so membership does not extend their lifetime.
   std::vector<Entry> m_entries;
+};
+
+/// A group that accepts a CPU target as its first member, followed by
+/// accelerator targets.
+class TargetGroupCPUAndAccelerator final
+    : public llvm::RTTIExtends<TargetGroupCPUAndAccelerator, TargetGroup> {
+  using Base = llvm::RTTIExtends<TargetGroupCPUAndAccelerator, TargetGroup>;
+
+public:
+  static char ID;
+
+private:
+  friend class TargetGroupList;
+
+  TargetGroupCPUAndAccelerator(TargetGroupList &group_list,
+                               llvm::StringRef description);
+
+  llvm::Error ValidateTargetAddition(const lldb::TargetSP &target_sp,
+                                     Role role) const override;
 };
 
 } // namespace lldb_private

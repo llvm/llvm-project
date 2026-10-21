@@ -9,6 +9,7 @@
 #include "lldb/Target/TargetGroup.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroupList.h"
 
 #include <algorithm>
 #include <cassert>
@@ -16,9 +17,43 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char TargetGroup::ID;
+char TargetGroupCPUAndAccelerator::ID;
+
+TargetGroup::TargetGroup(TargetGroupList &group_list,
+                         llvm::StringRef description)
+    : m_debugger_wp(group_list.m_debugger.shared_from_this()),
+      m_description(description), m_mutex(group_list.m_mutex) {}
+
 TargetGroup::~TargetGroup() {
   assert(m_entries.empty() &&
          "target group destroyed while it still contains targets");
+}
+
+llvm::Error TargetGroup::ValidateTargetAddition(const TargetSP &, Role) const {
+  return llvm::Error::success();
+}
+
+TargetGroupCPUAndAccelerator::TargetGroupCPUAndAccelerator(
+    TargetGroupList &group_list, llvm::StringRef description)
+    : Base(group_list, description) {}
+
+llvm::Error
+TargetGroupCPUAndAccelerator::ValidateTargetAddition(const TargetSP &,
+                                                     Role role) const {
+  switch (role) {
+  case Role::CPU:
+    if (!GetTargets().empty())
+      return llvm::createStringError(
+          "the CPU target must be the first target in the group");
+    break;
+  case Role::Accelerator:
+    if (GetTargets(Role::CPU).size() != 1)
+      return llvm::createStringError(
+          "the group must contain one CPU target before adding accelerators");
+    break;
+  }
+  return llvm::Error::success();
 }
 
 llvm::Error TargetGroup::AddTarget(const TargetSP &target_sp, Role role) {
@@ -49,10 +84,8 @@ llvm::Error TargetGroup::AddTarget(const TargetSP &target_sp, Role role) {
         "target is already in the group with a different role");
   }
 
-  if (m_target_validator) {
-    if (llvm::Error error = m_target_validator(*this, target_sp, role))
-      return error;
-  }
+  if (llvm::Error error = ValidateTargetAddition(target_sp, role))
+    return error;
 
   m_entries.push_back({target_sp, role});
   target_sp->AddTargetGroup(shared_from_this());
