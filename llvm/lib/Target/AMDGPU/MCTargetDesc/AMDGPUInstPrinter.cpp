@@ -764,7 +764,7 @@ void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, raw_ostream &O,
 void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI,
                                   raw_ostream &O) {
-  unsigned Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Imm = MI->getOperand(OpNo).getImm();
   if (!Imm)
     return;
 
