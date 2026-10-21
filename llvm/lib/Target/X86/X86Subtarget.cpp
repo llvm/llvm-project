@@ -367,6 +367,10 @@ bool X86Subtarget::enableEarlyIfConversion() const {
   return canUseCMOV() && CLOpts.early_ifcvt;
 }
 
+bool X86Subtarget::enableCCMPFormation() const {
+  return CLOpts.enable_ccmp && hasCCMP();
+}
+
 void X86Subtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(createX86MacroFusionDAGMutation());
