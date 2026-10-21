@@ -117,7 +117,6 @@
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions
 ; LAXX-NEXT:       Remove unreachable machine basic blocks
-; LAXX-NEXT:       Live Variable Analysis
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Slot index numbering
 ; LAXX-NEXT:       Live Interval Analysis
