@@ -62,6 +62,26 @@ def AGXstore_v3 : SDNode<"AGXISD::STORE_V3", SDT_AGXStoreV3,
 def AGXstore_v4 : SDNode<"AGXISD::STORE_V4", SDT_AGXStoreV4,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// The high half of a 64-bit value (the low half is a truncate). Lowering
+// splits 64-bit values with it and joins halves with BUILD_PAIR, so that the
+// combiner folds through the halves.
+def SDT_AGXHi32 : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i64>]>;
+def AGXhi32 : SDNode<"AGXISD::HI32", SDT_AGXHi32>;
+// The 64-bit product of two 32-bit values, unsigned or signed (one imadd).
+def SDT_AGXMulWide : SDTypeProfile<1, 2, [SDTCisVT<0, i64>, SDTCisVT<1, i32>,
+                                          SDTCisVT<2, i32>]>;
+def AGXmul_wide_u : SDNode<"AGXISD::MUL_WIDE_U", SDT_AGXMulWide, [SDNPCommutative]>;
+def AGXmul_wide_s : SDNode<"AGXISD::MUL_WIDE_S", SDT_AGXMulWide, [SDNPCommutative]>;
+
+// Shifts with the hardware's 7-bit amount (0 to 127; bits shifted past the
+// register are gone), for 64-bit shifts by a variable amount: bfi a, b, s
+// (b << s inserted over a), extr lo, hi, s ((hi:lo) >> s) and asr x, s.
+def SDT_AGXBitfield : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                                           SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
+def AGXbfi7 : SDNode<"AGXISD::BFI7", SDT_AGXBitfield>;
+def AGXextr7 : SDNode<"AGXISD::EXTR7", SDT_AGXBitfield>;
+def AGXsra7 : SDNode<"AGXISD::SRA7", SDTIntBinOp>;
+
 def AGXballot : SDNode<"AGXISD::BALLOT", SDTIntUnaryOp>;
 def AGXquad_ballot : SDNode<"AGXISD::QUAD_BALLOT", SDTIntUnaryOp>;
 

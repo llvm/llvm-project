@@ -4,7 +4,7 @@
 define agx_kernel void @add_mul(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; CHECK-LABEL: add_mul:
 ; CHECK:         // uniform registers: 18 x 16-bit (threadgroups_per_grid at u6)
-; CHECK-NEXT:    // general purpose registers: 6 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 6 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -36,7 +36,7 @@ define agx_kernel void @add_mul(ptr addrspace(1) %out, i64 %a, i64 %b) {
 define agx_kernel void @mul_wide(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; CHECK-LABEL: mul_wide:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 4 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 4 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -61,24 +61,16 @@ define agx_kernel void @mul_wide(ptr addrspace(1) %out, i32 %a, i32 %b) {
 define agx_kernel void @shifts(ptr addrspace(1) %out, i64 %a, i64 %s) {
 ; CHECK-LABEL: shifts:
 ; CHECK:         // uniform registers: 18 x 16-bit (threadgroups_per_grid at u6)
-; CHECK-NEXT:    // general purpose registers: 6 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 4 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov_imm r1, 0
+; CHECK-NEXT:    bfeil r1, 0, u3, 5
 ; CHECK-NEXT:    mov_imm r2, 16777215
-; CHECK-NEXT:    bfeil r3, 0, u3, 5
-; CHECK-NEXT:    and r1, r1, r1
-; CHECK-NEXT:    and r4, u4, 31
-; CHECK-NEXT:    and r2, r3, r2
-; CHECK-NEXT:    and r3, r4, 31
-; CHECK-NEXT:    extr r2, r2, r1, r3
-; CHECK-NEXT:    and r3, u4, 32
-; CHECK-NEXT:    bfeil r1, 0, r1, r4
-; CHECK-NEXT:    bfeil r3, 0, r3, 5
-; CHECK-NEXT:    icmpsel ueq, r4, r3, 0, r2, r1
-; CHECK-NEXT:    icmpsel ueq, r5, r3, 0, r1, 0
-; CHECK-NEXT:    device_store 0, i32, xy, r4_r5, u0_u1, 0, signed
+; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    extr r2, r1, 0, u4
+; CHECK-NEXT:    mov_imm r3, 0
+; CHECK-NEXT:    device_store 0, i32, xy, r2_r3, u0_u1, 0, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap
@@ -98,7 +90,7 @@ define agx_kernel void @shifts(ptr addrspace(1) %out, i64 %a, i64 %s) {
 define agx_kernel void @compare(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; CHECK-LABEL: compare:
 ; CHECK:         // uniform registers: 18 x 16-bit (threadgroups_per_grid at u6)
-; CHECK-NEXT:    // general purpose registers: 5 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 5 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -131,7 +123,7 @@ define agx_kernel void @compare(ptr addrspace(1) %out, i64 %a, i64 %b) {
 define agx_kernel void @bitcount(ptr addrspace(1) %out, i64 %a) {
 ; CHECK-LABEL: bitcount:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 7 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 7 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -182,7 +174,7 @@ define agx_kernel void @bitcount(ptr addrspace(1) %out, i64 %a) {
 define agx_kernel void @sext_inreg_i64(ptr addrspace(1) %p, ptr addrspace(1) %o) {
 ; CHECK-LABEL: sext_inreg_i64:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:

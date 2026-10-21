@@ -114,6 +114,16 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
   case AGXISD::STORE_V3:
   case AGXISD::STORE_V4:
     return selectVectorStore(N, N->getNumOperands() - 2);
+  case ISD::BUILD_PAIR: {
+    SDLoc DL(N);
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(AGX::GPR64RegClassID, DL, MVT::i32),
+        N->getOperand(0), CurDAG->getTargetConstant(AGX::sub0, DL, MVT::i32),
+        N->getOperand(1), CurDAG->getTargetConstant(AGX::sub1, DL, MVT::i32)};
+    ReplaceNode(N, CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                          MVT::i64, Ops));
+    return;
+  }
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:

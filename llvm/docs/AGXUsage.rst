@@ -521,7 +521,13 @@ Supported:
 
 * 16, 32 and 64-bit integer arithmetic, including 64-bit multiplication,
   shifts, comparisons and bit counting. Division is expanded in IR, except
-  by constants.
+  by constants. 64-bit additions are single instructions; 64-bit logic,
+  selects, shifts, comparisons and products are lowered on the 32-bit halves
+  (split with ``truncate`` and ``AGXISD::HI32``, joined with ``BUILD_PAIR``),
+  so known or constant halves fold. Shifts by a variable amount use the 7-bit
+  shift amounts of ``bfi``, ``extr`` and ``asr`` (a logical right shift is
+  two ``extr``), as documented by dougallj's applegpu for G13; G14 is to be
+  confirmed (ptx-re-blockers B47).
 * Half and single precision arithmetic, with source modifiers and 8-bit
   floating point immediates folded. Division uses ``rcp`` and a multiply
   with a Newton-Raphson step (omitted with ``arcp``/``afn`` and for
@@ -719,9 +725,9 @@ to integers saturate, and NaN converts to 0.
 Values that are only moved (loads, stores, ``phi``, ``select``, arguments)
 stay ``double`` and become ``i64`` in type legalization. ``frem`` and vector
 arithmetic on ``double`` are diagnosed as unsupported. The code is large: in
-instructions per operation, about 290 for an addition, 335 for a
-multiplication, 670 for a fused multiply-add, 450 for a division, 480 for a
-square root, 140 for a conversion and 20 for a comparison.
+instructions per operation, about 215 for an addition or a multiplication,
+430 for a fused multiply-add, 290 for a division or a square root, 100 for a
+conversion and 30 for a comparison.
 
 Vector floating point arithmetic is scalarized before the floating point
 lowerings (the Scalarizer pass), and constrained vector operations are rounded

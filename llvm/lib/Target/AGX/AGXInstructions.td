@@ -304,6 +304,7 @@ def : Pat<(i64 (sext_inreg i64:$a, i32)),
 
 def : Pat<(i16 (trunc i32:$a)), (EXTRACT_SUBREG $a, lo16)>;
 def : Pat<(i32 (trunc i64:$a)), (EXTRACT_SUBREG $a, sub0)>;
+def : Pat<(i32 (AGXhi32 i64:$a)), (EXTRACT_SUBREG $a, sub1)>;
 def : Pat<(i16 (trunc i64:$a)),
           (i16 (EXTRACT_SUBREG (i32 (EXTRACT_SUBREG $a, sub0)), lo16))>;
 
@@ -335,6 +336,10 @@ def IMADD_I64_FROM32 : AGXALUPseudo<IMADD_g13, (outs GPR64:$dst),
 def : Pat<(i64 (mul (zext i32:$a), (zext i32:$b))),
           (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0)>;
 def : Pat<(i64 (mul (sext i32:$a), (sext i32:$b))),
+          (IMADD_I64_FROM32 MOD_SX, $a, MOD_SX, $b, 0, (i64 0), 0)>;
+def : Pat<(i64 (AGXmul_wide_u i32:$a, i32:$b)),
+          (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0)>;
+def : Pat<(i64 (AGXmul_wide_s i32:$a, i32:$b)),
           (IMADD_I64_FROM32 MOD_SX, $a, MOD_SX, $b, 0, (i64 0), 0)>;
 def : Pat<(i32 (mulhu i32:$a, i32:$b)),
           (EXTRACT_SUBREG (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0), sub1)>;
@@ -376,6 +381,12 @@ def : Pat<(i32 (shl AGXIntSrc32:$a, AGXIntSrc32:$s)),
 def : Pat<(i32 (srl AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (BFEIL_I32 0, (i32 0), 0, $a, 0, $s, 0)>;
 def : Pat<(i32 (sra AGXIntSrc32:$a, AGXIntSrc32:$s)),
+          (ASR_I32 0, $a, 0, $s)>;
+def : Pat<(i32 (AGXbfi7 AGXIntSrc32:$a, AGXIntSrc32:$b, AGXIntSrc32:$s)),
+          (BFI_I32 0, $a, 0, $b, 0, $s, 0)>;
+def : Pat<(i32 (AGXextr7 AGXIntSrc32:$lo, AGXIntSrc32:$hi, AGXIntSrc32:$s)),
+          (EXTR_I32 0, $lo, 0, $hi, 0, $s, 0)>;
+def : Pat<(i32 (AGXsra7 AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (ASR_I32 0, $a, 0, $s)>;
 def : Pat<(i16 (shl AGXIntSrc16:$a, AGXIntSrc16:$s)),
           (BFI_I16 0, (i16 0), 0, $a, 0, $s, 0)>;

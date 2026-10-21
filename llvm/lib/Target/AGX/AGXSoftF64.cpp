@@ -116,11 +116,19 @@ public:
     Value *R = B.CreateLShr(M, B.CreateZExt(umin(S, c32(W - 1)), M->getType()));
     return select(B.CreateICmpUGT(S, c32(W - 1)), cw(M, 0), R);
   }
+  /// Whether M has a bit set below bit S (an i32, any value).
+  Value *lostBelow(Value *M, Value *S) {
+    Value *Tz = B.CreateTrunc(B.CreateBinaryIntrinsic(Intrinsic::cttz, M, B.getFalse()), I32);
+    return B.CreateAnd(B.CreateICmpSLT(Tz, S), B.CreateICmpNE(M, cw(M, 0)));
+  }
   /// M >> S with the bits shifted out ORed into the lowest bit.
   Value *lshrSticky(Value *M, Value *S) {
-    Value *R = lshr(M, S);
-    Value *Lost = B.CreateICmpNE(shl(R, S), M);
-    return B.CreateOr(R, B.CreateZExt(Lost, M->getType()));
+    return B.CreateOr(lshr(M, S), B.CreateZExt(lostBelow(M, S), M->getType()));
+  }
+  /// M >> S for an M with its top bit clear, the shift amount clamped (an
+  /// unsigned S of the width or more gives 0).
+  Value *lshrTopClear(Value *M, Value *S) {
+    return B.CreateLShr(M, B.CreateZExt(umin(S, c32(width(M) - 1)), M->getType()));
   }
   /// A term with a 128-bit M as one with a 64-bit M (and a sticky bit).
   Term compress(Term T) {
@@ -186,15 +194,11 @@ public:
     Value *RS = smax(Shift, c32(0));
     Value *Q = select(Right, lshr(T.M, RS),
                       shl(T.M, B.CreateNeg(B.CreateBinaryIntrinsic(Intrinsic::smin, Shift, c32(0)))));
-    Value *Rem = B.CreateSub(T.M, shl(lshr(T.M, RS), RS));
+    // The guard bit is bit RS - 1 of M, and the sticky bits those below it.
     Value *GuardS = B.CreateSub(RS, c32(1));
-    Value *Guard = B.CreateTrunc(lshr(Rem, umin(GuardS, c32(width(T.M)))), I1);
-    // The bits below the guard bit; all of them if the guard bit is above
-    // the top bit.
-    Value *Half = shl(cw(T.M, 1), GuardS);
-    Value *Sticky = B.CreateICmpNE(B.CreateAnd(Rem, B.CreateSub(Half, cw(T.M, 1))), cw(T.M, 0));
+    Value *Guard = B.CreateTrunc(lshr(T.M, GuardS), I1);
+    Value *Sticky = lostBelow(T.M, GuardS);
     Guard = B.CreateAnd(Guard, Right);
-    Sticky = B.CreateAnd(Sticky, Right);
     Value *Odd = B.CreateTrunc(Q, I1);
     Value *Inexact = B.CreateOr(Guard, Sticky);
     Value *IncNearest = B.CreateAnd(Guard, B.CreateOr(Sticky, Odd));
@@ -224,8 +228,9 @@ public:
   Term addTerms(Term X, Term Y) {
     unsigned Top = width(X.M) - 2;
     auto Normalize = [&](Term T) {
+      // At most Top places: a plain shift.
       Value *S = B.CreateSub(c32(Top), bitLength(T.M));
-      return Term{T.Sign, shl(T.M, S), B.CreateSub(T.E, S)};
+      return Term{T.Sign, B.CreateShl(T.M, B.CreateZExt(S, T.M->getType())), B.CreateSub(T.E, S)};
     };
     X = Normalize(X);
     Y = Normalize(Y);
@@ -241,8 +246,8 @@ public:
     Term Small{select(YBigger, X.Sign, Y.Sign), select(YBigger, X.M, Y.M),
                select(YBigger, X.E, Y.E)};
     Value *D = B.CreateSub(Big.E, Small.E);
-    Value *SM = select(B.CreateICmpEQ(Small.M, cw(Small.M, 0)), cw(Small.M, 0),
-                       lshrSticky(Small.M, D));
+    Value *SM = B.CreateOr(lshrTopClear(Small.M, D),
+                           B.CreateZExt(lostBelow(Small.M, D), Small.M->getType()));
     Value *Same = B.CreateICmpEQ(Big.Sign, Small.Sign);
     Value *M = select(Same, B.CreateAdd(Big.M, SM), B.CreateSub(Big.M, SM));
     return {Big.Sign, M, Big.E};

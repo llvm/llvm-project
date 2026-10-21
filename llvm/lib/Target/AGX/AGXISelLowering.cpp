@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -85,7 +86,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
-  setTargetDAGCombine(ISD::BRCOND);
+  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR});
   // Vectors are not legal types; 4-byte aligned loads and stores of 2 to 4
   // 32-bit elements still become one access (lowerVectorLoad/Store).
   for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
@@ -119,6 +120,11 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA, ISD::MUL}, MVT::i64,
                      Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
+  // 64-bit logic and selects are done on the halves (BUILD_PAIR joins them),
+  // so that constant or known halves fold.
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SELECT}, MVT::i64,
+                     Custom);
+  setOperationAction(ISD::BUILD_PAIR, MVT::i64, Legal);
   setOperationAction({ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT,
                       ISD::SSUBSAT},
                      MVT::i32, Legal);
@@ -398,21 +404,55 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
 // Custom lowering
 //===----------------------------------------------------------------------===//
 
-/// Low and high halves of a 64-bit value.
+/// The high half of a 64-bit value.
+static SDValue hi32(SelectionDAG &DAG, const SDLoc &DL, SDValue V) {
+  if (auto *C = dyn_cast<ConstantSDNode>(V))
+    return DAG.getConstant(C->getZExtValue() >> 32, DL, MVT::i32);
+  switch (V.getOpcode()) {
+  case ISD::BUILD_PAIR:
+    return V.getOperand(1);
+  case ISD::ZERO_EXTEND:
+    return DAG.getConstant(0, DL, MVT::i32);
+  case ISD::SIGN_EXTEND:
+    if (V.getOperand(0).getValueType() == MVT::i32)
+      return DAG.getNode(ISD::SRA, DL, MVT::i32, V.getOperand(0),
+                         DAG.getConstant(31, DL, MVT::i32));
+    break;
+  case ISD::ANY_EXTEND:
+    return DAG.getUNDEF(MVT::i32);
+  default:
+    break;
+  }
+  return DAG.getNode(AGXISD::HI32, DL, MVT::i32, V);
+}
+
+/// Low and high halves of a 64-bit value, as nodes the combiner folds.
 static std::pair<SDValue, SDValue> split64(SelectionDAG &DAG, const SDLoc &DL,
                                            SDValue V) {
-  return {DAG.getTargetExtractSubreg(AGX::sub0, DL, MVT::i32, V),
-          DAG.getTargetExtractSubreg(AGX::sub1, DL, MVT::i32, V)};
+  if (V.getOpcode() == ISD::BUILD_PAIR)
+    return {V.getOperand(0), V.getOperand(1)};
+  return {DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, V), hi32(DAG, DL, V)};
 }
 
 static SDValue join64(SelectionDAG &DAG, const SDLoc &DL, SDValue Lo,
                       SDValue Hi) {
-  SDValue Ops[] = {
-      DAG.getTargetConstant(AGX::GPR64RegClassID, DL, MVT::i32), Lo,
-      DAG.getTargetConstant(AGX::sub0, DL, MVT::i32), Hi,
-      DAG.getTargetConstant(AGX::sub1, DL, MVT::i32)};
-  return SDValue(
-      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::i64, Ops), 0);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+}
+
+static SDValue lowerLogicSelect64(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
+  if (Opc == ISD::SELECT) {
+    auto [XLo, XHi] = split64(DAG, DL, Op.getOperand(1));
+    auto [YLo, YHi] = split64(DAG, DL, Op.getOperand(2));
+    SDValue C = Op.getOperand(0);
+    return join64(DAG, DL, DAG.getSelect(DL, MVT::i32, C, XLo, YLo),
+                  DAG.getSelect(DL, MVT::i32, C, XHi, YHi));
+  }
+  auto [ALo, AHi] = split64(DAG, DL, Op.getOperand(0));
+  auto [BLo, BHi] = split64(DAG, DL, Op.getOperand(1));
+  return join64(DAG, DL, DAG.getNode(Opc, DL, MVT::i32, ALo, BLo),
+                DAG.getNode(Opc, DL, MVT::i32, AHi, BHi));
 }
 
 SDValue AGXTargetLowering::LowerOperation(SDValue Op,
@@ -437,6 +477,11 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerBRCOND(Op, DAG);
   case ISD::SETCC:
     return lowerSETCC64(Op, DAG);
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SELECT:
+    return lowerLogicSelect64(Op, DAG);
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -834,8 +879,62 @@ SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::BRCOND:
     return performBRCONDCombine(N, DCI);
+  case ISD::TRUNCATE:
+    // The low half of a pair.
+    if (N->getOperand(0).getOpcode() == ISD::BUILD_PAIR) {
+      SDValue Lo = N->getOperand(0).getOperand(0);
+      return DCI.DAG.getZExtOrTrunc(Lo, SDLoc(N), N->getValueType(0));
+    }
+    return SDValue();
+  case ISD::BUILD_PAIR: {
+    // A value split and joined again.
+    SDValue Lo = N->getOperand(0), Hi = N->getOperand(1);
+    if (Lo.getOpcode() == ISD::TRUNCATE && Hi.getOpcode() == AGXISD::HI32 &&
+        Lo.getOperand(0) == Hi.getOperand(0))
+      return Lo.getOperand(0);
+    return SDValue();
+  }
+  case AGXISD::BFI7:
+  case AGXISD::EXTR7:
+  case AGXISD::SRA7:
+    // Shifts of zero.
+    if (all_of(drop_end(N->ops()), [](const SDUse &U) { return isNullConstant(U.get()); }))
+      return DCI.DAG.getConstant(0, SDLoc(N), MVT::i32);
+    return SDValue();
+  case AGXISD::HI32: {
+    SDValue V = N->getOperand(0);
+    SDLoc DL(N);
+    SDValue H = hi32(DCI.DAG, DL, V);
+    if (H.getOpcode() != AGXISD::HI32)
+      return H;
+    KnownBits Known = DCI.DAG.computeKnownBits(SDValue(N, 0));
+    if (Known.isConstant())
+      return DCI.DAG.getConstant(Known.getConstant(), DL, MVT::i32);
+    return SDValue();
+  }
   default:
     return SDValue();
+  }
+}
+
+void AGXTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  Known.resetAll();
+  switch (Op.getOpcode()) {
+  case AGXISD::HI32:
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1).extractBits(32, 32);
+    break;
+  case AGXISD::MUL_WIDE_U:
+  case AGXISD::MUL_WIDE_S: {
+    bool S = Op.getOpcode() == AGXISD::MUL_WIDE_S;
+    KnownBits A = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits B = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = KnownBits::mul(S ? A.sext(64) : A.zext(64), S ? B.sext(64) : B.zext(64));
+    break;
+  }
+  default:
+    break;
   }
 }
 
@@ -883,38 +982,62 @@ SDValue AGXTargetLowering::lowerShift64(SDValue Op, SelectionDAG &DAG) const {
   SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   auto C32 = [&](uint64_t V) { return DAG.getConstant(V, DL, MVT::i32); };
 
-  // Shifts by a constant stay legal for address mode matching; they are
-  // expanded during instruction selection.
-  if (isa<ConstantSDNode>(Op.getOperand(1)))
-    return Op;
+  if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    uint64_t S = C->getZExtValue();
+    // Small left shifts stay for address mode matching (iadd with a shift);
+    // instruction selection expands what is left.
+    SDValue X = Op.getOperand(0);
+    bool Address =
+        X.getOpcode() == ISD::ZERO_EXTEND || X.getOpcode() == ISD::SIGN_EXTEND ||
+        all_of(Op->users(), [](SDNode *U) { return U->getOpcode() == ISD::ADD; });
+    if (S >= 64 || (Opc == ISD::SHL && S <= 4 && Address))
+      return Op;
+    if (S == 0)
+      return X;
+    SDValue NewLo, NewHi;
+    if (S >= 32) {
+      if (Opc == ISD::SHL) {
+        NewLo = Zero;
+        NewHi = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, C32(S - 32));
+      } else {
+        NewLo = DAG.getNode(Opc, DL, MVT::i32, Hi, C32(S - 32));
+        NewHi = Opc == ISD::SRA ? DAG.getNode(ISD::SRA, DL, MVT::i32, Hi, C32(31))
+                                : Zero;
+      }
+    } else if (Opc == ISD::SHL) {
+      NewLo = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, C32(S));
+      NewHi = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, C32(32 - S));
+    } else {
+      NewLo = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, C32(S));
+      NewHi = DAG.getNode(Opc, DL, MVT::i32, Hi, C32(S));
+    }
+    return join64(DAG, DL, NewLo, NewHi);
+  }
 
-  // Variable shifts: shift each half by the amount modulo 32, then select
-  // on bit 5 of the amount.
-  SDValue A5 = DAG.getNode(ISD::AND, DL, MVT::i32, Amt, C32(31));
-  SDValue Big = DAG.getSetCC(
-      DL, MVT::i32, DAG.getNode(ISD::AND, DL, MVT::i32, Amt, C32(32)), Zero,
-      ISD::SETNE);
+  // Variable shifts (by 0 to 63) with the 7-bit shift amounts of bfi, extr
+  // and asr, which shift a register's bits out completely from 32 on:
+  //   srl: lo = extr lo, hi, s            hi = extr hi, 0, s
+  //   shl: lo = bfi 0, lo, s              hi = bfi (extr 0, lo, 64 - s), hi, s
+  //   sra: lo = s < 32 ? extr lo, hi, s : asr hi, s - 32      hi = asr hi, s
+  // In shl, extr 0, lo, 64 - s is the part of lo that moves into hi, for s
+  // below and above 32 (and 0 for s = 0).
   SDValue NewLo, NewHi;
-  if (Opc == ISD::SHL) {
-    // hi = (hi << s) | ((lo >> 1) >> (31 - s)), avoiding a shift by 32.
-    SDValue LoS = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, A5);
-    SDValue Carry = DAG.getNode(
-        ISD::SRL, DL, MVT::i32,
-        DAG.getNode(ISD::SRL, DL, MVT::i32, Lo, C32(1)),
-        DAG.getNode(ISD::XOR, DL, MVT::i32, A5, C32(31)));
-    SDValue HiS = DAG.getNode(ISD::OR, DL, MVT::i32,
-                              DAG.getNode(ISD::SHL, DL, MVT::i32, Hi, A5),
-                              Carry);
-    NewLo = DAG.getSelect(DL, MVT::i32, Big, Zero, LoS);
-    NewHi = DAG.getSelect(DL, MVT::i32, Big, LoS, HiS);
+  if (Opc == ISD::SRL) {
+    NewLo = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Lo, Hi, Amt);
+    NewHi = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Hi, Zero, Amt);
+  } else if (Opc == ISD::SHL) {
+    NewLo = DAG.getNode(AGXISD::BFI7, DL, MVT::i32, Zero, Lo, Amt);
+    SDValue Up = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Zero, Lo,
+                             DAG.getNode(ISD::SUB, DL, MVT::i32, C32(64), Amt));
+    NewHi = DAG.getNode(AGXISD::BFI7, DL, MVT::i32, Up, Hi, Amt);
   } else {
-    SDValue HiS = DAG.getNode(Opc, DL, MVT::i32, Hi, A5);
-    SDValue LoS = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, A5);
-    SDValue Fill = Opc == ISD::SRA
-                       ? DAG.getNode(ISD::SRA, DL, MVT::i32, Hi, C32(31))
-                       : Zero;
-    NewLo = DAG.getSelect(DL, MVT::i32, Big, HiS, LoS);
-    NewHi = DAG.getSelect(DL, MVT::i32, Big, Fill, HiS);
+    NewHi = DAG.getNode(AGXISD::SRA7, DL, MVT::i32, Hi, Amt);
+    SDValue Big = DAG.getSetCC(DL, MVT::i32, Amt, C32(31), ISD::SETUGT);
+    NewLo = DAG.getSelect(
+        DL, MVT::i32, Big,
+        DAG.getNode(AGXISD::SRA7, DL, MVT::i32, Hi,
+                    DAG.getNode(ISD::SUB, DL, MVT::i32, Amt, C32(32))),
+        DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Lo, Hi, Amt));
   }
   return join64(DAG, DL, NewLo, NewHi);
 }
@@ -923,21 +1046,18 @@ SDValue AGXTargetLowering::lowerMUL64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
-  auto IsExt32 = [](SDValue V, unsigned Opc) {
-    return V.getOpcode() == Opc && V.getOperand(0).getValueType() == MVT::i32;
-  };
+  auto [ALo, AHi] = split64(DAG, DL, A);
+  auto [BLo, BHi] = split64(DAG, DL, B);
   // 32 x 32 -> 64-bit products are a single imadd.
-  if ((IsExt32(A, ISD::ZERO_EXTEND) && IsExt32(B, ISD::ZERO_EXTEND)) ||
-      (IsExt32(A, ISD::SIGN_EXTEND) && IsExt32(B, ISD::SIGN_EXTEND)))
-    return Op;
+  if (DAG.computeKnownBits(A).countMinLeadingZeros() >= 32 &&
+      DAG.computeKnownBits(B).countMinLeadingZeros() >= 32)
+    return DAG.getNode(AGXISD::MUL_WIDE_U, DL, MVT::i64, ALo, BLo);
+  if (DAG.ComputeNumSignBits(A) > 32 && DAG.ComputeNumSignBits(B) > 32)
+    return DAG.getNode(AGXISD::MUL_WIDE_S, DL, MVT::i64, ALo, BLo);
 
   // lo(a) * lo(b) as a 64-bit product, plus the cross products in the high
   // half.
-  auto [ALo, AHi] = split64(DAG, DL, A);
-  auto [BLo, BHi] = split64(DAG, DL, B);
-  SDValue P = DAG.getNode(ISD::MUL, DL, MVT::i64,
-                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, ALo),
-                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, BLo));
+  SDValue P = DAG.getNode(AGXISD::MUL_WIDE_U, DL, MVT::i64, ALo, BLo);
   auto [PLo, PHi] = split64(DAG, DL, P);
   SDValue Cross = DAG.getNode(ISD::ADD, DL, MVT::i32,
                               DAG.getNode(ISD::MUL, DL, MVT::i32, ALo, BHi),
