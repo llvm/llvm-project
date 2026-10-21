@@ -20,6 +20,10 @@ on:
         description: 'The LNT test suite to submit to'
         required: true
         type: string
+    secrets:
+      LNT_SUBMISSION_TOKEN:
+        description: 'The token used to submit to LNT'
+        required: true
 
 jobs:
   submit:

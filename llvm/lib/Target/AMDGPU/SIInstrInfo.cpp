@@ -2059,7 +2059,9 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   MachineBasicBlock *TrapBB = &MBB;
   MachineBasicBlock *HaltLoopBB = MF->CreateMachineBasicBlock();
 
-  if (!MBB.succ_empty() || std::next(MI.getIterator()) != MBB.end()) {
+  if (!MBB.succ_empty() ||
+      next_nodbg(MachineBasicBlock::iterator(MI), MBB.end(),
+                 /*SkipPseudoOp=*/false) != MBB.end()) {
     MBB.splitAt(MI, /*UpdateLiveIns=*/false);
     TrapBB = MF->CreateMachineBasicBlock();
     BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);

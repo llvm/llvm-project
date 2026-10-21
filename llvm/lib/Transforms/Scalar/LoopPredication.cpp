@@ -290,10 +290,10 @@ class LoopPredication {
   bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
 
 public:
-  LoopPredication(AliasAnalysis *AA, DominatorTree *DT, ScalarEvolution *SE,
-                  LoopInfo *LI, MemorySSAUpdater *MSSAU)
-      : Opts(ScalarOptions::Global), AA(AA), DT(DT), SE(SE), LI(LI),
-        MSSAU(MSSAU) {};
+  LoopPredication(const ScalarOptions &Opts, AliasAnalysis *AA,
+                  DominatorTree *DT, ScalarEvolution *SE, LoopInfo *LI,
+                  MemorySSAUpdater *MSSAU)
+      : Opts(Opts), AA(AA), DT(DT), SE(SE), LI(LI), MSSAU(MSSAU) {};
   bool runOnLoop(Loop *L);
 };
 
@@ -305,7 +305,9 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI,
+  const ScalarOptions &Opts =
+      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopPredication LP(Opts, &AR.AA, &AR.DT, &AR.SE, &AR.LI,
                      MSSAU ? MSSAU.get() : nullptr);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();

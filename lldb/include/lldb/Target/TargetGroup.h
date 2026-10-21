@@ -24,8 +24,8 @@ namespace lldb_private {
 
 /// A group of related targets and the roles they play in that relationship.
 ///
-/// Target::Destroy() automatically removes a target from all its groups;
-/// clients do not need to remove memberships during target destruction.
+/// Target::Destroy() automatically removes a target from all its groups and
+/// removes groups left empty from the Debugger's registry.
 class TargetGroup : public std::enable_shared_from_this<TargetGroup> {
 public:
   /// Describes the part a target plays in this group.

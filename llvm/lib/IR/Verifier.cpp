@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Verifier.h"
+#include "IROptions.h"
 #include "VerifierInternal.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -120,7 +121,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -141,11 +141,6 @@
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<bool> VerifyNoAliasScopeDomination(
-    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
-    cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
-             "scopes are not dominating"));
 
 namespace {
 
@@ -430,9 +425,10 @@ private:
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
   void visitBitInsertInst(BitInsertInst &BII);
   void visitBitExtractInst(BitExtractInst &BEI);
-  void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
+  void visitVAArgInst(VAArgInst &VAA);
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
+  void checkGEPOperator(const GEPOperator &GEP);
   void visitGetElementPtrInst(GetElementPtrInst &GEP);
   void visitLoadInst(LoadInst &LI);
   void visitStoreInst(StoreInst &SI);
@@ -2830,7 +2826,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       }
     }
   }
+
+  Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
+        "Attributes 'hot' and 'cold' are incompatible");
 }
+
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
   Check(MD->getNumOperands() == 2,
         "'unknown' !prof should have a single additional operand", MD);
@@ -2864,11 +2864,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == MDProfLabels::FunctionEntryCount ||
-                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
-            "first operand should be 'function_entry_count'"
-            " or 'synthetic_function_entry_count'",
-            MD);
+      Check(ProfName == MDProfLabels::FunctionEntryCount,
+            "first operand should be 'function_entry_count'", MD);
 
       // Check second operand.
       Check(MD->getOperand(1) != nullptr, "second operand should not be null",
@@ -2969,6 +2966,8 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
           "Invalid bitcast", CE);
   } else if (CE->getOpcode() == Instruction::PtrToAddr)
     checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
+  else if (CE->getOpcode() == Instruction::GetElementPtr)
+    checkGEPOperator(cast<GEPOperator>(*CE));
 }
 
 void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
@@ -4645,6 +4644,13 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   visitInstruction(BII);
 }
 
+void Verifier::visitVAArgInst(VAArgInst &VAA) {
+  // No target can lower va_arg of an aggregate, so frontends expand it.
+  Check(!VAA.getType()->isAggregateType(),
+        "va_arg with an aggregate type is not supported", &VAA);
+  visitInstruction(VAA);
+}
+
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   if (const char *Reason = BitExtractInst::areInvalidOperands(
           BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
@@ -4655,12 +4661,7 @@ void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   visitInstruction(BEI);
 }
 
-void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
-  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
-          GEP.getModule()->getModuleFlag("require-logical-pointer")))
-    Check(!MD->getZExtValue(),
-          "Non-logical getelementptr disallowed for this module.");
-
+void Verifier::checkGEPOperator(const GEPOperator &GEP) {
   Type *TargetTy = GEP.getPointerOperandType()->getScalarType();
 
   Check(isa<PointerType>(TargetTy),
@@ -4717,9 +4718,17 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  Check(GEP.getAddressSpace() == PtrTy->getAddressSpace(),
+  Check(GEP.getPointerAddressSpace() == PtrTy->getAddressSpace(),
         "GEP address space doesn't match type", &GEP);
+}
 
+void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          GEP.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical getelementptr disallowed for this module.");
+
+  checkGEPOperator(cast<GEPOperator>(GEP));
   visitInstruction(GEP);
 }
 
@@ -7968,7 +7977,7 @@ void Verifier::verifyNoAliasScopeDecl() {
 
   // Only check the domination rule when requested. Once all passes have been
   // adapted this option can go away.
-  if (!VerifyNoAliasScopeDomination)
+  if (!getIROptions(M.getContext()).verify_noalias_scope_decl_dom)
     return;
 
   // Now sort the intrinsics based on the scope MDNode so that declarations of
