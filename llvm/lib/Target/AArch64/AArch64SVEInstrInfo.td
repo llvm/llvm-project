@@ -807,6 +807,26 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", AArch64eor_m1, DestructiveBinaryComm>;
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", AArch64and_m1, DestructiveBinaryComm>;
   defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic, DestructiveBinary>;
+
+  multiclass SVEMergingAndNotPats<ValueType VT, ValueType PT,
+                                Instruction PredBic> {
+    // Preserve A in inactive lanes. NOT must cover every active AND lane.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+
+    // With both predicates all-active, no inactive lanes need preserving.
+    def : Pat<(VT (int_aarch64_sve_and (PT (SVEAllActive)), VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+  }
+  defm : SVEMergingAndNotPats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
+  defm : SVEMergingAndNotPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
+  defm : SVEMergingAndNotPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
+  defm : SVEMergingAndNotPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
