@@ -16,6 +16,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/clone.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/exit.h"
@@ -25,7 +26,6 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
@@ -39,7 +39,6 @@
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/thread_attributes.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
@@ -47,10 +46,9 @@
 #include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include "hdr/types/sigset_t.h"
-#include <linux/param.h> // For EXEC_PAGESIZE.
-#include <linux/prctl.h> // For PR_SET_NAME
-#include <sys/syscall.h> // For syscall numbers.
+#include <linux/param.h>         // For EXEC_PAGESIZE.
+#include <linux/prctl.h>         // For PR_SET_NAME
+#include <sys/syscall.h>         // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -504,21 +502,23 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // be called by the thread which owns them.
   internal::call_atexit_callbacks();
 
+  // Block all signals now that thread-local destructors have run. This
+  // prevents signal handlers from observing destroyed thread-local state,
+  // ensures threads in DetachState::EXITING cannot handle signals, and
+  // prevents detached threads from running a signal handler after unmapping
+  // their own stack.
+  (void)signals::block_all();
+
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(
           joinable_state, uint32_t(DetachState::EXITING))) {
     // Thread is detached so cleanup the resources.
-    // Signals must be blocked before unmapping the stack to prevent any signal
-    // handler from running without a stack.
-    sigset_t set;
-    inline_memset(&set, 0xff, sizeof(sigset_t));
-    (void)linux_syscalls::rt_sigprocmask(SIG_BLOCK, &set, nullptr);
+    // Set the CLEAR_TID address to nullptr before unmapping the stack to
+    // prevent the kernel from signalling at a non-existent futex location.
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_set_tid_address, 0);
 
     cleanup_thread_resources(attrib);
 
-    // Set the CLEAR_TID address to nullptr to prevent the kernel
-    // from signalling at a non-existent futex location.
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_set_tid_address, 0);
     // Return value for detached thread should be unused. We need to avoid
     // referencing `style` or `retval.*` because they may be stored on the stack
     // and we have deallocated our stack!
