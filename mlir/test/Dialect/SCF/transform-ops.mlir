@@ -83,10 +83,8 @@ func.func @loop_peel_first_iter_op() {
   // CHECK: %[[C41:.+]] = arith.constant 41
   // CHECK: %[[C5:.+]] = arith.constant 5
   // CHECK: %[[C5_0:.+]] = arith.constant 5
-  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C5_0]] step %[[C5]]
-  // CHECK:   arith.addi
-  // CHECK: scf.for %{{.+}} = %[[C5_0]] to %[[C41]] step %[[C5]]
-  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %{{.+}} to %[[SPLIT:.+]] step %[[STEP:.+]]
+  // CHECK: scf.for %{{.+}} = %[[SPLIT]] to %{{.+}} step %[[STEP]]
   %0 = arith.constant 0 : index
   %1 = arith.constant 41 : index
   %2 = arith.constant 5 : index
