@@ -299,12 +299,7 @@ define { <2 x i32>, <2 x i32> } @fixed_struct_alloca_fixed_from_scalable(<vscale
 ; CHECK-LABEL: @fixed_struct_alloca_fixed_from_scalable(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <2 x i32>, <2 x i32> }, align 8
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[CAST_FCA_0_GEP:%.*]] = getelementptr inbounds { <2 x i32>, <2 x i32> }, ptr [[TMP]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP_0_CAST_FCA_0_LOAD:%.*]] = load <2 x i32>, ptr [[CAST_FCA_0_GEP]], align 8
-; CHECK-NEXT:    [[CAST_FCA_0_INSERT:%.*]] = insertvalue { <2 x i32>, <2 x i32> } poison, <2 x i32> [[TMP_0_CAST_FCA_0_LOAD]], 0
-; CHECK-NEXT:    [[TMP_8_CAST_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds { <2 x i32>, <2 x i32> }, ptr [[TMP]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP_8_CAST_FCA_1_LOAD:%.*]] = load <2 x i32>, ptr [[TMP_8_CAST_FCA_1_GEP_SROA_IDX]], align 8
-; CHECK-NEXT:    [[CAST_FCA_1_INSERT:%.*]] = insertvalue { <2 x i32>, <2 x i32> } [[CAST_FCA_0_INSERT]], <2 x i32> [[TMP_8_CAST_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[CAST_FCA_1_INSERT:%.*]] = load { <2 x i32>, <2 x i32> }, ptr [[TMP]], align 8
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i32> } [[CAST_FCA_1_INSERT]]
 ;
   %tmp = alloca { <2 x i32>, <2 x i32> }
@@ -316,12 +311,7 @@ define { <2 x i32>, <2 x i32> } @fixed_struct_alloca_fixed_from_scalable(<vscale
 define <vscale x 4 x i64> @fixed_struct_alloca_scalable_from_fixed({ <2 x ptr>, <2 x ptr> } %a) {
 ; CHECK-LABEL: @fixed_struct_alloca_scalable_from_fixed(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <2 x ptr>, <2 x ptr> }, align 16
-; CHECK-NEXT:    [[A_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[A:%.*]], 0
-; CHECK-NEXT:    [[A_FCA_0_GEP:%.*]] = getelementptr inbounds { <2 x ptr>, <2 x ptr> }, ptr [[TMP]], i32 0, i32 0
-; CHECK-NEXT:    store <2 x ptr> [[A_FCA_0_EXTRACT]], ptr [[A_FCA_0_GEP]], align 16
-; CHECK-NEXT:    [[A_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[A]], 1
-; CHECK-NEXT:    [[TMP_16_A_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds { <2 x ptr>, <2 x ptr> }, ptr [[TMP]], i32 0, i32 1
-; CHECK-NEXT:    store <2 x ptr> [[A_FCA_1_EXTRACT]], ptr [[TMP_16_A_FCA_1_GEP_SROA_IDX]], align 16
+; CHECK-NEXT:    store { <2 x ptr>, <2 x ptr> } [[A:%.*]], ptr [[TMP]], align 16
 ; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <vscale x 4 x i64>, ptr [[TMP]], align 32
 ; CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP_0_CAST]]
 ;

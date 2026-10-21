@@ -7,22 +7,7 @@ define void @escaped(ptr %p) {
 ; CHECK-LABEL: define void @escaped(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x { i32, i32 }], align 4
-; CHECK-NEXT:    [[DOTFCA_0_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 0, i32 0
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_0_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 0, i32 1
-; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 1, i32 0
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 1, i32 1
-; CHECK-NEXT:    store i32 4, ptr [[DOTFCA_1_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 2, i32 0
-; CHECK-NEXT:    store i32 5, ptr [[DOTFCA_2_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 2, i32 1
-; CHECK-NEXT:    store i32 6, ptr [[DOTFCA_2_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 3, i32 0
-; CHECK-NEXT:    store i32 7, ptr [[DOTFCA_3_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 3, i32 1
-; CHECK-NEXT:    store i32 8, ptr [[DOTFCA_3_1_GEP]], align 4
+; CHECK-NEXT:    store [4 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }, { i32, i32 } { i32 5, i32 6 }, { i32, i32 } { i32 7, i32 8 }], ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -36,22 +21,7 @@ define i32 @dynamic_load(i64 %i) {
 ; CHECK-LABEL: define i32 @dynamic_load(
 ; CHECK-SAME: i64 [[I:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x { i32, i32 }], align 4
-; CHECK-NEXT:    [[DOTFCA_0_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 0, i32 0
-; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_0_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_0_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 0, i32 1
-; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 1, i32 0
-; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_1_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 1, i32 1
-; CHECK-NEXT:    store i32 4, ptr [[DOTFCA_1_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 2, i32 0
-; CHECK-NEXT:    store i32 5, ptr [[DOTFCA_2_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_2_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 2, i32 1
-; CHECK-NEXT:    store i32 6, ptr [[DOTFCA_2_1_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_0_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 3, i32 0
-; CHECK-NEXT:    store i32 7, ptr [[DOTFCA_3_0_GEP]], align 4
-; CHECK-NEXT:    [[DOTFCA_3_1_GEP:%.*]] = getelementptr inbounds [4 x { i32, i32 }], ptr [[A]], i32 0, i32 3, i32 1
-; CHECK-NEXT:    store i32 8, ptr [[DOTFCA_3_1_GEP]], align 4
+; CHECK-NEXT:    store [4 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }, { i32, i32 } { i32 5, i32 6 }, { i32, i32 } { i32 7, i32 8 }], ptr [[A]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr [4 x { i32, i32 }], ptr [[A]], i64 0, i64 [[I]], i32 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[G]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]

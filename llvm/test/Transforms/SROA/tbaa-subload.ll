@@ -12,10 +12,7 @@ define void @caller() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[AGG:%.*]] = alloca [[CLASS_ANON:%.*]], align 8
 ; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[AGG]], i32 0, i32 2
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 0
-; CHECK-NEXT:    store i64 1, ptr [[DOTFCA_0_GEP]], align 8, !tbaa [[CHAR_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 1
-; CHECK-NEXT:    store i64 2, ptr [[DOTFCA_1_GEP]], align 8, !tbaa [[CHAR_TBAA0]]
+; CHECK-NEXT:    store { i64, i64 } { i64 1, i64 2 }, ptr [[OFF]], align 8, !tbaa [[CHAR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    call void @use(ptr [[AGG]])
 ; CHECK-NEXT:    ret void
 ;
