@@ -27,7 +27,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 
 #ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
@@ -779,6 +781,12 @@ static constexpr auto take(std::integer_sequence<T, b...>,
                            std::index_sequence<I...>) {
   return std::integer_sequence<T, LeadingNonZero<T, b...>::arr[I]...>{};
 }
+
+/// This is a helper for the mkRTKey macro; FirMacroExpandKey encodes runtime
+/// function names fixed-width template sequences of exactly 50 characters. This
+/// filter function removes the trailing '\0' characters. This is deliberately
+/// non-recursive because 50 nested template expansions might hit compiler
+/// limits, such as msvc's C1202.
 template <typename T, T... b>
 static constexpr auto filter(std::integer_sequence<T, b...>) {
   if constexpr (sizeof...(b) > 0) {
