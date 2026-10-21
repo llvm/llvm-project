@@ -47,8 +47,11 @@ void PluginManager::init() {
   TIMESCOPE();
 
   ODBG(ODT_Init) << "Loading RTLs";
-  if (ol_result_t Res = olInit(nullptr))
+  if (ol_result_t Res = olInit(nullptr)) {
     REPORT() << "Failed to initialize liboffload: " << Res->Details;
+    return;
+  }
+  LibOffloadInitialized = true;
 
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
@@ -77,8 +80,9 @@ void PluginManager::deinit() {
   }
 
   Plugins.clear();
-  if (auto Err = olShutDown())
-    REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  if (LibOffloadInitialized)
+    if (auto Err = olShutDown())
+      REPORT() << "Failed to denitialize liboffload: " << Err->Details;
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
@@ -127,6 +131,8 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 }
 
 void PluginManager::initializeAllDevices() {
+  if (!LibOffloadInitialized)
+    return;
   if (auto Err = iterateDevices(
           [this](ol_device_handle_t Device) { initializeDevice(Device); })) {
     REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
@@ -285,9 +291,11 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
-  // Register the images with the RTLs that understand them, if any.
+  // Register the images with the RTLs that understand them, if any. There are
+  // no devices to register with if liboffload was not initialized.
   llvm::SmallVector<ol_device_handle_t> UsedDevices;
-  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
+  for (int32_t i = 0; LibOffloadInitialized && i < Desc->NumDeviceImages;
+       ++i) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &Desc->DeviceImages[i];
 
@@ -650,6 +658,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
 
 int PluginManager::getNumActivePlugins() const {
   int count = 0;
+  if (!LibOffloadInitialized)
+    return count;
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
             bool Active = false;
