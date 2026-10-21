@@ -373,6 +373,7 @@ CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   Ctx->getLibraryOptions().assign(CI.getLibraryOptions());
+  Ctx->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   if (clang::loadLinkModules(CI, *Ctx, LinkModules))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);
