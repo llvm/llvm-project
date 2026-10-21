@@ -1958,30 +1958,6 @@ llvm.func @functionEntryCount() attributes {
 
 // -----
 
-// CHECK-LABEL: @syntheticFunctionEntryCount
-// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCount() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
-
-// -----
-
-// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
-// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCountWithImports() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
-
-// -----
-
 // CHECK-LABEL: @functionEntryCountWithImports
 // CHECK-SAME: !prof ![[IMPORTS_PROF_ID:[0-9]+]]
 llvm.func @functionEntryCountWithImports() attributes {
