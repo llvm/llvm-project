@@ -4613,16 +4613,17 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
 
   // Warn that we assume that throw/catch is never reached on OpenMP
   // GPU targets.
-  if (IsOpenMPGPUTarget) {
+  if (IsOpenMPGPUTarget)
     targetDiag(Loc, diag::warn_exceptions_not_valid_on_target)
         << T.str() << IsTry;
-    return;
-  }
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope()) {
     Diag(Loc, diag::err_omp_simd_region_cannot_use_exceptions) << IsTry;
     return;
   }
+
+  if (IsOpenMPGPUTarget)
+    return;
 
   // Exceptions aren't allowed in CUDA device code. Skip this check if
   // exceptions are disabled since we will issue a more general diagnostic
