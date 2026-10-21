@@ -2999,8 +2999,13 @@ these cases to a frozen `llvm.sdiv.poison`, `llvm.udiv.poison`,
 `llvm.srem.poison` or `llvm.urem.poison` intrinsic, whose result is an
 arbitrary but fixed value for those operands.
 
-This is the default for OpenCL C and C++ for OpenCL, except on SPIR and
-SPIR-V targets. `-fno-defined-int-divrem` restores the plain instructions.
+This is the default for OpenCL C and C++ for OpenCL, and for CUDA, HIP and
+SYCL device code, where C++ leaves these cases undefined, so an unspecified
+value is a valid choice; it is not the default on SPIR and SPIR-V targets. It is
+off for host code and for OpenMP offload. NVPTX and AMDGPU, whose integer
+division does not trap, select the intrinsics as the plain division for types up
+to 64 bits; other targets, and wider types, guard the divisor first.
+`-fno-defined-int-divrem` restores the plain instructions.
 :::
 
 :::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]

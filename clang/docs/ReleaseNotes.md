@@ -314,7 +314,10 @@ features cannot lower the translation-unit ABI level;
   by zero, and signed division overflow (`INT_MIN / -1`), an unspecified result
   instead of undefined behavior by lowering integer `/` and `%` to frozen
   `llvm.<op>.poison` intrinsics. On by default for OpenCL (OpenCL C and C++ for
-  OpenCL) except on SPIR and SPIR-V targets, off for every other language.
+  OpenCL) and for CUDA, HIP and SYCL device code, except on SPIR and SPIR-V
+  targets; off otherwise, including host code and OpenMP offload. NVPTX and
+  AMDGPU select the intrinsics as their plain division for types up to 64 bits,
+  so there is no guard on the divisor there.
 
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
@@ -1232,6 +1235,12 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA/HIP Language Changes
 
+- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`,
+  except on SPIR and SPIR-V targets: division by zero and signed division
+  overflow give an unspecified value instead of undefined behavior. Host code
+  is unchanged, and `-fno-defined-int-divrem` restores the previous behavior in
+  device code.
+
 - HIP compilations now add the `include/libhipcxx` directory from the selected
   ROCm installation to the header search path when it exists. This allows
   libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
@@ -1418,6 +1427,12 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### SYCL Support
 
 #### Improvements
+
+- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`,
+  except on SPIR and SPIR-V targets: division by zero and signed division
+  overflow give an unspecified value instead of undefined behavior. Host code
+  is unchanged, and `-fno-defined-int-divrem` restores the previous behavior in
+  device code.
 
 ## Additional Information
 
