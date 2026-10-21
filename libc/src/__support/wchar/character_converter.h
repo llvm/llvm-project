@@ -292,7 +292,8 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
     output = state->partial;
     // disallow using UTF-8 or UTF-32 to encode unpaired surrogates
     const bool is_surrogate =
-        output >= UTF16_SURROGATE_START && output <= UTF16_SURROGATE_END;
+        output >= static_cast<char32_t>(UTF16_SURROGATE_START) &&
+        output <= static_cast<char32_t>(UTF16_SURROGATE_END);
     if (is_surrogate) {
       clear();
       return Error(EILSEQ);
