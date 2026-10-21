@@ -372,8 +372,7 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
           emitter.cgm.getCXXABI().getVTableAddressPointAttr(
               BaseSubobject(cxxrd, offsetInDerived),
               cast<CXXRecordDecl>(vtableBaseTy));
-      if (!vptr)
-        return {};
+      assert(vptr && "failed to get vtable address point");
       elements[0] = vptr;
     }
 
