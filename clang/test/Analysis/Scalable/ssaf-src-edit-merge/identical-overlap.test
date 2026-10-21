@@ -2,7 +2,6 @@
 # inputs collapse to one in the merged output. No "conflict:" line because
 # this is a textbook dedup, not a conflict.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

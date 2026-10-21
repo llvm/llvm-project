@@ -5,7 +5,6 @@
 # where clang-apply-replacements' groupReplacements skipped dedup for plain
 # TUReplacements and AtomicChange::replace stacked the duplicates.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

@@ -1,5 +1,4 @@
 // REQUIRES: amdgpu-registered-target
-// XFAIL: system-zos
 // Test that the accelerator code selection pass only gets invoked after linking
 
 // Ensure Pass HipStdParAcceleratorCodeSelectionPass is not invoked in PreLink.

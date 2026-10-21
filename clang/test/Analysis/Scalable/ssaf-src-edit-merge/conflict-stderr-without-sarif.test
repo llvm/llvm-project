@@ -2,7 +2,6 @@
 # NOT pass --sarif-conflicts-out=. Stderr cluster line is still emitted
 # and drop-all still applies; no SARIF file is created at any path.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

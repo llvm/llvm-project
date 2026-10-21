@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: %clang_cc1 -emit-llvm -fno-builtin -o - %s | FileCheck --check-prefixes=GLOBAL,CHECK %s
 // RUN: %clang_cc1 -emit-llvm -fno-builtin-ceil -fno-builtin-copysign -fno-builtin-cos \
 // RUN:  -fno-builtin-fabs -fno-builtin-floor -fno-builtin-strcat -fno-builtin-strncat \

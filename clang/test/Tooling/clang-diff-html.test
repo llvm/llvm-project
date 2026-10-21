@@ -1,4 +1,3 @@
-XFAIL: system-zos
 RUN: clang-diff -html %S/Inputs/clang-diff-basic-src.cpp %S/clang-diff-basic.cpp -- | FileCheck %s
 
 CHECK: <pre><div id='L' class='code'><span id='L0' tid='R0' title='TranslationUnitDecl

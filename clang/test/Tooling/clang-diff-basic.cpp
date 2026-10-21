@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: clang-diff -dump-matches %S/Inputs/clang-diff-basic-src.cpp %s -- | FileCheck %s
 
 // CHECK: Match TranslationUnitDecl{{.*}} to TranslationUnitDecl

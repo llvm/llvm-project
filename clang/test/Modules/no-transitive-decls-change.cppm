@@ -1,7 +1,6 @@
 // Testing that changing a declaration in an unused module file won't change 
 // the BMI of the current module file.
 //
-// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 //
