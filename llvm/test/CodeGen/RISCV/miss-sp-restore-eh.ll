@@ -28,12 +28,6 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    # implicit-def: $x10
 ; CHECK-NEXT:    # implicit-def: $x11
-; CHECK-NEXT:    # implicit-def: $x12
-; CHECK-NEXT:    # implicit-def: $x13
-; CHECK-NEXT:    # implicit-def: $x14
-; CHECK-NEXT:    # implicit-def: $x15
-; CHECK-NEXT:    # implicit-def: $x16
-; CHECK-NEXT:    # implicit-def: $x17
 ; CHECK-NEXT:    call _Z3fooiiiiiiiiiiPi
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:  .Ltmp1: # EH_LABEL

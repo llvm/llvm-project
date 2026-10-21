@@ -279,6 +279,40 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow,
   ASSERT_EQ(writer.get_chars_written(), size_t{2});
 }
 
+TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionNoNullTerminator,
+           TestCharTypes) {
+  // When a precision is specified for a %s conversion, the input string does
+  // not need to be null-terminated, provided it contains at least as many
+  // characters as the specified precision.
+
+  using CharT = ParamType;
+  CharT str[60];
+  Writer writer =
+      make_drop_overflow_writer(str, sizeof(str) / sizeof(CharT) - 1);
+  WriteBuffer<CharT> &wb = writer.get_write_buffer();
+
+  const CharT input[] = {ENCODED(CharT, 'j'), ENCODED(CharT, 'k'),
+                         ENCODED(CharT, 'l')};
+
+  FormatSection<CharT> no_null_terminator_conv;
+  no_null_terminator_conv.has_conv = true;
+  no_null_terminator_conv.raw_string = ENCODED(CharT, "%.3s");
+  no_null_terminator_conv.conv_name = ENCODED(CharT, 's');
+  no_null_terminator_conv.precision = 3;
+  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>) {
+    no_null_terminator_conv.length_modifier =
+        LIBC_NAMESPACE::printf_core::LengthModifier::l;
+  }
+  no_null_terminator_conv.conv_val_ptr = const_cast<CharT *>(input);
+
+  LIBC_NAMESPACE::printf_core::convert(&writer, no_null_terminator_conv);
+
+  wb.buff[wb.buff_cur] = ENCODED(CharT, '\0');
+
+  ASSERT_STREQ(str, ENCODED(CharT, "jkl"));
+  ASSERT_EQ(writer.get_chars_written(), size_t{3});
+}
+
 TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionRightJustified,
            TestCharTypes) {
   using CharT = ParamType;

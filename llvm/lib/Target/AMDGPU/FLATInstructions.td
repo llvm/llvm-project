@@ -1403,7 +1403,7 @@ class FlatLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType v
 
 class FlatLoadPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FlatOffset i64:$vaddr, i32:$offset))),
-  (EXTRACT_SUBREG (inst $vaddr, $offset), lo16)
+  (vgpr32_lo16 (inst $vaddr, $offset))
 >;
 
 class FlatSignedLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1418,7 +1418,7 @@ class FlatSignedLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Value
 
 class FlatSignedLoadPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset))),
-  (EXTRACT_SUBREG (inst $vaddr, $offset, (i32 0)), lo16)
+  (vgpr32_lo16 (inst $vaddr, $offset, (i32 0)))
 >;
 
 class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1438,7 +1438,7 @@ class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 
 class FlatLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPROp_32:$voffset), i32:$offset, CPol:$cpol))),
-  (EXTRACT_SUBREG (inst $saddr, $voffset, $offset, $cpol), lo16)
+  (vgpr32_lo16 (inst $saddr, $voffset, $offset, $cpol))
 >;
 
 class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
@@ -1478,7 +1478,7 @@ class GlobalLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Valu
 
 class GlobalLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPROp_32:$voffset), i32:$offset, CPol:$cpol))),
-  (EXTRACT_SUBREG (inst $saddr, $voffset, $offset, $cpol), lo16)
+  (vgpr32_lo16 (inst $saddr, $voffset, $offset, $cpol))
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1657,7 +1657,7 @@ class ScratchLoadSignedPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Va
 
 class ScratchLoadSignedPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchOffset (i32 VGPROp_32:$vaddr), i32:$offset))),
-  (EXTRACT_SUBREG (inst $vaddr, $offset), lo16)
+  (vgpr32_lo16 (inst $vaddr, $offset))
 >;
 
 class ScratchStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1682,7 +1682,7 @@ class ScratchLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Val
 
 class ScratchLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchSAddr (i32 SGPR_32:$saddr), i32:$offset))),
-  (EXTRACT_SUBREG (inst $saddr, $offset), lo16)
+  (vgpr32_lo16 (inst $saddr, $offset))
 >;
 
 class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
@@ -1714,7 +1714,7 @@ class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Va
 
 class ScratchLoadSVaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchSVAddr (i32 VGPROp_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
-  (EXTRACT_SUBREG (inst $vaddr, $saddr, $offset, $cpol), lo16)
+  (vgpr32_lo16 (inst $vaddr, $saddr, $offset, $cpol))
 >;
 
 multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
@@ -2205,6 +2205,7 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
@@ -2217,8 +2218,6 @@ let True16Predicate = NotUseRealTrue16Insts in {
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, load_global, i16>;
 }
 
@@ -2226,8 +2225,6 @@ let True16Predicate = UseTrue16WithSramECC in {
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, load_global, i16>;
 }
 
