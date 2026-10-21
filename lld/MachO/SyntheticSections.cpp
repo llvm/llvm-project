@@ -2572,7 +2572,7 @@ void ChainedFixupsSection::finalizeContents() {
       uint64_t pageIdx = locations[i].offset / pageSize;
       if (pageIdx >= UINT16_MAX) {
         fatal("page index in " + locations[i].isec->getSegName() + "," +
-              locations[i].isec->getName() + " too large for chained fixups; "
+              locations[i].isec->getName() + " too large for chained fixups; " +
               "use -no_fixup_chains");
       }
       fixupSegments.back().pageStarts.emplace_back(
