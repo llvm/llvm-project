@@ -321,6 +321,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  popen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.popen
+)
+
+add_entrypoint_object(
+  pclose
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pclose
+)
+
+add_entrypoint_object(
   tmpfile
   ALIAS
   DEPENDS

@@ -1087,6 +1087,24 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }
 
+TEST(TargetParserTest, ARMParseBranchProtectionDefaultKey) {
+  // AArch64 Windows and UEFI only support B key return address signing, so it
+  // is the default there; everywhere else the A key is.
+  for (const auto &[TripleName, ExpectedKey] :
+       {std::pair{"aarch64-unknown-linux-gnu", "a_key"},
+        std::pair{"aarch64-pc-windows-msvc", "b_key"},
+        std::pair{"aarch64-unknown-uefi", "b_key"}}) {
+    const Triple T(TripleName);
+    for (StringRef Spec : {"standard", "pac-ret", "pac-ret+leaf+bti"}) {
+      ARM::ParsedBranchProtection PBP;
+      StringRef Err;
+      EXPECT_TRUE(ARM::parseBranchProtection(Spec, PBP, Err, T))
+          << TripleName << " " << Spec;
+      EXPECT_EQ(PBP.Key, ExpectedKey) << TripleName << " " << Spec;
+    }
+  }
+}
+
 struct AArch64CPUTestParams
     : public ARMCPUTestParams<AArch64::ExtensionBitset> {
   AArch64CPUTestParams(StringRef CPUName, StringRef ExpectedArch)
