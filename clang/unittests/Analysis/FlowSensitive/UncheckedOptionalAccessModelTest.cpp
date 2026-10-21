@@ -1179,7 +1179,6 @@ TEST_P(UncheckedOptionalAccessTest, StdExchange) {
       $ns::$optional<int> opt2 = std::exchange(opt1, $ns::nullopt);
 
       opt1.value(); // [[unsafe]]
-
       opt2.value();
     }
   )");
@@ -1194,11 +1193,12 @@ TEST_P(UncheckedOptionalAccessTest, StdExchange) {
       $ns::$optional<int> opt2 = std::exchange(opt1, 3);
 
       opt1.value();
-
       opt2.value(); // [[unsafe]]
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, StdExchangeImplicitConversion) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -1238,7 +1238,9 @@ TEST_P(UncheckedOptionalAccessTest, StdExchange) {
       opt2.value(); // [[unsafe]]
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, StdExchangeUnmodeledLoc) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -1248,14 +1250,14 @@ TEST_P(UncheckedOptionalAccessTest, StdExchange) {
     void target() {
       $ns::$optional<int> opt1 = 3;
       L bar;
+      bar.hd = 4;
+      bar.tl = &bar;
 
-      // Any `tl` beyond the first is not modeled.
+      // bar.tl->tl->hd has value, but any `tl` beyond the first is not modeled.
       std::exchange(opt1, bar.tl->tl->hd);
-
       opt1.value(); // [[unsafe]]
 
       $ns::$optional<int> opt2 = std::exchange(bar.tl->tl->hd, $ns::nullopt);
-
       opt2.value(); // [[unsafe]]
     }
   )");
