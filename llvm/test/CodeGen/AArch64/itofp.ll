@@ -6254,8 +6254,9 @@ entry:
 define <2 x half> @utofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-NOFP16-SD-LABEL: utofp_v2i16_v2f16:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-NOFP16-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NOFP16-SD-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NOFP16-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NOFP16-SD-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NOFP16-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NOFP16-SD-NEXT:    ret

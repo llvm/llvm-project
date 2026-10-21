@@ -12,19 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2)  {
 ; CHECK-LABEL: concat_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, z1.h[3]
-; CHECK-NEXT:    mov z3.h, z1.h[2]
-; CHECK-NEXT:    mov z4.h, z1.h[1]
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    mov z6.h, z0.h[2]
-; CHECK-NEXT:    mov z7.h, z0.h[1]
-; CHECK-NEXT:    zip1 z2.b, z3.b, z2.b
-; CHECK-NEXT:    zip1 z1.b, z1.b, z4.b
-; CHECK-NEXT:    zip1 z3.b, z6.b, z5.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z7.b
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z0.h, p0, { z0.h, z1.h }
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v8i8:
@@ -134,11 +124,9 @@ define void @concat_v64i8(ptr %a, ptr %b, ptr %c) {
 define <4 x i16> @concat_v4i16(<2 x i16> %op1, <2 x i16> %op2)  {
 ; CHECK-LABEL: concat_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, z1.s[1]
-; CHECK-NEXT:    mov z3.s, z0.s[1]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: concat_v4i16:
