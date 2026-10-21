@@ -337,12 +337,59 @@ static Value *checkedPointer(Instruction *I) {
   return cast<AtomicCmpXchgInst>(I)->getPointerOperand();
 }
 
+/// The alignment mask a device access of Size bytes is checked against.
+static uint32_t alignMask(unsigned AS, uint64_t Size) {
+  bool Device = AS == AGX::DEVICE_ADDRESS || AS == AGX::GENERIC_ADDRESS;
+  uint64_t AlignTo = std::min<uint64_t>(Size, 16);
+  return Device && isPowerOf2_64(AlignTo) && AlignTo > 1 ? AlignTo - 1 : 0;
+}
+
+/// Whether an access of Size bytes at Ptr is known to be good, so that it
+/// needs no check: a constant offset inside a global of known size (a device
+/// global or a static threadgroup array), aligned as the global is; a stack
+/// access at a constant offset (stack accesses are checked only at variable
+/// offsets); or an address space checked mode does not check.
+static bool cannotFail(Value *Ptr, uint64_t Size, const DataLayout &DL) {
+  unsigned AS = Ptr->getType()->getPointerAddressSpace();
+  if (AS == AGX::PRIVATE_ADDRESS) {
+    Value *V = Ptr;
+    bool Variable = false;
+    while (true) {
+      V = V->stripPointerCasts();
+      auto *G = dyn_cast<GEPOperator>(V);
+      if (!G)
+        break;
+      Variable |= !G->hasAllConstantIndices();
+      V = G->getPointerOperand();
+    }
+    return !Variable || !isa<AllocaInst>(V);
+  }
+  if (AS != AGX::DEVICE_ADDRESS && AS != AGX::GENERIC_ADDRESS &&
+      AS != AGX::THREADGROUP_ADDRESS)
+    return true;
+  int64_t Off = 0;
+  const auto *GV = dyn_cast<GlobalVariable>(
+      GetPointerBaseWithConstantOffset(Ptr, Off, DL));
+  if (!GV || GV->isDeclaration() || !GV->getValueType()->isSized())
+    return false;
+  uint64_t Bytes = DL.getTypeAllocSize(GV->getValueType());
+  uint32_t Mask = alignMask(AS, Size);
+  return Off >= 0 && Bytes && uint64_t(Off) + Size <= Bytes &&
+         (Off & Mask) == 0 && GV->getPointerAlignment(DL).value() > Mask;
+}
+
 static bool instrument(Kernel &K, std::string &Sites, unsigned &NextSite) {
   Function &F = *K.F;
   Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
   LLVMContext &Ctx = F.getContext();
   Type *I32 = Type::getInt32Ty(Ctx), *I64 = Type::getInt64Ty(Ctx);
+
+  // A kernel none of whose accesses can fail stays as it is: no hidden
+  // arguments, no entry test and no report block.
+  if (llvm::all_of(K.Accesses,
+                   [&](const Access &A) { return cannotFail(A.Ptr, A.Size, DL); }))
+    return false;
 
   // Bases first: the slots decide the hidden arguments.
   SmallVector<Base, 32> Bases;
@@ -454,9 +501,9 @@ static bool instrument(Kernel &K, std::string &Sites, unsigned &NextSite) {
     Value *From = A.Ptr;
     if (AS != AGX::PRIVATE_ADDRESS)
       From = GetPointerBaseWithConstantOffset(A.Ptr, Off, DL);
-    uint64_t AlignTo = std::min<uint64_t>(A.Size, 16);
-    uint32_t Mask =
-        Device && isPowerOf2_64(AlignTo) && AlignTo > 1 ? AlignTo - 1 : 0;
+    uint32_t Mask = alignMask(AS, A.Size);
+    if (AS != AGX::PRIVATE_ADDRESS && cannotFail(A.Ptr, A.Size, DL))
+      continue;
     auto Where = std::make_tuple(A.Block, From, AS);
     if (llvm::any_of(Covering[Where], [&](unsigned I) {
           const Check &C = Checks[I];

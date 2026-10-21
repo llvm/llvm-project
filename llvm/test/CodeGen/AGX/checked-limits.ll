@@ -36,12 +36,11 @@ define agx_kernel void @many(ptr addrspace(1) %p0, ptr addrspace(1) %p1, ptr add
   ret void
 }
 
-; CHECK-LABEL: define agx_kernel void @empty(
-; CHECK-SAME: i32 %n, ptr addrspace(1) "agx-checked"="record" [[R:%[0-9]+]], i32 "agx-checked"="threadgroup-bytes" %{{[0-9]+}})
+; A kernel with no access that can fail is left as it is: no hidden
+; arguments, no entry test, no report block.
+; CHECK-LABEL: define agx_kernel void @empty(i32 %n)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: %claimed = load i32, ptr addrspace(1) [[R]]
-; CHECK-NOT: checked.report
-; CHECK: ret void
+; CHECK-NEXT: ret void
 define agx_kernel void @empty(i32 %n) {
 entry:
   ret void

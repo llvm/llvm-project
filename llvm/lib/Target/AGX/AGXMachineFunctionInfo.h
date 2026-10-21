@@ -40,6 +40,9 @@ struct GlobalDataLayout {
 bool isGlobalDataVariable(const GlobalVariable &GV);
 
 GlobalDataLayout computeGlobalDataLayout(const Module &M);
+/// Whether F's instructions use a global that lives in the global data buffer,
+/// and so F needs the buffer's address.
+bool usesGlobalData(const Function &F);
 
 } // namespace AGX
 

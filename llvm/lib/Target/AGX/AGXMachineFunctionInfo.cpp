@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXMachineFunctionInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -65,6 +67,29 @@ bool AGX::isGlobalDataVariable(const GlobalVariable &GV) {
   unsigned AS = GV.getAddressSpace();
   return AS == AGX::GENERIC_ADDRESS || AS == AGX::DEVICE_ADDRESS ||
          AS == AGX::CONSTANT_ADDRESS;
+}
+
+bool AGX::usesGlobalData(const Function &F) {
+  SmallVector<const User *, 16> Work;
+  SmallPtrSet<const User *, 16> Seen;
+  for (const GlobalVariable &GV : F.getParent()->globals())
+    if (isGlobalDataVariable(GV) && !GV.isDeclaration())
+      for (const User *U : GV.users())
+        Work.push_back(U);
+  // Through constant expressions and initializers to the instructions
+  while (!Work.empty()) {
+    const User *U = Work.pop_back_val();
+    if (!Seen.insert(U).second)
+      continue;
+    if (const auto *I = dyn_cast<Instruction>(U)) {
+      if (I->getFunction() == &F)
+        return true;
+    } else if (isa<ConstantExpr>(U) || isa<ConstantAggregate>(U)) {
+      for (const User *UU : U->users())
+        Work.push_back(UU);
+    }
+  }
+  return false;
 }
 
 AGX::GlobalDataLayout AGX::computeGlobalDataLayout(const Module &M) {

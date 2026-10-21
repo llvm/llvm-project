@@ -349,8 +349,9 @@ SDValue AGXTargetLowering::LowerFormalArguments(
       MFI->setImplicitArgVReg(Dim,
                               MF.addLiveIn(PReg, &AGX::GPR32RegClass));
   }
-  // The global data buffer address, if the module has device globals.
-  if (!AGX::computeGlobalDataLayout(*MF.getFunction().getParent()).empty()) {
+  // The global data buffer address, if the kernel uses device globals (a
+  // module's other globals, such as checked mode's site table, need none).
+  if (AGX::usesGlobalData(MF.getFunction())) {
     unsigned GlobalHalf = alignTo(Half, 2);
     MCRegister PReg = Allocate(MVT::i64);
     if (PReg)
