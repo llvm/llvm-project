@@ -1248,6 +1248,10 @@ features cannot lower the translation-unit ABI level;
 
 - External CUDA kernel declarations now use the correct calling convention. (#GH118212)
 
+- Fixed `__dp4a`, `__dp2a_lo` and `__dp2a_hi` producing unresolved extern
+  functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
+  `__nvvm_idp2a_*` builtins. (#GH233434)
+
 #### AIX Support
 
 #### NetBSD Support
