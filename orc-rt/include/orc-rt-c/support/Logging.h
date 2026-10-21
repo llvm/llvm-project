@@ -43,6 +43,7 @@
 
 #include "orc-rt-c/config.h"
 #include "orc-rt-c/support/Compiler.h"
+#include "orc-rt-c/support/LogLevel.h"
 
 #if ORC_RT_LOG_BACKEND == ORC_RT_LOG_BACKEND_OS_LOG
 #include <os/log.h>
@@ -136,7 +137,7 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_FORMAT_PRINTF(1, 2);
 
 /*
  * To check whether a level is compiled in, use ORC_RT_LOG_ENABLED(Level),
- * defined in orc-rt-c/config.h.
+ * defined in orc-rt-c/support/LogLevel.h.
  */
 
 /**

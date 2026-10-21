@@ -8,6 +8,6 @@ addpl x19, x14, #32
 
 // addpl requires an immediate, not a register.
 addpl x19, x14, x15
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: addpl x19, x14, x15
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

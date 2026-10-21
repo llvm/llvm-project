@@ -22,7 +22,7 @@ static_assert(sizeof(void *) != 8 || sizeof(Relocation) == 24,
               "Try to minimize Reloc's size; we create many instances");
 
 InputSection *Relocation::getReferentInputSection() const {
-  if (const auto *sym = referent.dyn_cast<Symbol *>()) {
+  if (const auto *sym = dyn_cast<Symbol *>(referent)) {
     if (const auto *d = dyn_cast<Defined>(sym))
       return d->isec();
     return nullptr;

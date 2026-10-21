@@ -164,6 +164,10 @@ class SelectionDAGBuilder {
   /// tracking.
   bool AssignmentTrackingEnabled = false;
 
+  /// Cache whether a debug value can name the address of a global directly,
+  /// rather than holding out for a register with it.
+  bool CanDescribeGlobalAddressInLocationList = false;
+
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
   /// then emit token factor nodes when possible.  This allows us to get simple

@@ -13,9 +13,11 @@
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -30,6 +32,10 @@ struct TestModule final : FeatureModule {
   struct Listener final : ASTListener {
     Listener(TestModule &Module) : Module(Module) {}
 
+    void beforeBeginSourceFile(CompilerInstance &CI) override {
+      if (Module.BeforeBeginSourceFile)
+        Module.BeforeBeginSourceFile(CI);
+    }
     void beforePPCallbacks(CompilerInstance &CI) override {
       if (Module.BeforePPCallbacks)
         Module.BeforePPCallbacks(CI);
@@ -41,6 +47,11 @@ struct TestModule final : FeatureModule {
     void afterExecute(CompilerInstance &CI) override {
       if (Module.AfterExecute)
         Module.AfterExecute(CI);
+    }
+    void sawDiagnostic(const clang::Diagnostic &Info,
+                       clangd::Diag &Diag) override {
+      if (Module.SawDiagnostic)
+        Module.SawDiagnostic(Info, Diag);
     }
     void finalizeDiagnostic(clangd::Diag &Diag) override {
       if (Module.FinalizeDiagnostic)
@@ -55,9 +66,11 @@ struct TestModule final : FeatureModule {
     return std::make_unique<Listener>(*this);
   }
 
+  std::function<void(CompilerInstance &)> BeforeBeginSourceFile;
   std::function<void(CompilerInstance &)> BeforePPCallbacks;
   std::function<void(CompilerInstance &)> BeforeExecute;
   std::function<void(CompilerInstance &)> AfterExecute;
+  std::function<void(const clang::Diagnostic &, clangd::Diag &)> SawDiagnostic;
   std::function<void(clangd::Diag &)> FinalizeDiagnostic;
 };
 
@@ -123,6 +136,55 @@ TEST(FeatureModulesTest, SuppressDiags) {
     auto AST = TU.build();
     EXPECT_THAT(AST.getDiagnostics(), testing::IsEmpty());
   }
+}
+
+TEST(FeatureModulesTest, BeforeBeginSourceFile) {
+  std::vector<frontend::ActionKind> Builds;
+  auto Module = std::make_unique<TestModule>();
+  Module->BeforeBeginSourceFile = [&](CompilerInstance &CI) {
+    Builds.push_back(CI.getFrontendOpts().ProgramAction);
+  };
+  FeatureModuleSet Modules;
+  Modules.add(std::move(Module));
+  auto TU = TestTU::withCode(R"cpp(
+    #include "header.h"
+    HeaderType value;
+  )cpp");
+  TU.AdditionalFiles["header.h"] = "struct HeaderType {};";
+  TU.FeatureModules = &Modules;
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::IsEmpty());
+  // The preamble is built from header.h, but only the main-file build calls
+  // this hook.
+  EXPECT_THAT(Builds, testing::ElementsAre(frontend::ParseSyntaxOnly));
+}
+
+TEST(FeatureModulesTest, BeforeBeginSourceFileDiagnostics) {
+  unsigned SeenDiagnostics = 0;
+  auto Module = std::make_unique<TestModule>();
+  Module->BeforeBeginSourceFile = [](CompilerInstance &CI) {
+    // The newline warning is emitted while BeginSourceFile initializes macros,
+    // so beforePPCallbacks and beforeExecute would be too late to promote it.
+    CI.getDiagnostics().setSeverity(
+        diag::warn_fe_macro_contains_embedded_newline, diag::Severity::Error,
+        SourceLocation());
+  };
+  Module->SawDiagnostic = [&](const clang::Diagnostic &Info, clangd::Diag &) {
+    if (Info.getID() == diag::warn_fe_macro_contains_embedded_newline)
+      ++SeenDiagnostics;
+  };
+  FeatureModuleSet Modules;
+  Modules.add(std::move(Module));
+
+  auto TU = TestTU::withCode("int value;");
+  TU.ExtraArgs = {"-DMACRO=first\nsecond"};
+  TU.FeatureModules = &Modules;
+  auto AST = TU.build();
+  // clangd filters out this location-less diagnostic even when promoted, so
+  // check Clang's error count to verify that it was emitted as an error.
+  EXPECT_EQ(AST.getPreprocessor().getDiagnostics().getNumErrors(), 1u);
+  // StoreDiags filters it out before sawDiagnostic: it has no source location
+  // and is a warning by default, despite being promoted to an error here.
+  EXPECT_EQ(SeenDiagnostics, 0u);
 }
 
 TEST(FeatureModulesTest, BeforePPCallbacks) {

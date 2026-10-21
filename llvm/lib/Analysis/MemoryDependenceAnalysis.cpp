@@ -304,11 +304,11 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   // cast graph down only.
   Value *LoadOperand = LI->getPointerOperand()->stripPointerCasts();
 
-  // It's is not safe to walk the use list of global value, because function
+  // It's is not safe to walk the use list of constant, because function
   // passes aren't allowed to look outside their functions.
   // FIXME: this could be fixed by filtering instructions from outside
   // of current function.
-  if (isa<GlobalValue>(LoadOperand))
+  if (isa<Constant>(LoadOperand))
     return MemDepResult::getUnknown();
 
   Instruction *ClosestDependency = nullptr;
@@ -1344,16 +1344,17 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       if (!PredPtrVal) {
         // If translation failed but the (partially) translated address
         // expression depends on a select instruction, try to translate both
-        // sides of that select.  The select condition is recovered from the
+        // sides of that select.  The select instruction is recovered from the
         // failed `PredPointer` (the phi has already been resolved to the
         // select there), but the two sides must be translated from the
         // original, untranslated `Pointer`.
-        if (Value *Cond = PredPointer.getSelectCondition()) {
+        if (SelectInst *Sel = PredPointer.getSelect()) {
           SelectAddr::SelectAddrs SelAddrs =
-              PHITransAddr(Pointer).translateValue(BB, Pred, &DT, Cond);
+              PHITransAddr(Pointer).translateValue(BB, Pred, &DT,
+                                                   Sel->getCondition());
           if (SelAddrs.first && SelAddrs.second) {
             Result.push_back(NonLocalDepResult(Pred, MemDepResult::getSelect(),
-                                               SelectAddr(Cond, SelAddrs)));
+                                               SelectAddr(Sel, SelAddrs)));
             NonLocalPointerInfo &NLPI = NonLocalPointerDeps[CacheKey];
             NLPI.Pair = BBSkipFirstBlockPair();
             continue;
