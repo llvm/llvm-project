@@ -1787,10 +1787,13 @@ private:
   template <typename T>
   constexpr static bool has_fold_v = llvm::is_detected<has_fold_t, T>::value;
   /// Trait to check if T provides a 'fold' method with a FoldAdaptor for a
-  /// single result op.
+  /// single result op. Its result converts to OpFoldResult, which excludes the
+  /// OpFoldResults form with the same parameter.
   template <typename T, typename... Args>
-  using has_fold_adaptor_single_result_fold_t =
-      decltype(std::declval<T>().fold(std::declval<typename T::FoldAdaptor>()));
+  using has_fold_adaptor_single_result_fold_t = std::enable_if_t<
+      std::is_convertible_v<decltype(std::declval<T>().fold(
+                                std::declval<typename T::FoldAdaptor>())),
+                            OpFoldResult>>;
   template <class T>
   constexpr static bool has_fold_adaptor_single_result_v =
       llvm::is_detected<has_fold_adaptor_single_result_fold_t, T>::value;
@@ -1802,6 +1805,15 @@ private:
   template <class T>
   constexpr static bool has_fold_adaptor_v =
       llvm::is_detected<has_fold_adaptor_fold_t, T>::value;
+  /// Trait to check if T provides a 'fold' method with a FoldAdaptor that
+  /// returns OpFoldResults.
+  template <typename T, typename... Args>
+  using has_fold_adaptor_results_fold_t = std::enable_if_t<std::is_same_v<
+      decltype(std::declval<T>().fold(std::declval<typename T::FoldAdaptor>())),
+      OpFoldResults>>;
+  template <class T>
+  constexpr static bool has_fold_adaptor_results_v =
+      llvm::is_detected<has_fold_adaptor_results_fold_t, T>::value;
 
   /// Trait to check if T provides a 'print' method.
   template <typename T, typename... Args>
@@ -1900,27 +1912,69 @@ private:
   using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &, StringRef);
   using VerifyInvariantsFn = LogicalResult (*)(Operation *);
 
+  /// The fold form of an op, in the priority order of `getFoldHookFn`.
+  enum class FoldForm { Results, SingleResult, Legacy, None };
+  template <typename T>
+  static constexpr FoldForm getFoldForm() {
+    if (has_fold_adaptor_results_v<T>)
+      return FoldForm::Results;
+    if (hasTrait<OpTrait::OneResult>() &&
+        (has_single_result_fold_v<T> || has_fold_adaptor_single_result_v<T>))
+      return FoldForm::SingleResult;
+    if (has_fold_v<T> || has_fold_adaptor_v<T>)
+      return FoldForm::Legacy;
+    return FoldForm::None;
+  }
+
   /// Return the internal implementations of each of the OperationName hooks.
-  static constexpr FoldHookFn getFoldHookFn() {
-    // If the operation is single result and defines a `fold` method.
-    if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
-                                  Traits<ConcreteType>...>::value &&
-                  (has_single_result_fold_v<ConcreteType> ||
-                   has_fold_adaptor_single_result_v<ConcreteType>))
-      return [](Operation *op, ArrayRef<Attribute> operands) {
-        return foldSingleResultHook<ConcreteType>(op, operands);
-      };
-    // The operation is not single result and defines a `fold` method.
-    if constexpr (has_fold_v<ConcreteType> || has_fold_adaptor_v<ConcreteType>)
-      return [](Operation *op, ArrayRef<Attribute> operands) {
-        return foldHook<ConcreteType>(op, operands);
-      };
-    // The operation does not define a `fold` method.
+  template <typename T = ConcreteType>
+  static constexpr std::enable_if_t<getFoldForm<T>() == FoldForm::Results,
+                                    FoldHookFn>
+  getFoldHookFn() {
+    static_assert(!has_fold_v<T> && !has_fold_adaptor_v<T>,
+                  "an op must not define both `OpFoldResults "
+                  "fold(FoldAdaptor)` and a legacy `LogicalResult fold(..., "
+                  "SmallVectorImpl<OpFoldResult> &)`");
+    static_assert(!hasTrait<OpTrait::OneResult>(),
+                  "an op with the OneResult trait must use the single-result "
+                  "`OpFoldResult fold(FoldAdaptor)` form instead of "
+                  "`OpFoldResults fold(FoldAdaptor)`");
+    return &foldResultsHook<T>;
+  }
+  template <typename T = ConcreteType>
+  static constexpr std::enable_if_t<getFoldForm<T>() == FoldForm::SingleResult,
+                                    FoldHookFn>
+  getFoldHookFn() {
+    return &foldSingleResultHook<T>;
+  }
+  template <typename T = ConcreteType>
+  static constexpr std::enable_if_t<getFoldForm<T>() == FoldForm::Legacy,
+                                    FoldHookFn>
+  getFoldHookFn() {
+    return &foldLegacyHook<T>;
+  }
+  template <typename T = ConcreteType>
+  static constexpr std::enable_if_t<getFoldForm<T>() == FoldForm::None,
+                                    FoldHookFn>
+  getFoldHookFn() {
+    // Only the traits of the operation can fold it.
     return [](Operation *op, ArrayRef<Attribute> operands) {
-      // In this case, we only need to fold the traits of the operation.
       return op_definition_impl::foldTraits<Traits<ConcreteType>...>(op,
                                                                      operands);
     };
+  }
+  /// Return the result of folding an operation that defines an
+  /// `OpFoldResults fold(FoldAdaptor)` method.
+  template <typename ConcreteOpT>
+  static NormalizedOpFoldResults foldResultsHook(Operation *op,
+                                                 ArrayRef<Attribute> operands) {
+    NormalizedOpFoldResults result(
+        op, cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
+                operands, cast<ConcreteOpT>(op))));
+    return op_definition_impl::foldTraits<Traits<ConcreteType>...>(
+        op, operands,
+        ::mlir::detail::dropReplacementsOfReplacedResults(op,
+                                                          std::move(result)));
   }
   /// Return the result of folding a single result operation that defines a
   /// `fold` method.
@@ -1943,8 +1997,8 @@ private:
   /// Return the result of folding an operation that defines a legacy
   /// multi-result `fold` method, with the strict legacy contract.
   template <typename ConcreteOpT>
-  static NormalizedOpFoldResults foldHook(Operation *op,
-                                          ArrayRef<Attribute> operands) {
+  static NormalizedOpFoldResults foldLegacyHook(Operation *op,
+                                                ArrayRef<Attribute> operands) {
     SmallVector<OpFoldResult, 2> results;
     auto status = LogicalResult::failure();
     if constexpr (has_fold_adaptor_v<ConcreteOpT>) {

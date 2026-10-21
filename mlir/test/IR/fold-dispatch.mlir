@@ -41,11 +41,87 @@ func.func @dialect_fallback(%arg0: i32) {
   return
 }
 
+// `test.fold_dispatch` has a fold in the `OpFoldResults` form, configured by
+// `fold`, and a legacy fold trait, configured by `legacy_trait_fold`. The trait
+// folds only when the fold of the op replaces no result.
+func.func @own_fold_and_trait(%arg0: i32) {
+  // A partial fold of the op skips the trait.
+  // expected-remark @below {{fold: [keep, 42 : i32]}}
+  %0:2 = "test.fold_dispatch"()
+      {fold = {replace = [#test.fold_ref<keep>, 42 : i32]},
+       legacy_trait_fold = {in_place}}
+      : () -> (i32, i32)
+  // After an in-place fold of the op, the trait replaces every result...
+  // expected-remark @below {{fold: [1 : i32, 2 : i32] in place}}
+  %1:2 = "test.fold_dispatch"()
+      {fold = {in_place}, legacy_trait_fold = {replace = [1 : i32, 2 : i32]}}
+      : () -> (i32, i32)
+  // ... or some results.
+  // expected-remark @below {{fold: [keep, 1 : i32] in place}}
+  %2:2 = "test.fold_dispatch"()
+      {fold = {in_place},
+       legacy_trait_fold = {replace = [#test.fold_ref<result 0>, 1 : i32]}}
+      : () -> (i32, i32)
+  // After a failure of the op, the trait changes the op in place.
+  // expected-remark @below {{fold: in place}}
+  %3:2 = "test.fold_dispatch"() {legacy_trait_fold = {in_place}}
+      : () -> (i32, i32)
+  // The fold of the op keeps every result, which normalizes to a failure, so
+  // the trait folds.
+  // expected-remark @below {{fold: [1 : i32, 1 : i32]}}
+  %4:2 = "test.fold_dispatch"()
+      {fold = {replace = [#test.fold_ref<result 0>, #test.fold_ref<result 1>]},
+       legacy_trait_fold = {replace = [1 : i32, 1 : i32]}} : () -> (i32, i32)
+  // A partial fold of the op does not fall back on the dialect.
+  // expected-remark @below {{fold: [42 : i32, keep]}}
+  %5:2 = "test.fold_dispatch"()
+      {fold = {replace = [42 : i32, #test.fold_ref<keep>]},
+       legacy_dialect_fold = {replace = [7 : i32, 7 : i32]}}
+      : () -> (i32, i32)
+  // The fold of the op gets the constant operands.
+  %c7 = "test.constant"() <{value = 7 : i32}> : () -> i32
+  // expected-remark @below {{fold: [7 : i32, keep]}}
+  %6:2 = "test.fold_dispatch"(%c7, %arg0)
+      {fold = {replace = [#test.fold_ref<operand_attr 0>,
+                          #test.fold_ref<operand_attr 1>]}}
+      : (i32, i32) -> (i32, i32)
+  return
+}
+
+// A replacement can name another result of the op only if the fold keeps that
+// result. Otherwise the fold hook drops the replacements, and only the
+// in-place change stays.
+func.func @fold_naming_replaced_result() {
+  // expected-remark @below {{fold: failure}}
+  %0:2 = "test.fold_dispatch"()
+      {fold = {replace = [#test.fold_ref<result 1>, 1 : i32]}}
+      : () -> (i32, i32)
+  // expected-remark @below {{fold: in place}}
+  %1:2 = "test.fold_dispatch"()
+      {fold = {replace = [#test.fold_ref<result 1>, 1 : i32], in_place}}
+      : () -> (i32, i32)
+  // expected-remark @below {{fold: [result 1, keep]}}
+  %2:2 = "test.fold_dispatch"()
+      {fold = {replace = [#test.fold_ref<result 1>, #test.fold_ref<keep>]}}
+      : () -> (i32, i32)
+  // An op can use its own results in a graph region, as in an unreachable
+  // block.
+  test.graph_region {
+    // expected-remark @below {{fold: failure}}
+    %3:2 = "test.fold_dispatch"(%3#1, %3#0)
+        {fold = {replace = [#test.fold_ref<operand 0>,
+                            #test.fold_ref<operand 1>]}}
+        : (i32, i32) -> (i32, i32)
+    "test.valid"(%3#0, %3#1) : (i32, i32) -> ()
+  }
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
       %root: !transform.any_op {transform.readonly}) {
     %ops = transform.structured.match
-        ops{["test.fold_dispatch_fallback"]} in %root
+        ops{["test.fold_dispatch_fallback", "test.fold_dispatch"]} in %root
         : (!transform.any_op) -> !transform.any_op
     transform.test_fold %ops : !transform.any_op
     transform.yield

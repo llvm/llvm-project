@@ -267,6 +267,26 @@ void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
 llvm::LogicalResult getConfiguredLegacyFoldResults(
     mlir::Operation *op, llvm::ArrayRef<mlir::Attribute> operands,
     llvm::StringRef name, llvm::SmallVectorImpl<mlir::OpFoldResult> &results);
+
+/// Return the fold result that the dictionary attribute `name` of `op`
+/// configures.
+mlir::OpFoldResults
+getConfiguredFoldResults(mlir::Operation *op,
+                         llvm::ArrayRef<mlir::Attribute> operands,
+                         llvm::StringRef name);
+
+/// A legacy fold trait for the fold tests, configured by `legacy_trait_fold`.
+template <typename ConcreteType>
+class TestLegacyFoldTrait
+    : public mlir::OpTrait::TraitBase<ConcreteType, TestLegacyFoldTrait> {
+public:
+  static llvm::LogicalResult
+  foldTrait(mlir::Operation *op, llvm::ArrayRef<mlir::Attribute> operands,
+            llvm::SmallVectorImpl<mlir::OpFoldResult> &results) {
+    return getConfiguredLegacyFoldResults(op, operands, "legacy_trait_fold",
+                                          results);
+  }
+};
 } // namespace test
 
 #define GET_OP_CLASSES

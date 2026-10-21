@@ -302,7 +302,10 @@ public:
   ///
   ///  1. A replacement is an Attribute (replace the result with a constant),
   ///     a Value (replace the result with that value), or null (keep the
-  ///     result). Replacement i may be result j only if result j is kept.
+  ///     result). Replacement i may be result j only if result j is kept. A
+  ///     forwarding fold can break this rule in a graph region or in an
+  ///     unreachable block. If an `OpFoldResults fold` method of the operation
+  ///     breaks it, its replacements are dropped.
   ///  2. A failure replaces no result and does not set the in-place bit. The
   ///     IR must be unchanged.
   ///  3. The hook can mutate the operation in place, without changing anything
