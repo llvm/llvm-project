@@ -2034,6 +2034,19 @@ public:
   llvm::Expected<AddressSpaceInfo>
   GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
 
+  /// Maps \p pointer, a pointer value read from the target whose pointee is
+  /// in DWARF address class \p address_class (0 for none), to the address
+  /// lldb uses to access the pointee. This is the identity unless the server
+  /// published a flat aperture for that class (see AddressSpaceInfo).
+  lldb::addr_t PointerToLoadAddress(lldb::addr_t pointer,
+                                    uint32_t address_class);
+
+  /// Inverse of PointerToLoadAddress: returns the target pointer value for
+  /// \p address if it lies in the flat aperture of \p address_class, and
+  /// \p address unchanged otherwise.
+  lldb::addr_t LoadAddressToPointer(lldb::addr_t address,
+                                    uint32_t address_class);
+
   /// Get the number of watchpoints supported by this target.
   ///
   /// We may be able to determine the number of watchpoints available

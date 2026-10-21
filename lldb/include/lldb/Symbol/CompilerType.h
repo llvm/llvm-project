@@ -206,6 +206,9 @@ public:
 
   bool HasPointerAuthQualifier() const;
 
+  /// The target address space of this type, if it is not the default one.
+  std::optional<uint32_t> GetTargetAddressSpace() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 
@@ -399,6 +402,12 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Return a new CompilerType that qualifies this type with the given target
+  /// address space (DWARF address class) if this type is valid and the type
+  /// system supports target address spaces. Passing 0 (DW_ADDR_none) returns
+  /// this type unchanged.
+  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
   /// \}
 
   /// Exploring the type.
