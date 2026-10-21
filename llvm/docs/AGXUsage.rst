@@ -267,6 +267,14 @@ an earlier check of its block covers is not checked again. A failure of such
 a merged check is reported with the address and size of the whole range, and
 before the earlier accesses of the range have run.
 
+Accesses that cannot fail are not checked: constant offsets inside a device
+global or a static threadgroup array of known size, aligned as the global is,
+and stack accesses at constant offsets. A kernel with no other access is left
+unchanged: no hidden arguments and no ``.agx.kernels`` extension 2, so the
+runtime launches it as an unchecked kernel. MLIR memref descriptors are seen
+through: a pointer read back from an ``insertvalue`` chain has the bounds of
+the argument stored in it.
+
 On the agx-bench kernels the mode costs about 1.5 times the cycles (from 1.1
 times for compute-bound kernels to 5 times for very short ones) and 5 times
 the code, mostly a fixed part per kernel.
