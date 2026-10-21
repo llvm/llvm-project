@@ -2553,6 +2553,7 @@ public:
   mlir::Value emitX86CpuSupports(mlir::Location loc,
                                  std::array<uint32_t, 4> FeatureMask);
   mlir::Value emitX86CpuInit(mlir::Location loc);
+  mlir::Value emitX86MSVCIntrin(unsigned builtinID, const CallExpr *E);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
