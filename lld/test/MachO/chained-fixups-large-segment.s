@@ -13,7 +13,7 @@
 ## This aligns __big to end up on a page > UINT16_MAX.
 # RUN: not %lld -dylib -fixup_chains -o %t.bad %t.o -sectalign __DATA __big 0x20000000 2>&1 \
 # RUN:     | FileCheck --check-prefix=ERR %s
-# ERR: error: chained fixup too large in segment __DATA; use -no_fixup_chains
+# ERR: error: page index in __DATA,__big too large for chained fixups; use -no_fixup_chains
 
 .text
 .space 0x1000

@@ -2570,9 +2570,11 @@ void ChainedFixupsSection::finalizeContents() {
     fixupSegments.emplace_back(oseg);
     while (i < count && sameSegment(locations[i], firstLoc)) {
       uint64_t pageIdx = locations[i].offset / pageSize;
-      if (pageIdx >= UINT16_MAX)
-        fatal("chained fixup too large in segment " + oseg->name +
-              "; use -no_fixup_chains");
+      if (pageIdx >= UINT16_MAX) {
+        fatal("page index in " + locations[i].isec->getSegName() + "," +
+              locations[i].isec->getName() + " too large for chained fixups; "
+              "use -no_fixup_chains");
+      }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;
