@@ -28,6 +28,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -52,7 +53,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
                                       const SymbolTable &fallbackSymTab) {
   SymbolRefAttr routineRef;
@@ -176,6 +176,12 @@ class ACCBindRoutine : public acc::impl::ACCBindRoutineBase<ACCBindRoutine> {
 public:
   using acc::impl::ACCBindRoutineBase<ACCBindRoutine>::ACCBindRoutineBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCBindRoutineBase<ACCBindRoutine>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     FunctionOpInterface func = getOperation();
     ModuleOp module = func->getParentOfType<ModuleOp>();
@@ -254,5 +260,4 @@ public:
       signalPassFailure();
   }
 };
-
 } // namespace

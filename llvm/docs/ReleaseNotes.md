@@ -199,6 +199,9 @@ Makes programs 10x faster by doing Special New Thing.
   `machine-function-splitter` pass name are removed;
   `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
 
+* Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
+  which no longer had any users.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -271,6 +274,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.
 
+* Added support for the `aarch64-unknown-uefi` target. It follows the Windows
+  ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
+  unwind information) and produces PE/COFF objects.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
@@ -320,7 +327,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
-* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+* Added the `RVA23P1S64` and `RVB23P1S64` profiles (version 1.0).
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
