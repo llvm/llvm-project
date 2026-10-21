@@ -289,7 +289,6 @@ define <10 x i32> @load_factor3_x25(ptr %ptr) {
 ; CHECK-GI-LABEL: load_factor3_x25:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldp q2, q1, [x0]
-; CHECK-GI-NEXT:    adrp x9, .LCPI2_0
 ; CHECK-GI-NEXT:    ldp q3, q7, [x0, #48]
 ; CHECK-GI-NEXT:    mov s0, v2.s[0]
 ; CHECK-GI-NEXT:    mov s4, v2.s[1]
@@ -304,33 +303,33 @@ define <10 x i32> @load_factor3_x25(ptr %ptr) {
 ; CHECK-GI-NEXT:    mov v6.s[1], v7.s[0]
 ; CHECK-GI-NEXT:    mov v17.s[1], v7.s[1]
 ; CHECK-GI-NEXT:    ldp q2, q18, [x0, #80]
-; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI2_0]
-; CHECK-GI-NEXT:    ldr d19, [x0, #112]
+; CHECK-GI-NEXT:    ldr q3, [x0, #32]
 ; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-GI-NEXT:    mov v4.s[2], v1.s[3]
-; CHECK-GI-NEXT:    ldr q1, [x0, #32]
+; CHECK-GI-NEXT:    ldr d1, [x0, #112]
 ; CHECK-GI-NEXT:    mov v5.s[2], v7.s[2]
 ; CHECK-GI-NEXT:    mov v6.s[2], v7.s[3]
-; CHECK-GI-NEXT:    mov v7.16b, v18.16b
-; CHECK-GI-NEXT:    mov v16.s[2], v1.s[0]
+; CHECK-GI-NEXT:    mov v19.16b, v18.16b
+; CHECK-GI-NEXT:    zip1 v7.4s, v18.4s, v1.4s
+; CHECK-GI-NEXT:    mov v16.s[2], v3.s[0]
 ; CHECK-GI-NEXT:    mov v17.s[2], v2.s[0]
-; CHECK-GI-NEXT:    tbl v3.16b, { v18.16b, v19.16b }, v3.16b
-; CHECK-GI-NEXT:    mov v19.s[0], v18.s[2]
-; CHECK-GI-NEXT:    mov v0.s[3], v1.s[1]
-; CHECK-GI-NEXT:    mov v4.s[3], v1.s[2]
-; CHECK-GI-NEXT:    mov v7.s[1], v7.s[3]
+; CHECK-GI-NEXT:    mov v1.s[0], v18.s[2]
+; CHECK-GI-NEXT:    mov v0.s[3], v3.s[1]
+; CHECK-GI-NEXT:    mov v4.s[3], v3.s[2]
+; CHECK-GI-NEXT:    mov v19.s[1], v18.s[3]
 ; CHECK-GI-NEXT:    mov v5.s[3], v2.s[1]
 ; CHECK-GI-NEXT:    mov v6.s[3], v2.s[2]
-; CHECK-GI-NEXT:    mov v16.s[3], v1.s[3]
+; CHECK-GI-NEXT:    mov v16.s[3], v3.s[3]
 ; CHECK-GI-NEXT:    mov v17.s[3], v2.s[3]
+; CHECK-GI-NEXT:    trn2 v2.4s, v18.4s, v7.4s
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    add v2.2s, v7.2s, v19.2s
-; CHECK-GI-NEXT:    add v1.4s, v5.4s, v6.4s
+; CHECK-GI-NEXT:    add v1.2s, v19.2s, v1.2s
+; CHECK-GI-NEXT:    add v3.4s, v5.4s, v6.4s
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v16.4s
-; CHECK-GI-NEXT:    add v2.2s, v2.2s, v3.2s
-; CHECK-GI-NEXT:    add v1.4s, v1.4s, v17.4s
-; CHECK-GI-NEXT:    str d2, [x8, #32]
-; CHECK-GI-NEXT:    stp q0, q1, [x8]
+; CHECK-GI-NEXT:    add v1.2s, v1.2s, v2.2s
+; CHECK-GI-NEXT:    add v3.4s, v3.4s, v17.4s
+; CHECK-GI-NEXT:    str d1, [x8, #32]
+; CHECK-GI-NEXT:    stp q0, q3, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <30 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <30 x i32> %interleaved.vec, <30 x i32> poison, <10 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27>
@@ -1227,15 +1226,14 @@ define void @load_undef_mask_factor4(ptr %ptr) {
 ; CHECK-GI-LABEL: load_undef_mask_factor4:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
+; CHECK-GI-NEXT:    uzp2 v2.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    zip1 v3.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    trn2 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    zip2 v5.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    zip2 v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uzp2 v0.4s, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    // fake_use: $q3
 ; CHECK-GI-NEXT:    // fake_use: $q4
-; CHECK-GI-NEXT:    // fake_use: $q5
+; CHECK-GI-NEXT:    // fake_use: $q1
 ; CHECK-GI-NEXT:    // fake_use: $q0
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
@@ -1329,13 +1327,10 @@ define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI18_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    trn1 v3.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov s5, v2.s[2]
 ; CHECK-GI-NEXT:    mov v6.s[1], v2.s[1]
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v3.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-GI-NEXT:    mov v3.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    mov v5.s[1], v0.s[3]
 ; CHECK-GI-NEXT:    mov v6.s[2], v0.s[2]
 ; CHECK-GI-NEXT:    mov s4, v3.s[0]
@@ -2015,20 +2010,15 @@ define void @store_general_mask_factor3_undeflane(ptr %ptr, <32 x i32> %v0, <32 
 ;
 ; CHECK-GI-LABEL: store_general_mask_factor3_undeflane:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_2
-; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI30_2]
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-GI-NEXT:    ldr q3, [sp]
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
-; CHECK-GI-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_0]
-; CHECK-GI-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v1.16b
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    tbl v2.16b, { v4.16b, v5.16b }, v2.16b
-; CHECK-GI-NEXT:    stp q0, q1, [x0]
-; CHECK-GI-NEXT:    str q2, [x0, #32]
+; CHECK-GI-NEXT:    ldr q0, [sp]
+; CHECK-GI-NEXT:    trn1 v1.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    uzp2 v2.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    trn2 v3.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
+; CHECK-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    mov v3.s[0], v4.s[2]
+; CHECK-GI-NEXT:    stp q1, q0, [x0]
+; CHECK-GI-NEXT:    str q3, [x0, #32]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 poison, i32 32, i32 16, i32 poison, i32 33, i32 17, i32 poison, i32 34, i32 18, i32 poison, i32 35, i32 19>
   store <12 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -2119,14 +2109,12 @@ define void @no_interleave(<4 x float> %a0) {
 ;
 ; CHECK-GI-LABEL: no_interleave:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI32_0]
 ; CHECK-GI-NEXT:    adrp x8, :got:g
 ; CHECK-GI-NEXT:    ldr x8, [x8, :got_lo12:g]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    mov v1.s[2], v0.s[3]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[3]
+; CHECK-GI-NEXT:    str q1, [x8]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x float> %a0, <4 x float> %a0, <4 x i32> <i32 0, i32 3, i32 7, i32 poison>
   store <4 x float> %v0, ptr @g, align 16

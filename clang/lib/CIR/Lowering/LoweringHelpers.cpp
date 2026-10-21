@@ -369,9 +369,100 @@ static bool containsBlockAddress(mlir::Attribute attr) {
   return false;
 }
 
+/// The fewest trailing zeros that adjustGlobalArrayTypeForInit splits off an
+/// array constant into a zero-initialized tail, as in classic codegen.
+static constexpr int minSplitTrailingZeros = 8;
+
+static bool shouldSplitTrailingZeros(cir::ConstArrayAttr attr) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+  return elts && !elts.empty() &&
+         attr.getTrailingZerosNum() >= minSplitTrailingZeros;
+}
+
+static bool containsSplitTrailingZeros(mlir::Attribute attr) {
+  if (auto record = mlir::dyn_cast<cir::ConstRecordAttr>(attr))
+    return llvm::any_of(record.getMembers(), containsSplitTrailingZeros);
+  auto array = mlir::dyn_cast<cir::ConstArrayAttr>(attr);
+  if (!array)
+    return false;
+  if (shouldSplitTrailingZeros(array))
+    return true;
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(array.getElts());
+  return elts && llvm::any_of(elts, containsSplitTrailingZeros);
+}
+
+mlir::Attribute spellOutSplitTrailingZeros(mlir::Attribute attr) {
+  if (!containsSplitTrailingZeros(attr))
+    return attr;
+
+  if (auto record = mlir::dyn_cast<cir::ConstRecordAttr>(attr)) {
+    auto members =
+        llvm::map_to_vector(record.getMembers(), spellOutSplitTrailingZeros);
+    return cir::ConstRecordAttr::get(
+        mlir::cast<cir::RecordType>(record.getType()),
+        mlir::ArrayAttr::get(attr.getContext(), members));
+  }
+
+  auto array = mlir::cast<cir::ConstArrayAttr>(attr);
+  auto arrayTy = mlir::cast<cir::ArrayType>(array.getType());
+  auto elts = llvm::map_to_vector(mlir::cast<mlir::ArrayAttr>(array.getElts()),
+                                  spellOutSplitTrailingZeros);
+  if (!shouldSplitTrailingZeros(array))
+    return cir::ConstArrayAttr::get(
+        arrayTy, mlir::ArrayAttr::get(attr.getContext(), elts),
+        array.getTrailingZerosNum());
+  elts.append(array.getTrailingZerosNum(),
+              cir::ZeroAttr::get(arrayTy.getElementType()));
+  return cir::ConstArrayAttr::get(arrayTy,
+                                  mlir::ArrayAttr::get(attr.getContext(), elts),
+                                  /*trailingZerosNum=*/0);
+}
+
 static std::optional<mlir::Attribute> lowerConstRecordMemberAttr(
     mlir::Attribute attr, mlir::SymbolTableCollection &symbolTables,
     const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
+
+/// Lower \p constArr, which is or contains an array split by
+/// adjustGlobalArrayTypeForInit, element by element into the shape of its
+/// adjusted type. A dense attribute would span the split-off zeros.
+static std::optional<mlir::Attribute> lowerConstArrayAttrByElement(
+    cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp) {
+  mlir::MLIRContext *ctx = constArr.getContext();
+  auto arrayTy = mlir::cast<cir::ArrayType>(constArr.getType());
+  auto elts = mlir::cast<mlir::ArrayAttr>(constArr.getElts());
+  mlir::Type adjustedTy =
+      adjustGlobalTypeForInit(converter->convertType(arrayTy), constArr,
+                              *converter, mlir::DataLayout(moduleOp));
+
+  llvm::SmallVector<mlir::Attribute> lowered;
+  // Fewer members than elements: the elements were grouped into one array.
+  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(adjustedTy);
+  if (structTy && structTy.getBody().size() < elts.size()) {
+    auto prefix = cir::ConstArrayAttr::get(
+        cir::ArrayType::get(arrayTy.getElementType(), elts.size()), elts);
+    std::optional<mlir::Attribute> loweredPrefix =
+        lowerConstArrayAttr(prefix, symbolTables, converter, moduleOp);
+    if (!loweredPrefix)
+      return std::nullopt;
+    lowered.push_back(*loweredPrefix);
+  } else {
+    for (mlir::Attribute elt : elts) {
+      std::optional<mlir::Attribute> loweredElt =
+          lowerConstRecordMemberAttr(elt, symbolTables, converter, moduleOp);
+      if (!loweredElt)
+        return std::nullopt;
+      lowered.push_back(*loweredElt);
+    }
+  }
+
+  // A split array ends in one zero-initialized member; otherwise its few
+  // trailing zeros are spelled out.
+  lowered.append(
+      shouldSplitTrailingZeros(constArr) ? 1 : constArr.getTrailingZerosNum(),
+      mlir::LLVM::ZeroAttr::get(ctx));
+  return mlir::ArrayAttr::get(ctx, lowered);
+}
 
 std::optional<mlir::Attribute> lowerConstArrayAttr(
     cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
@@ -397,6 +488,10 @@ std::optional<mlir::Attribute> lowerConstArrayAttr(
   // constant attribute; fall back to the per-element insertvalue lowering.
   if (containsBlockAddress(constArr))
     return std::nullopt;
+
+  if (containsSplitTrailingZeros(constArr))
+    return lowerConstArrayAttrByElement(constArr, symbolTables, converter,
+                                        moduleOp);
 
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
@@ -705,6 +800,13 @@ static mlir::Type adjustGlobalUnionTypeForInit(
 // Unions in an array can cause individual elements to be of different types.
 // This function adjusts the array type and replaces it with a struct type if
 // necessary, OR leaves it as a 'new' array type if necessary.
+//
+// Like classic codegen, an array ending in many zeros becomes a packed struct
+// of its explicit elements and one zero-initialized array, so the zeros are
+// never spelled out:
+//   <{ T0, T1, [N x T] }>
+// or, when 8 or more elements share a type,
+//   <{ [M x T], [N x T] }>
 static mlir::Type adjustGlobalArrayTypeForInit(
     mlir::LLVM::LLVMArrayType arrayTy, cir::ConstArrayAttr arrayInit,
     const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
@@ -714,25 +816,39 @@ static mlir::Type adjustGlobalArrayTypeForInit(
     return arrayTy;
 
   mlir::Type origEltTy = arrayTy.getElementType();
-  llvm::SmallVector<mlir::Type> adjustedElts(arrayTy.getNumElements(),
-                                             origEltTy);
-  bool changed = false;
+  llvm::SmallVector<mlir::Type> adjustedElts;
+  adjustedElts.reserve(elts.size());
+  bool changed = elts.size() > arrayTy.getNumElements();
 
-  for (auto [idx, elt] : llvm::enumerate(elts)) {
+  for (mlir::Attribute elt : elts) {
     mlir::Type adjusted =
         adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+    changed |= adjusted != origEltTy;
+    adjustedElts.push_back(adjusted);
+  }
 
-    if (idx >= arrayTy.getNumElements()) {
-      adjustedElts.push_back(adjusted);
-      changed = true;
-    } else if (adjusted != origEltTy) {
-      adjustedElts[idx] = adjusted;
-      changed = true;
-    }
+  if (shouldSplitTrailingZeros(arrayInit)) {
+    mlir::Type commonEltTy =
+        llvm::all_equal(adjustedElts) ? adjustedElts.front() : mlir::Type{};
+    llvm::SmallVector<mlir::Type> body;
+    if (commonEltTy && elts.size() >= minSplitTrailingZeros)
+      body.push_back(
+          mlir::LLVM::LLVMArrayType::get(commonEltTy, adjustedElts.size()));
+    else
+      body.append(adjustedElts);
+    body.push_back(
+        mlir::LLVM::LLVMArrayType::get(commonEltTy ? commonEltTy : origEltTy,
+                                       arrayInit.getTrailingZerosNum()));
+    return mlir::LLVM::LLVMStructType::getLiteral(arrayTy.getContext(), body,
+                                                  /*isPacked=*/true);
   }
 
   if (!changed)
     return arrayTy;
+
+  adjustedElts.resize(
+      std::max<size_t>(adjustedElts.size(), arrayTy.getNumElements()),
+      origEltTy);
 
   if (llvm::all_equal(adjustedElts))
     return mlir::LLVM::LLVMArrayType::get(adjustedElts.front(),

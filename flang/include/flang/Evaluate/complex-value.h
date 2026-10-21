@@ -27,6 +27,8 @@ namespace Fortran::evaluate::value {
 /// The implementation is a pair of RealValue objects.
 class ComplexValue {
 public:
+  using Part = RealValue;
+
   ComplexValue() = default;
   ComplexValue(const ComplexValue &) = default;
   ComplexValue(ComplexValue &&) = default;
@@ -160,8 +162,6 @@ public:
 
   static ComplexValue FromRawBytes(
       int kind, const void *raw, std::size_t expectedSize);
-
-  // TODO: unit testing
 
 private:
   RealValue re_, im_;

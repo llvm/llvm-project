@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
+#include "Block.h"
 #include "Frame.h"
-#include "InterpBlock.h"
 #include "Pointer.h"
 
 namespace clang {
@@ -150,7 +150,6 @@ public:
   }
   SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
-  unsigned getDepth() const { return Depth; }
   unsigned getArgSize() const { return ArgSize; }
 
   bool isStdFunction() const;
@@ -222,8 +221,6 @@ private:
 #endif
   /// The size of all the arguments.
   const unsigned ArgSize;
-  /// Depth of this frame.
-  unsigned Depth;
 
 public:
   unsigned MSVCConstexprAllowed = 0;

@@ -5756,7 +5756,42 @@ bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
           Ctx.hasSameUnqualifiedType(SrcTy, UIntTy));
 }
 
+ExprResult SemaHLSL::CreateOutArgExpr(Expr *Arg, QualType ArgTy,
+                                      QualType ParamTy,
+                                      InitializedEntity Entity,
+                                      SourceLocation Loc, bool IsInOut) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+
+  QualType Ty = ParamTy.getNonLValueExprType(Ctx);
+
+  auto *ArgOpV =
+      new (Ctx) OpaqueValueExpr(Loc, ArgTy, VK_LValue, OK_Ordinary, Arg);
+
+  // Parameters are initialized via copy initialization. This allows for
+  // overload resolution of argument constructors.
+  ExprResult Res = SemaRef.PerformCopyInitialization(Entity, Loc, ArgOpV);
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Base = Res.get();
+  // After the cast, drop the reference type when creating the exprs.
+  Ty = Ty.getNonLValueExprType(Ctx);
+  auto *OpV = new (Ctx) OpaqueValueExpr(Loc, Ty, VK_LValue, OK_Ordinary, Base);
+
+  // Writebacks are performed with `=` binary operator, which allows for
+  // overload resolution on writeback result expressions.
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
+                           tok::equal, ArgOpV, OpV);
+
+  if (Res.isInvalid())
+    return ExprError();
+  Expr *Writeback = Res.get();
+  auto *OutExpr =
+      HLSLOutArgExpr::Create(Ctx, Ty, ArgOpV, OpV, Writeback, IsInOut);
+  return ExprResult(OutExpr);
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
+  ASTContext &Ctx = SemaRef.getASTContext();
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");
   const auto *Attr = Param->getAttr<HLSLParamModifierAttr>();
@@ -5770,8 +5805,6 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
     return ExprError();
   }
 
-  ASTContext &Ctx = SemaRef.getASTContext();
-
   QualType Ty = Param->getType().getNonLValueExprType(Ctx);
 
   // HLSL allows implicit conversions from scalars to vectors, but not the
@@ -5783,35 +5816,11 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
     return ExprError();
   }
 
-  auto *ArgOpV = new (Ctx) OpaqueValueExpr(Param->getBeginLoc(), Arg->getType(),
-                                           VK_LValue, OK_Ordinary, Arg);
-
-  // Parameters are initialized via copy initialization. This allows for
-  // overload resolution of argument constructors.
   InitializedEntity Entity =
       InitializedEntity::InitializeParameter(Ctx, Ty, false);
-  ExprResult Res =
-      SemaRef.PerformCopyInitialization(Entity, Param->getBeginLoc(), ArgOpV);
-  if (Res.isInvalid())
-    return ExprError();
-  Expr *Base = Res.get();
-  // After the cast, drop the reference type when creating the exprs.
-  Ty = Ty.getNonLValueExprType(Ctx);
-  auto *OpV = new (Ctx)
-      OpaqueValueExpr(Param->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
 
-  // Writebacks are performed with `=` binary operator, which allows for
-  // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
-                           tok::equal, ArgOpV, OpV);
-
-  if (Res.isInvalid())
-    return ExprError();
-  Expr *Writeback = Res.get();
-  auto *OutExpr =
-      HLSLOutArgExpr::Create(Ctx, Ty, ArgOpV, OpV, Writeback, IsInOut);
-
-  return ExprResult(OutExpr);
+  return CreateOutArgExpr(Arg, Arg->getType(), Param->getType(), Entity,
+                          Param->getBeginLoc(), IsInOut);
 }
 
 QualType SemaHLSL::getInoutParameterType(QualType Ty) {

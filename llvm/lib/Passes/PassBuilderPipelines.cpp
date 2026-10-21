@@ -165,6 +165,8 @@ namespace llvm {
 extern cl::opt<std::string> UseCtxProfile;
 
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
+
+extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions(
@@ -288,7 +290,7 @@ static void instructionCountersPass(ModulePassManager &MPM,
 static void addPipelineStartPasses(ModulePassManager &MPM,
                                    const PassesOptions &Opts) {
   instructionCountersPass(MPM, /*IsPreOptimization=*/true);
-  if (Opts.enable_profcheck_in_pipeline)
+  if (EnableProfcheckInPipeline)
     MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
 }
 
@@ -297,7 +299,7 @@ static void addPipelineStartPasses(ModulePassManager &MPM,
 static void addPipelineEndPasses(ModulePassManager &MPM,
                                  const PassesOptions &Opts) {
   instructionCountersPass(MPM, /*IsPreOptimization=*/false);
-  if (Opts.enable_profcheck_in_pipeline)
+  if (EnableProfcheckInPipeline)
     MPM.addPass(ProfileVerifierPass());
 }
 
@@ -1714,7 +1716,8 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
   // like removing CFI/WPD related instructions. Note, we reuse
   // DropTypeTestsPass to clean up type tests rather than duplicate that logic
-  // in FatLtoCleanup.
+  // in FatLtoCleanup; checked-load cleanup is shared the other way, with
+  // FatLtoCleanup calling lowertypetests::cleanUpTypeCheckedLoad.
   MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the

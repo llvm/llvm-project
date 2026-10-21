@@ -1121,20 +1121,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return std::move(MB);
   }
 
-  /// The minimum number of threads we use for a low-trip count combined loop.
-  /// Instead of using more threads we increase the outer (block/team)
-  /// parallelism.
-  /// @see OMPX_MinThreadsForLowTripCount
-  virtual uint32_t getMinThreadsForLowTripCountLoop() {
-    return OMPX_MinThreadsForLowTripCount;
-  }
-
-  /// Whether or not to reuse blocks for high trip count loops.
-  /// @see OMPX_ReuseBlocksForHighTripCount
-  bool getReuseBlocksForHighTripCount() {
-    return OMPX_ReuseBlocksForHighTripCount;
-  }
-
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -1307,15 +1293,6 @@ private:
   /// Environment variables defined by the LLVM OpenMP implementation.
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
-
-  /// Environment flag to set the minimum number of threads we use for a
-  /// low-trip count combined loop. Instead of using more threads we increase
-  /// the outer (block/team) parallelism.
-  UInt32Envar OMPX_MinThreadsForLowTripCount =
-      UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
-
-  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
-      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
@@ -1565,11 +1542,6 @@ public:
                                    const char *ReportFilename,
                                    const char *OutputDirPath);
 
-  /// Loads the associated binary into the plugin and returns a handle to it.
-  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                      __tgt_device_binary *Binary,
-                      GenericProfilerTy *ProfilerPtr = nullptr);
-
   /// Allocates memory that is accessively to the given device.
   void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind,
                    GenericProfilerTy *ProfilerPtr = nullptr);
@@ -1611,14 +1583,6 @@ public:
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
-
-  /// Look up a global symbol in the given binary.
-  int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
-                     const char *Name, void **DevicePtr);
-
-  /// Look up a kernel function in the given binary.
-  int32_t get_function(__tgt_device_binary Binary, const char *Name,
-                       void **KernelPtr);
 
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
