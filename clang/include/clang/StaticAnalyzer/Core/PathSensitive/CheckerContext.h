@@ -478,12 +478,8 @@ private:
 
     if (!P)
       P = getPredecessor();
-    // TODO: Defaulting to `getState()` (the state of `getPredecessor()`, i.e.
-    // the node passed to the constructor of `CheckerContext`) only makes sense
-    // in the common case when `P == getPredecessor()` -- otherwise this could
-    // "jump back" to an obsolete, older state.
     if (!State)
-      State = getState();
+      State = P->getState();
 
     Frontier.erase(P);
     ExplodedNode *N =
