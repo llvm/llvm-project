@@ -161,8 +161,6 @@ if (COMPILER_RT_STANDALONE_BUILD)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
-  # Each standalone build needs its own lit config map, even when runtime
-  # executables are written to a shared directory.
   set(LLVM_LIT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
 endif()
 
