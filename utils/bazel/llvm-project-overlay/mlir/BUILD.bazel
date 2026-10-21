@@ -5793,11 +5793,37 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "GPUBase",
+    srcs = ["lib/Dialect/GPU/IR/GPUBase.cpp"],
+    hdrs = [
+        "include/mlir/Dialect/GPU/IR/CompilationInterfaces.h",
+        "include/mlir/Dialect/GPU/IR/GPUBase.h",
+        "include/mlir/Dialect/GPU/IR/GPUDialectDecl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":FunctionInterfaces",
+        ":GPUBaseIncGen",
+        ":GPUCompilationAttrInterfacesIncGen",
+        ":GPUOpsIncGen",
+        ":IR",
+        ":SCFDialect",
+        ":Support",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "GPUDialect",
     srcs = glob(
         ["lib/Dialect/GPU/IR/*.cpp"],
+        exclude = ["lib/Dialect/GPU/IR/GPUBase.cpp"],
     ),
-    hdrs = glob(["include/mlir/Dialect/GPU/IR/*.h"]),
+    hdrs = glob(
+        ["include/mlir/Dialect/GPU/IR/*.h"],
+        exclude = ["include/mlir/Dialect/GPU/IR/GPUBase.h"],
+    ),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -5807,6 +5833,7 @@ cc_library(
         ":DLTIDialect",
         ":DialectUtils",
         ":FunctionInterfaces",
+        ":GPUBase",
         ":GPUBaseIncGen",
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUOpsIncGen",
@@ -10820,6 +10847,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
         ":DialectUtils",
+        ":GPUBase",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -10836,6 +10864,58 @@ cc_library(
         ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "OpenACCMemRefInterfaces",
+    srcs = ["lib/Dialect/OpenACC/Extensions/MemRefInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/OpenACC/Extensions/MemRefInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":GPUBase",
+        ":IR",
+        ":MemRefDialect",
+        ":OpenACCDialect",
+    ],
+)
+
+cc_library(
+    name = "OpenACCLLVMInterfaces",
+    srcs = ["lib/Dialect/OpenACC/Extensions/LLVMInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/OpenACC/Extensions/LLVMInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":OpenACCDialect",
+    ],
+)
+
+cc_library(
+    name = "OpenACCGPUInterfaces",
+    srcs = ["lib/Dialect/OpenACC/Extensions/GPUInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/OpenACC/Extensions/GPUInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":OpenACCDialect",
+    ],
+)
+
+cc_library(
+    name = "OpenACCAllExtensions",
+    srcs = ["lib/Dialect/OpenACC/Extensions/AllExtensions.cpp"],
+    hdrs = ["include/mlir/Dialect/OpenACC/Extensions/AllExtensions.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":OpenACCGPUInterfaces",
+        ":OpenACCLLVMInterfaces",
+        ":OpenACCMemRefInterfaces",
     ],
 )
 
@@ -10938,6 +11018,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":NVVMDialect",
+        ":OpenACCAllExtensions",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
@@ -11152,6 +11233,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":IR",
+        ":OpenACCAllExtensions",
         ":OpenACCDialect",
         ":Pass",
         ":SCFDialect",
@@ -11183,6 +11265,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":MemRefToLLVM",
+        ":OpenACCAllExtensions",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCUtils",

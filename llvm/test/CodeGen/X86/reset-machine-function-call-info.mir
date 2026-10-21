@@ -14,9 +14,9 @@
 name: f
 failedISel: true
 callSites:
-  - { bb: 0, offset: 0, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 0, fwdArgRegs: [] }
 calledGlobals:
-  - { bb: 0, offset: 0, callee: g, flags: 0 }
+  - { bb: '%bb.0', offset: 0, callee: g, flags: 0 }
 body: |
   bb.0:
     CALL64pcrel32 @g, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
