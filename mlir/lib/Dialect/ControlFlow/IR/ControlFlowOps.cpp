@@ -810,7 +810,8 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
 
 /// Drop cases whose destination block contains only ub.unreachable. If the
 /// default destination is unreachable, the last remaining case becomes the new
-/// default destination.
+/// default destination, or the switch is replaced by ub.unreachable if no case
+/// remains.
 /// switch %flag : i32, [
 ///   default: ^bb1,
 ///   42: ^bb2,
@@ -842,7 +843,12 @@ static LogicalResult dropUnreachableSwitchCases(SwitchOp op,
 
   Block *defaultDest = op.getDefaultDestination();
   ValueRange defaultOperands = op.getDefaultOperands();
-  if (isUnreachableBlock(defaultDest) && !newCaseDestinations.empty()) {
+  if (isUnreachableBlock(defaultDest)) {
+    // Every destination is unreachable, so the switch itself is unreachable.
+    if (newCaseDestinations.empty()) {
+      rewriter.replaceOpWithNewOp<ub::UnreachableOp>(op);
+      return success();
+    }
     // Any value not matching a remaining case is undefined behavior, so the
     // last remaining case can serve as the default destination.
     defaultDest = newCaseDestinations.pop_back_val();
