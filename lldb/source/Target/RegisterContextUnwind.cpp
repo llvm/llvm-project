@@ -41,7 +41,7 @@
 #include <cassert>
 #include <memory>
 #ifdef _AIX
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #endif
 
 using namespace lldb;

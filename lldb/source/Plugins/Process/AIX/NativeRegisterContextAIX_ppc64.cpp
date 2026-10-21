@@ -25,7 +25,7 @@
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Register/Arch/Utility/RegisterInfoPOSIX_ppc64.h"
+#include "Register/Common/RegisterInfo_ppc64.h"
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules

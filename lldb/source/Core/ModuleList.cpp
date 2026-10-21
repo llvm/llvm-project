@@ -296,7 +296,8 @@ void ModuleList::ReplaceEquivalent(
     // true even though the object name is NULL and doesn't match any loaded 
     // module. To fix this, set the object name of the equivalent_module_spec 
     // to be the same as the object name of the module_sp. */
-    equivalent_module_spec.SetObjectName(module_sp->GetObjectName());
+    equivalent_module_spec.SetObjectName(
+        module_sp->GetObjectName().GetStringRef().str());
 #endif
     size_t idx = 0;
     while (idx < m_modules.size()) {

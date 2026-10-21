@@ -493,7 +493,7 @@ ModuleSpecList ObjectContainerBigArchive::GetModuleSpecifications(
                 object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = object->ar_name;
+            spec.SetObjectName(object->ar_name.GetStringRef().str());
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(file_size - object_file_offset);
             spec.GetObjectModificationTime() = object_mod_time;

@@ -58,7 +58,7 @@ public:
       llvm::StringRef file_name(part);
       part = strtok(nullptr, "()");
       assert(part);
-      m_object_name = ConstString(part);
+      m_object_name = part;
       m_file = FileSpec(file_name);
       m_object_size = FileSystem::Instance().GetByteSize(m_file);
     } else {

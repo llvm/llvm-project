@@ -17,7 +17,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
+#include "Register/Common/RegisterInfo_ppc64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextCoreAIX_ppc64.h"
 
@@ -80,7 +80,7 @@ ThreadAIXCore::CreateRegisterContextForFrame(StackFrame *frame) {
     switch (arch.GetMachine()) {
         case llvm::Triple::ppc:
         case llvm::Triple::ppc64:
-            reg_interface = new RegisterInfoPOSIX_ppc64(arch);
+            reg_interface = new RegisterInfo_ppc64(arch);
             m_thread_reg_ctx_sp = std::make_shared<RegisterContextCoreAIX_ppc64>(
                     *this, reg_interface, m_gpregset_data);
             break;

@@ -35,7 +35,7 @@
 // Pull in GPR_PPC64 / FPR_PPC64 / VMX_PPC64 / VSX_PPC64 register structs
 // needed by cb_read_regs / cb_write_regs and PtraceWrapper.
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 #ifndef PTHDB_FLAG_RTL
