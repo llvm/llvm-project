@@ -48,7 +48,8 @@ static bool legalizeInteger(Instruction &I,
                             SmallVectorImpl<Instruction *> &ToRemove,
                             DenseMap<Value *, Value *> &ReplacedValues) {
   IRBuilder<> B(&I);
-  auto operand = [&](Value *V, IntegerExtension Ext = IntegerExtension::None) {
+  auto GetOperand = [&](Value *V,
+                        IntegerExtension Ext = IntegerExtension::None) {
     auto *Ty = getLegalIntegerType(V->getType());
     if (!Ty)
       return V;
@@ -69,7 +70,7 @@ static bool legalizeInteger(Instruction &I,
       R = B.CreateAnd(R, APInt::getLowBitsSet(Ty->getBitWidth(), Width));
     return R;
   };
-  auto replace = [&](Value *V) {
+  auto Replace = [&](Value *V) {
     if (I.getType() == V->getType())
       I.replaceAllUsesWith(V);
     else
@@ -89,22 +90,24 @@ static bool legalizeInteger(Instruction &I,
       reportFatalUsageError("DXIL legalization does not support this integer "
                             "bitcast");
     unsigned Width = VT->getScalarSizeInBits();
-    Value *Packed =
-        Dst ? B.getIntN(Dst->getBitWidth(), 0) : operand(BC->getOperand(0));
-    Value *Unpacked = PoisonValue::get(VT);
-    for (unsigned Idx = 0; Idx < VT->getNumElements(); ++Idx) {
-      if (Dst) {
-        Value *Elt = B.CreateZExt(
-            B.CreateExtractElement(BC->getOperand(0), B.getInt32(Idx)), Dst);
-        Packed = B.CreateOr(Packed, Idx ? B.CreateShl(Elt, Idx * Width) : Elt);
-      } else {
+    Value *Op = GetOperand(BC->getOperand(0));
+    if (Dst) {
+      Value *Result = B.getIntN(Dst->getBitWidth(), 0);
+      for (unsigned Idx = 0; Idx < VT->getNumElements(); ++Idx) {
         Value *Elt =
-            B.CreateTrunc(Idx ? B.CreateLShr(Packed, Idx * Width) : Packed,
-                          VT->getElementType());
-        Unpacked = B.CreateInsertElement(Unpacked, Elt, B.getInt32(Idx));
+            B.CreateZExt(B.CreateExtractElement(Op, B.getInt32(Idx)), Dst);
+        Result = B.CreateOr(Result, Idx ? B.CreateShl(Elt, Idx * Width) : Elt);
       }
+      Replace(Result);
+    } else {
+      Value *Result = PoisonValue::get(VT);
+      for (unsigned Idx = 0; Idx < VT->getNumElements(); ++Idx) {
+        Value *Elt = B.CreateTrunc(Idx ? B.CreateLShr(Op, Idx * Width) : Op,
+                                   VT->getElementType());
+        Result = B.CreateInsertElement(Result, Elt, B.getInt32(Idx));
+      }
+      Replace(Result);
     }
-    replace(Dst ? Packed : Unpacked);
     return true;
   }
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
@@ -125,30 +128,34 @@ static bool legalizeInteger(Instruction &I,
     default:
       break;
     }
-    Value *LHS = operand(BO->getOperand(0), Ext);
-    Value *RHS = operand(BO->getOperand(1),
-                         BO->isShift() ? IntegerExtension::Zero : Ext);
+    Value *LHS = GetOperand(BO->getOperand(0), Ext);
+    Value *RHS = GetOperand(BO->getOperand(1),
+                            BO->isShift() ? IntegerExtension::Zero : Ext);
     // Narrow no-wrap/exact flags do not describe the carrier operation.
-    return replace(B.CreateBinOp(BO->getOpcode(), LHS, RHS));
+    Replace(B.CreateBinOp(BO->getOpcode(), LHS, RHS));
+    return true;
   }
   if (auto *SI = dyn_cast<SelectInst>(&I)) {
     if (!getLegalIntegerType(I.getType()))
       return false;
-    Value *True = operand(SI->getTrueValue());
-    Value *False = operand(SI->getFalseValue());
-    Value *V = B.CreateSelect(SI->getCondition(), True, False, "", SI);
+    Value *True = GetOperand(SI->getTrueValue());
+    Value *False = GetOperand(SI->getFalseValue());
+    Value *V =
+        B.CreateSelect(SI->getCondition(), True, False, SI->getName(), SI);
     if (auto *NewSI = dyn_cast<SelectInst>(V);
         NewSI && !NewSI->getMetadata(LLVMContext::MD_prof))
       setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE);
-    return replace(V);
+    Replace(V);
+    return true;
   }
   if (auto *CI = dyn_cast<ICmpInst>(&I)) {
     if (!getLegalIntegerType(CI->getOperand(0)->getType()))
       return false;
     auto Ext = CI->isSigned() ? IntegerExtension::Sign : IntegerExtension::Zero;
-    Value *LHS = operand(CI->getOperand(0), Ext);
-    Value *RHS = operand(CI->getOperand(1), Ext);
-    return replace(B.CreateICmp(CI->getPredicate(), LHS, RHS));
+    Value *LHS = GetOperand(CI->getOperand(0), Ext);
+    Value *RHS = GetOperand(CI->getOperand(1), Ext);
+    Replace(B.CreateICmp(CI->getPredicate(), LHS, RHS));
+    return true;
   }
   if (auto *CI = dyn_cast<CastInst>(&I)) {
     auto *Dst = getLegalIntegerType(CI->getDestTy());
@@ -160,11 +167,12 @@ static bool legalizeInteger(Instruction &I,
     else if (CI->getOpcode() == Instruction::SExt ||
              CI->getOpcode() == Instruction::SIToFP)
       Ext = IntegerExtension::Sign;
-    Value *V = operand(CI->getOperand(0), Ext);
+    Value *V = GetOperand(CI->getOperand(0), Ext);
     Type *Ty = Dst ? Dst : CI->getDestTy();
-    return replace(CI->isIntegerCast()
-                       ? B.CreateIntCast(V, Ty, Ext == IntegerExtension::Sign)
-                       : B.CreateCast(CI->getOpcode(), V, Ty));
+    Replace(CI->isIntegerCast()
+                ? B.CreateIntCast(V, Ty, Ext == IntegerExtension::Sign)
+                : B.CreateCast(CI->getOpcode(), V, Ty));
+    return true;
   }
   if (ReplacedValues.contains(&I))
     return false;
@@ -175,6 +183,8 @@ static bool legalizeInteger(Instruction &I,
   for (Use &Op : I.operands()) {
     // Fixed intrinsic immediates are ABI operands, not integer SSA. These
     // DirectX intrinsics do not currently mark their immediates with immarg.
+    // TODO: Use immarg once https://github.com/llvm/llvm-project/issues/217423
+    // is addressed.
     if (auto *CB = dyn_cast<CallBase>(&I); CB && CB->isArgOperand(&Op)) {
       unsigned Arg = CB->getArgOperandNo(&Op);
       Intrinsic::ID ID = CB->getIntrinsicID();
@@ -210,12 +220,12 @@ static bool legalizeI8Memory(Instruction &I,
                              SmallVectorImpl<Instruction *> &ToRemove,
                              DenseMap<Value *, Value *> &ReplacedValues) {
 
-  auto replacement = [&](Value *V) { return ReplacedValues.lookup_or(V, V); };
   IRBuilder<> Builder(&I);
   if (auto *Store = dyn_cast<StoreInst>(&I)) {
     if (!Store->getValueOperand()->getType()->isIntegerTy(8))
       return false;
-    Value *Pointer = replacement(Store->getPointerOperand());
+    Value *Pointer = ReplacedValues.lookup_or(Store->getPointerOperand(),
+                                              Store->getPointerOperand());
     Type *Ty = nullptr;
     if (auto *AI = dyn_cast<AllocaInst>(Pointer))
       Ty = AI->getAllocatedType();
@@ -230,8 +240,10 @@ static bool legalizeI8Memory(Instruction &I,
     if (!Ty || !Ty->isIntegerTy() || getLegalIntegerType(Ty))
       reportFatalUsageError("DXIL legalization cannot determine the i8 store's "
                             "storage type");
-    Value *V = Builder.CreateZExtOrTrunc(replacement(Store->getValueOperand()),
-                                         Builder.getInt32Ty());
+    Value *V = Builder.CreateZExtOrTrunc(
+        ReplacedValues.lookup_or(Store->getValueOperand(),
+                                 Store->getValueOperand()),
+        Builder.getInt32Ty());
     V = Builder.CreateAnd(V, 255);
     Value *NewStore =
         Builder.CreateStore(Builder.CreateZExtOrTrunc(V, Ty), Pointer);
@@ -242,7 +254,8 @@ static bool legalizeI8Memory(Instruction &I,
 
   if (auto *Load = dyn_cast<LoadInst>(&I);
       Load && I.getType()->isIntegerTy(8)) {
-    Value *Pointer = replacement(Load->getPointerOperand());
+    Value *Pointer = ReplacedValues.lookup_or(Load->getPointerOperand(),
+                                              Load->getPointerOperand());
     Type *ElementType = Pointer->getType();
     if (auto *AI = dyn_cast<AllocaInst>(Pointer))
       ElementType = AI->getAllocatedType();
