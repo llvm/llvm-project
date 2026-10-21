@@ -122,7 +122,7 @@ bool RISCVCodeGenPrepareImpl::visitAnd(BinaryOperator &BO) {
 // widening multiply. Only do this if the splat isn't already in the same
 // basic block as the mul. We put the zext with the mul and the new
 // splat and trunc in the basic block with the original splat.
-// We only need to this when sinkSplatOperands() is false, otherwise
+// We only need to do this when sinkSplatOperands() is false, otherwise
 // CodeGenPrepare will just sink the splat and SelectionDAG can sort it out.
 // TODO: Extend to sign extend or mismatched extends.
 bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
