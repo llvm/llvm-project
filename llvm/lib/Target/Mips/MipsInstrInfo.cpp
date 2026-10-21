@@ -589,6 +589,9 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
 }
 
 bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
+  if (MI.isInlineAsm())
+    return false;
+
   // Also catches the 64-bit and accumulator super-registers.
   for (MCRegister Reg : {Mips::HI0, Mips::LO0})
     if (MI.definesRegister(Reg, &getRegisterInfo()))

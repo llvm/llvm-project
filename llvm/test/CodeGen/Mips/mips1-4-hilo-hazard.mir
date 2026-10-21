@@ -362,7 +362,6 @@ body:             |
 ...
 ---
 # Inline assembly may write HI/LO: two nops.
-# FIXME: no nop is inserted.
 name:            mflo_inlineasm
 tracksRegLiveness: true
 body:             |
@@ -373,6 +372,8 @@ body:             |
     ; CHECK: liveins: $ac0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2 = MFLO implicit $ac0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2 {
     ; CHECK-NEXT:   $r0 = SLL $r0, 0
@@ -385,7 +386,6 @@ body:             |
 ...
 ---
 # Inline assembly may read HI/LO: two nops.
-# FIXME: no nop is inserted.
 name:            inlineasm_mult
 tracksRegLiveness: true
 body:             |
@@ -396,6 +396,8 @@ body:             |
     ; CHECK: liveins: $r4, $r5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: $ac0 = PseudoMULT killed $r4, killed $r5
     ; CHECK-NEXT: $r2 = MFLO implicit killed $ac0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2 {

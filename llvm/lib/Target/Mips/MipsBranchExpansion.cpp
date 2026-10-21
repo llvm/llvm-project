@@ -803,8 +803,15 @@ bool MipsBranchExpansion::handleMFLO() {
   if (STI->hasMips32() || STI->hasMips5())
     return false;
 
+  // insertNop does not support MIPS16 mode.
+  if (STI->inMips16Mode())
+    return false;
+
+  // Inline assembly is opaque: it counts as both a read and a write.
   return handleMFLOSlot(
-      [this](auto &I) -> bool { return TII->IsMfloOrMfhi(I); },
+      [this](auto &I) -> bool {
+        return I.isInlineAsm() || TII->IsMfloOrMfhi(I);
+      },
       [this](auto &IInSlot, auto &I) -> bool {
         return TII->SafeAfterMflo(IInSlot);
       });
