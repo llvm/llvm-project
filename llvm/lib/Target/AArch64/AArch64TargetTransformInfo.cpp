@@ -3332,9 +3332,9 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
 static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
                      Instruction *&OtherAnd, Value *&A, Value *&B) {
   Value *MaskValue;
-  if (!match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
-                       m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
-                                        m_Value(A))))))
+  if (!match(I,
+             m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
+                    m_OneUse(m_c_And(m_Not(m_Value(MaskValue)), m_Value(A))))))
     return false;
 
   if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Value(B))))
@@ -4092,9 +4092,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         }
       }
 
+      if (!isa<ZExtInst, SExtInst>(I))
+        return std::nullopt;
+
       // The cast will be free for the s/urhadd instructions
-      if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
-          isExtPartOfAvgExpr(Usr, Dst, Src))
+      if (isExtPartOfAvgExpr(Usr, Dst, Src))
+        return 0;
+
+      // [US]SHLL/SHLL fold a doubling extend into a shift left by a splat
+      // immediate of at most the source element width.
+      const APInt *ShAmt;
+      unsigned SrcBits = Src->getScalarSizeInBits();
+      if (match(Usr, m_Shl(m_Specific(I), m_APInt(ShAmt))) &&
+          ShAmt->ule(SrcBits) && useNeonVector(Dst) &&
+          Dst->getScalarSizeInBits() == 2 * SrcBits &&
+          getTypeLegalizationCost(Src).second.getScalarSizeInBits() == SrcBits)
         return 0;
 
       return std::nullopt;
@@ -5122,6 +5134,28 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
         return InstructionCost::getInvalid();
+
+  if (CtxI && CtxI->getOpcode() == Opcode && !CtxI->use_empty() &&
+      useNeonVector(Ty)) {
+    // The Ands of a bit select are folded into the BSL that the Or becomes.
+    Instruction *MainAnd, *OtherAnd;
+    Value *A, *B;
+    if (Opcode == Instruction::And && CtxI->hasOneUse() &&
+        matchBSL(CtxI->user_back(), MainAnd, OtherAnd, A, B))
+      return 0;
+
+    // A Not is folded into the BIC, ORN or BSL of each And/Or using it, unless
+    // that And/Or negates both of its operands.
+    if (match(CtxI, m_Not(m_Value())) &&
+        all_of(CtxI->users(), [&](const User *U) {
+          const auto *UI = cast<Instruction>(U);
+          return is_contained({Instruction::And, Instruction::Or},
+                              UI->getOpcode()) &&
+                 UI->getParent() == CtxI->getParent() &&
+                 !match(UI, m_BinOp(m_Not(m_Value()), m_Not(m_Value())));
+        }))
+      return 0;
+  }
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);

@@ -361,6 +361,29 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
+                                       uint64_t FillValue, SMLoc Loc) {
+  int64_t Count;
+  if (!NumBytes.evaluateAsAbsolute(Count)) {
+    getContext().reportError(Loc, "fill length must be absolute in HLASM");
+    return;
+  }
+  if (Count < 0) {
+    getContext().reportError(Loc, "invalid number of bytes");
+    return;
+  }
+  if (Count > 0x7FFFFFFF) {
+    getContext().reportError(Loc, "fill length too large for HLASM");
+    return;
+  }
+  if (Count == 0)
+    return;
+
+  OS << " DC " << Count << "XL1'"
+     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  EmitEOL();
+}
+
 void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI) {
   raw_ostream &OS = getCommentOS();
