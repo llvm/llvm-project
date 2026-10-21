@@ -486,6 +486,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.doubleTy;
       break;
     case BuiltinType::LongDouble:
+      longDoubleReferenced = true;
       resultType =
           builder.getLongDoubleTy(astContext.getFloatTypeSemantics(type));
       break;

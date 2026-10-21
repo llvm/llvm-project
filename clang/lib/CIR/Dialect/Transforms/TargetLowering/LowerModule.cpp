@@ -115,6 +115,28 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
   }
+  if (auto ldFormat = mlir::dyn_cast_if_present<cir::LongDoubleFormatAttr>(
+          module->getAttr(cir::CIRDialect::getLongDoubleFormatAttrName()))) {
+    switch (ldFormat.getValue()) {
+    case cir::LongDoubleFormat::IEEEsingle:
+      // There is no frontend option to force 32 bit long double, so let it
+      // derive from the target.
+      break;
+    case cir::LongDoubleFormat::IEEEdouble:
+      langOpts.LongDoubleSize = 64;
+      break;
+    case cir::LongDoubleFormat::X87DoubleExtended:
+      langOpts.LongDoubleSize = 80;
+      break;
+    case cir::LongDoubleFormat::IEEEquad:
+      langOpts.LongDoubleSize = 128;
+      break;
+    case cir::LongDoubleFormat::PPCDoubleDouble:
+      // TargetInfo::adjust would turn 128 into IEEE quad, so leave it unset to
+      // keep the target's own ppc_fp128 format.
+      break;
+    }
+  }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());
 
@@ -132,6 +154,11 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
+
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                 new clang::IgnoringDiagConsumer());
+  targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
 
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,

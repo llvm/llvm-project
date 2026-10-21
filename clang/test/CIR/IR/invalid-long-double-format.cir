@@ -1,0 +1,42 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error@+1 {{long double format 'float' is not supported on target 'x86_64-unknown-linux-gnu'}}
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<float>} {
+}
+
+// -----
+
+// expected-error@+1 {{long double format 'ppc_fp128' is not supported on target 'x86_64-unknown-linux-gnu'}}
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<ppc_fp128>} {
+}
+
+// -----
+
+// expected-error@+1 {{long double format 'x86_fp80' is not supported on target 'aarch64-unknown-linux-gnu'}}
+module attributes {cir.triple = "aarch64-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<x86_fp80>} {
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{expects 'cir.long_double_format' attribute to be attached to 'builtin.module'}}
+  cir.func @f() attributes {cir.long_double_format = #cir.long_double_format<double>} {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid: PPC can use IEEE quad (-mabi=ieeelongdouble) and ppc_fp128.
+module attributes {cir.triple = "powerpc64le-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<fp128>} {
+}
+
+// -----
+
+module attributes {cir.triple = "powerpc64le-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<ppc_fp128>} {
+}

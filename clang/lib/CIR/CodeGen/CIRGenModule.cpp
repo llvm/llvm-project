@@ -4027,6 +4027,25 @@ void CIRGenModule::release() {
         cir::CIRDialect::getModuleFramePointerAttrName(),
         cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
 
+  if (getTypes().isLongDoubleReferenced()) {
+    const llvm::fltSemantics *flt = &getTarget().getLongDoubleFormat();
+    std::optional<cir::LongDoubleFormat> format;
+    if (flt == &llvm::APFloat::IEEEquad())
+      format = cir::LongDoubleFormat::IEEEquad;
+    else if (flt == &llvm::APFloat::IEEEdouble())
+      format = cir::LongDoubleFormat::IEEEdouble;
+    else if (flt == &llvm::APFloat::PPCDoubleDouble())
+      format = cir::LongDoubleFormat::PPCDoubleDouble;
+    else if (flt == &llvm::APFloat::x87DoubleExtended())
+      format = cir::LongDoubleFormat::X87DoubleExtended;
+    else if (flt == &llvm::APFloat::IEEEsingle())
+      format = cir::LongDoubleFormat::IEEEsingle;
+    if (format)
+      theModule->setAttr(
+          cir::CIRDialect::getLongDoubleFormatAttrName(),
+          cir::LongDoubleFormatAttr::get(&getMLIRContext(), *format));
+  }
+
   if (!recordLayoutEntries.empty())
     theModule->setAttr(
         cir::CIRDialect::getRecordLayoutsAttrName(),

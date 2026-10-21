@@ -120,6 +120,7 @@ def CIR_Dialect : Dialect {
     // LangOptions facts that post-CIRGen lowering consumes, serialized by
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
+    static llvm::StringRef getLongDoubleFormatAttrName() { return "cir.long_double_format"; }
     static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.

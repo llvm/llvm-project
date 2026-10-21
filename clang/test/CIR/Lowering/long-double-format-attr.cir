@@ -1,0 +1,7 @@
+// RUN: cir-translate %s --cir-to-llvmir -o - | FileCheck %s --check-prefix=LLVM
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+    cir.long_double_format = #cir.long_double_format<double>} {
+}
+
+// LLVM: !{i32 1, !"long-double-type", !"double"}

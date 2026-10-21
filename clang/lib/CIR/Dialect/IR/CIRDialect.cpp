@@ -281,6 +281,43 @@ bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
   return result;
 }
 
+/// Returns true if \p triple can use \p format for long double: either it is
+/// the target default, or the target lets the user select it (-mlong-double-64,
+/// -mlong-double-80, -mlong-double-128, -mabi=ieeelongdouble).
+static bool isLongDoubleFormatSupported(const llvm::Triple &triple,
+                                        cir::LongDoubleFormat format) {
+  auto toFormat = [](llvm::LongDoubleFormat f) {
+    switch (f) {
+    case llvm::LongDoubleFormat::IEEEsingle:
+      return cir::LongDoubleFormat::IEEEsingle;
+    case llvm::LongDoubleFormat::IEEEdouble:
+      return cir::LongDoubleFormat::IEEEdouble;
+    case llvm::LongDoubleFormat::X87DoubleExtended:
+      return cir::LongDoubleFormat::X87DoubleExtended;
+    case llvm::LongDoubleFormat::IEEEquad:
+      return cir::LongDoubleFormat::IEEEquad;
+    case llvm::LongDoubleFormat::PPCDoubleDouble:
+      return cir::LongDoubleFormat::PPCDoubleDouble;
+    }
+    llvm_unreachable("unknown long double format");
+  };
+  if (format == toFormat(triple.getDefaultLongDoubleFormat()))
+    return true;
+
+  switch (format) {
+  case cir::LongDoubleFormat::IEEEdouble:
+  case cir::LongDoubleFormat::IEEEquad:
+    return triple.isX86() || triple.isPPC();
+  case cir::LongDoubleFormat::X87DoubleExtended:
+    return triple.isX86();
+  case cir::LongDoubleFormat::PPCDoubleDouble:
+    return triple.isPPC();
+  case cir::LongDoubleFormat::IEEEsingle:
+    return false;
+  }
+  llvm_unreachable("unknown long double format");
+}
+
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
@@ -310,6 +347,30 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                << "C++ ABI '" << abi.getValue()
                << "' is not supported on target '" << triple.getValue() << "'";
 
+    return success();
+  }
+
+  if (attrName == getLongDoubleFormatAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getLongDoubleFormatAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto format = mlir::dyn_cast<cir::LongDoubleFormatAttr>(attr.getValue());
+    if (!format)
+      return op->emitOpError()
+             << "expects '" << getLongDoubleFormatAttrName()
+             << "' to be a #cir.long_double_format attribute";
+
+    auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName());
+    if (!triple)
+      return success();
+
+    llvm::Triple tripleVal(triple.getValue());
+    if (!isLongDoubleFormatSupported(tripleVal, format.getValue()))
+      return op->emitOpError()
+             << "long double format '"
+             << cir::stringifyLongDoubleFormat(format.getValue())
+             << "' is not supported on target '" << triple.getValue() << "'";
     return success();
   }
 

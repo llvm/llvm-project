@@ -2673,6 +2673,35 @@ def CIR_LoweringLangOptionsAttr
 }
 
 //===----------------------------------------------------------------------===//
+// LongDoubleFormatAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LongDoubleFormat : CIR_I32Enum<"LongDoubleFormat",
+    "long double format", [
+  I32EnumCase<"IEEEsingle", 0, "float">,
+  I32EnumCase<"IEEEdouble", 1, "double">,
+  I32EnumCase<"X87DoubleExtended", 2, "x86_fp80">,
+  I32EnumCase<"IEEEquad", 3, "fp128">,
+  I32EnumCase<"PPCDoubleDouble", 4, "ppc_fp128">
+]>;
+
+def CIR_LongDoubleFormatAttr
+    : CIR_EnumAttr<CIR_LongDoubleFormat, "long_double_format"> {
+  let summary = "Module long double format";
+  let description = [{
+    Records the floating-point format used for `long double` in the module.
+    The values of the attribute mirror possible values of `long-double-type`
+    LLVM IR metadata.
+
+    Example:
+    ```
+    module attributes {
+      cir.long_double_format = #cir.long_double_format<x86_fp80>} {}
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AnnotationAttr
 //===----------------------------------------------------------------------===//
 

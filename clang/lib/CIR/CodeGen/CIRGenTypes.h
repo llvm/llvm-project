@@ -74,6 +74,9 @@ class CIRGenTypes {
 
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
 
+  /// True if any instance of long double types are used.
+  bool longDoubleReferenced = false;
+
   /// Cache of record type keys known to be safe to convert (i.e.,
   /// isSafeToConvert returned true). Cleared whenever recordsBeingLaidOut
   /// changes, since the safety result depends on which records are currently
@@ -92,6 +95,7 @@ public:
 
   /// Utility to check whether a function type can be converted to a CIR type
   /// (i.e. doesn't depend on an incomplete tag type).
+  bool isLongDoubleReferenced() const { return longDoubleReferenced; }
   bool isFuncTypeConvertible(const clang::FunctionType *ft);
   bool isFuncParamTypeConvertible(clang::QualType type);
 
