@@ -16,6 +16,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 using namespace llvm;
@@ -363,16 +364,28 @@ static bool provablyDistinctObjects(AAResults &AA, const Value *ObjA,
   return ObjA && ObjB && AA.isNoAlias(ObjA, ObjB);
 }
 
-/// Returns true if a store of \p StoredTy to \p Addr writes different locations
-/// on each iteration of \p OuterLoop.
+/// Returns true if a store of \p StoredTy to \p Addr in \p VPBB writes
+/// different locations on each iteration of \p OuterLoop.
 static bool writesDisjointLocationsPerIteration(VPValue *Addr, Type *StoredTy,
-                                                const DataLayout &DL,
+                                                VPBasicBlock *VPBB,
+                                                VPBasicBlock *Latch,
+                                                const VPDominatorTree &VPDT,
                                                 PredicatedScalarEvolution &PSE,
                                                 const Loop *OuterLoop) {
-  if (!vputils::getGEPFlagsForPtr(Addr).isInBounds())
+  // The address cannot repeat if it is an nusw GEP on a live-in base executed
+  // in every iteration, with a single index that does not wrap.
+  auto *GEP = dyn_cast<VPInstruction>(Addr);
+  if (!GEP || GEP->getOpcode() != Instruction::GetElementPtr ||
+      GEP->getNumOperands() != 2 || !isa<VPIRValue>(GEP->getOperand(0)) ||
+      !GEP->getGEPNoWrapFlags().hasNoUnsignedSignedWrap() ||
+      !VPDT.dominates(VPBB, Latch))
+    return false;
+  auto *Idx = dyn_cast<SCEVAddRecExpr>(
+      vputils::getSCEVExprForVPValue(GEP->getOperand(1), PSE, OuterLoop));
+  if (!Idx || !Idx->hasNoUnsignedWrap())
     return false;
 
-  if (hasIrregularType(StoredTy, DL))
+  if (hasIrregularType(StoredTy, Latch->getPlan()->getDataLayout()))
     return false;
 
   // Stride != 0 ensures no write-after-write.
@@ -383,10 +396,12 @@ static bool writesDisjointLocationsPerIteration(VPValue *Addr, Type *StoredTy,
 
 bool llvm::proveOuterLoopMemorySafety(VPlan &Plan,
                                       PredicatedScalarEvolution &PSE,
-                                      AAResults &AA, const Loop *OuterLoop) {
+                                      AAResults &AA,
+                                      const VPDominatorTree &VPDT,
+                                      const Loop *OuterLoop) {
   SmallVector<const Value *> LoadObjects;
   SmallVector<const Value *> StoreObjects;
-  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  auto [Header, Latch] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(Header)) {
     for (VPRecipeBase &R : *VPBB) {
       if (!R.mayReadOrWriteMemory())
@@ -401,7 +416,7 @@ bool llvm::proveOuterLoopMemorySafety(VPlan &Plan,
       if (!match(&R, m_VPInstruction<Instruction::Store>(m_VPValue(StoredVal),
                                                          m_VPValue(Addr))) ||
           !writesDisjointLocationsPerIteration(Addr, StoredVal->getScalarType(),
-                                               Plan.getDataLayout(), PSE,
+                                               VPBB, Latch, VPDT, PSE,
                                                OuterLoop))
         return false;
       StoreObjects.push_back(getBaseObject(Addr));
