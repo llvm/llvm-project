@@ -93,7 +93,14 @@ def gather_commit_information(args):
         return subprocess.check_output(['git', '-C', args.git_repo, *command]).decode().strip()
 
     sha = git('rev-parse', '--verify', f'{args.benchmark_commit}^{{commit}}')
-    commit = {'value': sha, 'fields': {'short_sha': sha[:12]}}
+    (subject, author, timestamp) = git('log', '-1', '--no-show-signature', '--format=%s%x00%an%x00%ct', sha).split('\0')
+    fields = {
+        'short_sha': sha[:12],
+        'title': subject,
+        'author': author,
+        'committed_at': datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    commit = {'value': sha, 'fields': fields}
 
     # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
     # can exist, but they are not totally ordered with the rest.

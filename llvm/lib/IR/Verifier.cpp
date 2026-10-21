@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Verifier.h"
+#include "IROptions.h"
 #include "VerifierInternal.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -120,11 +121,11 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -141,11 +142,6 @@
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<bool> VerifyNoAliasScopeDomination(
-    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
-    cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
-             "scopes are not dominating"));
 
 namespace {
 
@@ -430,7 +426,7 @@ private:
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
   void visitBitInsertInst(BitInsertInst &BII);
   void visitBitExtractInst(BitExtractInst &BEI);
-  void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
+  void visitVAArgInst(VAArgInst &VAA);
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
   void checkGEPOperator(const GEPOperator &GEP);
@@ -2730,6 +2726,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                .empty(),
           "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
+  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+    checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
     StringRef S = A.getValueAsString();
@@ -2869,11 +2867,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == MDProfLabels::FunctionEntryCount ||
-                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
-            "first operand should be 'function_entry_count'"
-            " or 'synthetic_function_entry_count'",
-            MD);
+      Check(ProfName == MDProfLabels::FunctionEntryCount,
+            "first operand should be 'function_entry_count'", MD);
 
       // Check second operand.
       Check(MD->getOperand(1) != nullptr, "second operand should not be null",
@@ -3344,8 +3339,18 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::Intel_OCL_BI:
-  case CallingConv::PTX_Kernel:
   case CallingConv::PTX_Device:
+    Check(!F.isVarArg(),
+          "Calling convention does not support varargs or "
+          "perfect forwarding!",
+          &F);
+    break;
+  case CallingConv::PTX_Kernel:
+    // PTX permits the abi_preserve directives only between a .func directive
+    // and its body, so a kernel cannot express them.
+    for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+      Check(!F.hasFnAttribute(Attr),
+            "'" + Attr + "' is not allowed on kernel functions", &F);
     Check(!F.isVarArg(),
           "Calling convention does not support varargs or "
           "perfect forwarding!",
@@ -4650,6 +4655,13 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
             DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
+}
+
+void Verifier::visitVAArgInst(VAArgInst &VAA) {
+  // No target can lower va_arg of an aggregate, so frontends expand it.
+  Check(!VAA.getType()->isAggregateType(),
+        "va_arg with an aggregate type is not supported", &VAA);
+  visitInstruction(VAA);
 }
 
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
@@ -7978,7 +7990,7 @@ void Verifier::verifyNoAliasScopeDecl() {
 
   // Only check the domination rule when requested. Once all passes have been
   // adapted this option can go away.
-  if (!VerifyNoAliasScopeDomination)
+  if (!getIROptions(M.getContext()).verify_noalias_scope_decl_dom)
     return;
 
   // Now sort the intrinsics based on the scope MDNode so that declarations of

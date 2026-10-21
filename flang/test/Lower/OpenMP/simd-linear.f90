@@ -16,9 +16,9 @@
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x)
     do i = 1, 10
     end do
@@ -39,9 +39,9 @@ subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x:4)
     do i = 1, 10
     end do
@@ -71,9 +71,9 @@ subroutine linear_expr
     !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
     !IMPLICIT: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
 
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32, %[[I]]#0 : !fir.ref<i32> = {{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = {{.*}} : i32) {{.*}}
     !$omp simd linear(x:a+4)
     do i = 1, 10
     end do
@@ -96,8 +96,8 @@ subroutine non_i32_type
 !IMPLICIT: %[[STEP_VAR_CONST:.*]] = arith.constant 1 : i32
     integer(kind=8)::j=0
 
-    !CHECK: omp.simd linear(val(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64)) {{.*}}
-    !IMPLICIT: omp.simd linear(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64, %[[I_DECLARE]]#0 : !fir.ref<i32> = %[[STEP_VAR_CONST]] : i32)
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[J_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i64> = %[[CONST]] : i64)) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[J_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i64> = %[[CONST]] : i64, @{{[^ ]+}} %[[I_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[STEP_VAR_CONST]] : i32)
     !$omp simd linear(j:1_8)
     do i = 1,10
     end do
