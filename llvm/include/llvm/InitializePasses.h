@@ -260,7 +260,7 @@ LLVM_ABI void initializeProcessImplicitDefsLegacyPass(PassRegistry &);
 LLVM_ABI void initializeProfileSummaryInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializePromoteLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeRABasicPass(PassRegistry &);
-LLVM_ABI void initializePseudoProbeInserterPass(PassRegistry &);
+LLVM_ABI void initializePseudoProbeInserterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRAGreedyLegacyPass(PassRegistry &);
 LLVM_ABI void initializeReachingDefInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeReassociateLegacyPassPass(PassRegistry &);

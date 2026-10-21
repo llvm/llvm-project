@@ -610,7 +610,7 @@ void X86PassConfig::addPreEmitPass2() {
   addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
