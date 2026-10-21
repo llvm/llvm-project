@@ -5328,10 +5328,7 @@ let Predicates = [HasSVE, HasCPA] in {
 let Predicates = [HasSVE2p3_or_SME2p3, HasFPv2], hasNoSchedulingInfo = 1 in {
   defm FCMTL_PZZ : sve_fp_3op_u_pd_totalcomp<0b100, "fcmtl">;
   defm FCMTLMG_PZZ : sve_fp_3op_u_pd_totalcomp<0b101, "fcmtlmg">;
-} // End HasSVE_or_SME
 
-
-let Predicates = [HasSVE2p3_or_SME2p3, HasFPv2], hasNoSchedulingInfo = 1 in {
   defm FMAXINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b0, 0b00, "fmaxinm">;
   defm FMININM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b0, 0b01, "fmininm">;
   defm FMAXMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b00, "fmaxmginm">;
@@ -5345,7 +5342,7 @@ let Predicates = [HasSVE2p3_or_SME2p3, HasFPv2], hasNoSchedulingInfo = 1 in {
   defm FMINMGINMV_VPZ : sve_fp_fast_red_minmax<0b01, 0b1, "fminmginmv">;
   defm FMAXMGV_VPZ    : sve_fp_fast_red_minmax<0b10, 0b1, "fmaxmgv">;
   defm FMINMGV_VPZ    : sve_fp_fast_red_minmax<0b11, 0b1, "fminmgv">;
-} // End HasSVE_or_SME
+} // End HasSVE2p3_or_SME2p3, HasFPv2
 
 
 //===----------------------------------------------------------------------===//

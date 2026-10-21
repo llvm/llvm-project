@@ -6084,8 +6084,11 @@ def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
 
 defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
 defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
+
+let Predicates = [HasFPv2] in {
 defm FCMTL   : FPTotalOrderComparison<0, "fcmtl">;
 defm FCMTLMG : FPTotalOrderComparison<1, "fcmtlmg">;
+}
 
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.

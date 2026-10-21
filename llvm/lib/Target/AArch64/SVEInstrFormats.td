@@ -6334,6 +6334,7 @@ class sve_fp_3op_u_pd<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty,
   let Inst{3-0}   = Pd;
 
   let hasSideEffects = 0;
+  let mayRaiseFPException = 1;
   let Uses = [ FPCR ];
 }
 
