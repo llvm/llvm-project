@@ -15,9 +15,11 @@
 
 #include "hdr/types/size_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
-#include "src/unistd/execvp.h"
+#include "src/unistd/environ.h"
+#include "src/unistd/linux/exec_utils.h"
 
 #include <stdarg.h>
 
@@ -50,9 +52,16 @@ LLVM_LIBC_FUNCTION(int, execlp, (const char *file, const char *arg0, ...)) {
   va_end(varargs_copy);
   argv[argc] = nullptr;
 
+  auto ret = internal::execvpe(
+      file, argv, const_cast<char *const *>(LIBC_NAMESPACE::environ));
+  if (!ret) {
+    libc_errno = ret.error();
+    return -1;
+  }
+
   // Control will not reach here on success but having a return statement will
   // keep the compilers happy.
-  return LIBC_NAMESPACE::execvp(file, argv);
+  return *ret;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

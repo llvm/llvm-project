@@ -244,9 +244,12 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
-    libc.src.unistd.execvp
+    libc.src.errno.errno
+    libc.src.unistd.environ
+    libc.src.unistd.linux.exec_utils
 )
 
 add_entrypoint_object(

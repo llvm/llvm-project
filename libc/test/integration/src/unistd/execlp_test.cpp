@@ -13,6 +13,7 @@
 
 #include "src/stdlib/setenv.h"
 #include "src/sys/wait/waitpid.h"
+#include "src/unistd/_exit.h"
 #include "src/unistd/execlp.h"
 #include "src/unistd/fork.h"
 
@@ -28,6 +29,7 @@ void fork_and_execlp_slash_path() {
     const char *path = "./libc_execv_test_normal_exit";
     LIBC_NAMESPACE::execlp(path, "execv_test_normal_exit",
                            static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -47,6 +49,7 @@ void fork_and_execlp_path_search() {
     const char *file = "libc_execvp_test_normal_exit";
     LIBC_NAMESPACE::execlp(file, "execvp_test_normal_exit",
                            static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -87,6 +90,7 @@ void fork_and_execlp_skips_eacces() {
     const char *file = "libc_execvp_test_normal_exit";
     LIBC_NAMESPACE::execlp(file, "execvp_test_normal_exit",
                            static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
@@ -115,6 +119,7 @@ void fork_and_execlp_signal_exit() {
     const char *path = "./libc_exec_test_signal_exit";
     LIBC_NAMESPACE::execlp(path, "exec_test_signal_exit",
                            static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
   }
   ASSERT_TRUE(pid > 0);
   int status;
