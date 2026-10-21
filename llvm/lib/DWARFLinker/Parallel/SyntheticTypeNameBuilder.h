@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerGlobalData.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -78,6 +79,15 @@ protected:
                              bool AssignNameToTypeDescriptor,
                              ArrayRef<dwarf::Attribute> ODRAttrs);
 
+  /// Resolve the DIE that \p Attr of \p InputUnitEntryPair refers to.
+  /// \returns std::nullopt if there is nothing to follow.
+  Expected<std::optional<UnitEntryPairTy>>
+  resolveReference(UnitEntryPairTy InputUnitEntryPair, dwarf::Attribute Attr);
+
+  /// Count a referenced DIE toward the recursion limit. Callers decrement
+  /// RecursionDepth once they are done with it.
+  Error incrementRecursionDepth();
+
   /// Add names of parent dies to the built name.
   Error addParentName(UnitEntryPairTy &InputUnitEntryPair);
 
@@ -86,6 +96,15 @@ protected:
   /// and dwarf::DW_AT_decl_line attributes.
   void addDieNameFromDeclFileAndDeclLine(UnitEntryPairTy &InputUnitEntryPair,
                                          bool &HasDeclFileName);
+
+  /// Add a fixed-size digest of the contents of the unnamed type \p
+  /// InputUnitEntryPair, so the names of the types referring to it do not grow
+  /// with its size or nesting depth.
+  Error addUnnamedTypeContents(UnitEntryPairTy InputUnitEntryPair);
+
+  /// Add the type \p InputUnitEntryPair refers to, without parent scopes. A
+  /// type nested in an unnamed type would need the name being built.
+  Error addUnqualifiedTypeName(UnitEntryPairTy InputUnitEntryPair);
 
   /// Add type prefix to the built name.
   void addTypePrefix(CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry);
@@ -115,8 +134,14 @@ protected:
   /// Buffer keeping bult name.
   SmallString<1000> SyntheticName;
 
+  /// Digests of the contents of unnamed types, by DIE.
+  DenseMap<const DWARFDebugInfoEntry *, std::string> ContentsDigests;
+
   /// Recursion counter
   size_t RecursionDepth = 0;
+
+  /// Bounds RecursionDepth, which malformed input can make unbounded.
+  static constexpr size_t MaxRecursionDepth = 1000;
 
   /// Type pool
   TypePool &TypePoolRef;

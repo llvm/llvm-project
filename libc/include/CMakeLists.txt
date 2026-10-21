@@ -195,6 +195,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  libintl
+  ../libc/include/libintl.yaml
+  libintl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.locale_t
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -517,6 +526,7 @@ add_header_macro(
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
+    .llvm-libc-types.fpos_t
     .llvm-libc-types.off_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t

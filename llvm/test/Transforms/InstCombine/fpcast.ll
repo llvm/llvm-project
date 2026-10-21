@@ -798,8 +798,7 @@ define <4 x i32> @neg_fptoui_sat_fptrunc(<4 x double> %a) {
 
 define i32 @fptoui_trunc(float %x) {
 ; CHECK-LABEL: @fptoui_trunc(
-; CHECK-NEXT:    [[T:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call float @llvm.trunc.f32(float %x)
@@ -809,8 +808,7 @@ define i32 @fptoui_trunc(float %x) {
 
 define i32 @fptosi_trunc(float %x) {
 ; CHECK-LABEL: @fptosi_trunc(
-; CHECK-NEXT:    [[T:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call float @llvm.trunc.f32(float %x)
@@ -820,8 +818,7 @@ define i32 @fptosi_trunc(float %x) {
 
 define <2 x i64> @fptoui_trunc_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fptoui_trunc_vec(
-; CHECK-NEXT:    [[T:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptoui <2 x double> [[T]] to <2 x i64>
+; CHECK-NEXT:    [[R:%.*]] = fptoui <2 x double> [[T:%.*]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x)
@@ -831,8 +828,7 @@ define <2 x i64> @fptoui_trunc_vec(<2 x double> %x) {
 
 define <2 x i64> @fptosi_trunc_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fptosi_trunc_vec(
-; CHECK-NEXT:    [[T:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptosi <2 x double> [[T]] to <2 x i64>
+; CHECK-NEXT:    [[R:%.*]] = fptosi <2 x double> [[T:%.*]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> %x)
@@ -844,7 +840,7 @@ define i32 @fptoui_trunc_multi_use(float %x) {
 ; CHECK-LABEL: @fptoui_trunc_multi_use(
 ; CHECK-NEXT:    [[T:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    call void @use(float [[T]])
-; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptoui float [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call float @llvm.trunc.f32(float %x)
@@ -857,7 +853,7 @@ define i32 @fptosi_trunc_multi_use(float %x) {
 ; CHECK-LABEL: @fptosi_trunc_multi_use(
 ; CHECK-NEXT:    [[T:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
 ; CHECK-NEXT:    call void @use(float [[T]])
-; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call float @llvm.trunc.f32(float %x)
@@ -868,8 +864,7 @@ define i32 @fptosi_trunc_multi_use(float %x) {
 
 define i32 @fptoui_trunc_fmf(float %x) {
 ; CHECK-LABEL: @fptoui_trunc_fmf(
-; CHECK-NEXT:    [[T:%.*]] = call nnan ninf nsz float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptoui float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call nnan ninf nsz float @llvm.trunc.f32(float %x)
@@ -879,8 +874,7 @@ define i32 @fptoui_trunc_fmf(float %x) {
 
 define i32 @fptosi_trunc_fmf(float %x) {
 ; CHECK-LABEL: @fptosi_trunc_fmf(
-; CHECK-NEXT:    [[T:%.*]] = call nnan ninf nsz float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T]] to i32
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[T:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t = call nnan ninf nsz float @llvm.trunc.f32(float %x)

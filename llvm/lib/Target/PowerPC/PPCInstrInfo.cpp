@@ -62,16 +62,21 @@ STATISTIC(MissedConvertibleImmediateInstrs,
 STATISTIC(NumRcRotatesConvertedToRcAnd,
           "Number of record-form rotates converted to record-form andi");
 
-static cl::
-opt<bool> DisableCTRLoopAnal("disable-ppc-ctrloop-analysis", cl::Hidden,
-            cl::desc("Disable analysis for CTR loops"));
+static cl::opt<bool>
+    EnableCTRLoopAnal("ppc-ctr-loop-analysis",
+                      cl::desc("Enable analysis for CTR loops"), cl::init(true),
+                      cl::Hidden);
 
-static cl::opt<bool> DisableCmpOpt("disable-ppc-cmp-opt",
-cl::desc("Disable compare instruction optimization"), cl::Hidden);
+static cl::opt<bool>
+    EnableCmpOpt("ppc-cmp-opt",
+                 cl::desc("Enable compare instruction optimization"),
+                 cl::init(true), cl::Hidden);
 
-static cl::opt<bool> VSXSelfCopyCrash("crash-on-ppc-vsx-self-copy",
-cl::desc("Causes the backend to crash instead of generating a nop VSX copy"),
-cl::Hidden);
+static cl::opt<bool> VSXSelfCopyCrash(
+    "ppc-crash-on-vsx-self-copy",
+    cl::desc(
+        "Causes the backend to crash instead of generating a nop VSX copy"),
+    cl::Hidden);
 
 static cl::opt<bool>
 UseOldLatencyCalc("ppc-old-latency-calc", cl::Hidden,
@@ -1324,7 +1329,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                LastInst.getOpcode() == PPC::BDNZ) {
       if (!LastInst.getOperand(0).isMBB())
         return true;
-      if (DisableCTRLoopAnal)
+      if (!EnableCTRLoopAnal)
         return true;
       TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(1));
@@ -1335,7 +1340,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                LastInst.getOpcode() == PPC::BDZ) {
       if (!LastInst.getOperand(0).isMBB())
         return true;
-      if (DisableCTRLoopAnal)
+      if (!EnableCTRLoopAnal)
         return true;
       TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(0));
@@ -1392,7 +1397,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!SecondLastInst.getOperand(0).isMBB() ||
         !LastInst.getOperand(0).isMBB())
       return true;
-    if (DisableCTRLoopAnal)
+    if (!EnableCTRLoopAnal)
       return true;
     TBB = SecondLastInst.getOperand(0).getMBB();
     Cond.push_back(MachineOperand::CreateImm(1));
@@ -1406,7 +1411,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!SecondLastInst.getOperand(0).isMBB() ||
         !LastInst.getOperand(0).isMBB())
       return true;
-    if (DisableCTRLoopAnal)
+    if (!EnableCTRLoopAnal)
       return true;
     TBB = SecondLastInst.getOperand(0).getMBB();
     Cond.push_back(MachineOperand::CreateImm(0));
@@ -2434,7 +2439,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                         Register SrcReg2, int64_t Mask,
                                         int64_t Value,
                                         const MachineRegisterInfo *MRI) const {
-  if (DisableCmpOpt)
+  if (!EnableCmpOpt)
     return false;
 
   int OpC = CmpInstr.getOpcode();
@@ -2655,6 +2660,25 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // code of the users.
   if (NewOpC == -1)
     return false;
+
+  // Converting MI to its record form makes it define CR0, which is only legal
+  // if CR0 is dead at that point. CR0 may still be live from an earlier
+  // record-form instruction with a use scheduled after MI: expanding the
+  // ANDI_rec_1_{EQ,GT}_BIT pseudos produces COPYs of CR0 subregisters, and
+  // nothing keeps those adjacent to their `andi.` once other instructions are
+  // scheduled in between. The backward scan above only covers the range
+  // between MI and CmpInstr, so it cannot see such a use. Query CR0's
+  // liveness right after MI, using the block size as the neighborhood so the
+  // query can inspect the remainder of the block, and be conservative about
+  // an unknown answer.
+  const bool IntroducesRecFormInstr = MIOpC != NewOpC;
+  if (IntroducesRecFormInstr) {
+    const MachineBasicBlock *MBB = MI->getParent();
+    if (MBB->computeRegisterLiveness(
+            &RI, PPC::CR0, std::next(MachineBasicBlock::const_iterator(MI)),
+            /*Neighborhood=*/MBB->size()) != MachineBasicBlock::LQR_Dead)
+      return false;
+  }
 
   // This transformation should not be performed if `nsw` is missing and is not
   // `equalityOnly` comparison. Since if there is overflow, sub_lt, sub_gt in

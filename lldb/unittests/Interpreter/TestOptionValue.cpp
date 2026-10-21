@@ -10,6 +10,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <thread>
+
 using namespace lldb_private;
 
 class Callback {
@@ -171,4 +173,18 @@ TEST(TestProperties, DeepCopy) {
   // Trigger the callback second time.
   file_list_copy_ptr->SetValueFromString("0 another/path",
                                          eVarSetOperationReplace);
+}
+
+// Copying a file list while another thread reads it must not deadlock.
+TEST(OptionValueFileSpecList, ConcurrentDeepCopyAndRead) {
+  OptionValueFileSpecList file_list;
+  file_list.SetValueFromString("path/to/file");
+
+  std::thread reader([&file_list] {
+    for (int i = 0; i < 100000; ++i)
+      EXPECT_TRUE(file_list.GetValueAs<FileSpecList>());
+  });
+  for (int i = 0; i < 100000; ++i)
+    EXPECT_TRUE(file_list.DeepCopy(nullptr));
+  reader.join();
 }

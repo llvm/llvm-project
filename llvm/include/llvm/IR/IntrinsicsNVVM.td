@@ -1939,7 +1939,7 @@ let TargetPrefix = "nvvm" in {
   //
   foreach a_type = ["s", "u"] in {
     foreach b_type = ["s", "u"] in {
-      def int_nvvm_idp4a_ # a_type # _ # b_type :
+      def int_nvvm_idp4a_ # a_type # _ # b_type : NVVMBuiltin,
           PureIntrinsic<[llvm_i32_ty],
               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
       def int_nvvm_idp2a_ # a_type # _ # b_type :

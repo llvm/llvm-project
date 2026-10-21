@@ -58,7 +58,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPBuilder Builder(WideCanIV);
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-        nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
+        CanIVTy, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
         WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
@@ -167,13 +167,25 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  // If the canonical IV increment could overflow, adjust the trip count (TC)
+  // to TC - VF * UF.
+  VPValue *IncrementValue = CanonicalIVIncrement;
+  if (!TopRegion->hasCanonicalIVNUW() &&
+      !vputils::findIncomingAliasMask(Plan)) {
+    IncrementValue = TopRegion->getCanonicalIV();
+    VPValue &VFxUF = Plan.getVFxUF();
+    TC = Builder.createScalarIntrinsic(Intrinsic::usub_sat, {TC, &VFxUF},
+                                       TC->getScalarType(), DL,
+                                       "trip.count.minus.vf");
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {CanonicalIVIncrement, TC, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {IncrementValue, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");

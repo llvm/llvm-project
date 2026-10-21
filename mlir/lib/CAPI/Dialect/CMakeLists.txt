@@ -291,6 +291,8 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenACC
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRGPUDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
   MLIROpenACCTransforms
 )

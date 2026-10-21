@@ -855,9 +855,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // Other arithmetic and logic ops are unsupported.
   setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SRA, ISD::SRL, ISD::MULHS,
-                      ISD::MULHU, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
-                      ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::SETCC},
-                     {MVT::v2i16, MVT::v2i32}, Expand);
+                      ISD::MULHU, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
+                      ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
+                      ISD::UINT_TO_FP, ISD::SETCC},
+                     MVT::v2i16, Expand);
 
   // v2i32 is not supported for any arithmetic operations
   setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX,
@@ -885,9 +886,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // PTX does not directly support SELP of i1, so promote to i32 first
   setOperationAction(ISD::SELECT, MVT::i1, Custom);
 
-  // PTX cannot multiply two i64s in a single instruction.
-  setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+  // PTX only exposes separate mul.lo and mul.hi forms. Lower i16 and i32 to
+  // use mul.wide. i64 has no mul.wide, so it expands to MUL and MULHS/MULHU.
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, {MVT::i16, MVT::i32},
+                     Custom);
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD,
@@ -2443,6 +2446,20 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
+static SDValue lowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) {
+  const SDLoc DL(Op);
+  const EVT VT = Op.getValueType();
+  const unsigned Opc = Op.getOpcode() == ISD::SMUL_LOHI
+                           ? NVPTXISD::MUL_WIDE_SIGNED
+                           : NVPTXISD::MUL_WIDE_UNSIGNED;
+
+  SDValue Wide =
+      DAG.getNode(Opc, DL, VT.widenIntegerElementType(*DAG.getContext()),
+                  Op.getOperand(0), Op.getOperand(1));
+  auto [Lo, Hi] = DAG.SplitScalar(Wide, DL, VT, VT);
+  return DAG.getMergeValues({Lo, Hi}, DL);
+}
+
 static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
                                   const NVPTXSubtarget &STI) {
   EVT SrcVT = Op.getOperand(0).getValueType();
@@ -3677,6 +3694,9 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return lowerMUL_LOHI(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -4186,7 +4206,8 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   EVT VT = Store->getMemoryVT();
 
-  if (VT == MVT::i1)
+  // Leave truncating stores to i1 to the generic legalizer.
+  if (VT == MVT::i1 && !Store->isTruncatingStore())
     return LowerSTOREi1(Op, DAG);
 
   // Lower store of any other vector type, including v2f32 as we want to break
@@ -6617,31 +6638,20 @@ static SDValue combineSZExtToMulWide(SDNode *N,
   return SDValue();
 }
 
-enum OperandSignedness {
-  Signed = 0,
-  Unsigned,
-  Unknown
-};
-
-/// IsMulWideOperandDemotable - Checks if the provided DAG node is an operand
-/// that can be demoted to \p OptSize bits without loss of information. The
-/// signedness of the operand, if determinable, is placed in \p S.
-static bool IsMulWideOperandDemotable(SDValue Op,
-                                      unsigned OptSize,
-                                      OperandSignedness &S) {
-  S = Unknown;
-
+/// Check whether Op is explicitly extended from at most \p OptSize bits,
+/// setting \p IsSigned to the signedness of the extension.
+static bool IsExtendedFromLte(SDValue Op, unsigned OptSize, bool &IsSigned) {
   if (Op.getOpcode() == ISD::SIGN_EXTEND ||
       Op.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     EVT OrigVT = Op.getOperand(0).getValueType();
     if (OrigVT.getFixedSizeInBits() <= OptSize) {
-      S = Signed;
+      IsSigned = true;
       return true;
     }
   } else if (Op.getOpcode() == ISD::ZERO_EXTEND) {
     EVT OrigVT = Op.getOperand(0).getValueType();
     if (OrigVT.getFixedSizeInBits() <= OptSize) {
-      S = Unsigned;
+      IsSigned = false;
       return true;
     }
   }
@@ -6650,39 +6660,41 @@ static bool IsMulWideOperandDemotable(SDValue Op,
 }
 
 /// AreMulWideOperandsDemotable - Checks if the given LHS and RHS operands can
-/// be demoted to \p OptSize bits without loss of information. If the operands
-/// contain a constant, it should appear as the RHS operand. The signedness of
-/// the operands is placed in \p IsSigned.
+/// be demoted to \p OptSize bits without loss of information using the same
+/// signedness. The signedness of the operands is placed in \p IsSigned.
 static bool AreMulWideOperandsDemotable(SDValue LHS, SDValue RHS,
                                         unsigned OptSize,
+                                        const SelectionDAG &DAG,
                                         bool &IsSigned) {
-  OperandSignedness LHSSign;
-
-  // The LHS operand must be a demotable op
-  if (!IsMulWideOperandDemotable(LHS, OptSize, LHSSign))
-    return false;
-
-  // We should have been able to determine the signedness from the LHS
-  if (LHSSign == Unknown)
-    return false;
-
-  IsSigned = (LHSSign == Signed);
-
-  // The RHS can be a demotable op or a constant
-  if (ConstantSDNode *CI = dyn_cast<ConstantSDNode>(RHS)) {
-    const APInt &Val = CI->getAPIntValue();
-    if (LHSSign == Unsigned) {
-      return Val.isIntN(OptSize);
-    } else {
-      return Val.isSignedIntN(OptSize);
-    }
-  } else {
-    OperandSignedness RHSSign;
-    if (!IsMulWideOperandDemotable(RHS, OptSize, RHSSign))
+  // The native register size is 32 bits, so extending i16 to i32 is often
+  // cheap, whereas truncating i64 to i32 is free. Use known bits to narrow
+  // i64 products, and require explicit extensions for i32 products.
+  if (LHS.getValueType() != MVT::i64) {
+    if (!IsExtendedFromLte(LHS, OptSize, IsSigned))
       return false;
 
-    return LHSSign == RHSSign;
+    if (auto *CI = dyn_cast<ConstantSDNode>(RHS)) {
+      const APInt &Val = CI->getAPIntValue();
+      return IsSigned ? Val.isSignedIntN(OptSize) : Val.isIntN(OptSize);
+    }
+
+    bool RHSSigned;
+    return IsExtendedFromLte(RHS, OptSize, RHSSigned) && IsSigned == RHSSigned;
   }
+
+  // Extensions may have been folded into masks, shifts, or other operations.
+  // Check the values' widths rather than requiring explicit extension nodes.
+  if (DAG.computeKnownBits(LHS).countMaxActiveBits() <= OptSize &&
+      DAG.computeKnownBits(RHS).countMaxActiveBits() <= OptSize) {
+    IsSigned = false;
+    return true;
+  }
+  if (DAG.ComputeMaxSignificantBits(LHS) <= OptSize &&
+      DAG.ComputeMaxSignificantBits(RHS) <= OptSize) {
+    IsSigned = true;
+    return true;
+  }
+  return false;
 }
 
 /// TryMULWIDECombine - Attempt to replace a multiply of M bits with a multiply
@@ -6708,8 +6720,14 @@ static SDValue TryMULWIDECombine(SDNode *N,
     }
   }
 
-  // If we have a SHL, determine the actual multiply amount
+  bool Signed;
+  // If we have a SHL, determine the actual multiply amount.
   if (N->getOpcode() == ISD::SHL) {
+    // A plain shift is already one instruction. Only fold it when doing so
+    // can also remove an explicit extension.
+    if (!IsExtendedFromLte(LHS, OptSize, Signed))
+      return SDValue();
+
     ConstantSDNode *ShlRHS = dyn_cast<ConstantSDNode>(RHS);
     if (!ShlRHS) {
       return SDValue();
@@ -6717,18 +6735,29 @@ static SDValue TryMULWIDECombine(SDNode *N,
 
     APInt ShiftAmt = ShlRHS->getAPIntValue();
     unsigned BitWidth = MulType.getSizeInBits();
-    if (ShiftAmt.sge(0) && ShiftAmt.slt(BitWidth)) {
+    unsigned Limit = Signed ? OptSize - 1 : OptSize;
+    if (ShiftAmt.sge(0) && ShiftAmt.slt(Limit)) {
       APInt MulVal = APInt(BitWidth, 1) << ShiftAmt;
       RHS = DCI.DAG.getConstant(MulVal, DL, MulType);
     } else {
       return SDValue();
     }
+  } else if (!AreMulWideOperandsDemotable(LHS, RHS, OptSize, DCI.DAG, Signed)) {
+    return SDValue();
   }
 
-  bool Signed;
-  // Verify that our operands are demotable
-  if (!AreMulWideOperandsDemotable(LHS, RHS, OptSize, Signed)) {
-    return SDValue();
+  if (N->getOpcode() == ISD::MUL) {
+    // Keep matching low/high products together so ptxas can share their
+    // partial products. Widening only the low product can duplicate work and
+    // increase register pressure, even when its operands fit the narrow type.
+    for (unsigned Opc : {ISD::MULHU, ISD::MULHS}) {
+      if (SDNode *Hi = DCI.DAG.getNodeIfExists(Opc, N->getVTList(), {LHS, RHS}))
+        if (!Hi->use_empty())
+          return SDValue();
+      if (SDNode *Hi = DCI.DAG.getNodeIfExists(Opc, N->getVTList(), {RHS, LHS}))
+        if (!Hi->use_empty())
+          return SDValue();
+    }
   }
 
   EVT DemotedVT;
@@ -7908,9 +7937,12 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  Type *Ty = AI->getValOperand()->getType();
+/// Returns how NVPTX should expand a scalar atomicrmw.
+static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
+    AtomicRMWInst::BinOp Op, Type *Ty, unsigned AddressSpace, const Function &F,
+    bool IgnoreDenormalMode, const NVPTXSubtarget &STI) {
+  using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
+  assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
 
   // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
   // expanded to an fadd with a negated operand. This is complicated by the
@@ -7923,28 +7955,22 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atom.add; otherwise, we lower to a CAS loop. But we always allow
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
-  if (AI->isFloatingPointOperation() &&
-      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
-       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
-    const Function *F = AI->getFunction();
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::FSub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+  if (Op == AtomicRMWInst::BinOp::FAdd || Op == AtomicRMWInst::BinOp::FSub) {
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::FSub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
 
     // Both the -nvptx-allow-ftz-atomics option and per-instruction
     // !atomic.ignore.denormal.mode say that denormal handling is insignificant
     // here, so atom.add may be used even when its FTZ behavior disagrees with
     // the function's.
-    const bool IgnoreFTZMismatch =
-        AllowFTZAtomics ||
-        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+    const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
       bool UseNative = IgnoreFTZMismatch;
-      switch (AI->getPointerAddressSpace()) {
+      switch (AddressSpace) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
         break;
@@ -7960,7 +7986,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
       // function that is not in FTZ mode for f16.
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
       if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
@@ -7975,28 +8001,24 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
-  if (AI->isFloatingPointOperation())
+  if (AtomicRMWInst::isFPOperation(Op))
     return AtomicExpansionKind::CmpXChg;
 
-  if (Ty->isVectorTy())
-    return AtomicExpansionKind::CmpXChg;
-
-  assert(Ty->isIntegerTy() && "Ty should be integer at this point");
+  assert(Ty->isIntegerTy() && "Expected an integer atomicrmw type");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  switch (AI->getOperation()) {
+  switch (Op) {
   default:
     return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::BinOp::Xchg:
+  case AtomicRMWInst::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
   case AtomicRMWInst::BinOp::Add:
   case AtomicRMWInst::BinOp::Sub: {
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::Sub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::Sub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
@@ -8032,8 +8054,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::UIncWrap:
-  case AtomicRMWInst::BinOp::UDecWrap:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
@@ -8050,18 +8072,86 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 
+NVPTXTargetLowering::AtomicExpansionKind
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  const DataLayout &DL = AI->getDataLayout();
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+  const bool IgnoreDenormalMode =
+      AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
+  // TODO: once we support native elementwise vector atoms,
+  // return `AtomicExpansionKind::None` to preserve and lower them.
+  if (AI->isElementwise()) {
+    auto *VecTy = cast<FixedVectorType>(AI->getType());
+    Type *Ty = VecTy->getElementType();
+
+    // Collapse <1 x T> elementwise RMWs to scalar RMWs
+    if (VecTy->getNumElements() == 1)
+      return AtomicExpansionKind::Expand;
+
+    uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
+    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+
+    if (Op == AtomicRMWInst::BinOp::Xchg) {
+      // Split exchanges that are too wide or insufficiently aligned until
+      // each piece can be lowered atomically.
+      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
+          AI->getAlign().value() < VecBytes)
+        return AtomicExpansionKind::Expand;
+
+      // Expand subword exchanges to a masked cmpxchg loop.
+      if (VecBits < getMinCmpXchgSizeInBits())
+        return AtomicExpansionKind::CmpXChg;
+
+      return AtomicExpansionKind::None;
+    }
+
+    // If the scalar lane op is natively supported or expands to one, return
+    // Expand so halving eventually bottoms out at the scalar base case. The
+    // latter includes sub and fsub, which expand to add and fadd, respectively.
+    AtomicExpansionKind LaneExpansionKind = getScalarAtomicRMWExpansion(
+        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(),
+        IgnoreDenormalMode, STI);
+    if (LaneExpansionKind == AtomicExpansionKind::None ||
+        LaneExpansionKind == AtomicExpansionKind::Expand)
+      return AtomicExpansionKind::Expand;
+
+    // If the whole vector fits a single native cmpxchg, emit one wide
+    // cmpxchg loop at the current width.
+    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+      return AtomicExpansionKind::CmpXChg;
+
+    // If the vector is too wide for a single native cmpxchg, halve further to
+    // emit multiple cmpxchg loops.
+    return AtomicExpansionKind::Expand;
+  }
+
+  Type *Ty = AI->getValOperand()->getType();
+  if (Ty->isVectorTy())
+    return AtomicExpansionKind::CmpXChg;
+  return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
+                                     *AI->getFunction(), IgnoreDenormalMode,
+                                     STI);
+}
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff the operation is emulated using a CAS-loop,
-  // the target does not support memory-order qualifiers, or the operation has
-  // the memory order seq_cst (which is not natively supported in the PTX
-  // `atom` instruction).
+  // This function returns true iff AtomicExpandPass should enforce the
+  // instruction's ordering with fences instead of leaving that ordering on the
+  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
+  // operations (which are not natively supported by the PTX `atom`
+  // instruction), and elementwise atomicrmw expansion.
   //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
   // syncscope, and volatile semantics. For PTX, it is more efficient to use
   // atom.cas.relaxed.sco instructions within the loop, and fences before and
   // after the loop to restore order.
+  //
+  // For ordered elementwise atomicrmw, if we expand elementwise, it is also
+  // more efficient to insert fences around the whole split sequence once and
+  // downgrade the ordering for the entire sequence, rather than having the
+  // stronger ordering on every expanded atomicrmw.
   //
   // On targets with memory-order qualifiers, atomic instructions efficiently
   // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
@@ -8074,10 +8164,13 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            !STI.hasMemoryOrdering() ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
-    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    return Expansion == AtomicExpansionKind::CmpXChg ||
+           (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
            !STI.hasMemoryOrdering() ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  }
   return false;
 }
 
@@ -8112,8 +8205,10 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    // A non-elementwise `Expand` means we are expanding sub(x) to add(-x).
+    // The atomic add will have acquire ordering.
     if (ExpansionKind == AtomicExpansionKind::None ||
-        ExpansionKind == AtomicExpansionKind::Expand)
+        (ExpansionKind == AtomicExpansionKind::Expand && !RI->isElementwise()))
       return AtomicOrdering::Acquire;
   }
 
@@ -8159,11 +8254,17 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
 
-  bool IsEmulated =
-      !STI.hasMemoryOrdering() ||
-      (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-          : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
+  bool IsEmulated = !STI.hasMemoryOrdering();
+  if (CI)
+    IsEmulated |=
+        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits();
+  else {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    IsEmulated |=
+        Expansion == AtomicExpansionKind::CmpXChg ||
+        (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
+  }
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
@@ -8257,6 +8358,18 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
   Known.resetAll();
 
   switch (Op.getOpcode()) {
+  case NVPTXISD::MUL_WIDE_SIGNED:
+  case NVPTXISD::MUL_WIDE_UNSIGNED: {
+    KnownBits LHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits RHS = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    unsigned BitWidth = Known.getBitWidth();
+    bool IsSigned = Op.getOpcode() == NVPTXISD::MUL_WIDE_SIGNED;
+    // Forming mul.wide must not hide bits that let subsequent combines remove
+    // unused parts of its operands, such as the high bytes of narrow loads.
+    Known = KnownBits::mul(IsSigned ? LHS.sext(BitWidth) : LHS.zext(BitWidth),
+                           IsSigned ? RHS.sext(BitWidth) : RHS.zext(BitWidth));
+    break;
+  }
   case NVPTXISD::PRMT:
     computeKnownBitsForPRMT(Op, Known, DAG, Depth);
     break;
