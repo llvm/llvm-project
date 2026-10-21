@@ -36,6 +36,7 @@
 #include "AGX.h"
 #include "AGXSoftF64.h"
 #include "AGXSubtarget.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -323,6 +324,68 @@ public:
                    B.CreateAnd(roundingIs(RoundDown), B.CreateNot(Neg))));
     Value *R = B.CreateSelect(B.CreateAnd(Away, Above), nextUp(Q), Q);
     return B.CreateSelect(B.CreateAnd(Toward, Below), nextDown(Q), R);
+  }
+
+  /// The magnitude of S, rounded to nearest even, rounded in the direction
+  /// Rounding instead, with the sign of S: Err is the exact result minus S.
+  Value *adjust(Value *S, Value *Err) {
+    Value *SB = bits(S);
+    Value *Neg = B.CreateICmpSLT(SB, c32(0));
+    Value *Q = flt(B.CreateAnd(SB, c32(0x7fffffff)));
+    Value *R = adjustMagnitude(Q, B.CreateSelect(Neg, B.CreateFNeg(Err), Err), Neg);
+    return flt(B.CreateOr(bits(R), B.CreateAnd(SB, c32(0x80000000))));
+  }
+
+  /// X + Y (X - Y) rounded in the direction Rounding, using the hardware: the
+  /// error of the sum rounded to nearest even is exact (TwoSum) when the
+  /// operands are zero or at least 2^-102 (all values are then multiples of
+  /// 2^-125, so none is denormal) and below 2^126, and the sum is finite and
+  /// nonzero. Returns the result and whether it is valid.
+  std::pair<Value *, Value *> fastAdd(Value *X, Value *Y, bool Sub) {
+    if (Sub)
+      Y = B.CreateFNeg(Y);
+    Value *S = B.CreateFAdd(X, Y);
+    Value *BB = B.CreateFSub(S, X);
+    Value *Err = B.CreateFAdd(B.CreateFSub(X, B.CreateFSub(S, BB)), B.CreateFSub(Y, BB));
+    auto Operand = [&](Value *V) {
+      Value *M = B.CreateAnd(bits(V), c32(0x7fffffff));
+      // zero, or in [2^-102, 2^126)
+      return B.CreateOr(B.CreateICmpEQ(M, c32(0)),
+                        B.CreateICmpULT(B.CreateSub(M, c32(0x0c800000)), c32(0x7e800000 - 0x0c800000)));
+    };
+    Value *SM = B.CreateAnd(bits(S), c32(0x7fffffff));
+    Value *Valid = B.CreateICmpULT(SM, c32(0x7f800000));
+    Valid = B.CreateAnd(Valid, B.CreateAnd(Operand(X), Operand(Y)));
+    // An exact zero sum is -0 rounding down, unless both operands are +0.
+    Value *BothPlusZero = B.CreateICmpEQ(B.CreateOr(bits(X), bits(Y)), c32(0));
+    Value *DownZero = B.CreateAnd(B.CreateICmpEQ(SM, c32(0)), roundingIs(RoundDown));
+    Value *Zero = flt(B.CreateSelect(BothPlusZero, c32(0), c32(0x80000000)));
+    return {B.CreateSelect(DownZero, Zero, adjust(S, Err)), Valid};
+  }
+
+  /// X * Y rounded in the direction Rounding, using the hardware: the error
+  /// of the product rounded to nearest even, fma(x, y, -p), is exact when the
+  /// operands are normal with exponents adding up to at least -80 (it is a
+  /// multiple of 2^-126) and the product is finite.
+  std::pair<Value *, Value *> fastMul(Value *X, Value *Y) {
+    Value *P = B.CreateFMul(X, Y);
+    Value *Err = fma(X, Y, B.CreateFNeg(P));
+    Value *EX = B.CreateAnd(B.CreateLShr(bits(X), 23), c32(0xff));
+    Value *EY = B.CreateAnd(B.CreateLShr(bits(Y), 23), c32(0xff));
+    auto Normal = [&](Value *E) {
+      return B.CreateICmpULT(B.CreateSub(E, c32(1)), c32(254));
+    };
+    Value *PM = B.CreateAnd(bits(P), c32(0x7fffffff));
+    Value *Valid = B.CreateAnd(B.CreateAnd(Normal(EX), Normal(EY)),
+                               B.CreateICmpUGE(B.CreateAdd(EX, EY), c32(254 - 80)));
+    Valid = B.CreateAnd(Valid, B.CreateICmpULT(PM, c32(0x7f800000)));
+    // A zero operand and a zero or normal one: the product is an exact zero.
+    auto ZeroOrNormal = [&](Value *V, Value *E) {
+      return B.CreateOr(isZero(bits(V)), Normal(E));
+    };
+    Value *ZeroProduct = B.CreateAnd(B.CreateOr(isZero(bits(X)), isZero(bits(Y))),
+                                     B.CreateAnd(ZeroOrNormal(X, EX), ZeroOrNormal(Y, EY)));
+    return {B.CreateSelect(ZeroProduct, P, adjust(P, Err)), B.CreateOr(Valid, ZeroProduct)};
   }
 
   /// Division of normal operands with a normal result, using the hardware:
@@ -1304,13 +1367,8 @@ static Value *lowerRounded(ConstrainedFPIntrinsic *CI, Value *Rounding,
     switch (CI->getIntrinsicID()) {
     case Intrinsic::experimental_constrained_fadd:
     case Intrinsic::experimental_constrained_fsub:
-      if (Float)
-        R = SF.roundedAdd(Arg(0), Arg(1), CI->getIntrinsicID() ==
-                                              Intrinsic::experimental_constrained_fsub);
-      break;
     case Intrinsic::experimental_constrained_fmul:
-      if (Float)
-        R = SF.roundedMul(Arg(0), Arg(1));
+      // with a fast path below
       break;
     case Intrinsic::experimental_constrained_fma:
     case Intrinsic::experimental_constrained_fmuladd:
@@ -1336,12 +1394,34 @@ static Value *lowerRounded(ConstrainedFPIntrinsic *CI, Value *Rounding,
       break;
     }
   }
-  bool DivOrSqrt = Float && (CI->getIntrinsicID() ==
-                                 Intrinsic::experimental_constrained_fdiv ||
-                             CI->getIntrinsicID() ==
-                                 Intrinsic::experimental_constrained_sqrt);
-  if (!R && !DivOrSqrt)
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  bool AddOrMul = Float && (ID == Intrinsic::experimental_constrained_fadd ||
+                            ID == Intrinsic::experimental_constrained_fsub ||
+                            ID == Intrinsic::experimental_constrained_fmul);
+  bool DivOrSqrt = Float && (ID == Intrinsic::experimental_constrained_fdiv ||
+                             ID == Intrinsic::experimental_constrained_sqrt);
+  if (!R && !DivOrSqrt && !AddOrMul)
     return nullptr;
+  if (AddOrMul) {
+    // Placeholder replaced below by the hardware result corrected with its
+    // exact error, or the result of integer arithmetic.
+    Value *X = Arg(0), *Y = Arg(1);
+    bool Sub = ID == Intrinsic::experimental_constrained_fsub;
+    bool Mul = ID == Intrinsic::experimental_constrained_fmul;
+    IRBuilder<> B(CI);
+    Instruction *Stub = cast<Instruction>(B.CreateFreeze(X));
+    replaceWithSlowPath<TaggingBuilder>(
+        *Stub,
+        [&](SoftFloat &SF, IRBuilderBase &) {
+          SF.Rounding = Rounding;
+          return Mul ? SF.fastMul(X, Y) : SF.fastAdd(X, Y, Sub);
+        },
+        [&](SoftFloat &SF, IRBuilderBase &) {
+          SF.Rounding = Rounding;
+          return Mul ? SF.roundedMul(X, Y) : SF.roundedAdd(X, Y, Sub);
+        });
+    R = &*CI->getParent()->begin();
+  }
   if (DivOrSqrt) {
     // Placeholder replaced below by the correctly rounded division or root.
     Value *X = Arg(0);
@@ -1470,6 +1550,22 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
   }
   DominatorTree DT(F);
   PromoteMemToReg({Mode}, DT);
+  // The mode is usually known: fold the integer arithmetic on it, so that the
+  // operations below see constant rounding directions and denormal modes.
+  const DataLayout &DL = F.getDataLayout();
+  for (bool Changed = true; Changed;) {
+    Changed = false;
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      if (!I.getType()->isIntegerTy() || isa<CallBase>(I) || isa<FreezeInst>(I) ||
+          I.mayHaveSideEffects())
+        continue;
+      if (Constant *C = ConstantFoldInstruction(&I, DL)) {
+        I.replaceAllUsesWith(C);
+        I.eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
 
   for (ConstrainedFPIntrinsic *CI : Constrained) {
     FreezeInst *Fr = ModeAt[CI];
