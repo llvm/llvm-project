@@ -454,7 +454,7 @@ public:
   /// attribute of each kind. Returns a new set because attribute sets are
   /// immutable.
   [[nodiscard]] LLVM_ABI AttributeSet
-  addAttributes(LLVMContext &C, ArrayRef<Attribute> Attrs) const;
+  addSortedAttributes(LLVMContext &C, ArrayRef<Attribute> Attrs) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -649,7 +649,7 @@ public:
   /// Add attributes to the attribute set at the given index, as
   /// AttributeSet::addAttributes does. Returns a new list because attribute
   /// lists are immutable.
-  [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(
+  [[nodiscard]] LLVM_ABI AttributeList addSortedAttributesAtIndex(
       LLVMContext &C, unsigned Index, ArrayRef<Attribute> Attrs) const;
 
   /// Add a function attribute to the list. Returns a new list because

@@ -864,15 +864,16 @@ TEST(Attributes, SetAddAttributesArray) {
   AttributeSet AS = AttributeSet::get(C, {NoUnwind, Align4, A1, C1});
 
   // Sorted: attributes replace those of the same kind.
-  EXPECT_EQ(AS.addAttributes(C, {NoReturn, Align8, B2, C2}),
+  EXPECT_EQ(AS.addSortedAttributes(C, {NoReturn, Align8, B2, C2}),
             AttributeSet::get(C, {NoUnwind, NoReturn, Align8, A1, B2, C2}));
 
-  EXPECT_EQ(AttributeSet().addAttributes(C, {A1, B2}),
+  EXPECT_EQ(AttributeSet().addSortedAttributes(C, {A1, B2}),
             AttributeSet::get(C, {A1, B2}));
-  EXPECT_EQ(AS.addAttributes(C, ArrayRef<Attribute>()), AS);
+  EXPECT_EQ(AS.addSortedAttributes(C, ArrayRef<Attribute>()), AS);
 
   AttributeList AL;
-  AL = AL.addAttributesAtIndex(C, AttributeList::FunctionIndex, {NoReturn, B2});
+  AL = AL.addSortedAttributesAtIndex(C, AttributeList::FunctionIndex,
+                                     {NoReturn, B2});
   EXPECT_EQ(AL.getFnAttrs(), AttributeSet::get(C, {NoReturn, B2}));
 }
 
@@ -882,7 +883,7 @@ TEST(Attributes, SetAddAttributesArrayUnsorted) {
   LLVMContext C;
   Attribute A1 = Attribute::get(C, "a", "1");
   Attribute B1 = Attribute::get(C, "b", "1");
-  EXPECT_DEATH(AttributeSet().addAttributes(C, {B1, A1}),
+  EXPECT_DEATH(AttributeSet().addSortedAttributes(C, {B1, A1}),
                "Expected attributes sorted by kind");
 }
 #endif

@@ -1315,11 +1315,50 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   return getSorted(C, SortedAttrs);
 }
 
+/// Attribute comparator that only compares attribute keys. Enum attributes are
+/// sorted before string attributes.
+struct AttributeComparator {
+  bool operator()(Attribute A0, Attribute A1) const {
+    bool A0IsString = A0.isStringAttribute();
+    bool A1IsString = A1.isStringAttribute();
+    if (A0IsString) {
+      if (A1IsString)
+        return A0.getKindAsString() < A1.getKindAsString();
+      else
+        return false;
+    }
+    if (A1IsString)
+      return true;
+    return A0.getKindAsEnum() < A1.getKindAsEnum();
+  }
+  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
+    if (A0.isStringAttribute())
+      return false;
+    return A0.getKindAsEnum() < Kind;
+  }
+  bool operator()(Attribute A0, StringRef Kind) const {
+    if (A0.isStringAttribute())
+      return A0.getKindAsString() < Kind;
+    return true;
+  }
+};
+
+#ifndef NDEBUG
+/// Return true if \p Attrs is known sorted with no duplicate entries.
+static bool isSortedAndUnique(ArrayRef<Attribute> Attrs) {
+  return adjacent_find(Attrs, [](Attribute A0, Attribute A1) {
+           return !AttributeComparator()(A0, A1);
+         }) == Attrs.end();
+}
+#endif
+
 AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
                                               ArrayRef<Attribute> SortedAttrs) {
-  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   if (SortedAttrs.empty())
     return nullptr;
+
+  assert(isSortedAndUnique(SortedAttrs) &&
+         "expected sorted and unique attributes!");
 
   FoldingSetInsertToken Token;
   AttributeSetNode *PA = C.pImpl->AttrsSetNodes.lookup(SortedAttrs, Token);
@@ -1776,12 +1815,12 @@ AttributeList AttributeList::addAttributesAtIndex(LLVMContext &C,
 }
 
 AttributeList
-AttributeList::addAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                    ArrayRef<Attribute> Attrs) const {
+AttributeList::addSortedAttributesAtIndex(LLVMContext &C, unsigned Index,
+                                          ArrayRef<Attribute> Attrs) const {
   if (Attrs.empty())
     return *this;
-  return setAttributesAtIndex(C, Index,
-                              getAttributes(Index).addAttributes(C, Attrs));
+  return setAttributesAtIndex(
+      C, Index, getAttributes(Index).addSortedAttributes(C, Attrs));
 }
 
 AttributeList AttributeList::addParamAttribute(LLVMContext &C,
@@ -2122,34 +2161,6 @@ AttrBuilder::AttrBuilder(LLVMContext &Ctx, AttributeSet AS) : Ctx(Ctx) {
 
 void AttrBuilder::clear() { Attrs.clear(); }
 
-/// Attribute comparator that only compares attribute keys. Enum attributes are
-/// sorted before string attributes.
-struct AttributeComparator {
-  bool operator()(Attribute A0, Attribute A1) const {
-    bool A0IsString = A0.isStringAttribute();
-    bool A1IsString = A1.isStringAttribute();
-    if (A0IsString) {
-      if (A1IsString)
-        return A0.getKindAsString() < A1.getKindAsString();
-      else
-        return false;
-    }
-    if (A1IsString)
-      return true;
-    return A0.getKindAsEnum() < A1.getKindAsEnum();
-  }
-  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
-    if (A0.isStringAttribute())
-      return false;
-    return A0.getKindAsEnum() < Kind;
-  }
-  bool operator()(Attribute A0, StringRef Kind) const {
-    if (A0.isStringAttribute())
-      return A0.getKindAsString() < Kind;
-    return true;
-  }
-};
-
 template <typename K>
 static void addAttributeImpl(SmallVectorImpl<Attribute> &Attrs, K Kind,
                              Attribute Attr) {
@@ -2432,16 +2443,15 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   return *this;
 }
 
-AttributeSet AttributeSet::addAttributes(LLVMContext &C,
-                                         ArrayRef<Attribute> Attrs) const {
+AttributeSet
+AttributeSet::addSortedAttributes(LLVMContext &C,
+                                  ArrayRef<Attribute> Attrs) const {
   if (Attrs.empty())
     return *this;
 
-  assert(adjacent_find(Attrs,
-                       [](Attribute A0, Attribute A1) {
-                         return !AttributeComparator()(A0, A1);
-                       }) == Attrs.end() &&
-         "Expected attributes sorted by kind, with distinct kinds");
+  assert(isSortedAndUnique(Attrs) &&
+         "Expected sorted attributes with distinct kinds!");
+
   SmallVector<Attribute, 32> Merged;
   mergeSortedAttrs(ArrayRef(begin(), end()), Attrs, Merged);
   return AttributeSet(AttributeSetNode::getSorted(C, Merged));
