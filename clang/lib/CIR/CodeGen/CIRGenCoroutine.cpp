@@ -155,8 +155,16 @@ static mlir::LogicalResult
 emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
                        Stmt *body,
                        const CIRGenFunction::LexicalScope *currLexScope) {
-  if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
-    return mlir::failure();
+  {
+    // Destroy the body's local variables, and the temporaries they extend, when
+    // the body ends, before the fall-through handler, the implicit
+    // `co_return;`, calls return_void(). The body stays in the current lexical
+    // scope so that a co_return at its top level is recorded in currLexScope.
+    CIRGenFunction::RunCleanupsScope bodyScope(cgf);
+    if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+  }
+
   // Note that classic codegen checks CanFallthrough by looking into the
   // availability of the insert block which is kinda brittle and unintuitive,
   // seems to be related with how landing pads are handled.
@@ -248,7 +256,14 @@ cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
 
 cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
-  return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
+  return cir::CoroSizeOp::create(cgm.getBuilder(), loc,
+                                 convertType(e->getType()));
+}
+
+cir::CoroAlignOp CIRGenFunction::emitCoroAlignBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroAlignOp::create(cgm.getBuilder(), loc,
+                                  convertType(e->getType()));
 }
 
 cir::CoroPromiseOp
@@ -285,6 +300,16 @@ CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
 cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
   return cir::CoroNoopOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroSuspendOp
+CIRGenFunction::emitCoroSuspendBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  llvm::SmallVector<mlir::Value, 2> args;
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  args.push_back(emitScalarExpr(e->getArg(0)));
+
+  return cir::CoroSuspendOp::create(cgm.getBuilder(), loc, args);
 }
 
 static mlir::LogicalResult
@@ -598,25 +623,46 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
             res = mlir::failure();
         });
 
-    if (coro && !coro.getBody().empty() &&
-        !coro.getBody().back().mightHaveTerminator()) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointAfter(&coro.getBody().back().back());
-      cir::YieldOp::create(builder, openCurlyLoc);
+    if (coro && !coro.getBody().empty()) {
+      mlir::Block &lastBlock = coro.getBody().back();
+      mlir::Block *prevBlock = lastBlock.getPrevNode();
+      if (lastBlock.empty() && lastBlock.hasNoPredecessors() && prevBlock &&
+          !prevBlock->empty() && isa<cir::CoReturnOp>(prevBlock->back())) {
+        lastBlock.erase();
+      } else if (!lastBlock.mightHaveTerminator()) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(&lastBlock);
+        cir::YieldOp::create(builder, openCurlyLoc);
+      }
     }
   }
 
   return res;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *e) {
-  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
-    if (const auto *proto =
-            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
-          proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
+static bool functionCanThrow(const FunctionDecl *d) {
+  const auto *proto = d->getType()->getAs<FunctionProtoType>();
+  if (!proto)
+    return true;
+  return !isNoexceptExceptionSpec(proto->getExceptionSpecType()) ||
+         proto->canThrow() != CT_Cannot;
+}
+
+static bool stmtCanThrow(const Stmt *s) {
+  if (const auto *ce = dyn_cast<CallExpr>(s)) {
+    const FunctionDecl *callee = ce->getDirectCallee();
+    if (!callee || functionCanThrow(callee))
+      return true;
+  }
+
+  // The destructor call of a bound temporary is not among the children.
+  if (const auto *te = dyn_cast<CXXBindTemporaryExpr>(s))
+    if (functionCanThrow(te->getTemporary()->getDestructor()))
+      return true;
+
+  return llvm::any_of(s->children(), [](const Stmt *child) {
+    return child && stmtCanThrow(child);
+  });
 }
 
 // Given a suspend expression which roughly looks like:
@@ -642,6 +688,12 @@ struct LValueOrRValue {
 };
 } // namespace
 
+static bool isResumeExprInTryCatch(const CGCoroData &coro, cir::AwaitKind kind,
+                                   const CoroutineSuspendExpr &s) {
+  return coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+         stmtCanThrow(s.getResumeExpr());
+}
+
 static LValueOrRValue
 emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                       CoroutineSuspendExpr const &s, cir::AwaitKind kind,
@@ -654,6 +706,30 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Exception handling requires additional IR. We avoid generating it when
+  // neither the await_resume() call nor the destruction of its result can
+  // throw.
+  const bool resumeInTry = isResumeExprInTryCatch(coro, kind, s);
+
+  // If the await_resume() result needs a destructor, take over its
+  // destruction, unless the destination owns it. The try/catch path destroys
+  // the result itself.
+  const CXXBindTemporaryExpr *resultBind = nullptr;
+  if (!resumeInTry && !aggSlot.isExternallyDestructed())
+    resultBind = dyn_cast<CXXBindTemporaryExpr>(s.getResumeExpr());
+  if (resultBind) {
+    // Emit the result into a slot created outside of the cir.await, so that it
+    // is still available after it.
+    if (aggSlot.isIgnored())
+      aggSlot = cgf.createAggTemp(resultBind->getType(),
+                                  cgf.getLoc(resultBind->getSourceRange()),
+                                  "agg.tmp.ensured");
+    // Don't push the destructor from within the resume region, where its
+    // cir.cleanup.scope would capture the region's terminator.
+    aggSlot.setExternallyDestructed();
+  }
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
@@ -667,24 +743,28 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
-        // A invalid suspendRet indicates "void returning await_suspend"
-        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
-
-        // Veto suspension if requested by bool returning await_suspend.
-        if (suspendRet) {
-          cgf.cgm.errorNYI("Veto await_suspend");
+        switch (s.getSuspendReturnType()) {
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
+          mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
+          // Veto suspension if requested by bool returning await_suspend.
+          cir::CoroSuspendPoint::create(builder, loc, suspendRet);
+          break;
         }
-
-        // Signals the parent that execution flows to next region.
-        cir::CoroSuspendPoint::create(builder, loc);
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+          cgf.emitScalarExpr(s.getSuspendExpr());
+          // Signals the parent that execution flows to next region.
+          cir::CoroSuspendPoint::create(builder, loc);
+          break;
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
+          cgf.cgm.errorNYI(s.getSourceRange(),
+                           "await_suspend returning handle");
+          cir::CoroSuspendPoint::create(builder, loc);
+          break;
+        }
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Exception handling requires additional IR. If the 'await_resume'
-        // function is marked as 'noexcept', we avoid generating this additional
-        // IR.
-        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
-            memberCallExpressionCanThrow(s.getResumeExpr())) {
+        if (resumeInTry) {
           // we are basically just emitting:
           // resumeEh = false;
           // try {
@@ -722,8 +802,10 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                   resumeEHVar(resumeEHVar.getPointer()) {}
 
             mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+              CIRGenFunction::RunCleanupsScope resumeCleanups(cgf);
               mlir::LogicalResult res =
                   cgf.emitStmt(tryStmt.getTryBlock(), /*useCurrentScope=*/true);
+              resumeCleanups.forceCleanup();
               cgf.getBuilder().createFlagStore(loc, true, resumeEHVar);
               return res;
             }
@@ -736,9 +818,15 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           // await_resume().
           awaitRes.rv = RValue::getIgnored();
         } else if (forLValue) {
-          // FIXME(cir): the alloca for the resume expr should be placed in the
-          // enclosing cir.scope instead.
           awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
+          assert(awaitRes.lv.isSimple() &&
+                 "expected simple lvalue for coroutine resume");
+          mlir::Value ptr = awaitRes.lv.getPointer();
+          llvm::StringRef tmpName = "__coyield_resume_lval";
+          tmpResumeRValAddr = cgf.emitAlloca(
+              tmpName, ptr.getType(), loc, cgf.getPointerAlign(),
+              builder.getBestAllocaInsertPoint(scopeParentBlock));
+          builder.CIRBaseBuilderTy::createStore(loc, ptr, tmpResumeRValAddr);
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
@@ -763,6 +851,14 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
+
+  // Push the destructor right after the cir.await, where the result starts to
+  // exist, and not around it: destroying the coroutine at the suspend point
+  // would destroy the not yet constructed result. The cleanup runs at the end
+  // of the full-expression.
+  if (resultBind)
+    cgf.emitCXXTemporary(resultBind->getTemporary(), resultBind->getType(),
+                         aggSlot.getAddress());
 
   assert(awaitBuild.succeeded() && "Should know how to codegen");
   return awaitRes;
@@ -822,9 +918,41 @@ RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
                          ignoreResult);
 }
 
+#ifndef NDEBUG
+static QualType
+getCoroutineSuspendExprReturnType(const ASTContext &ctx,
+                                  const CoroutineSuspendExpr *e) {
+  const auto *re = e->getResumeExpr();
+  assert(isa<CallExpr>(re) && "unexpected suspend expression type");
+  return cast<CallExpr>(re)->getCallReturnType(ctx);
+}
+#endif
+
+LValue CIRGenFunction::emitCoyieldLValue(const CoyieldExpr *e) {
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
+  mlir::Location scopeLoc = getLoc(e->getSourceRange());
+  mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
+  mlir::Value tmpResumeLValAddr;
+  LValue lv =
+      emitSuspendExpression(*this, *curCoro.data, *e, cir::AwaitKind::Yield,
+                            AggValueSlot::ignored(),
+                            /*ignoreResult=*/false, currEntryBlock,
+                            tmpResumeLValAddr, /*forLValue=*/true)
+          .lv;
+  if (tmpResumeLValAddr) {
+    Address addr = lv.getAddress();
+    mlir::Value loadedPtr = cir::LoadOp::create(
+        getBuilder(), scopeLoc, addr.getPointer().getType(), tmpResumeLValAddr);
+    lv.setAddress(addr.withPointer(loadedPtr));
+  }
+  return lv;
+}
+
 mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
   ++curCoro.data->coreturnCount;
-  curLexScope->setCoreturn();
 
   const Expr *rv = s.getOperand();
   if (rv && rv->getType()->isVoidType() && !isa<InitListExpr>(rv)) {
@@ -836,11 +964,12 @@ mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
 
   if (emitStmt(s.getPromiseCall(), /*useCurrentScope=*/true).failed())
     return mlir::failure();
-  // Create a new return block (if not existent) and add a branch to
-  // it. The actual return instruction is only inserted during current
-  // scope cleanup handling.
   mlir::Location loc = getLoc(s.getSourceRange());
   cir::CoReturnOp::create(builder, loc);
+  curLexScope->markCoreturnEmitted();
 
+  // Statements after a co_return may stil be reachable through a label.
+  // Continue codegen.
+  builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }

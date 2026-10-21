@@ -3391,7 +3391,11 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
     if (InvertFalseVal)
       D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
-    Value *Select = Builder.CreateSelect(Cond, BitcastB, BitcastD);
+    // The condition here is synthesized and thus we have no way of knowing the
+    // distribution in general. Thus, mark the branch weights of the created
+    // select unknown.
+    Value *Select = Builder.CreateSelectWithUnknownProfile(
+        Cond, BitcastB, BitcastD, DEBUG_TYPE);
     return Builder.CreateBitCast(Select, OrigType);
   }
 
@@ -5228,10 +5232,15 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
 
   Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewBinOp;
-  if (IsBinaryOp)
+  if (IsBinaryOp) {
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
-  else
-    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  } else {
+    NewBinOp =
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (auto *NewSI = dyn_cast<SelectInst>(NewBinOp))
+      NewSI->swapProfMetadata();
+  }
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an
@@ -5587,8 +5596,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // When X is a power-of-two or zero and zero input is poison:
       // ctlz(i32 X) ^ 31 --> cttz(X)
       // cttz(i32 X) ^ 31 --> ctlz(X)
+      // The bit width must be a power of two so BW - 1 is an all-ones mask.
       auto *II = dyn_cast<IntrinsicInst>(Op0);
-      if (II && II->hasOneUse() && *RHSC == Ty->getScalarSizeInBits() - 1) {
+      if (II && II->hasOneUse() && isPowerOf2_32(Ty->getScalarSizeInBits()) &&
+          *RHSC == Ty->getScalarSizeInBits() - 1) {
         Intrinsic::ID IID = II->getIntrinsicID();
         if ((IID == Intrinsic::ctlz || IID == Intrinsic::cttz) &&
             match(II->getArgOperand(1), m_One()) &&

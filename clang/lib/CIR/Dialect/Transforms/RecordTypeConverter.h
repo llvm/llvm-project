@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/RWMutex.h"
 
@@ -36,6 +37,8 @@ namespace cir {
 /// Subclasses add conversions for the types they rewrite. The type converter
 /// tries the most recently added conversion first, so a subclass can also
 /// replace one of the conversions registered here.
+///
+/// Every record is rebuilt unless typeMayChange() is overridden.
 class RecordRewritingTypeConverter : public mlir::TypeConverter {
 public:
   explicit RecordRewritingTypeConverter(mlir::MLIRContext &context);
@@ -44,7 +47,15 @@ public:
   /// Remove the temporary name of every record rebuilt by this converter.
   void restoreRecordTypeNames();
 
+protected:
+  /// Whether \p type itself, ignoring nested types, may change. Records are
+  /// rebuilt only if some type they reach returns true.
+  virtual bool typeMayChange(mlir::Type type) const { return true; }
+
 private:
+  bool recordNeedsConversion(cir::RecordType type);
+  bool reachesChangingType(mlir::Type type,
+                           llvm::SmallPtrSetImpl<mlir::Type> &visiting) const;
   cir::RecordType convertRecordType(cir::RecordType type);
   llvm::SmallVector<mlir::Type> convertRecordMemberTypes(cir::RecordType type);
   llvm::SmallVector<cir::RecordType> &getCurrentThreadRecursiveStack();
@@ -64,6 +75,10 @@ private:
   // functions.
   llvm::SmallVector<cir::RecordType> convertedRecordTypes;
   llvm::sys::SmartRWMutex<true> recordTypeMutex;
+
+  // Cached results of recordNeedsConversion().
+  llvm::DenseMap<mlir::Type, bool> recordNeedsConversionCache;
+  llvm::sys::SmartRWMutex<true> recordNeedsConversionMutex;
 };
 
 } // namespace cir

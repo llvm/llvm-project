@@ -203,6 +203,11 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+  /// Parameters of the prototype the attribute was written on, kept because
+  /// late parsing runs after their scope is popped and the arguments may name
+  /// one: 'void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)'.
+  SmallVector<ParmVarDecl *, 4> ProtoParams;
+
 private:
   Kind K;
 
@@ -824,8 +829,7 @@ private:
   bool isEofOrEom() {
     tok::TokenKind Kind = Tok.getKind();
     return Kind == tok::eof || Kind == tok::annot_module_begin ||
-           Kind == tok::annot_module_end || Kind == tok::annot_module_include ||
-           Kind == tok::annot_repl_input_end;
+           Kind == tok::annot_module_end || Kind == tok::annot_module_include;
   }
 
   static void setTypeAnnotation(Token &Tok, TypeResult T) {
@@ -1544,6 +1548,12 @@ private:
   /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
   ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
+  /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
+  /// return true if it must be dropped.
+  bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
+                                   const Decl *D,
+                                   ArrayRef<const DeclRefExpr *> ParamRefs,
+                                   bool ReenteredProtoParams);
 
   /// Helper function to move LateParsedTypeAttribute pointers from one list
   /// to another. Filters type attributes from \p From and appends them to \p
@@ -2395,7 +2405,6 @@ private:
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   void ParseCUDAFunctionAttributes(ParsedAttributes &attrs);
-  bool isHLSLQualifier(const Token &Tok) const;
   void ParseHLSLQualifiers(ParsedAttributes &Attrs);
 
   /// Parse a version number.

@@ -373,6 +373,174 @@ func.func @u_convert_scalar(%arg0 : i32) -> i64 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.SatConvertSToU
+//===----------------------------------------------------------------------===//
+
+func.func @sat_convert_s_to_u_scalar(%arg0 : i32) -> i32 {
+  // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i32
+  %0 = spirv.SatConvertSToU %arg0 : i32 to i32
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_narrow_scalar(%arg0 : i32) -> i8 {
+  // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i8
+  %0 = spirv.SatConvertSToU %arg0 : i32 to i8
+  spirv.ReturnValue %0 : i8
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_widen_scalar(%arg0 : i16) -> i64 {
+  // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i16 to i64
+  %0 = spirv.SatConvertSToU %arg0 : i16 to i64
+  spirv.ReturnValue %0 : i64
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_vector(%arg0 : vector<3xi32>) -> vector<3xi32> {
+  // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : vector<3xi32> to vector<3xi32>
+  %0 = spirv.SatConvertSToU %arg0 : vector<3xi32> to vector<3xi32>
+  spirv.ReturnValue %0 : vector<3xi32>
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_narrow_vector(%arg0 : vector<4xi64>) -> vector<4xi16> {
+  // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : vector<4xi64> to vector<4xi16>
+  %0 = spirv.SatConvertSToU %arg0 : vector<4xi64> to vector<4xi16>
+  spirv.ReturnValue %0 : vector<4xi16>
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_float_operand(%arg0 : f32) -> i32 {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'f32'}}
+  %0 = spirv.SatConvertSToU %arg0 : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_float_result(%arg0 : i32) -> f32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'f32'}}
+  %0 = spirv.SatConvertSToU %arg0 : i32 to f32
+  spirv.ReturnValue %0 : f32
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_vector_length_mismatch(%arg0 : vector<3xi32>) -> vector<4xi32> {
+  // expected-error @+1 {{requires the same shape for all operands and results}}
+  %0 = spirv.SatConvertSToU %arg0 : vector<3xi32> to vector<4xi32>
+  spirv.ReturnValue %0 : vector<4xi32>
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_scalar_to_vector(%arg0 : i32) -> vector<2xi32> {
+  // expected-error @+1 {{requires the same shape for all operands and results}}
+  %0 = spirv.SatConvertSToU %arg0 : i32 to vector<2xi32>
+  spirv.ReturnValue %0 : vector<2xi32>
+}
+
+// -----
+
+func.func @sat_convert_s_to_u_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got '!spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>'}}
+  %0 = spirv.SatConvertSToU %arg0 : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SatConvertUToS
+//===----------------------------------------------------------------------===//
+
+func.func @sat_convert_u_to_s_scalar(%arg0 : i32) -> i32 {
+  // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i32 to i32
+  %0 = spirv.SatConvertUToS %arg0 : i32 to i32
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_narrow_scalar(%arg0 : i32) -> i8 {
+  // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i32 to i8
+  %0 = spirv.SatConvertUToS %arg0 : i32 to i8
+  spirv.ReturnValue %0 : i8
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_widen_scalar(%arg0 : i16) -> i64 {
+  // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i16 to i64
+  %0 = spirv.SatConvertUToS %arg0 : i16 to i64
+  spirv.ReturnValue %0 : i64
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_vector(%arg0 : vector<3xi32>) -> vector<3xi32> {
+  // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : vector<3xi32> to vector<3xi32>
+  %0 = spirv.SatConvertUToS %arg0 : vector<3xi32> to vector<3xi32>
+  spirv.ReturnValue %0 : vector<3xi32>
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_narrow_vector(%arg0 : vector<4xi64>) -> vector<4xi16> {
+  // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : vector<4xi64> to vector<4xi16>
+  %0 = spirv.SatConvertUToS %arg0 : vector<4xi64> to vector<4xi16>
+  spirv.ReturnValue %0 : vector<4xi16>
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_float_operand(%arg0 : f32) -> i32 {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'f32'}}
+  %0 = spirv.SatConvertUToS %arg0 : f32 to i32
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_float_result(%arg0 : i32) -> f32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'f32'}}
+  %0 = spirv.SatConvertUToS %arg0 : i32 to f32
+  spirv.ReturnValue %0 : f32
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_vector_length_mismatch(%arg0 : vector<3xi32>) -> vector<4xi32> {
+  // expected-error @+1 {{requires the same shape for all operands and results}}
+  %0 = spirv.SatConvertUToS %arg0 : vector<3xi32> to vector<4xi32>
+  spirv.ReturnValue %0 : vector<4xi32>
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_scalar_to_vector(%arg0 : i32) -> vector<2xi32> {
+  // expected-error @+1 {{requires the same shape for all operands and results}}
+  %0 = spirv.SatConvertUToS %arg0 : i32 to vector<2xi32>
+  spirv.ReturnValue %0 : vector<2xi32>
+}
+
+// -----
+
+func.func @sat_convert_u_to_s_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>) {
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got '!spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>'}}
+  %0 = spirv.SatConvertUToS %arg0 : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.PtrCastToGeneric
 //===----------------------------------------------------------------------===//
 

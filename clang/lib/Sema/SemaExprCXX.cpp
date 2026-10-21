@@ -537,10 +537,21 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
+/// RTTI is not available in CUDA/HIP device code, so typeid can't be used
+/// there. A dependent operand is checked once the template is instantiated.
+static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
+                                     bool IsDependent) {
+  if (S.getLangOpts().CUDA && !IsDependent)
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
+}
+
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc,
+                           Operand->getType()->isDependentType());
+
   // C++ [expr.typeid]p4:
   //   The top-level cv-qualifiers of the lvalue expression or the type-id
   //   that is the operand of typeid are always ignored.
@@ -568,6 +579,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc, E && E->isTypeDependent());
+
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
     if (E->hasPlaceholderType()) {
@@ -990,6 +1003,14 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
   // Cannot throw WebAssembly table.
   if (isPointer && Ty.isWebAssemblyReferenceType()) {
     Diag(ThrowLoc, diag::err_wasm_table_art) << 2 << E->getSourceRange();
+    return true;
+  }
+
+  // Reject throwing of ptr's involving non-default address spaces runtimes
+  // cannot perform cross-address-space conversions yet.
+  if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
+    Diag(ThrowLoc, diag::err_throw_or_catch_address_space_qualified_ptr)
+        << /*IsCatch=*/0 << /*IsRef=*/0 << E->getType() << E->getSourceRange();
     return true;
   }
 
@@ -2406,17 +2427,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                          << (*ArraySize)->getSourceRange());
       }
 
-      if (!AllocType->isDependentType()) {
-        unsigned ActiveSizeBits =
-            ConstantArrayType::getNumAddressingBits(Context, AllocType, *Value);
-        if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
-          return ExprError(
-              Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10, Value->isSigned(),
-                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                          /*InsertSeparators=*/true)
-              << (*ArraySize)->getSourceRange());
-      }
+      if (checkArrayTooLarge(AllocType, *Value, (*ArraySize)->getBeginLoc(),
+                             (*ArraySize)->getSourceRange()))
+        return ExprError();
 
       KnownArraySize = Value->getZExtValue();
     } else if (TypeIdParens.isValid()) {
@@ -2633,6 +2646,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       } else {
         Diag(TypeRange.getEnd(), diag::err_new_array_size_unknown_from_init)
             << Initializer->getSourceRange();
+        return ExprError();
       }
     }
   }
@@ -7547,11 +7561,10 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
-                              DS.getBeginLoc(), DS.getEllipsisLoc());
-    TLB.pushTrivial(getASTContext(),
-                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
-                    DS.getBeginLoc());
+    TypeSourceInfo *TSI = nullptr;
+    T = GetTypeFromParser(DS.getRepAsType(), &TSI);
+    T = ActOnPackIndexingType(T, DS.getPackIndexingExpr(), DS.getBeginLoc());
+    TLB.pushFullCopy(TSI->getTypeLoc());
     PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
     PITL.setEllipsisLoc(DS.getEllipsisLoc());
     break;
