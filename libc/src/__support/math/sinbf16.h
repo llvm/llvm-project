@@ -40,6 +40,7 @@ LIBC_INLINE bfloat16 sinbf16(bfloat16 x) {
   uint16_t x_abs = x_u & 0x7fff;
   float xf = x;
 
+  // |x| < inf (0x7f80)
   if (x_abs < 0x7f80) {
     // |x| <= 0x1.24p-3f (0x3e12)
     if (LIBC_UNLIKELY(x_abs <= 0x3e12)) {
