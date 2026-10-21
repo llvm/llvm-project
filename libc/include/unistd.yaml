@@ -246,7 +246,7 @@ functions:
       - type: __exec_argv_t
   - name: execvpe
     standards:
-      - posix
+      - gnu
     return_type: int
     arguments:
       - type: const char *

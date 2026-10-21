@@ -244,6 +244,7 @@ add_integration_test(
     libc.src.errno.errno
     libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
+    libc.src.unistd._exit
     libc.src.unistd.execvpe
     libc.src.unistd.fork
 )
