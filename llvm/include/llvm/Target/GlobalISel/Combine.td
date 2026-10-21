@@ -94,6 +94,13 @@ class GICombineRule<dag defs, dag a0, dag a1 = (empty_action)> : GICombine {
   // MIR patterns is legal (or we are before the legalizer), using the types of
   // that instruction's operands. Those operands must be defined by the 'match'.
   bit CheckApplyLegality = false;
+
+  // Legality checks done before the rule is applied, however its 'apply' is
+  // written. Each entry is an opcode followed by one type per type index of
+  // that opcode. A type is an operand defined by the 'match' ($x), or
+  // (GIElementTypeOf $x) for the element type of a vector operand. E.g.
+  //   let LegalityChecks = [(G_BUILD_VECTOR $dst, (GIElementTypeOf $dst))];
+  list<dag> LegalityChecks = [];
 }
 
 def gi_mo;
@@ -133,6 +140,12 @@ class GISpecialType;
 class GITypeOf<string opName> : GISpecialType {
   string OpName = opName;
 }
+
+// Element type of a vector operand, used in a rule's LegalityChecks.
+//
+// Usage:
+//    let LegalityChecks = [(G_BUILD_VECTOR $dst, (GIElementTypeOf $dst))];
+def GIElementTypeOf;
 
 // The type of an operand that can match a variable amount of operands.
 // This type contains a minimum and maximum number of operands to match.
