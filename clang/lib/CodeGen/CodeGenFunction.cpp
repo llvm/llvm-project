@@ -1508,7 +1508,6 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     Clone->setCallingConv(Fn->getCallingConv());
     Clone->setAttributes(Fn->getAttributes());
     CGM.SetLLVMFunctionAttributesForDefinition(FD, Clone);
-    Clone->addFnAttr(llvm::Attribute::AlwaysInline);
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
     Fn = Clone;
   } else {
