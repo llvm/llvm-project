@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../IR/DumpNotifications.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -43,12 +44,21 @@ struct TestSingleFold : public PassWrapper<TestSingleFold, OperationPass<>>,
 
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override {
+    if (dumpNotifications)
+      notificationPrinter.notifyOperationInserted(op, previous);
     existingConstants.insert(op);
   }
   void notifyOperationErased(Operation *op) override {
+    if (dumpNotifications)
+      notificationPrinter.notifyOperationErased(op);
     existingConstants.remove(op);
   }
 
+  DumpNotifications notificationPrinter;
+  Option<bool> dumpNotifications{
+      *this, "dump-notifications",
+      llvm::cl::desc("Print insertion and erasure notifications"),
+      llvm::cl::init(false)};
   Option<int> maxIterations{*this, "max-iterations",
                             llvm::cl::desc("Max iterations in the tryToFold"),
                             llvm::cl::init(1)};
