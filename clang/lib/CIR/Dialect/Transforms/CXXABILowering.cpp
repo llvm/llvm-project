@@ -954,6 +954,10 @@ void CXXABILoweringPass::runOnOperation() {
     return signalPassFailure();
   }
 
+  if (mlir::failed(cir::checkLoweringLevelBefore(
+          mod, cir::LoweringLevel::CXXABILowered, getArgument())))
+    return signalPassFailure();
+
   mlir::DataLayout dataLayout(mod);
   CIRABITypeConverter typeConverter(*ctx, dataLayout, *lowerModule);
 
@@ -975,6 +979,8 @@ void CXXABILoweringPass::runOnOperation() {
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+  else
+    cir::recordLoweringLevel(mod, cir::LoweringLevel::CXXABILowered);
 
   typeConverter.restoreRecordTypeNames();
 }

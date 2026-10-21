@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -split-input-file --cir-to-llvm -verify-diagnostics
+
+// expected-error @below {{'cir-flat-to-llvm' expects a module at lowering level 'prepared' or later, but the module is at 'cxxabi_lowered'}}
+module attributes {cir.lowering_level = #cir.lowering_level<cxxabi_lowered>, cir.triple = "x86_64-unknown-linux-gnu"} {
+}
+
+// -----
+
+// CallConvLowering is not run for every target, so a prepared module can be
+// lowered to LLVM.
+module attributes {cir.lowering_level = #cir.lowering_level<prepared>, cir.triple = "x86_64-unknown-linux-gnu"} {
+}

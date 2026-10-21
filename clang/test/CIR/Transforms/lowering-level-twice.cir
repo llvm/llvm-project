@@ -1,0 +1,8 @@
+// RUN: cir-opt %s --cir-call-conv-lowering=target=x86_64 -verify-diagnostics
+
+// CallConvLowering's output uses the same types as its input, so running it
+// again would silently rewrite the signatures a second time.
+
+// expected-error @below {{'cir-call-conv-lowering' expects a module at lowering level 'prepared', but the module is at 'callconv_lowered'}}
+module attributes {cir.lowering_level = #cir.lowering_level<callconv_lowered>, cir.triple = "x86_64-unknown-linux-gnu", dlti.dl_spec = #dlti.dl_spec<>} {
+}

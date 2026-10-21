@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  TargetParser
+  )
+
 add_clang_library(MLIRCIR
   CIRAttrs.cpp
   CIRDialect.cpp
