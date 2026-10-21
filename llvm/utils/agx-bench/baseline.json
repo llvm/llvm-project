@@ -18,19 +18,19 @@
   "waits": 1
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
-  "bytes": 692,
-  "cycles": 5808.7,
-  "gprs": 39,
-  "instructions": 104,
+  "bytes": 590,
+  "cycles": 4749.4,
+  "gprs": 42,
+  "instructions": 89,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
-  "bytes": 692,
-  "cycles": 5808.7,
-  "gprs": 39,
-  "instructions": 104,
+  "bytes": 590,
+  "cycles": 4749.4,
+  "gprs": 42,
+  "instructions": 89,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2

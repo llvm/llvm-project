@@ -492,6 +492,14 @@ The nesting counter is zeroed at the start of each kernel that uses control
 flow. Blocks are laid out in the reverse post-order of the structured graph,
 so constructs fall through into each other as in Mesa's output.
 
+Loads and stores of 2 to 4 consecutive 32-bit values (vectors, and
+neighbouring scalar accesses the load/store vectorizer merges) in device or
+threadgroup memory are one ``xy`` / ``xyz`` / ``xyzw`` access at any 4-byte
+alignment, which the M2 Max handles exactly at every offset, across 64-byte
+lines and pages (ptx-re-blockers B33). The vectorizer runs after checked mode,
+so the checks see the accesses the source wrote. Vector arithmetic is still
+scalar.
+
 Memory loads, stack loads and atomics complete asynchronously. A ``wait`` is
 inserted before the first instruction that reads or overwrites a pending
 result, before barriers and at the end of each block.
@@ -574,8 +582,7 @@ atomic operations are monotonic accesses between the fences of their scope
 sequence costs 0.4 to 0.65 us.
 
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
-precision`_; diagnosed as unsupported), vector memory
-operations (vectors are scalarized), textures and graphics shaders, calls
+precision`_; diagnosed as unsupported), textures and graphics shaders, calls
 to functions that are not defined in the module, and recursion.
 
 The backend does not use the hardware call and return instructions: all

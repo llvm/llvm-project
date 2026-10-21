@@ -10,12 +10,11 @@
 
 ; CHECK-LABEL: layout:
 ; CHECK:       // threadgroup memory: 272 bytes
-; CHECK:       mov_imm [[R:r[0-9]+]], 256
-; CHECK-NEXT:  device_store 0, i32, x, [[R]], u0_u1, 0, signed
-; CHECK:       mov_imm [[R:r[0-9]+]], 272
-; CHECK-NEXT:  device_store 0, i32, x, [[R]], u0_u1, 1, signed
-; CHECK:       mov_imm [[R:r[0-9]+]], 0
-; CHECK-NEXT:  device_store 0, i32, x, [[R]], u0_u1, 2, signed
+; The three stores are one (xyz): r1 = 256, r2 = 272, r3 = 0.
+; CHECK:       mov_imm r3, 0
+; CHECK-NEXT:  mov_imm r2, 272
+; CHECK-NEXT:  mov_imm r1, 256
+; CHECK-NEXT:  device_store 0, i32, xyz, r1_r2_r3, u0_u1, 0, signed
 define agx_kernel void @layout(ptr addrspace(1) %o) {
   %s = ptrtoint ptr addrspace(3) @slot to i32
   %d = ptrtoint ptr addrspace(3) @dyn to i32

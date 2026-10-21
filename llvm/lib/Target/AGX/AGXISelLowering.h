@@ -55,6 +55,10 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT VT) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  SDValue lowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
+                                      MachineMemOperand::Flags Flags,
+                                      unsigned *Fast) const override;
 
   // Ordered atomics are monotonic accesses between fences, so that fences
   // carry the measured barrier sequences (see lowerATOMIC_FENCE).

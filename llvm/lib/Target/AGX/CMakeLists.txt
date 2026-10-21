@@ -61,6 +61,7 @@ add_llvm_target(AGXCodeGen
   Target
   TargetParser
   TransformUtils
+  Vectorize
 
   ADD_TO_COMPONENT
   AGX

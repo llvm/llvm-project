@@ -52,6 +52,25 @@ public:
   }
 
   unsigned getInliningThresholdMultiplier() const override { return 11; }
+
+  // Device and threadgroup accesses of up to four 32-bit values are one
+  // instruction (xy / xyz / xyzw) at any 4-byte alignment (ptx-re-blockers
+  // B33); the load/store vectorizer merges neighbouring ones.
+  unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override {
+    return 128;
+  }
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
+                                   unsigned AS) const override {
+    return vectorizableChain(ChainSizeInBytes, Alignment, AS);
+  }
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
+                                    unsigned AS) const override {
+    return vectorizableChain(ChainSizeInBytes, Alignment, AS);
+  }
+  static bool vectorizableChain(unsigned Bytes, Align Alignment, unsigned AS) {
+    return Alignment >= Align(4) && Bytes % 4 == 0 && Bytes <= 16 &&
+           (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
+  }
 };
 
 } // namespace llvm

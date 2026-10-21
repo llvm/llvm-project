@@ -32,6 +32,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 
 using namespace llvm;
 
@@ -179,6 +180,10 @@ void AGXPassConfig::addIRPasses() {
   addPass(createAGXLowerGenericAddressesPass());
   // By-reference kernel arguments become uniform register values.
   addPass(createAGXPromoteKernelArgsPass());
+  // Neighbouring 32-bit accesses become one vector access (after checked
+  // mode, which checks the accesses as the source wrote them).
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoadStoreVectorizerPass());
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.
   addPass(createScalarizerPass());

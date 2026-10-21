@@ -86,6 +86,11 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
   setTargetDAGCombine(ISD::BRCOND);
+  // Vectors are not legal types; 4-byte aligned loads and stores of 2 to 4
+  // 32-bit elements still become one access (lowerVectorLoad/Store).
+  for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
+                 MVT::v4f32})
+    setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -413,6 +418,11 @@ static SDValue join64(SelectionDAG &DAG, const SDLoc &DL, SDValue Lo,
 SDValue AGXTargetLowering::LowerOperation(SDValue Op,
                                           SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::STORE:
+    return lowerVectorStore(Op, DAG);
+  case ISD::LOAD:
+    // reached only for loads ReplaceNodeResults leaves as they are
+    return SDValue();
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
@@ -475,10 +485,79 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+/// Whether a load or store of VT is one xy / xyz / xyzw access: 2 to 4
+/// elements of 32 bits, 4-byte aligned, in device or threadgroup memory, and
+/// neither volatile nor atomic (those keep the scalar path).
+static bool isVectorAccess(EVT VT, const MemSDNode *M) {
+  unsigned AS = M->getAddressSpace();
+  return VT.isVector() && VT.getScalarSizeInBits() == 32 &&
+         VT.getVectorNumElements() >= 2 && VT.getVectorNumElements() <= 4 &&
+         M->isSimple() && M->getAlign() >= Align(4) &&
+         (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
+}
+
+static unsigned vectorNode(bool Load, unsigned N) {
+  static const unsigned Loads[] = {AGXISD::LOAD_V2, AGXISD::LOAD_V3,
+                                   AGXISD::LOAD_V4};
+  static const unsigned Stores[] = {AGXISD::STORE_V2, AGXISD::STORE_V3,
+                                    AGXISD::STORE_V4};
+  return (Load ? Loads : Stores)[N - 2];
+}
+
 void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
                                            SmallVectorImpl<SDValue> &Results,
                                            SelectionDAG &DAG) const {
-  // The custom operations do not have illegal result types.
+  // Vector loads: one access with a 32-bit result per element.
+  auto *L = dyn_cast<LoadSDNode>(N);
+  if (!L || L->getExtensionType() != ISD::NON_EXTLOAD || L->isIndexed() ||
+      !isVectorAccess(L->getValueType(0), L))
+    return;
+  SDLoc DL(N);
+  EVT VT = L->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<EVT, 5> VTs(NumElts, MVT::i32);
+  VTs.push_back(MVT::Other);
+  SDValue Load = DAG.getMemIntrinsicNode(
+      vectorNode(true, NumElts), DL, DAG.getVTList(VTs),
+      {L->getChain(), L->getBasePtr()}, L->getMemoryVT(), L->getMemOperand());
+  SmallVector<SDValue, 4> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(DAG.getBitcast(VT.getScalarType(), Load.getValue(I)));
+  Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+  Results.push_back(Load.getValue(NumElts));
+}
+
+/// Device and threadgroup accesses of up to 128 bits need only 4-byte
+/// alignment: xy / xyzw accesses at every byte offset 0, 4, 8, 12 mod 16, also
+/// across 64-byte lines and 4 KiB pages, match the byte-address model on the
+/// M2 Max (ptx-re-blockers B33).
+bool AGXTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AS, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  bool OK = (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS) &&
+            Alignment >= Align(4) && VT.getStoreSize() <= 16;
+  if (Fast)
+    *Fast = OK;
+  return OK;
+}
+
+SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  auto *S = cast<StoreSDNode>(Op);
+  SDValue Val = S->getValue();
+  EVT VT = Val.getValueType();
+  if (S->isTruncatingStore() || S->isIndexed() || !isVectorAccess(VT, S))
+    return SDValue();
+  SDLoc DL(Op);
+  SmallVector<SDValue, 6> Ops{S->getChain()};
+  for (unsigned I = 0; I < VT.getVectorNumElements(); ++I)
+    Ops.push_back(DAG.getBitcast(
+        MVT::i32, DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getScalarType(),
+                              Val, DAG.getVectorIdxConstant(I, DL))));
+  Ops.push_back(S->getBasePtr());
+  return DAG.getMemIntrinsicNode(vectorNode(false, VT.getVectorNumElements()),
+                                 DL, DAG.getVTList(MVT::Other), Ops,
+                                 S->getMemoryVT(), S->getMemOperand());
 }
 
 SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,

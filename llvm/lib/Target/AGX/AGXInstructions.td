@@ -911,9 +911,13 @@ class LocalStorePseudo<RegisterClass rc>
 def LOCAL_LOAD_16 : LocalLoadPseudo<GPR16>;
 def LOCAL_LOAD_32 : LocalLoadPseudo<GPR32>;
 def LOCAL_LOAD_64 : LocalLoadPseudo<GPR32x2>;
+def LOCAL_LOAD_96 : LocalLoadPseudo<GPR96>;
+def LOCAL_LOAD_128 : LocalLoadPseudo<GPR128>;
 def LOCAL_STORE_16 : LocalStorePseudo<GPR16>;
 def LOCAL_STORE_32 : LocalStorePseudo<GPR32>;
 def LOCAL_STORE_64 : LocalStorePseudo<GPR32x2>;
+def LOCAL_STORE_96 : LocalStorePseudo<GPR96>;
+def LOCAL_STORE_128 : LocalStorePseudo<GPR128>;
 
 multiclass LocalLoadPat<PatFrag frag, ValueType vt, Instruction inst,
                         ComplexPattern addr, int fmt, int mask> {
