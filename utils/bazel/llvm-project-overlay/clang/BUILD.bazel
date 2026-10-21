@@ -3167,6 +3167,7 @@ cc_library(
         ":cir_dialect",
         ":cir_openacc_support",
         ":cir_openmp_support",
+        "//mlir:ArithDialect",
         "//mlir:DLTIDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",
