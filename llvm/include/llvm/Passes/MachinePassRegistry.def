@@ -21,11 +21,6 @@
 #ifndef MACHINE_FUNCTION_ANALYSIS
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
-// LiveVariables currently requires pure SSA form.
-// FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-// LiveVariables can be removed completely, and LiveIntervals can be directly
-// computed. (We still either need to regenerate kill flags after regalloc, or
-// preferably fix the scavenger to not depend on them).
 MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("gisel-cse-analysis", GISelCSEAnalysis(TM))
 MACHINE_FUNCTION_ANALYSIS("gisel-value-tracking", GISelValueTrackingAnalysis())
