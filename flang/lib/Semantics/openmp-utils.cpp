@@ -1349,8 +1349,11 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   // are present: LOOP will be added to the semantic overrides if it
   // ends up being allowed.
   // Until then treat it as a special case.
-  if (allowsCollapse || allowsOrdered ||
-      dir == llvm::omp::Directive::OMPD_loop) {
+  bool hasLoopConstruct{
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(dir),
+          llvm::omp::Directive::OMPD_loop)};
+
+  if (allowsCollapse || allowsOrdered || hasLoopConstruct) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
