@@ -27,7 +27,8 @@ class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
   unsigned getTextSectionAlignment() const override;
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   /// Return true if this global address should be placed into small data/bss
   /// section.
@@ -43,8 +44,6 @@ public:
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C, Align &Alignment,
                                    const Function *F) const override;
-
-  void getModuleMetadata(Module &M) override;
 
   bool isInSmallSection(uint64_t Size) const;
 

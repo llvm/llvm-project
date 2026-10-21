@@ -102,3 +102,12 @@ void foo() {
   f<int>(0); // expected-note {{in instantiation of function template specialization 'GH26612::f<int>' requested here}}
 }
 } // namespace GH26612
+
+namespace GH194289 {
+template<int qux>
+void bar() { // expected-note {{'bar' declared here}} expected-note {{possible target for call}}
+  (void)__builtin_assume_aligned(baz, qux + 1);
+  // expected-error@-1 {{use of undeclared identifier 'baz'; did you mean 'bar'?}}
+  // expected-error@-2 {{reference to overloaded function could not be resolved}}
+}
+}

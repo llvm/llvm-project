@@ -197,9 +197,9 @@ define i32 @any_of_reduction(ptr %src, i64 %n) !prof !0 {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[BC_MERGE_RDX]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 [[N]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[BC_MERGE_RDX]], 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -292,10 +292,10 @@ define i64 @find_last_iv(ptr %src, i64 %n) !prof !0 {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ -1, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[BC_MERGE_RDX]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 [[N]], [[TMP10]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[BC_MERGE_RDX]], -1
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP18]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
