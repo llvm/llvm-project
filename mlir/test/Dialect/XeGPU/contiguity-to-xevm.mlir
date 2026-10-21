@@ -45,3 +45,39 @@ gpu.func @load_matrix_blocked(
   gpu.return
 }
 }
+
+// -----
+// An inst_data-only anchor is completed with a chunk that tiles the runs:
+// 16-wide blocks and inst_data = [1, 32] give 2 elements per lane.
+// CHECK-LABEL: gpu.func @store_matrix_partial_anchor_blocked_16
+// CHECK-NOT: vector<{{[3-9]}}xf32>
+// CHECK-COUNT-24: llvm.store %{{.*}}, %{{.*}} : vector<2xf32>, !llvm.ptr<3>
+// CHECK-NOT: llvm.store
+// CHECK: gpu.return
+gpu.module @test {
+gpu.func @store_matrix_partial_anchor_blocked_16(
+    %dst: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>) {
+  %v = arith.constant dense<1.0> : vector<8x96xf32>
+  xegpu.store_matrix %v, %dst[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32]>}>
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>
+  gpu.return
+}
+}
+
+// -----
+// 3-wide blocks allow one element per lane, and inst_data = [1, 16] fits that
+// exactly: every access is a single element.
+// CHECK-LABEL: gpu.func @store_matrix_partial_anchor_blocked_3
+// CHECK-NOT: llvm.store %{{.*}}, %{{.*}} : vector
+// CHECK-COUNT-48: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<3>
+// CHECK-NOT: llvm.store
+// CHECK: gpu.return
+gpu.module @test {
+gpu.func @store_matrix_partial_anchor_blocked_3(
+    %dst: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>) {
+  %v = arith.constant dense<1.0> : vector<8x96xf32>
+  xegpu.store_matrix %v, %dst[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16]>}>
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>
+  gpu.return
+}
+}

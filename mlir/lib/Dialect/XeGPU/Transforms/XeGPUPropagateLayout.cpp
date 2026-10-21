@@ -1277,7 +1277,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
         return;
       auto completed = xegpu::completeScatterLoadLaneLayoutFromInstData(
           anchorLayoutAttr, consumerLayoutAttr, resVecTy.getElementType(),
-          uArchInstruction, uArch->getSubgroupSize());
+          uArchInstruction, uArch->getSubgroupSize(), contigChunkSize);
       if (!completed) {
         load.emitWarning(
             "Failed to identify lane layouts for the specified inst_data.");
@@ -1392,12 +1392,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask())
                             ? storeScatter.getContiguity().value_or(1)
                             : 1;
-  // Match a fixed-layout producer (see `getFixedProducerLaneData`). Runs of
-  // gcd(contiguity, its lane_data) are still contiguous, and they make the
-  // store take the producer's lane_data when the runs allow it.
-  if (std::optional<int64_t> producerLaneData =
-          getFixedProducerLaneData(storeScatter.getValue(), uArch))
-    contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1409,7 +1403,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
         return;
       auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
           anchorLayoutAttr, srcVecTy.getElementType(), uArchInstruction,
-          uArch->getSubgroupSize());
+          uArch->getSubgroupSize(), contigChunkSize);
       if (!completed) {
         markFailure(
             storeScatter,
@@ -1428,6 +1422,12 @@ void LayoutInfoPropagation::visitStoreScatterOp(
         getNumSgOrFail(storeScatter, uArch->getSubgroupSize(), nullptr);
     if (failed(numSgOrErr))
       return;
+    // Match a fixed-layout producer (see `getFixedProducerLaneData`). Runs of
+    // gcd(contiguity, its lane_data) are still contiguous, and they make the
+    // store take the producer's lane_data when the runs allow it.
+    if (std::optional<int64_t> producerLaneData =
+            getFixedProducerLaneData(storeScatter.getValue(), uArch))
+      contigChunkSize = std::gcd<int64_t>(contigChunkSize, *producerLaneData);
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
         layoutKind, srcVecTy, contigChunkSize, numSgOrErr.value_or(0), uArch);
     if (!requiredAnchorLayoutAttr) {
@@ -1504,7 +1504,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
         return;
       auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
           anchorLayoutAttr, srcVecTy.getElementType(), uArchInstruction,
-          uArch->getSubgroupSize());
+          uArch->getSubgroupSize(), storeMatrix.getContiguity().value_or(1));
       if (!completed) {
         markFailure(
             storeMatrix,

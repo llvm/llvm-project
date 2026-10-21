@@ -162,15 +162,16 @@ func.func @load_matrix_with_coalesce_chunksize(%arg0: memref<2048x512xf32>, %arg
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_coalesce_chunksize(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf32>) {
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<true> : vector<16x32xi1>
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<12> : vector<16x32xindex>
-// CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> :
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} dense<true> : vector<16x32xi1>
+// CHECK: %{{.*}} = vector.broadcast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} : vector<32xindex> to vector<16x32xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> :
 // CHECK-SAME: memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
-// CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> :
+// CHECK: xegpu.store %[[LOAD]], %[[ARG0]][%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> :
 // CHECK-SAME: vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
 func.func @scatter_ops_coalesce_chunksize(%src: memref<512xf32>) {
   %1 = arith.constant dense<1>: vector<16x32xi1>
-  %offset = arith.constant dense<12> : vector<16x32xindex>
+  %step = vector.step : vector<32xindex>
+  %offset = vector.broadcast %step : vector<32xindex> to vector<16x32xindex>
   %3 = xegpu.load %src[%offset], %1
       : memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
   xegpu.store %3, %src[%offset], %1 <{layout = #xegpu.layout<inst_data = [1, 32]>}>
@@ -344,7 +345,7 @@ gpu.module @test_collapse_dims [#xevm.target<O = 3, chip = "pvc">] {
 
     // CHECK: xegpu.store {{.*}} <{{{.*}}layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>{{.*}}}> :
     xegpu.store %data, %ptr_i64[%1], %mask <{
-      layout = #xegpu.layout<inst_data = [32, 32]>
+      layout = #xegpu.layout<inst_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 2]>
     }> : vector<32x32xf32>, i64, vector<32x32xindex>, vector<32x32xi1>
 
     gpu.return

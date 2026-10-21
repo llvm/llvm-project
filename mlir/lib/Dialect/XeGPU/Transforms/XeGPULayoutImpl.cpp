@@ -2160,6 +2160,19 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
                                        numSg);
 }
 
+/// Returns true when one lane_layout x lane_data block covers `instData`
+/// exactly, so each lane accesses one contiguous span per instruction. A
+/// larger inst_data would give each lane several spans, which the lowering of
+/// a scatter-style access cannot express: it reads or writes a lane's whole
+/// vector from the address of its first element.
+static bool coversInstDataExactly(ArrayRef<int64_t> instData,
+                                  ArrayRef<int64_t> laneLayout,
+                                  ArrayRef<int64_t> laneData) {
+  return llvm::all_of(llvm::seq<size_t>(0, instData.size()), [&](size_t d) {
+    return laneLayout[d] * laneData[d] == instData[d];
+  });
+}
+
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from
 /// `specifiedLayout`'s inst_data when they are missing. The layout is returned
 /// unchanged if `specifiedLayout` is null, carries no inst_data, or already has
@@ -2167,20 +2180,22 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
 ///
 /// When lane info is absent, inst_data is treated as the effective shape and
 /// the lane factorization is filled in as follows:
-///   - If `consumerLayout` is present and its lane_layout / lane_data are a
-///     valid factorization of inst_data, that consumer lane info is reused so
-///     the completed layout matches the consumer (avoiding a relayout).
+///   - If `consumerLayout` is present, covers inst_data exactly, and its
+///     lane_data tiles the runs of `contiguity`, that consumer lane info is
+///     reused so the completed layout matches the consumer (avoiding a
+///     relayout).
 ///   - Otherwise a standard scatter-style factorization is computed via
 ///     `computeScatterIOLaneLayoutAndData`, bounded by `maxChunkSize` — the
 ///     per-lane load width reported by the uArch's LoadGather instruction
-///     (`getMaxLaneAccessSizeBytes`).
+///     (`getMaxLaneAccessSizeBytes`) — and tiling the runs of `contiguity`.
+///     If it does not cover inst_data exactly, there is no valid completion.
 ///
 std::optional<xegpu::DistributeLayoutAttr>
 xegpu::completeScatterLoadLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout,
     xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
     const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
-    const int subgroupSize) {
+    const int subgroupSize, int contiguity) {
   if (!specifiedLayout)
     return specifiedLayout;
   SmallVector<int64_t> specifiedInstData =
@@ -2198,14 +2213,16 @@ xegpu::completeScatterLoadLaneLayoutFromInstData(
     auto consumerLaneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
     auto consumerLaneData = consumerLayout.getEffectiveLaneDataAsInt();
     if (!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
-        isValidLaneLayout(specifiedInstData, consumerLaneLayout,
-                          consumerLaneData))
+        coversInstDataExactly(specifiedInstData, consumerLaneLayout,
+                              consumerLaneData) &&
+        getScatterChunkSize(consumerLaneData.back(), contiguity,
+                            maxChunkSize) == consumerLaneData.back())
       return buildInstDataLayoutWithLane(context, specifiedInstData,
                                          consumerLaneLayout, consumerLaneData);
   }
   auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
-      specifiedInstData, subgroupSize, maxChunkSize);
-  if (!isValidLaneLayout(specifiedInstData, defLaneLayout, defLaneData))
+      specifiedInstData, subgroupSize, maxChunkSize, contiguity);
+  if (!coversInstDataExactly(specifiedInstData, defLaneLayout, defLaneData))
     return std::nullopt;
   return buildInstDataLayoutWithLane(context, specifiedInstData, defLaneLayout,
                                      defLaneData);
@@ -2213,12 +2230,13 @@ xegpu::completeScatterLoadLaneLayoutFromInstData(
 
 /// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores. A
 /// store is a data sink, so lane info is derived purely from inst_data (bounded
-/// by the uArch's per-lane store width); there is no consumer layout to reuse.
+/// by the uArch's per-lane store width and tiling the runs of `contiguity`);
+/// there is no consumer layout to reuse.
 std::optional<xegpu::DistributeLayoutAttr>
 xegpu::completeScatterStoreLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout, Type elemTy,
     const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
-    const int subgroupSize) {
+    const int subgroupSize, int contiguity) {
   if (!specifiedLayout)
     return specifiedLayout;
   SmallVector<int64_t> specifiedInstData =
@@ -2233,8 +2251,8 @@ xegpu::completeScatterStoreLaneLayoutFromInstData(
   auto *context = specifiedLayout.getContext();
   int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
   auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
-      specifiedInstData, subgroupSize, maxChunkSize);
-  if (!isValidLaneLayout(specifiedInstData, defLaneLayout, defLaneData))
+      specifiedInstData, subgroupSize, maxChunkSize, contiguity);
+  if (!coversInstDataExactly(specifiedInstData, defLaneLayout, defLaneData))
     return std::nullopt;
   return buildInstDataLayoutWithLane(context, specifiedInstData, defLaneLayout,
                                      defLaneData);
