@@ -2086,11 +2086,10 @@ a:
 
 ; Make sure we don't fold a load from a swifterror value into a memory operand
 ; during -O0: on x86-64 the value lives in a register.
-define swiftcc i64 @dontFoldSwiftErrorLoad(ptr swifterror %err) {
+define swiftcc i64 @dontFoldSwiftErrorLoad(ptr swifterror %err) nounwind {
 ; CHECK-APPLE-LABEL: dontFoldSwiftErrorLoad:
 ; CHECK-APPLE:       ## %bb.0: ## %entry
 ; CHECK-APPLE-NEXT:    pushq %rax
-; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-APPLE-NEXT:    callq _foo2
 ; CHECK-APPLE-NEXT:    testq %r12, %r12
 ; CHECK-APPLE-NEXT:    je LBB26_2
@@ -2106,7 +2105,6 @@ define swiftcc i64 @dontFoldSwiftErrorLoad(ptr swifterror %err) {
 ; CHECK-O0-LABEL: dontFoldSwiftErrorLoad:
 ; CHECK-O0:       ## %bb.0: ## %entry
 ; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    callq _foo2
 ; CHECK-O0-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
 ; CHECK-O0-NEXT:    cmpq $0, %r12
@@ -2126,10 +2124,7 @@ define swiftcc i64 @dontFoldSwiftErrorLoad(ptr swifterror %err) {
 ; CHECK-i386-LABEL: dontFoldSwiftErrorLoad:
 ; CHECK-i386:       ## %bb.0: ## %entry
 ; CHECK-i386-NEXT:    pushl %esi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-i386-NEXT:    subl $8, %esp
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-i386-NEXT:    .cfi_offset %esi, -8
 ; CHECK-i386-NEXT:    movl 16(%esp), %esi
 ; CHECK-i386-NEXT:    movl %esi, (%esp)
 ; CHECK-i386-NEXT:    calll _foo2
