@@ -1317,30 +1317,28 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   }
 
   if (!getLangOpts().CPlusPlus) {
-    if (InitStmt != nullptr && InitStmt->isUsable()) {
-      // Handle the 2 clauses of declaration: (clause1; clause2). We need to
-      // allow NullStmt because that’s what we end up with if we have an empty
-      // attribute-specifier-sequence, which is valid: if ([[]]; true).
-      if (!isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
-        // C2y only permits declaration in the first clause of an if condition.
-        Diag(InitStmt->get()->getBeginLoc(),
-             diag::err_c2y_first_condition_clause_is_not_declaration)
-            << InitStmt->get()->getSourceRange();
+    bool HasInitStmt = InitStmt != nullptr && InitStmt->isUsable();
+    // Handle the 2 clauses of declaration: (clause1; clause2). We need to
+    // allow NullStmt because that’s what we end up with if we have an empty
+    // attribute-specifier-sequence, which is valid: if ([[]]; true).
+    if (HasInitStmt &&
+        !isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
+      // C2y only permits declaration in the first clause of an if condition.
+      Diag(InitStmt->get()->getBeginLoc(),
+           diag::err_c2y_first_condition_clause_is_not_declaration)
+          << InitStmt->get()->getSourceRange();
 
-      if (Cond.get().first != nullptr)
-        // C2y only permits expression in the second clause of an if condition.
-        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
-            << Cond.get().first->getSourceRange();
-    } else if (Cond.get().first != nullptr) {
-      if (InitStmt == nullptr)
-        // C2y only permits a declaration in the condition of an 'if' or
-        // 'switch' statement; a 'while' statement still requires an
-        // expression. Handle: while (int decl = 0) {}.
-        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
-            << Cond.get().first->getSourceRange();
+    if (Decl *CondDecl = Cond.get().first) {
+      // C2y only permits a declaration as the sole clause of an 'if' or
+      // 'switch' condition. Diagnose it as an expected expression when there
+      // is no init-statement slot at all (while (int decl = 0) {}) or when the
+      // declaration is in the second clause (if (int x = 0; int y = 0) {}).
+      if (InitStmt == nullptr || HasInitStmt)
+        Diag(CondDecl->getBeginLoc(), diag::err_expected_expression)
+            << CondDecl->getSourceRange();
       else
         // Handle: if (int decl = 0) {}.
-        DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
+        DiagCompat(CondDecl->getBeginLoc(), diag_compat::decl_statement)
             << (CK == Sema::ConditionKind::Switch);
     }
   }
