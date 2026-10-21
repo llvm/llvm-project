@@ -229,25 +229,6 @@ public:
   }
 
   /// Creates a new ExplodedNode which is marked as a sink and adds it to the
-  /// ExplodedGraph as a child of the parameter \p Pred. A sink node terminates
-  /// the execution path: it cannot have children and prevents the default
-  /// behavior that the path "passes through" the checker callback without
-  /// changes if the checker doesn't create any node.
-  /// Can return nullptr if the node creation fails (when it would recreate
-  /// an existing node or when the state is posteriorly overconstrained).
-  ///
-  /// @param State The state of the generated sink node.
-  /// @param Pred The node that will become the predecessor of the new node.
-  /// @param Tag A ProgramPointTag that will be attached to the node. This is
-  ///        doesn't have any compelling use case, but could perhaps be used
-  ///        debugging purposes. When \p Tag is nullptr, node creation will
-  ///        default to using the active checker as the tag.
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State, true, Pred, Tag);
-  }
-
-  /// Creates a new ExplodedNode which is marked as a sink and adds it to the
   /// ExplodedGraph.
   /// A sink node terminates the execution path: it cannot have children and
   /// prevents the default behavior that the path "passes through" the checker
