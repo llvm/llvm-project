@@ -31,8 +31,7 @@ LLVM_ATTRIBUTE_NOINLINE
 VersionedTypeInfo::VersionedTypeInfo(const VersionedTypeInfo &other) = default;
 
 LLVM_ATTRIBUTE_NOINLINE
-VersionedTypeInfo::VersionedTypeInfo(VersionedTypeInfo &&other) noexcept =
-    default;
+VersionedTypeInfo::VersionedTypeInfo(VersionedTypeInfo &&other) = default;
 
 LLVM_ATTRIBUTE_NOINLINE
 VersionedTypeInfo &
@@ -40,7 +39,7 @@ VersionedTypeInfo::operator=(const VersionedTypeInfo &other) = default;
 
 LLVM_ATTRIBUTE_NOINLINE
 VersionedTypeInfo &
-VersionedTypeInfo::operator=(VersionedTypeInfo &&other) noexcept = default;
+VersionedTypeInfo::operator=(VersionedTypeInfo &&other) = default;
 
 LLVM_ATTRIBUTE_NOINLINE
 VersionedTypeInfo::~VersionedTypeInfo() = default;
@@ -65,8 +64,8 @@ LLVM_ATTRIBUTE_NOINLINE
 OpComplianceInfo<T>::OpComplianceInfo(const OpComplianceInfo &other) = default;
 
 template <typename T>
-LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::OpComplianceInfo(
-    OpComplianceInfo &&other) noexcept = default;
+LLVM_ATTRIBUTE_NOINLINE
+OpComplianceInfo<T>::OpComplianceInfo(OpComplianceInfo &&other) = default;
 
 template <typename T>
 LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
@@ -74,7 +73,7 @@ OpComplianceInfo<T>::operator=(const OpComplianceInfo &other) = default;
 
 template <typename T>
 LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T> &
-OpComplianceInfo<T>::operator=(OpComplianceInfo &&other) noexcept = default;
+OpComplianceInfo<T>::operator=(OpComplianceInfo &&other) = default;
 
 template <typename T>
 LLVM_ATTRIBUTE_NOINLINE OpComplianceInfo<T>::~OpComplianceInfo() = default;
