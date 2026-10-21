@@ -21,9 +21,9 @@ using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 namespace {
-float128 wrapper(float128 x, int n) {
+float128 scalblnf128_wrapper(float128 x, int n) {
   return LIBC_NAMESPACE::scalblnf128(x, static_cast<long>(n));
 }
 } // namespace
 
-LIST_SCALBN_TESTS(float128, wrapper)
+LIST_SCALBN_TESTS(float128, scalblnf128_wrapper)
