@@ -2989,7 +2989,7 @@ mlir::Value
 ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
                                                 cir::VectorType vectorType,
                                                 ArrayRef<mlir::Value> inits) {
-  const unsigned resElts = vectorType.getSize();
+  const unsigned resElts = vectorType.getFixedSize();
   mlir::Value result =
       builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
   unsigned curIdx = 0;
@@ -3000,7 +3000,7 @@ ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
       continue;
     }
 
-    const unsigned initElts = initType.getSize();
+    const unsigned initElts = initType.getFixedSize();
     assert(curIdx + initElts <= resElts &&
            "Sema should reject excess elements");
     SmallVector<int64_t, 16> mask(resElts, -1);
