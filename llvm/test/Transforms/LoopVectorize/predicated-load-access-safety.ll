@@ -169,25 +169,9 @@ define void @sufficient_alignment(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 3
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> poison, i32 [[TMP16]], i64 0
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP17]], i64 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP19]], i64 3
-; CHECK-NEXT:    [[TMP24:%.*]] = add <4 x i32> [[TMP15]], [[TMP23]]
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 3
+; CHECK-NEXT:    [[TMP24:%.*]] = add <4 x i32> [[TMP33]], [[TMP33]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <4 x i32> [[TMP24]], zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP6]], align 16
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i64 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i64 1
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP28]], i64 2
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i64 3
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP25]], <4 x i32> [[TMP33]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP34]], align 1

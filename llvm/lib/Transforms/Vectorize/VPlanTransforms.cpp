@@ -2314,6 +2314,14 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
+// Determines if a given recipe represents a load operation supported for CSE.
+static bool isSupportedLoadRecipe(const VPSingleDefRecipe *R) {
+  if (isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R))
+    return true;
+  const auto *Repl = dyn_cast<VPReplicateRecipe>(R);
+  return Repl && Repl->isSingleScalar() && isa<LoadInst>(Repl->getUnderlyingValue());
+}
+
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
@@ -2342,14 +2350,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // Allocas must not be merged, as each creates a distinct allocation.
     if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
-
-    // Widened loads (including the EVL variant) are handled, as cse() only
-    // reuses them within a block with no intervening memory write. Any other
-    // memory access is rejected.
+    // Widened loads (including the EVL variant) and replicating loads re
+    // handled, as cse() only reuses them within a block with no intervening
+    // memory write. Any other memory read is rejected.
     if (Def->mayWriteToMemory())
       return false;
-    return !Def->mayReadFromMemory() ||
-           isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
+    return !Def->mayReadFromMemory() || isSupportedLoadRecipe(Def);
   }
 
   /// Hash the underlying data of \p Def.
@@ -2432,7 +2438,7 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
-      bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
+      const bool IsLoad = isSupportedLoadRecipe(Def);
       auto [It, Inserted] =
           (IsLoad ? LoadCSEMap : CSEMap).try_emplace(Def, Def);
       if (Inserted)
@@ -2442,16 +2448,26 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       if (!VPDT.dominates(V->getParent(), VPBB))
         continue;
       if (IsLoad) {
-        auto *EarlierLoad = cast<VPWidenMemoryRecipe>(V);
-        auto *Load = cast<VPWidenMemoryRecipe>(Def);
-        if (EarlierLoad->getAlign() < Load->getAlign()) {
-          // Record Load as the candidate for subsequent loads, as it may be
-          // reusable where EarlierLoad is not.
-          It->second = Def;
-          continue;
-        }
-        // Keep only metadata common to both loads on the survivor.
-        EarlierLoad->intersect(*Load);
+        auto getAlign = [](VPSingleDefRecipe *R) -> Align {
+          if (auto *Rep = dyn_cast<VPReplicateRecipe>(R)) {
+            const auto *LI = cast<LoadInst>(Rep->getUnderlyingValue());
+            return LI->getAlign();
+          }
+         return cast<VPWidenMemoryRecipe>(R)->getAlign();
+        };
+        Align EarlierAlign = getAlign(V);
+        Align LoadAlign = getAlign(Def);
+        if (EarlierAlign < LoadAlign) {
+           // Record Load as the candidate for subsequent loads, as it may be
+           // reusable where EarlierLoad is not.
+           It->second = Def;
+           continue;
+         }
+        // Keep only metadata common to both recipes on the survivor.
+        VPRecipeBase *Earlier = V;
+        VPRecipeBase *Current = Def;
+        if (auto *MD = dyn_cast<VPIRMetadata>(Earlier))
+          MD->intersect(*cast<VPIRMetadata>(Current));
       }
       // Only keep flags present on both V and Def.
       if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
