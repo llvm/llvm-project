@@ -715,6 +715,24 @@ subroutine test_constant_condition_kinds()
   !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
 end subroutine
 
+! A false constant of any kind makes the third WHEN clause inapplicable, so the
+! first two tie and TASKYIELD is selected.
+! CHECK-LABEL: func.func @_QPtest_false_constant_condition_kind(
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         omp.taskyield
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         return
+subroutine test_false_constant_condition_kind(b)
+  logical, intent(in) :: b
+  !$omp metadirective &
+  !$omp & when(device={kind(host)}, implementation={vendor(score(3): llvm)}: &
+  !$omp &      taskyield) &
+  !$omp & when(user={condition(b)}, implementation={vendor(score(4): llvm)}: &
+  !$omp &      taskwait) &
+  !$omp & when(user={condition(.false._8)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: barrier)
+end subroutine
+
 ! Calls to intrinsics without arguments are evaluated at runtime.
 ! CHECK-LABEL: func.func @_QPtest_intrinsic_call_conditions(
 ! CHECK:         arith.cmpi sgt, %{{.*}}, %c0

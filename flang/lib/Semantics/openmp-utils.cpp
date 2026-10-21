@@ -2352,9 +2352,17 @@ std::optional<bool> EvaluateUserCondition(
   if (auto constVal = evaluate::ToInt64(foldedExpr))
     return *constVal != 0;
 
-  if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
-    return logicalVal->IsTrue();
+  if (const auto *logical{
+          evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeLogical>>(
+              foldedExpr)})
+    return common::visit(
+        [](const auto &x) -> std::optional<bool> {
+          using T = typename std::decay_t<decltype(x)>::Result;
+          if (auto value{evaluate::GetScalarConstantValue<T>(x)})
+            return value->IsTrue();
+          return std::nullopt;
+        },
+        logical->u);
 
   return std::nullopt;
 }
@@ -2590,9 +2598,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
   llvm::SmallVector<SomeExpr, 4> runtimeConditions;
   auto getConditionKey = [&](const DynamicUserCondition &condition) {
     const SomeExpr *expr{GetExpr(context, *condition.expr)};
-    if (!expr ||
-        evaluate::IsActuallyConstant(
-            evaluate::Fold(context.foldingContext(), common::Clone(*expr))))
+    if (!expr)
       return std::string{};
     SomeExpr normalized{NormalizeMetadirectiveCondition(*expr)};
     auto *it{llvm::find_if(runtimeConditions, [&](const SomeExpr &condition) {
