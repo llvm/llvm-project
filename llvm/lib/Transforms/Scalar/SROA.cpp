@@ -44,6 +44,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -172,6 +173,7 @@ class SROA {
   LLVMContext *const C;
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
+  const TargetTransformInfo *const TTI;
   const bool PreserveCFG;
   const bool AggregateToVector;
 
@@ -270,8 +272,8 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions Options)
-      : C(C), DTU(DTU), AC(AC),
+       const TargetTransformInfo *TTI, SROAOptions Options)
+      : C(C), DTU(DTU), AC(AC), TTI(TTI),
         PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
         AggregateToVector(Options.AggregateToVector) {}
 
@@ -6263,6 +6265,23 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
+/// Return the value a load of type \p Ty reads from bytes written by \p MSI,
+/// or nullptr if that value can't be expressed as a constant.
+static Constant *getMemSetValue(const MemSetInst &MSI, Type *Ty,
+                                const DataLayout &DL) {
+  auto *Byte = dyn_cast<ConstantInt>(MSI.getValue());
+  if (!Byte)
+    return nullptr;
+  if (Byte->isZero() && (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy() ||
+                         Ty->isPtrOrPtrVectorTy()))
+    return Constant::getNullValue(Ty);
+  if (Ty->isIntegerTy() &&
+      DL.getTypeSizeInBits(Ty) == DL.getTypeStoreSizeInBits(Ty))
+    return ConstantInt::get(
+        Ty, APInt::getSplat(Ty->getIntegerBitWidth(), Byte->getValue()));
+  return nullptr;
+}
+
 /// A basic LoadAndStorePromoter that does not remove store nodes.
 class BasicLoadAndStorePromoter : public LoadAndStorePromoter {
 public:
@@ -6286,7 +6305,22 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   // that do not overlap with any before them. The slices are sorted by
   // increasing beginOffset. We don't use AS.partitions(), as it will use a more
   // sophisticated algorithm that takes splittable slices into account.
+  // If the target opts in, constant-length memsets are kept out of that
+  // grouping and instead act as a store of their value in each slice range
+  // they fully cover.
   LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
+  const DataLayout &DL = AI.getDataLayout();
+  const bool ForwardMemSets = TTI->shouldForwardMemSetValuesInSROA();
+  auto IsForwardableMemSet = [ForwardMemSets](const Instruction *I) {
+    auto *MSI = dyn_cast<MemSetInst>(I);
+    return ForwardMemSets && MSI && !MSI->isVolatile() &&
+           isa<ConstantInt>(MSI->getLength());
+  };
+  SmallVector<const Slice *, 4> MemSets;
+  for (const Slice &S : AS)
+    if (IsForwardableMemSet(cast<Instruction>(S.getUse()->getUser())))
+      MemSets.push_back(&S);
+
   bool AllSameAndValid = true;
   Type *PartitionType = nullptr;
   SmallVector<Instruction *> Insts;
@@ -6294,6 +6328,30 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   uint64_t EndOffset = 0;
 
   auto Flush = [&]() {
+    SmallVector<StoreInst *, 2> MemSetStores;
+    if (AllSameAndValid && !Insts.empty()) {
+      for (const Slice *M : MemSets) {
+        if (M->endOffset() <= BeginOffset || M->beginOffset() >= EndOffset)
+          continue;
+        auto &MSI = *cast<MemSetInst>(M->getUse()->getUser());
+        Constant *V = nullptr;
+        if (M->beginOffset() <= BeginOffset && EndOffset <= M->endOffset())
+          V = getMemSetValue(MSI, PartitionType, DL);
+        if (!V) {
+          LLVM_DEBUG(dbgs() << "Memset does not define range [" << BeginOffset
+                            << ", " << EndOffset << "): " << MSI << "\n");
+          AllSameAndValid = false;
+          break;
+        }
+        // LoadAndStorePromoter only treats stores as definitions, so model the
+        // memset with a store of the same bytes, removed again below.
+        IRBuilderTy IRB(MSI.getNextNode());
+        Value *Ptr = IRB.CreateInBoundsPtrAdd(
+            &AI, ConstantInt::get(DL.getIndexType(AI.getType()), BeginOffset));
+        MemSetStores.push_back(IRB.CreateStore(V, Ptr));
+        Insts.push_back(MemSetStores.back());
+      }
+    }
     if (AllSameAndValid && !Insts.empty()) {
       LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
                         << EndOffset << ")\n");
@@ -6302,6 +6360,12 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       Insts.push_back(&AI);
       BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
       Promoter.run(Insts);
+    }
+    for (StoreInst *SI : MemSetStores) {
+      auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand());
+      SI->eraseFromParent();
+      if (Ptr && Ptr != &AI && Ptr->use_empty())
+        Ptr->eraseFromParent();
     }
     AllSameAndValid = true;
     PartitionType = nullptr;
@@ -6317,6 +6381,8 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       });
       continue;
     }
+    if (IsForwardableMemSet(User))
+      continue;
     if (S.beginOffset() >= EndOffset) {
       Flush();
       BeginOffset = S.beginOffset();
@@ -6574,9 +6640,10 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, &TTI, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6621,14 +6688,18 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    auto [Changed, _] = SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+    auto [Changed, _] =
+        SROA(&F.getContext(), &DTU, &AC, &TTI, Options).runSROA(F);
     return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
@@ -6650,5 +6721,6 @@ INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",
                       "Scalar Replacement Of Aggregates", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(SROALegacyPass, "sroa", "Scalar Replacement Of Aggregates",
                     false, false)
