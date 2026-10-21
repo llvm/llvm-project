@@ -2393,7 +2393,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   // FIXME: Once runtime libcall attribute derivation is centralized in
   // RuntimeLibcalls, TargetLibraryInfo should not be used here.
   Attribute::AttrKind OrderingExt =
-    TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
+      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
 
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
