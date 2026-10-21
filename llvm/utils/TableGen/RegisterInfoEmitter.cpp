@@ -724,6 +724,15 @@ static void printMask(raw_ostream &OS, LaneBitmask Val) {
   OS << "LaneBitmask(0x" << PrintLaneMask(Val) << ')';
 }
 
+// Print the offset of a register class storage member relative to the class
+// with the given index, as MCRegisterClass reads it.
+static void printStorageOffset(raw_ostream &OS, StringRef TargetName,
+                               StringRef Member, unsigned DataIdx,
+                               unsigned ClassIdx) {
+  OS << "offsetof(" << TargetName << "RegisterClassStorage, " << Member << "["
+     << DataIdx << "]) - " << ClassIdx << " * sizeof(MCRegisterClass)";
+}
+
 // Try to combine Idx's compose map into Vec if it is compatible.
 // Return false if it's not possible.
 static bool combine(const CodeGenSubRegIndex *Idx,
@@ -1248,16 +1257,6 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "MCRegisterClassStorage = {\n"
      << "  {\n";
 
-  // Helper to generate offsetof macro for the offset of a storage member
-  // relative to the class with the given index, as MCRegisterClass reads it.
-  auto GetOff = [&](std::string_view Member, unsigned DataIdx,
-                    unsigned ClassIdx) -> std::string {
-    return ("offsetof(" + Twine(TargetName) + "RegisterClassStorage, " +
-            Member + "[" + Twine(DataIdx) + "]) - " + Twine(ClassIdx) +
-            " * sizeof(MCRegisterClass)")
-        .str();
-  };
-
   for (const auto &It : enumerate(RegisterClasses)) {
     const auto &RC = It.value();
     const auto &RCIndices = StartIndices[It.index()];
@@ -1265,25 +1264,29 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
 
-    OS << "    {\n      " << GetOff("Regs", RCIndices.RegIdx, It.index())
-       << ",\n      " << GetOff("BitSets", RCIndices.BitSetIdx, It.index())
-       << ",\n      " << RegClassStrings.get(RC.getName()) << ",\n      "
+    OS << "    {\n      ";
+    printStorageOffset(OS, TargetName, "Regs", RCIndices.RegIdx, It.index());
+    OS << ",\n      ";
+    printStorageOffset(OS, TargetName, "BitSets", RCIndices.BitSetIdx,
+                       It.index());
+    OS << ",\n      " << RegClassStrings.get(RC.getName()) << ",\n      "
        << RegSize << ",\n      " << RC.getOrder().size() << ",\n      "
        << RCIndices.MinRegVal << ", /* MinRegVal */\n      "
        << RCIndices.RegSetSize << ", /* RegSetSize */\n      "
        << RC.getQualifiedIdName() << ",\n      "
        << static_cast<unsigned>(RC.CopyCost) << ", /* CopyCost */\n      "
        << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
-       << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
-       << GetOff("SubClassMasks", RCIndices.SubClassMaskIdx, It.index())
-       << ",\n      "
-       << GetOff("SuperRegMaskOffsets", RCIndices.SuperRegMaskOffsetIdx,
-                 It.index())
-       << ",\n      "
-       << GetOff("SuperRegIdxSeqs",
-                 SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]),
-                 It.index())
-       << ",\n      ";
+       << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      ";
+    printStorageOffset(OS, TargetName, "SubClassMasks",
+                       RCIndices.SubClassMaskIdx, It.index());
+    OS << ",\n      ";
+    printStorageOffset(OS, TargetName, "SuperRegMaskOffsets",
+                       RCIndices.SuperRegMaskOffsetIdx, It.index());
+    OS << ",\n      ";
+    printStorageOffset(OS, TargetName, "SuperRegIdxSeqs",
+                       SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]),
+                       It.index());
+    OS << ",\n      ";
     printMask(OS, RC.LaneMask);
     OS << ",\n      " << (unsigned)RC.AllocationPriority << ",\n      "
        << (RC.GlobalPriority ? "true" : "false") << ",\n      "
@@ -1292,9 +1295,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
        << (RC.HasDisjunctSubRegs ? "true" : "false")
        << ", /* HasDisjunctSubRegs */\n      "
        << (RC.CoveredBySubRegs ? "true" : "false")
-       << ", /* CoveredBySubRegs */\n      "
-       << GetOff("SuperClasses", RCIndices.SuperClassIdx, It.index())
-       << ",\n      " << RC.getSuperClasses().size() << "\n    },\n";
+       << ", /* CoveredBySubRegs */\n      ";
+    printStorageOffset(OS, TargetName, "SuperClasses", RCIndices.SuperClassIdx,
+                       It.index());
+    OS << ",\n      " << RC.getSuperClasses().size() << "\n    },\n";
   }
 
   OS << "  },\n  {\n";
@@ -1351,9 +1355,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       continue;
     OS << "    /* " << StartIndices[Idx].SuperRegMaskOffsetIdx << " "
        << RC.getName() << " */ ";
-    for (unsigned MaskIdx : MaskIndices)
-      OS << GetOff("SubClassMasks", MaskPoolStart + MaskIdx * RCMaskWords, Idx)
-         << ", ";
+    for (unsigned MaskIdx : MaskIndices) {
+      printStorageOffset(OS, TargetName, "SubClassMasks",
+                         MaskPoolStart + MaskIdx * RCMaskWords, Idx);
+      OS << ", ";
+    }
     OS << "\n";
   }
   OS << "  },\n  {\n";
