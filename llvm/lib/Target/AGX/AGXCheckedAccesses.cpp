@@ -174,7 +174,16 @@ static Base findIntBase(const Value *V, const DataLayout &DL, unsigned Depth) {
 
 static Base findBase(const Value *Ptr, const DataLayout &DL, unsigned Depth) {
   Base B;
+  if (Depth > 16)
+    return B;
   const Value *U = getUnderlyingObject(Ptr, /*MaxLookup=*/0);
+  // A field of an aggregate built with insertvalue: MLIR's memref
+  // descriptors hold the pointer arguments of a kernel.
+  if (const auto *EV = dyn_cast<ExtractValueInst>(U))
+    if (Value *F = FindInsertedValue(
+            const_cast<Value *>(EV->getAggregateOperand()), EV->getIndices()))
+      if (F != EV)
+        return findBase(F, DL, Depth + 1);
   if (const auto *I2P = dyn_cast<IntToPtrInst>(U))
     return findIntBase(I2P->getOperand(0), DL, Depth + 1);
   if (const auto *CE = dyn_cast<ConstantExpr>(U))

@@ -17,6 +17,11 @@ elements, `inout:TYPE:...` an initialized buffer that is also printed, and
 pointers in uniform registers (see AGXUsage.rst). The output buffers are
 printed one per line, `NAME: v v v ...`, with NAME the argument number.
 --grid and --wg take X or X,Y or X,Y,Z threads.
+
+With --checked, the kernel is built with the agx-checked feature and launched
+by llvm/utils/agx-checked/run_checked.py (which passes the hidden arguments
+from the .agx.kernels record), and the error record is printed as
+`checked: ...` before the buffers.
 """
 
 import argparse
@@ -26,6 +31,9 @@ import struct
 import subprocess
 import sys
 import tempfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CHECKED = os.path.join(HERE, *[os.pardir] * 5, 'llvm', 'utils', 'agx-checked')
 
 FMT = {'i32': 'i', 'u32': 'I', 'f16': 'e', 'f32': 'f', 'f64': 'd', 'i64': 'q'}
 
@@ -41,7 +49,9 @@ def translate(mlir_translate, path, tmp):
         depth += lines[end].count('{') - lines[end].count('}')
     body = lines[start + 1:end]
     mlir = os.path.join(tmp, 'k.mlir')
-    open(mlir, 'w').write('module {\n' + '\n'.join(body) + '\n}\n')
+    # attribute and location aliases (#loc, #di_...) defined at the top level
+    aliases = [l for l in lines[:start] + lines[end + 1:] if l.startswith('#')]
+    open(mlir, 'w').write('\n'.join(aliases) + '\nmodule {\n' + '\n'.join(body) + '\n}\n')
     ll = os.path.join(tmp, 'k.ll')
     subprocess.run([mlir_translate, '-mlir-to-llvmir', mlir, '-o', ll], check=True)
     return ll
@@ -54,6 +64,8 @@ def main():
     ap.add_argument('--agx-run', dest='agx_run', required=True)
     ap.add_argument('--mlir-translate', dest='mlir_translate')
     ap.add_argument('--cpu', default='agx-g13g')
+    ap.add_argument('--checked', action='store_true')
+    ap.add_argument('--readelf')
     ap.add_argument('--grid', required=True)
     ap.add_argument('--wg', required=True)
     ap.add_argument('ir')
@@ -62,6 +74,8 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         if a.ir.endswith('.mlir'):
             a.ir = translate(a.mlir_translate, a.ir, tmp)
+        if a.checked:
+            return run_checked(a, tmp)
         asm = subprocess.run([a.llc, '-mtriple=agx', '-mcpu=' + a.cpu, a.ir, '-o', '-'],
                              capture_output=True, text=True, check=True).stdout
         obj = os.path.join(tmp, 'k.o')
@@ -130,6 +144,49 @@ def main():
         for i, t, n, f in outs:
             vals = struct.unpack('<%d%s' % (n, FMT[t]), open(f, 'rb').read())
             print('%d: %s' % (i, ' '.join(('%g' % v) if t[0] == 'f' else str(v) for v in vals)))
+
+
+def run_checked(a, tmp):
+    sys.path.insert(0, CHECKED)
+    import run_checked as rc
+    obj = os.path.join(tmp, 'k.o')
+    subprocess.run([a.llc, '-mtriple=agx', '-mcpu=' + a.cpu, '-mattr=+agx-checked', '-filetype=obj', a.ir,
+                    '-o', obj], check=True)
+    dims = lambda s: tuple((list(map(int, s.split(','))) + [1, 1])[:3])
+    args, outs = [], []
+    for i, arg in enumerate(a.args):
+        if '=' in arg and ':' not in arg:
+            t, v = arg.split('=')
+            if t == 'f32':
+                args.append(('i32', struct.unpack('<I', struct.pack('<f', float(v)))[0]))
+            else:
+                args.append(('i32' if t == 'i32' else 'i64', int(v, 0) & (2 ** 64 - 1)))
+            continue
+        if '*' in arg and ':' not in arg:
+            t, n = arg.split('*')
+            args.append(('buf', bytes(struct.calcsize('<' + FMT[t]) * int(n))))
+            outs.append((i, t, int(n)))
+            continue
+        inout = arg.startswith('inout:')
+        t, vals = arg[6 if inout else 0:].split(':', 1)
+        if vals.startswith('@'):
+            vals = open(vals[1:]).read().strip()
+        if vals.startswith('iota*'):
+            vals = ','.join(str(v) for v in range(int(vals[5:])))
+        vs = [float(v) if t[0] == 'f' else int(v, 0) for v in vals.split(',')]
+        args.append(('buf', struct.pack('<%d%s' % (len(vs), FMT[t]), *vs)))
+        if inout:
+            outs.append((i, t, len(vs)))
+    names = list(rc.kernels(obj, a.objcopy))
+    if len(names) != 1:
+        sys.exit('--checked needs one kernel, the module has %s' % names)
+    r = rc.launch(obj, names[0], args, dims(a.grid), dims(a.wg), a.agx_run, a.objcopy, a.readelf)
+    print('checked: %s' % r)
+    buf_index = [i for i, x in enumerate(args) if x[0] == 'buf']
+    for i, t, n in outs:
+        b = r.buffers[buf_index.index(i)]
+        vals = struct.unpack('<%d%s' % (n, FMT[t]), b)
+        print('%d: %s' % (i, ' '.join(('%g' % v) if t[0] == 'f' else str(v) for v in vals)))
 
 
 if __name__ == '__main__':

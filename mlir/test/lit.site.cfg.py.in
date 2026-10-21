@@ -39,6 +39,7 @@ config.run_rocm_tests = @LLVM_HAS_AMDGPU_TARGET@
 # AGX is an experimental target: the variable is unset unless it is built.
 config.run_agx_tests = "@LLVM_HAS_AGX_TARGET@" == "1"
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
+config.enable_agx_runner = @MLIR_ENABLE_AGX_RUNNER@
 config.gpu_compilation_format = "@MLIR_GPU_COMPILATION_TEST_FORMAT@"
 config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
 config.run_xevm_tests = @MLIR_ENABLE_XEVM_CONVERSIONS@
