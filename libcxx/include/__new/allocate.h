@@ -64,15 +64,6 @@ __libcpp_deallocate(__type_identity_t<_Tp>* __ptr,
 
 #undef _LIBCPP_ONLY_IF_SIZED_DEALLOCATION
 
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate_unsized(
-    __type_identity_t<_Tp>* __ptr, [[__maybe_unused__]] size_t __align = _LIBCPP_ALIGNOF(_Tp)) _NOEXCEPT {
-#if _LIBCPP_HAS_ALIGNED_ALLOCATION
-  if (__is_overaligned_for_new(__align))
-    return __builtin_operator_delete(__ptr, static_cast<align_val_t>(__align));
-#endif
-  return __builtin_operator_delete(__ptr);
-}
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___NEW_ALLOCATE_H

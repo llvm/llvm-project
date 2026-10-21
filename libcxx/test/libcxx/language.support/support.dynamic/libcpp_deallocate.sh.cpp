@@ -131,14 +131,7 @@ void test_libcpp_dealloc() {
 #else
   std::size_t over_align_val = TEST_ALIGNOF(std::max_align_t) * 2;
 #endif
-  std::size_t under_align_val = TEST_ALIGNOF(int);
   std::size_t with_size_val   = 2;
-
-  {
-    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), under_align_val);
-    assert(stats.expect_plain());
-  }
-  stats.reset();
 
 #if defined(NO_SIZE) && defined(NO_ALIGN)
   {
@@ -165,12 +158,7 @@ void test_libcpp_dealloc() {
   }
   stats.reset();
   {
-    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), over_align_val);
-    assert(stats.expect_align(over_align_val));
-  }
-  stats.reset();
-  {
-    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), under_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), TEST_ALIGNOF(int));
     assert(stats.expect_size(with_size_val));
   }
   stats.reset();
