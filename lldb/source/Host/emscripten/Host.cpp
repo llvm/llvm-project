@@ -23,7 +23,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &) {
       "launching a host process is not supported under Emscripten");
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &,
+                                  const Timeout<std::micro> &) {
   return Status::FromErrorString(
       "shell expansion is not supported under Emscripten");
 }

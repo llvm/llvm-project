@@ -41,14 +41,14 @@ using namespace llvm;
 static cl::opt<bool>
     EnableCSEInLegalizer("enable-cse-in-legalizer",
                          cl::desc("Should enable CSE in Legalizer"),
-                         cl::Optional, cl::init(false));
+                         cl::init(false));
 
 // This is a temporary hack, should be removed soon.
 static cl::opt<bool> AllowGInsertAsArtifact(
     "allow-ginsert-as-artifact",
     cl::desc("Allow G_INSERT to be considered an artifact. Hack around AMDGPU "
              "test infinite loops."),
-    cl::Optional, cl::init(true));
+    cl::init(true));
 
 enum class DebugLocVerifyLevel {
   None,

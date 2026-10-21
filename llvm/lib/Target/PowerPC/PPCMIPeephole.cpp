@@ -34,7 +34,6 @@
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -112,7 +111,6 @@ struct PPCMIPeephole : public MachineFunctionPass {
   const PPCInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
-  LiveVariables *LV;
 
   PPCMIPeephole() : MachineFunctionPass(ID) {}
 
@@ -139,10 +137,10 @@ private:
                       MachineInstr *MI);
 
   // A number of transformations will eliminate the definition of a register
-  // as all of its uses will be removed. However, this leaves a register
-  // without a definition for LiveVariables. Such transformations should
-  // use this function to provide a dummy definition of the register that
-  // will simply be removed by DCE.
+  // as all of its uses will be removed. However, this can leave a register
+  // used with no reaching definition until DCE removes the dead uses. Such
+  // transformations should use this function to provide a dummy definition of
+  // the register that will simply be removed by DCE.
   void addDummyDef(MachineBasicBlock &MBB, MachineInstr *At, Register Reg) {
     BuildMI(MBB, At, At->getDebugLoc(), TII->get(PPC::IMPLICIT_DEF), Reg);
   }
@@ -152,13 +150,10 @@ private:
                               Register Dst);
 
 public:
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
@@ -196,7 +191,6 @@ void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -498,12 +492,11 @@ bool PPCMIPeephole::simplifyCode() {
     } while (SomethingChanged && FixedPointRegToImm);
   }
 
-  // Since we are deleting this instruction, we need to run LiveVariables
-  // on any of its definitions that are marked as needing an update since
-  // we can't run LiveVariables on a deleted register. This only needs
-  // to be done for defs since uses will have their own defining
-  // instructions so we won't be running LiveVariables on a deleted reg.
-  auto recomputeLVForDyingInstr = [&]() {
+  // Since we are deleting this instruction, clear the kill flags on any of its
+  // definitions that are marked as needing an update: the transforms only ever
+  // invalidate kill flags by removing uses (turning a non-last use into the
+  // last one), so a conservative clear is sufficient.
+  auto clearKillsForDyingInstr = [&]() {
     if (RegsToUpdate.empty())
       return;
     for (MachineOperand &MO : ToErase->operands()) {
@@ -516,7 +509,9 @@ bool PPCMIPeephole::simplifyCode() {
       // a def of an invalid register as the instruction is going away.
       if (!MRI->getUniqueVRegDef(RegToUpdate))
         MO.setReg(PPC::NoRegister);
-      LV->recomputeForSingleDefVirtReg(RegToUpdate);
+      MRI->clearKillFlags(RegToUpdate);
+      for (MachineOperand &Def : MRI->def_operands(RegToUpdate))
+        Def.setIsDead(false);
     }
   };
 
@@ -528,7 +523,7 @@ bool PPCMIPeephole::simplifyCode() {
       if (ToErase) {
         LLVM_DEBUG(dbgs() << "Deleting instruction: ");
         LLVM_DEBUG(ToErase->dump());
-        recomputeLVForDyingInstr();
+        clearKillsForDyingInstr();
         ToErase->eraseFromParent();
         ToErase = nullptr;
       }
@@ -1088,7 +1083,7 @@ bool PPCMIPeephole::simplifyCode() {
           // chain used to deduce sign extension to eliminate the 'extsw' will
           // need to be promoted to 64-bit pseudo instructions when the 'extsw'
           // is eliminated.
-          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
@@ -1386,7 +1381,7 @@ bool PPCMIPeephole::simplifyCode() {
     // If the last instruction was marked for elimination,
     // remove it now.
     if (ToErase) {
-      recomputeLVForDyingInstr();
+      clearKillsForDyingInstr();
       ToErase->eraseFromParent();
       ToErase = nullptr;
     }
@@ -1405,11 +1400,16 @@ bool PPCMIPeephole::simplifyCode() {
   Simplified |= eliminateRedundantCompare();
 
   // If we have made any modifications and added any registers to the set of
-  // registers for which we need to update the kill flags, do so by recomputing
-  // LiveVariables for those registers.
+  // registers whose liveness flags may now be stale, clear those flags. A
+  // transform may remove a use (leaving a stale kill on an earlier use) or add
+  // a use of a previously dead def (leaving a stale dead flag), so clear both
+  // kinds conservatively.
   for (Register Reg : RegsToUpdate) {
-    if (!MRI->reg_empty(Reg))
-      LV->recomputeForSingleDefVirtReg(Reg);
+    if (MRI->reg_empty(Reg))
+      continue;
+    MRI->clearKillFlags(Reg);
+    for (MachineOperand &Def : MRI->def_operands(Reg))
+      Def.setIsDead(false);
   }
   return Simplified;
 }
@@ -2074,7 +2074,6 @@ INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

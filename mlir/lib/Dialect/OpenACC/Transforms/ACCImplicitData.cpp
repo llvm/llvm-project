@@ -197,6 +197,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
@@ -216,6 +217,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <type_traits>
 
 namespace mlir {
@@ -230,10 +233,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class ACCImplicitData : public acc::impl::ACCImplicitDataBase<ACCImplicitData> {
 public:
   using acc::impl::ACCImplicitDataBase<ACCImplicitData>::ACCImplicitDataBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCImplicitDataBase<ACCImplicitData>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override;
 
@@ -292,7 +300,7 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
     return false;
 
   // Device data is a candidate - it will get a deviceptr clause.
-  if (acc::isDeviceValue(val))
+  if (acc::isDeviceAccessibleValue(val))
     return true;
 
   // If it is otherwise valid, skip it.
@@ -457,10 +465,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
-  if (acc::isDeviceValue(var)) {
-    // If the variable is device data, use deviceptr clause.
+  // `deviceptr` asserts the value's storage is already in device memory; no
+  // runtime mapping or attach is performed. Storage that is device-accessible
+  // but physically shared with the host may migrate on demand, so it is not
+  // guaranteed to be in device memory and must still be mapped rather than
+  // treated as deviceptr.
+  if (acc::isInDeviceMemoryValue(var)) {
+    // If the variable is in device memory, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                               "device data\n");
+                               "in device memory\n");
     return acc::DevicePtrOp::create(builder, loc, var,
                                     /*structured=*/true, /*implicit=*/true,
                                     accSupport.getVariableName(var));
@@ -795,5 +808,4 @@ void ACCImplicitData::runOnOperation() {
     }
   });
 }
-
 } // namespace

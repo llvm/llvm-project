@@ -183,6 +183,73 @@ struct MoveConstructOnly {
 static_assert(std::is_move_constructible_v<MoveConstructOnly>);
 static_assert(!std::is_move_assignable_v<MoveConstructOnly>);
 
+template <typename T> class SmallVectorMoveTest : public testing::Test {};
+using SmallVectorMoveTestTypes = testing::Types<int, char, Constructable>;
+TYPED_TEST_SUITE(SmallVectorMoveTest, SmallVectorMoveTestTypes, );
+
+TYPED_TEST(SmallVectorMoveTest, MoveConstructRestoresInlineCapacity) {
+  SmallVector<TypeParam, 4> From;
+  const auto *InlineData = From.data();
+  From.resize(5);
+  const auto *HeapData = From.data();
+
+  SmallVector<TypeParam, 4> To(std::move(From));
+
+  EXPECT_EQ(HeapData, To.data());
+  EXPECT_EQ(5u, To.size());
+  EXPECT_TRUE(From.empty());
+  EXPECT_EQ(4u, From.capacity());
+  From.reserve(4);
+  From.resize(4);
+  EXPECT_EQ(InlineData, From.data());
+}
+
+TYPED_TEST(SmallVectorMoveTest, MoveAssignRestoresInlineCapacity) {
+  for (bool Empty : {false, true}) {
+    SmallVector<TypeParam, 4> From;
+    const auto *InlineData = From.data();
+    From.resize(5);
+    const auto *HeapData = From.data();
+    if (Empty)
+      From.clear();
+    SmallVector<TypeParam, 4> To(6);
+
+    To = std::move(From);
+
+    EXPECT_EQ(HeapData, To.data());
+    EXPECT_EQ(Empty ? 0u : 5u, To.size());
+    EXPECT_TRUE(From.empty());
+    EXPECT_EQ(4u, From.capacity());
+    From.emplace_back();
+    EXPECT_EQ(InlineData, From.data());
+  }
+}
+
+TYPED_TEST(SmallVectorMoveTest, SelfMovePreservesCapacity) {
+  for (unsigned Size : {0u, 4u, 5u}) {
+    SmallVector<TypeParam, 4> V(Size);
+    auto *Data = V.data();
+    auto Capacity = V.capacity();
+    auto &Alias = V;
+
+    V = std::move(Alias);
+
+    EXPECT_EQ(Data, V.data());
+    EXPECT_EQ(Capacity, V.capacity());
+    EXPECT_EQ(Size, V.size());
+  }
+}
+
+TYPED_TEST(SmallVectorMoveTest, MoveWithoutInlineCapacity) {
+  SmallVector<TypeParam, 0> From(1);
+  SmallVector<TypeParam, 0> To(std::move(From));
+  EXPECT_TRUE(From.empty());
+  EXPECT_EQ(0u, From.capacity());
+  From = std::move(To);
+  EXPECT_TRUE(To.empty());
+  EXPECT_EQ(0u, To.capacity());
+}
+
 LLVM_ATTRIBUTE_USED void CompileTest() {
   SmallVector<NonCopyable, 0> V;
   V.resize(42);
@@ -210,6 +277,7 @@ TEST(SmallVectorTest, MoveConstructNonMoveAssignableInlineElements) {
 
 TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
   SmallVector<MoveConstructOnly, 1> From;
+  const auto *InlineData = From.data();
   From.emplace_back(1);
   From.emplace_back(2);
   const MoveConstructOnly *FromData = From.data();
@@ -221,6 +289,9 @@ TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
   EXPECT_EQ(FromData, To.data());
   EXPECT_EQ(1, To[0].Value);
   EXPECT_EQ(2, To[1].Value);
+  EXPECT_EQ(1u, From.capacity());
+  From.emplace_back(3);
+  EXPECT_EQ(InlineData, From.data());
 }
 
 TEST(SmallVectorTest, MoveConstructNonMoveAssignableFromSmallVectorImpl) {

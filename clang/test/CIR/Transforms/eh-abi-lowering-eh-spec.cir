@@ -151,6 +151,44 @@ cir.func @catch_then_filter() {
 // CHECK:       ^[[RETURN]]:
 // CHECK:         cir.return
 
-// CHECK: cir.func {{.*}} @__cxa_call_unexpected(!cir.ptr<!void>)
+// void target() noexcept
+// A terminate scope catches everything, so the landing pad has a catch-all
+// clause and the handler calls the terminate helper without any type test.
+cir.func @terminate_scope() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch_all : ^bb4
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.terminate %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @terminate_scope()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @_Z8externalv() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception catch_all
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[TERMINATE:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[TERMINATE]](%[[T_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__clang_call_terminate(%[[T_EXN]]){{.*}}noreturn
+// CHECK:         cir.unreachable
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Declarations
+// CHECK: cir.func private @__cxa_call_unexpected(!cir.ptr<!void>)
+// CHECK: cir.func linkonce_odr hidden @__clang_call_terminate
 
 }

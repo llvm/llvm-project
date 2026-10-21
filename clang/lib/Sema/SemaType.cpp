@@ -1298,11 +1298,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    Expr *E = DS.getPackIndexingExpr();
-    assert(E && "Didn't get an expression for pack indexing");
-    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
-    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
-                                     DS.getEllipsisLoc());
+    Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
       Result = Context.IntTy;
@@ -1393,6 +1389,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.SingletonId;                                              \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 
   case DeclSpec::TST_error:
     Result = Context.IntTy;
@@ -2084,9 +2086,32 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
   return false;
 }
 
+bool Sema::checkArrayTooLarge(QualType ElementType,
+                              const llvm::APSInt &NumElements,
+                              SourceLocation Loc, SourceRange Range) {
+  unsigned ActiveSizeBits = NumElements.getActiveBits();
+  if (!ElementType->isDependentType() && !ElementType->isIncompleteType() &&
+      !ElementType->isUndeducedType() && ElementType->isConstantSizeType())
+    ActiveSizeBits =
+        std::max(ActiveSizeBits, ConstantArrayType::getNumAddressingBits(
+                                     Context, ElementType, NumElements));
+  if (ActiveSizeBits <= ConstantArrayType::getMaxSizeBits(Context))
+    return false;
+
+  Diag(Loc, diag::err_array_too_large)
+      << toString(NumElements, 10, NumElements.isSigned(),
+                  /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                  /*InsertSeparators=*/true)
+      << Range;
+  return true;
+}
+
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
+  // ArrayType stores only the CVR qualifiers; __unaligned and _Atomic are
+  // dropped.
+  unsigned IndexTypeQuals = Quals & Qualifiers::CVRMask;
 
   SourceLocation Loc = Brackets.getBegin();
   if (getLangOpts().CPlusPlus) {
@@ -2249,12 +2274,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       if (VLAIsError)
         return QualType();
 
-      T = Context.getVariableArrayType(T, nullptr, ASM, Quals);
+      T = Context.getVariableArrayType(T, nullptr, ASM, IndexTypeQuals);
     } else {
-      T = Context.getIncompleteArrayType(T, ASM, Quals);
+      T = Context.getIncompleteArrayType(T, ASM, IndexTypeQuals);
     }
   } else if (ArraySize->isTypeDependent() || ArraySize->isValueDependent()) {
-    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Quals);
+    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, IndexTypeQuals);
   } else {
     ExprResult R =
         checkArraySize(*this, ArraySize, ConstVal, VLADiag, VLAIsError);
@@ -2265,7 +2290,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       // C99: an array with a non-ICE size is a VLA. We accept any expression
       // that we can fold to a non-zero positive value as a non-VLA as an
       // extension.
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
     } else if (!T->isDependentType() && !T->isIncompleteType() &&
                !T->isConstantSizeType()) {
       // C99: an array with an element type that has a non-constant-size is a
@@ -2274,7 +2299,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
     } else {
       // C99 6.7.5.2p1: If the expression is a constant expression, it shall
       // have a value greater than zero.
@@ -2307,22 +2332,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
           return QualType();
       }
 
-      // Is the array too large?
-      unsigned ActiveSizeBits =
-          (!T->isDependentType() && !T->isVariablyModifiedType() &&
-           !T->isIncompleteType() && !T->isUndeducedType())
-              ? ConstantArrayType::getNumAddressingBits(Context, T, ConstVal)
-              : ConstVal.getActiveBits();
-      if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-        Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10, ConstVal.isSigned(),
-                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                        /*InsertSeparators=*/true)
-            << ArraySize->getSourceRange();
+      if (checkArrayTooLarge(T, ConstVal, ArraySize->getBeginLoc(),
+                             ArraySize->getSourceRange()))
         return QualType();
-      }
 
-      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Quals);
+      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM,
+                                       IndexTypeQuals);
     }
   }
 
@@ -2374,6 +2389,12 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
   return false;
 }
 
+// A bool vector is stored as an integer with one bit per element and can be
+// formed from any vector (e.g. by the conditional operator); the size bound
+// keeps the natural alignment within TypeInfo::Align.
+static constexpr uint64_t MaxVectorElements = llvm::IntegerType::MAX_INT_BITS;
+static constexpr uint64_t MaxVectorSizeInBits = 1ULL << 31;
+
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2414,8 +2435,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                           VectorKind::Generic);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize->isIntN(61)) {
-    // Bit size will overflow uint64.
+  if (VecSize->ugt(MaxVectorSizeInBits / 8)) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2435,7 +2455,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
-  if (VectorSizeBits / TypeSize > std::numeric_limits<uint32_t>::max()) {
+  if (VectorSizeBits / TypeSize > MaxVectorElements) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2459,7 +2479,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      (IsNoBoolVecLang && T->isBooleanType())) {
+      T->isEnumeralType() || (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
@@ -2483,17 +2503,24 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
-    if (!VecSize->isIntN(32)) {
+    // Unlike gcc's vector_size attribute, the size is specified as the
+    // number of elements, not the number of bytes.
+    if (VecSize->ugt(MaxVectorElements)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
-    // Unlike gcc's vector_size attribute, the size is specified as the
-    // number of elements, not the number of bytes.
     unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
     if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
+          << SizeExpr->getSourceRange() << "vector";
+      return QualType();
+    }
+
+    if (!T->isDependentType() &&
+        VectorSize * Context.getTypeSize(T) > MaxVectorSizeInBits) {
+      Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
@@ -6090,7 +6117,9 @@ namespace {
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
-      TL.setEllipsisLoc(DS.getEllipsisLoc());
+      TypeSourceInfo *TInfo = nullptr;
+      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
+      TL.copy(TInfo->getTypeLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
@@ -6703,8 +6732,10 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
-                                         : Attr.asOpenCLLangAS();
+    // The SYCL address space attributes are available in both SYCL host and
+    // device compilation.
+    ASIdx =
+        S.getLangOpts().isSYCL() ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
@@ -9141,6 +9172,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
@@ -9161,8 +9197,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLRowMajor:
     case ParsedAttr::AT_HLSLColumnMajor:
       if (Attr *A =
-              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
-        type = state.getAttributedType(A, type, type);
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr)) {
+        MatrixType::LayoutKind Layout =
+            attr.getKind() == ParsedAttr::AT_HLSLRowMajor
+                ? MatrixType::LayoutKind::RowMajor
+                : MatrixType::LayoutKind::ColumnMajor;
+        QualType Equivalent =
+            state.getSema().Context.getMatrixTypeWithLayout(type, Layout);
+        type = state.getAttributedType(A, type, Equivalent);
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -10001,6 +10044,40 @@ BuildTypeCoupledDecls(Expr *E,
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
+bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                           FieldDecl *FD, Expr *Arg) {
+  assert(Arg);
+
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  auto Reject = [&]() -> bool {
+    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
+    // the node once.
+    if (!CATy->getCountExpr())
+      Context.completeCountAttributedType(CATy, Arg, {});
+    FD->setInvalidDecl();
+    return false;
+  };
+
+  if (Arg->containsErrors())
+    return Reject();
+
+  if (CheckCountedByAttrOnField(FD, Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull()))
+    return Reject();
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  // Several declarators can share one node when the attribute was written in
+  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
+  // once per field
+  if (!CATy->getCountExpr())
+    Context.completeCountAttributedType(CATy, Arg, Decls);
+
+  return true;
+}
+
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
@@ -10106,8 +10183,7 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc) {
+                                     SourceLocation Loc) {
   if (!IndexExpr)
     return QualType();
 
@@ -10115,7 +10191,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   if (!Pattern->containsUnexpandedParameterPack())
     Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
 
-  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc);
 
   if (!Type.isNull())
     DiagCompat(Loc, diag_compat::pack_indexing);
@@ -10123,9 +10199,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 }
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc,
-                                     bool FullySubstituted,
+                                     SourceLocation Loc, bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;

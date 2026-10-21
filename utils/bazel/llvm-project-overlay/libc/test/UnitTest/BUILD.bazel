@@ -54,6 +54,7 @@ libc_test_library(
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_scope",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
@@ -98,6 +99,11 @@ libc_test_library(
             "//libc:stdout",
             "//libc:strsignal",
             "//libc:waitpid",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        "//libc:full_build_linux": [
+            "//libc:prctl",
         ],
         "//conditions:default": [],
     }),

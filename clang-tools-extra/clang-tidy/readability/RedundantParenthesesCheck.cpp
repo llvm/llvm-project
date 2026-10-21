@@ -34,9 +34,15 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+AST_MATCHER(ParenExpr, isWritten) {
+  return Node.getLParen() != Node.getRParen();
+}
+
 AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
   return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
 }
+
+AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
 
 } // namespace
 
@@ -73,6 +79,27 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstantExpr =
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
+  // Include dependent and substituted operands so templates and their
+  // instantiations protect the same outer pair of parentheses.
+  const auto DecltypeOperand =
+      expr(anyOf(declRefExpr(), memberExpr(), dependentScopeDeclRefExpr(),
+                 cxxDependentScopeMemberExpr(), unresolvedLookupExpr(),
+                 substNonTypeTemplateParmExpr()));
+  const auto DecltypeAutoType = ignoringParens(autoType(isDecltypeAuto()));
+  const auto DecltypeAutoVar = varDecl(hasType(DecltypeAutoType));
+  // Operands that create temporaries are wrapped in ExprWithCleanups.
+  const auto InDecltypeAutoContext = anyOf(
+      hasParent(DecltypeAutoVar),
+      hasParent(
+          expr(anyOf(initListExpr(), parenListExpr()),
+               anyOf(hasParent(DecltypeAutoVar),
+                     hasParent(exprWithCleanups(hasParent(DecltypeAutoVar)))))),
+      hasParent(
+          returnStmt(forCallable(functionDecl(returns(DecltypeAutoType))))));
+  const auto IsDecltypeOperand = allOf(
+      subExpr(ignoringParens(DecltypeOperand)),
+      anyOf(hasParent(typeLoc(loc(decltypeType()))), InDecltypeAutoContext,
+            hasParent(exprWithCleanups(InDecltypeAutoContext))));
   Finder->addMatcher(
       parenExpr(subExpr(anyOf(
                     parenExpr(), ConstantExpr,
@@ -82,11 +109,14 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     callExpr(unless(cxxOperatorCallExpr(
                         unless(hasAnyOperatorName("()", "[]"))))),
                     arraySubscriptExpr())),
+                isWritten(),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()),
                              // typeof(...) parentheses are required syntax.
-                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())),
+                             // decltype((x)) differs from decltype(x).
+                             IsDecltypeOperand)))
           .bind("dup"),
       this);
 }

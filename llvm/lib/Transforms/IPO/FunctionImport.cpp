@@ -1403,13 +1403,14 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
 // accordingly.
 void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
                                      FunctionSummary *FS) {
-  for (auto &EI : FS->mutableCalls()) {
-    if (!EI.first.getSummaryList().empty())
-      continue;
-    auto GUID = Index.getGUIDFromOriginalID(EI.first.getGUID());
+  // Returns the ValueInfo that should be used in place of \p CalleeVI, or an
+  // empty ValueInfo if no update is needed.
+  auto GetUpdatedCallee = [&](ValueInfo CalleeVI) -> ValueInfo {
+    if (!CalleeVI || !CalleeVI.getSummaryList().empty())
+      return ValueInfo();
+    auto GUID = Index.getGUIDFromOriginalID(CalleeVI.getGUID());
     if (GUID == 0)
-      continue;
-    // Update the edge to point directly to the correct GUID.
+      return ValueInfo();
     auto VI = Index.getValueInfo(GUID);
     if (llvm::any_of(
             VI.getSummaryList(),
@@ -1426,8 +1427,28 @@ void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
               return SummaryPtr->getSummaryKind() ==
                      GlobalValueSummary::GlobalVarKind;
             }))
-      continue;
-    EI.first = VI;
+      return ValueInfo();
+    return VI;
+  };
+
+  for (auto &EI : FS->mutableCalls()) {
+    // Update the edge to point directly to the correct GUID.
+    if (auto VI = GetUpdatedCallee(EI.first))
+      EI.first = VI;
+  }
+
+  // MemProf summarizes indirect callsites by synthesizing a CallsiteInfo
+  // record for each profiled target, using the same GUIDs found in the VP
+  // metadata (which, for local targets, may be the original name GUID when
+  // e.g. synthesized from the MemProf profile or from a SamplePGO profile).
+  // Update those callees as well so that they are consistent with the call
+  // edges above, and so that the thin link's MemProf context disambiguation
+  // can correlate the callsite with the summary for the target function.
+  if (FS->callsites().empty())
+    return;
+  for (auto &CI : FS->mutableCallsites()) {
+    if (auto VI = GetUpdatedCallee(CI.Callee))
+      CI.Callee = VI;
   }
 }
 

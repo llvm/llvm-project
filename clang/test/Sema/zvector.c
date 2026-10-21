@@ -2,6 +2,10 @@
 // RUN:  -flax-vector-conversions=none -W -Wall -Wconversion \
 // RUN:  -Werror -fsyntax-only -verify %s
 
+// RUN: %clang_cc1 -triple s390x-ibm-zos -fzvector -target-cpu z13 \
+// RUN:  -flax-vector-conversions=none -W -Wall -Wconversion \
+// RUN:  -Werror -fsyntax-only -verify %s
+
 vector signed char sc, sc2;
 vector unsigned char uc, uc2;
 vector bool char bc, bc2;

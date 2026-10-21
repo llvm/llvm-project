@@ -8,6 +8,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -553,8 +554,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
-    assert(!elemTy->isConstantMatrixType() && "not implemented");
-
     mlir::Type pointeeType = convertType(elemTy);
 
     resultType =
@@ -605,6 +604,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
     resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    break;
+  }
+
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *mt = cast<ConstantMatrixType>(ty);
+    const mlir::Type elemTy = convertType(mt->getElementType());
+    resultType =
+        cir::MatrixType::get(elemTy, mt->getNumRows(), mt->getNumColumns());
     break;
   }
 
@@ -691,9 +698,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  if (qualType->isConstantMatrixType()) {
-    cgm.errorNYI("Matrix type conversion");
-    return cgm.sInt32Ty;
+  if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
+    if (isMatrixRowMajor(astContext.getLangOpts(), qualType)) {
+      cgm.errorNYI("convertTypeForMem: HLSL & Matrix row major");
+    }
   }
 
   mlir::Type convertedType = convertType(qualType);
@@ -730,7 +738,7 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
-  if (t->getAs<PointerType>())
+  if (t->getAs<PointerType>() || t->isNullPtrType())
     return astContext.getTargetNullPointerValue(t) == 0;
 
   if (const auto *at = astContext.getAsArrayType(t)) {
@@ -740,6 +748,8 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
     if (const auto *cat = dyn_cast<ConstantArrayType>(at))
       if (astContext.getConstantArrayElementCount(cat) == 0)
         return true;
+
+    t = astContext.getBaseElementType(t);
   }
 
   if (const auto *rd = t->getAsRecordDecl())
@@ -771,6 +781,8 @@ CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
     return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
   default:
     // TODO(cir): Support the remaining target-specific calling conventions.
+    cgm.errorNYI(SourceLocation(), "calling convention",
+                 FunctionType::getNameForCallConv(cc));
     return cir::CallingConv::C;
   }
 }
