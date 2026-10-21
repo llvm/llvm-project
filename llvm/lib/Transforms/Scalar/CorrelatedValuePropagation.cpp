@@ -1017,6 +1017,7 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   // Check whether the division folds to a constant.
   ConstantRange DivCR = LCR.sdiv(RCR);
   if (const APInt *Elem = DivCR.getSingleElement()) {
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
     SDI->eraseFromParent();
     return true;
