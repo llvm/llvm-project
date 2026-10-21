@@ -2,34 +2,71 @@
 
 #include "Toy64FrameLowering.h"
 
+#include "MCTargetDesc/Toy64MCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include "Toy64Subtarget.h"
+
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+
 using namespace llvm;
 
-void Toy64FrameLowering::emitPrologue(
-    MachineFunction &MF,
-    MachineBasicBlock &MBB) const {
+void Toy64FrameLowering::emitPrologue(MachineFunction &MF,
+                                      MachineBasicBlock &MBB) const {
 
-  // We do not support real stack frames yet.
-  //
-  // For functions requiring no stack space, there is nothing to emit.
-  if (MF.getFrameInfo().getStackSize() == 0)
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+
+  if (StackSize == 0)
     return;
 
-  llvm_unreachable(
-      "Toy64 stack-frame prologue is not implemented yet");
+  // ADDI's positive and negative immediates must both be encodable.
+  if (StackSize > 2047)
+    report_fatal_error("Toy64 stack frames larger than 2047 bytes "
+                       "are not implemented");
+
+  const Toy64InstrInfo *TII = MF.getSubtarget<Toy64Subtarget>().getInstrInfo();
+
+  MachineBasicBlock::iterator I = MBB.begin();
+
+  BuildMI(MBB, I, DebugLoc(), TII->get(Toy64::ADDI), Toy64::X2)
+      .addReg(Toy64::X2)
+      .addImm(-static_cast<int64_t>(StackSize))
+      .setMIFlag(MachineInstr::FrameSetup);
 }
 
-void Toy64FrameLowering::emitEpilogue(
-    MachineFunction &MF,
-    MachineBasicBlock &MBB) const {
+void Toy64FrameLowering::emitEpilogue(MachineFunction &MF,
+                                      MachineBasicBlock &MBB) const {
 
-  // We do not support real stack frames yet.
-  if (MF.getFrameInfo().getStackSize() == 0)
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+
+  if (StackSize == 0)
     return;
 
-  llvm_unreachable(
-      "Toy64 stack-frame epilogue is not implemented yet");
+  if (StackSize > 2047)
+    report_fatal_error("Toy64 stack frames larger than 2047 bytes "
+                       "are not implemented");
+
+  const Toy64InstrInfo *TII = MF.getSubtarget<Toy64Subtarget>().getInstrInfo();
+
+  MachineBasicBlock::iterator I = MBB.getFirstTerminator();
+
+  BuildMI(MBB, I, DebugLoc(), TII->get(Toy64::ADDI), Toy64::X2)
+      .addReg(Toy64::X2)
+      .addImm(static_cast<int64_t>(StackSize))
+      .setMIFlag(MachineInstr::FrameDestroy);
+}
+
+StackOffset
+Toy64FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                           Register &FrameReg) const {
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  FrameReg = Toy64::X2;
+
+  int64_t Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
+
+  return StackOffset::getFixed(Offset);
 }

@@ -27,6 +27,11 @@ public:
       MachineFunction &MF,
       MachineBasicBlock &MBB) const override;
 
+  StackOffset getFrameIndexReference(
+      const MachineFunction &MF,
+      int FI,
+      Register &FrameReg) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override {
     return false;

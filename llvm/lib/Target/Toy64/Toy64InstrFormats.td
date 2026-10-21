@@ -90,6 +90,39 @@ class Toy64IType<bits<3> funct3, bits<7> opcode, dag outs, dag ins,
   let Inst{6-0}   = opcode;
 }
 
+//===----------------------------------------------------------------------===//
+// S-type instruction
+//
+//  31       25 24    20 19    15 14  12 11      7 6       0
+// +-----------+--------+--------+------+-----------+---------+
+// | imm[11:5] | rs2    | rs1    |funct3| imm[4:0] | opcode  |
+// +-----------+--------+--------+------+-----------+---------+
+//
+// Used by stores.
+//===----------------------------------------------------------------------===//
+
+class Toy64SType<
+    bits<3> funct3,
+    bits<7> opcode,
+    dag outs,
+    dag ins,
+    string asmstr,
+    list<dag> pattern = []
+> : Toy64Inst<outs, ins, asmstr, pattern> {
+
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<12> imm12;
+
+  let Inst{31-25} = imm12{11-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = imm12{4-0};
+  let Inst{6-0}   = opcode;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions

@@ -25,6 +25,12 @@ Toy64InstPrinter::getMnemonic(const MCInst &MI) const {
   case Toy64::RET:
     return {"ret", 0};
 
+  case Toy64::LD:
+    return {"ld", 0};
+
+  case Toy64::SD:
+    return {"sd", 0};
+
   default:
     llvm_unreachable(
         "unknown Toy64 opcode in instruction printer");

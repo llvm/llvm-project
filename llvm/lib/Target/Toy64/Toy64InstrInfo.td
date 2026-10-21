@@ -39,8 +39,16 @@ def toy64_ret_glue :
 //
 // We will add proper range checking when the assembler/parser and
 // instruction-selection patterns are introduced.
-def simm12 : Operand<i64>;
+def simm12 : Operand<i64>,ImmLeaf<i64, [{return isInt<12>(Imm);}]>;
 
+
+// SelectionDAG address matcher.
+//
+// SelectAddr() will decompose an address into:
+//
+//     Base, Offset
+//
+def addr : ComplexPattern<i64, 2, "SelectAddr",[], []>;
 
 //===----------------------------------------------------------------------===//
 // Call-frame pseudo instructions
@@ -113,6 +121,63 @@ def ADDI : Toy64IType<
     "addi\t$rd, $rs1, $imm12"
 >;
 
+//===----------------------------------------------------------------------===//
+// Integer code-generation patterns
+//===----------------------------------------------------------------------===//
+
+// Materialize a small signed constant:
+//
+//     imm
+//
+// becomes:
+//
+//     ADDI rd, X0, imm
+//
+def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
+
+// Register + signed 12-bit immediate:
+//
+//     add rs1, imm
+//
+// becomes:
+//
+//     ADDI rd, rs1, imm
+//
+def : Pat< (add GPR:$rs1, simm12:$imm12), (ADDI GPR:$rs1, simm12:$imm12)>;
+
+
+//===----------------------------------------------------------------------===//
+// Memory instructions
+//===----------------------------------------------------------------------===//
+
+// LD rd, rs1, imm12
+//
+// rd = Mem[rs1 + sign_extend(imm12)]
+//
+let mayLoad = 1 in
+def LD : Toy64IType<
+    0b011,                    // funct3: 64-bit load
+    0b0000011,                // opcode
+    (outs GPR:$rd),
+    (ins GPR:$rs1, simm12:$imm12),
+    "ld\t$rd, $imm12($rs1)",
+    [(set GPR:$rd,(load (addr GPR:$rs1,simm12:$imm12)))]>;
+
+// SD rs2, rs1, imm12
+//
+// Mem[rs1 + sign_extend(imm12)] = rs2
+//
+let mayStore = 1 in
+def SD : Toy64SType<
+    0b011,                    // funct3: 64-bit store
+    0b0100011,                // opcode
+    (outs),
+    (ins GPR:$rs2,
+         GPR:$rs1,
+         simm12:$imm12),
+    "sd\t$rs2, $imm12($rs1)",
+    [(store GPR:$rs2,(addr GPR:$rs1,simm12:$imm12))]
+>;
 
 //===----------------------------------------------------------------------===//
 // Return
