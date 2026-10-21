@@ -170,6 +170,11 @@ static void emitCIRModuleOutput(
     });
     LLVMCtx.setDiagnosticHandler(DiagConsumer.createDiagnosticHandler());
 
+    // Backend components (e.g. the inline-asm parser) reach the filesystem
+    // through the context's VFS, which must be set to stay within the IO
+    // sandbox.
+    LLVMCtx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
+
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
                              mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
