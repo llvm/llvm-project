@@ -153,7 +153,6 @@
 ; O2-NEXT:     init-undef
 ; O2-NEXT:     process-implicit-defs
 ; O2-NEXT:     unreachable-mbb-elimination
-; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
@@ -359,7 +358,6 @@
 ; O3-WINDOWS-NEXT:     init-undef
 ; O3-WINDOWS-NEXT:     process-implicit-defs
 ; O3-WINDOWS-NEXT:     unreachable-mbb-elimination
-; O3-WINDOWS-NEXT:     require<live-vars>
 ; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     require<machine-loops>
 ; O3-WINDOWS-NEXT:     phi-node-elimination

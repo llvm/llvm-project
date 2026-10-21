@@ -17162,6 +17162,19 @@ libc_function(
 )
 
 libc_function(
+    name = "getcpu",
+    srcs = ["src/sched/linux/getcpu.cpp"],
+    hdrs = ["src/sched/getcpu.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getcpu",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "sched_getcpu",
     srcs = ["src/sched/linux/sched_getcpu.cpp"],
     hdrs = ["src/sched/sched_getcpu.h"],

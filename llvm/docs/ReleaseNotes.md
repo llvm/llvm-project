@@ -199,6 +199,9 @@ Makes programs 10x faster by doing Special New Thing.
   `machine-function-splitter` pass name are removed;
   `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
 
+* Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
+  which no longer had any users.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -225,6 +228,12 @@ Makes programs 10x faster by doing Special New Thing.
   dependency, its build-tree `MLIRConfig.cmake` now reports the package as not
   found with an explanatory message instead of succeeding with no targets;
   such a build never provided a usable MLIR SDK.
+
+* When Clang is in the `LLVM_ENABLE_PROJECTS` list, it now compiles the
+  experimental MLIR-Generator ClangIR by default. This functionality can
+  increase the compile time and binary size of Clang significantly.  This can be
+  disabled with `CLANG_ENABLE_CIR=OFF`, which wil disable the `-fclangir` flag
+  in Clang.
 
 * LLVM's documentation has largely been rewritten from [reStructuredText] to
   Markdown, and our Sphinx documentation build now has a hard dependency on the
@@ -267,6 +276,12 @@ Makes programs 10x faster by doing Special New Thing.
   Functions with the `"sign-return-address-harden"="load-return-address"`
   attribute perform a load from the return address before returning, reducing the
   cache side channel used to guess pointer authentication codes.
+
+* The SelectionDAG Darwin ABI lowering of function arguments which are
+  aggregates passed by value containing small integers less than 32 bits in
+  size has been made consistent with the GlobalISel lowering of such arguments.
+  This is an ABI-breaking change but is unlikely to have any observable effect
+  from higher-level languages compiled through clang.
 
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.
@@ -324,7 +339,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
-* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+* Added the `RVA23P1S64` and `RVB23P1S64` profiles (version 1.0).
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
@@ -375,6 +390,8 @@ Makes programs 10x faster by doing Special New Thing.
   point, instruction, or block, respectively. The context is implied by the
   insertion point.
 
+* `builder` now takes an `llmodule` argument, instead of `llcontext`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -397,6 +414,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
+
+* Deprecated `LLVMCreateBuilderInContext()` in favor of
+  `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
+  `LLVMContextRef`.
 
 ### Changes to the CodeGen infrastructure
 
