@@ -467,6 +467,10 @@ public:
 
   bool hasRemainingReads(unsigned RPO) const { return RemainingReads[RPO] > 0; }
 
+  bool hasRemainingReads(const BasicBlock &BB) const {
+    return hasRemainingReads(BBToOrder.lookup(&BB));
+  }
+
   /// Return true if \p Pred has no other remaining readers, allowing its
   /// LiveOut entry to be moved into its sole remaining successor.
   bool canMoveLiveOut(const BasicBlock *Pred) const {
@@ -992,12 +996,11 @@ class MemLocFragmentFill {
 
   /// Store \p LiveSet into LiveOut[&BB] if any successor may still read it.
   /// Return true if successors should be queued for re-evaluation.
-  bool updateLiveOut(const BasicBlock &BB, unsigned RPO, bool SingleVisit,
-                     const BlockLivenessTracker &Liveness,
+  bool updateLiveOut(const BasicBlock &BB, const BlockLivenessTracker &Liveness,
                      VarFragMap &&LiveSet) {
-    if (!Liveness.hasRemainingReads(RPO))
+    if (!Liveness.hasRemainingReads(BB))
       return false;
-    if (SingleVisit) {
+    if (!Liveness.canRevisit(BB)) {
       LiveOut[&BB] = std::move(LiveSet);
       return false;
     }
@@ -1075,10 +1078,9 @@ public:
         unsigned RPO = Worklist.pop();
         BasicBlock *BB = OrderToBB[RPO];
         LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
-        bool SingleVisit = !Liveness.canRevisit(RPO);
         VarFragMap LiveSet;
         bool InChanged = meet(*BB, Liveness, LiveSet);
-        if (SingleVisit)
+        if (!Liveness.canRevisit(RPO))
           Liveness.retireVisitedPreds(*BB, LiveOut);
         // Always consider LiveIn changed on the first visit.
         InChanged |= Liveness.markVisited(BB);
@@ -1087,8 +1089,7 @@ public:
                      << BB->getName() << " has new InLocs, process it\n");
           // Process the instructions in the block.
           process(*BB, LiveSet);
-          if (updateLiveOut(*BB, RPO, SingleVisit, Liveness,
-                            std::move(LiveSet)))
+          if (updateLiveOut(*BB, Liveness, std::move(LiveSet)))
             enqueueSuccessors(*BB, RPO, BBToOrder, Worklist, Pending);
         }
       }
@@ -1449,8 +1450,8 @@ private:
 
   /// Store \p LiveSet into LiveOut[&BB] if any successor may still read it.
   /// Return true if LiveOut changed and successors should be queued.
-  bool updateLiveOut(const BasicBlock &BB, unsigned RPO,
-                     const BlockLivenessTracker &Liveness, BlockInfo &&LiveSet);
+  bool updateLiveOut(const BasicBlock &BB, const BlockLivenessTracker &Liveness,
+                     BlockInfo &&LiveSet);
 
   ///@name joinMethods
   /// Functions that implement `join` (the least upper bound) for the
@@ -2302,10 +2303,14 @@ bool AssignmentTrackingLowering::join(const BasicBlock &BB,
 }
 
 bool AssignmentTrackingLowering::updateLiveOut(
-    const BasicBlock &BB, unsigned RPO, const BlockLivenessTracker &Liveness,
+    const BasicBlock &BB, const BlockLivenessTracker &Liveness,
     BlockInfo &&LiveSet) {
-  if (!Liveness.hasRemainingReads(RPO))
+  if (!Liveness.hasRemainingReads(BB))
     return false;
+  if (!Liveness.canRevisit(BB)) {
+    LiveOut[&BB] = std::move(LiveSet);
+    return false;
+  }
   // Relatively expensive check: has anything changed in LiveOut for BB?
   auto [OutIt, OutInserted] = LiveOut.try_emplace(&BB);
   if (!OutInserted && OutIt->second == LiveSet)
@@ -2640,7 +2645,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
         // Process the instructions in the block. After calling process
         // LiveSet is the LiveOut set for BB.
         process(*BB, &LiveSet);
-        if (updateLiveOut(*BB, RPO, Liveness, std::move(LiveSet)))
+        if (updateLiveOut(*BB, Liveness, std::move(LiveSet)))
           enqueueSuccessors(*BB, RPO, BBToOrder, Worklist, Pending);
       }
     }
