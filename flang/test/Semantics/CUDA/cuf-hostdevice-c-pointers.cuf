@@ -1,0 +1,76 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! These intrinsic-module procedures lower inline on both host and device.
+module c_pointer_calls
+  use iso_c_binding, only: c_ptr, c_funptr, c_funloc, c_associated, operator(==), operator(/=)
+  use __fortran_builtins, only: c_devptr => __builtin_c_devptr
+contains
+  subroutine callback() bind(c)
+  end subroutine
+  attributes(host,device) subroutine take_address(fp)
+    type(c_funptr) :: fp
+    fp = c_funloc(callback)
+  end subroutine
+  attributes(device) subroutine take_device_address(fp)
+    type(c_funptr) :: fp
+    fp = c_funloc(callback)
+  end subroutine
+  attributes(host,device) subroutine consume_procedure(proc)
+    interface
+      subroutine proc() bind(c)
+      end subroutine
+    end interface
+  end subroutine
+  attributes(host,device) subroutine pass_procedure()
+    call consume_procedure(callback)
+  end subroutine
+  integer function host_value()
+    host_value = 1
+  end function
+  attributes(host,device) subroutine consume_value(i)
+    integer, value :: i
+  end subroutine
+  attributes(host,device) subroutine pass_expression()
+    !ERROR: 'host_value' may not be called in device code
+    call consume_value(host_value())
+  end subroutine
+  attributes(host,device) subroutine both(p, q, f, g, d, e, result)
+    type(c_ptr), value :: p, q
+    type(c_funptr), value :: f, g
+    type(c_devptr), value :: d, e
+    logical :: result(8)
+    result(1) = c_associated(p)
+    result(2) = c_associated(p, q)
+    result(3) = c_associated(f)
+    result(4) = c_associated(f, g)
+    result(5) = p == q
+    result(6) = p /= q
+    result(7) = d == e
+    result(8) = d /= e
+  end subroutine
+  attributes(device) subroutine device(p, q, f, g, d, e, result)
+    type(c_ptr), value :: p, q
+    type(c_funptr), value :: f, g
+    type(c_devptr), value :: d, e
+    logical :: result(8)
+    result(1) = c_associated(p)
+    result(2) = c_associated(p, q)
+    result(3) = c_associated(f)
+    result(4) = c_associated(f, g)
+    result(5) = p == q
+    result(6) = p /= q
+    result(7) = d == e
+    result(8) = d /= e
+  end subroutine
+end module
+
+module ordinary_named_builtin
+contains
+  logical function c_associated_c_ptr()
+    c_associated_c_ptr = .true.
+  end function
+  attributes(host,device) subroutine caller(result)
+    logical :: result
+    !ERROR: 'c_associated_c_ptr' may not be called in device code
+    result = c_associated_c_ptr()
+  end subroutine
+end module

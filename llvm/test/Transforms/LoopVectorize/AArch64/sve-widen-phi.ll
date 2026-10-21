@@ -144,11 +144,13 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-EPI-TF-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-EPI-TF-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 1
+; CHECK-EPI-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP22]])
 ; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-EPI-TF-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK-EPI-TF:       vec.epilog.vector.body:
-; CHECK-EPI-TF-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-TF-NEXT:    [[INDEX5:%.*]] = phi i64 [ 0, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-TF-NEXT:    [[INDEX4:%.*]] = add i64 [[INDEX5]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-EPI-TF-NEXT:    [[TMP23:%.*]] = shl i64 [[INDEX4]], 3
 ; CHECK-EPI-TF-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[C]], i64 [[TMP23]]
 ; CHECK-EPI-TF-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
@@ -162,10 +164,10 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF-NEXT:    [[TMP28:%.*]] = add nsw <vscale x 2 x i32> [[TMP25]], splat (i32 1)
 ; CHECK-EPI-TF-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX4]]
 ; CHECK-EPI-TF-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP28]], ptr align 4 [[TMP29]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX4]], [[TMP22]]
-; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT7]], i64 [[N]])
+; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX4]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-EPI-TF-NEXT:    [[TMP30:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-EPI-TF-NEXT:    [[TMP31:%.*]] = xor i1 [[TMP30]], true
+; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX5]], [[TMP22]]
 ; CHECK-EPI-TF-NEXT:    br i1 [[TMP31]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-EPI-TF:       vec.epilog.middle.block:
 ; CHECK-EPI-TF-NEXT:    br label [[FOR_EXIT]]
@@ -321,21 +323,23 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-EPI-TF-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-EPI-TF-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-EPI-TF-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP12]], 1
+; CHECK-EPI-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP13]])
 ; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-EPI-TF-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK-EPI-TF:       vec.epilog.vector.body:
-; CHECK-EPI-TF-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-TF-NEXT:    [[INDEX5:%.*]] = phi i64 [ 0, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-EPI-TF-NEXT:    [[INDEX4:%.*]] = add i64 [[INDEX5]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-EPI-TF-NEXT:    [[TMP14:%.*]] = shl i64 [[INDEX4]], 2
 ; CHECK-EPI-TF-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP14]]
 ; CHECK-EPI-TF-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-EPI-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[NEXT_GEP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i32> poison)
 ; CHECK-EPI-TF-NEXT:    [[TMP15:%.*]] = shl nsw <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
 ; CHECK-EPI-TF-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP15]], ptr align 4 [[NEXT_GEP6]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX4]], [[TMP13]]
-; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT7]], i64 [[N]])
+; CHECK-EPI-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX4]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-EPI-TF-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-EPI-TF-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP16]], true
+; CHECK-EPI-TF-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX5]], [[TMP13]]
 ; CHECK-EPI-TF-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-EPI-TF:       vec.epilog.middle.block:
 ; CHECK-EPI-TF-NEXT:    br label [[FOR_COND_CLEANUP]]

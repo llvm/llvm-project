@@ -48,19 +48,21 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i32 %val) {
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX3:%.*]] = add i64 [[INDEX4]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX3]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[BROADCAST_SPLAT2]], ptr align 4 [[TMP4]], <8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX3]], 8
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT4]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX3]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP5]], true
+; CHECK-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX4]], 8
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -110,19 +112,21 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i32 %val) {
 ; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 3
+; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP7]])
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-VS-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-VS-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-VS:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-VS-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX4:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX3:%.*]] = add i64 [[INDEX4]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-VS-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX3]]
 ; CHECK-VS-NEXT:    call void @llvm.masked.store.nxv8i32.p0(<vscale x 8 x i32> [[BROADCAST_SPLAT2]], ptr align 4 [[TMP8]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-VS-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX3]], [[TMP7]]
-; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_NEXT4]], i64 [[N]])
+; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX3]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-VS-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-VS-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
+; CHECK-VS-NEXT:    [[INDEX_NEXT4]] = add i64 [[INDEX4]], [[TMP7]]
 ; CHECK-VS-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-VS-NEXT:    br label %[[EXIT]]
@@ -181,17 +185,19 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = add i64 [[INDEX2]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP5]], <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i32> poison)
-; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], 8
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT2]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX1]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX2]], 8
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
@@ -247,17 +253,19 @@ define i32 @live_out(ptr %src, i64 %n) {
 ; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 3
+; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP11]])
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-VS:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-VS-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX1:%.*]] = add i64 [[INDEX2]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-VS-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX1]]
 ; CHECK-VS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32.p0(ptr align 4 [[TMP12]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i32> poison)
-; CHECK-VS-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP11]]
-; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_NEXT2]], i64 [[N]])
+; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX1]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-VS-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-VS-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
+; CHECK-VS-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX2]], [[TMP11]]
 ; CHECK-VS-NEXT:    br i1 [[TMP14]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-VS-NEXT:    [[TMP15:%.*]] = xor <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
@@ -328,19 +336,21 @@ define void @stride_copy(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 8)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX2:%.*]] = add i64 [[INDEX3]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP6]], <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX2]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP7]], <8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX2]], 8
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX_NEXT3]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX2]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX3]], 8
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -398,19 +408,21 @@ define void @stride_copy(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride
 ; CHECK-VS-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 3
+; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP9]])
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[VEC_EPILOG_RESUME_VAL]], i64 [[N]])
 ; CHECK-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-VS:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-VS-NEXT:    [[INDEX2:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX3:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX2:%.*]] = add i64 [[INDEX3]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-VS-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX2]]
 ; CHECK-VS-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32.p0(ptr align 4 [[TMP10]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i32> poison)
 ; CHECK-VS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX2]]
 ; CHECK-VS-NEXT:    call void @llvm.masked.store.nxv8i32.p0(<vscale x 8 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP11]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-VS-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX2]], [[TMP9]]
-; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_NEXT3]], i64 [[N]])
+; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX2]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-VS-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-VS-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
+; CHECK-VS-NEXT:    [[INDEX_NEXT3]] = add i64 [[INDEX3]], [[TMP9]]
 ; CHECK-VS-NEXT:    br i1 [[TMP13]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-VS-NEXT:    br label %[[EXIT]]
@@ -506,7 +518,7 @@ define void @reversed_loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i64 -7
 ; CHECK-NEXT:    [[REVERSE6:%.*]] = shufflevector <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[REVERSE4]], ptr align 4 [[TMP16]], <8 x i1> [[REVERSE6]])
-; CHECK-NEXT:    [[INDEX_NEXT7]] = add i32 [[INDEX5]], 8
+; CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i32 [[INDEX5]], 8
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 [[INDEX_NEXT7]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
@@ -582,11 +594,13 @@ define void @reversed_loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-VS-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-VS-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT2]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-VS-NEXT:    [[REVERSE4:%.*]] = call <vscale x 8 x i32> @llvm.vector.reverse.nxv8i32(<vscale x 8 x i32> [[BROADCAST_SPLAT3]])
+; CHECK-VS-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[TMP2]], i32 [[TMP21]])
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 [[VEC_EPILOG_RESUME_VAL]], i32 [[TMP2]])
 ; CHECK-VS-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-VS:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-VS-NEXT:    [[INDEX5:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX6:%.*]] = phi i32 [ 0, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VEC_EPILOG_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-VS-NEXT:    [[INDEX5:%.*]] = add i32 [[INDEX6]], [[VEC_EPILOG_RESUME_VAL]]
 ; CHECK-VS-NEXT:    [[TMP22:%.*]] = sub i32 [[ST]], [[INDEX5]]
 ; CHECK-VS-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP22]]
 ; CHECK-VS-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP21]] to i64
@@ -595,10 +609,10 @@ define void @reversed_loop(ptr %A, i32 %n, i32 %val) {
 ; CHECK-VS-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[TMP26]]
 ; CHECK-VS-NEXT:    [[REVERSE6:%.*]] = call <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-VS-NEXT:    call void @llvm.masked.store.nxv8i32.p0(<vscale x 8 x i32> [[REVERSE4]], ptr align 4 [[TMP27]], <vscale x 8 x i1> [[REVERSE6]])
-; CHECK-VS-NEXT:    [[INDEX_NEXT7]] = add i32 [[INDEX5]], [[TMP21]]
-; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 [[INDEX_NEXT7]], i32 [[TMP2]])
+; CHECK-VS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 [[INDEX5]], i32 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-VS-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-VS-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
+; CHECK-VS-NEXT:    [[INDEX_NEXT7]] = add i32 [[INDEX6]], [[TMP21]]
 ; CHECK-VS-NEXT:    br i1 [[TMP29]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]]
 ; CHECK-VS:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-VS-NEXT:    br label %[[EXIT]]

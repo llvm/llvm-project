@@ -122,14 +122,15 @@ public:
   llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(Process &process) override;
 
+  /// The generic implementation parses the SDKs out of debug info, but only
+  /// Darwin SDKs come in public and internal flavors, so detecting a conflict
+  /// between the two is done here.
   llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
   GetSDKPathFromDebugInfo(Module &module) override;
+  using Platform::GetSDKPathFromDebugInfo;
 
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) override;
-
-  llvm::Expected<XcodeSDKAndSysroot>
-  GetSDKPathFromDebugInfo(CompileUnit &unit) override;
 
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;

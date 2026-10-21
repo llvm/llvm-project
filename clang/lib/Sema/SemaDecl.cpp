@@ -30,7 +30,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -1505,6 +1504,25 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
   }
 }
 
+void Sema::ActOnReenterFunctionPrototypeParams(Scope *S,
+                                               ArrayRef<ParmVarDecl *> Params) {
+  for (ParmVarDecl *Param : Params)
+    if (Param->getIdentifier()) {
+      S->AddDecl(Param);
+      IdResolver.AddDecl(Param);
+    }
+}
+
+void Sema::ActOnExitFunctionPrototypeParams(Scope *S,
+                                            ArrayRef<ParmVarDecl *> Params) {
+  // Remove in reverse so each name is the most recent one when it is removed.
+  for (ParmVarDecl *Param : llvm::reverse(Params))
+    if (Param->getIdentifier()) {
+      IdResolver.RemoveDecl(Param);
+      S->RemoveDecl(Param);
+    }
+}
+
 void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   // We assume that the caller has already called
   // ActOnReenterTemplateScope so getTemplatedDecl() works.
@@ -1519,14 +1537,7 @@ void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   CurContext = FD;
   S->setEntity(CurContext);
 
-  for (unsigned P = 0, NumParams = FD->getNumParams(); P < NumParams; ++P) {
-    ParmVarDecl *Param = FD->getParamDecl(P);
-    // If the parameter has an identifier, then add it to the scope
-    if (Param->getIdentifier()) {
-      S->AddDecl(Param);
-      IdResolver.AddDecl(Param);
-    }
-  }
+  ActOnReenterFunctionPrototypeParams(S, FD->parameters());
 }
 
 void Sema::ActOnExitFunctionContext() {
@@ -4977,7 +4988,13 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     // [basic.def]p2 for details, but the basic idea is: if the old declaration
     // contains the extern specifier and doesn't have an initializer, it's fine
     // in C++.
-    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+    if (New->getTLSKind() != VarDecl::TLS_None &&
+        New->isThisDeclarationADefinition() == VarDecl::Definition) {
+      VarDecl *Def = Old->getDefinition();
+      if (Def && checkVarDeclRedefinition(Def, New)) {
+        return;
+      }
+    } else if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
       Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
           << New;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -7168,11 +7185,26 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   Var->assignAddressSpace(Context, ImplAS);
 }
 
+static bool checkWeakAttrCompatibility(Sema &S, const NamedDecl &ND,
+                                       const WeakAttr &Attr) {
+  const NamedDecl *D = &ND;
+  // IFuncAttr is not inherited, so a redeclaration may need to check the
+  // attributes on the definition instead.
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND))
+    if (const FunctionDecl *Def = FD->getDefinition())
+      D = Def;
+  return DiagnoseMutualExclusions(S, D, &Attr);
+}
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
     if (!ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weak_static);
+      ND.dropAttr<WeakAttr>();
+    } else if (!checkWeakAttrCompatibility(S, ND, *Attr)) {
+      // A forward #pragma weak adds the attribute without checking mutual
+      // exclusions during attribute processing.
       ND.dropAttr<WeakAttr>();
     }
   }
@@ -7192,7 +7224,7 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
     if (VD->hasInit()) {
       if (const auto *Attr = VD->getAttr<AliasAttr>()) {
         assert(VD->isThisDeclarationADefinition() &&
-               !VD->isExternallyVisible() && "Broken AliasAttr handled late!");
+               "Broken AliasAttr handled late!");
         S.Diag(Attr->getLocation(), diag::err_alias_is_definition) << VD << 0;
         VD->dropAttr<AliasAttr>();
       }
@@ -7782,9 +7814,15 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
       break;
     case SC_Register:
       // Local Named register
-      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      if (DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl())) {
+        const auto &TI = Context.getTargetInfo();
+        if (!TI.isValidGCCRegisterName(Label))
+          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+        else if (!TI.validateLocalRegisterVariable(
+                     TI.getNormalizedGCCRegisterName(Label,
+                                                     /*ReturnCanonical=*/true)))
+          Diag(E->getExprLoc(), diag::err_asm_invalid_local_var_reg) << Label;
+      }
       break;
     case SC_Static:
     case SC_Extern:
@@ -15090,8 +15128,18 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   QualType AttributedType =
       Context.getAttributedType(Attr, MethodType, MethodType);
   TypeLocBuilder TLB;
-  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+  TypeSourceInfo *TSI = MD->getTypeSourceInfo();
+  if (TSI && TSI->getTypeLoc().getType() == MethodType) {
     TLB.pushFullCopy(TSI->getTypeLoc());
+  } else {
+    // The written type-source info can disagree with the method's type. For
+    // example, a deduced 'auto' return type in a template instantiation keeps
+    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
+    // already been resolved to the deduced type. Pushing the stale TypeLoc
+    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
+    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+  }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
@@ -15782,10 +15830,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
   if (Group.empty() || !Group[0])
     return;
 
-  if (Diags.isIgnored(diag::warn_doc_param_not_found,
-                      Group[0]->getLocation()) &&
-      Diags.isIgnored(diag::warn_unknown_comment_command_name,
-                      Group[0]->getLocation()))
+  if (!areDocumentationDiagsEnabled(Group[0]->getLocation()))
     return;
 
   if (Group.size() >= 2) {
@@ -17380,6 +17425,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   }
 
   if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OpenMPSimd) ||
              (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
@@ -19125,6 +19171,12 @@ CreateNewDecl:
       AddAlignmentAttributesForRecord(RD);
       AddMsStructLayoutForRecord(RD);
     }
+
+    // The __interface tag implies __declspec(novtable) according to MSDN:
+    // https://learn.microsoft.com/en-us/cpp/cpp/interface?view=msvc-170
+    // so add the implicit attribute now.
+    if (Kind == TagTypeKind::Interface)
+      RD->addAttr(MSNoVTableAttr::CreateImplicit(Context));
   }
 
   if (ModulePrivateLoc.isValid()) {
@@ -21439,10 +21491,13 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
 void Sema::ActOnPragmaWeakID(IdentifierInfo* Name,
                              SourceLocation PragmaLoc,
                              SourceLocation NameLoc) {
-  Decl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
 
   if (PrevDecl) {
-    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc));
+    auto *Attr = WeakAttr::CreateImplicit(Context, PragmaLoc);
+    if (checkWeakAttrCompatibility(*this, *PrevDecl, *Attr))
+      PrevDecl->addAttr(Attr);
   } else {
     (void)WeakUndeclaredIdentifiers[Name].insert(WeakInfo(nullptr, NameLoc));
   }

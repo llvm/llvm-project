@@ -48,7 +48,7 @@ contains
 ! Check inline deallocation of allocatable intent(out) on the callee side.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub1(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"})
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_out>})
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub1Ea"
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -114,7 +114,7 @@ contains
 ! is done with a runtime call.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub5(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>> {fir.bindc_name = "t"})
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>> {fir.bindc_name = "t", fir.fortran_attrs = #fir.var_attrs<intent_out>})
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub5Et"
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>) -> !fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>
@@ -160,7 +160,7 @@ contains
 ! Check inline deallocation of optional allocatable intent(out) on the callee side.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub9(
-! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.optional})
+! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_out>, fir.optional})
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub9Ea"
 ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]]{{[#0]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> i1
 ! CHECK: fir.if %[[IS_PRESENT]] {
@@ -188,7 +188,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMmod1Psub10(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub10Ea"
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -215,7 +215,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMmod1Psub12(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub12Ea"
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -234,7 +234,7 @@ contains
 ! CHECK: }
 
 ! CHECK-LABEL: func.func @_QMmod1Psub13(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub12Ea"
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -258,7 +258,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMmod1Psub14(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub14Ep"
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>) -> !fir.heap<!fir.type<_QMmod1Tt{a:i32}>>
@@ -277,7 +277,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMmod1Psub15(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "p"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "p", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub15Ep"
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<none>>) -> !fir.heap<none>
@@ -295,7 +295,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMmod1Psub16(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p", fir.optional}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p", fir.fortran_attrs = #fir.var_attrs<intent_out>, fir.optional}) {
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub16Ep"
 ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]]{{[#0]*}} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> i1
 ! CHECK: fir.if %[[IS_PRESENT]] {

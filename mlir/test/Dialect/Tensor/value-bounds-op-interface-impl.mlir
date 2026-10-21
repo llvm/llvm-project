@@ -176,6 +176,85 @@ func.func @extract_slice_rank_reduce(%t: tensor<?x?xf32>, %sz: index) -> index {
 
 // -----
 
+// An in-bounds extract_slice cannot exceed ceil((src - offset) / stride).
+// Default constant upper bounds are open, so size <= 8 reifies as 9.
+
+// CHECK-LABEL: func @extract_slice_in_bounds_constant_ub(
+//       CHECK:   %[[c9:.*]] = arith.constant 9 : index
+//       CHECK:   return %[[c9]]
+func.func @extract_slice_in_bounds_constant_ub(%t: tensor<10xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @extract_slice_in_bounds_compare(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c8) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// src=10, stride=3 allows indices {0,3,6,9}, so size <= 4 = ceil(10/3).
+// floor(10/3) = 3 would be too tight.
+
+func.func @extract_slice_strided_in_bounds(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %0 = tensor.extract_slice %t[0][%sz][3] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c4) {cmp = "LE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%d, %c3) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// A dynamic offset is non-negative, so size <= src - 0.
+
+func.func @extract_slice_dynamic_offset_in_bounds(%t: tensor<10xf32>, %off: index, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %0 = tensor.extract_slice %t[%off][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c10) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_rank_reduce_in_bounds(%t: tensor<8x16xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c14 = arith.constant 14 : index
+  %0 = tensor.extract_slice %t[0, 2][1, %sz][1, 1] : tensor<8x16xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c14) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_dynamic_stride_no_constant_ub(%t: tensor<10xf32>, %sz: index, %st: index) -> index {
+  %0 = tensor.extract_slice %t[0][%sz][%st] : tensor<10xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index

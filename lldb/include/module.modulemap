@@ -91,6 +91,7 @@ module lldb_Wrapper {
     requires cplusplus
 
     umbrella "lldb/DataFormatters"
+    textual header "lldb/DataFormatters/FormatterBytecode.def"
     module * { export * }
   }
 

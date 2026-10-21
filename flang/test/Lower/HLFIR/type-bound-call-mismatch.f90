@@ -34,6 +34,6 @@ subroutine test(x)
   call x%proc()
 end subroutine
 !CHECK-LABEL:  func.func @_QPtest(
-!CHECK:    %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtestEx"}
+!CHECK:    %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtestEx")
 !CHECK:    %[[CAST:.*]] = fir.convert %[[X]]#0 : (!fir.class<!fir.type<_QMdispatch_mismatchTt2{t:!fir.type<_QMdispatch_mismatchTt{i:i32}>}>>) -> !fir.class<!fir.type<_QMdispatch_mismatchTt{i:i32}>>
-!CHECK:    fir.dispatch "proc"(%[[X]]#0 : !fir.class<!fir.type<_QMdispatch_mismatchTt2{t:!fir.type<_QMdispatch_mismatchTt{i:i32}>}>>) (%[[CAST]] : !fir.class<!fir.type<_QMdispatch_mismatchTt{i:i32}>>) {pass_arg_pos = 0 : i32}
+!CHECK:    fir.dispatch "proc"(%[[X]]#0 : !fir.class<!fir.type<_QMdispatch_mismatchTt2{t:!fir.type<_QMdispatch_mismatchTt{i:i32}>}>>) (%[[CAST]] : !fir.class<!fir.type<_QMdispatch_mismatchTt{i:i32}>>) pass_arg_pos(0)
