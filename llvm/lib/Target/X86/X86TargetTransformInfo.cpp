@@ -7333,20 +7333,13 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
   return getSchedModelGSBody(Opc, ST);
 }
 
-// Per-shape break-even TOTAL for znver4+ gather/scatter: the cost at which
-// the LoopVectorizer stops preferring the vectorised operation. The totals
-// were swept on a Zen5 9950X. The bodies they are measured against come from
-// Znver4Model, which was timed on znver4. znver5 and znver6 reuse both without
-// measurement of their own.
-//
-// Subtracting the getModeledGSInstrCost body leaves the premium,
-// so X86ScheduleZnver4.td stays the only source for the hardware half and a
-// retune needs no edit here.
-//
-// A row covers one data shape while the body varies with the index
-// width, so a total is exact only for the dword form it was calibrated
-// against. Rows exist for the native shapes: VF <= 16 for 32-bit, <= 8
-// for 64-bit.
+// Per-shape break-even TOTAL for znver4+ gather/scatter: the cost at which the
+// LoopVectorizer stops preferring the vectorised operation. Swept on a Zen5
+// 9950X against bodies from Znver4Model, which was timed on znver4. znver5 and
+// znver6 reuse both unmeasured. Subtracting the getModeledGSInstrCost body
+// leaves the premium, so X86ScheduleZnver4.td stays the only source for the
+// hardware half. A total is exact only for the dword form it was calibrated
+// against. Rows cover VF <= 16 for 32-bit, <= 8 for 64-bit.
 std::optional<unsigned>
 X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
   if (!ST->hasPreferGSCostTable() || !ST->hasAVX512() || !SrcVTy)
@@ -7388,11 +7381,8 @@ X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
 
 int X86TTIImpl::getGatherOverhead() const {
   // Flat, shape-independent gather break-even overhead relative to a plain
-  // Load. "2" is the number provided by Intel architects; the per-shape AMD
-  // znver4+ break-even lives in getZenGSCalibratedTotal
-  // instead. Gather, unlike scatter, also has a VEX form, so AVX2 targets that
-  // report it as fast are charged the same overhead; anything else is priced
-  // out of reach.
+  // Load. "2" is the number provided by Intel architects. The per-shape AMD
+  // znver4+ break-even lives in getZenGSCalibratedTotal instead.
   // TODO: Remove the explicit hasAVX512()?, That would mean we would only
   // enable gather with a -march.
   if (ST->hasAVX512() || (ST->hasAVX2() && ST->hasFastGather()))
@@ -7651,14 +7641,13 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
     std::optional<unsigned> Body =
         getModeledGSInstrCost(IsLoad, PartVTy, IndexSize, CostKind);
 
-    // The body follows the instructions CodeGen emits; the premium is the
+    // The body follows the instructions CodeGen emits. The premium is the
     // margin against scalarising, so it follows the lanes.
     //
-    // Lanes beyond one register's worth pay it again: the scalar alternative
-    // grew too and the parts do not overlap, the serialisation Zn4UcodeGS
-    // models. Lanes that split only because the index is wider do not, since
-    // the same lanes are gathered either way. A lane a constant mask turns off
-    // has no scalar load to measure against and pays nothing.
+    // Lanes beyond one register's worth pay it again, the serialisation
+    // Zn4UcodeGS models. Lanes that split only because the index is wider do
+    // not, since the same lanes are gathered either way. A lane a constant
+    // mask turns off pays nothing.
     unsigned ActiveLanes = VF;
     if (auto Live = getActiveGSLanesAndGroups(Mask, VF, 1))
       ActiveLanes = Live->first;
@@ -7681,16 +7670,11 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
       unsigned FitVF = std::min<unsigned>(PowerOf2Ceil(RowLanes), ShapeVF);
 
       // A row's premium is its calibrated total less the body it was measured
-      // against. Both are read for the dword-indexed form the calibration
-      // used, so a retune moves the body, the premium absorbs it, and the
-      // total holds.
-      //
-      // The premium is then added to the summed body of the instructions the
-      // shape emits, so a qword-indexed shape follows its own body rather than
-      // its row. It lands above the dword form where the wider index grows the
-      // body, v8i64 scatter at 35 against 32, and below it where the wider
-      // index shrinks it, v8i32 scatter at 24 against 25. Neither of those
-      // splits. Splitting only adds further bodies to the sum.
+      // against, both read for the dword-indexed form, so a retune moves the
+      // body and the premium absorbs it. The premium is then added to the
+      // summed body the shape emits, so a qword-indexed shape follows its own
+      // body: above the dword form at v8i64 scatter, 35 against 32, and below
+      // it at v8i32 scatter, 24 against 25. Neither splits.
       auto premiumFor =
           [&](unsigned NativeVF) -> std::optional<InstructionCost::CostType> {
         auto *NativeVTy = FixedVectorType::get(EltTy, NativeVF);
@@ -7714,16 +7698,13 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
         return *Total - *NativeBody;
       };
 
-      // The premium is charged once per register's worth of live lanes, and
-      // counts how many there are rather than how far apart the mask spreads
-      // them: per occupied register would price four isolated lanes above the
-      // sixteen that compile to one instruction.
-      //
-      // Every row from here up holds the live lanes in one register's worth, so
-      // take the cheapest rather than the narrowest. The rows are measured and
-      // need not grow with the row: the four-lane scatter premium sits above
-      // the eight-lane one. Charging the narrowest would price a subset of
-      // lanes above the superset it belongs to.
+      // Charged once per register's worth of live lanes, counting how many
+      // there are rather than how far apart the mask spreads them: per
+      // occupied register would price four isolated lanes above the sixteen
+      // that compile to one instruction. Every row from here up fits one
+      // register's worth, so take the cheapest, not the narrowest. The
+      // premiums are not monotonic, so the narrowest would price a subset
+      // above its superset.
       std::optional<InstructionCost::CostType> Margin;
       for (unsigned NativeVF = std::max(FitVF, 1u); NativeVF <= ShapeVF;
            NativeVF *= 2) {
