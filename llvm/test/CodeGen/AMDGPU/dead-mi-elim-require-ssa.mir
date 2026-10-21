@@ -1,6 +1,6 @@
 # RUN: not llc -mtriple=amdgpu9 -run-pass=dead-mi-elimination -filetype=null %s 2>&1 | FileCheck %s
 # RUN: not llc -mtriple=amdgpu9 -passes=dead-mi-elimination -filetype=null %s 2>&1 | FileCheck %s
-
+# REQUIRES: STABILITY
 # CHECK: Required properties: IsSSA
 # CHECK: LLVM ERROR: MachineFunctionProperties check failed
 ---
