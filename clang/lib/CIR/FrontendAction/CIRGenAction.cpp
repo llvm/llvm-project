@@ -170,9 +170,21 @@ static void emitCIRModuleOutput(
     });
     LLVMCtx.setDiagnosticHandler(DiagConsumer.createDiagnosticHandler());
 
+    // Backend components (e.g. the inline-asm parser) reach the filesystem
+    // through the context's VFS, which must be set to stay within the IO
+    // sandbox.
+    LLVMCtx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
+
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
                              mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
+    if (!LLVMModule) {
+      // Lowering errors are already routed through the MLIR diagnostic
+      // handler. Only emit the generic error if nothing was reported.
+      if (!CI.getDiagnostics().hasErrorOccurred())
+        CI.getDiagnostics().Report(diag::err_cir_to_llvm_lowering_failed);
+      return;
+    }
 
     LLVMModule->setDataLayout(CI.getTarget().getDataLayoutString());
 
@@ -206,6 +218,8 @@ static void emitCIRModuleOutput(
     // If there is device offloading code embed it in the host now.
     EmbedObject(LLVMModule.get(), CGO, CI.getVirtualFileSystem(),
                 CI.getDiagnostics());
+
+    EmbedBitcode(LLVMModule.get(), CGO, llvm::MemoryBufferRef());
 
     BackendAction BEAction = getBackendActionFromOutputType(Action);
     emitBackendOutput(CI, CGO, LLVMModule.get(), BEAction,
@@ -364,7 +378,9 @@ CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   Ctx->getLibraryOptions().assign(CI.getLibraryOptions());
-  if (clang::loadLinkModules(CI, *Ctx, LinkModules))
+  Ctx->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
+  if (clang::loadLinkModules(CI, *Ctx, LinkModules,
+                             /*OnlyInternalized=*/false))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
@@ -432,24 +448,14 @@ void CIRGenAction::ExecuteAction() {
     return;
   }
 
-  switch (Action) {
-  case OutputType::EmitCIR:
-    // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
-    // been through it, and its lowering passes are not idempotent.
-    printCIRModule(*Module, *OS);
-    break;
-  case OutputType::EmitCIRBC:
-    if (failed(mlir::writeBytecodeToFile(*Module, *OS)) &&
-        !Diags.hasErrorOccurred())
-      Diags.Report(diag::err_cir_bc_write_failed);
-    break;
-  case OutputType::EmitLLVM:
-  case OutputType::EmitBC:
-  case OutputType::EmitObj:
-  case OutputType::EmitAssembly:
-    Diags.Report(diag::err_fe_cir_input_unsupported);
-    break;
-  }
+  // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
+  // been through it, and its lowering passes are not idempotent.
+  // TODO: Decide from a pipeline-stage attribute on the module which passes
+  // still have to run, once -emit-cir can stop before ABI lowering.
+  BackendDiagnosticConsumer DiagConsumer(Diags, CI.getCodeGenOpts());
+  DiagConsumer.setSourceManager(&SM);
+  emitCIRModuleOutput(Action, CI, *Module, *Ctx, LinkModules, DiagConsumer,
+                      std::move(OS));
 }
 
 static std::unique_ptr<raw_pwrite_stream>

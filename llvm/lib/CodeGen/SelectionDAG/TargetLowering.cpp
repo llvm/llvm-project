@@ -180,17 +180,6 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
-TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
-                                               Attribute::AttrKind Attr)
-    : ArgListEntry(nullptr, Node, Ty) {
-  if (Attr == Attribute::SExt)
-    IsSExt = true;
-  else if (Attr == Attribute::ZExt)
-    IsZExt = true;
-  else if (Attr != Attribute::None)
-    llvm_unreachable("Unexpected attribute left unhandled.");
-}
-
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, *Call, ArgIdx);
@@ -199,6 +188,20 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 void TargetLoweringBase::ArgListEntry::setAttributes(const AttributeList &Attrs,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, Attrs, ArgIdx);
+}
+
+void TargetLoweringBase::ArgListEntry::setExtAttribute(
+    Attribute::AttrKind Attr) {
+  if (Attr != Attribute::None) {
+    if (Attr == Attribute::SExt)
+      IsSExt = true;
+    else if (Attr == Attribute::ZExt)
+      IsZExt = true;
+    else if (Attr == Attribute::NoExt)
+      IsNoExt = true;
+    else
+      llvm_unreachable("Unexpected extension attribute!");
+  }
 }
 
 TargetLowering::ArgListTy
@@ -4066,7 +4069,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS;
+    KnownZero = ZeroLHS & ~UndefRHS;
     KnownUndef = UndefLHS & UndefRHS; // TODO: use getKnownUndefForVectorBinop?
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -11501,6 +11504,40 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   SDValue ActiveElts = DAG.getSelect(DL, StepVecVT, Mask, StepVec, Zeroes);
   SDValue HighestIdx = DAG.getNode(ISD::VECREDUCE_UMAX, DL, StepVT, ActiveElts);
   return DAG.getZExtOrTrunc(HighestIdx, DL, N->getValueType(0));
+}
+
+SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(N);
+
+  SDValue Start = N->getOperand(0);
+  SDValue End = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = Start.getValueType();
+
+  auto [Mask, StepVector] = getLegalMaskAndStepVector(
+      DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
+
+  // TODO: Handle the step vector needing to be split.
+  assert(StepVector && "Step vector needs splitting");
+
+  // Rebase and saturate the termination value.
+  SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
+                                DL, OpVT);
+  End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
+  End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
+  End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());
+
+  // cmp <0, 1, 2, 3...>, End
+  SDValue EndV = DAG.getSplat(StepVector.getValueType(), DL, End);
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                StepVector.getValueType());
+  SDValue Cmp = DAG.getSetCC(DL, CCVT, StepVector, EndV, ISD::SETULT);
+  SDValue Res = DAG.getBoolExtOrTrunc(Cmp, DL, Mask.getValueType(),
+                                      StepVector.getValueType());
+  if (Mask.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
 }
 
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,

@@ -203,9 +203,12 @@ public:
         getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
-  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
-                               mlir::Value src, mlir::Value len) {
-    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  cir::MemMoveOp createMemMove(mlir::Location loc, Address dst, Address src,
+                               mlir::Value len) {
+    return cir::MemMoveOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
@@ -674,7 +677,7 @@ public:
   // caller must describe the address with a byte offset, using a
   // GlobalOffsetAttr, instead.
   [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
-      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      int64_t offset, mlir::Type ty, const cir::CIRDataLayout &layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
   // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
