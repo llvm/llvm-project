@@ -4,7 +4,6 @@
 # a "conflict:" line for the (file, offset) cluster with the full cluster
 # size (3) and exits 0.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

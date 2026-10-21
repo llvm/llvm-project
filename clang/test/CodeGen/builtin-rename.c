@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: %clang_cc1 %s -emit-llvm -o - | grep 'declare.*printf' | count 1
 // PR3612
 

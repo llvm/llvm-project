@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: clang-diff -ast-dump %s -- -std=c++11 | FileCheck %s
 
 

@@ -3,7 +3,6 @@
 # removes all four; SARIF has two results, ordered by (file, min-offset)
 # ascending so the offset-10 cluster precedes the offset-30 cluster.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

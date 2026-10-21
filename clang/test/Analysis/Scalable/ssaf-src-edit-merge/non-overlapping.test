@@ -2,7 +2,6 @@
 # Conflicts are detected per-(file, offset) so disjoint offsets yield no
 # tool-level "conflict:" line, and exit is 0.
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # Real source file required so groupReplacements doesn't drop the entries.

@@ -2,7 +2,6 @@
 # "If exactly one input is given, the tool SHALL still produce a one-run
 # merged document equivalent to that input."
 
-# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

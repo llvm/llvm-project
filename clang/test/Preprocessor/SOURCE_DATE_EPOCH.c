@@ -1,4 +1,3 @@
-// XFAIL: system-zos
 // RUN: %clang_cc1 -source-date-epoch 0 -E %s | FileCheck %s --check-prefix=19700101
 
 // 19700101:      const char date[] = "Jan  1 1970";
