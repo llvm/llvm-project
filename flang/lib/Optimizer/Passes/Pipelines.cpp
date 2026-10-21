@@ -197,13 +197,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
       pm.addPass(fir::createConstantArgumentGlobalisationOpt());
   }
 
-  if (pc.LoopVersioning) {
-    // Hoist loop-invariant descriptor loads (e.g. of POINTER arrays) first,
-    // so that LoopVersioning can version loops on the strides of such arrays.
-    if (!disableFirLICM && pc.OptLevel != llvm::OptimizationLevel::O0)
-      pm.addPass(fir::createLoopInvariantCodeMotion());
+  if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioning());
-  }
 
   pm.addPass(mlir::createCSEPass());
 
