@@ -31,6 +31,7 @@ AGXSubtarget &AGXSubtarget::initializeSubtargetDependencies(StringRef CPU,
     HasDeviceAtomicFAdd = false;
     HasDeviceAtomicU64MinMax = false;
     HasSIMDMatrix = false;
+    HasBlockBarrier = false;
   }
   return *this;
 }

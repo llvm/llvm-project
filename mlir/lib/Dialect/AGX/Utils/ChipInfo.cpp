@@ -11,7 +11,7 @@
 using namespace mlir;
 using namespace mlir::agx;
 
-FailureOr<ChipInfo> ChipInfo::get(StringRef chip) {
+FailureOr<ChipInfo> ChipInfo::get(StringRef chip, StringRef features) {
   if (chip == "generic")
     chip = "agx-g13g";
   unsigned gen;
@@ -29,10 +29,12 @@ FailureOr<ChipInfo> ChipInfo::get(StringRef chip) {
   case 14:
     // Measured on G14C (M2 Max, Asahi Linux): AGX Performance Simulator and
     // Apple-M2-Playground novel-results 2026-10-11-fmadd-lane-offset,
-    // barrier-0x68-vs-0x78, occupancy. The lane-offset fmadd and the block
-    // barrier wait for recorded coverage of the forms the lowerings emit
-    // (ptx-re-blockers B16, B18) and stay off until then.
+    // barrier-0x68-vs-0x78, occupancy. The block barrier orders memory
+    // within its block and completes for partial blocks and divergent callers
+    // (ptx-re-blockers B16). The lane-offset fmadd waits for recorded
+    // coverage of the forms its lowering emits (B18) and stays off until then.
     info.threadgroupMemoryBytes = 65536;
+    info.blockBarrier = true;
     break;
   case 15:
     info.dynamicCaching = true;
@@ -46,6 +48,26 @@ FailureOr<ChipInfo> ChipInfo::get(StringRef chip) {
     info.maxGPRs = gen == 17 && info.variant == 'g' ? 126 : 96;
     info.threadgroupMemoryBytes = 32768;
     break;
+  }
+
+  SmallVector<StringRef> list;
+  features.split(list, ',', -1, /*KeepEmpty=*/false);
+  for (StringRef f : list) {
+    f = f.trim();
+    if (f == "+mesa-isa")
+      info.mesaISA = true;
+    else if (f == "-mesa-isa")
+      info.mesaISA = false;
+  }
+  if (info.mesaISA) {
+    // Mesa compiles for G13 and G14 only, and never emits the lane-offset
+    // fmadd, the block barrier or a matrix instruction.
+    if (gen != 13 && gen != 14)
+      return failure();
+    info.laneShiftFMA = false;
+    info.blockBarrier = false;
+    info.matrixUnit = MatrixUnit::Emulated;
+    info.matrixNegatedAccumulate = false;
   }
   return info;
 }

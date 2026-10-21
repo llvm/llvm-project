@@ -263,17 +263,24 @@ struct AGXExpandOpsPass
     for (Operation *root : roots) {
       // getTargetChip looks at enclosing modules; a root module is its own.
       StringRef name = chip;
+      StringRef targetFeatures = features;
       if (name.empty()) {
         name = getTargetChip(root);
         if (auto m = dyn_cast<gpu::GPUModuleOp>(root))
           if (ArrayAttr targets = m.getTargetsAttr())
             for (Attribute t : targets)
-              if (auto target = dyn_cast<AGXIR::AGXIRTargetAttr>(t))
+              if (auto target = dyn_cast<AGXIR::AGXIRTargetAttr>(t)) {
                 name = target.getChip();
+                if (targetFeatures.empty())
+                  targetFeatures = target.getFeatures();
+              }
       }
-      FailureOr<ChipInfo> info = ChipInfo::get(name);
+      FailureOr<ChipInfo> info = ChipInfo::get(name, targetFeatures);
       if (failed(info)) {
-        root->emitError() << "unknown AGX chip '" << name << "'";
+        root->emitError() << "unknown AGX chip '" << name << "'"
+                          << (targetFeatures.contains("+mesa-isa")
+                                  ? " for +mesa-isa (G13 and G14 only)"
+                                  : "");
         return signalPassFailure();
       }
       RewritePatternSet patterns(&getContext());

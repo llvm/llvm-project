@@ -775,6 +775,15 @@ def : Pat<(i16 (fp_to_sint f32:$a)), (CONVERT_16_32 CVT_F_TO_S16, 0, $a, ROUND_R
 def : Pat<(i16 (fp_to_uint f32:$a)), (CONVERT_16_32 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
 def : Pat<(i16 (fp_to_sint f16:$a)), (CONVERT_16_16 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
 def : Pat<(i16 (fp_to_uint f16:$a)), (CONVERT_16_16 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
+// convert saturates, and NaN converts to 0 (B27).
+def : Pat<(i32 (fp_to_sint_sat f32:$a, i32)), (CONVERT_32_32 CVT_F_TO_S32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_uint_sat f32:$a, i32)), (CONVERT_32_32 CVT_F_TO_U32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_sint_sat f16:$a, i32)), (CONVERT_32_16 CVT_F_TO_S32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_uint_sat f16:$a, i32)), (CONVERT_32_16 CVT_F_TO_U32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_sint_sat f32:$a, i16)), (CONVERT_16_32 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_uint_sat f32:$a, i16)), (CONVERT_16_32 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_sint_sat f16:$a, i16)), (CONVERT_16_16 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_uint_sat f16:$a, i16)), (CONVERT_16_16 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
 def : Pat<(f32 (sint_to_fp i32:$a)), (CONVERT_32_32 CVT_S32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (uint_to_fp i32:$a)), (CONVERT_32_32 CVT_U32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (sint_to_fp i16:$a)), (CONVERT_32_16 CVT_S16_TO_F, 0, $a, ROUND_RTE)>;
@@ -1217,7 +1226,15 @@ def THREADGROUP_BARRIER : AGXPseudo<(outs), (ins),
   let G13Real = THREADGROUP_BARRIER_g13;
   let SchedRW = [WriteBarrier];
 }
+let Predicates = [HasBlockBarrier], mayLoad = 1, mayStore = 1 in
+def BLOCK_BARRIER : AGXPseudo<(outs), (ins), [(int_agx_block_barrier)]> {
+  let G13Real = BLOCK_BARRIER_g13;
+  let SchedRW = [WriteBarrier];
 }
+}
+// Without one, a barrier over the whole threadgroup also orders the block.
+let Predicates = [NoBlockBarrier] in
+def : Pat<(int_agx_block_barrier), (THREADGROUP_BARRIER)>;
 
 let hasSideEffects = 1 in
 def MEMORY_BARRIER : AGXPseudo<(outs), (ins i32imm:$a, i32imm:$b, i32imm:$c),

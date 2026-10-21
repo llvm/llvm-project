@@ -301,9 +301,10 @@ struct LowerGpuOpsToAGXIROpsPass final
       if (ArrayAttr targets = m.getTargetsAttr())
         for (Attribute t : targets)
           if (auto target = dyn_cast<AGXIR::AGXIRTargetAttr>(t))
-            chip = agx::ChipInfo::get(target.getChip());
+            chip = agx::ChipInfo::get(target.getChip(), target.getFeatures());
       if (failed(chip)) {
-        m.emitError() << "unknown AGX chip in the module's #agxir.target";
+        m.emitError() << "unknown AGX chip in the module's #agxir.target (or "
+                         "+mesa-isa on a chip other than G13 and G14)";
         return signalPassFailure();
       }
       RewritePatternSet patterns(ctx);

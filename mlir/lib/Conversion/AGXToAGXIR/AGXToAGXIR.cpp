@@ -51,6 +51,18 @@ struct ThreadgroupBarrierOpLowering
   }
 };
 
+/// The block barrier orders memory itself (B16), so it needs no fences.
+struct BlockBarrierOpLowering : ConvertOpToLLVMPattern<BlockBarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(BlockBarrierOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::BlockBarrierOp>(op);
+    return success();
+  }
+};
+
 /// Create the AGXIR shuffle for the mode and scope.
 static Value createShuffle(ConversionPatternRewriter &rewriter, Location loc,
                            ShuffleMode mode, Scope scope, Value value,
@@ -318,7 +330,8 @@ struct ConvertAGXToAGXIRPass
 
 void mlir::populateAGXToAGXIRConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<ThreadgroupBarrierOpLowering, MemoryBarrierOpLowering,
+  patterns.add<ThreadgroupBarrierOpLowering, BlockBarrierOpLowering,
+               MemoryBarrierOpLowering,
                MMAOpLowering, CoreIdOpLowering, SetFPModeOpLowering, GetFPModeOpLowering,
                ShuffleOpLowering,
                ReduceOpLowering, BallotOpLowering>(converter);

@@ -53,10 +53,16 @@ struct ChipInfo {
   /// Registers and threadgroup memory are allocated dynamically (G15 and
   /// later), so occupancy hints are only advisory.
   bool dynamicCaching = false;
+  /// Mesa ISA mode (the "+mesa-isa" target feature): code may use only the
+  /// instructions Mesa's asahi compiler emits, so every native capability
+  /// Mesa does not use is off and its agx operations take the portable form.
+  bool mesaISA = false;
 
   /// The capabilities of the chip named `chip` (an LLVM AGX -mcpu such as
-  /// "agx-g14c"), or failure for an unknown name.
-  static FailureOr<ChipInfo> get(StringRef chip);
+  /// "agx-g14c") with the LLVM target `features` (comma separated, as in
+  /// #agxir.target), or failure for an unknown name or for "+mesa-isa" on a
+  /// chip Mesa does not compile for (only G13 and G14).
+  static FailureOr<ChipInfo> get(StringRef chip, StringRef features = "");
 };
 
 } // namespace mlir::agx

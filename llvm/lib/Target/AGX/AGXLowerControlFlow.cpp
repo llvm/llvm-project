@@ -18,7 +18,11 @@
 //
 // The jumps only skip code no thread executes; the execution mask
 // instructions alone implement the semantics. The nesting counter is zeroed
-// at kernel entry.
+// at kernel entry. A jump_exec_none over a short run of ALU instructions is
+// left out: on G14C an ALU instruction issued with no active thread costs
+// about as little as a taken jump over it, while memory instructions still
+// cost a large part of their latency (AGX Performance Simulator
+// tasks/ptx-re-blockers.md, B31).
 //
 // Shuffles read the index of every thread of a quad, including inactive
 // ones, whose register may hold anything. Register indices are therefore
@@ -36,6 +40,7 @@
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -64,6 +69,12 @@ INITIALIZE_PASS(AGXLowerControlFlow, DEBUG_TYPE, "AGX Lower Control Flow",
 FunctionPass *llvm::createAGXLowerControlFlowPass() {
   return new AGXLowerControlFlow();
 }
+
+static cl::opt<unsigned> MaxUnskippedInstrs(
+    "agx-max-unskipped-instrs",
+    cl::desc("Most ALU instructions an if or else body may have and still be "
+             "run with an empty execution mask instead of jumped over"),
+    cl::init(4), cl::Hidden);
 
 // Integer conditions.
 static constexpr unsigned ICondUEQ = 0;
@@ -103,6 +114,72 @@ static bool isShuffle(unsigned Opc) {
   default:
     return false;
   }
+}
+
+static bool isControlFlowPseudo(unsigned Opc) {
+  switch (Opc) {
+  case AGX::AGX_IF:
+  case AGX::AGX_ELSE:
+  case AGX::AGX_LOOP:
+  case AGX::AGX_IF_ICMP:
+  case AGX::AGX_IF_FCMP:
+  case AGX::AGX_LOOP_ICMP:
+  case AGX::AGX_LOOP_FCMP:
+  case AGX::AGX_LOOP_BEGIN:
+  case AGX::AGX_END_CF:
+  case AGX::AGX_BR:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Whether the blocks a jump_exec_none at the end of MBB would skip, up to
+/// Target, are a straight run of at most MaxUnskippedInstrs ALU instructions,
+/// so that running them with an empty execution mask is cheaper than the jump.
+static bool isShortALURun(MachineBasicBlock &MBB, MachineBasicBlock *Target) {
+  unsigned Count = 0;
+  MachineFunction &MF = *MBB.getParent();
+  for (MachineBasicBlock *S : MBB.successors())
+    if (S != Target && !MBB.isLayoutSuccessor(S))
+      return false;
+  for (auto B = std::next(MBB.getIterator()); &*B != Target; ++B) {
+    if (B == MF.end() || B->succ_size() != 1)
+      return false;
+    MachineBasicBlock *Next = *B->succ_begin();
+    if (!B->isLayoutSuccessor(Next))
+      return false;
+    for (const MachineInstr &MI : *B) {
+      if (MI.isMetaInstruction())
+        continue;
+      // A branch to the next block is left out.
+      if (MI.getOpcode() == AGX::AGX_BR && MI.getOperand(0).getMBB() == Next)
+        continue;
+      if (isControlFlowPseudo(MI.getOpcode()) || MI.mayLoadOrStore() ||
+          MI.hasUnmodeledSideEffects() || MI.isCall() || MI.isTerminator() ||
+          AGXInstrInfo::isExecMaskOp(MI))
+        return false;
+      // A shuffle also moves its index to r0h and resets it.
+      Count += isShuffle(MI.getOpcode()) ? 3 : 1;
+      if (Count > MaxUnskippedInstrs)
+        return false;
+    }
+  }
+  return true;
+}
+
+/// Jump over the code between MBB and Target when no thread runs it, unless
+/// that code is cheap enough to run with an empty mask. Without the jump, the
+/// edge to Target is removed: MBB falls through.
+static void buildSkip(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                      const DebugLoc &DL, const AGXInstrInfo &TII,
+                      MachineBasicBlock *Target) {
+  if (!isShortALURun(MBB, Target)) {
+    BuildMI(MBB, I, DL, TII.get(AGX::JMP_EXEC_NONE)).addMBB(Target);
+    return;
+  }
+  if (!MBB.isLayoutSuccessor(Target) && MBB.isSuccessor(Target))
+    MBB.removeSuccessor(Target);
 }
 
 /// Pass the register index of a shuffle in r0h. Returns true if MI was
@@ -199,8 +276,7 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             .addImm(0)
             .addImm(0)
             .addImm(1);
-        BuildMI(MBB, I, DL, TII.get(AGX::JMP_EXEC_NONE))
-            .addMBB(MI.getOperand(1).getMBB());
+        buildSkip(MBB, I, DL, TII, MI.getOperand(1).getMBB());
         break;
       }
       case AGX::AGX_ELSE:
@@ -210,8 +286,7 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             .addImm(0)
             .addImm(FPImmZero)
             .addImm(1);
-        BuildMI(MBB, I, DL, TII.get(AGX::JMP_EXEC_NONE))
-            .addMBB(MI.getOperand(0).getMBB());
+        buildSkip(MBB, I, DL, TII, MI.getOperand(0).getMBB());
         break;
       case AGX::AGX_LOOP:
         // Threads stay in the loop while brk is zero.
@@ -243,9 +318,11 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             .add(MI.getOperand(3))
             .add(MI.getOperand(4))
             .addImm(1);
-        BuildMI(MBB, I, DL,
-                TII.get(Loop ? AGX::JMP_EXEC_ANY : AGX::JMP_EXEC_NONE))
-            .addMBB(MI.getOperand(5).getMBB());
+        if (Loop)
+          BuildMI(MBB, I, DL, TII.get(AGX::JMP_EXEC_ANY))
+              .addMBB(MI.getOperand(5).getMBB());
+        else
+          buildSkip(MBB, I, DL, TII, MI.getOperand(5).getMBB());
         break;
       }
       case AGX::AGX_LOOP_BEGIN:

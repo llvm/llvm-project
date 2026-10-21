@@ -54,6 +54,7 @@ static constexpr unsigned MaxPending = 8;
 
 static bool isBarrier(const MachineInstr &MI) {
   return MI.getOpcode() == AGX::THREADGROUP_BARRIER ||
+         MI.getOpcode() == AGX::BLOCK_BARRIER ||
          MI.getOpcode() == AGX::MEMORY_BARRIER;
 }
 

@@ -156,6 +156,13 @@ another.
                                   ``atomicrmw umin/umax i64`` whose old value
                                   is unused.
    ``stack-access``               Per-thread stack loads and stores.
+   ``block-barrier``              ``block_barrier`` (``78 09``), a barrier over
+                                  the caller's aligned block of 4 SIMD-groups
+                                  that orders their memory accesses (G14,
+                                  measured on G14C; AGX Performance Simulator
+                                  ``tasks/ptx-re-blockers.md``, B16).
+                                  ``llvm.agx.block.barrier`` is a
+                                  ``threadgroup_barrier`` without it.
    ``dynamic-caching``            Registers and threadgroup memory are
                                   allocated dynamically (G15 and later).
    ``ray-tracing``                Hardware ray tracing (not used by code
@@ -190,7 +197,7 @@ production. It is selected in IR by either
 On a processor other than G13 and G14 the feature is a fatal error. It turns
 off the capabilities Mesa does not use: ``device-atomic-fadd`` (float atomics
 become compare-and-swap loops), ``device-atomic-u64-minmax`` (64-bit min and
-max take the lock table) and ``simd-matrix``. Device and threadgroup loads,
+max take the lock table), ``simd-matrix`` and ``block-barrier``. Device and threadgroup loads,
 stores and atomics are encoded in their long form, as Mesa packs them.
 
 Every instruction is then checked against Mesa's instruction forms after
@@ -351,7 +358,12 @@ every function, uniform branches included, and annotates it with:
 
 * ``llvm.agx.if``: ``if_icmp r0l, nueq, cond, 0, 1`` deactivates the threads
   where the condition is false, followed by ``jmp_exec_none`` to skip the
-  region when no thread remains.
+  region when no thread remains. The jump (here and after ``else``) is left
+  out when the region is a straight run of at most 4 ALU instructions
+  (``-agx-max-unskipped-instrs``): on G14C an ALU instruction issued with no
+  active thread costs about as little as the taken jump over it, while
+  masked loads, stores and their waits still cost much of their latency
+  (B31).
 * ``llvm.agx.else``: ``else_fcmp r0l, eq, 0.0, 0.0, 1`` swaps the threads of
   the innermost level.
 * ``llvm.agx.end.cf``: ``pop_exec r0l, 1`` reactivates the threads of the
@@ -478,7 +490,11 @@ real instruction of that family, to be filled in as encodings are confirmed.
 Intrinsics
 ==========
 
-See ``llvm/include/llvm/IR/IntrinsicsAGX.td``. The special register
+See ``llvm/include/llvm/IR/IntrinsicsAGX.td``. The ``float`` and ``half``
+to 32- and 16-bit integer ``convert`` saturates and converts NaN to 0
+(measured on G14C, B27), so ``llvm.fptosi.sat`` and ``llvm.fptoui.sat`` to
+``i32`` and ``i16`` are a single ``convert``; narrower saturation widths are
+clamped first. The special register
 intrinsics (``llvm.agx.thread.position.in.grid.x`` and so on) read
 ``get_sr`` registers, ``llvm.agx.read.sr`` reads any special register by
 number, and ``llvm.agx.simd.reduce``/``prefix`` and

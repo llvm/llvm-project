@@ -752,6 +752,10 @@ def THREADGROUP_BARRIER_g13 : AGXReal<"threadgroup_barrier", (outs), (ins),
   let Inst{15-0} = 0x0068;
 }
 
+def BLOCK_BARRIER_g13 : AGXReal<"block_barrier", (outs), (ins), "", 2> {
+  let Inst{15-0} = 0x0978;
+}
+
 def MEMORY_BARRIER_g13 : AGXReal<"memory_barrier", (outs),
                                  (ins AGXImm:$a, AGXImm:$b, AGXImm:$c),
                                  "$a, $b, $c", 2> {

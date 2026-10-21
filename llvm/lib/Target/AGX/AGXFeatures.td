@@ -118,6 +118,17 @@ def FeatureDeviceAtomics : SubtargetFeature<"device-atomics",
   "Has device memory atomics"
 >;
 
+// G14 (measured on the M2 Max, AGX Performance Simulator
+// tasks/ptx-re-blockers.md, B16): block_barrier (0x0978) waits for the
+// caller's aligned block of 4 SIMD-groups and orders their threadgroup and
+// device memory accesses, like threadgroup_barrier within the block. A block
+// cut short by the end of the threadgroup does not wait for the missing
+// groups.
+def FeatureBlockBarrier : SubtargetFeature<"block-barrier",
+  "HasBlockBarrier", "true",
+  "Has a barrier over an aligned block of 4 SIMD-groups"
+>;
+
 def FeatureStackAccess : SubtargetFeature<"stack-access",
   "HasStackAccess", "true",
   "Has stack_load/stack_store for register spilling"
@@ -190,7 +201,7 @@ def FeatureG14 : AGXSubtargetFeatureGeneration<"G14", "g14",
    FeatureSIMDReduce, FeatureSIMDBallot, FeatureSIMDMatrix,
    FeatureQuadShuffleIndexMerge, FeatureThreadgroupAtomics,
    FeatureDeviceAtomics, FeatureDeviceAtomicFAdd, FeatureDeviceAtomicU64MinMax, FeatureStackAccess,
-   FeatureMaxGPRs128]
+   FeatureMaxGPRs128, FeatureBlockBarrier]
 >;
 
 // No public instruction set documentation exists for G15. It is assumed to
@@ -235,3 +246,5 @@ def HasThreadgroupAtomics : Predicate<"Subtarget->hasThreadgroupAtomics()">;
 def HasDeviceAtomics : Predicate<"Subtarget->hasDeviceAtomics()">;
 def HasDeviceAtomicFAdd : Predicate<"Subtarget->hasDeviceAtomicFAdd()">;
 def HasDeviceAtomicU64MinMax : Predicate<"Subtarget->hasDeviceAtomicU64MinMax()">;
+def HasBlockBarrier : Predicate<"Subtarget->hasBlockBarrier()">;
+def NoBlockBarrier : Predicate<"!Subtarget->hasBlockBarrier()">;

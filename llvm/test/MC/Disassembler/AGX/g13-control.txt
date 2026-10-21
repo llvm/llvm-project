@@ -70,6 +70,9 @@
 
 0x68 0x00
 # CHECK: threadgroup_barrier{{ +}}// encoding: [0x68,0x00]
+# The G14 block barrier (AGX Performance Simulator ptx-re-blockers B16).
+0x78 0x09
+# CHECK: block_barrier{{ +}}// encoding: [0x78,0x09]
 0x68 0x00
 # CHECK: threadgroup_barrier{{ +}}// encoding: [0x68,0x00]
 0x68 0x00

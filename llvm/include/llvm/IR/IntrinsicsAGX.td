@@ -68,6 +68,16 @@ def int_agx_threadgroup_barrier
                 [IntrNoMem, IntrHasSideEffects, IntrConvergent,
                  IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Execution barrier across the caller's aligned block of 4 SIMD-groups
+// (block_barrier), ordering their memory accesses. Every SIMD-group of the
+// block must reach one. A threadgroup_barrier on chips without it. It is a
+// memory operation, so no fence is needed around it: the hardware orders the
+// block's accesses (B16) and the compiler moves none across it.
+def int_agx_block_barrier
+    : Intrinsic<[], [],
+                [IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+                 IntrNoCallback, IntrNoFree]>;
+
 // Raw memory_barrier with its three hardware fields (a, b, c). The memory
 // model lowering of `fence` picks the encodings documented in AGXUsage.rst.
 def int_agx_memory_barrier

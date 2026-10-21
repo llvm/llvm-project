@@ -72,6 +72,8 @@ stop
 
 threadgroup_barrier
 # CHECK: threadgroup_barrier{{ +}}// encoding: [0x68,0x00]
+block_barrier
+# CHECK: block_barrier{{ +}}// encoding: [0x78,0x09]
 threadgroup_barrier
 # CHECK: threadgroup_barrier{{ +}}// encoding: [0x68,0x00]
 threadgroup_barrier

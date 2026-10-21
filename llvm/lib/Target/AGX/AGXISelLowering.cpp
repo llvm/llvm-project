@@ -155,6 +155,12 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32},
                      Custom);
 
+  // Float-to-integer convert saturates and gives 0 for NaN (measured on G14C,
+  // AGX Performance Simulator tasks/ptx-re-blockers.md, B27), so saturating
+  // conversions to the convert's own width are legal; the others expand.
+  setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+                     {MVT::i16, MVT::i32}, Custom);
+
   // 64-bit conversions are expanded with 32-bit conversions.
   setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
                       ISD::UINT_TO_FP},
@@ -455,6 +461,14 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return lowerFP_TO_INT64(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: {
+    EVT Src = Op.getOperand(0).getValueType();
+    EVT Sat = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    if (Sat == Op.getValueType() && (Src == MVT::f32 || Src == MVT::f16))
+      return Op;
+    return SDValue();
+  }
   default:
     llvm_unreachable("unexpected custom lowering");
   }

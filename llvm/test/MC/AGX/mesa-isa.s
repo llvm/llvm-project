@@ -21,6 +21,11 @@ atomic sub, 0, r1, u0_u1, 0, signed, r1, 1
 # CHECK: :[[@LINE-1]]:1: error: ATOMIC_g13 is not an instruction Mesa emits (mesa-isa): atomic.coherent: field value
 # G14D: :[[@LINE-2]]:1: error: ATOMIC_g13 is not an instruction Mesa emits (mesa-isa): atomic.coherent: field value
 
+# The G14 block barrier is not one of Mesa's instructions.
+block_barrier
+# CHECK: :[[@LINE-1]]:1: error: BLOCK_BARRIER_g13 is not an instruction Mesa emits (mesa-isa): no Mesa instruction has this opcode and length
+# G14D: :[[@LINE-2]]:1: error: BLOCK_BARRIER_g13 is not an instruction Mesa emits (mesa-isa): no Mesa instruction has this opcode and length
+
 # shlhi is decoded by Mesa's disassembler but never emitted by its compiler.
 shlhi r118l, r109.discard, r119l.cache, r9, mask 0xFF
 # CHECK: :[[@LINE-1]]:1: error: SHLHI_g13 is not an instruction Mesa emits (mesa-isa): no Mesa instruction has this opcode and length
