@@ -266,7 +266,7 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
 
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned Dim = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t Dim = MI->getOperand(OpNo).getImm();
   O << " dim:SQ_RSRC_IMG_";
 
   const AMDGPU::MIMGDimInfo *DimInfo =
