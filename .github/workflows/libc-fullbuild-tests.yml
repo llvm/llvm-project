@@ -81,7 +81,7 @@ jobs:
             target: armv6m-none-eabi
             testing: SKIP
           - name: baremetal-armv7m
-            os: ubuntu-26.04-arm
+            os: ubuntu-26.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
