@@ -1765,6 +1765,11 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
 }
 
 void AArch64EpilogueEmitter::finalizeEpilogue() const {
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
+
   if (AFI->needsShadowCallStackPrologueEpilogue(MF)) {
     emitShadowCallStackEpilogue(MBB.getFirstTerminator(), DL);
     HasWinCFI |= NeedsWinCFI;
