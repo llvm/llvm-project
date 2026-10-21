@@ -94,10 +94,14 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
       atom = pool.make_byte_set(bs);
       break;
     }
+    case '^':
+      atom = pool.make_anchor(ANCHOR_BOL);
+      break;
+    case '$':
+      atom = pool.make_anchor(ANCHOR_EOL);
+      break;
     // TODO: Wire ERE metacharacters as each operator is implemented in
     // subsequent patches.
-    case '^':
-    case '$':
     case '*':
     case '+':
     case '?':
