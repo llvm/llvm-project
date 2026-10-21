@@ -29,6 +29,7 @@
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/CallingConv.h"
 
 #include <memory>
 #include <optional>
@@ -135,18 +136,20 @@ protected:
 
 private:
   /// Classify a signature returning \p retCIR and taking \p inputs, whose
-  /// first \p required entries are declared parameters.
+  /// first \p required entries are declared parameters, under \p callConv.
   std::optional<mlir::abi::FunctionClassification>
   classifySignature(mlir::Type retCIR, mlir::TypeRange inputs,
                     llvm::abi::RequiredArgs required,
                     const llvm::abi::TargetInfo &targetInfo,
+                    llvm::CallingConv::ID callConv,
                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 
   /// Classify \p call, which passes more operands than \p calleeTy declares,
   /// from the call's operands.
   std::optional<mlir::abi::FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncType calleeTy,
-                       const llvm::abi::TargetInfo &targetInfo);
+                       const llvm::abi::TargetInfo &targetInfo,
+                       llvm::CallingConv::ID callConv);
 };
 
 /// The MLIR test ABI target's classifier, whose predictable rules approximate
@@ -164,6 +167,14 @@ createInjectedABIClassifier(const mlir::DataLayout &dl,
 std::unique_ptr<CIRABIClassifier>
 createX86_64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
                           const ABIClassifierOptions &options);
+
+/// The AMDGPU classifier.
+std::unique_ptr<CIRABIClassifier>
+createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
+
+/// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
+/// uses.  Conventions the classifier does not distinguish fall back to C.
+llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc);
 
 //===----------------------------------------------------------------------===//
 // Classification helpers defined in CallConvLoweringPass.cpp
