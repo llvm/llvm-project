@@ -371,7 +371,7 @@ public:
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
-  bool addPostFastRegAllocRewrite() override;
+  bool addRegAssignAndRewriteFast() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -526,6 +526,12 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86FastPreTileConfigLegacyPass());
 }
 
+bool X86PassConfig::addRegAssignAndRewriteFast() {
+  bool ToReturn = TargetPassConfig::addRegAssignAndRewriteFast();
+  addPass(createX86FastTileConfigLegacyPass());
+  return ToReturn;
+}
+
 void X86PassConfig::addMachineSSAOptimization() {
   addPass(createX86DomainReassignmentLegacyPass());
   TargetPassConfig::addMachineSSAOptimization();
@@ -631,11 +637,6 @@ void X86PassConfig::addPreEmitPass2() {
     addPass(createX86WinEHUnwindV2LegacyPass());
     addPass(createX86WinEHUnwindV3Pass());
   }
-}
-
-bool X86PassConfig::addPostFastRegAllocRewrite() {
-  addPass(createX86FastTileConfigLegacyPass());
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
