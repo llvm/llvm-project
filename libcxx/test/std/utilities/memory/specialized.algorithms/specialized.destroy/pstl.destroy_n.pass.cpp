@@ -13,7 +13,7 @@
 // template <class ExecutionPolicy,
 //           class ForwardIterator,
 //           class Size>
-//   void destroy_n(ExecutionPolicy&& exec, ForwardIterator first, Size n);
+//   ForwardIterator destroy_n(ExecutionPolicy&& exec, ForwardIterator first, Size n);
 
 #include <atomic>
 #include <algorithm>
@@ -64,8 +64,9 @@ struct TestCounted {
         }
         assert(std::all_of(std::begin(counters), std::begin(counters) + size, [](auto& x) { return x == 1; }));
 
-        std::destroy_n(policy, Iter(pool), size);
-        ASSERT_SAME_TYPE(decltype(std::destroy_n(policy, Iter(pool), size)), void);
+        auto res = std::destroy_n(policy, Iter(pool), size);
+        static_assert(std::is_same_v<decltype(res), Iter>);
+        assert(res == Iter(pool + size));
         assert(std::all_of(std::begin(counters), std::begin(counters) + size, [](auto& x) { return x == 0; }));
       });
 
@@ -97,8 +98,9 @@ struct TestArrayCounted3 {
       }
       assert(counter == 5 * 3);
 
-      std::destroy_n(policy, Iter(pool), 5);
-      ASSERT_SAME_TYPE(decltype(std::destroy_n(policy, Iter(pool), 5)), void);
+      auto res = std::destroy_n(policy, Iter(pool), 5);
+      static_assert(std::is_same_v<decltype(res), Iter>);
+      assert(res == Iter(pool + 5));
       assert(counter == 0);
 
       std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
@@ -128,8 +130,9 @@ struct TestArrayCounted3x2 {
         }
       }
       assert(counter == 5 * 3 * 2);
-      std::destroy_n(policy, Iter(pool), 5);
-      ASSERT_SAME_TYPE(decltype(std::destroy_n(policy, Iter(pool), 5)), void);
+      auto res = std::destroy_n(policy, Iter(pool), 5);
+      static_assert(std::is_same_v<decltype(res), Iter>);
+      assert(res == Iter(pool + 5));
       assert(counter == 0);
 
       std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);

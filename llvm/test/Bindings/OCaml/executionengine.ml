@@ -29,7 +29,7 @@ let bomb msg =
 let define_getglobal m pg =
   let fty = function_type i32_type [||] in
   let fn = define_function "getglobal" fty m in
-  let b = builder_at_end context (entry_block fn) in
+  let b = builder_at_end (entry_block fn) in
   let g = build_call fty pg [||] "" b in
   ignore (build_ret g b);
   fn
@@ -37,7 +37,7 @@ let define_getglobal m pg =
 let define_plus m =
   let fn = define_function "plus" (function_type i32_type [| i32_type;
                                                              i32_type |]) m in
-  let b = builder_at_end context (entry_block fn) in
+  let b = builder_at_end (entry_block fn) in
   let add = build_add (param fn 0) (param fn 1) "sum" b in
   ignore (build_ret add b);
   fn

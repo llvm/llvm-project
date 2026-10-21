@@ -415,9 +415,13 @@ public:
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
 
   SpecificBumpPtrAllocator &operator=(SpecificBumpPtrAllocator &&RHS) {
+    DestroyAll();
     Allocator = std::move(RHS.Allocator);
     return *this;
   }
+
+  /// Total memory held by this allocator, including slack in the slabs.
+  size_t getTotalMemory() const { return Allocator.getTotalMemory(); }
 
   /// Call the destructor of each allocated object and deallocate all but the
   /// current slab and reset the current pointer to the beginning of it, freeing

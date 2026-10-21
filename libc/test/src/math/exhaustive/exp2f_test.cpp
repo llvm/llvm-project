@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/math/exp2f_double_eval.h"
 #include "src/__support/math/exp2f_float_eval.h"
+#include "src/__support/math/exp2f_integer_eval.h"
 #include "src/math/exp2f.h"
 #include "test/src/math/exhaustive/exhaustive_test.h"
+#include "test/src/math/exhaustive/exhaustive_test_static_rounding.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -49,4 +52,19 @@ TEST_F(LlvmLibcExp2fFloatExhaustiveTest, PositiveRange) {
 
 TEST_F(LlvmLibcExp2fFloatExhaustiveTest, NegativeRange) {
   test_full_range(mpfr::RoundingMode::Nearest, NEG_START, NEG_STOP);
+}
+
+// Statically rounded implementation: tested against double_eval across all
+// roundings.
+using LlvmLibcExp2fStaticRoundingExhaustiveTest =
+    LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<
+        float, LIBC_NAMESPACE::math::double_eval::exp2f,
+        LIBC_NAMESPACE::math::static_rounding::exp2f>;
+
+TEST_F(LlvmLibcExp2fStaticRoundingExhaustiveTest, PositiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
+}
+
+TEST_F(LlvmLibcExp2fStaticRoundingExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

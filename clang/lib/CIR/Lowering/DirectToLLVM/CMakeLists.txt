@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMOffloadPrintf.cpp
   LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
@@ -26,7 +27,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
   MLIRIR
