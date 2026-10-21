@@ -5321,3 +5321,11 @@ let Predicates = [HasSVE, HasCPA] in {
   // Multiply-add vectors, writing addend
   def MLA_CPA : sve_int_mla_cpa<"mlapt">;
 }
+
+//===----------------------------------------------------------------------===//
+// Load-Acquire/Store-Release octaword (FEAT_SVE_LRCPC)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE_LRCPC] in {
+  defm LDAPRO_ZXI : sve_mem_z_acq_fill<"ldapro">;
+  defm STLRO_ZXI  : sve_mem_z_rel_spill<"stlro">;
+}

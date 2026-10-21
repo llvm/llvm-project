@@ -51,6 +51,18 @@ add_header_library(
 )
 
 add_header_library(
+  sched_get_priority_max
+  HDRS
+    sched_get_priority_max.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_get_priority_min
   HDRS
     sched_get_priority_min.h
@@ -655,6 +667,19 @@ add_header_library(
 )
 
 add_header_library(
+  pipe2
+  HDRS
+    pipe2.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.include.sys_syscall
+)
+
+add_header_library(
   posix_fadvise
   HDRS
     posix_fadvise.h
@@ -938,6 +963,32 @@ add_header_library(
   setuid
   HDRS
     setuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setresgid
+  HDRS
+    setresgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setresuid
+  HDRS
+    setresuid.h
   DEPENDS
     libc.hdr.types.uid_t
     libc.include.sys_syscall

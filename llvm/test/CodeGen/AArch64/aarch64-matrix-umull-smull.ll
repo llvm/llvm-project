@@ -585,8 +585,7 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
-; CHECK-SD-NEXT:    mov w8, wzr
-; CHECK-SD-NEXT:    mov w0, w8
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB5_4: // %vector.ph
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
@@ -760,8 +759,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    mov x8, xzr
 ; CHECK-SD-NEXT:    b .LBB6_13
 ; CHECK-SD-NEXT:  .LBB6_3:
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:    mov x0, x8
+; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB6_4: // %vector.main.loop.iter.check
 ; CHECK-SD-NEXT:    cmp w2, #16
@@ -933,8 +931,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-GI-NEXT:    mov x0, x8
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB6_7:
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:    mov x0, x8
+; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB6_8: // %vec.epilog.iter.check
 ; CHECK-GI-NEXT:    cbz x8, .LBB6_12
