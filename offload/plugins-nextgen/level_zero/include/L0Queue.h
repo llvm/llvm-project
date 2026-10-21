@@ -51,6 +51,7 @@ public:
   LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
   void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
 
+  /// Underlying immediate command list, or null if the queue is not active.
   ze_command_list_handle_t getZeCmdList() const {
     return CmdList ? CmdList->getCmdList() : nullptr;
   }

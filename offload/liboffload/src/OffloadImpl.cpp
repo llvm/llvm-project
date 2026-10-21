@@ -589,6 +589,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
     return Info.write<uint64_t>(Device->Device->getMaxGridSize());
 
+  case OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativePlatformHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+
   default:
     break;
   }

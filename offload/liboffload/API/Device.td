@@ -87,6 +87,9 @@ def ol_device_info_t : Enum {
                   "The backend-native handle of the device, reinterpreted as "
                   "a void pointer. The actual type of the handle is backend "
                   "dependent">,
+       TaggedEtor<"NATIVE_PLATFORM_HANDLE", "void *",
+                  "The backend-native handle of the platform this device "
+                  "belongs to, reinterpreted as a void pointer">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);
