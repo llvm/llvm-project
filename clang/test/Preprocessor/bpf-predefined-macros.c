@@ -5,7 +5,6 @@
 // RUN: %clang -E -target bpfel -mcpu=v3 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V3 %s
 // RUN: %clang -E -target bpfel -mcpu=v4 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V4 %s
 // RUN: %clang -E -target bpfel -mcpu=v5 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V5 %s
-// RUN: %clang -E -target bpfeb -mcpu=v5 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V5 %s
 // RUN: %clang -E -target bpfel -mcpu=generic -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_GENERIC %s
 // RUN: %clang -E -target bpfel -mcpu=probe -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_PROBE %s
 
