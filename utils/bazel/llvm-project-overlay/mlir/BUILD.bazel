@@ -10121,6 +10121,7 @@ cc_library(
         ":MemRefTransformOps",
         ":NVGPUTransformOps",
         ":NVVMToLLVM",
+        ":OpenACCAllExtensions",
         ":OpenMPToLLVM",
         ":PtrToLLVM",
         ":ROCDLToLLVMIRTranslation",
