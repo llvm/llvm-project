@@ -1075,14 +1075,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // depending on which of these groups the frame index applies to.
   // The following calculates the correct offset knowing the number of callee
   // saved registers spilt by the two methods.
-  if (int LibCallRegs = getLibCallID(MF, MFI.getCalleeSavedInfo()) + 1) {
-    // Calculate the size of the frame managed by the libcall. The stack
-    // alignment of these libcalls should be the same as how we set it in
-    // getABIStackAlignment.
-    unsigned LibCallFrameSize =
-        alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
-    RVFI->setLibCallStackSize(LibCallFrameSize);
-
+  if (unsigned LibCallFrameSize = RVFI->getLibCallStackSize()) {
     if (NeedsDwarfCFI) {
       CFIBuilder.buildDefCFAOffset(LibCallFrameSize);
       for (const CalleeSavedInfo &CS : getPushOrLibCallsSavedInfo(MF, CSI))
@@ -2481,9 +2474,11 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     if (int64_t PushSize = RVFI->getRVPushStackSize())
       MFI.CreateFixedSpillStackObject(PushSize, -PushSize - QCIOffset);
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
-    int64_t LibCallFrameSize =
+    unsigned LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
-    MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);
+    RVFI->setLibCallStackSize(LibCallFrameSize);
+    MFI.CreateFixedSpillStackObject(
+        LibCallFrameSize, -static_cast<int64_t>(LibCallFrameSize));
   }
 
   return true;

@@ -4,10 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+save-restore %s -o - | FileCheck %s --check-prefixes=RV64V
 
 ; This tests the combination of save/restore libcalls with RVV stack objects.
-
-; FIXME: There is a bug which caused RVV spills to potentially overlap with
-; other frame objects because the size of the libcall saves is not being taken
-; into account.
+; This was written to catch a bug which caused RVV spills to potentially overlap
+; with other frame objects because the size of the libcall saves was not being
+; taken into account.
 
 declare void @g()
 
@@ -23,10 +22,10 @@ define <vscale x 4 x i32> @a(<vscale x 4 x i32> %a) {
 ; RV32V-NEXT:    slli a0, a0, 1
 ; RV32V-NEXT:    sub sp, sp, a0
 ; RV32V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
-; RV32V-NEXT:    addi a0, sp, 32
+; RV32V-NEXT:    addi a0, sp, 16
 ; RV32V-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV32V-NEXT:    call g
-; RV32V-NEXT:    addi a0, sp, 32
+; RV32V-NEXT:    addi a0, sp, 16
 ; RV32V-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; RV32V-NEXT:    csrr a0, vlenb
 ; RV32V-NEXT:    slli a0, a0, 1
@@ -47,10 +46,10 @@ define <vscale x 4 x i32> @a(<vscale x 4 x i32> %a) {
 ; RV64V-NEXT:    slli a0, a0, 1
 ; RV64V-NEXT:    sub sp, sp, a0
 ; RV64V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
-; RV64V-NEXT:    addi a0, sp, 32
+; RV64V-NEXT:    addi a0, sp, 16
 ; RV64V-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV64V-NEXT:    call g
-; RV64V-NEXT:    addi a0, sp, 32
+; RV64V-NEXT:    addi a0, sp, 16
 ; RV64V-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; RV64V-NEXT:    csrr a0, vlenb
 ; RV64V-NEXT:    slli a0, a0, 1
