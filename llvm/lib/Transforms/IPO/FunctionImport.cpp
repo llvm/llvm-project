@@ -408,7 +408,8 @@ class GlobalsImporter final {
     const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
     if (GVS == DefinedGVSummaries.end())
       return true;
-    // A local definition in another module cannot satisfy this reference.
+    // A local definition in the destination module cannot satisfy a reference
+    // from a different module.
     if (shouldSkipLocalInAnotherModule(GVS->second, VI.getSummaryList().size(),
                                        ReferencingModule))
       return true;
