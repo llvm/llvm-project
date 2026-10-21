@@ -8888,11 +8888,8 @@ static void genMaddShf(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MUL->getOperand(1).getReg();
-  bool Src0IsKill = MUL->getOperand(1).isKill();
   Register SrcReg1 = MUL->getOperand(2).getReg();
-  bool Src1IsKill = MUL->getOperand(2).isKill();
   Register ShiftedReg = Root.getOperand(2).getReg();
-  bool ShiftedIsKill = Root.getOperand(2).isKill();
 
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
@@ -8931,7 +8928,7 @@ static void genMaddShf(MachineFunction &MF, MachineRegisterInfo &MRI,
   Register ShiftReg = MRI.createVirtualRegister(RC);
   MachineInstrBuilder MIB1 =
       BuildMI(MF, MIMetadata(Root), TII->get(BFMOpc), ShiftReg)
-          .addReg(ShiftedReg, getKillRegState(ShiftedIsKill))
+          .addReg(ShiftedReg)
           .addImm(ImmR)
           .addImm(ImmS);
   InstrIdxForVirtReg.insert(std::make_pair(ShiftReg, InsInstrs.size()));
@@ -8942,9 +8939,9 @@ static void genMaddShf(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB2 =
       BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
-          .addReg(ShiftReg, getKillRegState(true))
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
+          .addReg(ShiftReg)
           .setMIFlags(Flags);
 
   InsInstrs.push_back(MIB2);

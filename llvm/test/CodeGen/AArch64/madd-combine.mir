@@ -15,7 +15,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY1]], 2, 31
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY]], [[COPY2]], killed [[SBFMWri]]
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY]], [[COPY2]], [[SBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:gpr32 = COPY $w2
@@ -40,7 +40,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 4, 31
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], killed [[UBFMWri]]
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], [[UBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:gpr32 = COPY $w2
@@ -65,7 +65,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[COPY1]], 2, 63
-    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = nsw MADDXrrr [[COPY]], [[COPY2]], killed [[SBFMXri]]
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = nsw MADDXrrr [[COPY]], [[COPY2]], [[SBFMXri]]
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %2:gpr64 = COPY $x2
@@ -119,7 +119,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 29, 28
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], killed [[UBFMWri]]
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], [[UBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:gpr32 = COPY $w2
@@ -144,7 +144,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 20, 19
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], killed [[UBFMWri]]
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], [[UBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:gpr32 = COPY $w2
@@ -169,7 +169,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY1]], 52, 51
-    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[COPY]], [[COPY2]], killed [[UBFMXri]]
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[COPY]], [[COPY2]], [[UBFMXri]]
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %2:gpr64 = COPY $x2
@@ -196,7 +196,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[UDIVWr:%[0-9]+]]:gpr32 = UDIVWr [[COPY3]], [[COPY]]
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY2]], 29, 28
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], killed [[UDIVWr]], killed [[UBFMWri]]
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[UDIVWr]], [[UBFMWri]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %3:gpr32 = COPY $w3
