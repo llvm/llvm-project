@@ -10472,14 +10472,20 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
   return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
 }
 
+namespace {
+struct SPAddSubImmEncoding {
+  unsigned Opcode;
+  int64_t Imm;
+  int64_t Shift;
+};
+} // namespace
+
 /// If \p MI is an ADD/SUBXri that reads SP but does not write SP (e.g.
 /// "add x0, sp, #48"), try to adjust its signed byte offset by \p Delta and
-/// re-encode the result. On success, returns the new opcode, immediate, and
-/// shift. Returns false if \p MI is not a matching instruction or the adjusted
-/// offset is not encodable.
-static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
-                              unsigned &OutOpcode, int64_t &OutImm,
-                              int64_t &OutShift) {
+/// re-encode the result. Returns std::nullopt if \p MI is not a matching
+/// instruction or the adjusted offset is not encodable.
+static std::optional<SPAddSubImmEncoding>
+adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta) {
   bool IsSub;
   switch (MI.getOpcode()) {
   case AArch64::ADDXri:
@@ -10489,7 +10495,7 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
     IsSub = true;
     break;
   default:
-    return false;
+    return std::nullopt;
   }
 
   assert(MI.getNumExplicitOperands() == 4 && "Wrong number of operands");
@@ -10497,13 +10503,13 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
          MI.getOperand(3).isImm() && "Unexpected add/sub immediate operands");
 
   if (MI.getOperand(0).getReg() == AArch64::SP)
-    return false;
+    return std::nullopt;
   if (MI.getOperand(1).getReg() != AArch64::SP)
-    return false;
+    return std::nullopt;
 
   // The immediate operand can also be a symbol which we cannot fix up.
   if (!MI.getOperand(2).isImm())
-    return false;
+    return std::nullopt;
 
   // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
   // which can only be 12.
@@ -10521,19 +10527,21 @@ static bool adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta,
   int64_t NewOffset = Offset + Delta;
   int64_t AbsOffset = std::abs(NewOffset);
 
+  SPAddSubImmEncoding Enc;
+  Enc.Opcode = NewOffset < 0 ? AArch64::SUBXri : AArch64::ADDXri;
+
   // Try to encode as a 12-bit immediate with shift=0 first.
   if (AbsOffset <= 0xfff) {
-    OutImm = AbsOffset;
-    OutShift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
+    Enc.Imm = AbsOffset;
+    Enc.Shift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
   } else if ((AbsOffset & 0xfff) == 0 && (AbsOffset >> 12) <= 0xfff) {
-    OutImm = AbsOffset >> 12;
-    OutShift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 12);
+    Enc.Imm = AbsOffset >> 12;
+    Enc.Shift = AArch64_AM::getShifterImm(AArch64_AM::LSL, 12);
   } else {
-    return false;
+    return std::nullopt;
   }
 
-  OutOpcode = NewOffset < 0 ? AArch64::SUBXri : AArch64::ADDXri;
-  return true;
+  return Enc;
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -10790,12 +10798,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       return true;
     }
 
-    {
-      unsigned NewOpcode;
-      int64_t NewImm, NewShift;
-      if (adjustSPAddSubImm(MI, 16, NewOpcode, NewImm, NewShift))
-        return true;
-    }
+    if (adjustSPAddSubImm(MI, 16))
+      return true;
 
     // FIXME: Add handling for other SP-based address calculations that can be
     // adjusted after outlining.
@@ -11353,14 +11357,10 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
       continue;
     }
 
-    {
-      unsigned NewOpcode;
-      int64_t NewImm, NewShift;
-      if (adjustSPAddSubImm(MI, 16, NewOpcode, NewImm, NewShift)) {
-        MI.setDesc(get(NewOpcode));
-        MI.getOperand(2).setImm(NewImm);
-        MI.getOperand(3).setImm(NewShift);
-      }
+    if (auto Enc = adjustSPAddSubImm(MI, 16)) {
+      MI.setDesc(get(Enc->Opcode));
+      MI.getOperand(2).setImm(Enc->Imm);
+      MI.getOperand(3).setImm(Enc->Shift);
     }
   }
 }
