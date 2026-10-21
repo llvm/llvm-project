@@ -87,6 +87,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -4380,6 +4381,11 @@ class ACCCGToGPU : public acc::impl::ACCCGToGPUBase<ACCCGToGPU> {
 public:
   using acc::impl::ACCCGToGPUBase<ACCCGToGPU>::ACCCGToGPUBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCCGToGPUBase<ACCCGToGPU>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *context = funcOp->getContext();
@@ -4427,5 +4433,4 @@ public:
     }
   }
 };
-
 } // namespace

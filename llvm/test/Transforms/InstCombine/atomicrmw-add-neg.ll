@@ -97,7 +97,7 @@ define i64 @fn_add_of_two_vars(ptr %p, i64 %a, i64 %b) {
 define i32 @fn_sub_const(ptr %a) {
 ; CHECK-LABEL: define i32 @fn_sub_const(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[A]], i32 5 syncscope("agent") acq_rel, align 4
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[A]], i32 -5 syncscope("agent") acq_rel, align 4
 ; CHECK-NEXT:    ret i32 [[OLD]]
 ;
   %old = atomicrmw sub ptr %a, i32 5 syncscope("agent") acq_rel
@@ -107,7 +107,7 @@ define i32 @fn_sub_const(ptr %a) {
 define i64 @fn_sub_const_int_min(ptr %a) {
 ; CHECK-LABEL: define i64 @fn_sub_const_int_min(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[A]], i64 -9223372036854775808 monotonic, align 8
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[A]], i64 -9223372036854775808 monotonic, align 8
 ; CHECK-NEXT:    ret i64 [[OLD]]
 ;
   %old = atomicrmw sub ptr %a, i64 -9223372036854775808 monotonic
@@ -139,7 +139,7 @@ define i64 @neg_fn_sub_constexpr(ptr %a) {
 define <2 x i32> @fn_sub_const_vec(ptr %a) {
 ; CHECK-LABEL: define <2 x i32> @fn_sub_const_vec(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[A]], <2 x i32> splat (i32 5) monotonic, align 8
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[A]], <2 x i32> splat (i32 -5) monotonic, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[OLD]]
 ;
   %old = atomicrmw sub ptr %a, <2 x i32> splat (i32 5) monotonic
@@ -149,7 +149,7 @@ define <2 x i32> @fn_sub_const_vec(ptr %a) {
 define <2 x i64> @fn_sub_const_vec_elementwise(ptr %a) {
 ; CHECK-LABEL: define <2 x i64> @fn_sub_const_vec_elementwise(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw elementwise sub ptr [[A]], <2 x i64> <i64 1, i64 -9223372036854775808> monotonic, align 16
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw elementwise add ptr [[A]], <2 x i64> <i64 -1, i64 -9223372036854775808> monotonic, align 16
 ; CHECK-NEXT:    ret <2 x i64> [[OLD]]
 ;
   %old = atomicrmw elementwise sub ptr %a, <2 x i64> <i64 1, i64 -9223372036854775808> monotonic
@@ -159,7 +159,7 @@ define <2 x i64> @fn_sub_const_vec_elementwise(ptr %a) {
 define <2 x i32> @fn_sub_const_vec_poison(ptr %a) {
 ; CHECK-LABEL: define <2 x i32> @fn_sub_const_vec_poison(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[A]], <2 x i32> <i32 1, i32 poison> monotonic, align 8
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[A]], <2 x i32> <i32 -1, i32 poison> monotonic, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[OLD]]
 ;
   %old = atomicrmw sub ptr %a, <2 x i32> <i32 1, i32 poison> monotonic

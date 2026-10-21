@@ -254,7 +254,7 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
     std::optional<int64_t> cst = getConstantIntValue(ofr);
     tensorShape.push_back(cst.has_value() ? *cst : ShapedType::kDynamic);
     if (!cst.has_value())
-      dynDims.push_back(ofr.dyn_cast<Value>());
+      dynDims.push_back(dyn_cast<Value>(ofr));
   }
   // TODO: use dispatchIndexOpFoldResults(paddedShape, dynDims, paddedShape);
 

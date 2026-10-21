@@ -21,7 +21,7 @@ Documents](#clangir-design-documents) for in-depth coverage of CIR's design.
 Until [#221291](https://github.com/llvm/llvm-project/pull/221291) lands, you
 need a build of Clang with CIR enabled. [Configure
 LLVM](https://llvm.org/docs/CMake.html) with
-`-DLLVM_ENABLE_PROJECTS="clang;mlir"` and `-DCLANG_ENABLE_CIR=ON`.
+`-DLLVM_ENABLE_PROJECTS="clang"` and `-DCLANG_ENABLE_CIR=ON`.
 :::
 
 ClangIR is an MLIR dialect tightly integrated with Clang: it lives in the

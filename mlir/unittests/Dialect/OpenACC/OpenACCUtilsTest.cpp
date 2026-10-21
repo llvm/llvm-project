@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -40,6 +41,9 @@ static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
 class OpenACCUtilsTest : public ::testing::Test {
 protected:
   OpenACCUtilsTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context
         .loadDialect<acc::OpenACCDialect, arith::ArithDialect, gpu::GPUDialect,
                      memref::MemRefDialect, func::FuncDialect>();

@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple aarch64-windows -filetype asm -o - < %s | FileCheck %s
 ; RUN: llc -mtriple aarch64-windows -filetype asm -o - -fast-isel %s | FileCheck %s --check-prefix=FISEL
 ; RUN: llc -mtriple aarch64-windows -filetype asm -o - -global-isel -global-isel-abort=0 %s | FileCheck %s
+; RUN: llc -mtriple aarch64-unknown-uefi -filetype asm -o - < %s | FileCheck %s
+; RUN: llc -mtriple aarch64-unknown-uefi -filetype asm -o - -fast-isel %s | FileCheck %s --check-prefix=FISEL
+; RUN: llc -mtriple aarch64-unknown-uefi -filetype asm -o - -global-isel -global-isel-abort=0 %s | FileCheck %s
 
 define void @func() nounwind {
 ; CHECK-LABEL: func:
