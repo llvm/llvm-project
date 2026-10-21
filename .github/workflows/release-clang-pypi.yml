@@ -1,0 +1,122 @@
+name: Release Clang Python Bindings
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+    paths:
+      - .github/workflows/release-clang-pypi.yml
+      - 'clang/bindings/python/**'
+
+  pull_request:
+    paths:
+      - .github/workflows/release-clang-pypi.yml
+      - 'clang/bindings/python/**'
+
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: true
+        type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
+
+jobs:
+  build-release:
+    if: github.repository_owner == 'llvm' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Compute checkout parameters
+        id: checkout-params
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.release-version }}" ]; then
+            echo "ref=llvmorg-${{ inputs.release-version }}" >> $GITHUB_OUTPUT
+            echo "fetch-depth=1" >> $GITHUB_OUTPUT
+          else
+            echo "ref=" >> $GITHUB_OUTPUT
+            echo "fetch-depth=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout LLVM
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ steps.checkout-params.outputs.ref }}
+          fetch-depth: ${{ steps.checkout-params.outputs.fetch-depth }}
+          sparse-checkout: |
+            clang/bindings/python/
+            llvm/utils/git/requirements_packaging.txt
+
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.14'
+
+      - name: Install Packaging Dependencies
+        shell: bash
+        working-directory: llvm/utils/git
+        run: |
+          pip install --require-hashes -r requirements_packaging.txt
+
+      - name: Package Clang Python Bindings
+        working-directory: clang/bindings/python
+        run: |
+          python -m build
+          python -m twine check dist/*
+
+      - name: Upload Clang Python Bindings package dist artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: python-package-dist
+          path: clang/bindings/python/dist
+
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-24.04
+    needs: build-release
+    # Only run this job in the main llvm repository when a release version is provided.
+    if: github.repository_owner == 'llvm' && inputs.release-version != ''
+    environment:
+      name: pypi
+      url: https://pypi.org/p/clang
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - name: Checkout github-upload-release.py for permissions check
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: llvm/utils/release/github-upload-release.py
+
+      - name: Install dependencies for github-upload-release.py
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-github
+
+      - name: Check Permissions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+
+      - name: Download Python package dist artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+            name: python-package-dist
+            path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
