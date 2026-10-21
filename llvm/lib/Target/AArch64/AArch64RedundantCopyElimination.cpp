@@ -51,10 +51,12 @@
 //===----------------------------------------------------------------------===//
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -485,6 +487,47 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
   return true;
 }
 
+// Removes blocks no longer reachable from the entry block or any other root.
+static bool removeUnreachableBlocks(MachineFunction &MF) {
+  auto IsRoot = [](const MachineBasicBlock &MBB) {
+    return MBB.isEntryBlock() || MBB.isEHPad() ||
+           MBB.isMachineBlockAddressTaken();
+  };
+
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  for (MachineBasicBlock &MBB : MF) {
+    if (!IsRoot(MBB))
+      continue;
+    for (MachineBasicBlock *BB : depth_first_ext(&MBB, Reachable))
+      (void)BB;
+  }
+
+  SmallVector<MachineBasicBlock *, 4> Dead;
+  for (MachineBasicBlock &MBB : MF)
+    if (!Reachable.contains(&MBB))
+      Dead.push_back(&MBB);
+  if (Dead.empty())
+    return false;
+
+  // Detach all dead blocks first, so no live block keeps a pointer to an
+  // erased predecessor.
+  for (MachineBasicBlock *MBB : Dead)
+    while (!MBB->succ_empty())
+      MBB->removeSuccessor(MBB->succ_begin());
+
+  MachineJumpTableInfo *JTI = MF.getJumpTableInfo();
+  for (MachineBasicBlock *MBB : Dead) {
+    for (MachineInstr &MI : MBB->instrs())
+      if (MI.shouldUpdateAdditionalCallInfo())
+        MF.eraseAdditionalCallInfo(&MI);
+    if (JTI)
+      JTI->RemoveMBBFromJumpTables(MBB);
+    MBB->eraseFromParent();
+  }
+  MF.RenumberBlocks();
+  return true;
+}
+
 bool AArch64RedundantCopyEliminationImpl::run(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
@@ -497,12 +540,14 @@ bool AArch64RedundantCopyEliminationImpl::run(MachineFunction &MF) {
   OptBBClobberedRegs.init(*TRI);
   OptBBUsedRegs.init(*TRI);
 
-  bool Changed = false;
+  bool Changed = false, ChangedTerm = false;
   for (MachineBasicBlock &MBB : MF) {
-    Changed |= optimizeTerminators(&MBB, TII);
+    ChangedTerm |= optimizeTerminators(&MBB, TII);
     Changed |= optimizeBlock(&MBB);
   }
-  return Changed;
+  if (ChangedTerm)
+    removeUnreachableBlocks(MF);
+  return Changed || ChangedTerm;
 }
 
 bool AArch64RedundantCopyEliminationLegacy::runOnMachineFunction(

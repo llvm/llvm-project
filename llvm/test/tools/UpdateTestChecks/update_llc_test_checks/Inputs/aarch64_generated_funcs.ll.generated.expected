@@ -2,14 +2,14 @@
 ; RUN: llc -enable-machine-outliner -mtriple=aarch64-unknown-linux < %s | FileCheck %s
 @x = dso_local global i32 0, align 4
 
-define dso_local i32 @check_boundaries() #0 {
+define dso_local i32 @check_boundaries(i32 %p) #0 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
   store i32 0, i32* %1, align 4
-  store i32 0, i32* %2, align 4
+  store i32 %p, i32* %2, align 4
   %6 = load i32, i32* %2, align 4
   %7 = icmp ne i32 %6, 0
   br i1 %7, label %9, label %8
@@ -72,20 +72,24 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    stur xzr, [x29, #-8]
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
-; CHECK-NEXT:    ldur w8, [x29, #-8]
-; CHECK-NEXT:    cbz w8, .LBB0_2
+; CHECK-NEXT:    stp w0, wzr, [x29, #-8]
+; CHECK-NEXT:    cbz w0, .LBB0_3
 ; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    str w8, [sp, #16]
-; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:    ldur w8, [x29, #-8]
+; CHECK-NEXT:    cbz w8, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
+; CHECK-NEXT:    str w8, [sp, #16]
+; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
+; CHECK-NEXT:    ldur w8, [x29, #-8]
+; CHECK-NEXT:    cbnz w8, .LBB0_2
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
@@ -128,6 +132,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ;
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    stp w9, w8, [x29, #-12]
 ; CHECK-NEXT:    mov w9, #3 // =0x3
 ; CHECK-NEXT:    mov w8, #4 // =0x4
