@@ -555,6 +555,12 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   if (MF.hasEHFunclets())
     return true;
 
+  // Unwinding out of a callee that pops stack arguments we reserved in our
+  // prologue leaves SP higher than our unwind info expects, so on Windows we
+  // must be found via the frame pointer instead.
+  if (AFI.hasWinCallToCalleePopFunction())
+    return true;
+
   // When the stack guard is mixed with the frame pointer, a dedicated FP is
   // required so the guard value remains stable in the presence of dynamic
   // stack allocations (e.g. _alloca on MSVCRT).
@@ -2308,6 +2314,28 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
           .setMIFlags(MachineInstr::FrameDestroy);
     }
 
+    if (KeepLR && RGI.Type == RegGroupInfo::GPR &&
+        (Reg1 == AArch64::LR || Reg2 == AArch64::LR)) {
+      // Windows pairs LR with the register before it, which is the one at the
+      // lower address, so restore just that register. The pair has not been
+      // swapped yet at this point, so that register is Reg1.
+      if (!RGI.isPaired())
+        continue;
+      assert(Reg2 == AArch64::LR && "Expected LR to be the second of the pair");
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXui));
+      MIB.addReg(Reg1, getDefRegState(true));
+      MIB.addReg(AArch64::SP)
+          .addImm(RGI.Offset)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, RGI.FrameIdx),
+          MachineMemOperand::MOLoad, 8, Align(8)));
+      if (NeedsWinCFI)
+        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
+      continue;
+    }
+
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
     if (RGI.isPaired() && RGI.isScalable()) {
       assert(!isTargetWindows(MF) &&
@@ -2325,26 +2353,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
                   RGI.getNumRegs()) // [sp, #imm*size*vscale]
                                     // where size*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
-    } else if (KeepLR && RPI.Type == RegPairInfo::GPR &&
-               (Reg1 == AArch64::LR || Reg2 == AArch64::LR)) {
-      // Windows pairs LR with the register before it, which is the one at the
-      // lower address (and so the first operand of the ldp once the pair is
-      // swapped, as below), so restore just that register. The pair has not
-      // been swapped yet at this point, so that register is Reg1.
-      if (!RGI.isPaired())
-        continue;
-      assert(Reg2 == AArch64::LR && "Expected LR to be the second of the pair");
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXui));
-      MIB.addReg(Reg1, getDefRegState(true));
-      MIB.addReg(AArch64::SP)
-          .addImm(RGI.Offset)
-          .setMIFlag(MachineInstr::FrameDestroy);
-      MIB.addMemOperand(MF.getMachineMemOperand(
-          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
-          MachineMemOperand::MOLoad, 8, Align(8)));
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
     } else {
       // Windows unwind codes require consecutive registers if registers are
       // paired.  Make the switch here, so that the code below will save (x,x+1)
