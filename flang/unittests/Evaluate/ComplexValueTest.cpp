@@ -25,10 +25,6 @@ INSTANTIATE_TEST_SUITE_P(ComplexValueKind, ComplexValueKind,
       return "COMPLEX_" + std::to_string(info.param);
     });
 
-//===----------------------------------------------------------------------===//
-// Helpers
-//===----------------------------------------------------------------------===//
-
 RealValue Real(int kind, std::int64_t n) {
   return RealValue::FromInteger(kind, IntegerValue{8, n}).value;
 }

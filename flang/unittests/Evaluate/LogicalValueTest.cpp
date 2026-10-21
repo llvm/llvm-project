@@ -26,10 +26,6 @@ INSTANTIATE_TEST_SUITE_P(LogicalValueKind, LogicalValueKind,
       return "LOGICAL_" + std::to_string(info.param);
     });
 
-//===----------------------------------------------------------------------===//
-// Helpers
-//===----------------------------------------------------------------------===//
-
 static constexpr int KindPos(int kind) {
   constexpr auto &LogicalKinds{KindsByType<TypeCategory::Logical>::kinds};
   for (std::size_t i{0}; i < std::size(LogicalKinds); ++i) {
