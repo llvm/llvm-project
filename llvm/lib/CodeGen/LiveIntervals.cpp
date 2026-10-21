@@ -671,9 +671,16 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, Register Reg) {
       if ((LaneMask & SR.LaneMask).none())
         continue;
     }
-    // We only need to visit each instruction once.
+    // We only need to visit each use slot once.
     MachineInstr *UseMI = MO.getParent();
-    SlotIndex Idx = getInstructionIndex(*UseMI).getRegSlot();
+    // A use tied to an early-clobber def is read at the early-clobber slot.
+    // Using the normal register slot can extend a subrange beyond the main
+    // range when rebuilding it below.
+    unsigned DefIdx;
+    bool IsEarlyClobber =
+        UseMI->isRegTiedToDefOperand(MO.getOperandNo(), &DefIdx) &&
+        UseMI->getOperand(DefIdx).isEarlyClobber();
+    SlotIndex Idx = getInstructionIndex(*UseMI).getRegSlot(IsEarlyClobber);
     if (Idx == LastIdx)
       continue;
     LastIdx = Idx;
