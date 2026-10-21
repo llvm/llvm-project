@@ -45,6 +45,10 @@ def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
 
+// Type profile for indirect call / tail call nodes carrying a zicfilp landing pad label.
+def SDT_RISCVCallLpad : SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
+                                              SDTCisVT<1, i32>]>;
+
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
@@ -194,6 +198,18 @@ def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair",
                                                          SDTCisVT<1, XLenVT>,
                                                          SDTCisVT<2, GPRPairVT>]>>;
 
+// indirect call and tail call SDNodes so the pseudoCALLIndirect and pseudoTAILIndirect 
+// instrs can carry a landing pad label value for the zicfilp extension
+def riscv_call_indirect : SDNode<"RISCVISD::CALL_INDIRECT", SDT_RISCVCallLpad, 
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic, SDNPOutGlue]>;
+def riscv_tail_indirect : SDNode<"RISCVISD::TAIL_INDIRECT", SDT_RISCVCallLpad, 
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic, SDNPOutGlue]>;
+
+// SDNode used for indirect llvm.experimental.patchpoint/stackmap
+// calls. Shares SDT_RISCVCall's operand shape with riscv_sw_guarded_call.
+def riscv_patchpoint_call_indirect
+    : SDNode<"RISCVISD::PATCHPOINT_CALL_INDIRECT", SDT_RISCVCall,
+             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -1934,15 +1950,25 @@ let Predicates = [HasStdExtSmrnmi] in
 def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
+
 // Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
 // in cf-protection-branch. The NonX7 constraint is applied unconditionally
 // to simplify the code at a negligible performance cost.
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
-                                [(riscv_call GPRJALRNonX7:$rs1)]>,
-                         PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, i32imm:$lpad_label),
+                                [(riscv_call_indirect GPRJALRNonX7:$rs1, timm:$lpad_label)]>;
+
 def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_call GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+
+// Dedicated pseudo for indirect llvm.experimental.patchpoint/stackmap calls.
+// Their target is rewritten in-place by a JIT after codegen, so no static
+// signature label applies; the JIT-controlled target is treated like a
+// software-guarded branch and is routed through x7, not labeled.
+def PseudoPatchpointCALLIndirect : Pseudo<(outs), (ins GPRX7:$rs1),
+                                          [(riscv_patchpoint_call_indirect GPRX7:$rs1)]>,
+                                   PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+
 }
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1980,9 +2006,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
 // Use GPRTCNonX7 to avoid X7 which is reserved for landing pad labels
 // in cf-protection-branch. The NonX7 constraint is applied unconditionally
 // to simplify the code at a negligible performance cost.
-def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
-                                [(riscv_tail GPRTCNonX7:$rs1)]>,
-                         PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTCNonX7:$rs1, i32imm:$lpad_label),
+                                [(riscv_tail_indirect GPRTCNonX7:$rs1, timm:$lpad_label)]>;
+
 def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_tail GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;

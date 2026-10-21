@@ -98,6 +98,17 @@ private:
   /// Whether the function has cf-protection-branch module flag set.
   bool CFProtectionBranch = false;
 
+  /// intended Zicfilp Label Scheme for this function and the frontend-supplied
+  /// labels.
+  RISCVCFI::ZicfilpLabelSchemeKind ZicfilpLabelScheme =
+      RISCVCFI::ZicfilpLabelSchemeKind::Invalid;
+  uint32_t ZicfilpFnEntryLabel = 0;
+  uint32_t ZicfilpLocalJumpLabel = 0;
+  bool NeedsFunctionEntryLpad = false;
+
+  /// Cached from STI->getCLOpts().landing_pad_label at construction time
+  std::optional<uint32_t> PreferredLandingPadLabel;
+
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
 
@@ -248,6 +259,30 @@ public:
   void setDynamicAllocation() { HasDynamicAllocation = true; }
 
   bool hasCFProtectionBranch() const { return CFProtectionBranch; }
+
+  RISCVCFI::ZicfilpLabelSchemeKind getZicfilpLabelScheme() const {
+    return ZicfilpLabelScheme;
+  }
+  uint32_t getZicfilpFnEntryLabel() const { return ZicfilpFnEntryLabel; }
+  uint32_t getZicfilpLocalJumpLabel() const { return ZicfilpLocalJumpLabel; }
+  bool getNeedsFunctionEntryLpad() const { return NeedsFunctionEntryLpad; }
+
+  /// validate Label against Scheme, using -riscv-landing-pad-label=<val> when
+  /// applicable. Fatal-errors on Scheme <-> given Label mismatch.
+  static uint32_t resolveZicfilpLabel(uint32_t Label,
+                                      RISCVCFI::ZicfilpLabelSchemeKind Scheme,
+                                      std::optional<uint32_t> PreferredLabel);
+
+  static uint32_t generateRawFnEntryLabel(const Function &F);
+  static uint32_t generateRawLocalJumpLabel(uint32_t RawFnEntryLabel);
+
+  /// Extract and validate the RISC-V zicfilp call-site landing-pad label from
+  /// CB's !riscv_lpad_label metadata.
+  uint32_t getZicfilpCallSiteLabel(const CallBase *CB) const;
+
+  /// Extract and validate the RISC-V zicfilp landing-pad label operand from
+  /// an indirect call/tail-call pseudo. Does not validate against Label Scheme.
+  static uint32_t resolveZicfilpIndirectCallLabel(const MachineInstr &MI);
 };
 
 } // end namespace llvm
