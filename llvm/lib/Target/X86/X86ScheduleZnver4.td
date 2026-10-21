@@ -332,10 +332,10 @@ def Zn4FPAES01 : ProcResGroup<[Zn4FPAES0, Zn4FPAES1]>;
 // *CLM*
 def Zn4FPCLM01 : ProcResGroup<[Zn4FPCLM0, Zn4FPCLM1]>;
 
-// An issue limit the masked gathers and scatters share. A gather run alongside
-// a scatter costs close to the sum of the two, which is what the mixed-stream
-// runs measured. Other microcoded instructions were not measured and are not
-// charged here.
+// An issue limit the masked gathers and scatters share. The model charges a
+// mixed stream the full sum of the two standalone costs. Hardware runs one at
+// 79 to 94% of that sum, so the model is 6 to 27% pessimistic there. Other
+// microcoded instructions were not measured and are not charged here.
 // Not a pipe. It is 4 wide so round(tput * 4) keeps quarter-cycle resolution.
 // Throughput is the maximum over resources, so the physical columns set a
 // floor this one cannot go under.
@@ -530,13 +530,21 @@ defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLa
 // Records distinguish three dimensions: element count, data width, and index
 // width. Per-pipe occupancy comes from uops.info. Zn4UcodeGS holds the rest.
 //
-// Measured on Znver4 with every mask bit set and a fixed unit-stride index, so
-// every instruction touches one L1-resident cache line. One kxnor writes the
-// mask before each, which is what llc emits. With kmovd instead, the short
+// Measured on Znver4 with every mask bit set. The throughput fit uses a fixed
+// unit-stride index, so every instruction touches one L1-resident cache line.
+// Latency predates that fit and comes from a unit-stride walk over an
+// L2-resident buffer, so the two columns do not share a condition. The gather
+// latencies still land at or under the uops.info Zen 4 index-to-destination
+// records, so the walk did not inflate them. One kxnor writes the mask before
+// each, which is what llc emits. With kmovd instead, the short
 // shapes measure higher and the two four-lane rows stop agreeing. The AVX2
 // gathers below take their mask in a vector register, not a mask register, so
-// neither form applies there. A vmovdqa refills it instead. Scatter latency is
-// estimated, since a scatter has no data result to time.
+// neither form applies there. A vmovdqa refills it instead. A scatter has no
+// data result to time, so its latency is estimated, and that estimate is what
+// delays a later read of the mask it rewrites. The uops.info mask-to-mask
+// record does not replace it: that chain feeds the rewritten mask back in, and
+// a scatter clears the bits it stores through, so every instruction after the
+// first runs fully masked off.
 //
 // VPGATHERDDZ, VPGATHERDDY and VPSCATTERDDZ let their FP1/FP2 uops use FP3 as
 // well, since llvm-mca does not terminate on a write holding both Zn4FPU01 and
