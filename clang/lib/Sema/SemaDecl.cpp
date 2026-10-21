@@ -21521,6 +21521,40 @@ void Sema::ActOnPragmaWeakAlias(IdentifierInfo* Name,
   }
 }
 
+/// Whether the definition \p FD is only handed to the ASTConsumer, and thus to
+/// CodeGen, once it is used, so that it is never emitted unless it is used.
+static bool isEmittedOnlyIfUsed(const FunctionDecl *FD) {
+  // Lambda call operators are defined by their lambda expressions, which are
+  // not top-level declarations. Implicit functions and functions defaulted on
+  // their first declaration are defined when they are used.
+  return isLambdaMethod(FD) || FD->isImplicit() ||
+         FD->getCanonicalDecl()->isDefaulted();
+}
+
+/// Whether CodeGen emits \p FD regardless of whether it is used.
+static bool isEmittedRegardlessOfUses(const Sema &S, const FunctionDecl *FD,
+                                      bool Final) {
+  const FunctionDecl *Def = FD->getDefinition();
+  if (!Def || Def->hasSkippedBody())
+    return false;
+  // Immediate functions are never emitted. Whether an immediate-escalating
+  // function is immediate is only known once its body is complete, so leave
+  // that to the check at the end of the translation unit.
+  const LangOptions &LangOpts = S.getLangOpts();
+  if (Def->isImmediateFunction() ||
+      (!Final && LangOpts.CPlusPlus20 && Def->isImmediateEscalating()))
+    return false;
+  if (isEmittedOnlyIfUsed(Def))
+    return false;
+  // An available externally definition is only emitted to be inlined into its
+  // callers.
+  ASTContext &Ctx = S.getASTContext();
+  if (Ctx.GetGVALinkageForFunction(Def) == GVA_AvailableExternally)
+    return false;
+  return Ctx.shouldEmitCUDADecl(Def) &&
+         (LangOpts.EmitAllDecls || Ctx.DeclMustBeEmitted(Def));
+}
+
 Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
@@ -21594,7 +21628,8 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
         (T == CUDAFunctionTarget::Device || T == CUDAFunctionTarget::Global))
       return FunctionEmissionStatus::CUDADiscarded;
 
-    if (IsEmittedForExternalSymbol())
+    if (IsEmittedForExternalSymbol() ||
+        isEmittedRegardlessOfUses(*this, FD, Final))
       return FunctionEmissionStatus::Emitted;
   }
 

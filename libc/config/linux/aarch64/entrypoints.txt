@@ -299,6 +299,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/file.h entrypoints
     libc.src.sys.file.flock
 
@@ -1160,6 +1163,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # net/if.h entrypoints
     libc.src.net.if_indextoname
     libc.src.net.if_nametoindex
+
+    # netinet/ether.h entrypoints
+    libc.src.netinet.ether.ether_ntoa
+    libc.src.netinet.ether.ether_ntoa_r
 
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
