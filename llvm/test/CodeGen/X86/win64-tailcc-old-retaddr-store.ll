@@ -11,7 +11,8 @@ declare tailcc void @g(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 
 define tailcc void @f(i64 %a, i64 %b) {
 ; CHECK-LABEL: name: f
-; CHECK:         MOV64mr %fixed-stack.{{[0-9]+}}, 1, $noreg, 0, $noreg, %[[V:[0-9]+]] :: (volatile store (s64) into %fixed-stack.{{[0-9]+}})
+; CHECK:         %[[V:[0-9]+]]:gr64 = COPY %{{[0-9]+}}
+; CHECK-NEXT:    MOV64mr %fixed-stack.{{[0-9]+}}, 1, $noreg, 0, $noreg, %[[V]] :: (volatile store (s64) into %fixed-stack.{{[0-9]+}})
 ; CHECK:         TCRETURNdi64 @g, {{.*}}implicit %[[V]]
 ;
 ; LINUX-LABEL: name: f
