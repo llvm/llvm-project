@@ -218,13 +218,6 @@ def SPIRV_CopyMemorySizedOp : SPIRV_Op<"CopyMemorySized", [DeclareOpInterfaceMet
     ```
   }];
 
-  let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[]>,
-    Capability<[SPIRV_C_Addresses]>
-  ];
-
   let arguments = (ins
     SPIRV_AnyPtr:$target,
     SPIRV_AnyPtr:$source,
