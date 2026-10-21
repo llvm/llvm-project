@@ -184,3 +184,17 @@ define amdgpu_kernel void @store_as4_2xdouble(ptr addrspace(4) %p, <2 x double> 
   store <2 x double> %v, ptr addrspace(4) %p
   ret void
 }
+
+define amdgpu_kernel void @store_as4_v4i64(ptr addrspace(4) %dst, <4 x i64> %value) {
+; CHECK-LABEL: store_as4_v4i64:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <4 x i64> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as6_v4i64(<4 x i64> %value) {
+; CHECK-LABEL: store_as6_v4i64:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <4 x i64> %value, ptr addrspace(6) inttoptr (i32 4096 to ptr addrspace(6)), align 32
+  ret void
+}
