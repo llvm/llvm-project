@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-unknown < %s | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefixes=DARWIN %s
 ; RUN: llc -mtriple=aarch64-pc-windows < %s | FileCheck --check-prefixes=WIN %s
+; RUN: llc -mtriple=aarch64-unknown-uefi < %s | FileCheck --check-prefixes=WIN %s
 
 ; This test checks various function call behaviors between preserve_none and
 ; normal calling conventions.

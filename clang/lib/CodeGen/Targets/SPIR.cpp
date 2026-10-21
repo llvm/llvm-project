@@ -11,6 +11,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 
@@ -184,11 +185,6 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // The logic is same as in DefaultABIInfo with an exception on the kernel
   // arguments handling.
   llvm::CallingConv::ID CC = FI.getCallingConvention();
-
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
 
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
@@ -491,19 +487,7 @@ llvm::Constant *
 CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
                                             llvm::PointerType *PT,
                                             QualType QT) const {
-  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
-                  ? LangAS::Default
-                  : QT->getPointeeType().getAddressSpace();
-  unsigned ASAsInt = static_cast<unsigned>(AS);
-  unsigned FirstTargetASAsInt =
-      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
-  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
-  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
-  // function pointers to/from the generic AS.
-  bool IsFunctionPtrAS =
-      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
-      AS == LangAS::opencl_constant || IsFunctionPtrAS)
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(QT, CGM.getTriple()))
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
@@ -599,10 +583,8 @@ void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
   if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
-      RMW->getType()->isFloatTy())
-    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

@@ -1617,7 +1617,8 @@ static void determineDefaultLoopParMode(
     Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
-    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes) {
+    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes,
+    bool kernelsDoConcurrentIsIndependent) {
   auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
     return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
            mlir::acc::DeviceType::None;
@@ -1671,8 +1672,15 @@ static void determineDefaultLoopParMode(
     // auto clause.
     assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
            "Expected kernels construct");
-    autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        builder.getContext(), mlir::acc::DeviceType::None));
+    // By default, preserve the DO CONCURRENT iteration-independence assertion
+    // when honoring an associated OpenACC kernels loop. An explicit
+    // seq/auto/independent clause has already returned above.
+    if (kernelsDoConcurrentIsIndependent)
+      independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+    else
+      autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
   }
 }
 
@@ -2089,13 +2097,26 @@ void AccDataMap::remapDataOperandSymbols(
   builder.setInsertionPointToStart(&region.front());
   llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 8> seenSymbols;
   mlir::IRMapping mapper;
+
+  // A symbol may appear on several data clauses, and their results are not
+  // necessarily interchangeable. A reduction clause describes the accumulator
+  // itself through its own bounds and recipe, so prefer its result over a
+  // mapping of the enclosing variable. Otherwise keep the first result.
+  llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::Value> remapTarget;
   for (auto [value, symbol] : symbols) {
-    // If a symbol appears on several data clause, just map it to the first
-    // result (all data operations results for a symbol are pointing same
-    // memory, so it does not matter which one is used).
+    auto [it, inserted] = remapTarget.try_emplace(&symbol.get(), value);
+    if (inserted)
+      continue;
+    if (mlir::acc::getDataClause(value.getDefiningOp()) ==
+        mlir::acc::DataClause::acc_reduction)
+      it->second = value;
+  }
+
+  for (auto [value, symbol] : symbols) {
     if (seenSymbols.contains(&symbol.get()))
       continue;
     seenSymbols.insert(&symbol.get());
+    value = remapTarget.lookup(&symbol.get());
     mlir::Location loc = value.getLoc();
     // When a common block appears in a directive, remap its members.
     // Note: this will instantiate all common block members even if they are not
@@ -2684,8 +2705,12 @@ static mlir::acc::LoopOp createLoopOp(
         builder.getDenseI32ArrayAttr(tileOperandsSegments));
 
   // Determine the loop's default par mode - either seq, independent, or auto.
+  const bool kernelsDoConcurrentIsIndependent =
+      outerDoConstruct.IsDoConcurrent() &&
+      converter.getLoweringOptions().getOpenACCKernelsDoConcurrentIndependent();
   determineDefaultLoopParMode(converter, loopOp, seqDeviceTypes,
-                              independentDeviceTypes, autoDeviceTypes);
+                              independentDeviceTypes, autoDeviceTypes,
+                              kernelsDoConcurrentIsIndependent);
   if (!seqDeviceTypes.empty())
     loopOp.setSeqAttr(builder.getArrayAttr(seqDeviceTypes));
   if (!independentDeviceTypes.empty())

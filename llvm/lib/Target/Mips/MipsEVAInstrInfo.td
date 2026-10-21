@@ -52,10 +52,9 @@ class PREFE_ENC   : SPECIAL3_EVA_LOAD_STORE_FM<OPCODE6_PREFE>;
 // Memory Load/Store EVA descriptions
 class LOAD_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins mem_simm9:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, mem_simm9:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeMemEVA";
   bit canFoldAsLoad = 1;
   string BaseOpcode = instr_asm;
   bit mayLoad = 1;
@@ -69,10 +68,9 @@ class LWE_DESC  : LOAD_EVA_DESC_BASE<"lwe",  GPR32Opnd>;
 
 class STORE_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins GPROpnd:$rt, mem_simm9:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins GPROpnd:$rt, MemBase:$base, mem_simm9:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeMemEVA";
   string BaseOpcode = instr_asm;
   bit mayStore = 1;
 }
@@ -84,10 +82,9 @@ class SWE_DESC : STORE_EVA_DESC_BASE<"swe", GPR32Opnd>;
 // Load/Store Left/Right EVA descriptions
 class LOAD_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins mem_simm9:$addr, GPROpnd:$src);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, mem_simm9:$offset, GPROpnd:$src);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeMemEVA";
   string BaseOpcode = instr_asm;
   string Constraints = "$src = $rt";
   bit canFoldAsLoad = 1;
@@ -100,10 +97,9 @@ class LWRE_DESC : LOAD_LEFT_RIGHT_EVA_DESC_BASE<"lwre", GPR32Opnd>;
 
 class STORE_LEFT_RIGHT_EVA_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins GPROpnd:$rt, mem_simm9:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins GPROpnd:$rt, MemBase:$base, mem_simm9:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeMemEVA";
   string BaseOpcode = instr_asm;
   bit mayLoad = 0;
   bit mayStore = 1;
@@ -115,25 +111,23 @@ class SWRE_DESC : STORE_LEFT_RIGHT_EVA_DESC_BASE<"swre", GPR32Opnd>;
 // Load-linked EVA, Store-conditional EVA descriptions
 class LLE_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins mem_simm9:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, mem_simm9:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   string BaseOpcode = instr_asm;
   bit mayLoad = 1;
-  string DecoderMethod = "DecodeMemEVA";
 }
 
 class LLE_DESC : LLE_DESC_BASE<"lle", GPR32Opnd>;
 
 class SCE_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
   dag OutOperandList = (outs GPROpnd:$dst);
-  dag InOperandList = (ins GPROpnd:$rt, mem_simm9:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
+  dag InOperandList = (ins GPROpnd:$rt, MemBase:$base, mem_simm9:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   list<dag> Pattern = [];
   string BaseOpcode = instr_asm;
   bit mayStore = 1;
   string Constraints = "$rt = $dst";
-  string DecoderMethod = "DecodeMemEVA";
 }
 
 class SCE_DESC : SCE_DESC_BASE<"sce", GPR32Opnd>;
@@ -154,11 +148,10 @@ class CACHEE_DESC_BASE<string instr_asm, Operand MemOpnd> {
   bits<5> rt = hint;
 
   dag OutOperandList = (outs);
-  dag InOperandList = (ins  MemOpnd:$addr, uimm5:$hint);
-  string AsmString = !strconcat(instr_asm, "\t$hint, $addr");
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset, uimm5:$hint);
+  string AsmString = !strconcat(instr_asm, "\t$hint, ${offset}(${base})");
   list<dag> Pattern = [];
   string BaseOpcode = instr_asm;
-  string DecoderMethod = "DecodeCacheeOp_CacheOpR6";
 }
 
 class CACHEE_DESC  : CACHEE_DESC_BASE<"cachee", mem_simm9>;

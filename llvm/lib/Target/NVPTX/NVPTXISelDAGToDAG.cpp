@@ -130,6 +130,7 @@ private:
   bool SelectSETP_BF16X2(SDNode *N);
   bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
+  void PostprocessISelDAG() override;
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
@@ -545,7 +546,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
+      NVPTX::SETP_f16x2, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
        CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
@@ -556,7 +557,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
   SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP =
-      CurDAG->getMachineNode(NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+      CurDAG->getMachineNode(NVPTX::SETP_bf16x2, DL, MVT::i1, MVT::i1,
                              {N->getOperand(0), N->getOperand(1), PTXCmpMode});
   ReplaceNode(N, SetP);
   return true;
@@ -625,6 +626,64 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
 
   return true;
 }
+
+static std::optional<unsigned> getI16ExtractIndex(const SDNode *N) {
+  if (!N->isMachineOpcode() || N->use_empty())
+    return std::nullopt;
+  switch (N->getMachineOpcode()) {
+  default:
+    return std::nullopt;
+  case NVPTX::CVT_u16_u32:
+    if (N->getConstantOperandVal(1) != NVPTX::PTXCvtMode::NONE)
+      return std::nullopt;
+    [[fallthrough]];
+  case NVPTX::I32toI16L:
+  case NVPTX::I32toI16L_Sink:
+    return 0;
+  case NVPTX::I32toI16H:
+  case NVPTX::I32toI16H_Sink:
+    return 1;
+  }
+}
+
+// Merge scalar truncations and individual vector extracts after selection, when
+// bitcasts no longer hide that they extract the same 16-bit halves.
+static void mergeI16Unpacks(SelectionDAG &DAG) {
+  auto Position = DAG.allnodes_begin();
+  // Replacing extracts can CSE downstream nodes, including the next node.
+  SelectionDAG::DAGNodeDeletedListener Listener(
+      DAG, [&](SDNode *Deleted, SDNode *) {
+        if (Position == SelectionDAG::allnodes_iterator(Deleted))
+          ++Position;
+      });
+
+  bool Changed = false;
+  while (Position != DAG.allnodes_end()) {
+    SDNode *N = &*Position++;
+    if (!getI16ExtractIndex(N))
+      continue;
+    SDValue Word = N->getOperand(0);
+    SmallVector<SDValue, 2> Halves[2];
+    for (SDNode *User : Word->users()) {
+      std::optional<unsigned> Index = getI16ExtractIndex(User);
+      if (Index && User->getOperand(0) == Word)
+        Halves[*Index].emplace_back(User, 0);
+    }
+    if (Halves[0].empty() || Halves[1].empty())
+      continue;
+
+    SDNode *Scatter = DAG.getMachineNode(NVPTX::I32toV2I16, SDLoc(N), MVT::i16,
+                                         MVT::i16, Word);
+    for (unsigned Index : {0u, 1u})
+      for (SDValue V : Halves[Index])
+        DAG.ReplaceAllUsesOfValueWith(V, SDValue(Scatter, Index));
+    Changed = true;
+  }
+  if (Changed)
+    DAG.RemoveDeadNodes();
+}
+
+void NVPTXDAGToDAGISel::PostprocessISelDAG() { mergeI16Unpacks(*CurDAG); }
 
 NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   auto AS =
@@ -1773,6 +1832,11 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 /// SelectBFE - Look for instruction sequences that can be made more efficient
 /// by using the 'bfe' (bit-field extract) PTX instruction
 bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
+  // BFE is not a native instruction starting with sm_70. Let ptxas see the
+  // original operations so it can optimize them for the target architecture.
+  if (Subtarget->hasFeature(NVPTX::SM70))
+    return false;
+
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -1816,7 +1880,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
         uint64_t StartVal = StartConst->getZExtValue();
         // How many "good" bits do we have left?  "good" is defined here as bits
         // that exist in the original value, not shifted in.
-        int64_t GoodBits = Start.getValueSizeInBits() - StartVal;
+        int64_t GoodBits = Val.getValueSizeInBits() - StartVal;
         if (NumBits > GoodBits) {
           // Do not handle the case where bits have been shifted in. In theory
           // we could handle this, but the cost is likely higher than just
@@ -1953,31 +2017,13 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     // No can do...
     return false;
   }
-
-
-  unsigned Opc;
-  // For the BFE operations we form here from "and" and "srl", always use the
-  // unsigned variants.
-  if (Val.getValueType() == MVT::i32) {
-    if (IsSigned) {
-      Opc = NVPTX::BFE_S32rii;
-    } else {
-      Opc = NVPTX::BFE_U32rii;
-    }
-  } else if (Val.getValueType() == MVT::i64) {
-    if (IsSigned) {
-      Opc = NVPTX::BFE_S64rii;
-    } else {
-      Opc = NVPTX::BFE_U64rii;
-    }
-  } else {
-    // We cannot handle this type
+  // Only 32-bit BFE has a native SASS implementation.
+  if (Val.getValueType() != MVT::i32)
     return false;
-  }
 
-  SDValue Ops[] = {
-    Val, Start, Len
-  };
+  unsigned Opc = IsSigned ? NVPTX::BFE_S32 : NVPTX::BFE_U32;
+
+  SDValue Ops[] = {selectPossiblyImm(Val), Start, Len};
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops));
   return true;
@@ -2034,7 +2080,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     llvm_unreachable("Unexpected opcode");
   };
 
-  int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
+  int Opcode = IsVec ? NVPTX::FMA_BF16x2 : NVPTX::FMA_BF16;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
   return true;
@@ -2096,8 +2142,8 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   // tmp = V2I64toI128 {lo, hi};
   // CopyToReg Dst, tmp;
   SDValue Dst = N->getOperand(1);
-  SDValue Lo = N->getOperand(2);
-  SDValue Hi = N->getOperand(3);
+  SDValue Lo = selectPossiblyImm(N->getOperand(2));
+  SDValue Hi = selectPossiblyImm(N->getOperand(3));
 
   SDLoc DL(N);
   SDNode *Mov =
@@ -2372,7 +2418,8 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   const SDValue Chain = N->getOperand(0);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SmallVector<SDValue, 10> Ops{Base, Offset};
-  Ops.append(N->op_begin() + 2, N->op_end());
+  for (const SDValue &Operand : drop_begin(N->op_values(), 2))
+    Ops.push_back(selectPossiblyImm(Operand));
   Ops.append({getI32Imm(getMemOrder(AN), dl), getI32Imm(getAtomicScope(AN), dl),
               getI32Imm(getAddrSpace(AN), dl)});
 

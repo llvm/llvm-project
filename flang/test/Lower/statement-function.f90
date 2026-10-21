@@ -9,8 +9,8 @@ real function test_stmt_0(x)
   real :: x, func, arg
   func(arg) = arg + 0.123456
 
-  ! CHECK: %[[res:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_stmt_0Etest_stmt_0"}
-  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %arg0 {{.*}} {uniq_name = "_QFtest_stmt_0Ex"}
+  ! CHECK: %[[res:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_stmt_0Etest_stmt_0")
+  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %arg0 {{.*}} uniq_name("_QFtest_stmt_0Ex")
   ! CHECK: %[[x:.*]] = fir.load %[[xdecl]]#0
   ! CHECK: %[[cst:.*]] = arith.constant 1.234560e-01
   ! CHECK: %[[eval:.*]] = arith.addf %[[x]], %[[cst]]
@@ -44,14 +44,14 @@ real function test_stmt_1(x, a)
   real :: res1, res2
   func1(arg1) = a + foo(arg1)
   func2(arg2) = func1(arg2) + b
-  ! CHECK-DAG: %[[adecl:.*]]:2 = hlfir.declare %arg1 {{.*}} {uniq_name = "_QFtest_stmt_1Ea"}
+  ! CHECK-DAG: %[[adecl:.*]]:2 = hlfir.declare %arg1 {{.*}} uniq_name("_QFtest_stmt_1Ea")
   ! CHECK-DAG: %[[bmem:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eb"}>
-  ! CHECK-DAG: %[[bdecl:.*]]:2 = hlfir.declare %[[bmem]] {uniq_name = "_QFtest_stmt_1Eb"}
+  ! CHECK-DAG: %[[bdecl:.*]]:2 = hlfir.declare %[[bmem]] uniq_name("_QFtest_stmt_1Eb")
   ! CHECK-DAG: %[[res1:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eres1"}>
-  ! CHECK-DAG: %[[res1decl:.*]]:2 = hlfir.declare %[[res1]] {uniq_name = "_QFtest_stmt_1Eres1"}
+  ! CHECK-DAG: %[[res1decl:.*]]:2 = hlfir.declare %[[res1]] uniq_name("_QFtest_stmt_1Eres1")
   ! CHECK-DAG: %[[res2:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eres2"}>
-  ! CHECK-DAG: %[[res2decl:.*]]:2 = hlfir.declare %[[res2]] {uniq_name = "_QFtest_stmt_1Eres2"}
-  ! CHECK-DAG: %[[xdecl:.*]]:2 = hlfir.declare %arg0 {{.*}} {uniq_name = "_QFtest_stmt_1Ex"}
+  ! CHECK-DAG: %[[res2decl:.*]]:2 = hlfir.declare %[[res2]] uniq_name("_QFtest_stmt_1Eres2")
+  ! CHECK-DAG: %[[xdecl:.*]]:2 = hlfir.declare %arg0 {{.*}} uniq_name("_QFtest_stmt_1Ex")
 
   b = 5
 
@@ -100,8 +100,8 @@ integer function test_stmt_character(c, j)
   character(10) :: c, argc
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %arg0 :
   ! CHECK: %[[ref:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[ref]] typeparams %{{.*}} {{.*}} {uniq_name = "_QFtest_stmt_characterEc"}
-  ! CHECK: %[[funcArgcDecl:.*]]:2 = hlfir.declare %[[cdecl]]#0 typeparams %{{.*}} {uniq_name = "_QFtest_stmt_characterFfuncEargc"}
+  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[ref]] typeparams %{{.*}} {{.*}} uniq_name("_QFtest_stmt_characterEc")
+  ! CHECK: %[[funcArgcDecl:.*]]:2 = hlfir.declare %[[cdecl]]#0 typeparams %{{.*}} uniq_name("_QFtest_stmt_characterFfuncEargc")
 
   func(argc, argj) = len_trim(argc, 4) + argj
   ! CHECK: addi %{{.*}}, %{{.*}} : i
@@ -119,11 +119,11 @@ integer function test_stmt_character_with_different_length(c)
   character(10) :: argc
   character(*) :: c
   ! CHECK: %[[unboxedC:.*]]:2 = fir.unboxchar %[[arg0]] :
-  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[unboxedC]]#0 typeparams %[[unboxedC]]#1 {{.*}} {uniq_name = "_QFtest_stmt_character_with_different_lengthEc"}
+  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[unboxedC]]#0 typeparams %[[unboxedC]]#1 {{.*}} uniq_name("_QFtest_stmt_character_with_different_lengthEc")
   ! CHECK: %[[unboxedArg:.*]]:2 = fir.unboxchar %[[cdecl]]#0 :
   ! CHECK: %[[ref:.*]] = fir.convert %[[unboxedArg]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
   ! CHECK: %[[c10:.*]] = arith.constant 10 : index
-  ! CHECK: %[[funcArgc:.*]]:2 = hlfir.declare %[[ref]] typeparams %[[c10]] {uniq_name = "_QFtest_stmt_character_with_different_lengthFfuncEargc"}
+  ! CHECK: %[[funcArgc:.*]]:2 = hlfir.declare %[[ref]] typeparams %[[c10]] uniq_name("_QFtest_stmt_character_with_different_lengthFfuncEargc")
   ! CHECK: %[[argc:.*]] = fir.emboxchar %[[funcArgc]]#0, %[[c10]]
   ! CHECK: fir.call @_QPifoo(%[[argc]]) {{.*}}: (!fir.boxchar<1>) -> i32
   func(argc) = ifoo(argc)
@@ -136,14 +136,14 @@ integer function test_stmt_character_with_different_length_2(c, n)
   integer :: func, ifoo
   character(n) :: argc
   character(*) :: c
-  ! CHECK: %[[ndecl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} {uniq_name = "_QFtest_stmt_character_with_different_length_2En"}
+  ! CHECK: %[[ndecl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} uniq_name("_QFtest_stmt_character_with_different_length_2En")
   ! CHECK: %[[unboxedC:.*]]:2 = fir.unboxchar %[[arg0]] :
-  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[unboxedC]]#0 typeparams %[[unboxedC]]#1 {{.*}} {uniq_name = "_QFtest_stmt_character_with_different_length_2Ec"}
+  ! CHECK: %[[cdecl:.*]]:2 = hlfir.declare %[[unboxedC]]#0 typeparams %[[unboxedC]]#1 {{.*}} uniq_name("_QFtest_stmt_character_with_different_length_2Ec")
   ! CHECK: %[[unboxedArg:.*]]:2 = fir.unboxchar %[[cdecl]]#0 :
   ! CHECK: %[[n:.*]] = fir.load %[[ndecl]]#0 : !fir.ref<i32>
   ! CHECK: %[[n_is_positive:.*]] = arith.cmpi sgt, %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[len:.*]] = arith.select %[[n_is_positive]], %[[n]], %c0{{.*}} : i32
-  ! CHECK: %[[funcArgc:.*]]:2 = hlfir.declare %[[unboxedArg]]#0 typeparams %[[len]] {uniq_name = "_QFtest_stmt_character_with_different_length_2FfuncEargc"} : (!fir.ref<!fir.char<1,?>>, i32) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  ! CHECK: %[[funcArgc:.*]]:2 = hlfir.declare %[[unboxedArg]]#0 typeparams %[[len]] uniq_name("_QFtest_stmt_character_with_different_length_2FfuncEargc") : (!fir.ref<!fir.char<1,?>>, i32) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   ! CHECK: fir.call @_QPifoo(%[[funcArgc]]#0) {{.*}}: (!fir.boxchar<1>) -> i32
   func(argc) = ifoo(argc)
   test_stmt_character = func(c)
@@ -171,7 +171,7 @@ end subroutine
 ! CHECK: %[[argDecl:.*]]:2 = hlfir.declare %[[arg]] typeparams %[[c10]]
 ! CHECK: %[[castArg:.*]] = fir.convert %[[argDecl]]#0 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,4>>
 ! CHECK: %[[c4:.*]] = arith.constant 4 : index
-! CHECK: %[[fctArg:.*]]:2 = hlfir.declare %[[castArg]] typeparams %[[c4]] {uniq_name = "_QFtruncate_argFstmt_fctEarg"}
+! CHECK: %[[fctArg:.*]]:2 = hlfir.declare %[[castArg]] typeparams %[[c4]] uniq_name("_QFtruncate_argFstmt_fctEarg")
 ! CHECK: %[[c10_i64:.*]] = arith.constant 10 : i64
 ! CHECK: %[[setlen:.*]] = hlfir.set_length %[[fctArg]]#0 len %[[c10_i64]] : (!fir.ref<!fir.char<1,4>>, i64) -> !hlfir.expr<!fir.char<1,10>>
 ! CHECK: %[[assoc:.*]]:3 = hlfir.associate %[[setlen]] typeparams %[[c10_i64]] {{.*}} : (!hlfir.expr<!fir.char<1,10>>, i64) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>, i1)

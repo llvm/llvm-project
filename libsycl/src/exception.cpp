@@ -10,19 +10,21 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 
+#include <utility>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-namespace detail {
+namespace {
 class SYCLCategory : public std::error_category {
 public:
   const char *name() const noexcept override { return "sycl"; }
   std::string message(int) const override { return "SYCL Error"; }
 };
-} // namespace detail
+} // namespace
 
 // Free functions
 const std::error_category &sycl_category() noexcept {
-  static const detail::SYCLCategory SYCLCategoryObj;
+  static const SYCLCategory SYCLCategoryObj;
   return SYCLCategoryObj;
 }
 
@@ -33,8 +35,8 @@ std::error_code make_error_code(sycl::errc e) noexcept {
 // Exception methods implementation
 exception::exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
                      const char *WhatArg)
-    : MMessage(std::make_shared<std::string>(WhatArg)), MContext(SharedPtrCtx),
-      MErrC(EC) {}
+    : MMessage(std::make_shared<std::string>(WhatArg)),
+      MContext(std::move(SharedPtrCtx)), MErrC(EC) {}
 
 exception::~exception() = default;
 

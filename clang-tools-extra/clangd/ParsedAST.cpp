@@ -544,6 +544,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
 
   auto Action = std::make_unique<ClangdFrontendAction>();
+  for (const auto &L : ASTListeners)
+    L->beforeBeginSourceFile(*Clang);
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
     elog("BeginSourceFile() failed when building AST for {0}",

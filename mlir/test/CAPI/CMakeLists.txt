@@ -64,6 +64,20 @@ _add_capi_test_executable(mlir-capi-llvm-test
     MLIRCAPIRegisterEverything
 )
 
+_add_capi_test_executable(mlir-capi-openacc-test
+  openacc.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIFunc
+    MLIRCAPIOpenACC
+)
+
+_add_capi_test_executable(mlir-capi-remarks-test
+  remarks.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+)
+
 _add_capi_test_executable(mlir-capi-pass-test
   pass.c
   LINK_LIBS PRIVATE

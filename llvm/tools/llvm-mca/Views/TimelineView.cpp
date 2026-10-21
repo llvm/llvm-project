@@ -19,10 +19,12 @@ namespace mca {
 
 TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
                            llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
-                           unsigned Cycles)
+                           unsigned Cycles, float ReservationStationScaleFactor)
     : InstructionView(sti, Printer, S), CurrentCycle(0),
       MaxCycle(Cycles == 0 ? std::numeric_limits<unsigned>::max() : Cycles),
-      LastCycle(0), WaitTime(S.size()), UsedBuffer(S.size()) {
+      LastCycle(0),
+      ReservationStationScaleFactor(ReservationStationScaleFactor),
+      WaitTime(S.size()), UsedBuffer(S.size()) {
   unsigned NumInstructions = getSource().size();
   assert(Iterations && "Invalid number of iterations specified!");
   NumInstructions *= Iterations;
@@ -46,7 +48,8 @@ void TimelineView::onReservedBuffers(const InstRef &IR,
   const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
   std::pair<unsigned, int> BufferInfo = {0, -1};
   for (const unsigned Buffer : Buffers) {
-    const int BufferSize = SM.getResourceBufferSize(Buffer);
+    const int BufferSize =
+        SM.getResourceBufferSize(Buffer, ReservationStationScaleFactor);
     if (!BufferInfo.first || BufferInfo.second > BufferSize) {
       BufferInfo.first = Buffer;
       BufferInfo.second = BufferSize;

@@ -21,7 +21,7 @@ program OmpAtomicUpdate
 !CHECK: %[[VAL_D_ADDRESS:.*]] = fir.address_of(@_QFEd) : !fir.ref<i32>
 !CHECK: %[[VAL_D_DECLARE:.*]]:2 = hlfir.declare %[[VAL_D_ADDRESS]] {{.}}
 !CHECK: %[[VAL_G_ADDRESS:.*]] = fir.alloca complex<f32> <{bindc_name = "g", uniq_name = "_QFEg"}>
-!CHECK: %[[VAL_G_DECLARE:.*]]:2 = hlfir.declare %[[VAL_G_ADDRESS]] {uniq_name = "_QFEg"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!CHECK: %[[VAL_G_DECLARE:.*]]:2 = hlfir.declare %[[VAL_G_ADDRESS]] uniq_name("_QFEg") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !CHECK: %[[VAL_i1_ALLOCA:.*]] = fir.alloca i8 <{bindc_name = "i1", uniq_name = "_QFEi1"}>
 !CHECK: %[[VAL_i1_DECLARE:.*]]:2 = hlfir.declare %[[VAL_i1_ALLOCA]] {{.*}}
 !CHECK: %[[VAL_c5:.*]] = arith.constant 5 : index
@@ -30,13 +30,13 @@ program OmpAtomicUpdate
 !CHECK: %[[VAL_K_DECLARE:.*]]:2 = hlfir.declare %[[VAL_K_ALLOCA]](%[[VAL_K_SHAPED]]) {{.*}}
 
 !CHECK: %[[VAL_W_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "w", uniq_name = "_QFEw"}>
-!CHECK: %[[VAL_W_DECLARE:.*]]:2 = hlfir.declare %[[VAL_W_ALLOCA]] {uniq_name = "_QFEw"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[VAL_W_DECLARE:.*]]:2 = hlfir.declare %[[VAL_W_ALLOCA]] uniq_name("_QFEw") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFEx"}>
-!CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X_ALLOCA]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X_ALLOCA]] uniq_name("_QFEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[VAL_Y_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
-!CHECK: %[[VAL_Y_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Y_ALLOCA]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[VAL_Y_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Y_ALLOCA]] uniq_name("_QFEy") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[VAL_Z_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
-!CHECK: %[[VAL_Z_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Z_ALLOCA]] {uniq_name = "_QFEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[VAL_Z_DECLARE:.*]]:2 = hlfir.declare %[[VAL_Z_ALLOCA]] uniq_name("_QFEz") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     integer :: w, x, y, z
     integer, pointer :: a, b
     integer, target :: c, d
@@ -204,7 +204,7 @@ program OmpAtomicUpdate
 !CHECK: %[[UNDEF:.*]] = fir.undefined complex<f32>
 !CHECK: %[[IDX1:.*]] = fir.insert_value %[[UNDEF]], %[[CVT]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 !CHECK: %[[IDX2:.*]] = fir.insert_value %[[IDX1]], %[[CST]], [1 : index] : (complex<f32>, f32) -> complex<f32>
-!CHECK: %[[ADD:.*]] = fir.addc %[[IDX2]], %[[LOAD]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+!CHECK: %[[ADD:.*]] = fir.addc %[[IDX2]], %[[LOAD]] fastmath(contract) : complex<f32>
 !CHECK: %[[EXT:.*]] = fir.extract_value %[[ADD]], [0 : index] : (complex<f32>) -> f32
 !CHECK: %[[RESULT:.*]] = fir.convert %[[EXT]] : (f32) -> i32
 !CHECK: omp.yield(%[[RESULT]] : i32)

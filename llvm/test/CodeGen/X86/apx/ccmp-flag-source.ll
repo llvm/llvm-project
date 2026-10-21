@@ -6,20 +6,18 @@
 ; flags, (X & Y) == 0 an AND's, (0 - X) == Y is rewritten into (X + Y) == 0 and
 ; uses an ADD's, and an equality can reuse an already existing XOR.
 ;
-; A non-root leaf of a CCMP chain rebuilds a conditional comparison out of that
-; flag source's operands. Only a subtract (CCMP) and an AND (CTEST) can be made
-; conditional, so a flag source that computes something else must not have its
-; operands reused.
+; Only a subtract (CCMP) and an AND (CTEST) can be made conditional, so a
+; non-root leaf of a CCMP chain is built from the comparison's own operands
+; rather than from a flag source's: a comparison with zero becomes a test of the
+; value, and an AND compared with zero a test of the AND's operands.
 
 ; A comparison of an OR with zero, in a non-root slot of the chain.
-;
-; FIXME: Miscompiled. The OR's result is never tested, the CCMP compares x with
-; y instead.
 define i32 @or_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v) {
 ; CHECK-LABEL: or_vs_zero_interior:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    ccmpll {dfv=} %esi, %edi
+; CHECK-NEXT:    ctestll {dfv=} %edi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -33,18 +31,13 @@ define i32 @or_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v) {
 
 ; Same, with a flag source that has a second use and a condition that reads SF
 ; rather than ZF.
-;
-; FIXME: Miscompiled. The ADD's result is never tested, the CCMP compares x with
-; y instead.
 define i32 @stored_add_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, ptr %s) {
 ; CHECK-LABEL: stored_add_vs_zero_interior:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    movl %eax, (%r9)
+; CHECK-NEXT:    addl %esi, %edi
+; CHECK-NEXT:    movl %edi, (%r9)
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    ccmpll {dfv=sf} %esi, %edi
+; CHECK-NEXT:    ctestll {dfv=sf} %edi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovnsl %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -62,9 +55,8 @@ define i32 @stored_add_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, 
 define i32 @and_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v) {
 ; CHECK-LABEL: and_vs_zero_interior:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    ccmpll {dfv=} $0, %edi
+; CHECK-NEXT:    ctestll {dfv=} %esi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -77,9 +69,8 @@ define i32 @and_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v) {
 }
 
 ; An AND whose result is used elsewhere, so EmitCmp reuses the AND's own EFLAGS
-; rather than emitting a test.
-;
-; FIXME: Miscompiled. The CCMP subtracts x and y instead of testing them.
+; rather than emitting a test. The AND is still tested conditionally, from its
+; operands.
 define i32 @stored_and_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, ptr %s) {
 ; CHECK-LABEL: stored_and_vs_zero_interior:
 ; CHECK:       # %bb.0:
@@ -87,7 +78,7 @@ define i32 @stored_and_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, 
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    movl %eax, (%r9)
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    ccmpll {dfv=} %esi, %edi
+; CHECK-NEXT:    ctestll {dfv=} %esi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -105,11 +96,10 @@ define i32 @stored_and_vs_zero_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, 
 define i32 @eq_reuses_live_xor_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v, ptr %s) {
 ; CHECK-LABEL: eq_reuses_live_xor_interior:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    movl %eax, (%r9)
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    movl %edi, (%r9)
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    ccmpll {dfv=} %esi, %edi
+; CHECK-NEXT:    ctestll {dfv=} %edi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq
@@ -138,13 +128,12 @@ define i32 @eq_without_live_xor_interior(i32 %x, i32 %y, i32 %p, i32 %q, i32 %v)
   ret i32 %sel
 }
 
-; (0 - b) == c is rewritten by EmitCmp into (b + c) == 0.
-;
-; FIXME: Miscompiled. Neither the negation nor an addition is tested, the CCMP
-; compares b with c instead.
+; (0 - b) == c is rewritten by EmitCmp into (b + c) == 0, whose EFLAGS have no
+; conditional form. The original operands are compared instead.
 define i32 @neg_eq_interior(i32 %b, i32 %c, i32 %p, i32 %q, i32 %v) {
 ; CHECK-LABEL: neg_eq_interior:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    cmpl %ecx, %edx
 ; CHECK-NEXT:    ccmpll {dfv=} %esi, %edi
 ; CHECK-NEXT:    movl $-1, %eax

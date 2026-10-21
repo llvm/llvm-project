@@ -23,6 +23,7 @@ add_clang_library(MLIRCIRTargetLowering
   MLIRPass
   MLIRDLTIDialect
   MLIRCIR
+  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRLLVMDialect
 )

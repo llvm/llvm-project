@@ -1066,7 +1066,7 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call float @llvm.log.f32(float %fx)", 0},
       {true, "call float @llvm.log10.f32(float %fx)", 0},
       {true, "call float @llvm.log2.f32(float %fx)", 0},
-      {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
+      {true, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
       {false, "call float @llvm.fabs.f32(float %fx)", 0},
       {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.maxnum.f32(float %fx, float %fy)", 0},
@@ -1084,7 +1084,7 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call i64 @llvm.llround.f32(float %fx)", 0},
       {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
       {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
-      {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
+      {true, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
        0}};
 
   std::string AssemblyStr = AsmHead;
@@ -1918,6 +1918,23 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A5);
   expectKnownFPClass(~fcNan, std::nullopt, A6);
   expectKnownFPClass(fcPositive, false, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, FRemDemandRHSForSNaN) {
+  parseAssembly("define float @test(float nofpclass(snan) %lhs, "
+                "float nofpclass(snan) %rhs) {\n"
+                "  %A = frem float %lhs, %rhs\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass KnownSNan = computeKnownFPClass(A, M->getDataLayout(), fcSNan);
+  KnownFPClass KnownQNan = computeKnownFPClass(A, M->getDataLayout(), fcQNan);
+
+  EXPECT_TRUE(KnownSNan.isKnownNever(fcSNan));
+  EXPECT_FALSE(KnownSNan.isKnownNever(fcQNan));
+
+  EXPECT_TRUE(KnownQNan.isKnownNever(fcSNan));
+  EXPECT_FALSE(KnownQNan.isKnownNever(fcQNan));
 }
 
 TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
@@ -2963,7 +2980,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
-  IRBuilder<> Builder(Context);
+  IRBuilder<> Builder(M);
   Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
                                                       {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {});
@@ -3963,6 +3980,33 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     ConstantRange CR1 = computeConstantRange(X2, /*ForSigned=*/false, SQ);
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
+  }
+  {
+    // The range of the source should be preserved through zext/sext.
+    auto M = parseModule(R"(
+  define void @test(i8 range(i8 0, 6) %x, i8 range(i8 -3, 6) %y) {
+    %x.zext = zext i8 %x to i32
+    %x.sext = sext i8 %x to i32
+    %y.sext = sext i8 %y to i32
+    ret void
+  })");
+    Function *F = M->getFunction("test");
+    SimplifyQuery SQ(M->getDataLayout());
+
+    Instruction *XZExt = &findInstructionByName(F, "x.zext");
+    ConstantRange CR1 = computeConstantRange(XZExt, /*ForSigned=*/false, SQ);
+    EXPECT_EQ(0, CR1.getLower());
+    EXPECT_EQ(6, CR1.getUpper());
+
+    Instruction *XSExt = &findInstructionByName(F, "x.sext");
+    ConstantRange CR2 = computeConstantRange(XSExt, /*ForSigned=*/true, SQ);
+    EXPECT_EQ(0, CR2.getLower());
+    EXPECT_EQ(6, CR2.getUpper());
+
+    Instruction *YSExt = &findInstructionByName(F, "y.sext");
+    ConstantRange CR3 = computeConstantRange(YSExt, /*ForSigned=*/true, SQ);
+    EXPECT_EQ(-3, CR3.getSignedMin().getSExtValue());
+    EXPECT_EQ(5, CR3.getSignedMax().getSExtValue());
   }
 }
 

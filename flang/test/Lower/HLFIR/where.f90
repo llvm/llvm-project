@@ -43,8 +43,8 @@ subroutine where_construct()
   end where
 end subroutine
 ! CHECK-LABEL:   func.func @_QPwhere_construct() {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMwhere_defsEa"}
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMwhere_defsEb"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMwhere_defsEa") fortran_attrs<allocatable>
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMwhere_defsEb") fortran_attrs<allocatable>
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}Emask
 ! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}Ex
 ! CHECK:  %[[VAL_15:.*]]:2 = hlfir.declare {{.*}}Ey
@@ -76,7 +76,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}Ex
 ! CHECK:  hlfir.where {
-! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)
+! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)
 ! CHECK:    %[[VAL_6:.*]] = fir.call @_QPreturn_temporary_mask() fastmath<contract> : () -> !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK:    fir.save_result %[[VAL_6]] to %[[VAL_7]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:             %[[deref:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
@@ -87,7 +87,7 @@ end subroutine
 ! CHECK:    }
 ! CHECK:  } do {
 ! CHECK:    hlfir.region_assign {
-! CHECK:      %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK:      %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK:      %[[VAL_14:.*]] = fir.call @_QPreturn_temporary_array() fastmath<contract> : () -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:      fir.save_result %[[VAL_14]] to %[[VAL_15]]#0 : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:               %[[deref:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
