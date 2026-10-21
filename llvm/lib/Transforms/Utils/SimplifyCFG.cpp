@@ -5618,6 +5618,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     CondBrInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
     if (HasProfile)
       setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    else
+      setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
     if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
       NewBI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     // We don't need to update PHI nodes since we don't add any new edges.
@@ -5636,6 +5638,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
       for (auto &V : drop_begin(NewWeights))
         V = BranchWeights[0] / Values.size();
       setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*New, DEBUG_TYPE);
     }
 
     // Add all of the 'cases' to the switch instruction.
