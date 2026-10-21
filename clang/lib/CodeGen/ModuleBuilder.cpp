@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <functional>
 #include <memory>
 
 using namespace clang;
@@ -65,6 +66,10 @@ namespace {
     std::unique_ptr<llvm::Module> M;
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
+
+    // HLSL emission must observe the final translation-unit-wide Sema state.
+    bool DeferEmission = false;
+    SmallVector<std::function<void()>, 8> DeferredCallbacks;
 
     static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
                                             const CodeGenOptions &CGO) {
@@ -157,6 +162,7 @@ namespace {
 
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
+      DeferEmission = Context.getLangOpts().HLSL;
 
       M->setTargetTriple(Ctx->getTargetInfo().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
@@ -182,6 +188,12 @@ namespace {
       if (Diags.hasErrorOccurred())
         return;
 
+      if (DeferEmission) {
+        DeferredCallbacks.push_back(
+            [this, VD] { HandleCXXStaticMemberVarInstantiation(VD); });
+        return;
+      }
+
       Builder->HandleCXXStaticMemberVarInstantiation(VD);
     }
 
@@ -193,6 +205,11 @@ namespace {
       // FIXME: Why not return false and abort parsing?
       if (Diags.hasUnrecoverableErrorOccurred())
         return true;
+
+      if (DeferEmission) {
+        DeferredCallbacks.push_back([this, DG] { HandleTopLevelDecl(DG); });
+        return true;
+      }
 
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
@@ -219,6 +236,12 @@ namespace {
     void HandleInlineFunctionDefinition(FunctionDecl *D) override {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
+
+      if (DeferEmission) {
+        DeferredCallbacks.push_back(
+            [this, D] { HandleInlineFunctionDefinition(D); });
+        return;
+      }
 
       assert(D->doesThisDeclarationHaveABody());
 
@@ -247,6 +270,11 @@ namespace {
     void HandleTagDeclDefinition(TagDecl *D) override {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
+
+      if (DeferEmission) {
+        DeferredCallbacks.push_back([this, D] { HandleTagDeclDefinition(D); });
+        return;
+      }
 
       // Don't allow re-entrant calls to CodeGen triggered by PCH
       // deserialization to emit deferred decls.
@@ -300,6 +328,12 @@ namespace {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
+      if (DeferEmission) {
+        DeferredCallbacks.push_back(
+            [this, D] { HandleTagDeclRequiredDefinition(D); });
+        return;
+      }
+
       // Don't allow re-entrant calls to CodeGen triggered by PCH
       // deserialization to emit deferred decls.
       HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
@@ -310,6 +344,14 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
+      // Replay in order before finalization. Callbacks triggered by replay,
+      // including AST deserialization, can now emit immediately.
+      DeferEmission = false;
+      if (!Diags.hasUnrecoverableErrorOccurred())
+        for (auto &Callback : DeferredCallbacks)
+          Callback();
+      DeferredCallbacks.clear();
+
       // Release the Builder when there is no error.
       if (!Diags.hasUnrecoverableErrorOccurred() && Builder)
         Builder->Release();
@@ -329,6 +371,11 @@ namespace {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
+      if (DeferEmission) {
+        DeferredCallbacks.push_back([this, RD] { AssignInheritanceModel(RD); });
+        return;
+      }
+
       Builder->RefreshTypeCacheForClass(RD);
     }
 
@@ -336,16 +383,33 @@ namespace {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 
+      if (DeferEmission) {
+        DeferredCallbacks.push_back(
+            [this, D] { CompleteTentativeDefinition(D); });
+        return;
+      }
+
       Builder->EmitTentativeDefinition(D);
     }
 
     void CompleteExternalDeclaration(DeclaratorDecl *D) override {
+      if (DeferEmission) {
+        DeferredCallbacks.push_back(
+            [this, D] { CompleteExternalDeclaration(D); });
+        return;
+      }
+
       Builder->EmitExternalDeclaration(D);
     }
 
     void HandleVTable(CXXRecordDecl *RD) override {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
+
+      if (DeferEmission) {
+        DeferredCallbacks.push_back([this, RD] { HandleVTable(RD); });
+        return;
+      }
 
       Builder->EmitVTable(RD);
     }
