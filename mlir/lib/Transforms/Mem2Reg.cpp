@@ -356,11 +356,7 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
 }
 
 /// Returns `op`'s parent if it owns embedded blocking uses, or `op` otherwise.
-/// Uses directly in `slotRegion` stay with `op`, since its parent is outside
-/// the slot's region.
-static Operation *getBlockingUseOwner(Operation *op, Region *slotRegion) {
-  if (op->getParentRegion() == slotRegion)
-    return op;
+static Operation *getBlockingUseOwner(Operation *op) {
   auto memOp = dyn_cast_or_null<PromotableMemOpInterface>(op->getParentOp());
   return memOp && memOp.ownsEmbeddedBlockingUses() ? memOp : op;
 }
@@ -384,7 +380,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     return failure();
 
   auto addBlockingUse = [&](OpOperand *use) {
-    Operation *owner = getBlockingUseOwner(use->getOwner(), slotPtrRegion);
+    Operation *owner = getBlockingUseOwner(use->getOwner());
     userToBlockingUses[owner->getParentRegion()][owner].insert(use);
   };
 
@@ -406,13 +402,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *op : forwardSlice) {
     // Each owner wraps a single access, so replacing it preserves slice order.
-    Operation *user = getBlockingUseOwner(op, slotPtrRegion);
-    // Visit an owner only at its wrapped access, even if the slice also
-    // includes the owner or its terminator.
-    if (auto memOp = dyn_cast<PromotableMemOpInterface>(user);
-        memOp && memOp.ownsEmbeddedBlockingUses() &&
-        op != &user->getRegion(0).front().front())
-      continue;
+    Operation *user = getBlockingUseOwner(op);
     // If the next operation has no blocking uses, everything is fine.
     auto *blockingUsesMapIt = userToBlockingUses.find(user->getParentRegion());
     if (blockingUsesMapIt == userToBlockingUses.end())
@@ -463,12 +453,6 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
       // promotable, promotion must fail.
       return failure();
     }
-
-    // Reject new blocking uses from owners: users of their results are absent
-    // from the slice and would escape analysis.
-    auto memOp = dyn_cast<PromotableMemOpInterface>(user);
-    if (memOp && memOp.ownsEmbeddedBlockingUses() && !newBlockingUses.empty())
-      return failure();
 
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {
@@ -576,8 +560,7 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
     for (OpOperand &use : ptr.getUses()) {
       // Attribute an embedded store to its blocking-use owner's block.
-      Operation *user =
-          getBlockingUseOwner(use.getOwner(), slot.ptr.getParentRegion());
+      Operation *user = getBlockingUseOwner(use.getOwner());
       if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
         if (storeOp.storesTo(ptrSlot))
           definingBlocks[user->getParentRegion()].insert(user->getBlock());

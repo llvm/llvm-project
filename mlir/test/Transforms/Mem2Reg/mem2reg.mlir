@@ -656,11 +656,11 @@ func.func @owning_access_through_alias(%a: i32) -> f32 {
 
 // Keep the slot in memory when the wrapper rejects blocking-use removal.
 
-// CHECK-LABEL: func.func @owning_access_declines
+// CHECK-LABEL: func.func @negative_owning_access_declines
 // CHECK: test.multi_slot_alloca
 // CHECK: test.owning_access decline
 // CHECK:   memref.load
-func.func @owning_access_declines(%a: i32) -> i32 {
+func.func @negative_owning_access_declines(%a: i32) -> i32 {
   %slot = test.multi_slot_alloca : () -> memref<i32>
   memref.store %a, %slot[] : memref<i32>
   %v = test.owning_access decline {
@@ -675,11 +675,11 @@ func.func @owning_access_declines(%a: i32) -> i32 {
 // Keep the slot in memory when the wrapper disowns its embedded uses, leaving
 // the load in an unpromotable region.
 
-// CHECK-LABEL: func.func @owning_access_disowned
+// CHECK-LABEL: func.func @negative_owning_access_disowned
 // CHECK: test.multi_slot_alloca
 // CHECK: test.owning_access disown
 // CHECK:   memref.load
-func.func @owning_access_disowned(%a: i32) -> i32 {
+func.func @negative_owning_access_disowned(%a: i32) -> i32 {
   %slot = test.multi_slot_alloca : () -> memref<i32>
   memref.store %a, %slot[] : memref<i32>
   %v = test.owning_access disown {
@@ -693,12 +693,12 @@ func.func @owning_access_disowned(%a: i32) -> i32 {
 
 // A wrapper with multiple accesses cannot own their blocking uses.
 
-// CHECK-LABEL: func.func @owning_access_multiple_accesses
+// CHECK-LABEL: func.func @negative_owning_access_multiple_accesses
 // CHECK: test.multi_slot_alloca
 // CHECK: test.owning_access
 // CHECK:   memref.store
 // CHECK:   memref.load
-func.func @owning_access_multiple_accesses(%a: i32) -> i32 {
+func.func @negative_owning_access_multiple_accesses(%a: i32) -> i32 {
   %slot = test.multi_slot_alloca : () -> memref<i32>
   %v = test.owning_access {
     memref.store %a, %slot[] : memref<i32>
