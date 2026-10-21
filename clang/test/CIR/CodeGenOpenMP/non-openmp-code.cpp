@@ -9,44 +9,40 @@
 
 // Ordinary code compiled with -fopenmp.
 
-int g;
-
-// CIR: cir.global external @g = #cir.int<0> : !s32i
-// LLVM: @g = global i32 0
-
 struct S {
   int x;
 };
 
 void scalar_ops(S *s, int v) {
+  static int g;
   g = v;
   g += v;
   ++g;
   s->x = g;
 }
 
+// CIR: cir.global "private" internal dso_local @[[G:_ZZ10scalar_opsP1SiE1g]] = #cir.int<0> : !s32i
 // CIR: cir.func{{.*}} @_Z10scalar_opsP1Si
-// CIR:   %[[G:.*]] = cir.get_global @g : !cir.ptr<!s32i>
-// CIR:   cir.store{{.*}} %{{.*}}, %[[G]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[G1:.*]] = cir.get_global @g : !cir.ptr<!s32i>
-// CIR:   %[[G1_VAL:.*]] = cir.load{{.*}} %[[G1]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[ADD:.*]] = cir.add nsw %[[G1_VAL]], %{{.*}} : !s32i
-// CIR:   cir.store{{.*}} %[[ADD]], %[[G1]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[G2:.*]] = cir.get_global @g : !cir.ptr<!s32i>
-// CIR:   %[[G2_VAL:.*]] = cir.load{{.*}} %[[G2]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[INC:.*]] = cir.inc nsw %[[G2_VAL]] : !s32i
-// CIR:   cir.store{{.*}} %[[INC]], %[[G2]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[G_PTR:.*]] = cir.get_global @[[G]] : !cir.ptr<!s32i>
+// CIR:   cir.store{{.*}} %{{.*}}, %[[G_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[G1:.*]] = cir.load{{.*}} %[[G_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[ADD:.*]] = cir.add nsw %[[G1]], %{{.*}} : !s32i
+// CIR:   cir.store{{.*}} %[[ADD]], %[[G_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[G2:.*]] = cir.load{{.*}} %[[G_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[INC:.*]] = cir.inc nsw %[[G2]] : !s32i
+// CIR:   cir.store{{.*}} %[[INC]], %[[G_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[X:.*]] = cir.get_member %{{.*}}[0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %{{.*}}, %[[X]] : !s32i, !cir.ptr<!s32i>
 
+// LLVM: @[[G:_ZZ10scalar_opsP1SiE1g]] = internal global i32 0
 // LLVM: define{{.*}} void @_Z10scalar_opsP1Si
-// LLVM:   store i32 %{{.*}}, ptr @g
-// LLVM:   %[[G1:.*]] = load i32, ptr @g
+// LLVM:   store i32 %{{.*}}, ptr @[[G]]
+// LLVM:   %[[G1:.*]] = load i32, ptr @[[G]]
 // LLVM:   %[[ADD:.*]] = add nsw i32 %[[G1]], %{{.*}}
-// LLVM:   store i32 %[[ADD]], ptr @g
-// LLVM:   %[[G2:.*]] = load i32, ptr @g
+// LLVM:   store i32 %[[ADD]], ptr @[[G]]
+// LLVM:   %[[G2:.*]] = load i32, ptr @[[G]]
 // LLVM:   %[[INC:.*]] = add nsw i32 %[[G2]], 1
-// LLVM:   store i32 %[[INC]], ptr @g
+// LLVM:   store i32 %[[INC]], ptr @[[G]]
 // LLVM:   %[[X:.*]] = getelementptr inbounds nuw %struct.S, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store i32 %{{.*}}, ptr %[[X]]
 

@@ -463,17 +463,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (cgf.getLangOpts().OpenMPIsTargetDevice) {
-    std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> res =
-        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(vd);
-    if (res && (*res == OMPDeclareTargetDeclAttr::MT_Link ||
-                ((*res == OMPDeclareTargetDeclAttr::MT_To ||
-                  *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
-                 cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())))
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "emitGlobalVarDeclLValue: OpenMP declare target "
-                       "indirect access");
-  }
+  if (cgf.getLangOpts().OpenMP)
+    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
 
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar.
