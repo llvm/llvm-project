@@ -77,30 +77,30 @@ bb20:                                             ; preds = %bb20, %bb
   %call = tail call i64 @llvm.riscv.vsetvli.i64(i64 %sub21, i64 0, i64 0)
   %trunc22 = trunc i64 %call to i32
   %getelementptr = getelementptr inbounds i8, ptr %arg1, i64 %phi
-  %call23 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 %getelementptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %trunc22)
+  %call23 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 %getelementptr, <vscale x 8 x i1> splat (i1 true), i32 %trunc22)
   %call24 = zext <vscale x 8 x i8> %call23 to <vscale x 8 x i16>
   %call25 = mul <vscale x 8 x i16> %shufflevector, %call24
   %add = add nuw nsw i64 %phi, 1
   %getelementptr26 = getelementptr inbounds i8, ptr %arg1, i64 %add
-  %call27 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr nonnull align 1 %getelementptr26, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %trunc22)
+  %call27 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr nonnull align 1 %getelementptr26, <vscale x 8 x i1> splat (i1 true), i32 %trunc22)
   %call28 = zext <vscale x 8 x i8> %call27 to <vscale x 8 x i16>
   %call29 = mul <vscale x 8 x i16> %shufflevector13, %call28
   %getelementptr30 = getelementptr inbounds i8, ptr %arg, i64 %phi
-  %call31 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 %getelementptr30, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %trunc22)
+  %call31 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 %getelementptr30, <vscale x 8 x i1> splat (i1 true), i32 %trunc22)
   %call32 = zext <vscale x 8 x i8> %call31 to <vscale x 8 x i16>
   %call33 = mul <vscale x 8 x i16> %shufflevector16, %call32
   %getelementptr34 = getelementptr inbounds i8, ptr %arg, i64 %add
-  %call35 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr nonnull align 1 %getelementptr34, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %trunc22)
+  %call35 = tail call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr nonnull align 1 %getelementptr34, <vscale x 8 x i1> splat (i1 true), i32 %trunc22)
   %call36 = zext <vscale x 8 x i8> %call35 to <vscale x 8 x i16>
   %call37 = mul <vscale x 8 x i16> %shufflevector19, %call36
   %call38 = add <vscale x 8 x i16> %call37, %call33
   %call39 = add <vscale x 8 x i16> %call29, %call25
-  %call40 = add <vscale x 8 x i16> %call39, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %call40 = add <vscale x 8 x i16> %call39, splat (i16 32)
   %call41 = add <vscale x 8 x i16> %call40, %call38
-  %call42 = lshr <vscale x 8 x i16> %call41, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %call42 = lshr <vscale x 8 x i16> %call41, splat (i16 6)
   %call43 = trunc <vscale x 8 x i16> %call42 to <vscale x 8 x i8>
   %getelementptr44 = getelementptr inbounds i8, ptr %arg2, i64 %phi
-  tail call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> %call43, ptr align 1 %getelementptr44, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %trunc22)
+  tail call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> %call43, ptr align 1 %getelementptr44, <vscale x 8 x i1> splat (i1 true), i32 %trunc22)
   %add45 = add i64 %phi, %call
   %icmp = icmp eq i64 %add45, %arg3
   br i1 %icmp, label %bb46, label %bb20
