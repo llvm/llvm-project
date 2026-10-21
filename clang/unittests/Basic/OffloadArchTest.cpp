@@ -65,10 +65,16 @@ TEST(OffloadArchTest, RoundTrip) {
   }
 }
 
-// Each Intel GPU has one name, so other spellings are unknown.
 TEST(OffloadArchTest, IntelGPUOtherSpellings) {
+  // An alias and a numeric name denote the device and print as its name.
+  EXPECT_EQ(parse("xe-arl-u"), parse("xe-mtl-u"));
+  EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
+  EXPECT_STREQ(OffloadArchToString(parse("xe-tgllp")), "xe-tgl");
+  EXPECT_STREQ(OffloadArchToString(parse("xe_20.1.0")), "xe-bmg-g21");
+
+  // An unlisted numeric name and the old bmg_g21 spelling are unknown.
+  EXPECT_TRUE(parse("xe_40.11.0").isUnknown());
   EXPECT_TRUE(parse("bmg_g21").isUnknown());
-  EXPECT_TRUE(parse("xe_12.60.7").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {

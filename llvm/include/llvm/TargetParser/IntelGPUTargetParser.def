@@ -25,17 +25,21 @@
 //
 //   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
 //     A compatibility name that covers several minor versions, e.g. "xe-dg2",
-//     which covers every xe-dg2-* and xe-acm-* platform. These names have no
+//     which covers every xe-acm-* and xe-dg2-* platform. These names have no
 //     GPU IP version of their own, so no device reports one and the
 //     offload-arch utility never prints one, but they are legal --offload-arch
 //     values. The columns mean the same as above.
+//
+//   INTEL_GPU_ALIAS(NAME, KIND)
+//     Another name for a device that already has a row, e.g. "xe-arl-u" for
+//     "xe-mtl-u", which share a GPU IP version. An alias is never printed.
 //
 // A device is keyed by its major and minor version alone. The revision
 // component of the GPU IP version is deliberately left out of the key, so that
 // every revision of a device shares one name and one IGCA target.
 //
 // Products that share a major and a minor version have one row, named after
-// the product the offload-arch utility prints.
+// the product the offload-arch utility prints, and the others are aliases.
 //
 // Devices without a published name are left out on purpose; offload-arch names
 // them by GPU IP version, as "xe_*.*.*". A device gets a row only once it has
@@ -82,5 +86,25 @@ INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
 INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
+// Aliases, which are other names of a device named above
+#ifndef INTEL_GPU_ALIAS
+#define INTEL_GPU_ALIAS(NAME, KIND)
+#endif
+
+INTEL_GPU_ALIAS("xe-nvl-h",    XE_NVL_U)
+INTEL_GPU_ALIAS("xe-nvl-hx",   XE_NVL_S)
+INTEL_GPU_ALIAS("xe-nvl-ul",   XE_NVL_S)
+INTEL_GPU_ALIAS("xe-arl-u",    XE_MTL_U)
+INTEL_GPU_ALIAS("xe-arl-s",    XE_MTL_U)
+INTEL_GPU_ALIAS("xe-dg2-g12",  XE_ACM_G12)
+INTEL_GPU_ALIAS("xe-dg2-g11",  XE_ACM_G11)
+INTEL_GPU_ALIAS("xe-ats-m75",  XE_ACM_G11)
+INTEL_GPU_ALIAS("xe-dg2-g10",  XE_ACM_G10)
+INTEL_GPU_ALIAS("xe-ats-m150", XE_ACM_G10)
+INTEL_GPU_ALIAS("xe-rpl-p",    XE_ADL_P)
+INTEL_GPU_ALIAS("xe-rpl-s",    XE_ADL_S)
+INTEL_GPU_ALIAS("xe-tgllp",    XE_TGLLP)
+
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
+#undef INTEL_GPU_ALIAS
