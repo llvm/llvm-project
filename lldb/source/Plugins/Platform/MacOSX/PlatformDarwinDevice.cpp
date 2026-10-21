@@ -230,6 +230,8 @@ const char *PlatformDarwinDevice::GetDeviceSupportDirectoryForOSVersion() {
   if (!m_sdk_sysroot.empty())
     return m_sdk_sysroot.c_str();
 
+  std::lock_guard<std::mutex> guard(
+      m_device_support_directory_for_os_version_mutex);
   if (m_device_support_directory_for_os_version.empty()) {
     const PlatformDarwinDevice::SDKDirectoryInfo *sdk_dir_info =
         GetSDKDirectoryForCurrentOSVersion();
