@@ -106,13 +106,6 @@ SmallVector<uint32_t> llvm::fitWeights(ArrayRef<uint64_t> Weights) {
   return Ret;
 }
 
-static cl::opt<bool> ElideAllZeroBranchWeights("elide-all-zero-branch-weights",
-#if defined(LLVM_ENABLE_PROFCHECK)
-                                               cl::init(false)
-#else
-                                               cl::init(true)
-#endif
-);
 // This option is mainly used when constructing the pass pipeline, but needs to
 // be defined here so that it can also control all zero branch weight elision
 // and avoid layering issues.
