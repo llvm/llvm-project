@@ -5,6 +5,8 @@
 ; RUN:   | FileCheck %s --check-prefix=RV32
 ; RUN: llc -mtriple=riscv32 -mattr=+zimop,+save-restore < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV32-SAVE-RESTORE
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zimop,+save-restore -target-abi=ilp32d < %s \
+; RUN:   | FileCheck %s --check-prefix=RV32D-SAVE-RESTORE
 ; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmp < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV32-ZCMP
 ; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmp,+save-restore < %s \
@@ -16,6 +18,8 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64
 ; RUN: llc -mtriple=riscv64 -mattr=+zimop,+save-restore < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64-SAVE-RESTORE
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zimop,+save-restore -target-abi=lp64d < %s \
+; RUN:   | FileCheck %s --check-prefix=RV64D-SAVE-RESTORE
 ; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmp < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64-ZCMP
 ; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmp,+save-restore < %s \
@@ -24,6 +28,7 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64-XQCCMP
 
 declare i32 @callee(i32 %x)
+declare float @callee_float(float %x)
 
 ;; Software Shadow Call Stack
 
@@ -68,6 +73,26 @@ define i32 @caller_sw(i32 %x) shadowcallstack {
 ; RV32-SAVE-RESTORE-NEXT:    addi gp, gp, -4
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32D-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_sw:
 ; RV32-ZCMP:       # %bb.0:
@@ -161,6 +186,26 @@ define i32 @caller_sw(i32 %x) shadowcallstack {
 ; RV64-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV64-SAVE-RESTORE-NEXT:    ret
 ;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64D-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV64-ZCMP-LABEL: caller_sw:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    addi gp, gp, 8
@@ -228,6 +273,11 @@ define i32 @caller_sw_tail(i32 %x) shadowcallstack {
 ; RV32-SAVE-RESTORE-NEXT:    neg a0, a0
 ; RV32-SAVE-RESTORE-NEXT:    tail callee
 ;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw_tail:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    tail callee
+;
 ; RV32-ZCMP-LABEL: caller_sw_tail:
 ; RV32-ZCMP:       # %bb.0:
 ; RV32-ZCMP-NEXT:    neg a0, a0
@@ -252,6 +302,11 @@ define i32 @caller_sw_tail(i32 %x) shadowcallstack {
 ; RV64-SAVE-RESTORE:       # %bb.0:
 ; RV64-SAVE-RESTORE-NEXT:    negw a0, a0
 ; RV64-SAVE-RESTORE-NEXT:    tail callee
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw_tail:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    tail callee
 ;
 ; RV64-ZCMP-LABEL: caller_sw_tail:
 ; RV64-ZCMP:       # %bb.0:
@@ -326,6 +381,32 @@ define i32 @caller_sw_fp(i32 %x) shadowcallstack "frame-pointer"="all" {
 ; RV32-SAVE-RESTORE-NEXT:    addi gp, gp, -4
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw_fp:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32D-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32D-SAVE-RESTORE-NEXT:    addi s0, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_sw_fp:
 ; RV32-ZCMP:       # %bb.0:
@@ -454,6 +535,32 @@ define i32 @caller_sw_fp(i32 %x) shadowcallstack "frame-pointer"="all" {
 ; RV64-SAVE-RESTORE-NEXT:    addi gp, gp, -8
 ; RV64-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV64-SAVE-RESTORE-NEXT:    ret
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw_fp:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64D-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64D-SAVE-RESTORE-NEXT:    addi s0, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-ZCMP-LABEL: caller_sw_fp:
 ; RV64-ZCMP:       # %bb.0:
@@ -586,6 +693,31 @@ define i32 @caller_sw_cond(i32 %x) shadowcallstack {
 ; RV32-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV32-SAVE-RESTORE-NEXT:    ret
 ;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw_cond:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    beqz a0, .LBB3_2
+; RV32D-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32D-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32D-SAVE-RESTORE-NEXT:    ret
+; RV32D-SAVE-RESTORE-NEXT:  .LBB3_2: # %return
+; RV32D-SAVE-RESTORE-NEXT:    li a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV32-ZCMP-LABEL: caller_sw_cond:
 ; RV32-ZCMP:       # %bb.0:
 ; RV32-ZCMP-NEXT:    beqz a0, .LBB3_2
@@ -704,6 +836,32 @@ define i32 @caller_sw_cond(i32 %x) shadowcallstack {
 ; RV64-SAVE-RESTORE-NEXT:  .LBB3_2: # %return
 ; RV64-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV64-SAVE-RESTORE-NEXT:    ret
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw_cond:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sext.w a1, a0
+; RV64D-SAVE-RESTORE-NEXT:    beqz a1, .LBB3_2
+; RV64D-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64D-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64D-SAVE-RESTORE-NEXT:    ret
+; RV64D-SAVE-RESTORE-NEXT:  .LBB3_2: # %return
+; RV64D-SAVE-RESTORE-NEXT:    li a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-ZCMP-LABEL: caller_sw_cond:
 ; RV64-ZCMP:       # %bb.0:
@@ -841,6 +999,32 @@ define i32 @caller_sw_clobber_s11(i32 %x) shadowcallstack {
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV32-SAVE-RESTORE-NEXT:    ret
 ;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw_clobber_s11:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32D-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_12
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset s11, -52
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    #APP
+; RV32D-SAVE-RESTORE-NEXT:    nop
+; RV32D-SAVE-RESTORE-NEXT:    #NO_APP
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore s11
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 64
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV32-ZCMP-LABEL: caller_sw_clobber_s11:
 ; RV32-ZCMP:       # %bb.0:
 ; RV32-ZCMP-NEXT:    addi gp, gp, 4
@@ -958,6 +1142,32 @@ define i32 @caller_sw_clobber_s11(i32 %x) shadowcallstack {
 ; RV64-SAVE-RESTORE-NEXT:    .cfi_restore gp
 ; RV64-SAVE-RESTORE-NEXT:    ret
 ;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw_clobber_s11:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64D-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_12
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 112
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset s11, -104
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    #APP
+; RV64D-SAVE-RESTORE-NEXT:    nop
+; RV64D-SAVE-RESTORE-NEXT:    #NO_APP
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore s11
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 112
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV64-ZCMP-LABEL: caller_sw_clobber_s11:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    addi gp, gp, 8
@@ -1027,6 +1237,322 @@ define i32 @caller_sw_clobber_s11(i32 %x) shadowcallstack {
   ret i32 %add
 }
 
+define float @caller_sw_float(float %x, float %y, float %z) shadowcallstack {
+; RV32-LABEL: caller_sw_float:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi gp, gp, 4
+; RV32-NEXT:    sw ra, -4(gp)
+; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a1
+; RV32-NEXT:    call callee_float
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    call __mulsf3
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    lw ra, -4(gp)
+; RV32-NEXT:    addi gp, gp, -4
+; RV32-NEXT:    .cfi_restore gp
+; RV32-NEXT:    ret
+;
+; RV32-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV32-SAVE-RESTORE:       # %bb.0:
+; RV32-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-SAVE-RESTORE-NEXT:    call t0, __riscv_save_2
+; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset s1, -12
+; RV32-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV32-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV32-SAVE-RESTORE-NEXT:    call callee_float
+; RV32-SAVE-RESTORE-NEXT:    mv a0, s1
+; RV32-SAVE-RESTORE-NEXT:    mv a1, s0
+; RV32-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV32-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore s1
+; RV32-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32D-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, -16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV32D-SAVE-RESTORE-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV32D-SAVE-RESTORE-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset fs0, -24
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset fs1, -32
+; RV32D-SAVE-RESTORE-NEXT:    fmv.s fs0, fa2
+; RV32D-SAVE-RESTORE-NEXT:    fmv.s fs1, fa1
+; RV32D-SAVE-RESTORE-NEXT:    call callee_float
+; RV32D-SAVE-RESTORE-NEXT:    fmul.s fa0, fs1, fs0
+; RV32D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore fs0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore fs1
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32D-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32D-SAVE-RESTORE-NEXT:    ret
+;
+; RV32-ZCMP-LABEL: caller_sw_float:
+; RV32-ZCMP:       # %bb.0:
+; RV32-ZCMP-NEXT:    addi gp, gp, 4
+; RV32-ZCMP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMP-NEXT:    cm.push {ra, s0-s1}, -16
+; RV32-ZCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NEXT:    .cfi_offset ra, -12
+; RV32-ZCMP-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMP-NEXT:    .cfi_offset s1, -4
+; RV32-ZCMP-NEXT:    mv s0, a2
+; RV32-ZCMP-NEXT:    mv s1, a1
+; RV32-ZCMP-NEXT:    call callee_float
+; RV32-ZCMP-NEXT:    cm.mva01s s1, s0
+; RV32-ZCMP-NEXT:    call __mulsf3
+; RV32-ZCMP-NEXT:    cm.pop {ra, s0-s1}, 16
+; RV32-ZCMP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMP-NEXT:    addi gp, gp, -4
+; RV32-ZCMP-NEXT:    .cfi_restore gp
+; RV32-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV32-ZCMP-SAVE-RESTORE:       # %bb.0:
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    addi gp, gp, 4
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    sw ra, -4(gp)
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra, s0-s1}, -16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -12
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s1, -4
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    call callee_float
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.mva01s s1, s0
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra, s0-s1}, 16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    lw ra, -4(gp)
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    addi gp, gp, -4
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
+;
+; RV32-XQCCMP-LABEL: caller_sw_float:
+; RV32-XQCCMP:       # %bb.0:
+; RV32-XQCCMP-NEXT:    addi gp, gp, 4
+; RV32-XQCCMP-NEXT:    sw ra, -4(gp)
+; RV32-XQCCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-XQCCMP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; RV32-XQCCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-XQCCMP-NEXT:    .cfi_offset ra, -4
+; RV32-XQCCMP-NEXT:    .cfi_offset s0, -8
+; RV32-XQCCMP-NEXT:    .cfi_offset s1, -12
+; RV32-XQCCMP-NEXT:    mv s0, a2
+; RV32-XQCCMP-NEXT:    mv s1, a1
+; RV32-XQCCMP-NEXT:    call callee_float
+; RV32-XQCCMP-NEXT:    qc.cm.mva01s s1, s0
+; RV32-XQCCMP-NEXT:    call __mulsf3
+; RV32-XQCCMP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; RV32-XQCCMP-NEXT:    lw ra, -4(gp)
+; RV32-XQCCMP-NEXT:    addi gp, gp, -4
+; RV32-XQCCMP-NEXT:    .cfi_restore gp
+; RV32-XQCCMP-NEXT:    ret
+;
+; RV64-LABEL: caller_sw_float:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi gp, gp, 8
+; RV64-NEXT:    sd ra, -8(gp)
+; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    .cfi_offset s1, -24
+; RV64-NEXT:    mv s0, a2
+; RV64-NEXT:    mv s1, a1
+; RV64-NEXT:    call callee_float
+; RV64-NEXT:    mv a0, s1
+; RV64-NEXT:    mv a1, s0
+; RV64-NEXT:    call __mulsf3
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore s1
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ld ra, -8(gp)
+; RV64-NEXT:    addi gp, gp, -8
+; RV64-NEXT:    .cfi_restore gp
+; RV64-NEXT:    ret
+;
+; RV64-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV64-SAVE-RESTORE:       # %bb.0:
+; RV64-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-SAVE-RESTORE-NEXT:    call t0, __riscv_save_2
+; RV64-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset s1, -24
+; RV64-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV64-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV64-SAVE-RESTORE-NEXT:    call callee_float
+; RV64-SAVE-RESTORE-NEXT:    mv a0, s1
+; RV64-SAVE-RESTORE-NEXT:    mv a1, s0
+; RV64-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV64-SAVE-RESTORE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore s1
+; RV64-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV64-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64-SAVE-RESTORE-NEXT:    ret
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64D-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, -16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64D-SAVE-RESTORE-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV64D-SAVE-RESTORE-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset fs0, -24
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset fs1, -32
+; RV64D-SAVE-RESTORE-NEXT:    fmv.s fs0, fa2
+; RV64D-SAVE-RESTORE-NEXT:    fmv.s fs1, fa1
+; RV64D-SAVE-RESTORE-NEXT:    call callee_float
+; RV64D-SAVE-RESTORE-NEXT:    fmul.s fa0, fs1, fs0
+; RV64D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore fs0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore fs1
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64D-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: caller_sw_float:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    addi gp, gp, 8
+; RV64-ZCMP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMP-NEXT:    cm.push {ra, s0-s1}, -32
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -24
+; RV64-ZCMP-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMP-NEXT:    .cfi_offset s1, -8
+; RV64-ZCMP-NEXT:    mv s0, a2
+; RV64-ZCMP-NEXT:    mv s1, a1
+; RV64-ZCMP-NEXT:    call callee_float
+; RV64-ZCMP-NEXT:    cm.mva01s s1, s0
+; RV64-ZCMP-NEXT:    call __mulsf3
+; RV64-ZCMP-NEXT:    cm.pop {ra, s0-s1}, 32
+; RV64-ZCMP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMP-NEXT:    addi gp, gp, -8
+; RV64-ZCMP-NEXT:    .cfi_restore gp
+; RV64-ZCMP-NEXT:    ret
+;
+; RV64-ZCMP-SAVE-RESTORE-LABEL: caller_sw_float:
+; RV64-ZCMP-SAVE-RESTORE:       # %bb.0:
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    addi gp, gp, 8
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    sd ra, -8(gp)
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra, s0-s1}, -32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -24
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s1, -8
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    call callee_float
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.mva01s s1, s0
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra, s0-s1}, 32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    ld ra, -8(gp)
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    addi gp, gp, -8
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_restore gp
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
+;
+; RV64-XQCCMP-LABEL: caller_sw_float:
+; RV64-XQCCMP:       # %bb.0:
+; RV64-XQCCMP-NEXT:    addi gp, gp, 8
+; RV64-XQCCMP-NEXT:    sd ra, -8(gp)
+; RV64-XQCCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-XQCCMP-NEXT:    qc.cm.push {ra, s0-s1}, -32
+; RV64-XQCCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-XQCCMP-NEXT:    .cfi_offset ra, -8
+; RV64-XQCCMP-NEXT:    .cfi_offset s0, -16
+; RV64-XQCCMP-NEXT:    .cfi_offset s1, -24
+; RV64-XQCCMP-NEXT:    mv s0, a2
+; RV64-XQCCMP-NEXT:    mv s1, a1
+; RV64-XQCCMP-NEXT:    call callee_float
+; RV64-XQCCMP-NEXT:    qc.cm.mva01s s1, s0
+; RV64-XQCCMP-NEXT:    call __mulsf3
+; RV64-XQCCMP-NEXT:    qc.cm.pop {ra, s0-s1}, 32
+; RV64-XQCCMP-NEXT:    ld ra, -8(gp)
+; RV64-XQCCMP-NEXT:    addi gp, gp, -8
+; RV64-XQCCMP-NEXT:    .cfi_restore gp
+; RV64-XQCCMP-NEXT:    ret
+  %a = call float @callee_float(float %x)
+  %b = fmul float %y, %z
+  ret float %b
+}
+
+
 ;; Hardware Shadow Call Stack
 
 define i32 @caller_hw(i32 %x) "hw-shadow-stack" {
@@ -1062,6 +1588,22 @@ define i32 @caller_hw(i32 %x) "hw-shadow-stack" {
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    sspush ra
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_hw:
 ; RV32-ZCMP:       # %bb.0:
@@ -1135,6 +1677,22 @@ define i32 @caller_hw(i32 %x) "hw-shadow-stack" {
 ; RV64-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-SAVE-RESTORE-NEXT:    ret
 ;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sspush ra
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV64-ZCMP-LABEL: caller_hw:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    sspush ra
@@ -1190,6 +1748,11 @@ define i32 @caller_hw_tail(i32 %x) "hw-shadow-stack" {
 ; RV32-SAVE-RESTORE-NEXT:    neg a0, a0
 ; RV32-SAVE-RESTORE-NEXT:    tail callee
 ;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw_tail:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    tail callee
+;
 ; RV32-ZCMP-LABEL: caller_hw_tail:
 ; RV32-ZCMP:       # %bb.0:
 ; RV32-ZCMP-NEXT:    neg a0, a0
@@ -1214,6 +1777,11 @@ define i32 @caller_hw_tail(i32 %x) "hw-shadow-stack" {
 ; RV64-SAVE-RESTORE:       # %bb.0:
 ; RV64-SAVE-RESTORE-NEXT:    negw a0, a0
 ; RV64-SAVE-RESTORE-NEXT:    tail callee
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw_tail:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    tail callee
 ;
 ; RV64-ZCMP-LABEL: caller_hw_tail:
 ; RV64-ZCMP:       # %bb.0:
@@ -1280,6 +1848,28 @@ define i32 @caller_hw_fp(i32 %x) "hw-shadow-stack" "frame-pointer"="all" {
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw_fp:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    sspush ra
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32D-SAVE-RESTORE-NEXT:    addi s0, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_hw_fp:
 ; RV32-ZCMP:       # %bb.0:
@@ -1389,6 +1979,28 @@ define i32 @caller_hw_fp(i32 %x) "hw-shadow-stack" "frame-pointer"="all" {
 ; RV64-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-SAVE-RESTORE-NEXT:    ret
 ;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw_fp:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sspush ra
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64D-SAVE-RESTORE-NEXT:    addi s0, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV64-ZCMP-LABEL: caller_hw_fp:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    sspush ra
@@ -1460,7 +2072,7 @@ define i32 @caller_hw_fp(i32 %x) "hw-shadow-stack" "frame-pointer"="all" {
 define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-LABEL: caller_hw_cond:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    beqz a0, .LBB8_2
+; RV32-NEXT:    beqz a0, .LBB9_2
 ; RV32-NEXT:  # %bb.1: # %if.end
 ; RV32-NEXT:    sspush ra
 ; RV32-NEXT:    addi sp, sp, -16
@@ -1476,13 +2088,13 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    sspopchk ra
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB8_2: # %return
+; RV32-NEXT:  .LBB9_2: # %return
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    ret
 ;
 ; RV32-SAVE-RESTORE-LABEL: caller_hw_cond:
 ; RV32-SAVE-RESTORE:       # %bb.0:
-; RV32-SAVE-RESTORE-NEXT:    beqz a0, .LBB8_2
+; RV32-SAVE-RESTORE-NEXT:    beqz a0, .LBB9_2
 ; RV32-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
 ; RV32-SAVE-RESTORE-NEXT:    sspush ra
 ; RV32-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
@@ -1497,13 +2109,34 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-SAVE-RESTORE-NEXT:    ret
-; RV32-SAVE-RESTORE-NEXT:  .LBB8_2: # %return
+; RV32-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
 ; RV32-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV32-SAVE-RESTORE-NEXT:    ret
 ;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw_cond:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    beqz a0, .LBB9_2
+; RV32D-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
+; RV32D-SAVE-RESTORE-NEXT:    sspush ra
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32D-SAVE-RESTORE-NEXT:    ret
+; RV32D-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
+; RV32D-SAVE-RESTORE-NEXT:    li a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV32-ZCMP-LABEL: caller_hw_cond:
 ; RV32-ZCMP:       # %bb.0:
-; RV32-ZCMP-NEXT:    beqz a0, .LBB8_2
+; RV32-ZCMP-NEXT:    beqz a0, .LBB9_2
 ; RV32-ZCMP-NEXT:  # %bb.1: # %if.end
 ; RV32-ZCMP-NEXT:    sspush ra
 ; RV32-ZCMP-NEXT:    cm.push {ra}, -16
@@ -1515,13 +2148,13 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-ZCMP-NEXT:    cm.pop {ra}, 16
 ; RV32-ZCMP-NEXT:    sspopchk ra
 ; RV32-ZCMP-NEXT:    ret
-; RV32-ZCMP-NEXT:  .LBB8_2: # %return
+; RV32-ZCMP-NEXT:  .LBB9_2: # %return
 ; RV32-ZCMP-NEXT:    li a0, 1
 ; RV32-ZCMP-NEXT:    ret
 ;
 ; RV32-ZCMP-SAVE-RESTORE-LABEL: caller_hw_cond:
 ; RV32-ZCMP-SAVE-RESTORE:       # %bb.0:
-; RV32-ZCMP-SAVE-RESTORE-NEXT:    beqz a0, .LBB8_2
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    beqz a0, .LBB9_2
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    sspush ra
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra}, -16
@@ -1533,13 +2166,13 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra}, 16
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
-; RV32-ZCMP-SAVE-RESTORE-NEXT:  .LBB8_2: # %return
+; RV32-ZCMP-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-XQCCMP-LABEL: caller_hw_cond:
 ; RV32-XQCCMP:       # %bb.0:
-; RV32-XQCCMP-NEXT:    beqz a0, .LBB8_2
+; RV32-XQCCMP-NEXT:    beqz a0, .LBB9_2
 ; RV32-XQCCMP-NEXT:  # %bb.1: # %if.end
 ; RV32-XQCCMP-NEXT:    sspush ra
 ; RV32-XQCCMP-NEXT:    qc.cm.push {ra}, -16
@@ -1551,14 +2184,14 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV32-XQCCMP-NEXT:    qc.cm.pop {ra}, 16
 ; RV32-XQCCMP-NEXT:    sspopchk ra
 ; RV32-XQCCMP-NEXT:    ret
-; RV32-XQCCMP-NEXT:  .LBB8_2: # %return
+; RV32-XQCCMP-NEXT:  .LBB9_2: # %return
 ; RV32-XQCCMP-NEXT:    li a0, 1
 ; RV32-XQCCMP-NEXT:    ret
 ;
 ; RV64-LABEL: caller_hw_cond:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a1, a0
-; RV64-NEXT:    beqz a1, .LBB8_2
+; RV64-NEXT:    beqz a1, .LBB9_2
 ; RV64-NEXT:  # %bb.1: # %if.end
 ; RV64-NEXT:    sspush ra
 ; RV64-NEXT:    addi sp, sp, -16
@@ -1574,14 +2207,14 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    sspopchk ra
 ; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB8_2: # %return
+; RV64-NEXT:  .LBB9_2: # %return
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    ret
 ;
 ; RV64-SAVE-RESTORE-LABEL: caller_hw_cond:
 ; RV64-SAVE-RESTORE:       # %bb.0:
 ; RV64-SAVE-RESTORE-NEXT:    sext.w a1, a0
-; RV64-SAVE-RESTORE-NEXT:    beqz a1, .LBB8_2
+; RV64-SAVE-RESTORE-NEXT:    beqz a1, .LBB9_2
 ; RV64-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
 ; RV64-SAVE-RESTORE-NEXT:    sspush ra
 ; RV64-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
@@ -1596,14 +2229,36 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-SAVE-RESTORE-NEXT:    ret
-; RV64-SAVE-RESTORE-NEXT:  .LBB8_2: # %return
+; RV64-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
 ; RV64-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV64-SAVE-RESTORE-NEXT:    ret
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw_cond:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sext.w a1, a0
+; RV64D-SAVE-RESTORE-NEXT:    beqz a1, .LBB9_2
+; RV64D-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
+; RV64D-SAVE-RESTORE-NEXT:    sspush ra
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64D-SAVE-RESTORE-NEXT:    ret
+; RV64D-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
+; RV64D-SAVE-RESTORE-NEXT:    li a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-ZCMP-LABEL: caller_hw_cond:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    sext.w a1, a0
-; RV64-ZCMP-NEXT:    beqz a1, .LBB8_2
+; RV64-ZCMP-NEXT:    beqz a1, .LBB9_2
 ; RV64-ZCMP-NEXT:  # %bb.1: # %if.end
 ; RV64-ZCMP-NEXT:    sspush ra
 ; RV64-ZCMP-NEXT:    cm.push {ra}, -16
@@ -1615,14 +2270,14 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
 ; RV64-ZCMP-NEXT:    sspopchk ra
 ; RV64-ZCMP-NEXT:    ret
-; RV64-ZCMP-NEXT:  .LBB8_2: # %return
+; RV64-ZCMP-NEXT:  .LBB9_2: # %return
 ; RV64-ZCMP-NEXT:    li a0, 1
 ; RV64-ZCMP-NEXT:    ret
 ;
 ; RV64-ZCMP-SAVE-RESTORE-LABEL: caller_hw_cond:
 ; RV64-ZCMP-SAVE-RESTORE:       # %bb.0:
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    sext.w a1, a0
-; RV64-ZCMP-SAVE-RESTORE-NEXT:    beqz a1, .LBB8_2
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    beqz a1, .LBB9_2
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:  # %bb.1: # %if.end
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    sspush ra
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra}, -16
@@ -1634,14 +2289,14 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra}, 16
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
-; RV64-ZCMP-SAVE-RESTORE-NEXT:  .LBB8_2: # %return
+; RV64-ZCMP-SAVE-RESTORE-NEXT:  .LBB9_2: # %return
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    li a0, 1
 ; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV64-XQCCMP-LABEL: caller_hw_cond:
 ; RV64-XQCCMP:       # %bb.0:
 ; RV64-XQCCMP-NEXT:    sext.w a1, a0
-; RV64-XQCCMP-NEXT:    beqz a1, .LBB8_2
+; RV64-XQCCMP-NEXT:    beqz a1, .LBB9_2
 ; RV64-XQCCMP-NEXT:  # %bb.1: # %if.end
 ; RV64-XQCCMP-NEXT:    sspush ra
 ; RV64-XQCCMP-NEXT:    qc.cm.push {ra}, -16
@@ -1653,7 +2308,7 @@ define i32 @caller_hw_cond(i32 %x) "hw-shadow-stack" {
 ; RV64-XQCCMP-NEXT:    qc.cm.pop {ra}, 16
 ; RV64-XQCCMP-NEXT:    sspopchk ra
 ; RV64-XQCCMP-NEXT:    ret
-; RV64-XQCCMP-NEXT:  .LBB8_2: # %return
+; RV64-XQCCMP-NEXT:  .LBB9_2: # %return
 ; RV64-XQCCMP-NEXT:    li a0, 1
 ; RV64-XQCCMP-NEXT:    ret
   %cmp = icmp eq i32 %x, 0
@@ -1715,6 +2370,28 @@ define i32 @caller_hw_clobber_s11(i32 %x) "hw-shadow-stack" {
 ; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw_clobber_s11:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    sspush ra
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_12
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset s11, -52
+; RV32D-SAVE-RESTORE-NEXT:    neg a0, a0
+; RV32D-SAVE-RESTORE-NEXT:    call callee
+; RV32D-SAVE-RESTORE-NEXT:    addi a0, a0, 1
+; RV32D-SAVE-RESTORE-NEXT:    #APP
+; RV32D-SAVE-RESTORE-NEXT:    nop
+; RV32D-SAVE-RESTORE-NEXT:    #NO_APP
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore s11
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 64
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32D-SAVE-RESTORE-NEXT:    ret
 ;
 ; RV32-ZCMP-LABEL: caller_hw_clobber_s11:
 ; RV32-ZCMP:       # %bb.0:
@@ -1813,6 +2490,28 @@ define i32 @caller_hw_clobber_s11(i32 %x) "hw-shadow-stack" {
 ; RV64-SAVE-RESTORE-NEXT:    sspopchk ra
 ; RV64-SAVE-RESTORE-NEXT:    ret
 ;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw_clobber_s11:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sspush ra
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_12
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 112
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset s11, -104
+; RV64D-SAVE-RESTORE-NEXT:    negw a0, a0
+; RV64D-SAVE-RESTORE-NEXT:    call callee
+; RV64D-SAVE-RESTORE-NEXT:    addiw a0, a0, 1
+; RV64D-SAVE-RESTORE-NEXT:    #APP
+; RV64D-SAVE-RESTORE-NEXT:    nop
+; RV64D-SAVE-RESTORE-NEXT:    #NO_APP
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore s11
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 112
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
 ; RV64-ZCMP-LABEL: caller_hw_clobber_s11:
 ; RV64-ZCMP:       # %bb.0:
 ; RV64-ZCMP-NEXT:    sspush ra
@@ -1868,4 +2567,271 @@ define i32 @caller_hw_clobber_s11(i32 %x) "hw-shadow-stack" {
   %add = add nsw i32 %call, 1
   call void asm sideeffect "nop", "~{x27}"()
   ret i32 %add
+}
+
+define float @caller_hw_float(float %x, float %y, float %z) "hw-shadow-stack" {
+; RV32-LABEL: caller_hw_float:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sspush ra
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a1
+; RV32-NEXT:    call callee_float
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    call __mulsf3
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    sspopchk ra
+; RV32-NEXT:    ret
+;
+; RV32-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV32-SAVE-RESTORE:       # %bb.0:
+; RV32-SAVE-RESTORE-NEXT:    sspush ra
+; RV32-SAVE-RESTORE-NEXT:    call t0, __riscv_save_2
+; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32-SAVE-RESTORE-NEXT:    .cfi_offset s1, -12
+; RV32-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV32-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV32-SAVE-RESTORE-NEXT:    call callee_float
+; RV32-SAVE-RESTORE-NEXT:    mv a0, s1
+; RV32-SAVE-RESTORE-NEXT:    mv a1, s0
+; RV32-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV32-SAVE-RESTORE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV32-SAVE-RESTORE-NEXT:    .cfi_restore s1
+; RV32-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; RV32-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32-SAVE-RESTORE-NEXT:    ret
+;
+; RV32D-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV32D-SAVE-RESTORE:       # %bb.0:
+; RV32D-SAVE-RESTORE-NEXT:    sspush ra
+; RV32D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, -16
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV32D-SAVE-RESTORE-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV32D-SAVE-RESTORE-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset fs0, -24
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_offset fs1, -32
+; RV32D-SAVE-RESTORE-NEXT:    fmv.s fs0, fa2
+; RV32D-SAVE-RESTORE-NEXT:    fmv.s fs1, fa1
+; RV32D-SAVE-RESTORE-NEXT:    call callee_float
+; RV32D-SAVE-RESTORE-NEXT:    fmul.s fa0, fs1, fs0
+; RV32D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore fs0
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_restore fs1
+; RV32D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV32D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV32D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32D-SAVE-RESTORE-NEXT:    ret
+;
+; RV32-ZCMP-LABEL: caller_hw_float:
+; RV32-ZCMP:       # %bb.0:
+; RV32-ZCMP-NEXT:    sspush ra
+; RV32-ZCMP-NEXT:    cm.push {ra, s0-s1}, -16
+; RV32-ZCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NEXT:    .cfi_offset ra, -12
+; RV32-ZCMP-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMP-NEXT:    .cfi_offset s1, -4
+; RV32-ZCMP-NEXT:    mv s0, a2
+; RV32-ZCMP-NEXT:    mv s1, a1
+; RV32-ZCMP-NEXT:    call callee_float
+; RV32-ZCMP-NEXT:    cm.mva01s s1, s0
+; RV32-ZCMP-NEXT:    call __mulsf3
+; RV32-ZCMP-NEXT:    cm.pop {ra, s0-s1}, 16
+; RV32-ZCMP-NEXT:    sspopchk ra
+; RV32-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV32-ZCMP-SAVE-RESTORE:       # %bb.0:
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    sspush ra
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra, s0-s1}, -16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -12
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s1, -4
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    call callee_float
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.mva01s s1, s0
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra, s0-s1}, 16
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV32-ZCMP-SAVE-RESTORE-NEXT:    ret
+;
+; RV32-XQCCMP-LABEL: caller_hw_float:
+; RV32-XQCCMP:       # %bb.0:
+; RV32-XQCCMP-NEXT:    sspush ra
+; RV32-XQCCMP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; RV32-XQCCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-XQCCMP-NEXT:    .cfi_offset ra, -4
+; RV32-XQCCMP-NEXT:    .cfi_offset s0, -8
+; RV32-XQCCMP-NEXT:    .cfi_offset s1, -12
+; RV32-XQCCMP-NEXT:    mv s0, a2
+; RV32-XQCCMP-NEXT:    mv s1, a1
+; RV32-XQCCMP-NEXT:    call callee_float
+; RV32-XQCCMP-NEXT:    qc.cm.mva01s s1, s0
+; RV32-XQCCMP-NEXT:    call __mulsf3
+; RV32-XQCCMP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; RV32-XQCCMP-NEXT:    sspopchk ra
+; RV32-XQCCMP-NEXT:    ret
+;
+; RV64-LABEL: caller_hw_float:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sspush ra
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    .cfi_offset s1, -24
+; RV64-NEXT:    mv s0, a2
+; RV64-NEXT:    mv s1, a1
+; RV64-NEXT:    call callee_float
+; RV64-NEXT:    mv a0, s1
+; RV64-NEXT:    mv a1, s0
+; RV64-NEXT:    call __mulsf3
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore s1
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    sspopchk ra
+; RV64-NEXT:    ret
+;
+; RV64-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV64-SAVE-RESTORE:       # %bb.0:
+; RV64-SAVE-RESTORE-NEXT:    sspush ra
+; RV64-SAVE-RESTORE-NEXT:    call t0, __riscv_save_2
+; RV64-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64-SAVE-RESTORE-NEXT:    .cfi_offset s1, -24
+; RV64-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV64-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV64-SAVE-RESTORE-NEXT:    call callee_float
+; RV64-SAVE-RESTORE-NEXT:    mv a0, s1
+; RV64-SAVE-RESTORE-NEXT:    mv a1, s0
+; RV64-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV64-SAVE-RESTORE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore s0
+; RV64-SAVE-RESTORE-NEXT:    .cfi_restore s1
+; RV64-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV64-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64-SAVE-RESTORE-NEXT:    ret
+;
+; RV64D-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV64D-SAVE-RESTORE:       # %bb.0:
+; RV64D-SAVE-RESTORE-NEXT:    sspush ra
+; RV64D-SAVE-RESTORE-NEXT:    call t0, __riscv_save_0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset ra, -8
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, -16
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64D-SAVE-RESTORE-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV64D-SAVE-RESTORE-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset fs0, -24
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_offset fs1, -32
+; RV64D-SAVE-RESTORE-NEXT:    fmv.s fs0, fa2
+; RV64D-SAVE-RESTORE-NEXT:    fmv.s fs1, fa1
+; RV64D-SAVE-RESTORE-NEXT:    call callee_float
+; RV64D-SAVE-RESTORE-NEXT:    fmul.s fa0, fs1, fs0
+; RV64D-SAVE-RESTORE-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore ra
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore fs0
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_restore fs1
+; RV64D-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; RV64D-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 0
+; RV64D-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64D-SAVE-RESTORE-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: caller_hw_float:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra, s0-s1}, -32
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -24
+; RV64-ZCMP-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMP-NEXT:    .cfi_offset s1, -8
+; RV64-ZCMP-NEXT:    mv s0, a2
+; RV64-ZCMP-NEXT:    mv s1, a1
+; RV64-ZCMP-NEXT:    call callee_float
+; RV64-ZCMP-NEXT:    cm.mva01s s1, s0
+; RV64-ZCMP-NEXT:    call __mulsf3
+; RV64-ZCMP-NEXT:    cm.pop {ra, s0-s1}, 32
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV64-ZCMP-SAVE-RESTORE-LABEL: caller_hw_float:
+; RV64-ZCMP-SAVE-RESTORE:       # %bb.0:
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    sspush ra
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.push {ra, s0-s1}, -32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -24
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    .cfi_offset s1, -8
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    mv s0, a2
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    mv s1, a1
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    call callee_float
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.mva01s s1, s0
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    call __mulsf3
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    cm.pop {ra, s0-s1}, 32
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    sspopchk ra
+; RV64-ZCMP-SAVE-RESTORE-NEXT:    ret
+;
+; RV64-XQCCMP-LABEL: caller_hw_float:
+; RV64-XQCCMP:       # %bb.0:
+; RV64-XQCCMP-NEXT:    sspush ra
+; RV64-XQCCMP-NEXT:    qc.cm.push {ra, s0-s1}, -32
+; RV64-XQCCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-XQCCMP-NEXT:    .cfi_offset ra, -8
+; RV64-XQCCMP-NEXT:    .cfi_offset s0, -16
+; RV64-XQCCMP-NEXT:    .cfi_offset s1, -24
+; RV64-XQCCMP-NEXT:    mv s0, a2
+; RV64-XQCCMP-NEXT:    mv s1, a1
+; RV64-XQCCMP-NEXT:    call callee_float
+; RV64-XQCCMP-NEXT:    qc.cm.mva01s s1, s0
+; RV64-XQCCMP-NEXT:    call __mulsf3
+; RV64-XQCCMP-NEXT:    qc.cm.pop {ra, s0-s1}, 32
+; RV64-XQCCMP-NEXT:    sspopchk ra
+; RV64-XQCCMP-NEXT:    ret
+  %a = call float @callee_float(float %x)
+  %b = fmul float %y, %z
+  ret float %b
 }
