@@ -10,5 +10,6 @@ unittest("DebugInfoCodeViewTests") {
     "RandomAccessVisitorTest.cpp",
     "TypeHashingTest.cpp",
     "TypeIndexDiscoveryTest.cpp",
+    "TypeRecordMappingTest.cpp",
   ]
 }

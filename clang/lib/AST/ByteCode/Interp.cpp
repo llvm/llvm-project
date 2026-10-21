@@ -1024,7 +1024,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Block and string pointers are the only ones we can actually read from.
-  if (!Ptr.isReadablePointerType())
+  if (!Ptr.isStringPointer())
     return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
