@@ -464,3 +464,74 @@ entry:
   %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %pred)
   ret i32 %red
 }
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
+define dso_local signext range(i32 -262144, 262137) i32 @tsb3(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+; CHECK-LABEL: tsb3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    vspltish v4, 1
+; CHECK-NEXT:    xxlxor v0, v0, v0
+; CHECK-NEXT:    xxswapd v2, vs0
+; CHECK-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-NEXT:    xxswapd v3, vs0
+; CHECK-NEXT:    vmulosb v5, v2, v3
+; CHECK-NEXT:    vmulesb v2, v2, v3
+; CHECK-NEXT:    vmsumshm v5, v5, v4, v0
+; CHECK-NEXT:    vmsumshm v2, v2, v4, v5
+; CHECK-NEXT:    xxswapd v3, v2
+; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    vadduwm v2, v2, v3
+; CHECK-NEXT:    xxswapd vs0, v2
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    extsw r3, r3
+; CHECK-NEXT:    blr
+;
+; BE64-LABEL: tsb3:
+; BE64:       # %bb.0: # %entry
+; BE64-NEXT:    lxvw4x v3, 0, r3
+; BE64-NEXT:    lxvw4x v4, 0, r4
+; BE64-NEXT:    vspltish v2, 1
+; BE64-NEXT:    xxlxor v0, v0, v0
+; BE64-NEXT:    vmulosb v5, v3, v4
+; BE64-NEXT:    vmulesb v3, v3, v4
+; BE64-NEXT:    vmsumshm v5, v5, v2, v0
+; BE64-NEXT:    vmsumshm v2, v3, v2, v5
+; BE64-NEXT:    xxswapd v3, v2
+; BE64-NEXT:    vadduwm v2, v2, v3
+; BE64-NEXT:    xxspltw v3, v2, 1
+; BE64-NEXT:    vadduwm v2, v2, v3
+; BE64-NEXT:    xxsldwi vs0, v2, v2, 3
+; BE64-NEXT:    mffprwz r3, f0
+; BE64-NEXT:    extsw r3, r3
+; BE64-NEXT:    blr
+;
+; BE32-LABEL: tsb3:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    lxvw4x v3, 0, r3
+; BE32-NEXT:    lxvw4x v4, 0, r4
+; BE32-NEXT:    vspltish v2, 1
+; BE32-NEXT:    xxlxor v0, v0, v0
+; BE32-NEXT:    addi r3, r1, -16
+; BE32-NEXT:    vmulosb v5, v3, v4
+; BE32-NEXT:    vmulesb v3, v3, v4
+; BE32-NEXT:    vmsumshm v5, v5, v2, v0
+; BE32-NEXT:    vmsumshm v2, v3, v2, v5
+; BE32-NEXT:    xxswapd v3, v2
+; BE32-NEXT:    vadduwm v2, v2, v3
+; BE32-NEXT:    xxspltw v3, v2, 1
+; BE32-NEXT:    vadduwm v2, v2, v3
+; BE32-NEXT:    stxvw4x v2, 0, r3
+; BE32-NEXT:    lwz r3, -16(r1)
+; BE32-NEXT:    blr
+entry:
+  %0 = load <16 x i8>, ptr %a, align 2
+  %conv = sext <16 x i8> %0 to <16 x i32>
+  %lb = load <16 x i8>, ptr %b, align 2
+  %conv2 = sext <16 x i8> %lb to <16 x i32>
+  %mul = mul <16 x i32> %conv, %conv2
+  %pred = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <16 x i32> %mul)
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %pred)
+  ret i32 %red
+}
