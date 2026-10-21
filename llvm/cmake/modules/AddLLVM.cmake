@@ -378,14 +378,11 @@ function(add_link_opts target_name)
       # and teaching the linker to select machine code from .o files, see
       # https://lists.llvm.org/pipermail/llvm-dev/2021-April/149843.html
       if((UNIX OR MINGW) AND LINKER_IS_LLD)
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
+        target_link_options(${target_name} PRIVATE "LINKER:--lto-O0")
       elseif(LINKER_IS_LLD_LINK)
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " /opt:lldlto=0")
+        target_link_options(${target_name} PRIVATE "LINKER:/opt:lldlto=0")
       elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,-mllvm,-O0")
+        target_link_options(${target_name} PRIVATE "LINKER:-mllvm,-O0")
       endif()
     endif()
   endif()
@@ -396,37 +393,31 @@ function(add_link_opts target_name)
     if(NOT LLVM_NO_DEAD_STRIP)
       if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-dead_strip")
+        target_link_options(${target_name} PRIVATE "LINKER:-dead_strip")
       elseif("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
         check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
-          set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                       LINK_FLAGS " -Wl,-z,discard-unused=sections")
+          target_link_options(${target_name} PRIVATE "LINKER:-z,discard-unused=sections")
         endif()
       elseif(NOT MSVC AND NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC" AND NOT CMAKE_SYSTEM_NAME MATCHES "AIX|OS390")
         # TODO Revisit this later on z/OS.
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,--gc-sections")
+        target_link_options(${target_name} PRIVATE "LINKER:--gc-sections")
       endif()
     else() #LLVM_NO_DEAD_STRIP
       if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-bnogc")
+        target_link_options(${target_name} PRIVATE "LINKER:-bnogc")
       endif()
     endif()
   endif()
 
   if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
+    target_link_options(${target_name} PRIVATE "LINKER:-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " -Wl,-brtl")
+    target_link_options(${target_name} PRIVATE "LINKER:-brtl")
   endif()
 
   # Check for existence of symbolic functions flag. Not supported

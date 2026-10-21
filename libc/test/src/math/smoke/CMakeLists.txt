@@ -1479,8 +1479,11 @@ add_fp_unittest(
     exp2_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.exp2
+    libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
 )
 
 add_fp_unittest(
@@ -1495,6 +1498,7 @@ add_fp_unittest(
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
+    libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
 

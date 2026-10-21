@@ -469,16 +469,20 @@ entry:
 
 ;On v79 and above,
 ;v0.hf = vcvt(v0.uh) is translated to
-;v1 = vxor(v1,v1); v1:0.w = vadd(v0.uh,v1.uh);
-;v2.h = vpack(v1.w,v0.w):sat; v3.h = vshuff(v2.h); v0.hf = v3.h
+;v1:0.uw = vzxt(v0.uh); v2 = vxor(v2,v2)
+;v3.sf = v0.w ; v1.sf = v1.w
+;v4.qf32 = vadd(v3.sf,v2.sf); v5.qf32 = vadd(v1.sf,v2.sf)
+;v0.hf = v5:4.qf32
 
 ; CHECK-LABEL: convhfuh:
 ; CHECK-NOT: v0.hf = vcvt(v0.uh)
-; CHECK: v[[REG1:[0-9]+]] = vxor(v[[REG0:[0-9]+]],v[[REG0]])
-; CHECK: v[[REG3:[0-9]+]]:[[REG2:[0-9]+]].w = vadd(v0.uh,v[[REG1]].uh)
-; CHECK: v[[REG4:[0-9]+]].h = vpack(v[[REG3]].w,v[[REG2]].w):sat
-; CHECK: v[[REG5:[0-9]+]].h = vshuff(v[[REG4]].h)
-; CHECK: v0.hf = v[[REG5]].h
+; CHECK-DAG: v[[REG1:[0-9]+]]:[[REG0:[0-9]+]].uw = vzxt(v0.uh)
+; CHECK-DAG: v[[REG2:[0-9]+]] = vxor(v[[REG22:[0-9]+]],v[[REG22]])
+; CHECK-DAG: v[[REG3:[0-9]+]].sf = v[[REG0]].w
+; CHECK-DAG: v[[REG11:[0-9]+]].sf = v[[REG1]].w
+; CHECK-DAG: v[[REG4:[0-9]+]].qf32 = vadd(v[[REG3]].sf,v[[REG2]].sf)
+; CHECK-DAG: v[[REG5:[0-9]+]].qf32 = vadd(v[[REG11]].sf,v[[REG2]].sf)
+; CHECK: v0.hf = v[[REG5]]:[[REG4]].qf32
 
 ; V75-LABEL: convhfuh:
 ; V75: v0.hf = vcvt(v0.uh)
@@ -512,26 +516,15 @@ entry:
 
 ;On v79 and above,
 ;v1:0.hf = vcvt(v0.ub) is translated to
-;v1.h = vdeal(v0.h); v2 = vxor(v2,v2)
-;v5:4.uh = vunpack(v1.ub)
-;v7:6.w = vadd(v4.uh,v2.uh); v31:30.w = vadd(v5.uh,v2.uh)
-;v4.h = vpack(v7.w,v6.w):sat; v3.h = vpack(v31.w,v30.w):sat
-;v30.h = vshuff(v4.h);v31.h = vshuff(v3.h)
-;v0.hf = v30.h;v1.hf = v31.h
+;v1.h = vdeal(v0.h); v3:2.uh = vunpack(v1.ub)
+;v0.hf = v2.h; v1.hf = v3.h
 
 ; CHECK-LABEL: convhfub:
 ; CHECK-NOT: v1:0.hf = vcvt(v0.ub)
-; CHECK: v[[REG1:[0-9]+]].h = vdeal(v0.h)
-; CHECK-DAG: v[[REG5:[0-9]+]]:[[REG4:[0-9]+]].uh = vunpack(v[[REG1]].ub)
-; CHECK-DAG: v[[REG2:[0-9]+]] = vxor(v[[REG22:[0-9]+]],v[[REG22]])
-; CHECK-DAG: v[[REG7:[0-9]+]]:[[REG6:[0-9]+]].w = vadd(v[[REG4]].uh,v[[REG2]].uh)
-; CHECK-DAG: v[[REG31:[0-9]+]]:[[REG30:[0-9]+]].w = vadd(v[[REG5]].uh,v[[REG2]].uh)
-; CHECK-DAG: v[[REG44:[0-9]+]].h = vpack(v[[REG7]].w,v[[REG6]].w):sat
-; CHECK-DAG: v[[REG33:[0-9]+]].h = vpack(v[[REG31]].w,v[[REG30]].w):sat
-; CHECK-DAG: v[[REG3030:[0-9]+]].h = vshuff(v[[REG44]].h)
-; CHECK-DAG: v[[REG3131:[0-9]+]].h = vshuff(v[[REG33]].h)
-; CHECK-DAG: v0.hf = v[[REG3030]].h
-; CHECK-DAG: v1.hf = v[[REG3131]].h
+; CHECK: v[[REG0:[0-9]+]].h = vdeal(v0.h)
+; CHECK: v[[REG2:[0-9]+]]:[[REG1:[0-9]+]].uh = vunpack(v[[REG0]].ub)
+; CHECK-DAG: v0.hf = v[[REG1]].h
+; CHECK-DAG: v1.hf = v[[REG2]].h
 
 ; V75-LABEL: convhfub:
 ; V75: v1:0.hf = vcvt(v0.ub)

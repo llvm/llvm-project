@@ -589,7 +589,10 @@ getUnmanagedCSI(const MachineFunction &MF,
 
   for (auto &CS : CSI) {
     int FI = CS.getFrameIdx();
-    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::Default)
+    // Callee saves with negative frame indices have fixed positions on the
+    // stack, usually relating to libcalls or push/pop.
+    bool IsManagedFI = (FI < 0);
+    if (!IsManagedFI && MFI.getStackID(FI) == TargetStackID::Default)
       NonLibcallCSI.push_back(CS);
   }
 
@@ -1691,10 +1694,17 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     MaxCSFI = std::max(CSI.front().getFrameIdx(), CSI.back().getFrameIdx());
   }
 
+  auto FIIsCalleeSave = [&](const CalleeSavedInfo &CS) -> bool {
+    return FI == CS.getFrameIdx();
+  };
+
   bool IsInterruptCSR = RVFI->isSiFivePreemptibleInterrupt(MF) &&
                         (FI == RVFI->getInterruptCSRFrameIndex(0) ||
                          FI == RVFI->getInterruptCSRFrameIndex(1));
-  if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInterruptCSR) {
+  bool IsInlineRestoredLibcallCSR = llvm::any_of(
+      getPushOrLibCallsSavedInfo(MF, MFI.getCalleeSavedInfo()), FIIsCalleeSave);
+  if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInterruptCSR ||
+      IsInlineRestoredLibcallCSR) {
     FrameReg = SPReg;
 
     if (FirstSPAdjustAmount)
@@ -2674,10 +2684,13 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
         PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
   } else if (const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI)) {
+    assert(RVFI->useSaveRestoreLibCalls(*MF) &&
+           "Expected restore with libcall to use save restore libcalls");
+
     // Restore is not compatible with shadow stacks, so do the restore manually.
     // This ensures we still get the code size saving of `__riscv_save_<N>`.
     if (RVFI->hasShadowStack(*MF)) {
-      loadRegFromStackSlot(CSI);
+      loadRegFromStackSlot(getPushOrLibCallsSavedInfo(*MF, CSI));
       return true;
     }
 
