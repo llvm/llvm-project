@@ -238,6 +238,8 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
+    bool preferZeroCompareBranch() const override;
+
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
       // save two bitwise instructions and one float-to-int instruction and
@@ -271,6 +273,8 @@ namespace llvm {
         EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
         const APInt &ShiftOrRotateAmt,
         const std::optional<APInt> &AndMask) const override;
+
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
     bool preferScalarizeSplat(SDNode *N) const override;
 
@@ -576,10 +580,10 @@ namespace llvm {
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 
-    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-    /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+    /// index.
+    ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const override;
 
     /// Scalar ops always have equal or better analysis/performance/power than
     /// the vector equivalent, so this always makes sense if the scalar op is
@@ -621,12 +625,14 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
 
     bool needsFixedCatchObjects() const override;
 
@@ -727,13 +733,19 @@ namespace llvm {
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
       if (VT == MVT::f80)
         return EVT::getIntegerVT(Context, 96);
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
+
+    /// Return true if \p VT has the rsqrt* based estimate of the square root,
+    /// or of its reciprocal if \p Reciprocal is set.
+    bool hasSqrtEstimate(EVT VT, bool Reciprocal) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
@@ -849,6 +861,7 @@ namespace llvm {
     SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue

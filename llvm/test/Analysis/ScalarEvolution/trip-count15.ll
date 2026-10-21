@@ -101,6 +101,15 @@ define void @smin_unsigned_check(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (1 + (zext i64 (4096 smin %n) to i128))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i128 18446744073709551616
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (1 + (zext i64 (4096 smin %n) to i128))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ;
 entry:
   %min.cmp = icmp slt i64 4096, %n

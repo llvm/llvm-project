@@ -222,26 +222,6 @@ bool AA::isGPU(const Module &M) {
   return T.isGPU();
 }
 
-bool AA::isGPUGenericAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Generic);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Generic);
-}
-
-bool AA::isGPUGlobalAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Global);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Global);
-}
-
 bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
   Triple T(M.getTargetTriple());
@@ -1037,12 +1017,10 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
     return true;
   }
   if (Attr.isStringAttribute()) {
-    StringRef Kind = Attr.getKindAsString();
-    if (AttrSet.hasAttribute(Kind)) {
-      if (!ForceReplace)
-        return false;
-    }
-    AB.addAttribute(Kind, Attr.getValueAsString());
+    Attribute Existing = AttrSet.getAttribute(Attr.getKindAsString());
+    if (Existing.isValid() && (!ForceReplace || Existing == Attr))
+      return false;
+    AB.addAttribute(Attr);
     return true;
   }
   if (Attr.isIntAttribute()) {
@@ -1224,7 +1202,8 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
   if (HasChanged == ChangeStatus::UNCHANGED)
     return ChangeStatus::UNCHANGED;
 
-  AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
+  if (!AM.empty())
+    AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
 
   Iter->second = AL;
@@ -2427,7 +2406,6 @@ void Attributor::identifyDeadInternalFunctions() {
       isModulePass()
           ? nullptr
           : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
-  LibFunc LF;
 
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
@@ -2436,7 +2414,8 @@ void Attributor::identifyDeadInternalFunctions() {
 
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
+    if (F->hasLocalLinkage() &&
+        (isModulePass() || TLI->getLibFunc(*F) == NotLibFunc))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;
@@ -2529,10 +2508,13 @@ ChangeStatus Attributor::cleanupIR() {
       auto *CB = cast<CallBase>(U->getUser());
       if (CB->isArgOperand(U)) {
         unsigned Idx = CB->getArgOperandNo(U);
-        CB->removeParamAttr(Idx, Attribute::NoUndef);
+        // Drop all attributes that make passing undef UB, e.g., dereferenceable
+        // implies noundef.
+        AttributeMask UBImplying = AttributeFuncs::getUBImplyingAttributes();
+        CB->removeParamAttrs(Idx, UBImplying);
         auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
         if (Callee && Callee->arg_size() > Idx)
-          Callee->removeParamAttr(Idx, Attribute::NoUndef);
+          Callee->removeParamAttrs(Idx, UBImplying);
       }
     }
     if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
@@ -3040,14 +3022,14 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
   for (auto &It : ArgumentReplacementMap) {
-    Function *OldFn = It.getFirst();
+    Function *OldFn = It.first;
 
     // Deleted functions do not require rewrites.
     if (!Functions.count(OldFn) || ToBeDeletedFunctions.count(OldFn))
       continue;
 
     const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =
-        It.getSecond();
+        It.second;
     assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
 
     SmallVector<Type *, 16> NewArgumentTypes;
@@ -3179,7 +3161,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
 
       // Copy over various properties and the new attributes.
-      NewCB->copyMetadata(*OldCB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+      NewCB->copyProfileAndDebugMetadata(*OldCB);
       NewCB->setCallingConv(OldCB->getCallingConv());
       NewCB->takeName(OldCB);
       NewCB->setAttributes(AttributeList::get(
@@ -4097,6 +4079,7 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
@@ -4120,6 +4103,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(C.size());
   for (LazyCallGraph::Node &N : C)
     Functions.insert(&N.getFunction());
 
@@ -4149,6 +4133,7 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
   AnalysisGetter AG(FAM, /* CachedOnly */ true);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 

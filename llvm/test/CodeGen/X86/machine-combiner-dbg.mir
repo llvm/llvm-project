@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-gnu-linux -run-pass=machine-combiner %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-gnu-linux -passes=machine-combiner %s -o - | FileCheck %s
 
 --- |
   define float @reassoc_me(float %f1, float %f2, float %f3, float %f4) !dbg !4 {

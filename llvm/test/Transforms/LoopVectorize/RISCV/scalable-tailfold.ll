@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
 
-define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_add(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -51,7 +51,7 @@ for.end:
 
 
 ; a[b[i]] = v, exercise scatter support
-define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @indexed_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -94,7 +94,7 @@ for.end:
   ret void
 }
 
-define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @indexed_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -141,7 +141,7 @@ for.end:
   ret i64 %sum.next
 }
 
-define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @splat_int(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -180,7 +180,7 @@ for.end:
   ret void
 }
 
-define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @uniform_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -221,7 +221,7 @@ for.end:
   ret void
 }
 
-define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %n) {
+define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
@@ -263,7 +263,7 @@ for.end:
 }
 
 
-define void @vector_add_trip1024(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_add_trip1024(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_add_trip1024(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

@@ -14,3 +14,9 @@ class MinimalProvider(ScriptedFrameProvider):
 
     def get_frame_at_index(self, index):
         return None
+
+
+class FailingDescriptionProvider(MinimalProvider):
+    @staticmethod
+    def get_description():
+        raise ValueError("scripted frame provider description failed")

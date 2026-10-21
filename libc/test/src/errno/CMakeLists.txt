@@ -4,7 +4,7 @@ endif()
 
 add_custom_target(libc_errno_unittests)
 
-add_libc_unittest(
+add_libc_test(
   errno_test
   SUITE
     libc_errno_unittests

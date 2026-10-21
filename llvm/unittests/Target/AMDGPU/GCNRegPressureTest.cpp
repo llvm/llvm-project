@@ -50,7 +50,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerEndOnDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -119,7 +119,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerAllDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -166,7 +166,7 @@ body:             |
 )";
   ASSERT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("BumpDownwardPressureLastUseAfterCommit");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
 
@@ -182,15 +182,15 @@ body:             |
   MachineInstr *U1 = Instrs[2];
   MachineInstr *U2 = Instrs[3];
 
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNManualDownwardRPTracker RPTracker(LIS);
   GCNRPTracker::LiveRegSet Empty;
   RPTracker.reset(MRI, Empty);
 
   // Commit the defs and the first use of %1 via the externally-managed
   // iterator (same as while scheduling).
-  RPTracker.advance(DefV0, /*UseInternalIterator=*/false);
-  RPTracker.advance(DefV1, /*UseInternalIterator=*/false);
-  RPTracker.advance(U1, /*UseInternalIterator=*/false);
+  RPTracker.advance(*DefV0);
+  RPTracker.advance(*DefV1);
+  RPTracker.advance(*U1);
 
   // After committing U1, both %0 (1 VGPR) and %1 (vreg_256 = 8 VGPRs) are live.
   EXPECT_EQ(RPTracker.getPressure().getArchVGPRNum(), 9U);
@@ -199,4 +199,50 @@ body:             |
   // leaving only %0 live.
   GCNRegPressure P = RPTracker.bumpDownwardPressure(U2, TRI);
   EXPECT_EQ(P.getArchVGPRNum(), 1U);
+}
+
+// Tests bumpDownwardPressure for an instruction that uses and redefines
+// the same register.
+TEST_F(GCNRegPressureTest, BumpDownwardPressureUseAndRedef) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureUseAndRedef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %0:sgpr_32 = S_OR_B32 %0:sgpr_32, 1, implicit-def dead $scc
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureUseAndRedef");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0 (sgpr_32 = 1 SGPR)
+  // 1: use+redef of %0
+  // 2: use %0
+  // 3: S_ENDPGM
+  MachineInstr *DefS0 = Instrs[0];
+  MachineInstr *UseRedef = Instrs[1];
+
+  GCNManualDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the def; %0 occupies 1 SGPR and stays live.
+  RPTracker.advance(*DefS0);
+  EXPECT_EQ(RPTracker.getPressure().getSGPRNum(), 1U);
+
+  // Speculate the instruction. It uses and redefines %0, which stays live, so
+  // pressure must be unchanged.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(UseRedef, TRI);
+  EXPECT_EQ(P.getSGPRNum(), 1U);
 }

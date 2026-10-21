@@ -166,11 +166,6 @@ const char *getMarkdownLanguage(const ASTContext &Ctx) {
 
 HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
                                  const PrintingPolicy &PP) {
-  // TypePrinter doesn't resolve decltypes, so resolve them here.
-  // FIXME: This doesn't handle composite types that contain a decltype in them.
-  // We should rather have a printing policy for that.
-  while (!QT.isNull() && QT->isDecltypeType())
-    QT = QT->castAs<DecltypeType>()->getUnderlyingType();
   HoverInfo::PrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
   // Special case: if the outer type is a canonical tag type, then include the
@@ -178,6 +173,10 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // complex cases, including pointers/references, template specializations,
   // etc.
   PrintingPolicy Copy(PP);
+  // Show what a decltype resolves to; `int` is more useful than `decltype(x)`.
+  // Unlike the declaration printed as HI.Definition, this is not meant to
+  // reflect how the type was spelled.
+  Copy.ResolveDecltype = true;
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified()) {
@@ -191,8 +190,14 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
-    if (ShouldAKA)
+    if (ShouldAKA) {
       Result.AKA = DesugaredTy.getAsString(Copy);
+      // ShouldAKA reflects desugaring at the AST level, but the printing
+      // policy may already have resolved the difference away (e.g. for a
+      // decltype). Don't print "int (aka int)".
+      if (Result.AKA == Result.Type)
+        Result.AKA.reset();
+    }
   }
   return Result;
 }
@@ -958,6 +963,19 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
                                           const PrintingPolicy &PP,
                                           const SymbolIndex *Index) {
   std::optional<HoverInfo> HI;
+
+  if (const auto *VecExpr = dyn_cast<ExtVectorElementExpr>(E)) {
+    HI.emplace();
+    HI->Name = VecExpr->getAccessor().getName().str();
+    HI->Type = printType(VecExpr->getType(), AST.getASTContext(), PP);
+    return HI;
+  }
+  if (const auto *MatExpr = dyn_cast<MatrixElementExpr>(E)) {
+    HI.emplace();
+    HI->Name = MatExpr->getAccessor().getName().str();
+    HI->Type = printType(MatExpr->getType(), AST.getASTContext(), PP);
+    return HI;
+  }
 
   if (const StringLiteral *SL = dyn_cast<StringLiteral>(E)) {
     // Print the type and the size for string literals

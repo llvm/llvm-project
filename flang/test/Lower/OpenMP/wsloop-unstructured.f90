@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fopenmp -o - %s | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s | FileCheck %s
 
 subroutine sub(imax, jmax, x, y)
   integer, intent(in) :: imax, jmax
@@ -24,10 +24,10 @@ end subroutine sub
 ! that all blocks are terminated
 
 ! CHECK-LABEL:   func.func @_QPsub(
-! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "imax", fir.read_only},
-! CHECK-SAME:                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "jmax", fir.read_only},
-! CHECK-SAME:                      %[[VAL_2:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
-! CHECK-SAME:                      %[[VAL_3:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "imax", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only},
+! CHECK-SAME:                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "jmax", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only},
+! CHECK-SAME:                      %[[VAL_2:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>},
+! CHECK-SAME:                      %[[VAL_3:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "y", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 ! [...]
 ! CHECK:             omp.wsloop private({{.*}}) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_53:.*]], %[[VAL_54:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {

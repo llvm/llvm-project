@@ -47,28 +47,28 @@ const char16_t *UnicodeString16 = u"Hello";
 
 const char32_t *UnicodeString32 = U"Hello";
 //CHECK: [6 x i32] [i32 72, i32 101, i32 108, i32 108, i32 111, i32 0]
-//CHECK=UTF8: [6 x i32] [i32 72, i32 101, i32 108, i32 108, i32 111, i32 0]
+//CHECK-UTF8: [6 x i32] [i32 72, i32 101, i32 108, i32 108, i32 111, i32 0]
 
 const char *UnicodeRawString8 = u8R"("Hello\")";
 //CHECK: c"\22Hello\\\22\00"
-//CHECK=UTF8: c"\22Hello\\\22\00"
+//CHECK-UTF8: c"\22Hello\\\22\00"
 
 const char16_t *UnicodeRawString16 = uR"("Hello\")";
 //CHECK: [9 x i16] [i16 34, i16 72, i16 101, i16 108, i16 108, i16 111, i16 92, i16 34, i16 0]
-//CHECK=UTF8: [9 x i16] [i16 34, i16 72, i16 101, i16 108, i16 108, i16 111, i16 92, i16 34, i16 0]
+//CHECK-UTF8: [9 x i16] [i16 34, i16 72, i16 101, i16 108, i16 108, i16 111, i16 92, i16 34, i16 0]
 
 const char32_t *UnicodeRawString32 = UR"("Hello\")";
 //CHECK: [9 x i32] [i32 34, i32 72, i32 101, i32 108, i32 108, i32 111, i32 92, i32 34, i32 0]
-//CHECK=UTF8: [9 x i32] [i32 34, i32 72, i32 101, i32 108, i32 108, i32 111, i32 92, i32 34, i32 0]
+//CHECK-UTF8: [9 x i32] [i32 34, i32 72, i32 101, i32 108, i32 108, i32 111, i32 92, i32 34, i32 0]
 
 const char *UnicodeUCNString8 = u8"\u00E2\u00AC\U000000DF";
 //CHECK: c"\C3\A2\C2\AC\C3\9F\00"
-//CHECK=UTF8: c"\C3\A2\C2\AC\C3\9F\00"
+//CHECK-UTF8: c"\C3\A2\C2\AC\C3\9F\00"
 
 const char16_t *UnicodeUCNString16 = u"\u00E2\u00AC\U000000DF";
 //CHECK: [4 x i16] [i16 226, i16 172, i16 223, i16 0]
-//CHECK=UTF8: [4 x i16] [i16 226, i16 172, i16 223, i16 0]
+//CHECK-UTF8: [4 x i16] [i16 226, i16 172, i16 223, i16 0]
 
 const char32_t *UnicodeUCNString32 = U"\u00E2\u00AC\U000000DF";
 //CHECK: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
-//CHECK=UTF8: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
+//CHECK-UTF8: [4 x i32] [i32 226, i32 172, i32 223, i32 0]

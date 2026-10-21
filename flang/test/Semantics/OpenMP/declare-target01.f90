@@ -1,12 +1,9 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:
 ! 2.14.7 Declare Target Directive
 
 module declare_target01
-  use omp_lib
   type my_type(kind_param, len_param)
     integer, KIND :: kind_param
     integer, LEN :: len_param
@@ -51,84 +48,84 @@ module declare_target01
   !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
   !$omp declare target (y%KIND)
 
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var)
 
   !$omp declare target enter (my_var)
 
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var) device_type(host)
 
   !$omp declare target enter (my_var) device_type(host)
 
   !ERROR: A structure component cannot appear on the DECLARE TARGET directive
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var%t_i)
 
   !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (my_var%t_i)
 
   !ERROR: A structure component cannot appear on the DECLARE TARGET directive
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var%t_arr)
 
   !ERROR: A structure component cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (my_var%t_arr)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var%kind_param)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (my_var%kind_param)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (my_var%len_param)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (my_var%len_param)
 
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr)
 
   !$omp declare target enter (arr)
 
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr) device_type(nohost)
 
   !$omp declare target enter (arr) device_type(nohost)
 
   !ERROR: An array element cannot appear on the DECLARE TARGET directive
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr(1))
 
   !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (arr(1))
 
   !ERROR: An array element cannot appear on the DECLARE TARGET directive
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr(1:2))
 
   !ERROR: An array element cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (arr(1:2))
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (x%KIND)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (x%KIND)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (w%LEN)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (w%LEN)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (y%KIND)
 
   !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause

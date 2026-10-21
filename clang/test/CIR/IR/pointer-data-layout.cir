@@ -1,0 +1,58 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A well-formed #cir.ptr_spec entry round-trips without diagnostics.
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// The entry value must be a #cir.ptr_spec attribute.
+// expected-error @below {{expected layout attribute for '!cir.ptr<!cir.void>' to be a #cir.ptr_spec attribute}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = dense<32> : vector<2xi64>>} {
+}
+
+// -----
+
+// The entry key must use !cir.void as pointee.
+// expected-error @below {{expected !cir.ptr data layout entry for '!cir.ptr<!cir.int<s, 32>>' to use !cir.void as pointee}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.int<s, 32>> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// Per-address-space pointer layouts are not supported yet.
+// expected-error @below {{!cir.ptr data layout entries are currently limited to the default address space}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void, target_address_space(5)> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// expected-error @+2 {{size entry must be divisible by 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #cir.ptr_spec<size = 33, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// expected-error @+2 {{abi entry must be divisible by 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 33, preferred = 64>>} {
+}
+
+// -----
+
+// expected-error @+2 {{index entry must be divisible by 8}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32, index = 33>>} {
+}
+
+// -----
+
+// expected-error @+2 {{preferred alignment is expected to be at least as large as ABI alignment}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void> = #cir.ptr_spec<size = 64, abi = 64, preferred = 32>>} {
+}

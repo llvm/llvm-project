@@ -213,10 +213,10 @@ define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_
 ; CHECK:    [[P6:%[0-9]+]]:ppr = LDR_PXI [[X0]], 2 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[P5:%[0-9]+]]:ppr = LDR_PXI [[X0]], 1 :: (load (<vscale x 1 x s16>))
 ; CHECK:    [[P4:%[0-9]+]]:ppr = LDR_PXI [[X0]], 0 :: (load (<vscale x 1 x s16>))
-; CHECK:    [[RES0:%[0-9]+]]:ppr = AND_PPzPP [[P0]], [[P0]], killed [[P4]]
-; CHECK:    [[RES1:%[0-9]+]]:ppr = AND_PPzPP [[P1]], [[P1]], killed [[P5]]
-; CHECK:    [[RES2:%[0-9]+]]:ppr = AND_PPzPP [[P2]], [[P2]], killed [[P6]]
-; CHECK:    [[RES3:%[0-9]+]]:ppr = AND_PPzPP [[P3]], [[P3]], killed [[P7]]
+; CHECK:    [[RES0:%[0-9]+]]:ppr = AND_PPzPP [[P0]], [[P0]], [[P4]]
+; CHECK:    [[RES1:%[0-9]+]]:ppr = AND_PPzPP [[P1]], [[P1]], [[P5]]
+; CHECK:    [[RES2:%[0-9]+]]:ppr = AND_PPzPP [[P2]], [[P2]], [[P6]]
+; CHECK:    [[RES3:%[0-9]+]]:ppr = AND_PPzPP [[P3]], [[P3]], [[P7]]
 ; CHECK:    $p0 = COPY [[RES0]]
 ; CHECK:    $p1 = COPY [[RES1]]
 ; CHECK:    $p2 = COPY [[RES2]]
@@ -256,7 +256,7 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @callee_with_many_gpr_sve_arg(i
 ; CHECK: fixedStack:
 ; CHECK:      - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
 ; CHECK-DAG: [[BASE:%[0-9]+]]:gpr64common = LDRXui %fixed-stack.0, 0
-; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LDR_ZXI killed [[BASE]]
+; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LDR_ZXI [[BASE]]
 ; CHECK-DAG: $z0 = COPY [[RES]]
 ; CHECK: RET_ReallyLR implicit $z0
   ret <vscale x 4 x i32> %z9
@@ -275,8 +275,8 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_gpr_sve_arg(i
 ; CHECK-DAG: [[BASE1:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0
 ; CHECK-DAG: [[BASE2:%[0-9]+]]:gpr64common = ADDXri %stack.1, 0
 ; CHECK-DAG: [[SP:%[0-9]+]]:gpr64sp = COPY $sp
-; CHECK-DAG: STRXui killed [[BASE1]], [[SP]], 0
-; CHECK-DAG: STRXui killed [[BASE2]], [[SP]], 1
+; CHECK-DAG: STRXui [[BASE1]], [[SP]], 0
+; CHECK-DAG: STRXui [[BASE2]], [[SP]], 1
 ; CHECK:     BL @callee_with_many_gpr_sve_arg
 ; CHECK:     RET_ReallyLR implicit $z0
   %ret = call aarch64_sve_vector_pcs <vscale x 4 x i32> @callee_with_many_gpr_sve_arg(i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 4 x i32> %z, <vscale x 2 x i64> %z2, <vscale x 4 x i32> %z)

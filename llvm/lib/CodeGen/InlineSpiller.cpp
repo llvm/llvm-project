@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InlineSpiller.h"
 #include "AllocationOrder.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -216,8 +217,7 @@ private:
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
-  void markValueUsed(LiveInterval*, VNInfo*);
-  bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
+  void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
   void reMaterializeAll();
@@ -454,6 +454,34 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  MachineBasicBlock *MBB = DefMBB;
+  MachineBasicBlock::iterator MII;
+  if (SrcVNI->isPHIDef())
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+  else {
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+    assert(DefMI && "Defining instruction disappeared");
+    MII = DefMI;
+    ++MII;
+  }
+
+  // When the def is a PHI, the store may be inserted after the prologue
+  // instructions. In that case, the segment may need to be extended to the
+  // store (see below). Do not hoist if there is an interference between the end
+  // of the segment and the insertion point.
+  if (SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
+    // Here, MII points to the instruction before which the store will be
+    // inserted. Using that instruction's base index is a safe upper bound for
+    // the interference check.
+    SlotIndex InsertIdx = MII == MBB->end()
+                              ? LIS.getMBBEndIdx(MBB)
+                              : LIS.getInstructionIndex(*MII).getBaseIndex();
+    if (SrcQ.endPoint() < InsertIdx &&
+        Matrix->checkInterference(SrcQ.endPoint(), InsertIdx,
+                                  VRM.getPhys(SrcReg)))
+      return false;
+  }
+
   // Conservatively extend the stack slot range to the range of the original
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
@@ -468,16 +496,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // any later spills of the same value.
   eliminateRedundantSpills(SrcLI, SrcVNI);
 
-  MachineBasicBlock *MBB = LIS.getMBBFromIndex(SrcVNI->def);
-  MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
-    assert(DefMI && "Defining instruction disappeared");
-    MII = DefMI;
-    ++MII;
-  }
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
@@ -601,8 +619,8 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
-bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
-                                                     MachineInstr &MI) {
+bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg,
+                                            const MachineInstr &MI) {
   if (!RestrictStatepointRemat)
     return true;
   // Here's a quick explanation of the problem we're trying to handle here:
@@ -628,7 +646,7 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
   for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                 EndIdx = MI.getNumOperands();
        Idx < EndIdx; ++Idx) {
-    MachineOperand &MO = MI.getOperand(Idx);
+    const MachineOperand &MO = MI.getOperand(Idx);
     if (MO.isReg() && MO.getReg() == VReg)
       return false;
   }

@@ -9,7 +9,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
                   %B: tensor<512x2000xf32>,
                   %C: tensor<1024x2000xf32>) -> tensor<1024x2000xf32> {
 
-// CHECK:      #[[MAP:.*]] = affine_map<()[s0] -> (-(2000 mod s0) + 2000)>
+// CHECK:      #[[MAP:.*]] = affine_map<()[s0] -> (-(2000 mod s0) + 2000, 0)>
 // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:  %[[C2000:.*]] = arith.constant 2000 : index
 // CHECK-DAG:  %[[C8:.*]] = arith.constant 8 : index
@@ -23,7 +23,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 
 // Main loop after vectorisation (without masking)
 
-// CHECK:         %[[UB_MAIN:.*]] = affine.apply #[[MAP]]()[%[[STEP]]]
+// CHECK:         %[[UB_MAIN:.*]] = affine.max #[[MAP]]()[%[[STEP]]]
 // CHECK:         scf.for {{.*}} %[[C0]] to %[[UB_MAIN]] step %[[STEP]] {{.*}} -> (tensor<1024x2000xf32>) {
 // CHECK:           scf.for %arg7 = %[[C0]] to %[[C512]] step %[[C1]] {{.*}} -> (tensor<1024x2000xf32>) {
 // CHECK-NOT:         vector.mask

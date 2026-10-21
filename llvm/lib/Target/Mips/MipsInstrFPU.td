@@ -34,7 +34,13 @@ def SDT_MipsTruncIntFP : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_MipsBuildPairF64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
                                                 SDTCisVT<1, i32>,
                                                 SDTCisSameAs<1, 2>]>;
+def SDT_MipsBuildPairF64_FPR : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                                SDTCisVT<1, f32>,
+                                                SDTCisSameAs<1, 2>]>;
 def SDT_MipsExtractElementF64 : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                                                     SDTCisVT<1, f64>,
+                                                     SDTCisVT<2, i32>]>;
+def SDT_MipsExtractElementF64_FPR : SDTypeProfile<1, 2, [SDTCisVT<0, f32>,
                                                      SDTCisVT<1, f64>,
                                                      SDTCisVT<2, i32>]>;
 
@@ -57,8 +63,12 @@ def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
 
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
 def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64>;
+def MipsBuildPairF64_FPR : SDNode<"MipsISD::BuildPairF64_FPR", SDT_MipsBuildPairF64_FPR>;
+def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64_FPR>;
 def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
                                    SDT_MipsExtractElementF64>;
+def MipsExtractElementF64_FPR : SDNode<"MipsISD::ExtractElementF64_FPR",
+                                   SDT_MipsExtractElementF64_FPR>;
 
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
@@ -75,13 +85,13 @@ let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
 def IsFP64bit        : Predicate<"Subtarget->isFP64bit()">,
                        AssemblerPredicate<(all_of FeatureFP64Bit)>;
 def NotFP64bit       : Predicate<"!Subtarget->isFP64bit()">,
-                       AssemblerPredicate<(all_of (not FeatureFP64Bit))>;
+                       AssemblerPredicate<(none_of FeatureFP64Bit)>;
 def IsSingleFloat    : Predicate<"Subtarget->isSingleFloat()">,
                        AssemblerPredicate<(all_of FeatureSingleFloat)>;
 def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
+                       AssemblerPredicate<(none_of FeatureSingleFloat)>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
+                       AssemblerPredicate<(none_of FeatureSoftFloat)>;
 def HasMips3D        : Predicate<"Subtarget->has3D()">,
                        AssemblerPredicate<(all_of FeatureMips3D)>;
 
@@ -194,20 +204,29 @@ class MTC1_64_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC> :
   let Constraints = "$fs = $fs_in";
 }
 
+// Doubleword transfers encode all 32 FPR numbers, including odd ones when
+// the selected register model otherwise uses paired single registers.
+def AFGR64MemOpnd : RegisterOperand<AFGR64> {
+  let ParserMatchClass = AFGR64AsmOperand;
+  let DecoderMethod = "DecodeFGR64RegisterClass";
+}
+
 class LW_FT<string opstr, RegisterOperand RC, DAGOperand MO,
             SDPatternOperator OpNode = null_frag> :
-  InstSE<(outs RC:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(set RC:$rt, (OpNode addrDefault:$addr))], FrmFI, opstr>,
+  InstSE<(outs RC:$rt), (ins MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RC:$rt, (OpNode (addrDefault MemBase:$base, iPTR:$offset)))],
+         FrmFI, opstr>,
   HARDFLOAT {
-  let DecoderMethod = "DecodeFMem";
   let mayLoad = 1;
 }
 
 class SW_FT<string opstr, RegisterOperand RC, DAGOperand MO,
             SDPatternOperator OpNode = null_frag> :
-  InstSE<(outs), (ins RC:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RC:$rt, addrDefault:$addr)], FrmFI, opstr>, HARDFLOAT {
-  let DecoderMethod = "DecodeFMem";
+  InstSE<(outs), (ins RC:$rt, MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RC:$rt, (addrDefault MemBase:$base, iPTR:$offset))],
+         FrmFI, opstr>, HARDFLOAT {
   let mayStore = 1;
 }
 
@@ -256,7 +275,7 @@ class BC1F_FT<string opstr, DAGOperand opnd,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -267,7 +286,7 @@ class BC1XL_FT<string opstr, DAGOperand opnd> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -660,11 +679,11 @@ let DecoderNamespace = "MipsFP64", AdditionalPredicates = [NotInMicroMips] in {
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def LDC1 : MMRel, StdMMR6Rel, LW_FT<"ldc1", AFGR64Opnd, mem_simm16,
+  def LDC1 : MMRel, StdMMR6Rel, LW_FT<"ldc1", AFGR64MemOpnd, mem_simm16,
                                       load>, LW_FM<0x35>, ISA_MIPS2, FGR_32 {
     let BaseOpcode = "LDC132";
   }
-  def SDC1 : MMRel, SW_FT<"sdc1", AFGR64Opnd, mem_simm16, store>,
+  def SDC1 : MMRel, SW_FT<"sdc1", AFGR64MemOpnd, mem_simm16, store>,
              LW_FM<0x3d>, ISA_MIPS2, FGR_32;
 }
 
@@ -836,7 +855,12 @@ class BuildPairF64Base<RegisterOperand RO> :
   PseudoSE<(outs RO:$dst), (ins GPR32Opnd:$lo, GPR32Opnd:$hi),
            [(set RO:$dst, (MipsBuildPairF64 GPR32Opnd:$lo, GPR32Opnd:$hi))]>;
 
+class BuildPairF64Base_FPR<RegisterOperand RO> :
+  PseudoSE<(outs RO:$dst), (ins FGR32Opnd:$lo, FGR32Opnd:$hi),
+           [(set RO:$dst, (MipsBuildPairF64_FPR FGR32Opnd:$lo, FGR32Opnd:$hi))]>;
+
 def BuildPairF64 : BuildPairF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
+def BuildPairF64_FPR : BuildPairF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def BuildPairF64_64 : BuildPairF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 // This pseudo instr gets expanded into 2 mfc1 instrs after register
@@ -890,34 +914,41 @@ def LoadImmDoubleFGR : MipsAsmPseudoInst<(outs StrictlyFGR64Opnd:$rd),
                        FGR_64, HARDFLOAT;
 
 def SDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
-                                (ins mem_simm16:$addr),
-                                "s.d\t$fd, $addr">,
+                                (ins MemBase:$base, mem_simm16:$offset),
+                                "s.d\t$fd, ${offset}(${base})">,
               FGR_32, ISA_MIPS1, HARDFLOAT;
 
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//
 def : MipsInstAlias
-        <"s.s $fd, $addr", (SWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+        <"s.s $fd, ${offset}(${base})",
+         (SWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       ISA_MIPS2, HARDFLOAT;
 def : MipsInstAlias
-        <"s.d $fd, $addr", (SDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+        <"s.d $fd, ${offset}(${base})",
+         (SDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_32, ISA_MIPS2, HARDFLOAT;
 def : MipsInstAlias
-        <"s.d $fd, $addr", (SDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+        <"s.d $fd, ${offset}(${base})",
+         (SDC164 FGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
 def : MipsInstAlias
-        <"s.d $fd, $addr", (SDC1_M1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+        <"s.d $fd, ${offset}(${base})",
+         (SDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_32, ISA_MIPS1, HARDFLOAT;
 
 def : MipsInstAlias
-        <"l.s $fd, $addr", (LWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+        <"l.s $fd, ${offset}(${base})",
+         (LWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       ISA_MIPS2, HARDFLOAT;
 def : MipsInstAlias
-        <"l.d $fd, $addr", (LDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+        <"l.d $fd, ${offset}(${base})",
+         (LDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_32, ISA_MIPS2, HARDFLOAT;
 def : MipsInstAlias
-        <"l.d $fd, $addr", (LDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+        <"l.d $fd, ${offset}(${base})",
+         (LDC164 FGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
 
 multiclass C_COND_ALIASES<string TypeStr, RegisterOperand RC> {
@@ -1005,8 +1036,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
-def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>, ISA_MIPS1;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0), (MTC1 R0)>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 R0))>, ISA_MIPS1;
 
 def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
@@ -1039,9 +1070,15 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (CVT_D32_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_32;
 }
 
-def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
-def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
+def : MipsPat<(f64 fpimm0), (DMTC1 R0_64)>, ISA_MIPS3, GPR_64, FGR_64;
+def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 R0_64))>, ISA_MIPS3, GPR_64,
       FGR_64;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_lo)>;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 1)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_hi)>;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;
@@ -1090,10 +1127,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
     def : LoadRegImmPat<LWC1, f32, load>, ISA_MIPS1;
     def : StoreRegImmPat<SWC1, f32>, ISA_MIPS1;
 
-    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS1, FGR_64;
-    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS1, FGR_64;
+    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS2, FGR_64;
+    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS2, FGR_64;
 
-    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS1, FGR_32;
-    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS1, FGR_32;
+    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS2, FGR_32;
+    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS2, FGR_32;
   }
 }

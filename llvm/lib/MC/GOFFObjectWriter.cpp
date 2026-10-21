@@ -265,6 +265,7 @@ public:
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
@@ -292,6 +293,16 @@ class GOFFWriter {
   /// Saved relocation data collected in recordRelocations().
   std::vector<GOFFRelocationEntry> &Relocations;
 
+public:
+  enum DwoMode {
+    AllSections,
+    NonDwoOnly,
+    DwoOnly,
+  };
+
+private:
+  const DwoMode Mode;
+
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
   void writeText(const MCSectionGOFF *MC);
@@ -305,17 +316,40 @@ class GOFFWriter {
 
 public:
   GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD,
-             std::vector<GOFFRelocationEntry> &Relocations);
+             std::vector<GOFFRelocationEntry> &Relocations, DwoMode Mode);
   uint64_t writeObject();
 };
 } // namespace
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
                        MCSectionGOFF *RootSD,
-                       std::vector<GOFFRelocationEntry> &Relocations)
-    : OS(OS), Asm(Asm), RootSD(RootSD), Relocations(Relocations) {}
+                       std::vector<GOFFRelocationEntry> &Relocations,
+                       DwoMode Mode)
+    : OS(OS), Asm(Asm), RootSD(RootSD), Relocations(Relocations), Mode(Mode) {}
+
+namespace {
+bool isDwoSection(const MCSection &Section) {
+  StringRef Name = Section.getName();
+  return (Name.ends_with(".dwo") && Name.starts_with(".debug_")) ||
+         (Name.ends_with("_DWO") && Name.starts_with("D_"));
+}
+
+bool isSectionToSkip(const MCSection &Section, GOFFWriter::DwoMode Mode) {
+  if (Mode == GOFFWriter::DwoOnly) {
+    if (!isDwoSection(Section))
+      return true;
+  } else if (Mode == GOFFWriter::NonDwoOnly) {
+    if (isDwoSection(Section))
+      return true;
+  }
+  return false;
+}
+} // namespace
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
+  if (isSectionToSkip(Section, Mode))
+    return;
+
   if (Section.isSD()) {
     GOFFSymbol SD(Section.getExternalName(), Section.getOrdinal(),
                   Section.getSDAttributes());
@@ -368,8 +402,8 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
-                               Symbol.getLinkage(), Symbol.getBindingScope(),
-                               0});
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
@@ -396,14 +430,20 @@ void GOFFWriter::defineSymbols() {
       continue;
     auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
     if (!Symbol.isDefined()) {
-      Symbol.setIndex(++Ordinal);
-      defineExtern(Symbol);
-    } else if (Symbol.isInEDSection()) {
-      Symbol.setIndex(++Ordinal);
-      defineLabel(Symbol);
+      if (Mode != DwoOnly) {
+        Symbol.setIndex(++Ordinal);
+        defineExtern(Symbol);
+      }
     } else {
-      // Symbol is in PR section, the symbol refers to the section.
-      Symbol.setIndex(Symbol.getSection().getOrdinal());
+      if (isSectionToSkip(Symbol.getSection(), Mode))
+        continue;
+      if (Symbol.isInEDSection()) {
+        Symbol.setIndex(++Ordinal);
+        defineLabel(Symbol);
+      } else {
+        // Symbol is in PR section, the symbol refers to the section.
+        Symbol.setIndex(Symbol.getSection().getOrdinal());
+      }
     }
   }
 }
@@ -560,9 +600,7 @@ void GOFFWriter::writeRelocations() {
   for (auto &RelocEntry : Relocations) {
     auto GetRptr = [](const MCSymbolGOFF *Sym) -> uint32_t {
       if (Sym->isTemporary())
-        return static_cast<MCSectionGOFF &>(Sym->getSection())
-            .getBeginSymbol()
-            ->getIndex();
+        return static_cast<MCSectionGOFF &>(Sym->getSection()).getOrdinal();
       return Sym->getIndex();
     };
 
@@ -672,7 +710,9 @@ uint64_t GOFFWriter::writeObject() {
   for (const MCSection &Section : Asm)
     writeText(static_cast<const MCSectionGOFF *>(&Section));
 
-  writeRelocations();
+  // Do not write relocations into the dwo file.
+  if (Mode != GOFFWriter::DwoOnly)
+    writeRelocations();
 
   writeEnd();
 
@@ -688,6 +728,11 @@ uint64_t GOFFWriter::writeObject() {
 GOFFObjectWriter::GOFFObjectWriter(
     std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
     : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
+
+GOFFObjectWriter::GOFFObjectWriter(
+    std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
+    raw_pwrite_stream &DwoOS)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS), DwoOS(&DwoOS) {}
 
 GOFFObjectWriter::~GOFFObjectWriter() = default;
 
@@ -810,7 +855,13 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
 }
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS, *Asm, RootSD, Relocations).writeObject();
+  uint64_t Size = 0;
+  if (DwoOS)
+    Size += GOFFWriter(*DwoOS, *Asm, RootSD, Relocations, GOFFWriter::DwoOnly)
+                .writeObject();
+  Size += GOFFWriter(OS, *Asm, RootSD, Relocations,
+                     DwoOS ? GOFFWriter::NonDwoOnly : GOFFWriter::AllSections)
+              .writeObject();
   return Size;
 }
 
@@ -818,4 +869,10 @@ std::unique_ptr<MCObjectWriter>
 llvm::createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS) {
   return std::make_unique<GOFFObjectWriter>(std::move(MOTW), OS);
+}
+
+std::unique_ptr<MCObjectWriter>
+llvm::createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                             raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS) {
+  return std::make_unique<GOFFObjectWriter>(std::move(MOTW), OS, DwoOS);
 }

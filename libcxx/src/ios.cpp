@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/locale.h>
 #include <algorithm>
 #include <atomic>
 #include <ios>
@@ -49,7 +49,8 @@ const error_category& iostream_category() noexcept {
     constexpr explicit AvoidDestroyingIostreamCategory() : iostream_error_category() {}
     ~AvoidDestroyingIostreamCategory() {}
   };
-  constinit static AvoidDestroyingIostreamCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingIostreamCategory helper;
   return helper.iostream_error_category;
 }
 
@@ -371,13 +372,6 @@ void ios_base::__set_failbit_and_consider_rethrow() {
   if (__exceptions_ & failbit)
     throw;
 #endif // _LIBCPP_HAS_EXCEPTIONS
-}
-
-bool ios_base::sync_with_stdio(bool sync) {
-  static bool previous_state = true;
-  bool r                     = previous_state;
-  previous_state             = sync;
-  return r;
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

@@ -979,34 +979,31 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 24
 ; CHECK-NEXT:    sltui $a2, $a2, 1
 ; CHECK-NEXT:    slli.d $a3, $a0, 8
-; CHECK-NEXT:    addi.d $a4, $a1, -8
 ; CHECK-NEXT:    masknez $a0, $a0, $a2
 ; CHECK-NEXT:    maskeqz $a3, $a3, $a2
 ; CHECK-NEXT:    or $a0, $a3, $a0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
+; CHECK-NEXT:    addi.d $a3, $zero, -8
+; CHECK-NEXT:    maskeqz $a2, $a3, $a2
+; CHECK-NEXT:    add.d $a1, $a1, $a2
 ; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 28
 ; CHECK-NEXT:    sltui $a2, $a2, 1
 ; CHECK-NEXT:    slli.d $a3, $a0, 4
-; CHECK-NEXT:    addi.d $a4, $a1, -4
 ; CHECK-NEXT:    masknez $a0, $a0, $a2
 ; CHECK-NEXT:    maskeqz $a3, $a3, $a2
 ; CHECK-NEXT:    or $a0, $a3, $a0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
+; CHECK-NEXT:    addi.d $a3, $zero, -4
+; CHECK-NEXT:    maskeqz $a2, $a3, $a2
+; CHECK-NEXT:    add.d $a1, $a1, $a2
 ; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 30
 ; CHECK-NEXT:    sltui $a2, $a2, 1
 ; CHECK-NEXT:    slli.d $a3, $a0, 2
-; CHECK-NEXT:    addi.d $a4, $a1, -2
 ; CHECK-NEXT:    masknez $a0, $a0, $a2
 ; CHECK-NEXT:    maskeqz $a3, $a3, $a2
 ; CHECK-NEXT:    or $a0, $a3, $a0
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
+; CHECK-NEXT:    addi.d $a3, $zero, -2
+; CHECK-NEXT:    maskeqz $a2, $a3, $a2
+; CHECK-NEXT:    add.d $a1, $a1, $a2
 ; CHECK-NEXT:    nor $a0, $a0, $zero
 ; CHECK-NEXT:    srli.d $a0, $a0, 31
 ; CHECK-NEXT:    add.w $a0, $a1, $a0
@@ -1033,34 +1030,31 @@ define signext i32 @bug(i32 signext %x) {
 ; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 24
 ; NORMV-NEXT:    sltui $a2, $a2, 1
 ; NORMV-NEXT:    slli.d $a3, $a0, 8
-; NORMV-NEXT:    addi.d $a4, $a1, -8
 ; NORMV-NEXT:    masknez $a0, $a0, $a2
 ; NORMV-NEXT:    maskeqz $a3, $a3, $a2
 ; NORMV-NEXT:    or $a0, $a3, $a0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
+; NORMV-NEXT:    addi.d $a3, $zero, -8
+; NORMV-NEXT:    maskeqz $a2, $a3, $a2
+; NORMV-NEXT:    add.d $a1, $a1, $a2
 ; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 28
 ; NORMV-NEXT:    sltui $a2, $a2, 1
 ; NORMV-NEXT:    slli.d $a3, $a0, 4
-; NORMV-NEXT:    addi.d $a4, $a1, -4
 ; NORMV-NEXT:    masknez $a0, $a0, $a2
 ; NORMV-NEXT:    maskeqz $a3, $a3, $a2
 ; NORMV-NEXT:    or $a0, $a3, $a0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
+; NORMV-NEXT:    addi.d $a3, $zero, -4
+; NORMV-NEXT:    maskeqz $a2, $a3, $a2
+; NORMV-NEXT:    add.d $a1, $a1, $a2
 ; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 30
 ; NORMV-NEXT:    sltui $a2, $a2, 1
 ; NORMV-NEXT:    slli.d $a3, $a0, 2
-; NORMV-NEXT:    addi.d $a4, $a1, -2
 ; NORMV-NEXT:    masknez $a0, $a0, $a2
 ; NORMV-NEXT:    maskeqz $a3, $a3, $a2
 ; NORMV-NEXT:    or $a0, $a3, $a0
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
+; NORMV-NEXT:    addi.d $a3, $zero, -2
+; NORMV-NEXT:    maskeqz $a2, $a3, $a2
+; NORMV-NEXT:    add.d $a1, $a1, $a2
 ; NORMV-NEXT:    nor $a0, $a0, $zero
 ; NORMV-NEXT:    srli.d $a0, $a0, 31
 ; NORMV-NEXT:    add.d $a0, $a1, $a0

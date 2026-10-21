@@ -17,7 +17,6 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WasmAddressSpaces.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
@@ -583,26 +582,23 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
     Register Result = createResultReg(&WebAssembly::I64RegClass);
 
     if (Subtarget->hasSignExt()) {
-      if (From != MVT::i32) {
+      switch (From) {
+      case MVT::i8:
+      case MVT::i16: {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
             .addReg(Reg);
 
         Reg = Result;
         Result = createResultReg(&WebAssembly::I64RegClass);
-      }
 
-      switch (From) {
-      case MVT::i8:
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(WebAssembly::I64_EXTEND8_S_I64), Result)
+                TII.get(From == MVT::i8 ? WebAssembly::I64_EXTEND8_S_I64
+                                        : WebAssembly::I64_EXTEND16_S_I64),
+                Result)
             .addReg(Reg);
         return Result;
-      case MVT::i16:
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(WebAssembly::I64_EXTEND16_S_I64), Result)
-            .addReg(Reg);
-        return Result;
+      }
       case MVT::i32:
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
@@ -611,14 +607,15 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
       default:
         break;
       }
-    } else {
-      Reg = signExtendToI32(Reg, V, From);
-
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
-          .addReg(Reg);
     }
 
+    Reg = signExtendToI32(Reg, V, From);
+    if (Reg == 0)
+      return 0;
+
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+        .addReg(Reg);
     return Result;
   }
 
@@ -1176,6 +1173,13 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
 bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
   const auto *ICmp = cast<ICmpInst>(I);
 
+  // The I32 test below classifies every non-i64 type as i32, so a vector
+  // compare would emit a scalar compare over v128 registers and produce
+  // an invalid module. The SelectionDAG lowers vector compares to SIMD
+  // compares.
+  if (ICmp->getOperand(0)->getType()->isVectorTy())
+    return false;
+
   bool I32 = getSimpleType(ICmp->getOperand(0)->getType()) != MVT::i64;
   unsigned Opc;
   bool IsSigned = false;
@@ -1236,6 +1240,13 @@ bool WebAssemblyFastISel::selectICmp(const Instruction *I) {
 
 bool WebAssemblyFastISel::selectFCmp(const Instruction *I) {
   const auto *FCmp = cast<FCmpInst>(I);
+
+  // The F32 test below classifies every non-f64 type as f32, so a vector
+  // compare would emit a scalar compare over v128 registers and produce
+  // an invalid module. The SelectionDAG lowers vector compares to SIMD
+  // compares.
+  if (FCmp->getOperand(0)->getType()->isVectorTy())
+    return false;
 
   Register LHS = getRegForValue(FCmp->getOperand(0));
   if (LHS == 0)
@@ -1325,7 +1336,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
   --Iter;
   assert(Iter->isBitcast());
-  Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
+  Iter->setImplicitPhysRegDefsDead();
   updateValueMap(I, Reg);
   return true;
 }

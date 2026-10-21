@@ -1,7 +1,7 @@
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   add_custom_target(libc_regex_unittests)
 
-  add_libc_unittest(
+  add_libc_test(
     regerror_test
     SUITE
       libc_regex_unittests
@@ -12,7 +12,7 @@ if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regerror
   )
 
-  add_libc_unittest(
+  add_libc_test(
     regex_basic_test
     SUITE
       libc_regex_unittests
@@ -21,6 +21,7 @@ if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     DEPENDS
       libc.hdr.regex_macros
       libc.hdr.types.regex_t
+      libc.src.__support.CPP.scope
       libc.src.regex.regcomp
       libc.src.regex.regexec
       libc.src.regex.regfree

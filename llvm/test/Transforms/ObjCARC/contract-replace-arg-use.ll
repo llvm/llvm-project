@@ -39,3 +39,26 @@ bb3:
   %v4 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %phival)
   ret ptr %retval
 }
+
+declare ptr @llvm.objc.retain(ptr)
+declare void @use_pointer(ptr)
+
+; The pointer operand of a lifetime intrinsic has to be an alloca, so it must
+; not be replaced by the value returned by @llvm.objc.retain.
+
+; CHECK-LABEL: define void @lifetimeOfRetainedAlloca(
+; CHECK: %[[BLOCK:.*]] = alloca ptr, align 8
+; CHECK: call void @llvm.lifetime.start.p0(ptr %[[BLOCK]])
+; CHECK: %[[V0:.*]] = call ptr @llvm.objc.retain(ptr %[[BLOCK]])
+; CHECK: call void @use_pointer(ptr %[[V0]])
+; CHECK: call void @llvm.lifetime.end.p0(ptr %[[BLOCK]])
+
+define void @lifetimeOfRetainedAlloca() {
+entry:
+  %block = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(ptr %block)
+  %v0 = call ptr @llvm.objc.retain(ptr %block)
+  call void @use_pointer(ptr %block)
+  call void @llvm.lifetime.end.p0(ptr %block)
+  ret void
+}

@@ -182,7 +182,7 @@ private:
 
   uint64_t StackSize;
   Align MaxStackArgAlign;
-  SmallVector<uint32_t, 16> UsedRegs;
+  SmallVector<uint32_t, 32> UsedRegs;
   SmallVector<CCValAssign, 4> PendingLocs;
   SmallVector<ISD::ArgFlagsTy, 4> PendingArgFlags;
 

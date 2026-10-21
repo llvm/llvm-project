@@ -158,16 +158,26 @@ entry:
 
 ; FIXME: support vectorization;
 define half @reduction_sub_half4(<4 x half> %a) {
-; GCN-LABEL: @reduction_sub_half4(
-; GCN-NEXT:  entry:
-; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
-; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[A]], i64 1
-; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[A]], i64 2
-; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[A]], i64 3
-; GCN-NEXT:    [[ADD1:%.*]] = fsub fast half [[ELT1]], [[ELT0]]
-; GCN-NEXT:    [[ADD2:%.*]] = fsub fast half [[ELT2]], [[ADD1]]
-; GCN-NEXT:    [[ADD3:%.*]] = fsub fast half [[ELT3]], [[ADD2]]
-; GCN-NEXT:    ret half [[ADD3]]
+; GFX9-LABEL: @reduction_sub_half4(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
+; GFX9-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[A]], i64 2
+; GFX9-NEXT:    [[TMP0:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 1, i32 3>
+; GFX9-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0.000000e+00, <2 x half> [[TMP0]])
+; GFX9-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[ELT0]], [[ELT2]]
+; GFX9-NEXT:    [[OP_RDX1:%.*]] = fsub fast half [[TMP1]], [[OP_RDX]]
+; GFX9-NEXT:    ret half [[OP_RDX1]]
+;
+; VI-LABEL: @reduction_sub_half4(
+; VI-NEXT:  entry:
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[A]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[A]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[A]], i64 3
+; VI-NEXT:    [[ADD1:%.*]] = fsub fast half [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = fsub fast half [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = fsub fast half [[ELT3]], [[ADD2]]
+; VI-NEXT:    ret half [[ADD3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %a, i64 0

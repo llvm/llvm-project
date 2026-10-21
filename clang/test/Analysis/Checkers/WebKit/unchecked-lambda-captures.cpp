@@ -127,6 +127,8 @@ void lambda_capture_param(CheckedObj* obj) {
 struct CheckedObjWithLambdaCapturingThis {
   void incrementCheckedPtrCount() const;
   void decrementCheckedPtrCount() const;
+  void ref() const;
+  void deref() const;
   void nonTrivial();
 
   void method_captures_this_safe() {
@@ -263,6 +265,12 @@ struct CheckedObjWithLambdaCapturingThis {
       callAsync([this, protectedThis = WTF::move(*protectedThis)] {
         nonTrivial();
       });
+    });
+  }
+
+  void method_captures_this_with_protected_refptr() {
+    call([this, protectedThis = RefPtr { this }]() {
+      nonTrivial();
     });
   }
 };

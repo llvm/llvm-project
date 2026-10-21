@@ -63,6 +63,11 @@ public:
 
   unsigned size() const { return (unsigned)Instructions.size(); }
   bool empty() const { return Instructions.empty(); }
+
+  /// Discard the instructions decoded so far, e.g. the partial program left
+  /// behind by a parse() that failed, before decoding it again.
+  void clear() { Instructions.clear(); }
+
   uint64_t codeAlign() const { return CodeAlignmentFactor; }
   int64_t dataAlign() const { return DataAlignmentFactor; }
   Triple::ArchType triple() const { return Arch; }

@@ -140,8 +140,9 @@ protected:
 
     // Create an element access.
     mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-    mlir::Value index =
+    OwningOpRef<cir::ConstantOp> indexOp =
         cir::ConstantOp::create(b, loc, cir::IntAttr::get(i32Ty, 2));
+    mlir::Value index = indexOp.get();
     OwningOpRef<cir::PtrStrideOp> accessPtr =
         cir::PtrStrideOp::create(b, loc, ptrToElemTy, decayVal, index);
     mlir::Value accessVal = accessPtr.get();
@@ -169,7 +170,9 @@ protected:
     else
       structTy = cir::StructType::get(&context, getUniqueRecordName("S"),
                                       /*is_class=*/false);
-    structTy.complete({ty1, ty2}, false, false);
+    mlir::Type members[] = {ty1, ty2};
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
     // Verify that the pointer points to the structure type.
@@ -251,7 +254,9 @@ protected:
     cir::RecordType structTy =
         cir::StructType::get(&context, getUniqueRecordName("S"),
                              /*is_class=*/false);
-    structTy.complete({ptrTy, ptrTy}, false, false);
+    mlir::Type members[] = {ptrTy, ptrTy};
+    structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
@@ -361,6 +366,8 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
   cir::RecordType structTy =
       cir::StructType::get(&context, getUniqueRecordName("S"),
                            /*is_class=*/false);
-  structTy.complete({i32Ty, i32Ty}, false, false);
+  mlir::Type members[] = {i32Ty, i32Ty};
+  structTy.complete(members, /*packed=*/false, /*padding=*/{},
+                    cir::RecordType::getAllDataKinds(members));
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }

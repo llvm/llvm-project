@@ -3,20 +3,27 @@
 
 ; A DIGlobalVariable with no backing llvm::GlobalVariable but whose
 ; DIGlobalVariableExpression carries a non-empty DIExpression (a constant
-; initializer). Since DebugExpression emission is not implemented, the Variable
-; operand falls back to DebugInfoNone. Flags encode IsLocal|IsDefinition (12).
+; initializer). Both operations map, so the Variable operand is the resulting
+; DebugExpression rather than DebugInfoNone: Constu (8) carrying 42, then
+; StackValue (7) to say the operand stack holds the value itself.
+; Flags encode IsLocal|IsDefinition (12).
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32T:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "constg"
 ; CHECK-DAG: [[STR_INT:%[0-9]+]] = OpString "int"
-; CHECK-DAG: [[C42:%[0-9]+]] = OpConstant [[I32T]] 42
-; CHECK-DAG: [[C12:%[0-9]+]] = OpConstant [[I32T]] 12
-; CHECK-DAG: [[NONE:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugInfoNone
+; The trailing anchors keep e.g. [[C7]] from binding to "OpConstant %3 72".
+; CHECK-DAG: [[C7:%[0-9]+]] = OpConstant [[I32T]] 7{{ *$}}
+; CHECK-DAG: [[C8:%[0-9]+]] = OpConstant [[I32T]] 8{{ *$}}
+; CHECK-DAG: [[C12:%[0-9]+]] = OpConstant [[I32T]] 12{{ *$}}
+; CHECK-DAG: [[C42:%[0-9]+]] = OpConstant [[I32T]] 42{{ *$}}
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource
 ; CHECK-DAG: [[DTI:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[STR_INT]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] {{%[0-9]+}} {{%[0-9]+}} [[NAME]] [[NONE]] [[C12]]
+; CHECK-DAG: [[CONSTU:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugOperation [[C8]] [[C42]]{{ *$}}
+; CHECK-DAG: [[SV:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugOperation [[C7]]{{ *$}}
+; CHECK-DAG: [[EXPR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugExpression [[CONSTU]] [[SV]]{{ *$}}
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] {{%[0-9]+}} {{%[0-9]+}} [[NAME]] [[EXPR]] [[C12]]
 
 target triple = "spirv64-unknown-unknown"
 

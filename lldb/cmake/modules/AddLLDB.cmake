@@ -25,6 +25,11 @@ function(lldb_tablegen)
     list(APPEND LTG_UNPARSED_ARGUMENTS -DLLDB_SANITIZED)
   endif()
 
+  string(TOUPPER "${CMAKE_BUILD_TYPE}" LTG_BUILD_TYPE)
+  if (NOT LLVM_ENABLE_ASSERTIONS AND NOT LTG_BUILD_TYPE STREQUAL "DEBUG")
+    list(APPEND LTG_UNPARSED_ARGUMENTS -DNDEBUG)
+  endif()
+
   tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
@@ -328,7 +333,8 @@ function(add_lldb_library name)
     set_target_properties(${name} PROPERTIES FRAMEWORK ON)
   endif()
 
-  if(PARAM_SHARED)
+  if(PARAM_SHARED OR
+     (LLDB_BUILD_STATIC_LIBLLDB AND libkind STREQUAL "STATIC"))
     set(install_dest lib${LLVM_LIBDIR_SUFFIX})
     if(PARAM_INSTALL_PREFIX)
       set(install_dest ${PARAM_INSTALL_PREFIX})
@@ -535,7 +541,7 @@ endfunction()
 # sits beside it. A framework build moves liblldb into the bundle, so the plugin
 # must move with it and carry an rpath that reaches liblldb from its new
 # location.
-function(lldb_add_scriptinterpreter_plugin_to_framework name)
+function(lldb_add_scriptinterpreter_plugin_to_buildtree_framework name)
   if(NOT LLDB_BUILD_FRAMEWORK)
     return()
   endif()
@@ -547,8 +553,6 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
     )
   endif()
 
-  set_property(TARGET ${name} APPEND PROPERTY
-    INSTALL_RPATH "@loader_path/../../..")
   # Copy under the unversioned name: PluginManager derives a plugin's
   # initializer symbol from it. A versioned copy would load but never
   # initialize.
@@ -562,6 +566,37 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
     COMMENT "Removing ${name} from LLDB.framework")
   add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
+
+function(lldb_add_scriptinterpreter_dynamic_library name)
+  if (LLDB_BUILD_FRAMEWORK)
+    set(framework_install_prefix "${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/")
+    set(framework_arg INSTALL_PREFIX "${framework_install_prefix}")
+  endif()
+
+
+  # ScriptInterpreter shared libraries are loaded at runtime by PluginManager.
+  # Private lldb symbols are resolved via liblldb's re-exports, so we
+  # explicitly cannot link against any lldb_private libraries.
+  # FIXME: Add a mechanism to enforce this. We already have
+  # `ALLOWED_INTERNAL_DEPENDENCIES`, but it is not fine-grained enough to
+  # distinguish between link dependencies and header dependencies.
+  add_lldb_library(${name} SHARED
+    ${framework_arg}
+    ${ARGN}
+  )
+
+  if (LLDB_BUILD_FRAMEWORK)
+    lldb_add_post_install_steps_darwin(${name} ${framework_install_prefix})
+  endif()
+
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(${name})
+  endif()
+
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH "@loader_path/../../..")
+  lldb_add_scriptinterpreter_plugin_to_buildtree_framework(${name})
+endfunction(lldb_add_scriptinterpreter_dynamic_library)
 
 # Add extra install steps for dSYM creation and stripping for the given target.
 function(lldb_add_post_install_steps_darwin name install_prefix)

@@ -10,13 +10,13 @@
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
+#include "Plugins/Language/CPlusPlus/VectorIterator.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
-#include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -406,7 +406,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
@@ -508,7 +508,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
   if (name == "deleter")

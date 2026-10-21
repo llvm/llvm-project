@@ -88,10 +88,12 @@ public:
                                   EVT VT) const override;
 
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;
@@ -169,8 +171,8 @@ public:
                                          unsigned Depth) const override;
 
   bool shouldScalarizeBinop(SDValue VecOp) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   /// Check if a constant splat can be generated using [x]vldi, where imm[12]

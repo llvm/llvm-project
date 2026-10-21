@@ -399,7 +399,7 @@ static void computeFunctionSummary(
     }
 
     for (const Instruction &I : BB) {
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
       ++NumInsts;
 
@@ -520,16 +520,20 @@ static void computeFunctionSummary(
           for (const auto &Op : MD->operands()) {
             Function *Callee = mdconst::extract_or_null<Function>(Op);
             if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
+                  .setHasIndirectCall(true);
           }
         }
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
-        for (const auto &Candidate : CandidateProfileData)
-          CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
-              .updateHotness(getHotness(Candidate.Count, PSI));
+        for (const auto &Candidate : CandidateProfileData) {
+          auto &Edge =
+              CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
+          Edge.updateHotness(getHotness(Candidate.Count, PSI));
+          Edge.setHasIndirectCall(true);
+        }
       }
 
       // Summarize memprof related metadata. This is only needed for ThinLTO.
@@ -1081,15 +1085,16 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     DominatorTree DT(const_cast<Function &>(F));
     BlockFrequencyInfo *BFI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
-    if (GetBFICallback)
-      BFI = GetBFICallback(F);
-    else if (F.hasProfileData()) {
-      LoopInfo LI{DT};
-      CycleInfo CI;
-      CI.compute(const_cast<Function &>(F));
-      BranchProbabilityInfo BPI{F, CI};
-      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
-      BFI = BFIPtr.get();
+    if (F.hasProfileData()) {
+      if (GetBFICallback) {
+        BFI = GetBFICallback(F);
+      } else {
+        CycleInfo CI;
+        CI.compute(const_cast<Function &>(F));
+        BranchProbabilityInfo BPI{F, CI};
+        BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
+        BFI = BFIPtr.get();
+      }
     }
 
     computeFunctionSummary(Index, M, F, BFI, PSI, DT,
@@ -1269,8 +1274,6 @@ INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
 
 bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
   if (!CB)
-    return false;
-  if (CB->isDebugOrPseudoInst())
     return false;
   auto *CI = dyn_cast<CallInst>(CB);
   auto *CalledValue = CB->getCalledOperand();

@@ -55,6 +55,7 @@ BAR-OPT: define internal void @_ZL2f2v()
 BAR-OPT-NOT: {{define|declare}}
 
 
+USE-CMN: target triple
 USE-OPT: @_ZZ3foovE1i = linkonce_odr global i32 0, comdat
 USE-CMN-NOT: {{comdat|define|declare}}
 USE-CMN: define{{.*}} i32 @main()

@@ -328,7 +328,13 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
     Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(SP::I0, PtrVT));
-    RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
+
+    // A zero-sized return value, e.g. an empty struct or union, is returned
+    // without an unimp instruction after the call, so there is nothing for the
+    // return to skip over.
+    Type *RetType = MF.getFunction().getParamStructRetType(0);
+    if (!RetType->isEmptyTy())
+      RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
   }
 
   RetOps[0] = Chain;  // Update chain.
@@ -1636,7 +1642,7 @@ static SPCC::CondCodes FPCondCCodeToFCC(ISD::CondCode CC) {
 SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                                          const SparcSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = Subtarget->is64Bit() ? MVT::i64 : MVT::i32;
 
   // Instructions which use registers as conditionals examine all the
   // bits (as does the pseudo SELECT_CC expansion). I don't think it
@@ -1681,7 +1687,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // However, load and store *are* legal.
     setOperationAction(ISD::LOAD, MVT::v2i32, Legal);
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
 
     // And we need to promote i64 loads/stores into vector load/store
@@ -3163,6 +3169,26 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Idx = Op.getOperand(1);
+  assert(Vec.getSimpleValueType() == MVT::v2i32 && "Unexpected vector type");
+
+  // Constant indices are handled by the TableGen patterns.
+  if (isa<ConstantSDNode>(Idx))
+    return Op;
+
+  EVT VT = Op.getValueType();
+  EVT IdxVT = Idx.getValueType();
+  SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(0, DL, IdxVT));
+  SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(1, DL, IdxVT));
+  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, IdxVT), Elt0, Elt1,
+                         ISD::SETEQ);
+}
+
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -3233,6 +3259,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }

@@ -28,26 +28,27 @@ def IsWindowsArm64EC : LibcallPredicate<[{TT.isWindowsArm64EC()}]>;
 def IsX86_32 : LibcallPredicate<[{TT.getArch() == Triple::x86}]>;
 
 def isAArch64_ExceptArm64EC
-    : RuntimeLibcallAvailabilityDag<(all_of IsAArch64, (not IsWindowsArm64EC))>;
+    : RuntimeLibcallAvailability<(all_of IsAArch64, (not IsWindowsArm64EC))>;
 
-def isDarwinOrGNU : RuntimeLibcallAvailabilityDag<(any_of IsOSDarwin, IsGNUEnv)>;
+def isDarwinOrGNU : RuntimeLibcallAvailability<(any_of IsOSDarwin, IsGNUEnv)>;
 
-def isNotDarwin : RuntimeLibcallAvailabilityDag<(not IsOSDarwin)>;
+def isNotDarwin : RuntimeLibcallAvailability<(not IsOSDarwin)>;
 
 // Nested any_of inside all_of, plus a negated leaf.
-def isAArch64DarwinOrGNU : RuntimeLibcallAvailabilityDag<
+def isAArch64DarwinOrGNU : RuntimeLibcallAvailability<
   (all_of IsAArch64, (any_of IsOSDarwin, IsGNUEnv), (not IsWindowsArm64EC))>;
 
 // Not wrapping a nested any_of.
-def isAArch64OrNotDarwinGNU : RuntimeLibcallAvailabilityDag<
+def isAArch64OrNotDarwinGNU : RuntimeLibcallAvailability<
   (any_of IsAArch64, (not (any_of IsOSDarwin, IsGNUEnv)))>;
 
 // Negated leaf whose Cond contains an operator: `!(TT.getArch() == ...)`.
-def isNotX86_32 : RuntimeLibcallAvailabilityDag<(not IsX86_32)>;
+def isNotX86_32 : RuntimeLibcallAvailability<(not IsX86_32)>;
 
-def isTargetArch : RuntimeLibcallAvailability<[{isTargetArch()}]>;
+def IsTargetArch : LibcallPredicate<[{isTargetArch()}]>;
+def isTargetArch : RuntimeLibcallAvailability<(all_of IsTargetArch)>;
 
-def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch,
+def Libc : LibcallLibrary<"libc",
   (add LibcallImpls<(add impl0), isAArch64_ExceptArm64EC>,
        LibcallImpls<(add impl1), isDarwinOrGNU>,
        LibcallImpls<(add impl2), isNotDarwin>,
@@ -56,8 +57,11 @@ def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch,
        LibcallImpls<(add impl5), isNotX86_32>)
 >;
 
+def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, (add Libc)>;
+
 // Predicate groups emit sorted by predicate def name
 
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK: if (TT.isAArch64() && (TT.isOSDarwin() || TT.isGNUEnvironment()) && !(TT.isWindowsArm64EC())) {
 // CHECK: RTLIB::impl_impl3
 // CHECK: if (TT.isAArch64() || !(TT.isOSDarwin() || TT.isGNUEnvironment())) {

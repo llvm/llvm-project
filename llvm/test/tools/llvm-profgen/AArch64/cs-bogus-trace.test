@@ -1,0 +1,160 @@
+# REQUIRES: lld
+# RUN: split-file %s %t
+# RUN: llvm-mc -triple=aarch64 -filetype=obj %t/a.s -o %t/a.o
+# RUN: ld.lld --image-base=0 -Ttext=0x1000 -e main %t/a.o -o %t/cs-bogus-trace.exe
+# RUN: llvm-profgen --binary=%t/cs-bogus-trace.exe --perfscript=%t/perfscript \
+# RUN:   --skip-symbolization --format=text --output=%t/profile \
+# RUN:   --show-detailed-warning 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not="Bogus trace"
+# RUN: llvm-profgen --binary=%t/cs-bogus-trace.exe --perfscript=%t/perfscript-clean \
+# RUN:   --skip-symbolization --format=text --output=%t/profile-clean \
+# RUN:   --show-detailed-warning 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CLEAN --allow-empty
+
+## A hybrid sample is kept only if the callchain leaf (sampled pc) and the
+## newest LBR target lie in the same function, or either is external. The leaf
+## is then canonicalized to the LBR target, so skid within one function is
+## harmless.
+
+## Cross-function skid is rejected.
+# CHECK: Bogus trace: stack tip = 0x00001088, LBR tip = 0x00001000
+# CHECK: Bogus trace: stack tip = 0x00001008, LBR tip = 0x00001094
+# CHECK: Bogus trace: stack tip = 0x00001088, LBR tip = 0x00001060
+# CHECK: 33.33%(3/9) of hybrid samples had a callchain leaf that disagreed with the newest LBR target (bogus trace).
+# CHECK: Bogus trace rate exceeds 1%: the profile has high sample skid and may not be suitable for optimization.
+
+## No warnings when every sample is kept.
+# CLEAN-NOT: Bogus trace
+
+#--- a.s
+.macro func name
+  .globl \name
+  .type \name,%function
+\name:
+.endm
+
+.macro endfunc name
+  .size \name, .-\name
+.endm
+
+  .text
+func g                    // 0x1000
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  ret                     // 0x101c
+endfunc g
+
+func r                    // 0x1020
+  nop
+  nop
+  nop
+  bl r                    // 0x102c: r -> r
+  nop
+  nop
+  nop
+  ret
+endfunc r
+
+func main                 // 0x1040
+  nop
+  nop
+  bl f                    // 0x1048: main -> f
+  nop
+  bl r                    // 0x1050: main -> r
+  nop
+  nop
+  ret
+endfunc main
+
+func h                    // 0x1060
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  ret
+endfunc h
+
+func f                    // 0x1080
+  nop
+  nop
+  nop
+  nop
+  bl g                    // 0x1090: f -> g
+  nop
+  nop
+  b h                     // 0x109c: f -> h (tail call)
+  .space 0x160            // make f larger than 256 bytes
+endfunc f
+
+// profgen takes function ranges from symbol sizes only in pseudo-probe mode.
+  .section .pseudo_probe_desc,"",%progbits
+  .section .pseudo_probe,"",%progbits
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x0(0x2000) @ 0 00:00 0 0]: r-xp /tmp/cs-bogus-trace.exe
+
+; Small positive skid: pc 8 bytes past the LBR target in f. Kept.
+	            1088
+	            104c
+ 0x1048/0x1080/P/-/-/0
+
+; Positive skid of 260 bytes within f, beyond the old 0x100 cap. Kept.
+	            1184
+	            104c
+ 0x1048/0x1080/P/-/-/0
+
+; Negative skid within f: the LBR is newer than the pc (g returned to f).
+; The frames above the leaf are unchanged. Kept.
+	            1088
+	            104c
+ 0x101c/0x1094/P/-/-/0  0x1090/0x1000/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+; Skid across a call: pc in f, newest branch is f -> g. Dropped.
+	            1088
+	            104c
+ 0x1090/0x1000/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+; Skid across a return: pc in g, newest branch is g returning to f. Dropped.
+	            1008
+	            1094
+	            104c
+ 0x101c/0x1094/P/-/-/0  0x1090/0x1000/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+; Skid across a tail call: pc in f, newest branch is f -> h. Dropped.
+	            1088
+	            104c
+ 0x109c/0x1060/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+; Skid across a recursive call: pc in the inner r, but the LBR is older and
+; its newest branch is main -> outer r. Both are in r, so this is not caught.
+	            1028
+	            1030
+	            1054
+ 0x1050/0x1020/P/-/-/0
+
+; External leaf: pc in a library called from f. Not checked. Kept.
+	    7f0000001000
+	            1094
+	            104c
+ 0x1048/0x1080/P/-/-/0
+
+; External LBR target: newest branch leaves the binary. Not checked. Kept.
+	            1088
+	            104c
+ 0x1090/0x7f0000001000/P/-/-/0  0x1048/0x1080/P/-/-/0
+
+#--- perfscript-clean
+PERF_RECORD_MMAP2 1/1: [0x0(0x2000) @ 0 00:00 0 0]: r-xp /tmp/cs-bogus-trace.exe
+
+; Small positive skid within f. Kept.
+	            1088
+	            104c
+ 0x1048/0x1080/P/-/-/0

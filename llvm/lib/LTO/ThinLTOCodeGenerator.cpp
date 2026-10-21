@@ -44,6 +44,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -261,7 +262,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(TheModule.getContext(), DebugPassManager);
   SI.registerCallbacks(PIC, &MAM);
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&TheModule.getContext().getLibraryOptions());
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
   PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
@@ -379,7 +380,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder) {
+      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      ArrayRef<std::string> MllvmArgs) {
     if (CachePath.empty())
       return;
 
@@ -400,6 +402,7 @@ public:
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
+    append_range(Conf.MllvmArgs, MllvmArgs);
     std::string Key =
         computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
                            ResolvedODR, DefinedGVSummaries);
@@ -461,7 +464,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM.getTargetTriple().isOSBinFormatELF() &&
+      TheModule.getTargetTriple().isOSBinFormatELF() &&
       TM.getRelocationModel() != Reloc::Static &&
       TheModule.getPIELevel() == PIELevel::Default;
 
@@ -1001,6 +1004,7 @@ void ThinLTOCodeGenerator::run() {
     for (auto &Mod : Modules) {
       Pool.async([&](int count) {
         LLVMContext Context;
+        Context.getLibraryOptions().assign(LibraryOptions);
         Context.setDiscardValueNames(LTODiscardValueNames);
 
         // Parse module now
@@ -1152,7 +1156,7 @@ void ThinLTOCodeGenerator::run() {
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
                                     DefinedGVSummaries, OptLevel, Freestanding,
-                                    TMBuilder);
+                                    TMBuilder, MllvmArgs);
         auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {
@@ -1173,6 +1177,7 @@ void ThinLTOCodeGenerator::run() {
         }
 
         LLVMContext Context;
+        Context.getLibraryOptions().assign(LibraryOptions);
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
         auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
