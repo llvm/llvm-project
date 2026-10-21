@@ -16,7 +16,7 @@ void test(void) {
   switch (int x = 1) {} // ext-warning {{'switch' declaration statements are a C2y extension}} \
                         // compat-warning {{'switch' declaration statements are incompatible with C standards before C2y}}
 
-  while (int x = 12) {} // expected-error {{expected expression}}
-  while (_Static_assert(1, ""); 1) {} // expected-error {{expected expression}}
+  while (int x = 12) {} // expected-error {{ISO C does not allow a declaration in a 'while' statement}}
+  while (_Static_assert(1, ""); 1) {} // expected-error {{ISO C does not allow a declaration in a 'while' statement}}
   do {} while (int x = 1); // expected-error {{expected expression}}
 }

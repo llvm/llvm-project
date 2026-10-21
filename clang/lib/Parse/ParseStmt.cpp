@@ -1328,12 +1328,12 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
            diag::err_c2y_first_condition_clause_is_not_declaration)
           << InitStmt->get()->getSourceRange();
 
-    if (Decl *CondDecl = Cond.get().first) {
+    if (Decl *CondDecl = Cond.get().first; CondDecl && InitStmt != nullptr) {
       // C2y only permits a declaration as the sole clause of an 'if' or
-      // 'switch' condition. Diagnose it as an expected expression when there
-      // is no init-statement slot at all (while (int decl = 0) {}) or when the
-      // declaration is in the second clause (if (int x = 0; int y = 0) {}).
-      if (InitStmt == nullptr || HasInitStmt)
+      // 'switch' condition; one in the second clause (if (int x = 0; int y =
+      // 0) {}) must be an expression. A declaration in a 'while' condition
+      // (InitStmt == nullptr) has already been diagnosed by ParseCondition.
+      if (HasInitStmt)
         Diag(CondDecl->getBeginLoc(), diag::err_expected_expression)
             << CondDecl->getSourceRange();
       else

@@ -285,6 +285,8 @@ def err_c2y_labeled_break_continue : Error<
 def err_c2y_first_condition_clause_is_not_declaration : Error<
   "first clause in condition must be a declaration">;
 def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
+def err_c_decl_in_while_statement : Error<
+  "ISO C does not allow a declaration in a 'while' statement">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
