@@ -160,26 +160,36 @@ static bool isOrderedSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
+static bool hasUserConditionTrait(const VariantMatchInfo &VMI) {
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI.RequiredTraits.test(unsigned(Property)))
+      return true;
+  return false;
+}
+
+// A runtime condition can be left out of the traits but keep its key, so count
+// it as a trait.
+static unsigned countTraits(const VariantMatchInfo &VMI) {
+  return VMI.RequiredTraits.count() +
+         (!VMI.UserCondition.empty() && !hasUserConditionTrait(VMI));
+}
+
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
   // VMI0 is a strict subset if its required traits are a subset of VMI1's, its
   // construct traits are an ordered subsequence of VMI1's, and either relation
   // is strict.
-  if (VMI0.RequiredTraits.count() > VMI1.RequiredTraits.count())
+  if (countTraits(VMI0) > countTraits(VMI1))
     return false;
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
   // Different runtime conditions share a trait, so compare them as well.
-  // A runtime condition can be left out of the traits but keep its key.
-  if (!VMI0.UserCondition.empty() && VMI0.UserCondition != VMI1.UserCondition)
+  if ((!VMI0.UserCondition.empty() || hasUserConditionTrait(VMI0)) &&
+      VMI0.UserCondition != VMI1.UserCondition)
     return false;
-  for (TraitProperty Property :
-       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
-        TraitProperty::user_condition_unknown})
-    if (VMI0.RequiredTraits.test(unsigned(Property)) &&
-        VMI0.UserCondition != VMI1.UserCondition)
-      return false;
   // Different ISA names share a trait, so compare them as well.
   if (!llvm::all_of(VMI0.ISATraits,
                     [&](const VariantMatchInfo::ISATrait &Trait) {
@@ -189,18 +199,13 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   if (!isOrderedSubset<TraitProperty>(VMI0.ConstructTraits,
                                       VMI1.ConstructTraits))
     return false;
-  if (VMI0.RequiredTraits.count() < VMI1.RequiredTraits.count())
+  if (countTraits(VMI0) < countTraits(VMI1))
     return true;
   // With the same traits, only a repeated construct makes VMI0 strict.
   if (VMI0.ConstructTraits.size() == VMI1.ConstructTraits.size())
     return false;
   // Different conditions share a trait, so they can't be compared.
-  for (TraitProperty Property :
-       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
-        TraitProperty::user_condition_unknown})
-    if (VMI0.RequiredTraits.test(unsigned(Property)))
-      return false;
-  return true;
+  return !hasUserConditionTrait(VMI0);
 }
 
 static int
