@@ -372,7 +372,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -450,7 +451,8 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.
