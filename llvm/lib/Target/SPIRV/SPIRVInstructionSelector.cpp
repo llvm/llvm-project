@@ -6041,10 +6041,12 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   // For UAV/SSBO counters, the scope is Device. The counter variable is not
   // used as a flag. So the memory semantics can be None.
   Register Scope = buildI32ConstantInEntryBlock(SPIRV::Scope::Device, I);
-  Register Semantics = buildI32ConstantInEntryBlock(SPIRV::MemorySemantics::None, I);
+  Register Semantics =
+      buildI32ConstantInEntryBlock(SPIRV::MemorySemantics::None, I);
 
   int64_t IncrVal = getIConstValSext(IncrReg, MRI);
-  Register Incr = buildI32ConstantInEntryBlock(static_cast<uint32_t>(IncrVal), I);
+  Register Incr =
+      buildI32ConstantInEntryBlock(static_cast<uint32_t>(IncrVal), I);
 
   Register AtomicRes = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
