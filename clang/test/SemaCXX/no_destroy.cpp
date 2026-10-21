@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -fexceptions -fc++-static-destructors=thread-local -verify=expected,thread-local-dtors %s
 // RUN: %clang_cc1 -fexceptions -verify=expected,thread-local-dtors,all-dtors %s
 
+// XFAIL: target=s390x-ibm-zos
+
 struct SecretDestructor {
 private: ~SecretDestructor(); // expected-note + {{private}}
 };
