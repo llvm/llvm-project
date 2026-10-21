@@ -467,6 +467,24 @@ BlockAddress *BlockAddress::get(BasicBlock *BB) {
   return cast<BlockAddress>(BB->getContext().getOrCreateConstant(LLVMC));
 }
 
+Constant *ConstantExpr::getPtrToInt(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getPtrToInt(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantExpr::getIntToPtr(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getIntToPtr(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantExpr::getBitCast(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getBitCast(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
 BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::lookup(cast<llvm::BasicBlock>(BB->Val));
   return cast_or_null<BlockAddress>(BB->getContext().getValue(LLVMC));

@@ -35,7 +35,7 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C3]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[C6]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul reassoc nnan ninf arcp contract afn <4 x double> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, double [[L1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C1]], i64 0
@@ -48,7 +48,7 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C2]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP15]], double [[C5]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <4 x double> [[TMP14]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul reassoc nnan ninf arcp contract afn <4 x double> [[TMP14]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[TMP12]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>

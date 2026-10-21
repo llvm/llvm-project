@@ -176,6 +176,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execvp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvp
+)
+
+add_entrypoint_object(
+  fexecve
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fexecve
+)
+
+add_entrypoint_object(
   fsync
   ALIAS
   DEPENDS
@@ -302,6 +316,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lockf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lockf
+)
+
+add_entrypoint_object(
   lseek
   ALIAS
   DEPENDS
@@ -383,6 +404,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.rmdir
+)
+
+add_entrypoint_object(
+  setegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setegid
+)
+
+add_entrypoint_object(
+  seteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.seteuid
 )
 
 add_entrypoint_object(

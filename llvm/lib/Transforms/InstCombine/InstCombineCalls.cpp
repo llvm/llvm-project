@@ -881,7 +881,7 @@ removeTriviallyEmptyRange(IntrinsicInst &EndI, InstCombinerImpl &IC,
   BasicBlock::reverse_iterator BI(EndI), BE(EndI.getParent()->rend());
   for (; BI != BE; ++BI) {
     if (auto *I = dyn_cast<IntrinsicInst>(&*BI)) {
-      if (I->isDebugOrPseudoInst() ||
+      if (isa<PseudoProbeInst>(I) ||
           I->getIntrinsicID() == EndI.getIntrinsicID())
         continue;
       if (IsStart(*I)) {

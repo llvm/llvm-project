@@ -134,7 +134,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
         """Test that we can save a Linux mini dump."""
@@ -279,7 +279,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     # We try to read Linux /proc files from the host not the remote:
     # https://github.com/llvm/llvm-project/issues/231472
@@ -342,7 +342,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump_default_options(self):
         """Test that we can save a Linux mini dump with default SBSaveCoreOptions"""
@@ -398,7 +398,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(default_value_file):
                 os.unlink(default_value_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_save_linux_minidump_one_region(self):
         """Test that we can save a Linux mini dump with one region in sbsavecore regions"""
@@ -406,6 +406,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         one_region_file = self.getBuildArtifact("core.one_region.dmp")
+        target = None
+        core_target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -452,11 +454,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(err.Fail(), "Should fail to read memory")
 
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(one_region_file):
                 os.unlink(one_region_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -526,7 +531,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style_duplicated_regions(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -663,7 +668,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
 
     @skipUnlessPlatform(["linux"])
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     # We find the variable but its value is 0.
     @expectedFailureAll(archs=["x86_64", "aarch64"])
     def test_minidump_saves_tls(self):
@@ -695,7 +700,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(tls_file):
                 os.unlink(tls_file)
 
-    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @requireMinidumpSave
     @skipUnlessPlatform(["linux"])
     def test_invalid_custom_regions_not_included(self):
         options = lldb.SBSaveCoreOptions()

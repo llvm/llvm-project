@@ -5613,6 +5613,8 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     //   parameter of type decltype(auto) ([temp.func.order]), the declaration
     //   is ill-formed.
     auto isUndeducedAuto = [](QualType T, bool DecltypeAuto) {
+      if (T.isNull())
+        return false;
       const AutoType *AT = T->getContainedAutoType();
       return AT && AT->isDecltypeAuto() == DecltypeAuto &&
              AT->getDeducedType().isNull();

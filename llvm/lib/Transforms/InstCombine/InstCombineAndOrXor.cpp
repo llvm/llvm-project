@@ -5596,8 +5596,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // When X is a power-of-two or zero and zero input is poison:
       // ctlz(i32 X) ^ 31 --> cttz(X)
       // cttz(i32 X) ^ 31 --> ctlz(X)
+      // The bit width must be a power of two so BW - 1 is an all-ones mask.
       auto *II = dyn_cast<IntrinsicInst>(Op0);
-      if (II && II->hasOneUse() && *RHSC == Ty->getScalarSizeInBits() - 1) {
+      if (II && II->hasOneUse() && isPowerOf2_32(Ty->getScalarSizeInBits()) &&
+          *RHSC == Ty->getScalarSizeInBits() - 1) {
         Intrinsic::ID IID = II->getIntrinsicID();
         if ((IID == Intrinsic::ctlz || IID == Intrinsic::cttz) &&
             match(II->getArgOperand(1), m_One()) &&

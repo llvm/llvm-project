@@ -21,6 +21,7 @@ end subroutine requires_2
 
 subroutine declare_simd_1(a, b)
   real(8), intent(inout) :: a, b
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: 'a' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
@@ -38,6 +39,7 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p

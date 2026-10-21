@@ -15,6 +15,7 @@
 #define LLVM_CLANG_CODEGENUTILS_TARGETUTILS_H
 
 #include "clang/Basic/BitmaskEnum.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
 
@@ -62,6 +63,17 @@ bool hasExtraNeonArgument(unsigned BuiltinID);
 
 /// Helper method to check if the underlying ABI is AAPCS
 bool isAAPCS(const TargetInfo &TargetInfo);
+
+//===----------------------------------------------------------------------===//
+// Library builtins (PowerPC64 and AIX)
+//===----------------------------------------------------------------------===//
+
+/// Returns the library function name that should be called for the library
+/// builtin \p BuiltinID when the target's library does not use the name derived
+/// from the builtin (e.g. PPC64 IEEE 128-bit long double libcalls, or AIX with
+/// 64-bit long double), or an empty StringRef if there is no such override.
+llvm::StringRef getTargetBuiltinLibFunctionName(unsigned BuiltinID,
+                                                const TargetInfo &Target);
 
 //===----------------------------------------------------------------------===//
 // AMDGPU

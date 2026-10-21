@@ -17,6 +17,8 @@
 
 #include "PdbSymUid.h"
 
+#include <string>
+
 namespace lldb_private {
 class Stream;
 
@@ -45,6 +47,10 @@ public:
 
   virtual CompilerDeclContext FindNamespaceDecl(CompilerDeclContext parent_ctx,
                                                 llvm::StringRef name) = 0;
+
+  /// Convert a CodeView qualified name into the spelling used by the
+  /// language of this AST (e.g. anonymous namespaces).
+  virtual std::string GetQualifiedName(llvm::StringRef name) = 0;
 
   virtual void Dump(Stream &stream, llvm::StringRef filter,
                     bool show_color) = 0;
