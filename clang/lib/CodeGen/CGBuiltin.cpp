@@ -2714,8 +2714,8 @@ static void ClearPadding(CodeGenFunction &CGF, Address Src,
   }
 }
 
-static std::string getSPIRVBuiltinName(unsigned BuiltinID,
-                                       bool IsFloat = false) {
+static std::string getSPIRVBuiltinName(unsigned BuiltinID, bool IsFloat = false,
+                                       bool IsSigned = false) {
   switch (BuiltinID) {
   case Builtin::BIcoop_mat_load:
     return "__spirv_CooperativeMatrixLoadKHR";
@@ -2724,17 +2724,19 @@ static std::string getSPIRVBuiltinName(unsigned BuiltinID,
   case Builtin::BIcoop_mat_mulAdd:
     return "__spirv_CooperativeMatrixMulAddKHR";
   case Builtin::BIcoop_mat_binary_add:
-    return (IsFloat) ? "__spirv_CooperativeMatrixFAdd" : "__spirv_IAdd";
+    return (IsFloat) ? "__spirv_FAdd" : "__spirv_IAdd";
   case Builtin::BIcoop_mat_binary_sub:
-    return (IsFloat) ? "__spirv_CooperativeMatrixFSub" : "__spirv_ISub";
+    return (IsFloat) ? "__spirv_FSub" : "__spirv_ISub";
   case Builtin::BIcoop_mat_binary_mul:
-    return (IsFloat) ? "__spirv_CooperativeMatrixFMul" : "__spirv_IMul";
+    return (IsFloat) ? "__spirv_FMul" : "__spirv_IMul";
   case Builtin::BIcoop_mat_binary_div:
-    return (IsFloat) ? "__spirv_CooperativeMatrixFDiv" : "__spirv_IDiv";
+    return (IsFloat)    ? "__spirv_FDiv"
+           : (IsSigned) ? "__spirv_SDiv"
+                        : "__spirv_UDiv";
   case Builtin::BIcoop_mat_scalar_mul:
     return "__spirv_CooperativeMatrixScalarMulKHR";
   case Builtin::BIcoop_mat_scalar_neg:
-    return "__spirv_CooperativeMatrixScalarNeg";
+    return (IsFloat) ? "__spirv_FNegate" : "__spirv_SNegate";
   case Builtin::BIcoop_mat_init:
     return "__spirv_CompositeConstruct";
   case Builtin::BIcoop_mat_length:
@@ -4759,7 +4761,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcoop_mat_load: {
     auto *PtrTy = E->getArg(0)->getType()->getAs<PointerType>();
     assert(PtrTy && "arg0 must be of pointer type");
-
+    (void)PtrTy;
     Address SrcAddr = EmitPointerWithAlignment(E->getArg(0));
     EmitNonNullArgCheck(SrcAddr, E->getArg(0)->getType(),
                         E->getArg(0)->getExprLoc(), FD, 0);
@@ -4769,13 +4771,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     auto Ptr = EmitScalarExpr(E->getArg(0));
     auto Layout = EmitScalarExpr(E->getArg(1));
+    Layout = Builder.CreateZExtOrTrunc(Layout, Int32Ty);
     auto Stride = EmitScalarExpr(E->getArg(2));
+    Stride = Builder.CreateZExtOrTrunc(Stride, Int32Ty);
     // Create a TargetExtType to represent the coop matrix type
     llvm::TargetExtType *RetType = getTargetExtType(CGM, MTy);
 
     // Set function type.
     llvm::FunctionType *FTy = llvm::FunctionType::get(
-        RetType, {Ptr->getType(), Layout->getType(), Stride->getType()}, false);
+        RetType, {Ptr->getType(), Int32Ty, Int32Ty}, false);
     // Function name mangling.
     std::string Name =
         getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
@@ -4794,7 +4798,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcoop_mat_store: {
     auto *PtrTy = E->getArg(0)->getType()->getAs<PointerType>();
     assert(PtrTy && "arg0 must be of pointer type");
-
+    (void)PtrTy;
     Address Dst = EmitPointerWithAlignment(E->getArg(0));
     EmitNonNullArgCheck(Dst, E->getArg(0)->getType(),
                         E->getArg(0)->getExprLoc(), FD, 0);
@@ -4805,13 +4809,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Ptr = EmitScalarExpr(E->getArg(0));
     auto Arg0 = EmitScalarExpr(E->getArg(1));
     auto Layout = EmitScalarExpr(E->getArg(2));
+    Layout = Builder.CreateZExtOrTrunc(Layout, Int32Ty);
     auto Stride = EmitScalarExpr(E->getArg(3));
+    Stride = Builder.CreateZExtOrTrunc(Stride, Int32Ty);
     // Create a TargetExtType to represent the coop matrix type
     llvm::TargetExtType *ArgType = getTargetExtType(CGM, MTy);
     // Set function type.
     llvm::FunctionType *FTy = llvm::FunctionType::get(
-        VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()},
-        false);
+        VoidTy, {Ptr->getType(), ArgType, Int32Ty, Int32Ty}, false);
     // Function name mangling.
     std::string Name =
         getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
@@ -4884,19 +4889,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *ElTy = ConvertType(MTy->getElementType());
     // Check if the data is signed/unsigned
     QualType QT = MTy->getElementType();
-    bool isSigned = false;
+    bool IsSigned = false;
     if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
-      isSigned = BT->isSignedInteger();
+      IsSigned = BT->isSignedInteger();
     }
-    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
 
     llvm::FunctionType *FTy =
-        llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
+        llvm::FunctionType::get(RetType, {AType, BType}, false);
 
     std::string Name =
         (ElTy->isIntegerTy())
-            ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel)
+            ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ false,
+                                  IsSigned)
             : getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ true);
     // Function name mangling.
     Name = Name + getCoopMatFullSuffix(ConvertType(E->getType()));
@@ -4904,7 +4908,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(BinaryFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-    auto *NewCall = Builder.CreateCall(BinaryFn, {Arg0, Arg1, isDataSigned});
+    auto *NewCall = Builder.CreateCall(BinaryFn, {Arg0, Arg1});
     NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     return RValue::get(NewCall);
   }
@@ -4920,12 +4924,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // Check if the data is signed/unsigned
     QualType QT = MTy->getElementType();
-    bool isSigned = false;
+    bool IsSigned = false;
     if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
-      isSigned = BT->isSignedInteger();
+      IsSigned = BT->isSignedInteger();
     }
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
+    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, IsSigned);
 
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
@@ -4948,25 +4952,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto *RetType = getTargetExtType(CGM, MTy);
     auto *AType = getTargetExtType(CGM, MATy);
 
-    // Check if the data is signed/unsigned
-    QualType QT = MTy->getElementType();
-    bool isSigned = false;
-    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
-      isSigned = BT->isSignedInteger();
-    }
-    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
-
-    llvm::FunctionType *FTy =
-        llvm::FunctionType::get(RetType, {AType, Int1Ty}, false);
+    llvm::FunctionType *FTy = llvm::FunctionType::get(RetType, {AType}, false);
     // Function name mangling.
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+    bool IsFloat = MTy->getElementType()->isFloatingType();
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, IsFloat) +
                        getCoopMatFullSuffix(ConvertType(E->getType()));
     llvm::FunctionCallee ScalarNegFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarNegFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-    auto *NewCall = Builder.CreateCall(ScalarNegFn, {Arg0, isDataSigned});
+    auto *NewCall = Builder.CreateCall(ScalarNegFn, {Arg0});
     NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     return RValue::get(NewCall);
   }
