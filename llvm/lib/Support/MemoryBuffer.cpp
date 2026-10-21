@@ -396,10 +396,10 @@ static bool shouldUseMmap(sys::fs::file_t FD,
   // FIXME: this chunk of code is duplicated, but it avoids a fstat when
   // RequiresNullTerminator = false and MapSize != -1.
   if (FileSize == size_t(-1)) {
-    sys::fs::file_status Status;
-    if (sys::fs::status(FD, Status))
+    uint64_t FS;
+    if (sys::fs::file_size(FD, FS))
       return false;
-    FileSize = Status.getSize();
+    FileSize = FS;
   }
 
   // If we need a null terminator and the end of the map is inside the file,

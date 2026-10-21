@@ -702,6 +702,20 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
   return std::error_code();
 }
 
+/// A version for when a file handle is already available.
+#ifdef _WIN32
+LLVM_ABI std::error_code file_size(file_t FileHandle, uint64_t &Result);
+#else
+inline std::error_code file_size(file_t FileHandle, uint64_t &Result) {
+  file_status Status;
+  std::error_code EC = status(FileHandle, Status);
+  if (EC)
+    return EC;
+  Result = Status.getSize();
+  return std::error_code();
+}
+#endif
+
 /// Set the file modification and access time.
 ///
 /// @returns errc::success if the file times were successfully set, otherwise a

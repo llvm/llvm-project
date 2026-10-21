@@ -982,6 +982,14 @@ std::error_code status(file_t FileHandle, file_status &Result) {
   return getStatus(FileHandle.get(), Result);
 }
 
+std::error_code file_size(file_t FileHandle, uint64_t &Result) {
+  LARGE_INTEGER FileSize;
+  if (!::GetFileSizeEx(FileHandle.get(), &FileSize))
+    return mapLastWindowsError();
+  Result = FileSize.QuadPart;
+  return std::error_code();
+}
+
 unsigned getUmask() { return 0; }
 
 std::error_code setPermissions(const Twine &Path, perms Permissions) {

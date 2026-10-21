@@ -369,18 +369,6 @@ Error OnDiskOutputFile::initializeStream() {
 }
 
 namespace {
-class OpenFileRAII {
-  static const int InvalidFd = -1;
-
-public:
-  int Fd = InvalidFd;
-
-  ~OpenFileRAII() {
-    if (Fd != InvalidFd)
-      llvm::sys::Process::SafelyCloseFileDescriptor(Fd);
-  }
-};
-
 enum class FileDifference : uint8_t {
   /// The source and destination paths refer to the exact same file.
   IdenticalFile,
@@ -398,30 +386,36 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
   if (sys::fs::equivalent(Source, Destination))
     return FileDifference::IdenticalFile;
 
-  OpenFileRAII SourceFile;
-  sys::fs::file_status SourceStatus;
+  Expected<sys::fs::file_t> SourceFile = sys::fs::openNativeFileForRead(Source);
   // If we can't open the source file, fail.
-  if (std::error_code EC = sys::fs::openFileForRead(Source, SourceFile.Fd))
+  if (!SourceFile)
+    return convertToOutputError(Source,
+                                errorToErrorCode(SourceFile.takeError()));
+
+  llvm::scope_exit CloseSourceFile([&]() { sys::fs::closeFile(*SourceFile); });
+
+  uint64_t Size;
+  // If we can't get the the source size, fail.
+  if (std::error_code EC = sys::fs::file_size(*SourceFile, Size))
     return convertToOutputError(Source, EC);
 
-  // If we can't stat the source file, fail.
-  if (std::error_code EC = sys::fs::status(SourceFile.Fd, SourceStatus))
-    return convertToOutputError(Source, EC);
-
-  OpenFileRAII DestFile;
-  sys::fs::file_status DestStatus;
+  Expected<sys::fs::file_t> DestFile =
+      sys::fs::openNativeFileForRead(Destination);
   // If we can't open the destination file, report different.
-  if (std::error_code Error =
-          sys::fs::openFileForRead(Destination, DestFile.Fd))
+  if (!DestFile) {
+    consumeError(DestFile.takeError());
     return FileDifference::DifferentContents;
+  }
 
-  // If we can't open the destination file, report different.
-  if (std::error_code Error = sys::fs::status(DestFile.Fd, DestStatus))
+  llvm::scope_exit CloseDestFile([&]() { sys::fs::closeFile(*DestFile); });
+
+  uint64_t DestSize;
+  // If we can't get the destination size, report different.
+  if (std::error_code EC = sys::fs::file_size(*DestFile, DestSize))
     return FileDifference::DifferentContents;
 
   // If the files are different sizes, they must be different.
-  uint64_t Size = SourceStatus.getSize();
-  if (Size != DestStatus.getSize())
+  if (Size != DestSize)
     return FileDifference::DifferentContents;
 
   // If both files are zero size, they must be the same.
@@ -432,15 +426,14 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
   // if they're the same.
   std::error_code SourceRegionErr;
   sys::fs::mapped_file_region SourceRegion(
-      sys::fs::convertFDToNativeFile(SourceFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, SourceRegionErr);
+      *SourceFile, sys::fs::mapped_file_region::readonly, Size, 0,
+      SourceRegionErr);
   if (SourceRegionErr)
     return convertToOutputError(Source, SourceRegionErr);
 
   std::error_code DestRegionErr;
   sys::fs::mapped_file_region DestRegion(
-      sys::fs::convertFDToNativeFile(DestFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
+      *DestFile, sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
 
   if (DestRegionErr)
     return FileDifference::DifferentContents;

@@ -24,13 +24,11 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
 
   llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
 
-  sys::fs::file_status Status;
-  std::error_code EC = sys::fs::status(FD, Status);
+  uint64_t FileSize;
+  std::error_code EC = sys::fs::file_size(FD, FileSize);
   if (EC)
     return createFileError(FilePath, EC);
-  // FIXME: Do we need to add a hash of the data size? If we remove that we can
-  // avoid needing to read the file size before reading the file contents.
-  H.updateSize(Status.getSize());
+  H.updateSize(FileSize);
 
   size_t ChunkSize = sys::fs::DefaultReadChunkSize;
   SmallVector<char, 0> Buffer;
