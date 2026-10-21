@@ -4957,8 +4957,7 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   Scope *scope{
       reader.Read(name.source, isIntrinsic, ancestor, /*silent=*/false)};
   if (scope) {
-    if (DoesScopeContain(scope, currScope()) ||
-        scope->Contains(currScope())) { // 14.2.2(1)
+    if (scope->Contains(currScope())) { // F2023 14.2.2 p1
       std::optional<SourceName> submoduleName;
       if (const Scope * container{FindModuleOrSubmoduleContaining(currScope())};
           container && container->IsSubmodule()) {
