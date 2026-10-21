@@ -818,8 +818,8 @@ body:             |
   ; CHECK-LABEL: name: @FLDExp_LargeNegExp
   ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
   ; CHECK-NEXT: %exp:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %val:_(f32) = G_FCONSTANT float 1.0
     %exp:_(s32) = G_CONSTANT i32 -32768
     %fldexp:_(f32) = G_FLDEXP %val, %exp
@@ -1031,8 +1031,8 @@ body:             |
   ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %rhs:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %val:_(f32) = G_FREEZE %load
