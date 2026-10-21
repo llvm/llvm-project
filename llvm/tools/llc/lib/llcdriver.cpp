@@ -54,7 +54,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -405,7 +404,9 @@ extern "C" int llcMain(int argc, char **argv) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm system compiler\n");
 
   SmallVector<PassPlugin, 1> PluginList;
   for (const std::string &Path : PassPlugins) {
@@ -441,7 +442,6 @@ extern "C" int llcMain(int argc, char **argv) {
     }
   });
 
-  LLVMContext Context;
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
@@ -543,6 +543,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
       if (!TheTriple.isOSAIX())
@@ -826,6 +827,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
           return 1;
       }
       TPC.setInitialized();
+      if (TPC.getMachineVerifierMode() == MachineVerifierMode::End)
+        PM.add(createMachineVerifierPass("At end of pipeline"));
       PM.add(createPrintMIRPass(*OS));
 
       // Add MIR2Vec vocabulary printer if requested
@@ -858,8 +861,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       }
     }
 
-    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
-                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

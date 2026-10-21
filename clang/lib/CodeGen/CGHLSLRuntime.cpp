@@ -38,6 +38,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -102,6 +103,23 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+Expected<unsigned> packSemanticSignature(
+    MutableArrayRef<llvm::hlsl::SemanticSignatureElement> Elements,
+    llvm::Triple::EnvironmentType Stage, llvm::hlsl::IOType IOTy,
+    CodeGenOptions::HLSLSemanticSignaturePackingMode Mode,
+    bool UseNative16BitTypes) {
+  using namespace llvm::hlsl;
+  // Vertex inputs and pixel outputs have fixed packing rules, independent of
+  // the packing mode used between programmable stages.
+  if (Stage == llvm::Triple::Vertex && IOTy == IOType::In)
+    return packSignatureStacked(Elements, Stage, IOTy);
+  if (Stage == llvm::Triple::Pixel && IOTy == IOType::Out)
+    return packSignatureIndexed(Elements, Stage, IOTy);
+  if (Mode == CodeGenOptions::HLSLSemanticSignaturePackingMode::Optimized)
+    return packSignatureOptimized(Elements, Stage, IOTy, UseNative16BitTypes);
+  return packSignaturePrefixStable(Elements, Stage, IOTy, UseNative16BitTypes);
 }
 
 MDNode *buildSemanticSignatureMD(
@@ -1061,27 +1079,36 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
+  // Compute ID intrinsics return i32 components, but the semantic may use
+  // 16-bit integers. Narrow each component before assembling the input.
   if (const auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Value *Result = PoisonValue::get(Ty);
     for (unsigned I = 0; I < VT->getNumElements(); ++I) {
       Value *Elt = B.CreateCall(F, {B.getInt32(I)});
+      Elt = B.CreateTrunc(Elt, VT->getElementType());
       Result = B.CreateInsertElement(Result, Elt, I);
     }
     return Result;
   }
-  return B.CreateCall(F, {B.getInt32(0)});
+  return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn) {
+                                      unsigned BuiltIn,
+                                      bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
-  MDNode *Operands = MDNode::get(
+  // Emit all decorations as a single spirv.Decorations node.
+  SmallVector<Metadata *, 2> Decorations;
+  Decorations.push_back(MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
-  MDNode *Decoration = MDNode::get(Ctx, {Operands});
-  GV->addMetadata("spirv.Decorations", *Decoration);
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))}));
+  if (NeedsFlat)
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(
+                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 }
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
@@ -1116,13 +1143,14 @@ static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
 
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
-                                           unsigned BuiltInID) {
+                                           unsigned BuiltInID,
+                                           bool NeedsFlat = false) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  addSPIRVBuiltinDecoration(GV, BuiltInID, NeedsFlat);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
@@ -1545,6 +1573,26 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::ShadingRate:
+    assert(llvm::is_contained({llvm::Triple::Hull, llvm::Triple::Domain,
+                               llvm::Triple::Geometry, llvm::Triple::Pixel},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry &&
+           "FIXME: loading SV_ShadingRate is not yet implemented for this "
+           "shader stage");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      // Non-float pixel inputs cannot be interpolated and must be Flat.
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::ShadingRateKHR */ 4444,
+                                    inputRequiresFlatDecoration(Type));
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
   default:
     break;
   }
@@ -1602,6 +1650,28 @@ void CGHLSLRuntime::emitSystemSemanticStore(
            "diagnosed by Sema");
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
+  case llvm::dxbc::PSV::SemanticKind::ShadingRate:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry && Stage != llvm::Triple::Mesh &&
+           "FIXME: storing SV_ShadingRate is not yet implemented for this "
+           "shader stage");
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                              Semantic->getAttrName()->getName(),
+                              /* BuiltIn::PrimitiveShadingRateKHR */ 4432);
+      return;
+    }
+    break;
   default:
     break;
   }
@@ -1892,6 +1962,36 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       auto *RSDecl = RSAttr->getSignatureDecl();
       addRootSignatureMD(RSDecl->getVersion(), RSDecl->getRootElements(),
                          EntryFn, M);
+    }
+  }
+
+  if (CGM.getTarget().getTriple().isDXIL()) {
+    // Use the entry's shader stage, not the target environment, which may be
+    // 'library' when compiling multiple entry points.
+    auto Stage = FD->getAttr<HLSLShaderAttr>()->getType();
+    using PackingMode = CodeGenOptions::HLSLSemanticSignaturePackingMode;
+    auto Mode = CGM.getCodeGenOpts().getHLSLSemanticSignaturePacking();
+    for (auto IOTy : {llvm::hlsl::IOType::In, llvm::hlsl::IOType::Out}) {
+      bool IsOutput = IOTy == llvm::hlsl::IOType::Out;
+      auto &Signature = IsOutput ? OutputSignature : InputSignature;
+      auto Packed = packSemanticSignature(Signature, Stage, IOTy, Mode,
+                                          CGM.getLangOpts().NativeHalfType);
+      if (!Packed) {
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::err_hlsl_signature_packing)
+            << IsOutput << llvm::toString(Packed.takeError());
+        return;
+      }
+      // Library entry points retain stage-specific packing without warnings.
+      if (Mode != PackingMode::Default &&
+          CGM.getTarget().getTriple().getEnvironment() !=
+              llvm::Triple::Library &&
+          ((Stage == llvm::Triple::Vertex && !IsOutput) ||
+           (Stage == llvm::Triple::Pixel && IsOutput)))
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::warn_hlsl_signature_packing_ignored)
+            << (Mode == PackingMode::Optimized ? "optimized" : "prefix-stable")
+            << IsOutput;
     }
   }
 

@@ -37,13 +37,24 @@ class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
 struct PassesOptions;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
 public:
-  /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
-  /// can be set in the PassBuilder when using a LLVM as a library.
-  LLVM_ABI PipelineTuningOptions();
+  /// Constructor sets pipeline tuning defaults based on the global values of
+  /// the library options. Each option can be set in the PassBuilder when using
+  /// a LLVM as a library.
+  PipelineTuningOptions() : PipelineTuningOptions(nullptr) {}
+
+  /// Reads the defaults from \p LibraryOptions, or their global values if
+  /// null.
+  LLVM_ABI explicit PipelineTuningOptions(
+      const cl::LibraryOptionsContext *LibraryOptions);
+
+  const cl::LibraryOptionsContext *LibraryOptions;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
@@ -106,6 +117,11 @@ public:
   bool DevirtualizeSpeculatively;
 };
 
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
+};
+
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -113,6 +129,7 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  const cl::LibraryOptionsContext *LibraryOptions;
   const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
@@ -417,6 +434,11 @@ public:
   /// Print pass names.
   LLVM_ABI void printPassNames(raw_ostream &OS);
 
+  /// The format -print-pipeline-passes requests, or std::nullopt if it is not
+  /// given.
+  LLVM_ABI std::optional<PrintPipelinePassesFormat>
+  getPrintPipelinePasses() const;
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
@@ -662,6 +684,13 @@ public:
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the library options the pipelines read: the
+  /// PipelineTuningOptions', else the TargetMachine's, else null for the global
+  /// values.
+  const cl::LibraryOptionsContext *getLibraryOptions() const {
+    return LibraryOptions;
   }
 
   /// Returns the virtual file system.
@@ -1029,23 +1058,6 @@ public:
     return Result();
   }
 };
-
-enum class PrintPipelinePassesFormat {
-  Text,
-  Tree,
-};
-
-struct PrintPipelinePassesFormatParser
-    : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
-  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
-  LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-                      std::optional<PrintPipelinePassesFormat> &Val);
-};
-
-/// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
-                        PrintPipelinePassesFormatParser>
-    PrintPipelinePasses;
 
 LLVM_ABI void printFormattedPipelinePasses(
     raw_ostream &OS, StringRef Pipeline,

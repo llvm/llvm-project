@@ -156,6 +156,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  unique_ptr_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    unique_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   tuple_test
   SUITE
     libc-cpp-utils-tests

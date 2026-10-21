@@ -589,7 +589,10 @@ getUnmanagedCSI(const MachineFunction &MF,
 
   for (auto &CS : CSI) {
     int FI = CS.getFrameIdx();
-    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::Default)
+    // Callee saves with negative frame indices have fixed positions on the
+    // stack, usually relating to libcalls or push/pop.
+    bool IsManagedFI = (FI < 0);
+    if (!IsManagedFI && MFI.getStackID(FI) == TargetStackID::Default)
       NonLibcallCSI.push_back(CS);
   }
 
@@ -876,10 +879,11 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     return;
   }
 
+  // The amount of stack that was already allocated before this allocation.
+  uint64_t CFAAdjust = RealStackSize - Offset;
+
   // Unroll the probe loop depending on the number of iterations.
   if (Offset < ProbeSize * 5) {
-    uint64_t CFAAdjust = RealStackSize - Offset;
-
     uint64_t CurrentOffset = 0;
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
@@ -929,7 +933,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   if (EmitCFI) {
     // Set the CFA register to TargetReg.
-    CFIBuilder.buildDefCFA(TargetReg, RoundedSize);
+    CFIBuilder.buildDefCFA(TargetReg, RoundedSize + CFAAdjust);
   }
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
@@ -954,7 +958,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 
   if (EmitCFI)
-    CFIBuilder.buildDefCFAOffset(Offset);
+    CFIBuilder.buildDefCFAOffset(RealStackSize);
 }
 
 static bool isPush(unsigned Opcode) {
@@ -1690,10 +1694,17 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     MaxCSFI = std::max(CSI.front().getFrameIdx(), CSI.back().getFrameIdx());
   }
 
+  auto FIIsCalleeSave = [&](const CalleeSavedInfo &CS) -> bool {
+    return FI == CS.getFrameIdx();
+  };
+
   bool IsInterruptCSR = RVFI->isSiFivePreemptibleInterrupt(MF) &&
                         (FI == RVFI->getInterruptCSRFrameIndex(0) ||
                          FI == RVFI->getInterruptCSRFrameIndex(1));
-  if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInterruptCSR) {
+  bool IsInlineRestoredLibcallCSR = llvm::any_of(
+      getPushOrLibCallsSavedInfo(MF, MFI.getCalleeSavedInfo()), FIIsCalleeSave);
+  if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInterruptCSR ||
+      IsInlineRestoredLibcallCSR) {
     FrameReg = SPReg;
 
     if (FirstSPAdjustAmount)
@@ -2673,10 +2684,13 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
         PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
   } else if (const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI)) {
+    assert(RVFI->useSaveRestoreLibCalls(*MF) &&
+           "Expected restore with libcall to use save restore libcalls");
+
     // Restore is not compatible with shadow stacks, so do the restore manually.
     // This ensures we still get the code size saving of `__riscv_save_<N>`.
     if (RVFI->hasShadowStack(*MF)) {
-      loadRegFromStackSlot(CSI);
+      loadRegFromStackSlot(getPushOrLibCallsSavedInfo(*MF, CSI));
       return true;
     }
 

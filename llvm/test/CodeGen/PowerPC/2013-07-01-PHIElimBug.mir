@@ -64,7 +64,7 @@ body:             |
 #
 # CHECK:       bb.0:
 # CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
-# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit killed $x2 :: (load (s64))
+# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load (s64))
 # CHECK-NEXT:    %2:gprc = LI 0
 # CHECK-NEXT:    %3:crrc = CMPLWI killed %2, 0
 # CHECK-NEXT:    BCC 76, killed %3, %bb.2

@@ -10,6 +10,7 @@
 #define LLVM_LIB_PASSES_PASSESOPTIONS_H
 
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define OPTIONS_STRUCT_DECL

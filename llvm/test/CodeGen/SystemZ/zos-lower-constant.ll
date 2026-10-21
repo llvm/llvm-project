@@ -6,7 +6,7 @@
 ; descriptor through the indirect symbol, like code taking the address
 ; (@take_bar), so that both compare equal. Both use the same ADA slot.
 ; CHECK: func_s CSECT
-; CHECK: DC AD(AD({{.*}}#S)+XL8'8')
+; CHECK: DC AD(AD({{.*}}#S)+XL8'0000000000000008')
 ; CHECK: func_e CSECT
 ; CHECK: DC VD(bar@indirect)
 ; CHECK: * Offset 0 pointer to function descriptor bar
