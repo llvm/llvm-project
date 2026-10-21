@@ -2122,6 +2122,14 @@ class RVPBinaryIntrinsic
   def int_riscv_psati  : RVPSaturationIntrinsic;
   def int_riscv_pusati : RVPSaturationIntrinsic;
 
+  // Scalar Saturation.
+  class RVPScalarSaturationIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_sati  : RVPScalarSaturationIntrinsic;
+  def int_riscv_usati : RVPScalarSaturationIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
