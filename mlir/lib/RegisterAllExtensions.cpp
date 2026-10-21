@@ -46,6 +46,7 @@
 #include "mlir/Dialect/Math/TransformOps/MathTransformOps.h"
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Extensions/AllExtensions.h"
@@ -72,6 +73,7 @@
 /// individually register the specific extensions that are useful for the
 /// pipelines and transformations you are using.
 void mlir::registerAllExtensions(DialectRegistry &registry) {
+  acc::registerAllExtensions(registry);
   // Register all conversions to LLVM extensions.
   registerConvertArithToEmitCInterface(registry);
   arith::registerConvertArithToLLVMInterface(registry);

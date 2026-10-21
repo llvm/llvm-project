@@ -3630,7 +3630,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3850,8 +3850,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -4044,8 +4044,8 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     return true;
   }
 
-  // FIXME: support stack probing for Windows.
-  if (MF->getTarget().getTargetTriple().isOSWindows())
+  // FIXME: support stack probing for Windows and UEFI.
+  if (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI())
     return false;
 
   // Now we're in the harder dynamic case.
@@ -5053,14 +5053,20 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
-    Register GuardPtr = getOrCreateVReg(*IRGuard);
+    if (IRGuard) {
+      Register GuardPtr = getOrCreateVReg(*IRGuard);
 
-    Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
-                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
-                            MachineMemOperand::MOLoad |
-                                MachineMemOperand::MOVolatile)
-                .getReg(0);
+      Guard = CurBuilder
+                  ->buildLoad(PtrMemTy, GuardPtr,
+                              MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                              MachineMemOperand::MOLoad |
+                                  MachineMemOperand::MOVolatile)
+                  .getReg(0);
+    } else {
+      LLVMContext &Ctx = CurBuilder->getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = CurBuilder->buildUndef(PtrMemTy).getReg(0);
+    }
   }
 
   // Perform the comparison.

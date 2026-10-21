@@ -2140,13 +2140,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
       llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
       if (!imports.empty())
         importGUIDs.insert(imports.begin(), imports.end());
-      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
-      llvmFunc->setMetadata(
-          llvm::LLVMContext::MD_prof,
-          metadataBuilder.createFunctionEntryCount(
-              entryCount.getEntryCount(),
-              entryCount.getCountType() == ProfileCountType::Synthetic,
-              imports.empty() ? nullptr : &importGUIDs));
+      llvmFunc->setEntryCount(entryCount.getEntryCount(),
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.

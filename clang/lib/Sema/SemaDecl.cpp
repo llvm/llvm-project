@@ -15128,8 +15128,18 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   QualType AttributedType =
       Context.getAttributedType(Attr, MethodType, MethodType);
   TypeLocBuilder TLB;
-  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+  TypeSourceInfo *TSI = MD->getTypeSourceInfo();
+  if (TSI && TSI->getTypeLoc().getType() == MethodType) {
     TLB.pushFullCopy(TSI->getTypeLoc());
+  } else {
+    // The written type-source info can disagree with the method's type. For
+    // example, a deduced 'auto' return type in a template instantiation keeps
+    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
+    // already been resolved to the deduced type. Pushing the stale TypeLoc
+    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
+    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+  }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
@@ -17415,6 +17425,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   }
 
   if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OpenMPSimd) ||
              (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
