@@ -669,9 +669,9 @@ end subroutine
 ! Under match_any, the first WHEN also matches through `vendor(llvm)` when `a` is
 ! false. Both score 3 and the conditions differ, so TASKYIELD is always selected.
 ! CHECK-LABEL: func.func @_QPtest_distinct_conditions_match_any(
-! CHECK-NOT:     omp.taskwait
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
 ! CHECK:         omp.taskyield
-! CHECK-NOT:     omp.taskwait
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
 ! CHECK:         return
 subroutine test_distinct_conditions_match_any(a, b)
   logical, intent(in) :: a, b
@@ -686,9 +686,9 @@ end subroutine
 
 ! A constant condition is different from a runtime condition.
 ! CHECK-LABEL: func.func @_QPtest_constant_and_runtime_conditions_match_any(
-! CHECK-NOT:     omp.taskwait
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
 ! CHECK:         omp.taskyield
-! CHECK-NOT:     omp.taskwait
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
 ! CHECK:         return
 subroutine test_constant_and_runtime_conditions_match_any(b)
   logical, intent(in) :: b
