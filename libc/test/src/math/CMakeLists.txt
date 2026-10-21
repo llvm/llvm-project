@@ -1,4 +1,4 @@
-add_custom_target(libc-math-unittests)
+add_libc_testsuite(libc-math-unittests)
 
 add_fp_unittest(
   cosf_test
@@ -3926,6 +3926,9 @@ add_fp_unittest(
 )
 
 add_subdirectory(smoke)
+
+add_custom_target(libc-math-all-tests)
+add_dependencies(libc-math-all-tests libc-math-smoke-tests libc-math-unittests)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
