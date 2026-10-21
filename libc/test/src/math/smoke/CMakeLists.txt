@@ -3699,8 +3699,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3713,8 +3711,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3727,8 +3723,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3745,8 +3739,6 @@ add_fp_unittest(
     libc.src.math.sqrtf128
     libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
