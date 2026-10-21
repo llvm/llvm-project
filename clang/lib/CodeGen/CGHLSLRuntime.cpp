@@ -1129,7 +1129,7 @@ getSPIRVInterpolationMode(llvm::dxbc::PSV::InterpolationMode InterpMode,
 
 static void addSPIRVInterfaceDecorations(
     llvm::GlobalVariable *GV, unsigned Decoration, unsigned Operand,
-    llvm::dxbc::PSV::InterpolationMode Mode =
+    llvm::dxbc::PSV::InterpolationMode InterpMode =
         llvm::dxbc::PSV::InterpolationMode::Undefined) {
   using llvm::dxbc::PSV::InterpolationMode;
 
@@ -1143,7 +1143,7 @@ static void addSPIRVInterfaceDecorations(
     Decorations.push_back(MDNode::get(
         Ctx, {ConstantAsMetadata::get(B.getInt32(InterpolationDecoration))}));
   };
-  switch (Mode) {
+  switch (InterpMode) {
   case InterpolationMode::Undefined:
   case InterpolationMode::Linear:
     break;
