@@ -71,6 +71,18 @@
 # RUN:   | FileCheck --check-prefix=CHECK-PRIORITY %s
 # CHECK-PRIORITY: rv64gc/lib;@-target=riscv64-unknown-none-elf@mabi=lp64d@march=rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0
 
+## Test 5: an empty FallbackDir must not pick up multilib.yaml from the CWD
+#
+# The Linux toolchain passes no FallbackDir.
+#
+# RUN: mkdir -p %t/e/cwd %t/e/install/bin
+# RUN: cp %s %t/e/cwd/multilib.yaml
+# RUN: cd %t/e/cwd && %clang -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=x86_64-unknown-linux-gnu --sysroot= \
+# RUN:     -ccc-install-dir %t/e/install/bin \
+# RUN:   | FileCheck --check-prefix=CHECK-CWD %s
+# CHECK-CWD-NOT: rv64gc
+
 ---
 MultilibVersion: 1.0
 
