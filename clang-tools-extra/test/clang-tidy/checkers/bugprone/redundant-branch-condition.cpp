@@ -291,7 +291,6 @@ void positive_direct_outer_and_rhs_bool() {
   }
 }
 
-
 void positive_indirect_outer_and_rhs() {
   bool onFire = isBurning();
   if (fireFighters < 10 && onFire) {
