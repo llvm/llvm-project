@@ -599,7 +599,16 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   builder.createFlagStore(loc, false, var.getPointer());
 }
 
-/// Deactive a cleanup that was created in an active state.
+static bool enclosesOpenConditionalCleanupScope(CIRGenFunction &cgf,
+                                                EHCleanupScope &scope) {
+  cir::CleanupScopeOp op = scope.getCleanupScopeOp();
+  return op &&
+         llvm::any_of(cgf.conditionalCleanupScopes, [&](const auto &condScope) {
+           return op->isProperAncestor(condScope.scope);
+         });
+}
+
+/// Deactivate a cleanup that was created in an active state.
 void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
                                             mlir::Operation *dominatingIP) {
   assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
@@ -607,9 +616,11 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   assert(scope.isActive() && "double deactivation");
 
   // If it's the top of the stack, just pop it, but do so only if it belongs
-  // to the current RunCleanupsScope.
+  // to the current RunCleanupsScope. If a conditional opened a cleanup scope
+  // keep it open till the end of the full-expression.
   if (c == ehStack.stable_begin() &&
-      currentCleanupStackDepth.strictlyEncloses(c)) {
+      currentCleanupStackDepth.strictlyEncloses(c) &&
+      !enclosesOpenConditionalCleanupScope(*this, scope)) {
     popCleanupBlock(/*forDeactivation=*/true);
     return;
   }
