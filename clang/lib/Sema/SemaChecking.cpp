@@ -1406,9 +1406,18 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
 
   case Builtin::BIsprintf:
-  case Builtin::BI__builtin___sprintf_chk: {
-    size_t FormatIndex = BuiltinID == Builtin::BIsprintf ? 1 : 3;
-    auto *FormatExpr = TheCall->getArg(FormatIndex)->IgnoreParenImpCasts();
+  case Builtin::BI__builtin_sprintf:
+  case Builtin::BI__builtin___sprintf_chk:
+  case Builtin::BIvsprintf:
+  case Builtin::BI__builtin_vsprintf:
+  case Builtin::BI__builtin___vsprintf_chk: {
+    bool IsChk = BuiltinID == Builtin::BI__builtin___sprintf_chk ||
+                 BuiltinID == Builtin::BI__builtin___vsprintf_chk;
+    std::optional<unsigned> FormatIndex = Checker.TranslateIndex(IsChk ? 3 : 1);
+    if (!FormatIndex)
+      return;
+    const auto *FormatExpr =
+        TheCall->getArg(*FormatIndex)->IgnoreParenImpCasts();
 
     StringRef FormatStrRef;
     size_t StrLen;
@@ -1423,7 +1432,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                      : diag::warn_format_overflow_non_kprintf;
         AccessSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                          .extOrTrunc(SizeTypeWidth);
-        if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
+        if (IsChk) {
           BufferSize = Checker.ComputeExplicitObjectSizeArgument(2);
         } else {
           BufferSize = Checker.ComputeSizeArgument(0);
@@ -4218,6 +4227,38 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIstdc_memreverse8u16:
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_les64:
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_bes64:
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_les64:
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_aligned_bes64:
     if (Context.getTargetInfo().getCharWidth() != 8) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_requires_char_bit_8)
           << TheCall->getDirectCallee()->getName();
@@ -6883,6 +6924,8 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   {
     ExprResult FirstArgResult =
         DefaultFunctionArrayLvalueConversion(FirstArg);
+    if (FirstArgResult.isInvalid())
+      return true;
     if (!FirstArgResult.get()->getType()->isPointerType()) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
           << TheCall->getSourceRange();
@@ -7222,6 +7265,15 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
       // Member has counted_by attribute - return pointer to count field
       const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
       if (const FieldDecl *CountFD = MemberDecl->findCountedByField()) {
+        if (CountFD->isBitField()) {
+          Diag(ME->getBeginLoc(),
+               diag::err_builtin_counted_by_ref_counter_field_is_bitfield)
+              << Arg << CountFD << ME->getSourceRange();
+          return Diag(CountFD->getBeginLoc(),
+                      diag::note_counted_by_counter_field)
+                 << CountFD << CountFD->getSourceRange();
+        }
+
         TheCall->setType(Context.getPointerType(CountFD->getType()));
         return false;
       }

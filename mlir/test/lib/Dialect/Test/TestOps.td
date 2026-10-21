@@ -24,6 +24,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -3167,10 +3168,13 @@ def MakeTupleOp: TEST_Op<"make_tuple"> {
 //===----------------------------------------------------------------------===//
 
 def OpWithDataLayoutOp : TEST_Op<"op_with_data_layout",
-                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
+                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout,
+                                  DataLayoutOpInterface,
+                                  DLTIQueryOpInterface]> {
   let summary =
       "An op that uses DataLayout implementation from the Target dialect";
   let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins OptionalAttr<DLTIQueryAttr>:$dlti);
 }
 
 def DataLayoutQueryOp : TEST_Op<"data_layout_query"> {
@@ -4880,7 +4884,7 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
       return ::mlir::CallInterfaceCallable();
     }
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+      if (auto sym = dyn_cast<::mlir::SymbolRefAttr>(callee))
         (*this)->setDiscardableAttr("callee", sym);
       else
         (*this)->removeDiscardableAttr("callee");

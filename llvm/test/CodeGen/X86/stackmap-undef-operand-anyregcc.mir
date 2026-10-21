@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-apple-darwin -start-after=virtregrewriter -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-apple-darwin -start-after=virt-reg-rewriter -o - %s | FileCheck %s
 
 # Check there's no assertion for anyregcc with an undef operand to a stackmap.
 

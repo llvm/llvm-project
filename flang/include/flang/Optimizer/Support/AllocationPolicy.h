@@ -84,6 +84,10 @@ struct PendingAllocationInfo {
   bool isDynamic = false;
   /// The constant size of the allocation in bytes, if it can be determined.
   std::optional<std::int64_t> byteSize;
+  /// An operation at the point where the allocation lives or will be inserted,
+  /// used for context dependent decisions such as code that runs on a device.
+  /// Optional: without it the offload region rule is not applied.
+  mlir::Operation *context = nullptr;
 };
 
 /// Module-level information needed to compute constant allocation sizes.
@@ -113,7 +117,9 @@ struct AllocationInfo : PendingAllocationInfo {
 /// Size-based placement policy, usable before the allocation is created.
 /// Decides whether an allocation described by \p info should live on the stack,
 /// given the \p policy in effect and the per-function stack bytes already
-/// committed to the stack (\p stackBytesUsed).
+/// committed to the stack (\p stackBytesUsed). When \p info carries a context
+/// inside an offload region, -fstack-arrays is not honored there and only the
+/// size based rules apply, as for a device procedure.
 bool shouldAllocateOnStack(const PendingAllocationInfo &info,
                            const AllocationPolicy &policy,
                            std::size_t stackBytesUsed);

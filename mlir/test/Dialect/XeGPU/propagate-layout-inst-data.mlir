@@ -772,3 +772,18 @@ func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>)
   return
 }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_insert_unit_dim_replicated_lanes(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>, dims = [1]>} dense<0.000000e+00> : vector<8x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>} : vector<8x32xf16> to vector<8x1x32xf16>
+func.func @shape_cast_insert_unit_dim_replicated_lanes() {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x32xf16>
+  %0 = vector.shape_cast %cst : vector<8x32xf16> to vector<8x1x32xf16>
+  %1 = xegpu.convert_layout %0
+     <{target_layout = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>}>
+     : vector<8x1x32xf16>
+  return
+}
+}

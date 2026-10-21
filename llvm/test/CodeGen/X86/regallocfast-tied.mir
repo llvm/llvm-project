@@ -14,6 +14,7 @@
   define i64 @insert_subreg_undef_base(i32 %a) { ret i64 0 }
   define i64 @insert_subreg_live_base(i64 %a, i32 %b) { ret i64 0 }
   define i32 @tied_use_read_twice(i32 %a) { ret i32 0 }
+  define x86_regcallcc i32 @untied_read_before_tied_use(i32 %a) { ret i32 0 }
   define i32 @tied_use_undef() { ret i32 0 }
   define void @two_tied_uses_one_value(i32 %a) { ret void }
 
@@ -262,6 +263,25 @@ body: |
     $eax = COPY %1
     $ecx = COPY %0
     RET64 implicit $eax, implicit $ecx
+...
+---
+# The untied read of %0 precedes its tied use, as in a regcall function with
+# asm operands "r"(a), "0"(a). Allocating the tied use first lets both reads
+# share the def's register without a copy.
+name: untied_read_before_tied_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $eax
+    ; CHECK-LABEL: name: untied_read_before_tied_use
+    ; CHECK: liveins: $eax
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: INLINEASM &"// $0 $1 $2", attdialect, regdef:GR32, def renamable $eax, reguse:GR32, renamable $eax, reguse tiedto:$0, killed renamable $eax(tied-def 3)
+    ; CHECK-NEXT: RET64 implicit killed $eax
+    %0:gr32 = COPY $eax
+    INLINEASM &"// $0 $1 $2", attdialect, regdef:GR32, def %1:gr32, reguse:GR32, %0, reguse tiedto:$0, %0(tied-def 3)
+    $eax = COPY %1
+    RET64 implicit $eax
 ...
 ---
 # An undef tied use has no value to place; it just names the tied def's
