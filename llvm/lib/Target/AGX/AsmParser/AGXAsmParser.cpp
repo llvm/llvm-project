@@ -257,7 +257,7 @@ public:
            isRegKind({AGX::RegKind::GPR16, AGX::RegKind::GPR32});
   }
   bool isStoreFlag() const {
-    return Kind == Immediate && ImmKind == IK_Int && (Imm == 0 || Imm == 1);
+    return Kind == Immediate && ImmKind == IK_Int && Imm >= 0 && Imm <= 3;
   }
   bool isAtomicSrc() const {
     return isRegKind({AGX::RegKind::GPR32, AGX::RegKind::GPR64});

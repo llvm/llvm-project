@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXISelLowering.h"
+#include "AGX.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXRegisterInfo.h"
 #include "AGXSubtarget.h"
@@ -248,15 +249,32 @@ AGXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 
 TargetLowering::AtomicExpansionKind
 AGXTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  // There are no atomic loads: use a compare and swap that never succeeds in
-  // changing memory.
+  // System-scope 32-bit loads of device memory stay loads, encoded coherent
+  // after an f59d: the only form that sees host writes during a dispatch
+  // (ptx-re-blockers B7).
+  if (isSystemScopeDeviceAccess(LI))
+    return AtomicExpansionKind::None;
+  // Other atomic loads: a compare and swap that never succeeds in changing
+  // memory.
   return AtomicExpansionKind::CmpXChg;
 }
 
 TargetLowering::AtomicExpansionKind
 AGXTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  // System-scope 32-bit stores of device memory: a coherent store and an
+  // f533, the only form the host sees during a dispatch.
+  if (isSystemScopeDeviceAccess(SI))
+    return AtomicExpansionKind::None;
   // Atomic stores become atomic exchanges.
   return AtomicExpansionKind::Expand;
+}
+
+bool AGXTargetLowering::isSystemScopeDeviceAccess(const Instruction *I) {
+  Type *Ty = isa<LoadInst>(I) ? I->getType()
+                              : cast<StoreInst>(I)->getValueOperand()->getType();
+  const DataLayout &DL = I->getDataLayout();
+  return DL.getTypeSizeInBits(Ty) == 32 && AGX::isHostCoherentAccess(*I) &&
+         getLoadStoreAddressSpace(I) == AGX::DEVICE_ADDRESS;
 }
 
 //===----------------------------------------------------------------------===//

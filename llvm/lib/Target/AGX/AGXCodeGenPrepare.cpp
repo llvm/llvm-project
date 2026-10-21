@@ -34,6 +34,9 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
@@ -186,6 +189,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool flushHalfDenormals(Function &F);
   bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
+  bool fenceHostCoherentAccesses(Function &F);
 
 public:
   static char ID;
@@ -835,6 +839,66 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   Changed |= flushFloatMinMax(F);
   Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
+  Changed |= fenceHostCoherentAccesses(F);
   Changed |= unifyExits(F);
   return Changed;
+}
+
+static bool isSystemScope(SyncScope::ID Scope, LLVMContext &Ctx) {
+  return Scope == SyncScope::System ||
+         Scope == Ctx.getOrInsertSyncScopeID("one-as");
+}
+
+bool AGX::isHostCoherentAccess(const Instruction &I) {
+  unsigned AS;
+  if (const auto *L = dyn_cast<LoadInst>(&I)) {
+    if (!L->isVolatile() &&
+        !(L->isAtomic() && isSystemScope(L->getSyncScopeID(), I.getContext())))
+      return false;
+    AS = L->getPointerAddressSpace();
+  } else if (const auto *S = dyn_cast<StoreInst>(&I)) {
+    if (!S->isVolatile() &&
+        !(S->isAtomic() && isSystemScope(S->getSyncScopeID(), I.getContext())))
+      return false;
+    AS = S->getPointerAddressSpace();
+  } else {
+    return false;
+  }
+  return AS == AGX::DEVICE_ADDRESS || AS == AGX::GENERIC_ADDRESS;
+}
+
+bool AGX::isHostCoherentAccess(const MachineInstr &MI) {
+  LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
+  for (const MachineMemOperand *MMO : MI.memoperands())
+    if (MMO->isVolatile() ||
+        (MMO->isAtomic() && isSystemScope(MMO->getSyncScopeID(), Ctx)))
+      return true;
+  return false;
+}
+
+/// Host memory written during a dispatch is seen only by a coherent load
+/// after an f59d, and the host sees a store during the dispatch only when it
+/// is coherent and followed by an f533 (ptx-re-blockers B7, Apple-M2-Playground
+/// 2026-10-16-cpu-gpu-visibility). The coherency bit is set when the access is
+/// encoded (AGXMCInstLower); the barriers go here.
+bool AGXCodeGenPrepare::fenceHostCoherentAccesses(Function &F) {
+  SmallVector<Instruction *, 8> Accesses;
+  for (Instruction &I : instructions(F))
+    if (AGX::isHostCoherentAccess(I))
+      Accesses.push_back(&I);
+  if (Accesses.empty())
+    return false;
+  Module &M = *F.getParent();
+  Function *Barrier = Intrinsic::getOrInsertDeclaration(
+      &M, Intrinsic::agx_memory_barrier);
+  for (Instruction *I : Accesses) {
+    IRBuilder<> B(I);
+    if (isa<StoreInst>(I))
+      B.SetInsertPoint(I->getNextNode());
+    // f59d is memory_barrier 3, 1, 9; f533 is 0, 3, 3.
+    unsigned A = isa<LoadInst>(I) ? 3 : 0, Bv = isa<LoadInst>(I) ? 1 : 3,
+             C = isa<LoadInst>(I) ? 9 : 3;
+    B.CreateCall(Barrier, {B.getInt32(A), B.getInt32(Bv), B.getInt32(C)});
+  }
+  return true;
 }

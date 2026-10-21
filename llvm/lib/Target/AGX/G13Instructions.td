@@ -808,16 +808,23 @@ class G13DeviceMem<string mn, bits<7> op, dag outs, dag ins, string ops>
   let LengthBit = 47;
 }
 
+// Bits 44-45 of a load or store are an optional trailing operand (applegpu's
+// u6; Mesa's u4 is these bits and bit 46). 3 is Mesa's coherent access
+// (u4 = 7): together with f59d before a load or f533 after a store it is the
+// only form that sees, or makes visible, host memory during a dispatch
+// (ptx-re-blockers B7, Apple-M2-Playground 2026-10-16-cpu-gpu-visibility);
+// code generation uses it for volatile and system-scope accesses.
 let mayLoad = 1, IsAsync = 1 in
 def DEVICE_LOAD_g13
     : G13DeviceMem<"device_load", 0b0000101, (outs AGXMemReg:$R),
                    (ins AGXImm:$g, AGXMemFormat:$fmt, AGXMemMask:$mask,
                         AGXMemBase:$A, AGXMemIndex:$O, AGXSignedness:$sgn,
-                        AGXShift:$shift),
-                   "$g, $fmt, $mask, $R, $A, $O, $sgn$shift">;
+                        AGXShift:$shift, AGXStoreFlag:$u6),
+                   "$g, $fmt, $mask, $R, $A, $O, $sgn$shift$u6"> {
+  bits<2> u6;
+  let Inst{45-44} = u6;
+}
 
-// Bit 44 of a store (applegpu's u6, "store order"?) is an optional trailing
-// operand; code generation leaves it clear.
 let mayStore = 1 in
 def DEVICE_STORE_g13
     : G13DeviceMem<"device_store", 0b1000101, (outs),
@@ -826,8 +833,8 @@ def DEVICE_STORE_g13
                         AGXSignedness:$sgn, AGXShift:$shift,
                         AGXStoreFlag:$u6),
                    "$g, $fmt, $mask, $R, $A, $O, $sgn$shift$u6"> {
-  bits<1> u6;
-  let Inst{44} = u6;
+  bits<2> u6;
+  let Inst{45-44} = u6;
 }
 
 // Initialise uniform registers from general purpose registers. The index is

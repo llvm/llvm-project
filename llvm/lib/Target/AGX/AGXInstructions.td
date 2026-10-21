@@ -867,6 +867,14 @@ defm : DeviceStorePat<device_truncstorei8, i16, DEVICE_STORE_16, AGXDeviceAddr8,
 defm : DeviceStorePat<device_truncstorei8, i32, DEVICE_STORE_32, AGXDeviceAddr8, FMT_I8, 1>;
 defm : DeviceStorePat<device_truncstorei16, i32, DEVICE_STORE_32, AGXDeviceAddr16, FMT_I16, 1>;
 
+// System-scope atomic loads and stores of device memory (ld.acquire.sys,
+// st.release.sys) are coherent loads and stores, not atomics: device atomics
+// do not see host writes during a dispatch (ptx-re-blockers B7). Their
+// ordering fences come from AtomicExpand; the f59d / f533 and the coherency
+// bit from AGXCodeGenPrepare and AGXMCInstLower (isHostCoherentAccess).
+defm : DeviceLoadPat<atomic_load_nonext_32, i32, DEVICE_LOAD_32, AGXDeviceAddr32, FMT_I32, 1>;
+defm : DeviceStorePat<atomic_store_32, i32, DEVICE_STORE_32, AGXDeviceAddr32, FMT_I32, 1>;
+
 //===----------------------------------------------------------------------===//
 // Threadgroup memory
 //===----------------------------------------------------------------------===//

@@ -109,6 +109,9 @@ public:
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  /// A system-scope (or volatile) 32-bit load or store of device memory,
+  /// which is a coherent access rather than an atomic.
+  static bool isSystemScopeDeviceAccess(const Instruction *I);
 };
 
 } // namespace llvm

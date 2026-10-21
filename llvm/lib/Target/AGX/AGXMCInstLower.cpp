@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXMCInstLower.h"
+#include "AGX.h"
 #include "AGXInstrInfo.h"
 #include "AGXSubtarget.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
@@ -64,8 +65,12 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   const MCInstrDesc &PseudoDesc = MI->getDesc();
   const MCInstrDesc &RealDesc = TII->get(Opcode);
+  // Device loads and stores have a trailing coherency operand (added below).
+  bool HasCoherency =
+      Opcode == AGX::DEVICE_LOAD_g13 || Opcode == AGX::DEVICE_STORE_g13;
   bool InsertCache = PseudoDesc.getNumDefs() > 0 &&
-                     RealDesc.getNumOperands() == PseudoDesc.getNumOperands() + 1;
+                     RealDesc.getNumOperands() ==
+                         PseudoDesc.getNumOperands() + 1 + HasCoherency;
 
   // Atomics whose result is unused write no register.
   if (MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET ||
@@ -81,10 +86,11 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (Idx++ == 0 && InsertCache)
       OutMI.addOperand(MCOperand::createImm(0));
   }
-  // Trailing flag operands of the real instruction that code generation does
-  // not set.
-  if (Opcode == AGX::DEVICE_STORE_g13)
-    OutMI.addOperand(MCOperand::createImm(0));
+  // The trailing coherency operand of device loads and stores: coherent for
+  // volatile and system-scope accesses (with the f59d / f533 that
+  // AGXCodeGenPrepare puts around them).
+  if (HasCoherency)
+    OutMI.addOperand(MCOperand::createImm(AGX::isHostCoherentAccess(*MI) ? 3 : 0));
   // Device atomics on parts with several dies must bypass the per-die
   // caches.
   if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||

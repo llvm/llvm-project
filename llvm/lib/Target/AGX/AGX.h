@@ -58,6 +58,18 @@ void initializeAGXLowerControlFlowPass(PassRegistry &);
 void initializeAGXInsertWaitsPass(PassRegistry &);
 void initializeAGXAsmPrinterPass(PassRegistry &);
 
+class Instruction;
+class MachineInstr;
+
+namespace AGX {
+/// Whether a device memory access must reach memory shared with the host while
+/// the dispatch runs: volatile and system-scope atomic loads and stores
+/// (PTX ld/st.volatile, .sys). They are encoded coherent, loads after an f59d
+/// and stores before an f533 (ptx-re-blockers B7).
+bool isHostCoherentAccess(const Instruction &I);
+bool isHostCoherentAccess(const MachineInstr &MI);
+} // namespace AGX
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_AGX_AGX_H
