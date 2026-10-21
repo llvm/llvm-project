@@ -687,7 +687,7 @@ define float @select_fmul_legacy_copysign_mul_operand(float %x, float %y, float 
 define float @select_fmul_legacy_select_flags(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_select_flags(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -730,11 +730,7 @@ define float @select_fmul_legacy_fmul_flags(float %x, float %y) {
 define float @select_fmul_legacy_fmul_fast(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fmul_fast(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call reassoc arcp contract afn float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0

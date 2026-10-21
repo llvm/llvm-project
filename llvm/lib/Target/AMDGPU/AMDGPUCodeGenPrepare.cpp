@@ -32,6 +32,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1591,68 +1592,44 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) const {
   if (!Inverted && !match(I.getTrueValue(), m_PosZeroFP()))
     return false;
 
+  Value *Mul = Inverted ? I.getTrueValue() : I.getFalseValue();
   Value *X, *Y;
-  if (!match(Inverted ? I.getTrueValue() : I.getFalseValue(),
-             m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
+  if (!match(Mul, m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
     return false;
 
-  // Collect the values compared against zero in the condition.
-  SmallVector<Value *, 4> CondWorklist = {I.getCondition()};
-  SmallVector<Value *, 4> CmpSrcs;
-  SmallPtrSet<Value *, 8> VisitedConds;
-  while (!CondWorklist.empty()) {
-    Value *Cond = CondWorklist.pop_back_val();
-    if (!VisitedConds.insert(Cond).second)
-      continue;
-
-    Value *LHS, *RHS, *Src;
-    if (Inverted ? match(Cond, m_And(m_Value(LHS), m_Value(RHS)))
-                 : match(Cond, m_Or(m_Value(LHS), m_Value(RHS)))) {
-      CondWorklist.append({LHS, RHS});
-      continue;
-    }
-
-    if (!match(Cond, m_SpecificFCmp(Inverted ? FCmpInst::FCMP_UNE
-                                             : FCmpInst::FCMP_OEQ,
-                                    m_Value(Src), m_AnyZeroFP())))
+  FCmpInst::Predicate ZeroCmpPred =
+      Inverted ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_OEQ;
+  Value *A, *B;
+  auto ZeroCmpA = m_SpecificFCmp(ZeroCmpPred, m_Value(A), m_AnyZeroFP());
+  auto ZeroCmpB = m_SpecificFCmp(ZeroCmpPred, m_Value(B), m_AnyZeroFP());
+  Value *Cond = I.getCondition();
+  if (Inverted ? !match(Cond, m_And(ZeroCmpA, ZeroCmpB))
+               : !match(Cond, m_Or(ZeroCmpA, ZeroCmpB))) {
+    if (!match(Cond, ZeroCmpA))
       return false;
-    CmpSrcs.push_back(Src);
+    B = A;
   }
 
-  SmallVector<Value *, 4> Roots[2] = {std::move(CmpSrcs), {X, Y}};
-  SmallPtrSet<Value *, 4> Leaves[2];
-  for (auto [Worklist, Found] : zip(Roots, Leaves)) {
-    SmallPtrSet<Value *, 8> Visited;
-
-    while (!Worklist.empty()) {
-      Value *Cur = Worklist.pop_back_val();
-      if (!Visited.insert(Cur).second)
-        continue;
-
-      // Peeling a nnan/ninf op could expose poison that the select hides.
-      auto *FPOp = dyn_cast<FPMathOperator>(Cur);
-      if (FPOp && (FPOp->hasNoNaNs() || FPOp->hasNoInfs())) {
-        Found.insert(Cur);
-        continue;
-      }
-
-      Value *Src;
-      // m_UnOp, not m_FNeg: fsub -0.0, X may flush a denormal result to zero.
-      if (match(Cur, m_CombineOr(m_UnOp(m_Value(Src)), m_FAbs(m_Value(Src))))) {
-        Worklist.push_back(Src);
-        continue;
-      }
-
-      Found.insert(Cur);
-    }
-  }
-
-  if (Leaves[0] != Leaves[1])
+  Value *SA = InstCombiner::stripSignOnlyFPOps(A);
+  Value *SB = InstCombiner::stripSignOnlyFPOps(B);
+  Value *SX = InstCombiner::stripSignOnlyFPOps(X);
+  Value *SY = InstCombiner::stripSignOnlyFPOps(Y);
+  if (!((SA == SX && SB == SY) || (SA == SY && SB == SX)))
     return false;
+
+  // A stripped nnan/ninf op could create poison that the select hides.
+  if (!impliesPoison(X, SX) || !impliesPoison(Y, SY))
+    return false;
+
+  // The select may hide NaN, Inf or a signed zero from the fmul.
+  FastMathFlags FMF = cast<Instruction>(Mul)->getFastMathFlags();
+  FMF.setNoNaNs(false);
+  FMF.setNoInfs(false);
+  FMF.setNoSignedZeros(I.hasNoSignedZeros());
 
   IRBuilder<> Builder(&I);
   Value *LegacyMul =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {X, Y});
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {X, Y}, FMF);
   LegacyMul->takeName(&I);
   I.replaceAllUsesWith(LegacyMul);
   DeadVals.push_back(&I);
