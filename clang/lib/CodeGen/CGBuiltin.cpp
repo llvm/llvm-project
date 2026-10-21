@@ -4103,7 +4103,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // side-effects.
       return RValue::get(ConstantInt::get(ResultType, 0));
 
-    Value *ArgValue = EmitScalarExpr(Arg);
+    Value *ArgValue;
+    if (ArgType->isAnyComplexType()) {
+      ComplexPairTy Pair = EmitComplexExpr(Arg);
+      llvm::Type *ComplexTy = ConvertType(ArgType);
+      ArgValue = Builder.CreateInsertValue(llvm::PoisonValue::get(ComplexTy),
+                                           Pair.first, 0);
+      ArgValue = Builder.CreateInsertValue(ArgValue, Pair.second, 1);
+    } else {
+      ArgValue = EmitScalarExpr(Arg);
+    }
+
     if (ArgType->isObjCObjectPointerType()) {
       // Convert Objective-C objects to id because we cannot distinguish between
       // LLVM types for Obj-C classes as they are opaque.
