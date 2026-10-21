@@ -16,11 +16,11 @@
 ; silently.
 
 ; A calibrated row covers one data shape, and was calibrated against the
-; dword-indexed form, which is the form the premium is recovered from. Where the
-; qword-indexed body is the larger of the two, the same premium prices the shape
-; above its row. The v8i64 scatter pair at the end records that gap -- 35 against
-; 32, the difference the schedule model carries between VPSCATTERQQZ and
-; VPSCATTERDQZ.
+; dword-indexed form, which is the form the premium is recovered from. That
+; premium is added to the body the shape emits, so a qword-indexed shape lands
+; above or below the dword form on its own body. The v8i64 scatter pair at the
+; end records a case where the wider index grows the body -- 35 against 32, the
+; difference the schedule model carries between VPSCATTERQQZ and VPSCATTERDQZ.
 
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver4 | FileCheck %s --check-prefix=FEATURE
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver4 -mattr=-prefer-gs-cost-table | FileCheck %s --check-prefix=GENERIC
@@ -126,4 +126,24 @@ define void @scatter_v8i64_dword_index(<8 x i64> %val, ptr %base, <8 x i32> %idx
   %ptrs = getelementptr inbounds i64, ptr %base, <8 x i32> %idx
   call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
+}
+
+; A stride x86 cannot fold into an addressing-mode scale keeps the index at
+; qword, so half as many lanes fit a register and llc emits two VPGATHERQD where
+; the four-byte stride in gather_v12i32_dword_index above emits one. The row
+; charged follows the instruction class emitted, not the one the shape implies.
+define <12 x i32> @gather_v12i32_struct_stride(ptr %base, <12 x i32> %idx, <12 x i1> %mask) {
+; FEATURE-LABEL: 'gather_v12i32_struct_stride'
+; FEATURE-NEXT:  Cost Model: Found costs of 1 for: %ptrs = getelementptr inbounds { i32, i32, i32 }, ptr %base, <12 x i32> %idx, i32 0
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
+;
+; GENERIC-LABEL: 'gather_v12i32_struct_stride'
+; GENERIC-NEXT:  Cost Model: Found costs of 1 for: %ptrs = getelementptr inbounds { i32, i32, i32 }, ptr %base, <12 x i32> %idx, i32 0
+; GENERIC-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
+;
+  %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <12 x i32> %idx, i32 0
+  %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> %ptrs, i32 4, <12 x i1> %mask, <12 x i32> poison)
+  ret <12 x i32> %v
 }
