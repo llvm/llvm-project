@@ -3848,7 +3848,7 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   }
   DTU.flush();
 
-  EarliestEscapeAnalysis RunEA(*DT, this->LI);
+  EarliestEscapeAnalysis RunEA(*DT, &LI);
   EA = MSSA ? &RunEA : nullptr;
 
   unsigned Iteration = 0;
