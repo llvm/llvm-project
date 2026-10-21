@@ -500,13 +500,6 @@ void RegionBase<Tr>::dump() const {
 }
 #endif
 
-template <class Tr>
-void RegionBase<Tr>::clearNodeCache() {
-  BBNodeMap.clear();
-  for (std::unique_ptr<RegionT> &R : *this)
-    R->clearNodeCache();
-}
-
 //===----------------------------------------------------------------------===//
 // RegionInfoBase implementation
 //
