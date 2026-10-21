@@ -7201,7 +7201,7 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
 }
 
 //===----------------------------------------------------------------------===//
-// NVVM spcompress and spdecompress Ops
+// NVVM sparse.compress and sparse.decompress Ops
 //===----------------------------------------------------------------------===//
 
 // Size in bits of each structured sparsity metadata index.
@@ -7218,7 +7218,7 @@ defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
 defvar SPMetadataType = AnyTypeOf<[I32,
     FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
 
-def NVVM_SPCompressOp : NVVM_Op<"spcompress",
+def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
     [Pure, NVVMRequiresSMa<[107]>]> {
   let summary = "Compress dense vector to structured sparse vector";
   let description = [{
@@ -7247,11 +7247,13 @@ def NVVM_SPCompressOp : NVVM_Op<"spcompress",
     Examples:
     ```mlir
     // 8-bit elements, 2-bit indices, repeat factor of 1.
-    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 2
         : i32, vector<8xi8> -> i32, vector<4xi8>
 
     // 16-bit elements, 4-bit indices, repeat factor of 8.
-    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 4
         : i32, vector<32xi16> -> vector<2xi32>, vector<16xi16>
     ```
 
@@ -7280,11 +7282,11 @@ def NVVM_SPCompressOp : NVVM_Op<"spcompress",
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    NVVM::SPCompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+    NVVM::SparseCompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
   }];
 }
 
-def NVVM_SPDecompressOp : NVVM_Op<"spdecompress",
+def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
     [Pure, NVVMRequiresSMa<[107]>]> {
   let summary = "Decompress structured sparse vector to dense vector";
   let description = [{
@@ -7321,11 +7323,11 @@ def NVVM_SPDecompressOp : NVVM_Op<"spdecompress",
     Examples:
     ```mlir
     // 2:4 sparsity, 8-bit elements, 2-bit indices, repeat factor of 1.
-    %res = nvvm.spdecompress %metadata, %compdata idx_size = 2 num_tgt = 4
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 2 num_tgt = 4
         : i32, vector<2xi8> -> vector<4xi8>
 
     // 2:4 sparsity, 16-bit elements, 4-bit indices, repeat factor of 64.
-    %res = nvvm.spdecompress %metadata, %compdata idx_size = 4 num_tgt = 4
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 4 num_tgt = 4
         : vector<16xi32>, vector<128xi16> -> vector<256xi16>
     ```
 
@@ -7355,7 +7357,7 @@ def NVVM_SPDecompressOp : NVVM_Op<"spdecompress",
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    NVVM::SPDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+    NVVM::SparseDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
   }];
 }
 

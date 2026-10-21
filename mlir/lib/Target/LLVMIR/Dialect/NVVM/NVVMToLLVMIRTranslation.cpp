@@ -644,10 +644,10 @@ static llvm::Type *getSPMetadataType(Type type, llvm::IRBuilderBase &builder) {
                                     vecTy.getNumElements());
 }
 
-void NVVM::SPCompressOp::lowerToLLVMIR(Operation &op,
-                                       LLVM::ModuleTranslation &mt,
-                                       llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::SPCompressOp>(op);
+void NVVM::SparseCompressOp::lowerToLLVMIR(Operation &op,
+                                           LLVM::ModuleTranslation &mt,
+                                           llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseCompressOp>(op);
   Value metadata = thisOp.getMetadata();
   Value compressedData = thisOp.getCompressedData();
   llvm::Type *resultTy =
@@ -667,10 +667,10 @@ void NVVM::SPCompressOp::lowerToLLVMIR(Operation &op,
   mt.mapValue(compressedData) = builder.CreateExtractValue(result, 1);
 }
 
-void NVVM::SPDecompressOp::lowerToLLVMIR(Operation &op,
-                                         LLVM::ModuleTranslation &mt,
-                                         llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::SPDecompressOp>(op);
+void NVVM::SparseDecompressOp::lowerToLLVMIR(Operation &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseDecompressOp>(op);
   Value metadata = thisOp.getMetadata();
   mt.mapValue(thisOp.getData()) = createIntrinsicCall(
       builder, llvm::Intrinsic::nvvm_spdecompress,

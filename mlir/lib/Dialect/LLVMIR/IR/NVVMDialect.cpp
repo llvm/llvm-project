@@ -7071,7 +7071,7 @@ LogicalResult Tcgen05LdRedOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spcompress and spdecompress Ops
+// sparse.compress and sparse.decompress Ops
 //===----------------------------------------------------------------------===//
 
 // Returns the number of 32-bit registers in a metadata register bundle, which
@@ -7087,7 +7087,7 @@ static bool isValidSPRepFactor(unsigned repFactor) {
   return llvm::isPowerOf2_32(repFactor) && repFactor <= 64;
 }
 
-LogicalResult SPCompressOp::verify() {
+LogicalResult SparseCompressOp::verify() {
   auto dataTy = cast<VectorType>(getData().getType());
   auto compressedTy = cast<VectorType>(getCompressedData().getType());
   if (dataTy.getElementType() != compressedTy.getElementType())
@@ -7116,7 +7116,7 @@ LogicalResult SPCompressOp::verify() {
   return success();
 }
 
-LogicalResult SPDecompressOp::verify() {
+LogicalResult SparseDecompressOp::verify() {
   auto dataTy = cast<VectorType>(getData().getType());
   auto compressedTy = cast<VectorType>(getCompressedData().getType());
   if (dataTy.getElementType() != compressedTy.getElementType())

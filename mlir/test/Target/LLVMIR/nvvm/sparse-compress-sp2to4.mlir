@@ -8,7 +8,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_1(%spdesc: i32, %data: vector<8xi8>)
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <4 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<8xi8> -> i32, vector<4xi8>
   llvm.return %metadata : i32
 }
@@ -21,7 +21,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_2(%spdesc: i32, %data: vector<16xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <8 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<16xi8> -> i32, vector<8xi8>
   llvm.return %metadata : i32
 }
@@ -34,7 +34,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_4(%spdesc: i32, %data: vector<32xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <16 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<32xi8> -> i32, vector<16xi8>
   llvm.return %metadata : i32
 }
@@ -47,7 +47,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_8(%spdesc: i32, %data: vector<64xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <2 x i32>, <32 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <2 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<64xi8> -> vector<2xi32>, vector<32xi8>
   llvm.return %metadata : vector<2xi32>
 }
@@ -60,7 +60,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_16(%spdesc: i32, %data: vector<128xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <4 x i32>, <64 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <4 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<128xi8> -> vector<4xi32>, vector<64xi8>
   llvm.return %metadata : vector<4xi32>
 }
@@ -73,7 +73,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_32(%spdesc: i32, %data: vector<256xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <8 x i32>, <128 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <8 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<256xi8> -> vector<8xi32>, vector<128xi8>
   llvm.return %metadata : vector<8xi32>
 }
@@ -86,7 +86,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_64(%spdesc: i32, %data: vector<512xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <16 x i32>, <256 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <16 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<512xi8> -> vector<16xi32>, vector<256xi8>
   llvm.return %metadata : vector<16xi32>
 }
@@ -99,7 +99,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_1(%spdesc: i32, %data: vector<8xi8>)
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <4 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<8xi8> -> i32, vector<4xi8>
   llvm.return %metadata : i32
 }
@@ -112,7 +112,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_2(%spdesc: i32, %data: vector<16xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <8 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<16xi8> -> i32, vector<8xi8>
   llvm.return %metadata : i32
 }
@@ -125,7 +125,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_4(%spdesc: i32, %data: vector<32xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <2 x i32>, <16 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <2 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<32xi8> -> vector<2xi32>, vector<16xi8>
   llvm.return %metadata : vector<2xi32>
 }
@@ -138,7 +138,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_8(%spdesc: i32, %data: vector<64xi8>
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <4 x i32>, <32 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <4 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<64xi8> -> vector<4xi32>, vector<32xi8>
   llvm.return %metadata : vector<4xi32>
 }
@@ -151,7 +151,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_16(%spdesc: i32, %data: vector<128xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <8 x i32>, <64 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <8 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<128xi8> -> vector<8xi32>, vector<64xi8>
   llvm.return %metadata : vector<8xi32>
 }
@@ -164,7 +164,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_32(%spdesc: i32, %data: vector<256xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <16 x i32>, <128 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <16 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<256xi8> -> vector<16xi32>, vector<128xi8>
   llvm.return %metadata : vector<16xi32>
 }
@@ -177,7 +177,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b4_rpf_64(%spdesc: i32, %data: vector<512xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <32 x i32>, <256 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <32 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<512xi8> -> vector<32xi32>, vector<256xi8>
   llvm.return %metadata : vector<32xi32>
 }
@@ -190,7 +190,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_1(%spdesc: i32, %data: vector<4xi16
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <2 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<4xi16> -> i32, vector<2xi16>
   llvm.return %metadata : i32
 }
@@ -203,7 +203,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_2(%spdesc: i32, %data: vector<8xi16
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <4 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<8xi16> -> i32, vector<4xi16>
   llvm.return %metadata : i32
 }
@@ -216,7 +216,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_4(%spdesc: i32, %data: vector<16xi1
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <8 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<16xi16> -> i32, vector<8xi16>
   llvm.return %metadata : i32
 }
@@ -229,7 +229,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_8(%spdesc: i32, %data: vector<32xi1
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <16 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<32xi16> -> i32, vector<16xi16>
   llvm.return %metadata : i32
 }
@@ -242,7 +242,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_16(%spdesc: i32, %data: vector<64xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <2 x i32>, <32 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <2 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<64xi16> -> vector<2xi32>, vector<32xi16>
   llvm.return %metadata : vector<2xi32>
 }
@@ -255,7 +255,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_32(%spdesc: i32, %data: vector<128x
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <4 x i32>, <64 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <4 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<128xi16> -> vector<4xi32>, vector<64xi16>
   llvm.return %metadata : vector<4xi32>
 }
@@ -268,7 +268,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b2_rpf_64(%spdesc: i32, %data: vector<256x
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <8 x i32>, <128 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <8 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<256xi16> -> vector<8xi32>, vector<128xi16>
   llvm.return %metadata : vector<8xi32>
 }
@@ -281,7 +281,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_1(%spdesc: i32, %data: vector<4xi16
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <2 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<4xi16> -> i32, vector<2xi16>
   llvm.return %metadata : i32
 }
@@ -294,7 +294,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_2(%spdesc: i32, %data: vector<8xi16
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <4 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<8xi16> -> i32, vector<4xi16>
   llvm.return %metadata : i32
 }
@@ -307,7 +307,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_4(%spdesc: i32, %data: vector<16xi1
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <8 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret i32 %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<16xi16> -> i32, vector<8xi16>
   llvm.return %metadata : i32
 }
@@ -320,7 +320,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_8(%spdesc: i32, %data: vector<32xi1
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <2 x i32>, <16 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <2 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<32xi16> -> vector<2xi32>, vector<16xi16>
   llvm.return %metadata : vector<2xi32>
 }
@@ -333,7 +333,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_16(%spdesc: i32, %data: vector<64xi
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <4 x i32>, <32 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <4 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<64xi16> -> vector<4xi32>, vector<32xi16>
   llvm.return %metadata : vector<4xi32>
 }
@@ -346,7 +346,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_32(%spdesc: i32, %data: vector<128x
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <8 x i32>, <64 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <8 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<128xi16> -> vector<8xi32>, vector<64xi16>
   llvm.return %metadata : vector<8xi32>
 }
@@ -359,7 +359,7 @@ llvm.func @spcompress_elmsz_b16_idxsz_b4_rpf_64(%spdesc: i32, %data: vector<256x
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { <16 x i32>, <128 x i16> } %[[RES]], 1
   // CHECK-NEXT:    ret <16 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 4
       : i32, vector<256xi16> -> vector<16xi32>, vector<128xi16>
   llvm.return %metadata : vector<16xi32>
 }
@@ -373,7 +373,7 @@ llvm.func @spcompress_elmsz_b8_idxsz_b2_rpf_1_vec1(%spdesc: i32, %data: vector<8
   // CHECK-NEXT:    %{{[0-9]+}} = extractvalue { i32, <4 x i8> } %[[RES]], 1
   // CHECK-NEXT:    ret <1 x i32> %[[MDATA]]
   // CHECK-NEXT:  }
-  %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+  %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data idx_size = 2
       : i32, vector<8xi8> -> vector<1xi32>, vector<4xi8>
   llvm.return %metadata : vector<1xi32>
 }
