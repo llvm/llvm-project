@@ -949,10 +949,9 @@ StringRef OperationName::getDialectNamespace() const {
   return getStringRef().split('.').first;
 }
 
-LogicalResult
-OperationName::UnregisteredOpModel::foldHook(Operation *, ArrayRef<Attribute>,
-                                             SmallVectorImpl<OpFoldResult> &) {
-  return failure();
+NormalizedOpFoldResults
+OperationName::UnregisteredOpModel::foldHook(Operation *, ArrayRef<Attribute>) {
+  return {};
 }
 void OperationName::UnregisteredOpModel::getCanonicalizationPatterns(
     RewritePatternSet &, MLIRContext *) {}

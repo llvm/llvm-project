@@ -440,6 +440,11 @@ class DynamicOpDefinition : public OperationName::Impl {
 public:
   using GetCanonicalizationPatternsFn =
       llvm::unique_function<void(RewritePatternSet &, MLIRContext *) const>;
+  /// The legacy fold hook signature, kept for backwards compatibility. It has
+  /// the strict legacy contract: failure, success with an empty vector (in
+  /// place), or success with one entry per result.
+  using LegacyFoldHookFn = llvm::unique_function<LogicalResult(
+      Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) const>;
 
   /// Create a new op at runtime. The op is registered only after passing it to
   /// the dialect using registerDynamicOp.
@@ -460,6 +465,14 @@ public:
       OperationName::ParseAssemblyFn &&parseFn,
       OperationName::PrintAssemblyFn &&printFn,
       OperationName::FoldHookFn &&foldHookFn,
+      GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
+  static std::unique_ptr<DynamicOpDefinition>
+  get(StringRef name, ExtensibleDialect *dialect,
+      OperationName::VerifyInvariantsFn &&verifyFn,
+      OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
+      OperationName::ParseAssemblyFn &&parseFn,
+      OperationName::PrintAssemblyFn &&printFn, LegacyFoldHookFn &&foldHookFn,
       GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
       OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
@@ -495,6 +508,10 @@ public:
   void setFoldHookFn(OperationName::FoldHookFn &&foldHook) {
     foldHookFn = std::move(foldHook);
   }
+  /// Same as above, but with a legacy fold hook.
+  void setFoldHookFn(LegacyFoldHookFn &&foldHook);
+  /// Remove the fold hook, so that the op has no fold of its own.
+  void setFoldHookFn(std::nullptr_t);
 
   /// Set the hook returning any canonicalization pattern rewrites that the op
   /// supports, for use by the canonicalization pass.
@@ -514,9 +531,9 @@ public:
     return traits.insert(std::move(trait));
   }
 
-  LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
-                         SmallVectorImpl<OpFoldResult> &results) final {
-    return foldHookFn(op, attrs, results);
+  NormalizedOpFoldResults foldHook(Operation *op,
+                                   ArrayRef<Attribute> attrs) final {
+    return foldHookFn(op, attrs);
   }
   void getCanonicalizationPatterns(RewritePatternSet &set,
                                    MLIRContext *context) final {

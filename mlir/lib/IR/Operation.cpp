@@ -600,63 +600,53 @@ void Operation::setSuccessor(Block *block, unsigned index) {
   getBlockOperands()[index].set(block);
 }
 
-#ifndef NDEBUG
-/// Assert that the folded results (in case of values) have the same type as
-/// the results of the given op.
-static void checkFoldResultTypes(Operation *op,
-                                 SmallVectorImpl<OpFoldResult> &results) {
-  if (results.empty())
-    return;
-
-  for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
-    if (auto value = dyn_cast<Value>(ofr)) {
-      if (value.getType() != opResult.getType()) {
-        op->emitOpError() << "folder produced a value of incorrect type: "
-                          << value.getType()
-                          << ", expected: " << opResult.getType();
-        assert(false && "incorrect fold result type");
-      }
-    }
-  }
-}
-#endif // NDEBUG
-
 /// Attempt to fold this operation using the Op's registered foldHook.
-LogicalResult Operation::fold(ArrayRef<Attribute> operands,
-                              SmallVectorImpl<OpFoldResult> &results) {
+NormalizedOpFoldResults Operation::fold(ArrayRef<Attribute> operands) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  if (succeeded(name.foldHook(this, operands, results))) {
-#ifndef NDEBUG
-    checkFoldResultTypes(this, results);
-#endif // NDEBUG
-    return success();
-  }
+  NormalizedOpFoldResults results = name.foldHook(this, operands);
+  if (succeeded(results))
+    return results;
 
   // Otherwise, fall back on the dialect hook to handle it.
   Dialect *dialect = getDialect();
   if (!dialect)
-    return failure();
+    return results;
 
   auto *interface = dyn_cast<DialectFoldInterface>(dialect);
   if (!interface)
-    return failure();
+    return results;
 
-  LogicalResult status = interface->fold(this, operands, results);
-#ifndef NDEBUG
-  if (succeeded(status))
-    checkFoldResultTypes(this, results);
-#endif // NDEBUG
-  return status;
+  SmallVector<OpFoldResult> legacyResults;
+  LogicalResult status = interface->fold(this, operands, legacyResults);
+  return NormalizedOpFoldResults(
+      this, OpFoldResults::fromLegacy(status, legacyResults));
+}
+
+/// Compute the constant operand values of `op`.
+static SmallVector<Attribute> getConstantOperands(Operation *op) {
+  SmallVector<Attribute> constants(op->getNumOperands(), Attribute());
+  for (unsigned i = 0, e = op->getNumOperands(); i != e; ++i)
+    matchPattern(op->getOperand(i), m_Constant(&constants[i]));
+  return constants;
+}
+
+NormalizedOpFoldResults Operation::fold() {
+  return fold(getConstantOperands(this));
+}
+
+LogicalResult Operation::fold(ArrayRef<Attribute> operands,
+                              SmallVectorImpl<OpFoldResult> &results) {
+  NormalizedOpFoldResults foldResults = fold(operands);
+  if (foldResults.replacesAll()) {
+    llvm::append_range(results, foldResults.getReplacements());
+    return success();
+  }
+  return success(foldResults.modifiedInPlace());
 }
 
 LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
-  // Check if any operands are constants.
-  SmallVector<Attribute> constants;
-  constants.assign(getNumOperands(), Attribute());
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    matchPattern(getOperand(i), m_Constant(&constants[i]));
-  return fold(constants, results);
+  return fold(getConstantOperands(this), results);
 }
 
 /// Emit an error with the op name prefixed, like "'dim' op " which is
