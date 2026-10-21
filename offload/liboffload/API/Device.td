@@ -87,6 +87,9 @@ def ol_device_info_t : Enum {
                   "The backend-native handle of the device, reinterpreted as "
                   "a void pointer. The actual type of the handle is backend "
                   "dependent">,
+        TaggedEtor<"NATIVE_PLATFORM_HANDLE", "void *",
+                  "The backend-native handle of the platform this device "
+                  "belongs to, reinterpreted as a void pointer">,
        TaggedEtor<"PREFERRED_LOCATION_HOST", "bool",
                   "Whether the device is best used by accessing host memory "
                   "directly instead of copying it to device memory">,
