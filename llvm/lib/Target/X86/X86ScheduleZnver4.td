@@ -540,11 +540,12 @@ defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLa
 // shapes measure higher and the two four-lane rows stop agreeing. The AVX2
 // gathers below take their mask in a vector register, not a mask register, so
 // neither form applies there. A vmovdqa refills it instead. A scatter has no
-// data result to time, so its latency is estimated, and that estimate is what
-// delays a later read of the mask it rewrites. The uops.info mask-to-mask
-// record does not replace it: that chain feeds the rewritten mask back in, and
-// a scatter clears the bits it stores through, so every instruction after the
-// first runs fully masked off.
+// data result, so its latency is the writeback of the mask it rewrites, and
+// that is what delays a later mask read. The two- and four-lane rows carry a
+// measured upper bound for it. The wider rows are still estimates. The
+// uops.info mask-to-mask record is not a substitute: its chain feeds the
+// rewritten mask back without re-arming it, and a scatter clears the bits it
+// stores through, so every instruction after the first runs fully masked off.
 //
 // VPGATHERDDZ, VPGATHERDDY and VPSCATTERDDZ fold their measured FP1/FP2 uop
 // into the FP1/FP2/FP3 count. Charging it separately leaves the write holding
@@ -663,17 +664,17 @@ def : InstRW<[Zn4WriteVPGATHERDQY, WriteVecMaskedGatherWriteback],
 
 def Zn4WriteVPSCATTERQDZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4UcodeGS],
-                                       [2, 2, 2, 4, 1, 16], 6, 17>;
+                                       [2, 2, 2, 4, 1, 16], 2, 17>;
 def : InstRW<[Zn4WriteVPSCATTERQDZ128],
              (instrs VPSCATTERQDZ128mr, VSCATTERQPSZ128mr)>;
 def Zn4WriteVPSCATTERDDZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4FPU23, Zn4UcodeGS],
-                                       [4, 4, 4, 6, 2, 1, 24], 9, 27>;
+                                       [4, 4, 4, 6, 2, 1, 24], 6, 27>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ128],
              (instrs VPSCATTERDDZ128mr, VSCATTERDPSZ128mr)>;
 def Zn4WriteVPSCATTERQDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4FPU23, Zn4UcodeGS],
-                                       [4, 4, 4, 6, 2, 1, 24], 9, 27>;
+                                       [4, 4, 4, 6, 2, 1, 24], 5, 27>;
 def : InstRW<[Zn4WriteVPSCATTERQDZ256],
              (instrs VPSCATTERQDZ256mr, VSCATTERQPSZ256mr)>;
 def Zn4WriteVPSCATTERDDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
@@ -700,19 +701,19 @@ def : InstRW<[Zn4WriteVPSCATTERDDZ],
              (instrs VPSCATTERDDZmr, VSCATTERDPSZmr)>;
 def Zn4WriteVPSCATTERQQZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4UcodeGS],
-                                       [2, 2, 2, 4, 1, 16], 6, 17>;
+                                       [2, 2, 2, 4, 1, 16], 2, 17>;
 def : InstRW<[Zn4WriteVPSCATTERQQZ128],
              (instrs VPSCATTERQQZ128mr, VSCATTERQPDZ128mr,
                      VPSCATTERDQZ128mr, VSCATTERDPDZ128mr)>;
 def Zn4WriteVPSCATTERQQZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU12, Zn4FPU123, Zn4FPU23,
                                         Zn4UcodeGS],
-                                       [4, 4, 4, 6, 1, 1, 1, 29], 9, 27>;
+                                       [4, 4, 4, 6, 1, 1, 1, 29], 5, 27>;
 def : InstRW<[Zn4WriteVPSCATTERQQZ256],
              (instrs VPSCATTERQQZ256mr, VSCATTERQPDZ256mr)>;
 def Zn4WriteVPSCATTERDQZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FP1, Zn4FPU123, Zn4UcodeGS],
-                                       [4, 4, 4, 6, 2, 1, 24], 9, 28>;
+                                       [4, 4, 4, 6, 2, 1, 24], 6, 28>;
 def : InstRW<[Zn4WriteVPSCATTERDQZ256],
              (instrs VPSCATTERDQZ256mr, VSCATTERDPDZ256mr)>;
 def Zn4WriteVPSCATTERQQZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
