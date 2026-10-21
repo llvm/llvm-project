@@ -141,6 +141,11 @@ features cannot lower the translation-unit ABI level;
   target triples (except 32b arm targets). Can be disabled via
   `-fno-stack-clash-protection`.
 
+- Clang no longer searches all subdirectories of header search paths
+  for module maps by default when resolving a module import. The previous
+  behavior can be restored with `-fmodulemap-allow-subdirectory-search`,
+  which will be removed in a future release.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
