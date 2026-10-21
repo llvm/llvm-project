@@ -999,10 +999,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - *TBA*
 
-      > ```{todo}
-      > Add product
-      > names.
-      > ```
+      ```{todo}
+      Add product
+      names.
+      ```
   * - **GCN GFX11.5 (RDNA 3.5)** \[{ref}`AMD-GCN-GFX11-RDNA3.5 <amd-gcn-gfx11-rdna3-5>`\]
     -
     -
@@ -1022,10 +1022,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - Radeon 890M
 
-      > ```{todo}
-      > Add product
-      > names.
-      > ```
+      ```{todo}
+      Add product
+      names.
+      ```
   * - `gfx1151`
     -
     - `amdgpu11.51`
@@ -1182,10 +1182,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - *TBA*
 
-      > ```{todo}
-      > Add product
-      > names.
-      > ```
+      ```{todo}
+      Add product
+      names.
+      ```
   * - `gfx1250`
     -
     - `amdgpu12.50`
@@ -1198,10 +1198,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - *TBA*
 
-      > ```{todo}
-      > Add product
-      > names.
-      > ```
+      ```{todo}
+      Add product
+      names.
+      ```
   * - `gfx1251`
     -
     - `amdgpu12.51`
