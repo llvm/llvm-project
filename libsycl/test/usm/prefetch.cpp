@@ -31,7 +31,10 @@ int main() {
 
   event E1 = Q.prefetch(SharedData, NumBytes);
 
-  event E2 = Q.prefetch(SharedData, NumBytes / 2, E1);
+  event E2 = Q.submit([&](sycl::handler &CGH) {
+    CGH.depends_on(E1);
+    CGH.prefetch(SharedData, NumBytes / 2);
+  });
 
   event E3 = Q.prefetch(nullptr, 0, E2);
   E3.wait();

@@ -1504,6 +1504,25 @@ void Sema::EnterTemplatedContext(Scope *S, DeclContext *DC) {
   }
 }
 
+void Sema::ActOnReenterFunctionPrototypeParams(Scope *S,
+                                               ArrayRef<ParmVarDecl *> Params) {
+  for (ParmVarDecl *Param : Params)
+    if (Param->getIdentifier()) {
+      S->AddDecl(Param);
+      IdResolver.AddDecl(Param);
+    }
+}
+
+void Sema::ActOnExitFunctionPrototypeParams(Scope *S,
+                                            ArrayRef<ParmVarDecl *> Params) {
+  // Remove in reverse so each name is the most recent one when it is removed.
+  for (ParmVarDecl *Param : llvm::reverse(Params))
+    if (Param->getIdentifier()) {
+      IdResolver.RemoveDecl(Param);
+      S->RemoveDecl(Param);
+    }
+}
+
 void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   // We assume that the caller has already called
   // ActOnReenterTemplateScope so getTemplatedDecl() works.
@@ -1518,14 +1537,7 @@ void Sema::ActOnReenterFunctionContext(Scope* S, Decl *D) {
   CurContext = FD;
   S->setEntity(CurContext);
 
-  for (unsigned P = 0, NumParams = FD->getNumParams(); P < NumParams; ++P) {
-    ParmVarDecl *Param = FD->getParamDecl(P);
-    // If the parameter has an identifier, then add it to the scope
-    if (Param->getIdentifier()) {
-      S->AddDecl(Param);
-      IdResolver.AddDecl(Param);
-    }
-  }
+  ActOnReenterFunctionPrototypeParams(S, FD->parameters());
 }
 
 void Sema::ActOnExitFunctionContext() {
@@ -7802,9 +7814,15 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
       break;
     case SC_Register:
       // Local Named register
-      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      if (DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl())) {
+        const auto &TI = Context.getTargetInfo();
+        if (!TI.isValidGCCRegisterName(Label))
+          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+        else if (!TI.validateLocalRegisterVariable(
+                     TI.getNormalizedGCCRegisterName(Label,
+                                                     /*ReturnCanonical=*/true)))
+          Diag(E->getExprLoc(), diag::err_asm_invalid_local_var_reg) << Label;
+      }
       break;
     case SC_Static:
     case SC_Extern:
@@ -15110,8 +15128,18 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   QualType AttributedType =
       Context.getAttributedType(Attr, MethodType, MethodType);
   TypeLocBuilder TLB;
-  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+  TypeSourceInfo *TSI = MD->getTypeSourceInfo();
+  if (TSI && TSI->getTypeLoc().getType() == MethodType) {
     TLB.pushFullCopy(TSI->getTypeLoc());
+  } else {
+    // The written type-source info can disagree with the method's type. For
+    // example, a deduced 'auto' return type in a template instantiation keeps
+    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
+    // already been resolved to the deduced type. Pushing the stale TypeLoc
+    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
+    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+  }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
@@ -17397,6 +17425,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   }
 
   if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OpenMPSimd) ||
              (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
@@ -19142,6 +19171,12 @@ CreateNewDecl:
       AddAlignmentAttributesForRecord(RD);
       AddMsStructLayoutForRecord(RD);
     }
+
+    // The __interface tag implies __declspec(novtable) according to MSDN:
+    // https://learn.microsoft.com/en-us/cpp/cpp/interface?view=msvc-170
+    // so add the implicit attribute now.
+    if (Kind == TagTypeKind::Interface)
+      RD->addAttr(MSNoVTableAttr::CreateImplicit(Context));
   }
 
   if (ModulePrivateLoc.isValid()) {

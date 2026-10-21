@@ -186,11 +186,6 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // arguments handling.
   llvm::CallingConv::ID CC = FI.getCallingConvention();
 
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
-
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
@@ -588,10 +583,8 @@ void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
   if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
-      RMW->getType()->isFloatTy())
-    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

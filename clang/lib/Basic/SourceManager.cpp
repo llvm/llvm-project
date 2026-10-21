@@ -942,8 +942,12 @@ SourceLocation SourceManager::getSpellingLocSlowCase(SourceLocation Loc) const {
   return Loc;
 }
 
-SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
+SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc,
+                                                 unsigned MaxDepth) const {
+  unsigned Depth = 0;
   do {
+    if (Depth++ == MaxDepth)
+      return SourceLocation();
     const SLocEntry &Entry = getSLocEntry(getFileID(Loc));
     const ExpansionInfo &ExpInfo = Entry.getExpansion();
     if (ExpInfo.isMacroArgExpansion()) {

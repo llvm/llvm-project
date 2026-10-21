@@ -1425,6 +1425,18 @@ define i32 @foo() {
   // Check classof(), creation.
   [[maybe_unused]] auto *ConstExpr =
       cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int64Ty = sandboxir::Type::getInt64Ty(Ctx);
+  auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
+  auto *PtrTy = sandboxir::PointerType::get(Ctx, 0);
+  auto *CInt = sandboxir::ConstantInt::get(Int32Ty, 1);
+  EXPECT_TRUE(isa<sandboxir::ConstantFP>(
+      sandboxir::ConstantExpr::getBitCast(CInt, FloatTy)));
+  EXPECT_TRUE(isa<sandboxir::Constant>(
+      sandboxir::ConstantExpr::getIntToPtr(CInt, PtrTy)));
+  auto *NullPtr = sandboxir::ConstantPointerNull::get(PtrTy);
+  EXPECT_TRUE(isa<sandboxir::ConstantInt>(
+      sandboxir::ConstantExpr::getPtrToInt(NullPtr, Int64Ty)));
 }
 
 TEST_F(SandboxIRTest, BlockAddress) {

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -38,7 +39,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
@@ -57,14 +57,6 @@ using namespace SCEVPatternMatch;
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
-
-static cl::opt<unsigned>
-    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
-            cl::desc("Maximum number of rows to keep in constraint system"));
-
-static cl::opt<bool> DumpReproducers(
-    "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
-    cl::desc("Dump IR to reproduce successful transformations."));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -501,8 +493,16 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
       // More than 1 variable index, use outer result.
       return Result;
     }
+    // The GEPs' wrap flags do not prevent the sum of the offsets from
+    // sign-wrapping.
+    bool Overflow = false;
+    APInt CombinedOffset =
+        Result.ConstantOffset.sadd_ov(ConstantOffset2, Overflow);
+    if (Overflow)
+      return Result;
+
     Result.BasePtr = InnerGEP->getPointerOperand();
-    Result.ConstantOffset += ConstantOffset2;
+    Result.ConstantOffset = CombinedOffset;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
@@ -646,6 +646,11 @@ static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
       // non-negative, keep the GEP as-is instead of decomposing it.
       assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
       if (!Info.isKnownNonNegative(Index))
+        return &GEP;
+    } else if (!NW.hasNoUnsignedSignedWrap()) {
+      // For a nuw-only GEP, the scale is unsigned and must fit in the signed
+      // coefficient.
+      if (Scale.isNegative())
         return &GEP;
     }
 
@@ -2294,10 +2299,13 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 
   auto &CSToUse = getCS(R.IsSigned);
   // A row implied by a single existing row adds no information. Rows in the
-  // system are removed in reverse order, so the existing row outlives R.
-  if (!R.isEq() && NewVariables.empty() &&
-      CSToUse.isImpliedBySingleRow(R.Coefficients))
-    return;
+  // system are removed in reverse order, so the existing row outlives R. Rows
+  // in the system are normalized, so normalize R before comparing.
+  if (!R.isEq() && NewVariables.empty()) {
+    ConstraintSystem::normalizeByGCD(R.Coefficients);
+    if (CSToUse.isImpliedBySingleRow(R.Coefficients))
+      return;
+  }
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
@@ -2398,13 +2406,17 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
-      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+      Opts.constraint_elimination_dump_reproducers
+          ? new Module(F.getName(), F.getContext())
+          : nullptr);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -2514,7 +2526,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
       LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
-      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() >
+          Opts.constraint_elimination_max_rows) {
         LLVM_DEBUG(
             dbgs()
             << "Skip adding constraint because system has too many rows.\n");

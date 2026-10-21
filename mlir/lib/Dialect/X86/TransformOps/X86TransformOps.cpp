@@ -57,6 +57,11 @@ void mlir::transform::ApplyMoveAccumulatorForContractLoopPatternsOp::
   x86::populateMoveAccumulatorForContractLoopPatterns(patterns);
 }
 
+void mlir::transform::ApplyVectorContractMultiLevelUnrollForAMXPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateVectorContractMultiLevelUnrollForAMXPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
