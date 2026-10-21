@@ -28,7 +28,8 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<uint32_t> GetIndexOfChildWithName(ConstString name) {
+  virtual llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 

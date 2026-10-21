@@ -4199,8 +4199,10 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
-  } else
+  } else {
     PBI->setMetadata(LLVMContext::MD_prof, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*PBI, DEBUG_TYPE);
+  }
 
   // Now, update the CFG.
   PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
@@ -4231,12 +4233,15 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition())) {
     if (!MDWeights.empty()) {
       assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
       setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
                              /*IsExpected=*/false, /*ElideAllZero=*/true);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     }
+  }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -5613,6 +5618,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     CondBrInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
     if (HasProfile)
       setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    else
+      setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
     if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
       NewBI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     // We don't need to update PHI nodes since we don't add any new edges.
@@ -5631,6 +5638,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
       for (auto &V : drop_begin(NewWeights))
         V = BranchWeights[0] / Values.size();
       setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*New, DEBUG_TYPE);
     }
 
     // Add all of the 'cases' to the switch instruction.
@@ -7802,7 +7811,9 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
-  if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
+  const bool IsFullyCoveredLookupTable =
+      !DefaultIsReachable || GeneratingCoveredLookupTable;
+  if (IsFullyCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
     if (DTU)
       Updates.push_back({DominatorTree::Insert, BB, LookupBB});
@@ -7852,6 +7863,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
     Value *LoBit = Builder.CreateTrunc(
         Shifted, Type::getInt1Ty(Mod.getContext()), "switch.lobit");
+    if (!IsFullyCoveredLookupTable)
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
     CondBranch = Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
     if (DTU) {
       Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
@@ -7915,7 +7928,14 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       ToLookupWeight += BranchWeights[I];
   }
   SI->eraseFromParent();
-  if (HasBranchWeights)
+  // In the case where we do not have a fully covered lookup table (i.e., we
+  // need a range check), and we need a mask check, we split the default case
+  // into two different cases for which we cannot infer branch weights.
+  // Otherwise we have a single branch for which we can infer branch weights.
+  if ((NeedMask && !IsFullyCoveredLookupTable) &&
+      !ProfcheckDisableMetadataFixes)
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
+  else if (HasBranchWeights)
     setFittedBranchWeights(*CondBranch, {ToLookupWeight, ToDefaultWeight},
                            /*IsExpected=*/false);
   if (DTU)

@@ -5329,14 +5329,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       DenseSet<unsigned> NodeCallClones;
       for (auto *C : Node->Clones)
         NodeCallClones.insert(C->Call.cloneNo());
-      unsigned I = 0;
       // Now check all the function clones.
       for (auto &FC : FuncCloneInfos) {
-        // Function clones should be sequential.
-        assert(FC.FuncClone.cloneNo() == I);
+        unsigned I = FC.FuncClone.cloneNo();
         // Skip the first clone which got the original call.
         // Also skip any other clones created for this Node.
-        if (++I == 1 || NodeCallClones.contains(I)) {
+        if (I == 0 || NodeCallClones.contains(I)) {
           continue;
         }
         // Record the call clones created for this callsite in this function
@@ -6145,8 +6143,14 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
 #endif
         ImportSummary->getValueInfo(Candidate.Value);
     // We might not have a ValueInfo if this is a distributed
-    // ThinLTO backend and decided not to import that function.
-    assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo);
+    // ThinLTO backend and decided not to import that function. The thin link
+    // may also have updated the callee from the original name GUID recorded in
+    // the VP metadata to the GUID of the local target function (see
+    // updateValueInfoForIndirectCalls).
+    assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo ||
+           (SI->Callee &&
+            SI->Callee.getGUID() ==
+                ImportSummary->getGUIDFromOriginalID(Candidate.Value)));
     assert(SI != AllCallsites.end());
     auto &StackNode = *(SI++);
     // See if any of the clones of the indirect callsite for this
@@ -6198,6 +6202,17 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
+      // If not found, try the GUID of the callee recorded in the summary. For
+      // local targets the VP metadata may contain the GUID of the original
+      // name without the source file prefix (e.g. if it was synthesized from
+      // the MemProf profile's callee GUIDs or from a SamplePGO profile), which
+      // the thin link translates to the actual GUID of the local function
+      // (see updateValueInfoForIndirectCalls). The latter is recorded in the
+      // function's !guid metadata, which is preserved across promotion and
+      // importing, and is added to the Symtab.
+      if (!TargetFunction && StackNode.Callee &&
+          StackNode.Callee.getGUID() != Candidate.Value)
+        TargetFunction = Symtab->getFunction(StackNode.Callee.getGUID());
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a
