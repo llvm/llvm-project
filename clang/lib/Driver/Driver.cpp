@@ -969,21 +969,27 @@ using TripleSet = std::multiset<llvm::Triple>;
 // requested offloading kind and architectures.
 static TripleSet inferOffloadToolchains(Compilation &C,
                                         Action::OffloadKind Kind) {
+  // An Intel GPU has several spellings, so key it by its canonical name, or
+  // --no-offload-arch with another spelling would not remove it.
+  auto canonicalize = [](StringRef Arch) {
+    OffloadArch ID = StringToOffloadArch(Arch);
+    return ID.isIntelGPU() ? std::string(OffloadArchToString(ID)) : Arch.str();
+  };
   std::set<std::string> Archs;
   for (Arg *A : C.getInputArgs()) {
     for (StringRef Arch : A->getValues()) {
       if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
         if (Arch == "native") {
           for (StringRef Str : getSystemOffloadArchs(C, Kind))
-            Archs.insert(Str.str());
+            Archs.insert(canonicalize(Str));
         } else {
-          Archs.insert(Arch.str());
+          Archs.insert(canonicalize(Arch));
         }
       } else if (A->getOption().matches(options::OPT_no_offload_arch_EQ)) {
         if (Arch == "all")
           Archs.clear();
         else
-          Archs.erase(Arch.str());
+          Archs.erase(canonicalize(Arch));
       }
     }
   }
