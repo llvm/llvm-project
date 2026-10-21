@@ -495,6 +495,8 @@ exit:
   ret void
 }
 
+; Force VF 4, as extracting the mask for the replicated store makes
+; vectorization with tail-folding unprofitable otherwise.
 define void @exit_cond_zext_iv_store32(ptr %dst, i64 %N) {
 ; DEFAULT-LABEL: define void @exit_cond_zext_iv_store32(
 ; DEFAULT-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
@@ -637,7 +639,7 @@ loop:
   %iv.1.next = add i32 %iv.1, 1
   %iv.ext = zext i32 %iv.1.next to i64
   %c = icmp ult i64 %iv.ext, %N
-  br i1 %c, label %loop, label %exit
+  br i1 %c, label %loop, label %exit, !llvm.loop !0
 
 exit:
   ret void
@@ -726,3 +728,5 @@ exit:
 
 attributes #0 = { "target-features"="+sve" }
 
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.width", i32 4}
