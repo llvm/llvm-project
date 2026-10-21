@@ -21273,8 +21273,8 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 
       if (Ty->isDoubleTy()) {
         // Ignores denormal mode, but we don't consider flushing mandatory.
-        return Subtarget->hasLDSFPAtomicAddF64() ? AtomicExpansionKind::None
-                                                 : AtomicExpansionKind::CmpXChg;
+        return Subtarget->hasLdsAtomicAddF64() ? AtomicExpansionKind::None
+                                               : AtomicExpansionKind::CmpXChg;
       }
 
       if (Subtarget->hasAtomicDsPkAdd16Insts() && isV2F16OrV2BF16(Ty))
