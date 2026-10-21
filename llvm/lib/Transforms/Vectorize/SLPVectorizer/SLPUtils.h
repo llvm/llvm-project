@@ -51,6 +51,8 @@ class Value;
 
 namespace llvm::slpvectorizer {
 
+class SLPAnalysisCache;
+
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
 inline constexpr int UsesLimit = 64;
@@ -288,7 +290,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 /// equivalent shuffle mask.
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC);
+                     AssumptionCache *AC, SLPAnalysisCache &Cache);
 
 /// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.

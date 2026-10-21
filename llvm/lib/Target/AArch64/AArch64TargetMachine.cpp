@@ -152,8 +152,8 @@ static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
-  // AArch64 Darwin and Windows are always PIC.
-  if (TT.isOSDarwin() || TT.isOSWindows())
+  // AArch64 Darwin, Windows and UEFI are always PIC.
+  if (TT.isOSDarwin() || TT.isOSWindowsOrUEFI())
     return Reloc::PIC_;
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared
@@ -461,7 +461,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (Level != OptimizationLevel::O0)
           LPM.addPass(LoopIdiomVectorizePass());
       });
-  if (getTargetTriple().isOSWindows())
+  if (getTargetTriple().isOSWindowsOrUEFI())
     PB.registerPipelineEarlySimplificationEPCallback(
         [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           PM.addPass(LowerIFuncPass());

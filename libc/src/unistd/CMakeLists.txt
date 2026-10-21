@@ -407,6 +407,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setegid
+)
+
+add_entrypoint_object(
+  seteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.seteuid
+)
+
+add_entrypoint_object(
   setgid
   ALIAS
   DEPENDS
