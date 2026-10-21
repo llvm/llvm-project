@@ -5656,6 +5656,12 @@ void ASTWriter::computeNonAffectingInputFiles() {
   for (const auto &F : PP->getDiagnostics().DiagStatesByLoc.Files)
     if (F.first.isValid() && F.second.HasLocalTransitions)
       NamedFileIDs.insert(F.first);
+  // The import location of a module is written local to this module file and
+  // resolved against it, so the file it points into has to keep its entries.
+  if (hasChain())
+    for (ModuleFile &M : getChain()->getModuleManager())
+      if (M.isDirectlyImported() && M.ImportLoc.isValid())
+        NamedFileIDs.insert(SrcMgr.getFileID(M.ImportLoc));
 
   unsigned FileIDAdjustment = 0;
   unsigned OffsetAdjustment = 0;
