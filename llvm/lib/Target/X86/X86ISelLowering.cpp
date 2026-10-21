@@ -1170,6 +1170,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
     setOperationAction(ISD::FABS, MVT::v8f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Expand);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1669,6 +1670,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
     setOperationAction(ISD::FABS, MVT::v16f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Expand);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -1684,15 +1686,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
-      // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
-      // MULH[SU]. The custom lowering unrolls to scalar i64 [SU]MUL_LOHI,
-      // which is only legalizable when i64 is a legal type.
-      if (Subtarget.is64Bit()) {
-        setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
-        setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
-      } else {
-        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
-      }
+      setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
+
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -1729,7 +1724,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND,          VT, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCANONICALIZE}) {
       setOperationPromotedToType(Opc, MVT::v8f16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
     }
@@ -1763,8 +1759,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,                MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Expand);
     setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Expand);
 
     // There is no byte sized k-register load or store without AVX512DQ.
@@ -2301,7 +2295,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
 
     for (auto VT : {MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16,
-                    MVT::v16f16, MVT::v8f16}) {
+                    MVT::v16f16, MVT::v8f16, MVT::v16bf16, MVT::v8bf16}) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
@@ -2495,7 +2489,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI())) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
                                                         : &X86::VR128RegClass);
     addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
@@ -2514,32 +2508,47 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
-      setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
-      setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
-    }
-    setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
-    setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+
+    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()) {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                           ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                           ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
+        setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
+        setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
+      }
+      setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
+      setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
+    } else {
+      // No native conversions to promote with, expand like vXf16 without F16C.
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+        setOperationAction(Opc, MVT::v8bf16, Expand);
+        setOperationAction(Opc, MVT::v16bf16, Expand);
+      }
+    }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
-      setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
     setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
+
+    if (Subtarget.hasBF16()) {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                           ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                           ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
+        setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+    } else {
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+        setOperationAction(Opc, MVT::v32bf16, Expand);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
@@ -4691,6 +4700,10 @@ static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
 static SDValue splitVectorOp(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
   unsigned NumOps = Op.getNumOperands();
   EVT VT = Op.getValueType();
+
+  // We've already folded to a BUILD_VECTOR, just return the original.
+  if (Op.getOpcode() == ISD::BUILD_VECTOR)
+    return Op;
 
   // Extract the LHS Lo/Hi vectors
   SmallVector<SDValue> LoOps(NumOps, SDValue());
@@ -9477,7 +9490,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
   if (VT.getVectorElementType() == MVT::bf16 &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()))
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
@@ -22902,6 +22915,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
          Subtarget.hasAVXNECONVERT()))
       return Op;
+    // Without native conversions, round in vector registers instead of
+    // unrolling to libcalls.
+    if (VT.isVector() && SVT.getScalarType() == MVT::f32 && !IsStrict &&
+        !Subtarget.hasBF16() && !Subtarget.hasAVXNECONVERT())
+      return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
 
@@ -30705,8 +30723,16 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     return splitVectorIntBinary(Op, DAG, dl);
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i64) {
-    SDValue Lo, Hi;
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    // Scalarize if i64 MUL support is better than vXi64.
+    if ((VT == MVT::v2i64 || VT == MVT::v4i64) &&
+        TLI.isOperationLegal(ISD::MUL, MVT::i64) &&
+        !TLI.isOperationLegal(ISD::MUL, VT)) {
+      if (IsSigned || !(A.hasOneUse() || B.hasOneUse()))
+        return DAG.UnrollVectorOp(Op.getNode());
+    }
+
+    SDValue Lo, Hi;
     TLI.forceExpandMultiply(DAG, dl, IsSigned, Lo, Hi, A, B);
     return Hi;
   }
@@ -31079,11 +31105,12 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i16 && SVT != MVT::i32 && SVT != MVT::i64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
-      (VT.getScalarSizeInBits() > 16 || Subtarget.hasBWI()))
+      (SVT != MVT::i16 || Subtarget.hasBWI()))
     return true;
 
   bool LShift = (VT.is128BitVector() && Subtarget.hasSSE2()) ||
@@ -31115,11 +31142,15 @@ static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (!Subtarget.hasInt256() || VT.getScalarSizeInBits() < 16)
+  if (!Subtarget.hasInt256())
+    return false;
+
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i16 && SVT != MVT::i32 && SVT != MVT::i64)
     return false;
 
   // vXi16 supported only on AVX-512, BWI
-  if (VT.getScalarSizeInBits() == 16 && !Subtarget.hasBWI())
+  if (SVT == MVT::i16 && !Subtarget.hasBWI())
     return false;
 
   if (Subtarget.hasAVX512() &&
@@ -31127,7 +31158,7 @@ static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
     return true;
 
   bool LShift = VT.is128BitVector() || VT.is256BitVector();
-  bool AShift = LShift &&  VT != MVT::v2i64 && VT != MVT::v4i64;
+  bool AShift = LShift && VT != MVT::v2i64 && VT != MVT::v4i64;
   return (Opcode == ISD::SRA) ? AShift : LShift;
 }
 
@@ -34428,8 +34459,9 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked load op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
@@ -34476,8 +34508,9 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked store op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked store op.");
 
   // This operation is legal for targets with VLX, but without
@@ -34942,8 +34975,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MUL:                return LowerMUL(Op, Subtarget, DAG);
   case ISD::MULHS:
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
-  case ISD::SMUL_LOHI:
-  case ISD::UMUL_LOHI:          return DAG.UnrollVectorOp(Op.getNode());
   case ISD::ROTL:
   case ISD::ROTR:               return LowerRotate(Op, Subtarget, DAG);
   case ISD::SRA:
@@ -62373,16 +62404,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       [[fallthrough]];
     case X86ISD::BLENDV:
-      // TODO: BLENDV should use CombineSubOperand.
       if (!IsSplat && VT.is256BitVector() && NumOps == 2 &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(Ctx);
-        if (TLI.isTypeLegal(SelVT))
-          return DAG.getNode(
-              Opcode, DL, VT, ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
-              ConcatSubOperand(VT, Ops, 1), ConcatSubOperand(VT, Ops, 2));
+        if (TLI.isTypeLegal(SelVT)) {
+          SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+          SDValue Concat2 = CombineSubOperand(VT, Ops, 2);
+          if (Concat1 || Concat2) {
+            Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
+            Concat2 = Concat2 ? Concat2 : ConcatSubOperand(VT, Ops, 2);
+            return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(SelVT, Ops, 0),
+                               Concat1, Concat2);
+          }
+        }
       }
       break;
     }

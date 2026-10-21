@@ -542,6 +542,8 @@ public:
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
 
+  bool LSRWithInstrQueries() const override { return true; }
+
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
   }

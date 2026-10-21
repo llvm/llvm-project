@@ -1215,7 +1215,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    if (Triple.isOSDarwin() || Triple.isOSWindows())
+    if (Triple.isOSDarwin() || Triple.isOSWindowsOrUEFI())
       return true;
     return false;
 
@@ -1458,9 +1458,9 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
-    // This spelling cannot express a key, and AArch64 Windows only supports
-    // B-key, so default to it there as parseBranchProtection() does.
-    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+    // This spelling cannot express a key, and AArch64 Windows and UEFI only
+    // support B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindowsOrUEFI() ? "b_key" : "a_key";
     IndirectBranches =
         (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;
@@ -7390,6 +7390,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
+    Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_compress_EQ);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
@@ -9812,6 +9813,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_ftime_trace_EQ,
       OPT_ftime_trace_granularity_EQ,
       OPT_ftime_trace_verbose,
+      OPT_ftime_trace_compress_EQ,
       OPT_opt_record_file,
       OPT_opt_record_format,
       OPT_opt_record_passes,

@@ -855,6 +855,7 @@ class PredTwoOpPseudo<Instruction I, ZPRRegOp zprty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class PredTwoOpImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty,
@@ -863,6 +864,7 @@ class PredTwoOpImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class PredThreeOpPseudo<Instruction I, ZPRRegOp zprty,
@@ -871,6 +873,7 @@ class PredThreeOpPseudo<Instruction I, ZPRRegOp zprty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class UnpredRegImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty>
@@ -897,6 +900,7 @@ class PredOneOpPassthruPseudo<Instruction I, ZPRRegOp zprty,
   let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
   let ElementSize = size;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 //===----------------------------------------------------------------------===//
@@ -11567,4 +11571,53 @@ multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv8f16, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
   def : SVE_1_Op_Pat<nxv4f32, op, nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
   def : SVE_1_Op_Pat<nxv2f64, op, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE ordered load/store
+//===----------------------------------------------------------------------===//
+class sve_mem_z_acq_fill_inst<string mnemonic> :
+  I<(outs ZPRAny:$Zt), (ins GPR64sp:$Rn, uimm8s32:$imm), mnemonic,
+  "\t$Zt, [$Rn, $imm]", "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Rn;
+  bits<8> imm;
+  let Inst{31-21} = 0b10000101100;
+  let Inst{20-16} = imm{7-3};
+  let Inst{15-13} = 0b011;
+  let Inst{12-10} = imm{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
+class sve_mem_z_rel_spill_inst<string mnemonic> :
+  I<(outs ), (ins ZPRAny:$Zt, GPR64sp:$Rn, uimm8s32:$imm), mnemonic,
+  "\t$Zt, [$Rn, $imm]", "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Rn;
+  bits<8> imm;
+  let Inst{31-21} = 0b11100101110;
+  let Inst{20-16} = imm{7-3};
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = imm{2-0};
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
+multiclass sve_mem_z_acq_fill<string mnemonic> {
+  def NAME : sve_mem_z_acq_fill_inst<mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$Zt, [$Rn]",
+                  (!cast<Instruction>(NAME) ZPRAny:$Zt, GPR64sp:$Rn, 0), 1>;
+}
+
+multiclass sve_mem_z_rel_spill<string mnemonic> {
+  def NAME : sve_mem_z_rel_spill_inst<mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$Zt, [$Rn]",
+                  (!cast<Instruction>(NAME) ZPRAny:$Zt, GPR64sp:$Rn, 0), 1>;
 }

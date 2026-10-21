@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -200,20 +201,22 @@ bool SanitizerBinaryMetadata::run() {
     // there is a valid symbol linked. This allows building binaries with
     // semantic metadata, but without having callbacks. When a tool that wants
     // the metadata is linked which provides the callbacks, they will be called.
-    Function *Ctor =
-        createSanitizerCtorAndInitFunctions(
-            Mod, StructorPrefix + ".module_ctor",
-            (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
-            /*VersionCheckName=*/StringRef(),
-            /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks)
-            .first;
-    Function *Dtor =
-        createSanitizerCtorAndInitFunctions(
-            Mod, StructorPrefix + ".module_dtor",
-            (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
-            /*VersionCheckName=*/StringRef(),
-            /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks)
-            .first;
+    auto [Ctor, CtorInitFn] = createSanitizerCtorAndInitFunctions(
+        Mod, StructorPrefix + ".module_ctor",
+        (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
+        /*VersionCheckName=*/StringRef(),
+        /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks);
+    auto [Dtor, DtorInitFn] = createSanitizerCtorAndInitFunctions(
+        Mod, StructorPrefix + ".module_dtor",
+        (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
+        /*VersionCheckName=*/StringRef(),
+        /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks);
+    const Attribute::AttrKind ExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Param(TargetTriple,
+                                                 /*Signed=*/false);
+    if (ExtAttr != Attribute::None)
+      for (FunctionCallee InitFn : {CtorInitFn, DtorInitFn})
+        cast<Function>(InitFn.getCallee())->addParamAttr(0, ExtAttr);
     Constant *CtorComdatKey = nullptr;
     Constant *DtorComdatKey = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
