@@ -1174,32 +1174,17 @@ static void addSPIRVInterfaceDecorations(
 }
 
 static llvm::Value *
-createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
-                       const Twine &Name, unsigned BuiltInID,
-                       llvm::dxbc::PSV::InterpolationMode InterpMode) {
+createSPIRVInputLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
+                     const Twine &Name, bool IsBuiltIn, unsigned Operand,
+                     llvm::dxbc::PSV::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVInterfaceDecorations(GV, /* BuiltIn */ 11, BuiltInID, InterpMode);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  return B.CreateLoad(Ty, GV);
-}
-
-static llvm::Value *
-createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
-                        unsigned Location, StringRef Name,
-                        llvm::dxbc::PSV::InterpolationMode InterpMode) {
-  auto *GV = new llvm::GlobalVariable(
-      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
-      llvm::GlobalVariable::GeneralDynamicTLSModel,
-      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-
-  addSPIRVInterfaceDecorations(GV, /* Location */ 30, Location, InterpMode);
-
+  unsigned Decoration = IsBuiltIn ? /* BuiltIn */ 11 : /* Location */ 30;
+  addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   return B.CreateLoad(Ty, GV);
 }
 
@@ -1220,8 +1205,8 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
 
-  return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
-                                 VariableName.str(), InterpMode);
+  return createSPIRVInputLoad(B, CGM.getModule(), Type, VariableName.str(),
+                              /* IsBuiltIn= */ false, Location, InterpMode);
 }
 
 static void
@@ -1562,9 +1547,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "FIXME: loading SV_Position is not yet implemented for this "
            "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FragCoord */ 15, InterpMode);
+      return createSPIRVInputLoad(
+          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+          /* IsBuiltIn= */ true, /* FragCoord */ 15, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1574,9 +1559,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_VertexID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::VertexIndex */ 42, InterpMode);
+      return createSPIRVInputLoad(
+          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+          /* IsBuiltIn= */ true, /* VertexIndex */ 42, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1586,9 +1571,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(
+      return createSPIRVInputLoad(
           B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* BuiltIn::InstanceIndex */ 43, InterpMode);
+          /* IsBuiltIn= */ true, /* InstanceIndex */ 43, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
