@@ -2405,7 +2405,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
   }
 
-  // Now, the return type.
+  // Now, the return type.  FIXME: Properly add extension attributes.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
     Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
