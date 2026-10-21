@@ -52,6 +52,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXSoftF64Pass(PR);
   initializeAGXExpandWideAtomicsPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
+  initializeAGXSinkAddressesPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -231,6 +232,8 @@ bool AGXPassConfig::addPreISel() {
   // regions are structurized too.
   addPass(createStructurizeCFGPass(/*SkipUniformRegions=*/false));
   addPass(createAGXAnnotateControlFlowPass());
+  // Before LCSSA, which would put phis between addresses and their uses.
+  addPass(createAGXSinkAddressesPass());
   addPass(createLCSSAPass());
   return false;
 }

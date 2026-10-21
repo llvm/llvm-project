@@ -37,6 +37,7 @@ add_llvm_target(AGXCodeGen
   AGXRegisterInfo.cpp
   AGXSelectionDAGInfo.cpp
   AGXExpandWideAtomics.cpp
+  AGXSinkAddresses.cpp
   AGXSoftF64.cpp
   AGXStrictFP.cpp
   AGXSubtarget.cpp
