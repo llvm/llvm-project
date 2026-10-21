@@ -31,3 +31,20 @@
 
 .attribute arch, "rv64y0p910_zca_zcmp"
 # ATTR: error: invalid arch name 'rv64y0p910_zca_zcmp', 'zcmp' is incompatible with rv64y base
+
+## FIXME: resetToArch updates C/Zce implications as each extension is enabled
+## alphabetically and before Feature64Bit is updated, causing 'c' + 'd' on
+## rv64y to enable 'zcd' and 'c' + 'f' on rv64i (when switching from rv32) to
+## enable 'zcf'.
+.attribute arch, "rv64y0p910_c_d"
+## FIXME: Should be rejected because 'zcd' is not enabled on rv64y.
+c.fld fa0, 0(a0)
+.option arch, +m
+# ATTR: :[[#@LINE-1]]:16: error: 'zcd' is incompatible with rv64y base
+
+.attribute arch, "rv32i"
+.attribute arch, "rv64icf"
+c.flw fa0, 0(a0)
+# ATTR: :[[#@LINE-1]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+.option arch, +m
+# ATTR: :[[#@LINE-1]]:16: error: 'zcf' is only supported for 'rv32'
