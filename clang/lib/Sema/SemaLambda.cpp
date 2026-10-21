@@ -1148,6 +1148,9 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   // * clang/unittests/AST/LambdaDependencyTest.cpp
   // * https://github.com/llvm/llvm-project/issues/232874
   // * https://github.com/llvm/llvm-project/issues/233102
+  // A temporary guard in PaddingChecker::shouldSkipDecl skips fields of
+  // dependent type as a workaround; remove it together with this FIXME
+  // once the bug is fixed.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
