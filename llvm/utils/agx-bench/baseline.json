@@ -19,7 +19,7 @@
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
   "bytes": 590,
-  "cycles": 4749.4,
+  "cycles": 4565.0,
   "gprs": 42,
   "instructions": 89,
   "launch_inputs": true,
@@ -28,7 +28,7 @@
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
   "bytes": 590,
-  "cycles": 4749.4,
+  "cycles": 4565.0,
   "gprs": 42,
   "instructions": 89,
   "launch_inputs": true,

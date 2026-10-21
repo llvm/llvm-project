@@ -94,6 +94,9 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
+  // Alias analysis (AGXAliasAnalysis: disjoint address spaces) orders memory
+  // accesses in the DAG combiner and the machine scheduler.
+  bool useAA() const override { return true; }
   bool enablePostRAScheduler() const override { return false; }
   // Local reassignment makes the greedy allocator try every other register
   // for each interfering live range. With the AGX register file (overlapping

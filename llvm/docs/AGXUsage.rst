@@ -407,6 +407,14 @@ Address spaces
 Generic, device and constant pointers are interchangeable: casts between them
 are no-ops. There is no generic addressing of threadgroup or private memory.
 
+The backend's alias analysis (``agx-aa``, ahead of BasicAA in both pass
+managers, and used by the DAG combiner and the machine scheduler) takes two
+accesses in different non-generic address spaces never to alias, and the
+constant address space never to be written: kernels do not store to kernel
+arguments or to constant data (PTX ``.const``), as for NVPTX. It lets the
+scheduler issue device loads ahead of threadgroup stores, so their latencies
+overlap.
+
 Kernel ABI
 ==========
 

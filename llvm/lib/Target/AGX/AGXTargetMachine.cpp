@@ -16,6 +16,7 @@
 
 #include "AGXTargetMachine.h"
 #include "AGX.h"
+#include "AGXAliasAnalysis.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXTargetTransformInfo.h"
 #include "TargetInfo/AGXTargetInfo.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/Scalar.h"
@@ -40,6 +42,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
+  initializeAGXAAWrapperPassPass(PR);
+  initializeAGXExternalAAWrapperPass(PR);
   initializeAGXPromoteKernelArgsPass(PR);
   initializeAGXCheckedAccessesPass(PR);
   initializeAGXCodeGenPreparePass(PR);
@@ -157,11 +161,31 @@ public:
 
 } // namespace
 
+void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([] { return AGXAA(); });
+  });
+  PB.registerParseAACallback([](StringRef Name, AAManager &AAM) {
+    if (Name != "agx-aa")
+      return false;
+    AAM.registerFunctionAnalysis<AGXAA>();
+    return true;
+  });
+}
+
+void AGXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AGXAA>();
+}
+
 TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AGXPassConfig(*this, PM);
 }
 
 void AGXPassConfig::addIRPasses() {
+  // Disjoint address spaces do not alias (for every IR and machine pass that
+  // asks alias analysis, the scheduler's memory dependences among them).
+  addPass(createAGXAAWrapperPass());
+  addPass(createAGXExternalAAWrapperPass());
   // There are no function calls: inline everything into the kernels.
   addPass(createAGXAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());

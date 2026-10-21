@@ -44,6 +44,9 @@ public:
 
   bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                            unsigned DestAS) const override;
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  void registerEarlyDefaultAliasAnalyses(AAManager &AAM) override;
 };
 
 } // namespace llvm
