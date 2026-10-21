@@ -383,11 +383,10 @@ public:
     std::swap(InQueue, Other.InQueue);
   }
 };
-} // namespace
 
-static void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
-                              const BlockToRPOMap &BBToOrder,
-                              RPOWorklist &Worklist, RPOWorklist &Pending) {
+void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
+                       const BlockToRPOMap &BBToOrder, RPOWorklist &Worklist,
+                       RPOWorklist &Pending) {
   LLVM_DEBUG(dbgs() << BB.getName()
                     << " has new OutLocs, add succs to worklist: [ ");
   for (BasicBlock *Succ : successors(&BB)) {
@@ -399,7 +398,6 @@ static void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
   LLVM_DEBUG(dbgs() << "]\n");
 }
 
-namespace {
 /// Tracks block revisitability (reachability from CFG backedges) and remaining
 /// successor reads so acyclic dataflow states can be retired early.
 class BlockLivenessTracker {
