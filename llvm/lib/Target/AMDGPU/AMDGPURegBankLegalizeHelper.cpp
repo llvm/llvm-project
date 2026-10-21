@@ -107,7 +107,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
 #ifndef NDEBUG
-  const auto OrigRangeSize = std::distance(BeginIt, EndIt);
+  const ptrdiff_t OrigRangeSize = std::distance(BeginIt, EndIt);
 #endif
 
   MachineRegisterInfo &MRI = *B.getMRI();
