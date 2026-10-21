@@ -21,9 +21,8 @@ class DialectRegistry;
 
 namespace impl {
 /// Attempt to fold the given cast operation.
-LogicalResult foldCastInterfaceOp(Operation *op,
-                                  ArrayRef<Attribute> attrOperands,
-                                  SmallVectorImpl<OpFoldResult> &foldResults);
+OpFoldResults foldCastInterfaceOp(Operation *op,
+                                  ArrayRef<Attribute> attrOperands);
 
 /// Attempt to verify the given cast operation.
 LogicalResult verifyCastInterfaceOp(Operation *op);

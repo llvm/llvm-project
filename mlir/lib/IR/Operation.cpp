@@ -617,10 +617,7 @@ NormalizedOpFoldResults Operation::fold(ArrayRef<Attribute> operands) {
   if (!interface)
     return results;
 
-  SmallVector<OpFoldResult> legacyResults;
-  LogicalResult status = interface->fold(this, operands, legacyResults);
-  return NormalizedOpFoldResults(
-      this, OpFoldResults::fromLegacy(status, legacyResults));
+  return NormalizedOpFoldResults(this, interface->fold(this, operands));
 }
 
 /// Compute the constant operand values of `op`.
@@ -849,9 +846,8 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 // Op Trait implementations
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-OpTrait::impl::foldCommutative(Operation *op, ArrayRef<Attribute> operands,
-                               SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults OpTrait::impl::foldCommutative(Operation *op,
+                                             ArrayRef<Attribute> operands) {
   // Nothing to fold if there are not at least 2 operands.
   if (op->getNumOperands() < 2)
     return failure();

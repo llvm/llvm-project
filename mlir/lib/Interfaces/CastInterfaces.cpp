@@ -18,19 +18,16 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Attempt to fold the given cast operation.
-LogicalResult
-impl::foldCastInterfaceOp(Operation *op, ArrayRef<Attribute> attrOperands,
-                          SmallVectorImpl<OpFoldResult> &foldResults) {
+OpFoldResults impl::foldCastInterfaceOp(Operation *op,
+                                        ArrayRef<Attribute> attrOperands) {
   OperandRange operands = op->getOperands();
   if (operands.empty())
     return failure();
   ResultRange results = op->getResults();
 
   // Check for the case where the input and output types match 1-1.
-  if (operands.getTypes() == results.getTypes()) {
-    foldResults.append(operands.begin(), operands.end());
-    return success();
-  }
+  if (operands.getTypes() == results.getTypes())
+    return operands;
 
   return failure();
 }

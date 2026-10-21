@@ -284,8 +284,7 @@ namespace OpTrait {
 // corresponding trait classes.  This avoids them being template
 // instantiated/duplicated.
 namespace impl {
-LogicalResult foldCommutative(Operation *op, ArrayRef<Attribute> operands,
-                              SmallVectorImpl<OpFoldResult> &results);
+OpFoldResults foldCommutative(Operation *op, ArrayRef<Attribute> operands);
 OpFoldResult foldIdempotent(Operation *op);
 OpFoldResult foldInvolution(Operation *op);
 LogicalResult verifyZeroOperands(Operation *op);
@@ -1120,9 +1119,8 @@ public:
 template <typename ConcreteType>
 class IsCommutative : public TraitBase<ConcreteType, IsCommutative> {
 public:
-  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
-                                 SmallVectorImpl<OpFoldResult> &results) {
-    return impl::foldCommutative(op, operands, results);
+  static OpFoldResults foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    return impl::foldCommutative(op, operands);
   }
 };
 
@@ -1534,11 +1532,24 @@ inline bool hasTrait<>(TypeID traitID) {
 // Trait Folding
 //===----------------------------------------------------------------------===//
 
-/// Trait to check if T provides a 'foldTrait' method for single result
-/// operations.
+/// Trait to check if T provides a general 'foldTrait' method that returns
+/// OpFoldResults.
 template <typename T, typename... Args>
-using has_single_result_fold_trait = decltype(T::foldTrait(
-    std::declval<Operation *>(), std::declval<ArrayRef<Attribute>>()));
+using has_fold_results_trait = std::enable_if_t<
+    std::is_same_v<decltype(T::foldTrait(std::declval<Operation *>(),
+                                         std::declval<ArrayRef<Attribute>>())),
+                   OpFoldResults>>;
+template <typename T>
+using detect_has_fold_results_trait =
+    llvm::is_detected<has_fold_results_trait, T>;
+/// Trait to check if T provides a 'foldTrait' method for single result
+/// operations. Its result converts to OpFoldResult, which excludes the
+/// OpFoldResults form with the same parameters.
+template <typename T, typename... Args>
+using has_single_result_fold_trait = std::enable_if_t<std::is_convertible_v<
+    decltype(T::foldTrait(std::declval<Operation *>(),
+                          std::declval<ArrayRef<Attribute>>())),
+    OpFoldResult>>;
 template <typename T>
 using detect_has_single_result_fold_trait =
     llvm::is_detected<has_single_result_fold_trait, T>;
@@ -1553,7 +1564,7 @@ using detect_has_fold_trait = llvm::is_detected<has_fold_trait, T>;
 /// Trait to check if T provides any `foldTrait` method.
 template <typename T>
 using detect_has_any_fold_trait =
-    std::disjunction<detect_has_fold_trait<T>,
+    std::disjunction<detect_has_fold_results_trait<T>, detect_has_fold_trait<T>,
                      detect_has_single_result_fold_trait<T>>;
 
 /// Returns the result of folding a trait that implements a `foldTrait` function
@@ -1568,8 +1579,16 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands) {
   return ::mlir::detail::convertSingleResultFold(
       op, Trait::foldTrait(op, operands));
 }
-/// Returns the result of folding a trait that implements the generalized
-/// `foldTrait(op, operands, results)` function, with the strict legacy
+/// Returns the result of folding a trait that implements a generalized
+/// `foldTrait` function that supports any operation type.
+template <typename Trait>
+std::enable_if_t<detect_has_fold_results_trait<Trait>::value, OpFoldResults>
+foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+  return Trait::foldTrait(op, operands);
+}
+/// Returns the result of folding a trait that implements the legacy
+/// generalized `foldTrait` function. This is the folder for traits that do
+/// not implement the `OpFoldResults` form. It keeps the strict legacy
 /// contract.
 template <typename Trait>
 std::enable_if_t<detect_has_fold_trait<Trait>::value, OpFoldResults>
