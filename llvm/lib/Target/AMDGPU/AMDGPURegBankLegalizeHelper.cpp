@@ -2203,7 +2203,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits() / 32);
+      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits()) / 32;
       const RegisterBank *DstRB =
           MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB == DstRB)
@@ -2435,7 +2435,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits() / 32);
+      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits()) / 32;
       const RegisterBank *SrcRB =
           MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB != SrcRB)
