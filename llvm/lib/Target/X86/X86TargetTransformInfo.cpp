@@ -7585,9 +7585,6 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
     const Value *Mask, std::optional<bool> UniformBase) const {
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
 
-  // The index starts out as wide as the pointers being gathered, which is a
-  // property of the address space they live in. Asking the data layout without
-  // one answers for address space 0, which is not necessarily theirs.
   unsigned PtrSizeInBits = DL.getPointerSizeInBits(
       Ptr && Ptr->getType()->isPtrOrPtrVectorTy()
           ? Ptr->getType()->getScalarType()->getPointerAddressSpace()
