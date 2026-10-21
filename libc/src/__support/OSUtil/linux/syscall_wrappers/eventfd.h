@@ -14,7 +14,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_EVENTFD_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_EVENTFD_H
 
-#include "hdr/errno_macros.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -25,15 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> eventfd(unsigned int initval, int flags) {
-#ifdef SYS_eventfd2
   return syscall_checked<int>(SYS_eventfd2, initval, flags);
-#elif defined(SYS_eventfd)
-  if (flags != 0)
-    return Error(EINVAL);
-  return syscall_checked<int>(SYS_eventfd, initval);
-#else
-#error "eventfd2 and eventfd syscalls are not available."
-#endif
 }
 
 } // namespace linux_syscalls

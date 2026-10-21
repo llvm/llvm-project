@@ -1814,7 +1814,6 @@ add_header_library(
   HDRS
     eventfd.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
