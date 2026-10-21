@@ -185,6 +185,9 @@ namespace {
     // to hoist loads from this block.
     // Tri-state: 0 - false, 1 - true, 2 - unknown
     unsigned SpeculationState = SpeculateUnknown;
+    // The loop SpeculationState was computed for. A block is checked against
+    // both the outermost loop and its subloops.
+    const MachineLoop *SpeculationLoop = nullptr;
 
   public:
     MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
@@ -770,9 +773,10 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
 /// may not be safe to hoist.
 bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
                                             MachineLoop *CurLoop) {
-  if (SpeculationState != SpeculateUnknown)
+  if (SpeculationState != SpeculateUnknown && SpeculationLoop == CurLoop)
     return SpeculationState == SpeculateFalse;
 
+  SpeculationLoop = CurLoop;
   if (BB != CurLoop->getHeader()) {
     // Check loop exiting blocks.
     SmallVector<MachineBasicBlock*, 8> CurrentLoopExitingBlocks;
