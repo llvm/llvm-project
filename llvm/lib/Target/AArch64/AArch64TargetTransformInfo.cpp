@@ -5556,26 +5556,40 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
 }
 
 /// Check whether Opcode1 has less throughput according to the scheduling
-/// model than Opcode2. Returns std::nullopt if any of the opcodes has a
-/// variant scheduling class, which cannot be resolved without an instruction.
-std::optional<bool> AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
+/// model than Opcode2. For variant scheduling classes, the lowest throughput
+/// of Opcode1 and the highest throughput of Opcode2 are compared among all the
+/// scheduling classes they may be resolved to.
+bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
     unsigned Opcode1, unsigned Opcode2) const {
   const MCSchedModel &Sched = ST->getSchedModel();
   const TargetInstrInfo *TII = ST->getInstrInfo();
   if (!Sched.hasInstrSchedModel())
     return false;
 
-  const MCSchedClassDesc *SCD1 =
-      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
-  const MCSchedClassDesc *SCD2 =
-      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
-  if (SCD1->isVariant() || SCD2->isVariant())
-    return std::nullopt;
-  if (!SCD1->isValid() || !SCD2->isValid())
-    return false;
-
-  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
-         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+  auto GetRThroughput = [&](unsigned Opcode, bool Highest) {
+    std::optional<double> Res;
+    SmallVector<unsigned> Worklist = {TII->get(Opcode).getSchedClass()};
+    while (!Worklist.empty()) {
+      unsigned SchedClass = Worklist.pop_back_val();
+      const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+      if (SCD->isVariant()) {
+        append_range(Worklist, AArch64_MC::getVariantSchedClassTargets(
+                                   SchedClass, Sched.getProcessorID()));
+        continue;
+      }
+      if (!SCD->isValid())
+        continue;
+      double RThroughput = MCSchedModel::getReciprocalThroughput(*ST, *SCD);
+      if (!Res || (Highest ? RThroughput > *Res : RThroughput < *Res))
+        Res = RThroughput;
+    }
+    return Res;
+  };
+  std::optional<double> RThroughput1 =
+      GetRThroughput(Opcode1, /*Highest=*/true);
+  std::optional<double> RThroughput2 =
+      GetRThroughput(Opcode2, /*Highest=*/false);
+  return RThroughput1 && RThroughput2 && *RThroughput1 > *RThroughput2;
 }
 
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
@@ -5679,8 +5693,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     if (isa<ScalableVectorType>(ValTy) &&
         CostKind == TTI::TCK_RecipThroughput &&
         hasKnownLowerThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
-                                                   AArch64::FCMEQv4f32)
-            .value_or(false))
+                                                   AArch64::FCMEQv4f32))
       Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
@@ -5713,20 +5726,10 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   InstructionCost Cost = BaseT::getCmpSelInstrCost(
       Opcode, ValTy, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
   if (Opcode == Instruction::ICmp && isa<ScalableVectorType>(ValTy) &&
-      CostKind == TTI::TCK_RecipThroughput) {
-    // The SVE integer compares, writing the predicates, are executed on fewer
-    // pipelines than the Neon compares on some cores. The floating-point
-    // compares are used to estimate them, if the scheduling classes of the
-    // integer compares are variant.
-    std::optional<bool> HasLowerThroughput =
-        hasKnownLowerThroughputFromSchedulingModel(AArch64::CMPEQ_PPzZZ_S,
-                                                   AArch64::CMEQv4i32);
-    if (!HasLowerThroughput)
-      HasLowerThroughput = hasKnownLowerThroughputFromSchedulingModel(
-          AArch64::FCMEQ_PPzZZ_S, AArch64::FCMEQv4f32);
-    if (HasLowerThroughput.value_or(false))
-      Cost *= 2;
-  }
+      CostKind == TTI::TCK_RecipThroughput &&
+      hasKnownLowerThroughputFromSchedulingModel(AArch64::CMPEQ_PPzZZ_S,
+                                                 AArch64::CMEQv4i32))
+    Cost *= 2;
   return Cost;
 }
 

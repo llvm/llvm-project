@@ -177,11 +177,11 @@ public:
   bool prefersVectorizedAddressing() const override;
 
   /// Check whether Opcode1 has less throughput according to the scheduling
-  /// model than Opcode2. Returns std::nullopt if any of the opcodes has a
-  /// variant scheduling class, which cannot be resolved without an instruction.
-  std::optional<bool>
-  hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
-                                             unsigned Opcode2) const;
+  /// model than Opcode2. For variant scheduling classes, the lowest throughput
+  /// of Opcode1 and the highest throughput of Opcode2 are compared among all
+  /// the scheduling classes they may be resolved to.
+  bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
+                                                  unsigned Opcode2) const;
 
   InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
