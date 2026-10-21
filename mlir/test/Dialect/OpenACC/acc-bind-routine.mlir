@@ -149,3 +149,111 @@ module {
 // CHECK-LABEL: gpu.func @caller
 // CHECK: func.call @actual_local() : () -> ()
 // CHECK: func.func private @actual_local()
+
+// -----
+
+// Repeated lookups must see declarations inserted into the cached table.
+module {
+  acc.routine @r_repeated func(@wrapped_repeated) seq bind("new_target")
+  func.func private @wrapped_repeated()
+      attributes {acc.routine_info = #acc.routine_info<[@r_repeated]>}
+  func.func @repeat() {
+    acc.serial {
+      func.call @wrapped_repeated() : () -> ()
+      func.call @wrapped_repeated() : () -> ()
+      func.call @wrapped_repeated() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: func.func @repeat()
+// CHECK-COUNT-3: func.call @new_target() : () -> ()
+// CHECK: func.func private @new_target()
+// CHECK-NOT: func.func private @new_target
+
+// -----
+
+// Identical routine and wrapper names in separate GPU symbol tables must
+// resolve independently, including after inserting each string-bound target.
+module {
+  gpu.module @first_scope {
+    acc.routine @r func(@wrapped) seq bind("first_target")
+    func.func private @wrapped()
+        attributes {acc.routine_info = #acc.routine_info<[@r]>}
+    gpu.func @caller() {
+      func.call @wrapped() : () -> ()
+      func.call @wrapped() : () -> ()
+      gpu.return
+    }
+  }
+  gpu.module @second_scope {
+    acc.routine @r func(@wrapped) seq bind("second_target")
+    func.func private @wrapped()
+        attributes {acc.routine_info = #acc.routine_info<[@r]>}
+    gpu.func @caller() {
+      func.call @wrapped() : () -> ()
+      func.call @wrapped() : () -> ()
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: gpu.module @first_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK-COUNT-2: func.call @first_target() : () -> ()
+// CHECK: func.func private @first_target()
+// CHECK-NOT: func.func private @first_target
+// CHECK-LABEL: gpu.module @second_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK-COUNT-2: func.call @second_target() : () -> ()
+// CHECK: func.func private @second_target()
+// CHECK-NOT: func.func private @second_target
+
+// -----
+
+// Existing string-bound targets are reused, not renamed or redeclared.
+module {
+  acc.routine @r_existing func(@wrapped_existing) seq bind("existing_target")
+  func.func private @wrapped_existing()
+      attributes {acc.routine_info = #acc.routine_info<[@r_existing]>}
+  func.func private @existing_target()
+  func.func @reuse_existing() {
+    acc.serial {
+      func.call @wrapped_existing() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK: func.func private @existing_target()
+// CHECK-LABEL: func.func @reuse_existing()
+// CHECK: func.call @existing_target() : () -> ()
+// CHECK-NOT: func.func private @existing_target
+
+// -----
+
+// A GPU-local routine must take precedence over an identically named outer
+// routine when looking up both the callee and its routine metadata.
+module {
+  acc.routine @r_shadow func(@wrapped_shadow) seq bind("outer_target")
+  func.func private @wrapped_shadow()
+      attributes {acc.routine_info = #acc.routine_info<[@r_shadow]>}
+  gpu.module @shadowed_scope {
+    acc.routine @r_shadow func(@wrapped_shadow) seq bind("inner_target")
+    func.func private @wrapped_shadow()
+        attributes {acc.routine_info = #acc.routine_info<[@r_shadow]>}
+    gpu.func @caller() {
+      func.call @wrapped_shadow() : () -> ()
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: gpu.module @shadowed_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK: func.call @inner_target() : () -> ()
+// CHECK: func.func private @inner_target()
+// CHECK-NOT: func.func private @outer_target
