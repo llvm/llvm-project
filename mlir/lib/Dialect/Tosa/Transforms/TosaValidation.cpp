@@ -608,6 +608,14 @@ private:
       const int64_t scaleYD = scale[1];
       const int64_t scaleXN = scale[2];
       const int64_t scaleXD = scale[3];
+
+      // Invalid (non-positive) scale values are reported by the ERROR_IF
+      // check in applyErrorIfCheck(). Skip the level ratio check here to
+      // avoid dividing by a non-positive value and reporting a misleading
+      // level error for an already-invalid scale.
+      if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+        return success();
+
       if (failed(
               levelCheckScale(op, scaleYN / scaleYD, "scale_y_n/scale_y_d")) ||
           failed(
