@@ -1011,11 +1011,25 @@ void OmpStructureChecker::CheckDirectiveSpelling(
   }
 }
 
+static bool ContainsLeafs(
+    llvm::omp::Directive dir, llvm::ArrayRef<llvm::omp::Directive> leafs) {
+  llvm::ArrayRef<llvm::omp::Directive> dirLeafs{getLeafConstructsOrSelf(dir)};
+
+  size_t at = 0, end = dirLeafs.size();
+  for (; at != end; ++at) {
+    if (leafs[0] == dirLeafs[at]) {
+      break;
+    }
+  }
+  return leafs == dirLeafs.drop_front(at).take_front(leafs.size());
+}
+
 void OmpStructureChecker::CheckCompoundDirective(
     const parser::OmpDirectiveSpecification *beginSpec,
     const parser::OmpDirectiveSpecification *endSpec) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  auto leafs{llvm::omp::getLeafConstructsOrSelf(DEREF(beginSpec).DirId())};
+  parser::OmpDirectiveName dirName{DEREF(beginSpec).DirName()};
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(beginSpec->DirId())};
   if (leafs.size() == 1) {
     return;
   }
@@ -1032,25 +1046,52 @@ void OmpStructureChecker::CheckCompoundDirective(
     return static_cast<const parser::OmpClause *>(nullptr);
   }};
 
-  if (leafs[0] == llvm::omp::Directive::OMPD_parallel && version <= 52) {
-    std::string parName{
-        GetUpperName(llvm::omp::Directive::OMPD_parallel, version)};
-    parser::CharBlock dirSource{beginSpec->DirName().source};
-    auto compTxt{
-        "If a compound directive starts with %s, %s clause must not be specified"_err_en_US};
+  if (version < 60) {
+    using namespace llvm::omp;
+
+    auto compTxt{"This compound directive does not allow %s clause"_err_en_US};
     auto clauseTxt{"The clause is specified here"_en_US};
 
+    // Compound directives with these constituents do not allow NOWAIT:
+    // - parallel do
+    // - parallel loop
+    // - parallel sections
+    // - parallel workshare
+    llvm::SmallVector<llvm::SmallVector<Directive>> wait{
+        {Directive::OMPD_parallel, Directive::OMPD_do},
+        {Directive::OMPD_parallel, Directive::OMPD_loop},
+        {Directive::OMPD_parallel, Directive::OMPD_sections},
+        {Directive::OMPD_parallel, Directive::OMPD_workshare},
+    };
     if (auto *clause{findClause(llvm::omp::Clause::OMPC_nowait)}) {
-      context_
-          .Say(dirSource, compTxt, parName,
-              GetUpperName(llvm::omp::Clause::OMPC_nowait, version))
-          .Attach(clause->source, clauseTxt);
+      if (llvm::any_of(wait, [&](const llvm::SmallVector<Directive> &v) {
+            return ContainsLeafs(dirName.v, v);
+          })) {
+        context_
+            .Say(dirName.source, compTxt,
+                GetUpperName(Clause::OMPC_nowait, version))
+            .Attach(clause->source, clauseTxt);
+      }
     }
+
+    // Compound directives with these constituents does not allow IN_REDUCTION:
+    // - parallel master taskloop
+    // - parallel masked taskloop
+    llvm::SmallVector<llvm::SmallVector<Directive>> nored{
+        {Directive::OMPD_parallel, Directive::OMPD_master,
+            Directive::OMPD_taskloop},
+        {Directive::OMPD_parallel, Directive::OMPD_masked,
+            Directive::OMPD_taskloop},
+    };
     if (auto *clause{findClause(llvm::omp::Clause::OMPC_in_reduction)}) {
-      context_
-          .Say(dirSource, compTxt, parName,
-              GetUpperName(llvm::omp::Clause::OMPC_in_reduction, version))
-          .Attach(clause->source, clauseTxt);
+      if (llvm::any_of(nored, [&](const llvm::SmallVector<Directive> &v) {
+            return ContainsLeafs(dirName.v, v);
+          })) {
+        context_
+            .Say(dirName.source, compTxt,
+                GetUpperName(Clause::OMPC_in_reduction, version))
+            .Attach(clause->source, clauseTxt);
+      }
     }
   }
 }

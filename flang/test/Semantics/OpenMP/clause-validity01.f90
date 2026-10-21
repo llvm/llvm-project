@@ -325,9 +325,15 @@ use omp_lib
   !ERROR: Unmatched END SECTIONS directive
   !$omp end sections
 
-  !ERROR: If a compound directive starts with PARALLEL, NOWAIT clause must not be specified
+  !ERROR: This compound directive does not allow NOWAIT clause
   !$omp parallel sections
   !$omp end parallel sections nowait
+
+  !ERROR: This compound directive does not allow NOWAIT clause
+  !$omp teams distribute parallel do
+  do i = 1, N
+  end do
+  !$omp end teams distribute parallel do nowait
 
 ! 2.7.3 single-clause -> private-clause |
 !                        firstprivate-clause
@@ -605,10 +611,19 @@ use omp_lib
 
 ! parallel-masked-taskloop
   z = 0
-  !ERROR: If a compound directive starts with PARALLEL, IN_REDUCTION clause must not be specified
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
   !$omp parallel masked taskloop reduction(+: z) in_reduction(+: z)
   do i = 1, 10
     z = z + 1
   end do
   !$omp end parallel masked taskloop
+
+  a = 0.0
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
+  !$omp parallel masked taskloop simd reduction(+: a) in_reduction(+: a)
+  do i = 1, N
+    a = a + 3.0
+  end do
+  !$omp end parallel masked taskloop simd
+
 end program
