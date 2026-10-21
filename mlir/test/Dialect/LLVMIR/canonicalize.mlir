@@ -549,3 +549,192 @@ llvm.func @metadata_as_value_dedup() -> i32 {
   %4 = llvm.add %2, %3 : i32
   llvm.return %4 : i32
 }
+
+// -----
+
+llvm.mlir.global internal constant @const_global_i32(42 : i32) : i32
+llvm.mlir.global internal constant @const_global_f32(3.5 : f32) : f32
+llvm.mlir.global internal constant @const_global_vec(dense<[1, 2, 3, 4]> : vector<4xi32>) : vector<4xi32>
+llvm.mlir.global internal constant @const_global_region() : i32 {
+  %0 = llvm.mlir.constant(7 : i32) : i32
+  llvm.return %0 : i32
+}
+llvm.mlir.global internal constant @const_global_zero_region() : i32 {
+  %0 = llvm.mlir.zero : i32
+  llvm.return %0 : i32
+}
+llvm.mlir.global internal constant @const_global_zero_ptr_region() : !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.mlir.global linkonce_odr constant @const_global_linkonce_odr(5 : i32) : i32
+llvm.mlir.global internal @mutable_global_i32(42 : i32) : i32
+llvm.mlir.global internal constant @externally_initialized_global(42 : i32) {externally_initialized} : i32
+llvm.mlir.global weak constant @weak_global(42 : i32) : i32
+llvm.mlir.global linkonce constant @linkonce_global(42 : i32) : i32
+llvm.mlir.global extern_weak constant @extern_weak_global() : i32
+llvm.mlir.global common constant @common_global(0 : i32) : i32
+llvm.mlir.global external constant @external_decl() : i32
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_int
+llvm.func @fold_load_from_constant_global_int() -> i32 {
+  // CHECK-NEXT: %[[C42:.*]] = llvm.mlir.constant(42 : i32) : i32
+  // CHECK-NEXT: llvm.return %[[C42]] : i32
+  %0 = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_float
+llvm.func @fold_load_from_constant_global_float() -> f32 {
+  // CHECK-NEXT: %[[C35:.*]] = llvm.mlir.constant(3.500000e+00 : f32) : f32
+  // CHECK-NEXT: llvm.return %[[C35]] : f32
+  %0 = llvm.mlir.addressof @const_global_f32 : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> f32
+  llvm.return %1 : f32
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_vector
+llvm.func @fold_load_from_constant_global_vector() -> vector<4xi32> {
+  // CHECK-NEXT: %[[VEC:.*]] = llvm.mlir.constant(dense<[1, 2, 3, 4]> : vector<4xi32>) : vector<4xi32>
+  // CHECK-NEXT: llvm.return %[[VEC]] : vector<4xi32>
+  %0 = llvm.mlir.addressof @const_global_vec : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> vector<4xi32>
+  llvm.return %1 : vector<4xi32>
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_region
+llvm.func @fold_load_from_constant_global_region() -> i32 {
+  // CHECK-NEXT: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK-NEXT: llvm.return %[[C7]] : i32
+  %0 = llvm.mlir.addressof @const_global_region : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_zero_region
+llvm.func @fold_load_from_constant_global_zero_region() -> i32 {
+  // CHECK-NEXT: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-NEXT: llvm.return %[[C0]] : i32
+  %0 = llvm.mlir.addressof @const_global_zero_region : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_zero_ptr_region
+llvm.func @fold_load_from_constant_global_zero_ptr_region() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ZERO]] : !llvm.ptr
+  %0 = llvm.mlir.addressof @const_global_zero_ptr_region : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// CHECK-LABEL: llvm.func @fold_load_from_constant_global_linkonce_odr
+llvm.func @fold_load_from_constant_global_linkonce_odr() -> i32 {
+  // CHECK-NEXT: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK-NEXT: llvm.return %[[C5]] : i32
+  %0 = llvm.mlir.addressof @const_global_linkonce_odr : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_mutable_global
+llvm.func @do_not_fold_load_from_mutable_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @mutable_global_i32 : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @mutable_global_i32 : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_externally_initialized_global
+llvm.func @do_not_fold_load_from_externally_initialized_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @externally_initialized_global : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @externally_initialized_global : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_weak_global
+llvm.func @do_not_fold_load_from_weak_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @weak_global : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @weak_global : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_linkonce_global
+llvm.func @do_not_fold_load_from_linkonce_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @linkonce_global : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @linkonce_global : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_extern_weak_global
+llvm.func @do_not_fold_load_from_extern_weak_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @extern_weak_global : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @extern_weak_global : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_common_global
+llvm.func @do_not_fold_load_from_common_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @common_global : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @common_global : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_from_external_declaration
+llvm.func @do_not_fold_load_from_external_declaration() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @external_decl : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @external_decl : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_volatile_load_from_constant_global
+llvm.func @do_not_fold_volatile_load_from_constant_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load volatile %[[ADDR]] : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  %1 = llvm.load volatile %0 : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_atomic_load_from_constant_global
+llvm.func @do_not_fold_atomic_load_from_constant_global() -> i32 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] atomic monotonic <alignment = 4> : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  %0 = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  %1 = llvm.load %0 atomic monotonic <alignment = 4> : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK-LABEL: llvm.func @do_not_fold_load_with_mismatched_type
+llvm.func @do_not_fold_load_with_mismatched_type() -> i64 {
+  // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> i64
+  // CHECK-NEXT: llvm.return %[[VAL]] : i64
+  %0 = llvm.mlir.addressof @const_global_i32 : !llvm.ptr
+  %1 = llvm.load %0 : !llvm.ptr -> i64
+  llvm.return %1 : i64
+}

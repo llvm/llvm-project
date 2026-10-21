@@ -940,6 +940,77 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         /*tbaa=*/nullptr);
 }
 
+/// Returns true if the global's initializer may be replaced at link time, in
+/// which case loads from it must not be folded. Mirrors
+/// `llvm::GlobalValue::isInterposableLinkage`.
+static bool isInterposableLinkage(Linkage linkage) {
+  switch (linkage) {
+  case Linkage::Weak:
+  case Linkage::Linkonce:
+  case Linkage::ExternWeak:
+  case Linkage::Common:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Returns the attribute the given constant global is initialized with, or
+/// null if the initializer is absent or not a constant.
+static Attribute getConstantGlobalInitializer(GlobalOp globalOp) {
+  if (Attribute value = globalOp.getValueOrNull())
+    return value;
+  Block *initBlock = globalOp.getInitializerBlock();
+  if (!initBlock)
+    return {};
+  auto retOp = dyn_cast<LLVM::ReturnOp>(initBlock->getTerminator());
+  if (!retOp || !retOp.getArg())
+    return {};
+  Operation *defOp = retOp.getArg().getDefiningOp();
+  if (auto cstOp = dyn_cast_if_present<LLVM::ConstantOp>(defOp))
+    return cstOp.getValue();
+  if (isa_and_present<LLVM::ZeroOp>(defOp))
+    return LLVM::ZeroAttr::get(globalOp.getContext());
+  return {};
+}
+
+OpFoldResult LLVM::LoadOp::fold(FoldAdaptor adaptor) {
+  if (getVolatile_() || getOrdering() != AtomicOrdering::not_atomic)
+    return {};
+
+  // `llvm.mlir.addressof` is constant-like and folds to its symbol reference,
+  // so the address operand is already materialized as an attribute here.
+  auto symRef = dyn_cast_if_present<FlatSymbolRefAttr>(adaptor.getAddr());
+  if (!symRef)
+    return {};
+
+  // Mirror `llvm::GlobalVariable::hasDefinitiveInitializer`: the global must
+  // be constant, non-interposable, and not externally initialized.
+  auto globalOp = SymbolTable::lookupNearestSymbolFrom<GlobalOp>(*this, symRef);
+  if (!globalOp || !globalOp.getConstant() ||
+      globalOp.getExternallyInitialized() ||
+      isInterposableLinkage(globalOp.getLinkage()))
+    return {};
+
+  if (globalOp.getType() != getType())
+    return {};
+
+  Attribute value = getConstantGlobalInitializer(globalOp);
+  if (!value)
+    return {};
+
+  if (isa<LLVM::ZeroAttr>(value)) {
+    if (Attribute zero = Builder(getContext()).getZeroAttr(getType()))
+      return zero;
+    return value;
+  }
+
+  if (ConstantOp::isBuildableWith(value, getType()))
+    return value;
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//

@@ -485,6 +485,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
