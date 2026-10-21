@@ -1494,41 +1494,6 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   CGM.getTargetCodeGenInfo().checkFunctionABI(CGM, FD);
 
-  if (FD->isInlineBuiltinDeclaration()) {
-    // When generating code for a builtin with an inline declaration, use a
-    // mangled name to hold the actual body, while keeping an external
-    // definition in case the function pointer is referenced somewhere.
-    std::string FDInlineName = (Fn->getName() + ".inline").str();
-    llvm::Module *M = Fn->getParent();
-    llvm::Function *Clone = M->getFunction(FDInlineName);
-    if (!Clone) {
-      Clone = llvm::Function::Create(Fn->getFunctionType(),
-                                     llvm::GlobalValue::InternalLinkage,
-                                     Fn->getAddressSpace(), FDInlineName, M);
-      Clone->addFnAttr(llvm::Attribute::AlwaysInline);
-    }
-    Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    Fn = Clone;
-  } else {
-    // Detect the unusual situation where an inline version is shadowed by a
-    // non-inline version. In that case we should pick the external one
-    // everywhere. That's GCC behavior too. Unfortunately, I cannot find a way
-    // to detect that situation before we reach codegen, so do some late
-    // replacement.
-    for (const FunctionDecl *PD = FD->getPreviousDecl(); PD;
-         PD = PD->getPreviousDecl()) {
-      if (LLVM_UNLIKELY(PD->isInlineBuiltinDeclaration())) {
-        std::string FDInlineName = (Fn->getName() + ".inline").str();
-        llvm::Module *M = Fn->getParent();
-        if (llvm::Function *Clone = M->getFunction(FDInlineName)) {
-          Clone->replaceAllUsesWith(Fn);
-          Clone->eraseFromParent();
-        }
-        break;
-      }
-    }
-  }
-
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>()) {
     // Clear non-distinct debug info that was possibly attached to the function
