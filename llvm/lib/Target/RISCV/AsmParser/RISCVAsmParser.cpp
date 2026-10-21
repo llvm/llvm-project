@@ -1430,7 +1430,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   // YGPR and GPR use the same register names in assembly, so convert GPR
   // operands to YGPR when matching a YGPR register class (such as YGPRNoX0).
-  if (Op.isGPR() && Kind <= MCK_LAST_REGISTER) {
+  if (Op.isGPR()) {
     const MCRegisterClass *RC =
         getRegClassFromMatchKind(static_cast<MatchClassKind>(Kind));
     if (RC && regClassIsYGPR(*RC)) {

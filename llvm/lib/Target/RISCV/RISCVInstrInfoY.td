@@ -91,7 +91,7 @@ class RVY_bndswi<string opcodestr>
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasRVYInstructions] in {
+let Predicates = [HasYInstructions] in {
 //
 // Instructions to Update The Capability Pointer
 //
@@ -141,7 +141,7 @@ def YHIR : RVY_r_xy<0b00111, "yhir">;
 def YEQ : RVY_rr<0b0000110, "yeq", GPR, YGPR, YGPR>;
 def YSS : RVY_rr<0b0001110, "yss", GPR, YGPR, YGPR>;
 def YAMASK : RVY_r_xx<0b00000, "yamask">;
-} // Predicates = [HasRVYInstructions]
+} // Predicates = [HasYInstructions]
 
 //===----------------------------------------------------------------------===//
 // Zyhybrid extension (Hybrid Extension for RVI Compatibility)
