@@ -17,12 +17,43 @@
 #include "flang/Parser/tools.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+namespace descriptor {
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifiers(version);
+}
+
+llvm::omp::ModifierSets GetSets(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifierSets(version);
+}
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version) {
+  return desc.getClauses(version);
+}
+
+llvm::omp::ClauseSets GetSets(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version) {
+  return desc.getClauseSets(version);
+}
+
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::ClauseSet &desc, llvm::omp::Version version) {
+  return desc.getClauses(version);
+}
+
+llvm::omp::Modifiers GetElements(const llvm::omp::descriptor::ModifierSet &desc,
+    llvm::omp::Version version) {
+  return desc.getModifiers(version);
+}
+} // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(
     const parser::OmpObject &object) {

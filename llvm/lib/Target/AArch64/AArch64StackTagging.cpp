@@ -257,19 +257,20 @@ public:
 };
 
 class AArch64StackTagging : public FunctionPass {
+  // Without the TargetMachine's options (opt -aarch64-stack-tagging), require
+  // both analyses; runOnFunction may disable them per the context's options.
   const bool MergeInit;
   const bool UseStackSafety;
 
 public:
   static char ID; // Pass ID, replacement for typeid
 
-  AArch64StackTagging(bool IsOptNone = false)
+  AArch64StackTagging(const AArch64Options *Opts = nullptr,
+                      bool IsOptNone = false)
       : FunctionPass(ID),
-        MergeInit(valueOr(AArch64Options::Global.stack_tagging_merge_init,
-                          !IsOptNone)),
-        UseStackSafety(
-            valueOr(AArch64Options::Global.stack_tagging_use_stack_safety,
-                    !IsOptNone)) {}
+        MergeInit(!Opts || valueOr(Opts->stack_tagging_merge_init, !IsOptNone)),
+        UseStackSafety(!Opts || valueOr(Opts->stack_tagging_use_stack_safety,
+                                        !IsOptNone)) {}
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -287,6 +288,7 @@ public:
   StringRef getPassName() const override { return "AArch64 Stack Tagging"; }
 
 private:
+  const AArch64Options *CLOpts = nullptr;
   Function *F = nullptr;
   Function *SetTagFunc = nullptr;
   const DataLayout *DL = nullptr;
@@ -315,8 +317,9 @@ INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                     false, false)
 
-FunctionPass *llvm::createAArch64StackTaggingPass(bool IsOptNone) {
-  return new AArch64StackTagging(IsOptNone);
+FunctionPass *llvm::createAArch64StackTaggingPass(const AArch64Options &CLOpts,
+                                                  bool IsOptNone) {
+  return new AArch64StackTagging(&CLOpts, IsOptNone);
 }
 
 Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
@@ -328,7 +331,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
   BasicBlock::iterator BI(StartInst);
 
   unsigned Count = 0;
-  for (; Count < AArch64Options::Global.stack_tagging_merge_init_scan_limit &&
+  for (; Count < CLOpts->stack_tagging_merge_init_scan_limit &&
          !BI->isTerminator();
        ++BI) {
     ++Count;
@@ -391,8 +394,8 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
   bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
-  if (MergeInit && !F->hasOptNone() && LittleEndian &&
-      Size < AArch64Options::Global.stack_tagging_merge_init_size_limit) {
+  if (AA && !F->hasOptNone() && LittleEndian &&
+      Size < CLOpts->stack_tagging_merge_init_size_limit) {
     LLVM_DEBUG(dbgs() << "collecting initializers for " << *AI
                       << ", size = " << Size << "\n");
     InsertBefore = collectInitializers(InsertBefore, Ptr, Size, IB);
@@ -409,12 +412,13 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                               ConstantInt::get(IRB.getInt64Ty(), Size)});
 }
 
-static Value *getSlotPtr(IRBuilder<> &IRB, const Triple &TargetTriple,
+static Value *getSlotPtr(const AArch64Options &CLOpts, IRBuilder<> &IRB,
+                         const Triple &TargetTriple,
                          bool HasInstrumentedAllocas) {
   if (!HasInstrumentedAllocas)
     return nullptr;
 
-  auto Mode = AArch64Options::Global.stack_tagging_record_stack_history;
+  auto Mode = CLOpts.stack_tagging_record_stack_history;
   if (Mode == AArch64::StackTaggingRecordStackHistoryMode::Instr ||
       (!Mode && TargetTriple.isOSDarwin())) {
     if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
@@ -455,8 +459,8 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   // stack MTE take two slots (16 bytes).
   //
   // Stack history is recorded by default on Darwin.
-  if (Value *SlotPtr =
-          getSlotPtr(IRB, TargetTriple, !AllocasToInstrument.empty())) {
+  if (Value *SlotPtr = getSlotPtr(*CLOpts, IRB, TargetTriple,
+                                  !AllocasToInstrument.empty())) {
     constexpr uint64_t TagMask = 0xFULL << 56;
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
@@ -480,12 +484,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 
-  if (UseStackSafety)
-    SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
+  CLOpts = &Fn.getContext().getLibraryOptions().get<AArch64Options>();
+  SSI = UseStackSafety && valueOr(CLOpts->stack_tagging_use_stack_safety, true)
+            ? &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult()
+            : nullptr;
   F = &Fn;
   DL = &Fn.getDataLayout();
-  if (MergeInit)
-    AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  AA = MergeInit && valueOr(CLOpts->stack_tagging_merge_init, true)
+           ? &getAnalysis<AAResultsWrapperPass>().getAAResults()
+           : nullptr;
 
   std::unique_ptr<OptimizationRemarkEmitter> DeleteORE;
   OptimizationRemarkEmitter *ORE = nullptr;
