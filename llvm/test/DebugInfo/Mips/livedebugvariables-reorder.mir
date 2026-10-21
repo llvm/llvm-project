@@ -63,7 +63,7 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
 callSites:
-  - { bb: 0, offset: 1 }
+  - { bb: '%bb.0', offset: 1 }
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:

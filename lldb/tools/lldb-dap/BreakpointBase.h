@@ -20,7 +20,7 @@ class BreakpointBase {
 public:
   explicit BreakpointBase(DAP &d) : m_dap(d) {}
   BreakpointBase(DAP &d, const std::optional<std::string> &condition,
-                 const std::optional<std::string> &hit_condition);
+                 const std::string &hit_condition);
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;

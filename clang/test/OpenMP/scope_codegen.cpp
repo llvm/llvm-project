@@ -954,7 +954,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN3SSTIdEC1Ev_l70.omp_outlined.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_NULL_ALLOCATOR:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_DEFAULT_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_LARGE_CAP_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_CONST_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_HIGH_BW_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_LOW_LAT_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_PTEAM_MEM_ALLOC:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_THREAD_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1727,7 +1727,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN3SSTIdEC1Ev_l70.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 !dbg [[DBG72:![0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[OMP_CGROUP_MEM_ALLOC:%.*]], i64 noundef [[A:%.*]]) #[[ATTR9:[0-9]+]] personality ptr @__gxx_personality_v0 !dbg [[DBG72:![0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

@@ -71,6 +71,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
+  const AArch64Options *CLOpts = nullptr;
   ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
@@ -820,7 +821,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
-  if (!AArch64Options::Global.arm64ec_generate_thunks)
+  CLOpts = &Mod.getContext().getLibraryOptions().get<AArch64Options>();
+  if (!CLOpts->arm64ec_generate_thunks)
     return false;
 
   M = &Mod;
@@ -1032,9 +1034,8 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // FIXME: getCalledFunction() fails if there's a bitcast (e.g.
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
-        if (!AArch64Options::Global.arm64ec_lower_direct_to_indirect ||
-            F->hasLocalLinkage() || F->isIntrinsic() ||
-            !F->isDeclarationForLinker())
+        if (!CLOpts->arm64ec_lower_direct_to_indirect || F->hasLocalLinkage() ||
+            F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 
         DirectCalledFns.insert(F);

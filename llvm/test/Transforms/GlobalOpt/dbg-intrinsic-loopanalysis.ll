@@ -1,5 +1,6 @@
-; RUN: opt -passes="globalopt" < %s -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
-; RUN: opt -strip-debug -S < %s | opt -passes="globalopt" -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
+; REQUIRES: powerpc-registered-target
+; RUN: opt -passes="globalopt" -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc < %s -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
+; RUN: opt -strip-debug -S < %s | opt -passes="globalopt" -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-coldcc -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
 
 ; Make sure that the call to dbg.declare does not prevent running BlockFrequency
 ; and (especially) CycleAnalysis.

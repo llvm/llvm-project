@@ -525,48 +525,24 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
                      decAttr.getValue());
       continue;
     }
-    bool handled = false;
-    for (auto decoration :
-         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
-          spirv::Decoration::AliasedPointer,
-          spirv::Decoration::RestrictPointer}) {
+    if (!isa<UnitAttr>(decAttr.getValue()))
+      return emitError(unknownLoc, "unhandled decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
 
-      if (decAttr.getName() !=
-          getSymbolDecoration(stringifyDecoration(decoration)))
-        continue;
+    // TODO: Support multiple decorations per function parameter.
+    if (foundDecorationAttr)
+      return emitError(unknownLoc, "already found a decoration for function "
+                                   "argument with result <id> ")
+             << argID;
 
-      if (foundDecorationAttr)
-        return emitError(unknownLoc,
-                         "more than one Aliased/Restrict decorations for "
-                         "function argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
-      handled = true;
-      break;
-    }
-    if (handled)
-      continue;
-
-    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                 spirv::Decoration::RelaxedPrecision))) {
-      // TODO: Current implementation supports only one decoration per function
-      // parameter so RelaxedPrecision cannot be applied at the same time as,
-      // for example, Aliased/Restrict/etc. This should be relaxed to allow any
-      // combination of decoration allowed by the spec to be supported.
-      if (foundDecorationAttr)
-        return emitError(unknownLoc, "already found a decoration for function "
-                                     "argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(
-          context, spirv::Decoration::RelaxedPrecision);
-      continue;
-    }
-
-    return emitError(unknownLoc, "unhandled decoration '")
-           << decAttr.getName().getValue()
-           << "' on function argument with result <id> " << argID;
+    std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+        llvm::convertToCamelFromSnakeCase(decAttr.getName(), true));
+    if (!decoration)
+      return emitError(unknownLoc, "unknown decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
+    foundDecorationAttr = spirv::DecorationAttr::get(context, *decoration);
   }
 
   if (foundDecorationAttr)
@@ -2871,6 +2847,8 @@ LogicalResult ControlFlowStructurizer::structurize() {
       if (it != blockMergeInfo.end()) {
         // Use the original location for nested selection/loop ops.
         Location loc = it->second.loc;
+        // Copy the control before the erase below invalidates `it`.
+        uint32_t nestedControl = it->second.control;
 
         Block *newHeader = mapper.lookupOrNull(block);
         if (!newHeader)
@@ -2889,10 +2867,9 @@ LogicalResult ControlFlowStructurizer::structurize() {
         if (Block *mappedTo = mapper.lookupOrNull(newMerge))
           newMerge = mappedTo;
 
-        // The iterator should be erased before adding a new entry into
-        // blockMergeInfo to avoid iterator invalidation.
+        // Erase the stale entry before inserting the remapped one.
         blockMergeInfo.erase(it);
-        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+        blockMergeInfo.try_emplace(newHeader, loc, nestedControl, newMerge,
                                    newContinue);
       }
 

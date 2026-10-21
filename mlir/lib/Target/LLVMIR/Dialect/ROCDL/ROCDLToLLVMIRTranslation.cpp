@@ -262,6 +262,8 @@ public:
     }
     if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
         attribute.getName()) {
+      op->emitWarning("rocdl.ignore_denormal_mode is deprecated; use "
+                      "ignore_denormal_mode on llvm.atomicrmw instead");
       for (llvm::Instruction *i : instructions)
         i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
                        llvm::MDNode::get(llvmContext, {}));

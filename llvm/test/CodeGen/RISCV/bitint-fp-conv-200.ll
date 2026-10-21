@@ -1350,7 +1350,6 @@ define void @test_float_to_bitint_200(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    mv a0, s5
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    mv a2, s11
-; RV32-NEXT:    # implicit-def: $x13
 ; RV32-NEXT:    call __muldi3
 ; RV32-NEXT:    add a0, s1, a0
 ; RV32-NEXT:    add a0, a0, s6

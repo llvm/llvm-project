@@ -564,6 +564,7 @@ class VSAMPLE_Sampler_gfx13_Base<mimgopc op, string opcode, RegisterOperand Data
                                  bit isIndexedSamp, int num_addrs,
                                  RegisterOperand Addr3RC = VGPROp_32_Lo256, bit enableDisasm=0>
   : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), (ins SampRC:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
+  let Constraints = !if(!or(isIndexedRsrc, isIndexedSamp), "@earlyclobber $vdata", "");
   // Pin the index-kind MSBs of the rsrc (Inst{49-48}) and samp (Inst{63-62})
   // fields so the four direct/indexed combinations stay distinguishable.
   let Inst{49-48} = !if(isIndexedRsrc, rsrc{8-7}, 0b00);

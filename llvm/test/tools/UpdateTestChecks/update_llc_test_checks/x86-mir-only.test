@@ -1,0 +1,12 @@
+# REQUIRES: x86-registered-target
+## MIR output without any assembly RUN lines must not use an uninitialized
+## assembly-output handler.
+
+# RUN: cp %S/Inputs/x86_mir_only.ll %t.ll
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86_mir_only.ll.expected %t.ll
+# RUN: llc -mtriple=x86_64 -stop-after=finalize-isel < %t.ll | FileCheck %t.ll
+
+## Updating the generated checks again must preserve them.
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86_mir_only.ll.expected %t.ll

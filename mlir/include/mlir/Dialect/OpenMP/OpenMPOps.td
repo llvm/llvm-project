@@ -83,10 +83,30 @@ def PrivateClauseOp
     }
     ```
 
+    * `linear(x)` for an i32 would be emitted as:
+    ```mlir
+    omp.private {type = linear} @x.privatizer : i32
+    ```
+
+    * `linear(x)` for types wrapping the underlying linear variable (e.g.
+      Fortran's ALLOCATABLE) would be emitted as:
+    ```mlir
+    omp.private {type = linear} @x.privatizer : !some.type init {
+    ...
+    } data_address {
+    ^bb0(%arg0: !some.pointer<!some.type>):
+    // return the address of the data that %arg0 describes.
+    omp.yield(%addr : !llvm.ptr)
+    } dealloc {
+    ...
+    }
+    ```
+
     There are no restrictions on the body except for:
-    - The `dealloc` regions has a single argument.
+    - The `dealloc` & `data_address` regions have a single argument.
     - The `init` & `copy` regions have 2 arguments.
-    - All three regions are terminated by `omp.yield` ops.
+    - All regions are terminated by `omp.yield` ops.
+    - The `data_address` region yields a single value.
     The above restrictions and other obvious restrictions (e.g. verifying the
     type of yielded values) are verified by the custom op verifier. The actual
     contents of the blocks inside all regions are not verified.
@@ -103,7 +123,10 @@ def PrivateClauseOp
     the regions should be a type which represents a pointer to `type`.
 
     The `data_sharing_type` attribute specifies whether privatizer corresponds
-    to a `private` or a `firstprivate` clause.
+    to a `private`, `firstprivate` or `linear` clause. A `linear` privatizer is
+    only referenced by `linear` clauses; its optional `data_address` region
+    gives the address of the value the linear clause updates. Without it, the
+    variable itself holds that value.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
@@ -113,13 +136,15 @@ def PrivateClauseOp
 
   let regions = (region AnyRegion:$init_region,
                         AnyRegion:$copy_region,
-                        AnyRegion:$dealloc_region);
+                        AnyRegion:$dealloc_region,
+                        AnyRegion:$data_address_region);
 
   let assemblyFormat = [{
     ` ` `{` `type` `=` enum($data_sharing_type) `}`
       ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
+      (`data_address` $data_address_region^)?
       (`dealloc` $dealloc_region^)? attr-dict
   }];
 
@@ -145,6 +170,10 @@ def PrivateClauseOp
     BlockArgument getCopyPrivateArg() {
       auto &region = getCopyRegion();
       return region.empty() ? nullptr : region.getArgument(1);
+    }
+    BlockArgument getDataAddressArg() {
+      auto &region = getDataAddressRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
     }
     BlockArgument getDeallocMoldArg() {
       auto &region = getDeallocRegion();
@@ -851,7 +880,8 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
     NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_LinearClause, OpenMP_NowaitClause,
+    OpenMP_AllocateClause, OpenMP_LinearClauseSkip<assemblyFormat = true>,
+    OpenMP_NowaitClause,
     OpenMP_OrderClause, OpenMP_OrderedClause, OpenMP_PrivateClause,
     OpenMP_ReductionClause, OpenMP_ScheduleClause
   ], singleRegion = true> {
@@ -885,9 +915,12 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
   ];
 
   let assemblyFormat = clausesAssemblyFormat # [{
-    custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
-        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
+    custom<LinearPrivateReductionRegion>($region, $linear_vars,
+        type($linear_vars), $linear_step_vars, type($linear_step_vars),
+        $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
+        type($private_vars), $private_syms, $private_needs_barrier,
+        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_byref, $reduction_syms) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -903,8 +936,8 @@ def SimdOp : OpenMP_Op<"simd", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>, HasParallelRegion,
     NoTerminator, RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_LinearClause,
-    OpenMP_NontemporalClause, OpenMP_OrderClause, OpenMP_PrivateClause,
+    OpenMP_AlignedClause, OpenMP_IfClause,
+    OpenMP_LinearClauseSkip<assemblyFormat = true>, OpenMP_NontemporalClause, OpenMP_OrderClause, OpenMP_PrivateClause,
     OpenMP_ReductionClause, OpenMP_SafelenClause, OpenMP_SimdlenClause
   ], singleRegion = true> {
   let summary = "simd construct";
@@ -939,9 +972,12 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   ];
 
   let assemblyFormat = clausesAssemblyFormat # [{
-    custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
-        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
+    custom<LinearPrivateReductionRegion>($region, $linear_vars,
+        type($linear_vars), $linear_step_vars, type($linear_step_vars),
+        $linear_var_types, $linear_modifiers, $linear_syms, $private_vars,
+        type($private_vars), $private_syms, $private_needs_barrier,
+        $reduction_mod, $reduction_vars, type($reduction_vars),
+        $reduction_byref, $reduction_syms) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -2686,7 +2722,8 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute", traits = [
 def DeclareSimdOp
     : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
                 clauses = [OpenMP_AlignedClause, OpenMP_InbranchClause,
-                           OpenMP_LinearClause, OpenMP_NotinbranchClause,
+                           OpenMP_LinearClauseSkip<traits = true>,
+                           OpenMP_NotinbranchClause,
                            OpenMP_SimdlenClause, OpenMP_UniformClause]> {
   let summary = "declare simd directive";
   let description = [{

@@ -403,6 +403,41 @@ void test_lock_of_param(struct BDev *bdev,
   mutex_exclusive_unlock(&bdev->lock);
 }
 
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct BDevSelf {
+  struct Mutex lock;
+  int a GUARDED_BY(lock);
+  struct Mutex *(*lock_of)(void) LOCK_RETURNED(lock);
+  void (*unlock)(void) UNLOCK_FUNCTION(lock);
+};
+
+void test_bdev_self(struct BDevSelf *bdev) {
+  mutex_exclusive_lock(bdev->lock_of());
+  bdev->a = 42;
+  bdev->unlock();
+}
+
+void test_bdev_self_fail(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock(other->lock_of());
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock(bdev->lock_of()); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  other->unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void test_bdev_self_deref(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock((*bdev->lock_of)());
+  bdev->a = 42;
+  (*bdev->unlock)();
+  mutex_exclusive_lock((**other->lock_of)());
+  other->a = 42;
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock((*other->lock_of)());
+}
+
 // A pointee parameter shadows a member of the same name, in both modes: the
 // release is of the argument, not of 'ops->mu'.
 struct ShadowOps {

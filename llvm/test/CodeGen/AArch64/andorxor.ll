@@ -1485,8 +1485,7 @@ define i32 @and_hidden_bits_rhs(i32 %x, i32 %y) {
 ;
 ; CHECK-GI-LABEL: and_hidden_bits_rhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    orr w8, w0, #0xff00
-; CHECK-GI-NEXT:    and w0, w8, w1, lsr #24
+; CHECK-GI-NEXT:    and w0, w0, w1, lsr #24
 ; CHECK-GI-NEXT:    ret
   %bounded = lshr i32 %y, 24
   %inner = or i32 %x, 65280
@@ -1502,8 +1501,7 @@ define i32 @or_hidden_bits_rhs(i32 %x, i32 %y) {
 ;
 ; CHECK-GI-LABEL: or_hidden_bits_rhs:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    orn w0, w8, w1, lsr #24
+; CHECK-GI-NEXT:    orn w0, w0, w1, lsr #24
 ; CHECK-GI-NEXT:    ret
   %shift = lshr i32 %y, 24
   %bounded = xor i32 %shift, -1

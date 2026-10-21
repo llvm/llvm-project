@@ -656,7 +656,6 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
-    DesiredPeelCountLast = std::max(DesiredPeelCountLast, NewPeelCount);
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {

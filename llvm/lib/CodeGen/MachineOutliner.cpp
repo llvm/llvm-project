@@ -683,8 +683,10 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   auto Size = UnsignedVec.size();
 
   // Get the global outlined hash tree built from the previous run.
-  assert(cgdata::hasOutlinedHashTree());
-  const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
+  const cl::LibraryOptionsContext &LibraryOptions =
+      Mapper.MMI.getModule()->getContext().getLibraryOptions();
+  assert(cgdata::hasOutlinedHashTree(LibraryOptions));
+  const auto *RootNode = cgdata::getOutlinedHashTree(LibraryOptions)->getRoot();
 
   auto getValidInstr = [&](unsigned Index) -> const MachineInstr * {
     if (UnsignedVec[Index] >= Mapper.LegalInstrNumber)
@@ -1537,12 +1539,14 @@ void MachineOutliner::initializeOutlinerMode(const Module &M) {
   // hash tree to the custom section, `__llvm_outline`.
   // When the outlined hash tree is available from the previous codegen data,
   // we want to read it to optimistically create global outlining candidates.
-  if (cgdata::emitCGData()) {
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
+  if (cgdata::emitCGData(LibraryOptions)) {
     OutlinerMode = CGDataMode::Write;
     // Create a local outlined hash tree to be published.
     LocalHashTree = std::make_unique<OutlinedHashTree>();
     // We don't need to read the outlined hash tree from the previous codegen
-  } else if (cgdata::hasOutlinedHashTree())
+  } else if (cgdata::hasOutlinedHashTree(LibraryOptions))
     OutlinerMode = CGDataMode::Read;
 }
 

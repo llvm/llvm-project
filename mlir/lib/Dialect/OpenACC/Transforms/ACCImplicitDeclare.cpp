@@ -175,6 +175,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -201,7 +202,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 using GlobalOpSetT = llvm::SmallSetVector<Operation *, 16>;
 
 /// Checks whether a use of the requested `globalOp` should be considered
@@ -383,6 +383,11 @@ class ACCImplicitDeclare
 public:
   using ACCImplicitDeclareBase<ACCImplicitDeclare>::ACCImplicitDeclareBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCImplicitDeclareBase<ACCImplicitDeclare>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     ModuleOp mod = getOperation();
     MLIRContext *context = &getContext();
@@ -482,5 +487,4 @@ public:
     }
   }
 };
-
 } // namespace

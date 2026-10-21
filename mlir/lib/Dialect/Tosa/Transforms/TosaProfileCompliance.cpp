@@ -11,9 +11,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
-
+namespace mlir {
+namespace tosa {
 // Building this ~5,000-line generated initializer map under AddressSanitizer,
 // HWAddressSanitizer, or MemorySanitizer leads to extreme compile times (>3.5
 // minutes) during InstCombine and greedy register allocation due to
@@ -755,3 +754,5 @@ TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
 
   return stringifyScalarTypeInfo(typeInfo);
 }
+} // namespace tosa
+} // namespace mlir

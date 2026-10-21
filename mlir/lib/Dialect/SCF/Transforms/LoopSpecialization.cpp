@@ -233,51 +233,62 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 /// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
-  // TODO: Add support for unsigned loops. The current logic
-  // uses `affine.min` and `arith.index_cast`, which is incorrect for
-  // unsigned comparisons.
-  if (forOp.getUnsignedCmp())
-    return failure();
-
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.getLowerBound());
-  auto ubInt = getConstantIntValue(forOp.getUpperBound());
-  auto stepInt = getConstantIntValue(forOp.getStep());
-
-  // Peeling is not needed if there is at most one iteration.
-  // Per the scf.for semantics, the trip count is
-  // max(0, ceil((UB - LB) / Step)), so for a positive step there is more than
-  // one iteration exactly when UB - LB > Step.
-  if (lbInt && ubInt && stepInt && *ubInt - *lbInt <= *stepInt)
-    return failure();
-
-  // The peeling bound (%lb + %step) is computed with affine.apply, which
-  // accepts only index operands. %ub does not feed into this bound, so only
-  // %lb and %step need to be constant to guarantee the affine.apply (see below)
-  // folds away before its (non-index) operand types matter.
-  if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
-    return failure();
-
-  AffineExpr lbSymbol, stepSymbol;
-  bindSymbols(b.getContext(), lbSymbol, stepSymbol);
-
-  // New lower bound for main loop: min(%lb + %step, %ub). Without the minimum
-  // the peeled first iteration spans [%lb, %lb + %step) and executes even when
-  // the source loop is empty (%lb >= %ub).
-  AffineExpr ubSymbol;
-  bindSymbols(b.getContext(), lbSymbol, stepSymbol, ubSymbol);
-  auto ubMap =
-      AffineMap::get(0, 3, {lbSymbol + stepSymbol, ubSymbol}, b.getContext());
-  b.setInsertionPoint(forOp);
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
   auto loc = forOp.getLoc();
-  Value splitBound = b.createOrFold<AffineMinOp>(
-      loc, ubMap,
-      ValueRange{forOp.getLowerBound(), forOp.getStep(),
-                 forOp.getUpperBound()});
-  if (splitBound.getType() != forOp.getUpperBound().getType())
-    splitBound = b.createOrFold<arith::IndexCastOp>(
-        loc, forOp.getUpperBound().getType(), splitBound);
 
+  Value splitBound;
+  b.setInsertionPoint(forOp);
+
+  // Check whether we have a unsigned loop
+  if (forOp.getUnsignedCmp()) {
+    IntegerAttr lbAttr, ubAttr, stepAttr;
+    if (matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) &&
+        matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) &&
+        matchPattern(forOp.getStep(), m_Constant(&stepAttr))) {
+
+      // Get the constants as APInt at the loop’s own bit width
+      APInt lb = lbAttr.getValue();
+      APInt ub = ubAttr.getValue();
+      APInt step = stepAttr.getValue();
+
+      // bail out if ub <= lb or ub - lb <= step (unsigned constants)
+      if (ub.ule(lb) || (ub - lb).ule(step))
+        return failure();
+    }
+
+    // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
+    // or none if the loop is empty. If lb + step wraps, the loop has at most
+    // one iteration and split falls back to lb, so the main loop does the work.
+    // use unsigned ops (MinUIOp, MaxUIOp)
+    Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
+    Value capped = b.createOrFold<arith::MinUIOp>(loc, sum, ubVal);
+    splitBound = b.createOrFold<arith::MaxUIOp>(loc, lbVal, capped);
+  } else {
+    auto lbInt = getConstantIntValue(lbVal);
+    auto ubInt = getConstantIntValue(ubVal);
+    auto stepInt = getConstantIntValue(stepVal);
+
+    // Peeling is not needed if there is at most one iteration. scf.for requires
+    // a positive step, so the trip count is ceil((UB - LB) / Step) when UB > LB
+    // and 0 otherwise. With a positive step, "UB - LB <= Step" therefore covers
+    // both the empty loop and the single-iteration loop. Bail out if the
+    // subtraction overflows, since we can't reason about the trip count then.
+    if (lbInt && ubInt && stepInt) {
+      int64_t diff;
+      if (llvm::SubOverflow(*ubInt, *lbInt, diff) || diff <= *stepInt)
+        return failure();
+    }
+
+    // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
+    // or none if the loop is empty. If lb + step wraps, the loop has at most
+    // one iteration and split falls back to lb, so the main loop does the work.
+    Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
+    Value capped = b.createOrFold<arith::MinSIOp>(loc, sum, ubVal);
+    splitBound = b.createOrFold<arith::MaxSIOp>(loc, lbVal, capped);
+  }
   // Peel the first iteration.
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
   b.modifyOpInPlace(firstIteration, [&]() {
@@ -303,7 +314,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    if (forOp.getUnsignedCmp())
+    if (!peelFront && forOp.getUnsignedCmp())
       return rewriter.notifyMatchFailure(forOp,
                                          "unsigned loops are not supported");
 

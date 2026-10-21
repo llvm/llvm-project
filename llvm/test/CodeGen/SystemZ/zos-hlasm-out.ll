@@ -5,6 +5,9 @@
 @.str = private unnamed_addr constant [10 x i8] c"Hello %s\0A\00", align 2
 @Greeting = global ptr @.str, align 8
 @.str.1 = private unnamed_addr constant [6 x i8] c"World\00", align 2
+@zeros = global [16 x i8] zeroinitializer, align 8
+@padded = global { i8, i64 } { i8 1, i64 2 }, align 8
+@splat = global [8 x i8] c"!!!!!!!!", align 1
 
 ; Function Attrs: noinline nounwind optnone
 define void @foo() {
@@ -28,6 +31,14 @@ define void @foo() {
 ; CHECK: DS 0B
 ; CHECK-LABEL: L#.str.1 DS 0H
 ; CHECK: DC XL6'576F726C6400'
+; CHECK-LABEL: zeros XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC 16XL1'00'
+; CHECK-LABEL: padded XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC XL1'01'
+; CHECK-NEXT: DC 7XL1'00'
+; CHECK-NEXT: DC XL8'0000000000000002'
+; CHECK-LABEL: splat XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
+; CHECK: DC 8XL1'21'
 ; CHECK-LABEL: L#PPA1_foo_0 DS 0H    
 ; CHECK: DC XL1'02'
 ; CHECK: DC XL1'CE'

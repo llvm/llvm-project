@@ -21,6 +21,18 @@ upgrades post-parsing through the `upgradeFromVersion` method.
 There is no restriction on what kind of information a dialect
 is allowed to encode to model its versioning.
 
+When emitting bytecode, `mlir-opt --emit-bytecode-version=<version>` selects the
+overall bytecode format version. Dialect versions are selected separately with
+`--emit-bytecode-dialect-version=<dialect>=<version>`, which may be repeated for
+different dialects. For example, `mlir-opt --emit-bytecode
+--emit-bytecode-dialect-version=builtin=0` selects the historical builtin dialect
+encoding. A dialect must implement `BytecodeDialectInterface::parseVersion` to
+accept a version string; the dialect defines its syntax and supported versions.
+The resulting version object is passed to the bytecode writer through
+`BytecodeWriterConfig::setDialectVersion`. Before emission, the writer invokes
+`BytecodeDialectInterface::verifyVersion` for explicitly selected versions so
+dialects can reject IR that cannot be represented without losing information.
+
 [TOC]
 
 ## Magic Number

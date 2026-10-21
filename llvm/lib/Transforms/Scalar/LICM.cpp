@@ -116,12 +116,16 @@ STATISTIC(NumIntAssociationsHoisted,
 STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
-unsigned llvm::getLicmMssaOptCap() {
-  return ScalarOptions::Global.licm_mssa_optimization_cap;
+unsigned
+llvm::getLicmMssaOptCap(const cl::LibraryOptionsContext *LibraryOptions) {
+  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
+      .licm_mssa_optimization_cap;
 }
 
-unsigned llvm::getLicmMssaNoAccForPromotionCap() {
-  return ScalarOptions::Global.licm_mssa_max_acc_promotion;
+unsigned llvm::getLicmMssaNoAccForPromotionCap(
+    const cl::LibraryOptionsContext *LibraryOptions) {
+  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
+      .licm_mssa_max_acc_promotion;
 }
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
@@ -151,7 +155,7 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
 /// Aggregates various functions for hoisting computations out of loop.
-static bool hoistArithmetics(Instruction &I, Loop &L,
+static bool hoistArithmetics(const ScalarOptions &Opts, Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
@@ -180,6 +184,10 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
     ICFLoopSafetyInfo *SafetyInfo,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L);
 
+static const ScalarOptions &getScalarOptions(const Loop &L) {
+  return L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+}
+
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
@@ -187,14 +195,15 @@ struct LoopInvariantCodeMotion {
                  TargetTransformInfo *TTI, ScalarEvolution *SE, MemorySSA *MSSA,
                  OptimizationRemarkEmitter *ORE, bool LoopNestMode = false);
 
-  LoopInvariantCodeMotion(unsigned LicmMssaOptCap,
-                          unsigned LicmMssaNoAccForPromotionCap,
-                          bool LicmAllowSpeculation)
-      : LicmMssaOptCap(LicmMssaOptCap),
-        LicmMssaNoAccForPromotionCap(LicmMssaNoAccForPromotionCap),
-        LicmAllowSpeculation(LicmAllowSpeculation) {}
+  LoopInvariantCodeMotion(const ScalarOptions &Opts, const LICMOptions &LO)
+      : Opts(Opts),
+        LicmMssaOptCap(LO.MssaOptCap.value_or(Opts.licm_mssa_optimization_cap)),
+        LicmMssaNoAccForPromotionCap(LO.MssaNoAccForPromotionCap.value_or(
+            Opts.licm_mssa_max_acc_promotion)),
+        LicmAllowSpeculation(LO.AllowSpeculation) {}
 
 private:
+  const ScalarOptions &Opts;
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
   bool LicmAllowSpeculation;
@@ -202,13 +211,7 @@ private:
 
 struct LegacyLICMPass : public LoopPass {
   static char ID; // Pass identification, replacement for typeid
-  LegacyLICMPass(unsigned LicmMssaOptCap =
-                     ScalarOptions::Global.licm_mssa_optimization_cap,
-                 unsigned LicmMssaNoAccForPromotionCap =
-                     ScalarOptions::Global.licm_mssa_max_acc_promotion,
-                 bool LicmAllowSpeculation = true)
-      : LoopPass(ID), LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                           LicmAllowSpeculation) {
+  LegacyLICMPass() : LoopPass(ID) {
     initializeLegacyLICMPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -227,6 +230,9 @@ struct LegacyLICMPass : public LoopPass {
     // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
+    const ScalarOptions &Opts =
+        F->getContext().getLibraryOptions().get<ScalarOptions>();
+    LoopInvariantCodeMotion LICM(Opts, LICMOptions());
     return LICM.runOnLoop(
         L, &getAnalysis<AAResultsWrapperPass>().getAAResults(),
         &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
@@ -253,9 +259,6 @@ struct LegacyLICMPass : public LoopPass {
     AU.addPreserved<LazyBlockFrequencyInfoPass>();
     AU.addPreserved<LazyBranchProbabilityInfoPass>();
   }
-
-private:
-  LoopInvariantCodeMotion LICM;
 };
 } // namespace
 
@@ -269,8 +272,7 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
-                               Opts.AllowSpeculation);
+  LoopInvariantCodeMotion LICM(getScalarOptions(L), Opts);
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.AC, &AR.TLI, &AR.TTI,
                       &AR.SE, AR.MSSA, &ORE))
     return PreservedAnalyses::all();
@@ -302,10 +304,9 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(LN.getParent());
 
-  LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
-                               Opts.AllowSpeculation);
-
   Loop &OutermostLoop = LN.getOutermostLoop();
+  LoopInvariantCodeMotion LICM(getScalarOptions(OutermostLoop), Opts);
+
   bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, &AR.AC,
                                 &AR.TLI, &AR.TTI, &AR.SE, AR.MSSA, &ORE, true);
 
@@ -346,8 +347,8 @@ Pass *llvm::createLICMPass() { return new LegacyLICMPass(); }
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(bool IsSink, Loop &L,
                                                    MemorySSA &MSSA)
-    : SinkAndHoistLICMFlags(ScalarOptions::Global.licm_mssa_optimization_cap,
-                            ScalarOptions::Global.licm_mssa_max_acc_promotion,
+    : SinkAndHoistLICMFlags(getScalarOptions(L).licm_mssa_optimization_cap,
+                            getScalarOptions(L).licm_mssa_max_acc_promotion,
                             IsSink, L, MSSA) {}
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(
@@ -454,9 +455,8 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // make sure we catch that. An additional load may be generated in the
   // preheader for SSA updater, so also avoid sinking when no preheader
   // is available.
-  if (!ScalarOptions::Global.disable_licm_promotion && Preheader &&
-      L->hasDedicatedExits() && !Flags.tooManyMemoryAccesses() &&
-      !HasCoroSuspendInst) {
+  if (!Opts.disable_licm_promotion && Preheader && L->hasDedicatedExits() &&
+      !Flags.tooManyMemoryAccesses() && !HasCoroSuspendInst) {
     // Figure out the loop exits and their insertion points
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L->getUniqueExitBlocks(ExitBlocks);
@@ -639,6 +639,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
          CurLoop != nullptr && SafetyInfo != nullptr &&
          "Unexpected input to hoistRegion.");
 
+  const ScalarOptions &Opts = getScalarOptions(*CurLoop);
   LoopBlocksRPO Worklist(CurLoop);
   Worklist.perform(LI);
   bool Changed = false;
@@ -716,7 +717,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
       // Try to reassociate instructions so that part of computations can be
       // done out of loop.
-      if (hoistArithmetics(I, *CurLoop, *SafetyInfo, MSSAU, AC, DT)) {
+      if (hoistArithmetics(Opts, I, *CurLoop, *SafetyInfo, MSSAU, AC, DT)) {
         Changed = true;
         continue;
       }
@@ -837,12 +838,14 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   if (isa<Constant>(Addr))
     return false;
 
+  const ScalarOptions &Opts =
+      LI->getContext().getLibraryOptions().get<ScalarOptions>();
   unsigned UsesVisited = 0;
   // Traverse all uses of the load operand value, to see if invariant.start is
   // one of the uses, and whether it dominates the load instruction.
   for (auto *U : Addr->users()) {
     // Avoid traversing for Load operand with high number of users.
-    if (++UsesVisited > ScalarOptions::Global.licm_max_num_uses_traversed)
+    if (++UsesVisited > Opts.licm_max_num_uses_traversed)
       return false;
     IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
     // If there are escaping uses of invariant.start instruction, the load maybe
@@ -2584,11 +2587,10 @@ static bool isReassociableOp(Instruction *I, unsigned IntOpcode,
 /// ((A1 * C * B1) + (A2 * C * B2) + ...) and hoist the (A1 * C), (A2 * C), ...
 /// invariant expressions. This functions returns true only if any hoisting has
 /// actually occurred.
-static bool hoistMulAddAssociation(Instruction &I, Loop &L,
-                                   ICFLoopSafetyInfo &SafetyInfo,
+static bool hoistMulAddAssociation(const ScalarOptions &Opts, Instruction &I,
+                                   Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                    MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                                    DominatorTree *DT) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
   if (!isReassociableOp(&I, Instruction::Mul, Instruction::FMul))
     return false;
   Value *VariantOp = I.getOperand(0);
@@ -2854,7 +2856,7 @@ static bool hoistSubAddAssociation(Instruction &I, Loop &L,
   return true;
 }
 
-static bool hoistArithmetics(Instruction &I, Loop &L,
+static bool hoistArithmetics(const ScalarOptions &Opts, Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT) {
@@ -2882,7 +2884,7 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
   }
 
   bool IsInt = I.getType()->isIntOrIntVectorTy();
-  if (hoistMulAddAssociation(I, L, SafetyInfo, MSSAU, AC, DT)) {
+  if (hoistMulAddAssociation(Opts, I, L, SafetyInfo, MSSAU, AC, DT)) {
     ++NumHoisted;
     if (IsInt)
       ++NumIntAssociationsHoisted;

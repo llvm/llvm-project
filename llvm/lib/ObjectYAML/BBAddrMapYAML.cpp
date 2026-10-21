@@ -15,6 +15,7 @@
 #include "llvm/ObjectYAML/BBAddrMapYAML.h"
 #include "llvm/Object/BBAddrMap.h"
 #include "llvm/ObjectYAML/ContiguousBlobAccumulator.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/WithColor.h"
 
 namespace llvm {
@@ -25,6 +26,7 @@ void MappingTraits<BBAddrMapYAML::BBAddrMapEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
   IO.mapOptional("Feature", E.Feature, Hex16(0));
+  IO.mapOptional("FuncGUID", E.FuncGUID);
   IO.mapOptional("NumBBRanges", E.NumBBRanges);
   IO.mapOptional("BBRanges", E.BBRanges);
 }
@@ -83,7 +85,7 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
   assert((AddressSize == 4 || AddressSize == 8) && "invalid address size");
   for (const auto &[Idx, E] : llvm::enumerate(Entries)) {
     // Write version and feature values.
-    if (E.Version > 5)
+    if (E.Version > 6)
       WithColor::warning() << "unsupported BB address map version: "
                            << static_cast<int>(E.Version)
                            << "; encoding using the most recent version";
@@ -98,6 +100,13 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
       WithColor::warning() << toString(FeatureOrErr.takeError());
       continue;
     }
+    // Write the function GUID. This is emitted when either the feature is
+    // enabled or 'FuncGUID' is specified, which allows testing mismatches.
+    if (!FeatureOrErr->FuncGUID && E.FuncGUID.has_value())
+      WithColor::warning() << "feature value(" << E.Feature
+                           << ") does not support function GUID.";
+    if (FeatureOrErr->FuncGUID || E.FuncGUID.has_value())
+      CBA.write<uint64_t>(E.FuncGUID.value_or(llvm::yaml::Hex64(0)), Endian);
     bool MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
     bool MultiBBRange =
         MultiBBRangeFeatureEnabled ||
@@ -191,6 +200,129 @@ void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
       }
     }
   }
+}
+
+Error decodePayload(
+    ArrayRef<uint8_t> Content, llvm::endianness Endian, unsigned AddressSize,
+    std::optional<std::vector<BBAddrMapEntry>> &Entries,
+    std::optional<std::vector<PGOAnalysisMapEntry>> &PGOAnalyses) {
+  assert((AddressSize == 4 || AddressSize == 8) && "invalid address size");
+  DataExtractor Data(Content, Endian == llvm::endianness::little);
+
+  std::vector<BBAddrMapEntry> DecodedEntries;
+  bool HasAnyPGOAnalysisMapEntry = false;
+  std::vector<PGOAnalysisMapEntry> DecodedPGOAnalyses;
+  DataExtractor::Cursor Cur(0);
+  uint8_t Version = 0;
+  uint16_t Feature = 0;
+  uint64_t Address = 0;
+  while (Cur && Cur.tell() < Content.size()) {
+    Version = Data.getU8(Cur);
+    if (Cur && Version > 6)
+      return createStringError(
+          errc::invalid_argument,
+          "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
+              Twine(static_cast<int>(Version)));
+    Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
+    uint64_t NumBBRanges = 1;
+    uint64_t NumBlocks = 0;
+    uint32_t TotalNumBlocks = 0;
+    auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
+    if (!FeatureOrErr)
+      return FeatureOrErr.takeError();
+    std::optional<llvm::yaml::Hex64> FuncGUID;
+    if (FeatureOrErr->FuncGUID)
+      FuncGUID = Data.getU64(Cur);
+    if (FeatureOrErr->MultiBBRange) {
+      NumBBRanges = Data.getULEB128(Cur);
+    } else {
+      Address = Data.getUnsigned(Cur, AddressSize);
+      NumBlocks = Data.getULEB128(Cur);
+    }
+    std::vector<BBAddrMapEntry::BBRangeEntry> BBRanges;
+    uint64_t BaseAddress = 0;
+    for (uint64_t BBRangeN = 0; Cur && BBRangeN != NumBBRanges; ++BBRangeN) {
+      if (FeatureOrErr->MultiBBRange) {
+        BaseAddress = Data.getUnsigned(Cur, AddressSize);
+        NumBlocks = Data.getULEB128(Cur);
+      } else {
+        BaseAddress = Address;
+      }
+
+      std::vector<BBAddrMapEntry::BBEntry> BBEntries;
+      // Read the specified number of BB entries, or until decoding fails.
+      for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks;
+           ++BlockIndex) {
+        uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
+        uint64_t Offset = Data.getULEB128(Cur);
+        std::optional<std::vector<llvm::yaml::Hex64>> CallsiteEndOffsets;
+        if (FeatureOrErr->CallsiteEndOffsets) {
+          uint32_t NumCallsites = Data.getULEB128(Cur);
+          CallsiteEndOffsets = std::vector<llvm::yaml::Hex64>(NumCallsites, 0);
+          for (uint32_t CallsiteIndex = 0; Cur && CallsiteIndex < NumCallsites;
+               ++CallsiteIndex) {
+            (*CallsiteEndOffsets)[CallsiteIndex] = Data.getULEB128(Cur);
+          }
+        }
+        uint64_t Size = Data.getULEB128(Cur);
+        uint64_t Metadata = Data.getULEB128(Cur);
+        std::optional<llvm::yaml::Hex64> Hash;
+        if (FeatureOrErr->BBHash)
+          Hash = Data.getU64(Cur);
+        BBEntries.push_back(
+            {ID, Offset, Size, Metadata, std::move(CallsiteEndOffsets), Hash});
+      }
+      TotalNumBlocks += BBEntries.size();
+      BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
+    }
+    DecodedEntries.push_back(
+        {Version, Feature, FuncGUID, /*NumBBRanges=*/{}, std::move(BBRanges)});
+
+    PGOAnalysisMapEntry &PGOAnalysis = DecodedPGOAnalyses.emplace_back();
+    if (FeatureOrErr->hasPGOAnalysis()) {
+      HasAnyPGOAnalysisMapEntry = true;
+
+      if (FeatureOrErr->FuncEntryCount)
+        PGOAnalysis.FuncEntryCount = Data.getULEB128(Cur);
+
+      if (FeatureOrErr->hasPGOAnalysisBBData()) {
+        auto &PGOBBEntries = PGOAnalysis.PGOBBEntries.emplace();
+        for (uint64_t BlockIndex = 0; Cur && BlockIndex < TotalNumBlocks;
+             ++BlockIndex) {
+          auto &PGOBBEntry = PGOBBEntries.emplace_back();
+          if (FeatureOrErr->BBFreq) {
+            PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (FeatureOrErr->PostLinkCfg)
+              PGOBBEntry.PostLinkBBFreq = Data.getULEB128(Cur);
+            if (!Cur)
+              break;
+          }
+
+          if (FeatureOrErr->BrProb) {
+            auto &SuccEntries = PGOBBEntry.Successors.emplace();
+            uint64_t SuccCount = Data.getULEB128(Cur);
+            for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
+              uint32_t ID = Data.getULEB128(Cur);
+              uint32_t BrProb = Data.getULEB128(Cur);
+              std::optional<uint32_t> PostLinkBrFreq;
+              if (FeatureOrErr->PostLinkCfg)
+                PostLinkBrFreq = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb, PostLinkBrFreq});
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!Cur) {
+    consumeError(Cur.takeError());
+    return Error::success();
+  }
+  Entries = std::move(DecodedEntries);
+  if (HasAnyPGOAnalysisMapEntry)
+    PGOAnalyses = std::move(DecodedPGOAnalyses);
+  return Error::success();
 }
 
 } // end namespace BBAddrMapYAML

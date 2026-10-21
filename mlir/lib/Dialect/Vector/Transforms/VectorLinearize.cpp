@@ -51,7 +51,7 @@ namespace {
 
 struct LinearizeConstantLike final
     : OpTraitConversionPattern<OpTrait::ConstantLike> {
-  using OpTraitConversionPattern::OpTraitConversionPattern;
+  using Base::Base;
 
   LinearizeConstantLike(const TypeConverter &typeConverter,
                         MLIRContext *context, PatternBenefit benefit = 1)
@@ -91,7 +91,7 @@ struct LinearizeConstantLike final
 
 struct LinearizeVectorizable final
     : OpTraitConversionPattern<OpTrait::Vectorizable> {
-  using OpTraitConversionPattern::OpTraitConversionPattern;
+  using Base::Base;
 
 public:
   LinearizeVectorizable(const TypeConverter &typeConverter,

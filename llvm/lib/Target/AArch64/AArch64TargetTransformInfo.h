@@ -542,6 +542,8 @@ public:
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
 
+  bool LSRWithInstrQueries() const override { return true; }
+
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
   }
@@ -571,6 +573,9 @@ public:
     return ST->enableAggressiveInterleaving();
   }
   /// @}
+
+  bool hasPossibleIncompatibleOps(const Function *F, bool ConsiderZA,
+                                  bool ConsiderZT, bool ConsiderSM) const;
 };
 
 } // end namespace llvm

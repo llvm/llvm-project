@@ -360,6 +360,14 @@ protected:
   // in case it is not defined in the specified section.
   SmallVector<uint32_t> getSymbolIndexesForFunctionAddress(
       uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec);
+  // On ARM, bit 0 of the address of a Thumb function is set to mark it as
+  // Thumb code. The bit is not part of the address, so clear it from a function
+  // address before looking it up or printing it.
+  uint64_t clearThumbBit(uint64_t Address) const {
+    if (Obj.getHeader().e_machine == ELF::EM_ARM)
+      return Address & ~uint64_t(1);
+    return Address;
+  }
   bool printFunctionStackSize(uint64_t SymValue,
                               std::optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
@@ -368,8 +376,12 @@ protected:
                       unsigned Ndx, const Elf_Shdr *SymTab,
                       const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
+  /// Prints a stack size entry for the functions in \p FuncNames. \p Address
+  /// is the function's address as stored in the entry, and is only set for a
+  /// linked file.
   virtual void printStackSizeEntry(uint64_t Size,
-                                   ArrayRef<std::string> FuncNames) = 0;
+                                   ArrayRef<std::string> FuncNames,
+                                   std::optional<uint64_t> Address) = 0;
 
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
@@ -749,8 +761,8 @@ private:
   void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
                                     const Twine &Label, unsigned EntriesNum);
 
-  void printStackSizeEntry(uint64_t Size,
-                           ArrayRef<std::string> FuncNames) override;
+  void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
+                           std::optional<uint64_t> Address) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -806,8 +818,8 @@ private:
                    bool /*ExtraSymInfo*/) const override;
   void printProgramHeaders() override;
   void printSectionMapping() override {}
-  void printStackSizeEntry(uint64_t Size,
-                           ArrayRef<std::string> FuncNames) override;
+  void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
+                           std::optional<uint64_t> Address) override;
   void printCallGraphRelocation(const CallGraphFunc<ELFT> &Func,
                                 const Elf_Shdr &RelSec, const Elf_Shdr &SymTab);
   // Returns the names of the functions at the address that the relocation for
@@ -7235,6 +7247,7 @@ template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
     uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
+  SymValue = clearThumbBit(SymValue);
   SmallVector<uint32_t> FuncSymIndexes =
       this->getSymbolIndexesForFunctionAddress(SymValue, FunctionSec);
   if (FuncSymIndexes.empty())
@@ -7253,21 +7266,27 @@ bool ELFDumper<ELFT>::printFunctionStackSize(
     return false;
   }
 
+  // The address is only printed for a linked file. In a relocatable file the
+  // entry holds a placeholder for its relocation rather than an address.
+  std::optional<uint64_t> Address;
+  if (Obj.getHeader().e_type != ELF::ET_REL)
+    Address = SymValue;
   if (FuncSymIndexes.empty()) {
-    printStackSizeEntry(StackSize, {"?"});
+    printStackSizeEntry(StackSize, {"?"}, Address);
   } else {
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    printStackSizeEntry(StackSize, FuncSymNames);
+    printStackSizeEntry(StackSize, FuncSymNames, Address);
   }
 
   return true;
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                             ArrayRef<std::string> FuncNames) {
+void GNUELFDumper<ELFT>::printStackSizeEntry(
+    uint64_t Size, ArrayRef<std::string> FuncNames,
+    std::optional<uint64_t> /*Address*/) {
   OS.PadToColumn(2);
   OS << format_decimal(Size, 11);
   OS.PadToColumn(18);
@@ -8435,10 +8454,7 @@ SmallVector<std::string> LLVMELFDumper<ELFT>::getCallGraphTargetNames(
   uint64_t Addr = Resolve(R.Type, R.Offset, Sym.st_value,
                           R.Addend ? 0 : Func.FieldValue, R.Addend.value_or(0));
   // Truncate the result to the width of an address field.
-  Addr = static_cast<typename ELFT::uint>(Addr);
-  // Clear the Thumb bit, as for Address.
-  if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
-    Addr &= ~1;
+  Addr = this->clearThumbBit(static_cast<typename ELFT::uint>(Addr));
 
   SmallVector<std::string> Names;
   for (uint32_t Index :
@@ -8559,12 +8575,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       }
       // Without a relocation, the function is identified by the value stored
       // in the address field.
-      uint64_t FuncEntryPC = Func.FieldValue;
-      // In ARM thumb mode the LSB of the function pointer is set to 1. Since
-      // this detail is unnecessary in call graph reconstruction, we are
-      // clearing this bit to facilitate tooling.
-      if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
-        FuncEntryPC &= ~1;
+      uint64_t FuncEntryPC = this->clearThumbBit(Func.FieldValue);
       // In a relocatable object file that value is not a final address, so
       // there are no symbol names to look up for it.
       if (!IsRelocatable) {
@@ -8650,6 +8661,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
+      if (PAM.FeatEnable.FuncGUID)
+        W.printHex("GUID", AM.FuncGUID);
       {
         ListScope BBRL(W, "BB Ranges");
         for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
@@ -8997,9 +9010,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printStackSizes() {
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                              ArrayRef<std::string> FuncNames) {
+                                              ArrayRef<std::string> FuncNames,
+                                              std::optional<uint64_t> Address) {
   DictScope D(W, "Entry");
   W.printList("Functions", FuncNames);
+  if (Address)
+    W.printHex("Address", *Address);
   W.printHex("Size", Size);
 }
 

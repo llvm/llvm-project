@@ -119,11 +119,11 @@
 name:            func1
 alignment:       4
 callSites:
-  - { bb: 0, offset: 22, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 22, fwdArgRegs:
       - { arg: 0, reg: '$r0' }
       - { arg: 1, reg: '$r1' }
       - { arg: 2, reg: '$r2' } }
-  - { bb: 0, offset: 32, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 32, fwdArgRegs:
       - { arg: 0, reg: '$r0' }
       - { arg: 1, reg: '$r1' }
       - { arg: 2, reg: '$r2' } }

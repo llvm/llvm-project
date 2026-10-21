@@ -951,7 +951,8 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   uint64_t ShadowBase;
   int MappingScale;
   bool OrShadowOffset;
-  getAddressSanitizerParams(TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
+  getAddressSanitizerParams(MF->getFunction().getContext(),
+                            TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
                             &ShadowBase, &MappingScale, &OrShadowOffset);
 
   StringRef Name = AccessInfo.IsWrite ? "store" : "load";

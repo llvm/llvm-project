@@ -243,7 +243,7 @@ class JMP_IND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
   let BPFClass = BPF_JMP;
 }
 
-class JMP_JCOND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
+class JMP_JCOND<BPFJumpOp Opc, bits<4> Kind, string OpcodeStr, list<dag> Pattern>
     : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
                    (outs),
                    (ins brtarget:$BrDst),
@@ -251,6 +251,7 @@ class JMP_JCOND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
                    Pattern> {
   bits<16> BrDst;
 
+  let Inst{55-52} = Kind;
   let Inst{47-32} = BrDst;
   let BPFClass = BPF_JMP;
 }
@@ -307,7 +308,9 @@ defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU, BPF_CC_LEU_32>;
 defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
-def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
+def JCOND : JMP_JCOND<BPF_JCOND, 0, "may_goto", []>;
+// Follows a call: taken when the callee left with unwind_exit.
+def UNWIND_GOTO : JMP_JCOND<BPF_JCOND, 1, "unwind_goto", []>;
 
 let Predicates = [BPFHasGotox] in {
   let isIndirectBranch = 1, isBarrier = 1 in {
@@ -829,19 +832,22 @@ class NOP_I<string OpcodeStr>
 let hasSideEffects = 0, isCodeGenOnly = 1 in
   def NOP : NOP_I<"nop">;
 
-class RET<string OpcodeStr>
+class RET<bits<4> Kind, string OpcodeStr, list<dag> Pattern>
     : TYPE_ALU_JMP<BPF_EXIT.Value, BPF_K.Value,
                    (outs),
                    (ins),
                    !strconcat(OpcodeStr, ""),
-                   [(BPFretglue)]> {
+                   Pattern> {
+  let Inst{55-52} = Kind;
   let Inst{31-0} = 0;
   let BPFClass = BPF_JMP;
 }
 
 let isReturn = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1,
     isNotDuplicable = 1 in {
-  def RET : RET<"exit">;
+  def RET : RET<0, "exit", [(BPFretglue)]>;
+  // Like exit, except that unwind_goto after the call is taken.
+  def UNWIND_EXIT : RET<1, "unwind_exit", []>;
 }
 
 // ADJCALLSTACKDOWN/UP pseudo insns

@@ -59,6 +59,27 @@ struct LoopInvariantCodeMotion
 
 } // namespace
 
+/// Returns 'loc' with its line and column cleared but the file and surrounding
+/// structure kept. Line zero marks the location as compiler-generated; the
+/// file is kept for consumers that require a file:line.
+static Location dropLineInfo(Location loc) {
+  if (auto fileLoc = dyn_cast<FileLineColRange>(loc)) {
+    return FileLineColLoc::get(fileLoc.getFilename(), /*line=*/0, /*column=*/0);
+  }
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    llvm::SmallVector<Location> locs;
+    for (Location nested : fusedLoc.getLocations()) {
+      locs.push_back(dropLineInfo(nested));
+    }
+    return FusedLoc::get(locs, fusedLoc.getMetadata(), loc.getContext());
+  }
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(loc)) {
+    return CallSiteLoc::get(dropLineInfo(callSiteLoc.getCallee()),
+                            callSiteLoc.getCaller());
+  }
+  return loc;
+}
+
 /// 'location' is a memory reference used by a memory access.
 /// The type of 'location' defines the data type of the access
 /// (e.g. it is considered to be invalid to access 'i64'
@@ -454,6 +475,9 @@ void LoopInvariantCodeMotion::runOnOperation() {
     };
     auto moveOutOfRegion = [&](Operation *op, Region *) {
       loopLike.moveOutOfLoop(op);
+      // A hoisted operation no longer belongs to the statement it was written
+      // in. Clear its debug location to avoid reporting that line early.
+      op->setLoc(dropLineInfo(op->getLoc()));
     };
 
     moveLoopInvariantCode(

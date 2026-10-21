@@ -215,16 +215,16 @@ def olGetMemInfoSize : Function {
 def olMemcpy : Function {
     let desc = "Enqueue a memcpy operation.";
     let details = [
-        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform.",
+        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
         "If both pointers are on the host and a queue is specified, the memcpy is ordered with other work in the queue.",
         "If a queue is not specified, the memcpy happens synchronously"
     ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
         Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
-        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to, or NULL if DstPtr is host memory", PARAM_IN_OPTIONAL>,
         Param<"const void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
-        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to, or NULL if SrcPtr is host memory", PARAM_IN_OPTIONAL>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
     ];
     let returns = [];

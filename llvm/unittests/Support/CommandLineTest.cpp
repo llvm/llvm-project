@@ -2361,7 +2361,8 @@ struct TestLibrary final : cl::LibraryOptions {
     return Error::success();
   }
   void *global() override { return this; }
-  void *copyGlobal(BumpPtrAllocator &) const override { return nullptr; }
+  const void *getDefault() const override { return nullptr; }
+  void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
   void reset() override { Args.clear(); }
 };
 

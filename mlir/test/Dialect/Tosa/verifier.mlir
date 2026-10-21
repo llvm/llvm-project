@@ -688,19 +688,11 @@ func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>) {
 }
 
 // -----
-func.func @test_pad_output_mismatch(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi8>) -> tensor<13x21x3xi8> {
-  %0 = tosa.const_shape values(dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>) : () -> !tosa.shape<6>
-  // expected-error@+1 {{mismatch in output shape at dimension 1: expected 21 + 0 + 1 = 22, but got 21}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xi8>, !tosa.shape<6>, tensor<1xi8>) -> tensor<13x21x3xi8>
-  return %1 : tensor<13x21x3xi8>
-}
-
-// -----
-func.func @test_pad_invalid_padding_value(%arg0: tensor<10xi8>, %arg1: tensor<1xi8>) -> tensor<10xi8> {
-  %0 = tosa.const_shape values(dense<[-2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{invalid padding values at dimension 0: values must be non-negative or -1 for dynamic padding, got [-2, 2]}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<10xi8>, !tosa.shape<2>, tensor<1xi8>) -> tensor<10xi8>
-  return %1 : tensor<10xi8>
+func.func @test_pad_computed_padding_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<1xf32>) {
+  %0 = tosa.dim %arg0 axis(0) : (tensor<13x21x3xf32>) -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.pad' op padding tensor must have 3 * 2 = 6 elements, but got 1}}
+  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xf32>, !tosa.shape<1>, tensor<1xf32>) -> tensor<13x21x3xf32>
+  return
 }
 
 // -----

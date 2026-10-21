@@ -53,12 +53,12 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_and_b32_e32 v2, 15, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, -16, v0
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[0:1]
-; CHECK-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s17
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, s16, v4
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[6:7], 0, v2
 ; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, v8, v5, vcc
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_6: ; %Flow14
@@ -148,18 +148,15 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
-; CHECK-NEXT:    s_and_b32 s4, 32, 15
-; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_and_b32 s6, 32, 15
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_6
 ; CHECK-NEXT:  ; %bb.3: ; %loop-memcpy-residual.preheader
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:  .LBB1_4: ; %loop-memcpy-residual
-; CHECK-NEXT:    s_add_i32 s4, s6, 1
-; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
-; CHECK-NEXT:    s_mov_b64 s[6:7], 1
-; CHECK-NEXT:    s_cbranch_vccnz .LBB1_4
+; CHECK-NEXT:    s_add_i32 s4, s4, 1
+; CHECK-NEXT:    s_cmp_lt_u32 s4, s6
+; CHECK-NEXT:    s_mov_b64 s[4:5], 1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_4
 ; CHECK-NEXT:  ; %bb.5:
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0

@@ -79,6 +79,15 @@ define void @hot() !prof !28 {
   ret void
 }
 
+; The hot attribute takes precedence over the profile, so this must not be
+; treated as cold even though its entry count is.
+define void @hot_attr_cold_count() hot !prof !27 {
+  %l = load i32, ptr @s, align 4
+  %add = add nsw i32 %l, 4
+  store i32 %add, ptr @s, align 4
+  ret void
+}
+
 attributes #0 = { optsize }
 attributes #1 = { minsize }
 attributes #2 = { noinline optnone }

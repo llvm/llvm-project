@@ -45,6 +45,10 @@ cl::opt<bool> skipExternalRttiDefinition(
                    "other compilation units"),
     cl::Hidden);
 
+/// Force setting the no-alias attribute on fuction arguments when possible.
+llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
+                                 llvm::cl::init(true));
+
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
 codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};

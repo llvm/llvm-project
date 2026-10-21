@@ -60,6 +60,23 @@ def ol_device_info_t : Enum {
        TaggedEtor<"DRIVER_ID", "uint32_t",
                   "Backend driver identifier; within a platform, devices "
                   "sharing the same value can be grouped in a single context">,
+       TaggedEtor<"COMPUTE_UNIT_KIND", "char[]",
+                  "Kind of the compute units of the device, e.g. sm_80 or "
+                  "gfx908">,
+       TaggedEtor<"TIMESTAMP_FREQUENCY", "uint64_t",
+                  "Frequency, in Hz, of the counter device code reads to "
+                  "measure time">,
+       TaggedEtor<"HARDWARE_PARALLELISM", "uint64_t",
+                  "Total number of lane groups that can be resident on the "
+                  "device simultaneously">,
+       // The LAUNCH_DEFAULT_ properties are the geometry the backend prefers
+       // for a kernel launch. Unlike the limits above, they are a preference
+       // and not a constraint.
+       TaggedEtor<"LAUNCH_DEFAULT_WORK_GROUP_SIZE", "uint32_t",
+                  "Work group size, in work items, to use when none is "
+                  "requested">,
+       TaggedEtor<"LAUNCH_DEFAULT_NUM_WORK_GROUPS", "uint32_t",
+                  "Number of work groups to use when none is requested">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);

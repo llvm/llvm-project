@@ -199,7 +199,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    if (XLen == 32 && ST.hasStdExtD()) {
+    if (XLen == 32 && (ST.hasStdExtD() || ST.hasStdExtZilsd())) {
       MergeUnmergeActions.legalIf(
           all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
     }
@@ -371,7 +371,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
          {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s32, getScalarMemAlign(32)}});
-  } else if (ST.hasStdExtD()) {
+  } else if (ST.hasStdExtD() || ST.hasStdExtZilsd()) {
+    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd); LLT cannot tell the
+    // two apart, so one rule covers both.
+    // FIXME: We require natural alignment, so under -mzilsd-word-align an
+    // align-4 i64 access is split into two s32 ones. riscv-prera-zilsd-opt
+    // merges them back into LD_RV32/SD_RV32, but it is skipped at -O0.
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
     StoreActions.legalForTypesWithMemDesc(
@@ -596,12 +601,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}})
       .lower();
 
-  // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
-      .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
-      .libcallFor({{s32, s64}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s16, s32}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s16, s64}})
+      .libcallFor({{s16, s32}, {s16, s64}, {s32, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
@@ -730,7 +734,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH, G_FMODF})
+                               G_FTANH, G_FMODF, G_FSINCOS})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})

@@ -537,10 +537,21 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   llvm_unreachable("unknown nested name specifier kind");
 }
 
+/// RTTI is not available in CUDA/HIP device code, so typeid can't be used
+/// there. A dependent operand is checked once the template is instantiated.
+static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
+                                     bool IsDependent) {
+  if (S.getLangOpts().CUDA && !IsDependent)
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
+}
+
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc,
+                           Operand->getType()->isDependentType());
+
   // C++ [expr.typeid]p4:
   //   The top-level cv-qualifiers of the lvalue expression or the type-id
   //   that is the operand of typeid are always ignored.
@@ -568,6 +579,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  diagnoseCUDADeviceTypeid(*this, TypeidLoc, E && E->isTypeDependent());
+
   bool WasEvaluated = false;
   if (E && !E->isTypeDependent()) {
     if (E->hasPlaceholderType()) {

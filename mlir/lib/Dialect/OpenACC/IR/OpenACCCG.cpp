@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -33,7 +33,6 @@ using namespace mlir;
 using namespace acc;
 
 namespace {
-
 /// Generic helper for single-region OpenACC ops that execute their body once
 /// and then continue after the operation with their results (if any).
 static void
@@ -371,7 +370,6 @@ static void printGPUParallelDimList(AsmPrinter &printer,
   });
   printer << "]";
 }
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -976,8 +974,7 @@ LogicalResult GPUSharedMemoryOp::verify() {
   auto resultTy = cast<MemRefType>(getResult().getType());
   auto addrSpace =
       dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
-  if (!addrSpace ||
-      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+  if (!addrSpace || addrSpace.getValue() != gpu::AddressSpace::Workgroup)
     return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();

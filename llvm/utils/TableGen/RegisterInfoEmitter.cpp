@@ -1213,7 +1213,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       << Totals.SuperClassIdx << ">";
   OS << "using " << TargetName
      << "RegisterClassStorage = " << MCRegisterClassStorageType << ";\n";
-  OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
+  OS << "inline constexpr " << MCRegisterClassStorageType << " " << TargetName
      << "MCRegisterClassStorage = {\n"
      << "  {\n";
 

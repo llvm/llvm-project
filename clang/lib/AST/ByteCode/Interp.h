@@ -2854,11 +2854,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   return true;
 }
 
-inline bool InitScope(InterpState &S, uint32_t I) {
-  S.Current->initScope(I);
-  return true;
-}
-
 inline bool EnableLocal(InterpState &S, uint32_t I) {
   assert(!S.Current->isLocalEnabled(I));
   S.Current->enableLocal(I);

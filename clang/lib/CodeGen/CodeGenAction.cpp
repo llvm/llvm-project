@@ -172,6 +172,14 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
+  // Builtin bitcode is internalized into the module that links it, so each
+  // PTU of an incremental session needs its own copy. Plain bitcode files are
+  // still linked once.
+  if (LangOpts.IncrementalExtensions && LinkModules.empty() &&
+      loadLinkModules(CI, M->getContext(), LinkModules,
+                      /*OnlyInternalized=*/true))
+    return true;
+
   return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, TargetOpts,
                        DiagConsumer);
 }
@@ -202,6 +210,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(
@@ -371,7 +380,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -449,7 +459,8 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.
@@ -592,6 +603,7 @@ void CodeGenAction::ExecuteAction() {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

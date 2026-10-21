@@ -921,6 +921,8 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   EnableEmEH = EH == ExceptionHandling::Emscripten;
   assert((!EnableEmEH || !EnableWasmSjLj) &&
          "Wasm SjLj should be only used with Wasm EH");
+  assert((EH != ExceptionHandling::Wasm || !EnableEmSjLj) &&
+         "Emscripten SjLj cannot be used with Wasm EH");
 
   bool Changed = false;
 
@@ -1469,16 +1471,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::
   for (unsigned I = 0; I < BBs.size(); I++) {
     BasicBlock *BB = BBs[I];
     for (Instruction &I : *BB) {
-      if (isa<InvokeInst>(&I)) {
-        std::string S;
-        raw_string_ostream SS(S);
-        SS << "In function " << F.getName()
-           << ": When using Wasm EH with Emscripten SjLj, there is a "
-              "restriction that `setjmp` function call and exception cannot be "
-              "used within the same function:\n";
-        SS << I;
-        report_fatal_error(StringRef(SS.str()));
-      }
+      assert(!isa<InvokeInst>(&I));
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;

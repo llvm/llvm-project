@@ -414,6 +414,10 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
 
+# Propagate LLDBDAP_RUN_AS_SERVER to run the lldb-dap tests in server mode.
+if "LLDBDAP_RUN_AS_SERVER" in os.environ:
+    config.environment["LLDBDAP_RUN_AS_SERVER"] = os.environ["LLDBDAP_RUN_AS_SERVER"]
+
 # Transfer some environment variables into the tests on Windows build host.
 if platform.system() == "Windows":
     for v in ["SystemDrive"]:

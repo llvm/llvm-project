@@ -101,7 +101,10 @@ static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   if constexpr (checkLiveness) {
     __kmpc_impl_lanemask_t Liveness = mapping::activemask();
     // Check for partial warp with non-contiguous lanes.
-    if (Liveness == lanes::All) {
+    // Consider that Liveness::ALL is a 64-bit value, so compare the actual
+    // number of set bits to handle 32bit waves correctly.
+    const uint64_t Full = ~uint64_t(0) >> (64 - mapping::getWarpSize());
+    if (Liveness == Full) {
       gpu_regular_warp_reduce(reduce_data, shflFct);
     } else if (!(Liveness & (Liveness + 1))) {
       // Partial warp but contiguous lanes.

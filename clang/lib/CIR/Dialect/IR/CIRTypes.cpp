@@ -64,13 +64,8 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
 static bool isPureCIRType(mlir::Type ty) {
   if (!ty)
     return true;
-  return !ty.walk([](mlir::Type t) {
-              if (!t)
-                return mlir::WalkResult::advance();
-              return mlir::isa<cir::CIRDialect>(t.getDialect())
-                         ? mlir::WalkResult::advance()
-                         : mlir::WalkResult::interrupt();
-            }).wasInterrupted();
+  return ty.getContext()->getOrLoadDialect<cir::CIRDialect>()->isPureCIRType(
+      ty);
 }
 
 //===----------------------------------------------------------------------===//
@@ -326,9 +321,13 @@ Type StructType::parse(mlir::AsmParser &parser) {
                                   is_class, kindsRef);
     if (!type)
       return {};
-    if (auto structTy = mlir::dyn_cast<StructType>(type))
-      if (structTy.isIncomplete())
-        structTy.complete(membersRef, packed, kindsRef);
+    if (auto structTy = mlir::dyn_cast<StructType>(type)) {
+      if (failed(structTy.mutate(membersRef, packed, kindsRef))) {
+        parser.emitError(loc, "record '")
+            << name.getValue() << "' redefined with a different body";
+        return {};
+      }
+    }
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -491,9 +490,13 @@ Type UnionType::parse(mlir::AsmParser &parser) {
                                  padding, kindsRef);
     if (!type)
       return {};
-    if (auto unionTy = mlir::dyn_cast<UnionType>(type))
-      if (unionTy.isIncomplete())
-        unionTy.complete(membersRef, packed, padding, kindsRef);
+    if (auto unionTy = mlir::dyn_cast<UnionType>(type)) {
+      if (failed(unionTy.mutate(membersRef, packed, padding, kindsRef))) {
+        parser.emitError(loc, "record '")
+            << name.getValue() << "' redefined with a different body";
+        return {};
+      }
+    }
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");

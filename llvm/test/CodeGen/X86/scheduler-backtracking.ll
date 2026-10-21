@@ -896,20 +896,19 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-LABEL: PR25498:
 ; LIN:       # %bb.0:
 ; LIN-NEXT:    movq %rdi, %rax
-; LIN-NEXT:    movq %rsi, %r11
-; LIN-NEXT:    negq %r11
 ; LIN-NEXT:    xorl %edi, %edi
 ; LIN-NEXT:    movl $0, %r10d
 ; LIN-NEXT:    sbbq %rdx, %r10
 ; LIN-NEXT:    movl $0, %r9d
 ; LIN-NEXT:    sbbq %rcx, %r9
 ; LIN-NEXT:    sbbq %r8, %rdi
-; LIN-NEXT:    orq %rcx, %rsi
+; LIN-NEXT:    orq %rsi, %rcx
 ; LIN-NEXT:    orq %r8, %rdx
-; LIN-NEXT:    orq %rsi, %rdx
+; LIN-NEXT:    orq %rcx, %rdx
 ; LIN-NEXT:    je .LBB4_1
 ; LIN-NEXT:  # %bb.2: # %cond.false
-; LIN-NEXT:    bsrq %r11, %rcx
+; LIN-NEXT:    negq %rsi
+; LIN-NEXT:    bsrq %rsi, %rcx
 ; LIN-NEXT:    xorq $63, %rcx
 ; LIN-NEXT:    orq $64, %rcx
 ; LIN-NEXT:    bsrq %r10, %rdx

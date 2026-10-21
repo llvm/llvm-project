@@ -18,3 +18,4 @@ extern const size_t LINUX_IFMAP_SIZE = sizeof(struct ifmap);
 extern const size_t LINUX_IFMAP_ALIGN = alignof(struct ifmap);
 extern const size_t LINUX_IFREQ_SIZE = sizeof(struct ifreq);
 extern const size_t LINUX_IFREQ_ALIGN = alignof(struct ifreq);
+extern const int LINUX_IFNAMSIZ = IFNAMSIZ;

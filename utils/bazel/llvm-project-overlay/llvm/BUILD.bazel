@@ -1267,6 +1267,15 @@ filegroup(
     ],
 )
 
+gentbl_cc_library(
+    name = "IROptionsTableGen",
+    strip_include_prefix = "lib/IR",
+    tbl_outs = {"lib/IR/IROptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/IR/IROptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Core",
     srcs = glob([
@@ -1298,6 +1307,8 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":Demangle",
+        ":IROptionsTableGen",
+        ":Option",
         ":Remarks",
         ":Support",
         ":TargetParser",

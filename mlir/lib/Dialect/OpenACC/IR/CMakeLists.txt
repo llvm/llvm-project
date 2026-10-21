@@ -16,9 +16,7 @@ add_mlir_dialect_library(MLIROpenACCDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRDialectUtils
-  MLIRGPUDialect
-  MLIRLLVMDialect
-  MLIRMemRefDialect
+  MLIRGPUBase
   MLIRTransformUtils
   MLIROpenACCMPCommon
   )

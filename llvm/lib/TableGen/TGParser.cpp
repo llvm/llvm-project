@@ -3600,7 +3600,7 @@ bool TGParser::ParseTemplateArgValueList(
 const Init *TGParser::ParseDeclaration(Record *CurRec,
                                        bool ParsingTemplateArgs) {
   // Read the field prefix if present.
-  bool HasField = consume(tgtok::Field);
+  bool HasField = !ParsingTemplateArgs && consume(tgtok::Field);
 
   const RecTy *Type = ParseType();
   if (!Type)

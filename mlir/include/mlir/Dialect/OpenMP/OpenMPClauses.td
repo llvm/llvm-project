@@ -821,16 +821,21 @@ class OpenMP_LinearClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins Variadic<AnyType>:$linear_vars,
       Variadic<AnyInteger>:$linear_step_vars,
       OptionalAttr<ArrayAttr>:$linear_var_types,
-      OptionalAttr<ArrayAttr>:$linear_modifiers);
+      OptionalAttr<ArrayAttr>:$linear_modifiers,
+      OptionalAttr<SymbolRefArrayAttr>:$linear_syms);
 
   let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
-                           $linear_modifiers) `)`
+                           $linear_modifiers, $linear_syms) `)`
       ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
@@ -843,6 +848,10 @@ class OpenMP_LinearClauseSkip<
     The `linear_modifiers` attribute optionally specifies a per-variable
     linear-modifier: `val`, `ref`, or `uval`. When omitted, the default
     modifier is determined by the language semantics.
+
+    On operations with a region, `linear_syms` names the `omp.private`
+    declaration of `linear` type that privatizes each linear variable, and each
+    linear variable defines an entry block argument for its private copy.
   }];
 }
 

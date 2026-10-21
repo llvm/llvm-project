@@ -35,8 +35,7 @@ enum class ScalarizationState {
   // The function is currently on the recursive DFS stack. Re-entering this
   // state means a cycle was found, which this pass conservatively blocks.
   visiting,
-  // The function cannot be scalarized safely because either it is not locally
-  // eligible or one of its transitive users blocks the rewrite.
+  // A symbol user or a candidate caller blocks the rewrite.
   blocked,
   // The function is locally eligible and all transitive users considered by
   // this pass can be updated consistently.
@@ -88,17 +87,16 @@ struct ScalarizationAnalysis {
   explicit ScalarizationAnalysis(SymbolUserMap &userMap) : userMap(userMap) {}
 
   SymbolUserMap &userMap;
-  DenseSet<func::FuncOp> moduleFunctions;
   DenseMap<func::FuncOp, ScalarizableFunctionInfo> candidateInfos;
   DenseMap<func::FuncOp, SmallVector<func::CallOp>> callUsers;
   DenseMap<func::FuncOp, ScalarizationState> states;
   // DFS completion order for rewritable functions. The rewrite phase walks
-  // this list in reverse so callees are rewritten before their call sites.
+  // this list in reverse so callees are rewritten before candidate callers.
   SmallVector<func::FuncOp> rewriteOrder;
 };
 
-// Runs the memoized DFS that classifies one candidate function by walking its
-// transitive private call users.
+// Classifies a locally eligible candidate using memoized DFS through candidate
+// callers. Local eligibility must be cached for the entire module first.
 static ScalarizationState
 computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
   auto [it, inserted] =
@@ -113,7 +111,9 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
   // Starting from one locally-eligible private function, walk its symbol users
   // upward through private callers. Memoization avoids re-traversing the same
   // subgraph from the outer linear scan, and early blocking truncates the DFS
-  // as soon as a public/unsupported user is found.
+  // when an unsupported symbol user or a blocked candidate caller is found.
+  // Non-candidate callers, including public functions, stop recursion without
+  // blocking callsite adaptation.
   auto setBlocked = [&] {
     analysis.states[func] = ScalarizationState::blocked;
     return ScalarizationState::blocked;
@@ -124,8 +124,6 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
     return ScalarizationState::rewritable;
   };
 
-  if (!analysis.candidateInfos.contains(func))
-    return setBlocked();
   analysis.states[func] = ScalarizationState::visiting;
 
   SmallVector<func::CallOp> directCallUsers;
@@ -138,27 +136,10 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
     directCallUsers.push_back(directCall);
 
     func::FuncOp caller = directCall->getParentOfType<func::FuncOp>();
-    // A direct call user outside any func.func can still be updated in place,
-    // but it terminates the DFS because there is no caller signature to
-    // analyze or rewrite transitively.
-    if (!caller)
-      continue;
-    // Since `getScalarizableFunctionInfoIfEligible` has already categorized
-    // every direct func.func in the current module, any direct caller must
-    // already appear in the analysis tables.
-    assert(analysis.moduleFunctions.contains(caller) &&
-           "Caller of private function is not a direct function in the module");
-
-    // Public and external callers keep the current function blocked because the
-    // pass cannot rewrite every visible call boundary.
-    if (caller.isPublic())
-      return setBlocked();
-
-    assert(!caller.isExternal() && "Caller of private function is external.");
-
-    // A private non-candidate caller can absorb the scalarized call by
-    // reboxing the scalar result back into a single-element tensor.
-    if (!analysis.candidateInfos.contains(caller))
+    // Cache every direct call, but recurse only into candidate callers. Other
+    // callers, including public functions, keep their signatures and existing
+    // tensor uses through reboxing. Calls outside any func.func stop here too.
+    if (!caller || !analysis.candidateInfos.contains(caller))
       continue;
 
     if (computeScalarizationState(caller, analysis) !=
@@ -173,10 +154,8 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
 // Builds the module-level analysis state used by the rewrite phase.
 static void computeScalarizationAnalysis(ModuleOp module,
                                          ScalarizationAnalysis &analysis) {
-  // First collect all direct functions and the subset that is locally
-  // eligible.
+  // Cache local eligibility for all direct functions before starting DFS.
   for (func::FuncOp func : module.getOps<func::FuncOp>()) {
-    analysis.moduleFunctions.insert(func);
     FailureOr<ScalarizableFunctionInfo> sfi =
         getScalarizableFunctionInfoIfEligible(func);
     if (succeeded(sfi))

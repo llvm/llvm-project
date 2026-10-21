@@ -16,8 +16,8 @@ using olGetDeviceInfoSizeEqualTest = olGetHostDeviceInfoPropertyTest;
 using olGetDeviceInfoSizeNonZeroTest = olGetHostDeviceInfoPropertyTest;
 
 DeviceInfoProperties answerSizeEqualToTypeSizeProperties = mergeProperties(
-    {Uint32Properties, Uint64Properties, CapabilitesFlagsProperties,
-     PlatformProperties, DeviceTypeProperties});
+    {Uint32Properties, Uint64Properties, Uint64MayBeZeroProperties,
+     CapabilitesFlagsProperties, PlatformProperties, DeviceTypeProperties});
 
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     olGetDeviceInfoSizeEqualTest, answerSizeEqualToTypeSizeProperties,

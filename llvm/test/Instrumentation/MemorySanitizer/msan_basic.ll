@@ -158,13 +158,13 @@ define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB10]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR12:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    tail call void (...) @foo() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    tail call void (...) @foo() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    ret void
@@ -191,13 +191,13 @@ define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; ORIGIN-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB13:.*]], label %[[BB14:.*]], !prof [[PROF1]]
 ; ORIGIN:       [[BB13]]:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #[[ATTR12:[0-9]+]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #[[ATTR10:[0-9]+]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       [[BB14]]:
 ; ORIGIN-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
 ; ORIGIN:       [[IF_THEN]]:
 ; ORIGIN-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
-; ORIGIN-NEXT:    tail call void (...) @foo() #[[ATTR5:[0-9]+]]
+; ORIGIN-NEXT:    tail call void (...) @foo() #[[ATTR3:[0-9]+]]
 ; ORIGIN-NEXT:    br label %[[IF_END]]
 ; ORIGIN:       [[IF_END]]:
 ; ORIGIN-NEXT:    ret void
@@ -230,7 +230,7 @@ define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CALLS-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
 ; CALLS:       [[IF_THEN]]:
 ; CALLS-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CALLS-NEXT:    tail call void (...) @foo() #[[ATTR5:[0-9]+]]
+; CALLS-NEXT:    tail call void (...) @foo() #[[ATTR3:[0-9]+]]
 ; CALLS-NEXT:    br label %[[IF_END]]
 ; CALLS:       [[IF_END]]:
 ; CALLS-NEXT:    ret void
@@ -287,7 +287,7 @@ define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR5]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR3]]
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080
@@ -301,7 +301,7 @@ define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
-; ORIGIN-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR5]]
+; ORIGIN-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR3]]
 ; ORIGIN-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[A]] to i64
@@ -326,7 +326,7 @@ define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
-; CALLS-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR5]]
+; CALLS-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR3]]
 ; CALLS-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4
 ; CALLS-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]])
@@ -366,7 +366,7 @@ define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uw
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR12]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
@@ -411,7 +411,7 @@ define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uw
 ; ORIGIN-NEXT:    [[TOBOOL:%.*]] = icmp eq ptr [[B]], null
 ; ORIGIN-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
 ; ORIGIN:       [[BB9]]:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR12]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR10]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       [[BB10]]:
 ; ORIGIN-NEXT:    br i1 [[TOBOOL]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
@@ -989,19 +989,19 @@ declare void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr nocapture write
 
 define void @atomic_memcpy(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; CHECK-LABEL: define void @atomic_memcpy(
-; CHECK-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @atomic_memcpy(
-; ORIGIN-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; ORIGIN-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @atomic_memcpy(
-; CALLS-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; CALLS-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; CALLS-NEXT:    ret void
@@ -1012,19 +1012,19 @@ define void @atomic_memcpy(ptr nocapture %x, ptr nocapture %y) nounwind {
 
 define void @atomic_memmove(ptr nocapture %x, ptr nocapture %y) nounwind {
 ; CHECK-LABEL: define void @atomic_memmove(
-; CHECK-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @atomic_memmove(
-; ORIGIN-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; ORIGIN-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @atomic_memmove(
-; CALLS-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR5]] {
+; CALLS-SAME: ptr captures(none) [[X:%.*]], ptr captures(none) [[Y:%.*]]) #[[ATTR3]] {
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 [[X]], ptr align 2 [[Y]], i64 16, i32 1)
 ; CALLS-NEXT:    ret void
@@ -1035,19 +1035,19 @@ define void @atomic_memmove(ptr nocapture %x, ptr nocapture %y) nounwind {
 
 define void @atomic_memset(ptr nocapture %x) nounwind {
 ; CHECK-LABEL: define void @atomic_memset(
-; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 [[X]], i8 88, i64 16, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @atomic_memset(
-; ORIGIN-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR5]] {
+; ORIGIN-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR3]] {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 [[X]], i8 88, i64 16, i32 1)
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @atomic_memset(
-; CALLS-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR5]] {
+; CALLS-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR3]] {
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 [[X]], i8 88, i64 16, i32 1)
 ; CALLS-NEXT:    ret void
@@ -1277,7 +1277,7 @@ entry:
 
 define { i64, i64 } @SelectStruct(i1 zeroext %x, { i64, i64 } %a, { i64, i64 } %b) readnone sanitize_memory {
 ; CHECK-LABEL: define { i64, i64 } @SelectStruct(
-; CHECK-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load { i64, i64 }, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
@@ -1290,7 +1290,7 @@ define { i64, i64 } @SelectStruct(i1 zeroext %x, { i64, i64 } %a, { i64, i64 } %
 ; CHECK-NEXT:    ret { i64, i64 } [[C]]
 ;
 ; ORIGIN-LABEL: define { i64, i64 } @SelectStruct(
-; ORIGIN-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR6:[0-9]+]] {
+; ORIGIN-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -1309,7 +1309,7 @@ define { i64, i64 } @SelectStruct(i1 zeroext %x, { i64, i64 } %a, { i64, i64 } %
 ; ORIGIN-NEXT:    ret { i64, i64 } [[C]]
 ;
 ; CALLS-LABEL: define { i64, i64 } @SelectStruct(
-; CALLS-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR6:[0-9]+]] {
+; CALLS-SAME: i1 zeroext [[X:%.*]], { i64, i64 } [[A:%.*]], { i64, i64 } [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -1334,7 +1334,7 @@ entry:
 
 define { ptr, double } @SelectStruct2(i1 zeroext %x, { ptr, double } %a, { ptr, double } %b) readnone sanitize_memory {
 ; CHECK-LABEL: define { ptr, double } @SelectStruct2(
-; CHECK-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load { i64, i64 }, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
@@ -1347,7 +1347,7 @@ define { ptr, double } @SelectStruct2(i1 zeroext %x, { ptr, double } %a, { ptr, 
 ; CHECK-NEXT:    ret { ptr, double } [[C]]
 ;
 ; ORIGIN-LABEL: define { ptr, double } @SelectStruct2(
-; ORIGIN-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -1366,7 +1366,7 @@ define { ptr, double } @SelectStruct2(i1 zeroext %x, { ptr, double } %a, { ptr, 
 ; ORIGIN-NEXT:    ret { ptr, double } [[C]]
 ;
 ; CALLS-LABEL: define { ptr, double } @SelectStruct2(
-; CALLS-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i1 zeroext [[X:%.*]], { ptr, double } [[A:%.*]], { ptr, double } [[B:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i1, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -1481,7 +1481,7 @@ define i32 @Div(i32 %a, i32 %b) nounwind uwtable readnone sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR12]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A]], [[B]]
@@ -1499,7 +1499,7 @@ define i32 @Div(i32 %a, i32 %b) nounwind uwtable readnone sanitize_memory {
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP0]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; ORIGIN:       [[BB4]]:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR12]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR10]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       [[BB5]]:
 ; ORIGIN-NEXT:    [[DIV:%.*]] = udiv i32 [[A]], [[B]]
@@ -2415,7 +2415,7 @@ define i32 @ShadowLoadAlignmentSmall() nounwind uwtable sanitize_memory {
 
 define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; CHECK-LABEL: define i32 @ExtractElement(
-; CHECK-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2423,7 +2423,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR12]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[X:%.*]] = extractelement <4 x i32> [[VEC]], i32 [[IDX]]
@@ -2431,7 +2431,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 ; ORIGIN-LABEL: define i32 @ExtractElement(
-; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
@@ -2441,7 +2441,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; ORIGIN:       [[BB5]]:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR12]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR10]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       [[BB6]]:
 ; ORIGIN-NEXT:    [[X:%.*]] = extractelement <4 x i32> [[VEC]], i32 [[IDX]]
@@ -2450,7 +2450,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 ; ORIGIN-NEXT:    ret i32 [[X]]
 ;
 ; CALLS-LABEL: define i32 @ExtractElement(
-; CALLS-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; CALLS-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
@@ -2469,7 +2469,7 @@ define i32 @ExtractElement(<4 x i32> %vec, i32 %idx) sanitize_memory {
 
 define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memory {
 ; CHECK-LABEL: define <4 x i32> @InsertElement(
-; CHECK-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
@@ -2478,7 +2478,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR12]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <4 x i32> [[VEC]], i32 [[X]], i32 [[IDX]]
@@ -2486,7 +2486,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 ; CHECK-NEXT:    ret <4 x i32> [[VEC1]]
 ;
 ; ORIGIN-LABEL: define <4 x i32> @InsertElement(
-; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
@@ -2502,7 +2502,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1]]
 ; ORIGIN:       [[BB11]]:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR12]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR10]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       [[BB12]]:
 ; ORIGIN-NEXT:    [[VEC1:%.*]] = insertelement <4 x i32> [[VEC]], i32 [[X]], i32 [[IDX]]
@@ -2511,7 +2511,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 ; ORIGIN-NEXT:    ret <4 x i32> [[VEC1]]
 ;
 ; CALLS-LABEL: define <4 x i32> @InsertElement(
-; CALLS-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: <4 x i32> [[VEC:%.*]], i32 [[IDX:%.*]], i32 [[X:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; CALLS-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
@@ -2536,7 +2536,7 @@ define <4 x i32> @InsertElement(<4 x i32> %vec, i32 %idx, i32 %x) sanitize_memor
 
 define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory {
 ; CHECK-LABEL: define <4 x i32> @ShuffleVector(
-; CHECK-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2546,7 +2546,7 @@ define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory
 ; CHECK-NEXT:    ret <4 x i32> [[VEC2]]
 ;
 ; ORIGIN-LABEL: define <4 x i32> @ShuffleVector(
-; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
@@ -2562,7 +2562,7 @@ define <4 x i32> @ShuffleVector(<4 x i32> %vec, <4 x i32> %vec1) sanitize_memory
 ; ORIGIN-NEXT:    ret <4 x i32> [[VEC2]]
 ;
 ; CALLS-LABEL: define <4 x i32> @ShuffleVector(
-; CALLS-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: <4 x i32> [[VEC:%.*]], <4 x i32> [[VEC1:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
@@ -2689,7 +2689,7 @@ define void @VACopy(ptr %p1, ptr %p2) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 24, i1 false)
-; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @VACopy(
@@ -2701,7 +2701,7 @@ define void @VACopy(ptr %p1, ptr %p2) nounwind uwtable sanitize_memory {
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; ORIGIN-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 24, i1 false)
-; ORIGIN-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR5]]
+; ORIGIN-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR3]]
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @VACopy(
@@ -2713,7 +2713,7 @@ define void @VACopy(ptr %p1, ptr %p2) nounwind uwtable sanitize_memory {
 ; CALLS-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
 ; CALLS-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CALLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 24, i1 false)
-; CALLS-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR5]]
+; CALLS-NEXT:    call void @llvm.va_copy.p0(ptr [[P1]], ptr [[P2]]) #[[ATTR3]]
 ; CALLS-NEXT:    ret void
 ;
   call void @llvm.va_copy(ptr %p1, ptr %p2) nounwind
@@ -2731,7 +2731,7 @@ declare void @llvm.va_start(ptr) nounwind
 ; Function Attrs: nounwind uwtable
 define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-LABEL: define void @VAStart(
-; CHECK-SAME: i32 [[X:%.*]], ...) #[[ATTR6]] {
+; CHECK-SAME: i32 [[X:%.*]], ...) #[[ATTR4]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 176, [[TMP0]]
@@ -2777,7 +2777,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @VAStart(
-; ORIGIN-SAME: i32 [[X:%.*]], ...) #[[ATTR6]] {
+; ORIGIN-SAME: i32 [[X:%.*]], ...) #[[ATTR4]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = add i64 176, [[TMP0]]
@@ -2851,7 +2851,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @VAStart(
-; CALLS-SAME: i32 [[X:%.*]], ...) #[[ATTR6]] {
+; CALLS-SAME: i32 [[X:%.*]], ...) #[[ATTR4]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = add i64 176, [[TMP0]]
@@ -2997,7 +2997,7 @@ entry:
 
 define i32 @NoSanitizeMemory(i32 %x) uwtable {
 ; CHECK-LABEL: define i32 @NoSanitizeMemory(
-; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[X]], 0
@@ -3014,7 +3014,7 @@ define i32 @NoSanitizeMemory(i32 %x) uwtable {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 ; ORIGIN-LABEL: define i32 @NoSanitizeMemory(
-; ORIGIN-SAME: i32 [[X:%.*]]) #[[ATTR8:[0-9]+]] {
+; ORIGIN-SAME: i32 [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = xor i32 [[X]], 0
@@ -3032,7 +3032,7 @@ define i32 @NoSanitizeMemory(i32 %x) uwtable {
 ; ORIGIN-NEXT:    ret i32 [[X]]
 ;
 ; CALLS-LABEL: define i32 @NoSanitizeMemory(
-; CALLS-SAME: i32 [[X:%.*]]) #[[ATTR8:[0-9]+]] {
+; CALLS-SAME: i32 [[X:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    [[TMP0:%.*]] = xor i32 [[X]], 0
@@ -3319,7 +3319,7 @@ declare i32 @NoSanitizeMemoryParamTLSHelper(i32 %x)
 
 define <2 x i64> @ArgumentShadowAlignment(i64 %a, <2 x i64> %b) sanitize_memory {
 ; CHECK-LABEL: define <2 x i64> @ArgumentShadowAlignment(
-; CHECK-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -3327,7 +3327,7 @@ define <2 x i64> @ArgumentShadowAlignment(i64 %a, <2 x i64> %b) sanitize_memory 
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
 ; ORIGIN-LABEL: define <2 x i64> @ArgumentShadowAlignment(
-; ORIGIN-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
@@ -3337,7 +3337,7 @@ define <2 x i64> @ArgumentShadowAlignment(i64 %a, <2 x i64> %b) sanitize_memory 
 ; ORIGIN-NEXT:    ret <2 x i64> [[B]]
 ;
 ; CALLS-LABEL: define <2 x i64> @ArgumentShadowAlignment(
-; CALLS-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i64 [[A:%.*]], <2 x i64> [[B:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
@@ -3356,7 +3356,7 @@ entry:
 
 define { i64, i32 } @make_pair_64_32(i64 %x, i32 %y) sanitize_memory {
 ; CHECK-LABEL: define { i64, i32 } @make_pair_64_32(
-; CHECK-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
@@ -3369,7 +3369,7 @@ define { i64, i32 } @make_pair_64_32(i64 %x, i32 %y) sanitize_memory {
 ; CHECK-NEXT:    ret { i64, i32 } [[B]]
 ;
 ; ORIGIN-LABEL: define { i64, i32 } @make_pair_64_32(
-; ORIGIN-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3389,7 +3389,7 @@ define { i64, i32 } @make_pair_64_32(i64 %x, i32 %y) sanitize_memory {
 ; ORIGIN-NEXT:    ret { i64, i32 } [[B]]
 ;
 ; CALLS-LABEL: define { i64, i32 } @make_pair_64_32(
-; CALLS-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i64 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3422,7 +3422,7 @@ declare void @VAArgStructFn(i32 %guard, ...)
 
 define void @VAArgStruct(ptr nocapture %s) sanitize_memory {
 ; CHECK-LABEL: define void @VAArgStruct(
-; CHECK-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -3467,7 +3467,7 @@ define void @VAArgStruct(ptr nocapture %s) sanitize_memory {
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @VAArgStruct(
-; ORIGIN-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3550,7 +3550,7 @@ define void @VAArgStruct(ptr nocapture %s) sanitize_memory {
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @VAArgStruct(
-; CALLS-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3649,7 +3649,7 @@ entry:
 ; The register save area is only 48 bytes instead of 176.
 define void @VAArgStructNoSSE(ptr nocapture %s) sanitize_memory #0 {
 ; CHECK-LABEL: define void @VAArgStructNoSSE(
-; CHECK-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -3694,7 +3694,7 @@ define void @VAArgStructNoSSE(ptr nocapture %s) sanitize_memory #0 {
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @VAArgStructNoSSE(
-; ORIGIN-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR9:[0-9]+]] {
+; ORIGIN-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3777,7 +3777,7 @@ define void @VAArgStructNoSSE(ptr nocapture %s) sanitize_memory #0 {
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @VAArgStructNoSSE(
-; CALLS-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR9:[0-9]+]] {
+; CALLS-SAME: ptr captures(none) [[S:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CALLS-NEXT:  [[ENTRY:.*:]]
 ; CALLS-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
@@ -3878,7 +3878,7 @@ declare i32 @InnerTailCall(i32 %a)
 
 define void @MismatchedReturnTypeTailCall(i32 %a) sanitize_memory {
 ; CHECK-LABEL: define void @MismatchedReturnTypeTailCall(
-; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_param_tls, align 8
@@ -3888,7 +3888,7 @@ define void @MismatchedReturnTypeTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT:    ret void
 ;
 ; ORIGIN-LABEL: define void @MismatchedReturnTypeTailCall(
-; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
@@ -3901,7 +3901,7 @@ define void @MismatchedReturnTypeTailCall(i32 %a) sanitize_memory {
 ; ORIGIN-NEXT:    ret void
 ;
 ; CALLS-LABEL: define void @MismatchedReturnTypeTailCall(
-; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
@@ -3926,7 +3926,7 @@ declare i32 @MustTailCall(i32 %a)
 
 define i32 @CallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-LABEL: define i32 @CallMustTailCall(
-; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_param_tls, align 8
@@ -3934,7 +3934,7 @@ define i32 @CallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
 ; ORIGIN-LABEL: define i32 @CallMustTailCall(
-; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
@@ -3944,7 +3944,7 @@ define i32 @CallMustTailCall(i32 %a) sanitize_memory {
 ; ORIGIN-NEXT:    ret i32 [[B]]
 ;
 ; CALLS-LABEL: define i32 @CallMustTailCall(
-; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
@@ -3965,7 +3965,7 @@ declare ptr @MismatchingMustTailCall(i32 %a)
 
 define ptr @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-LABEL: define ptr @MismatchingCallMustTailCall(
-; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_param_tls, align 8
@@ -3973,7 +3973,7 @@ define ptr @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
 ; ORIGIN-LABEL: define ptr @MismatchingCallMustTailCall(
-; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; ORIGIN-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
@@ -3983,7 +3983,7 @@ define ptr @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; ORIGIN-NEXT:    ret ptr [[B]]
 ;
 ; CALLS-LABEL: define ptr @MismatchingCallMustTailCall(
-; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR6]] {
+; CALLS-SAME: i32 [[A:%.*]]) #[[ATTR4]] {
 ; CALLS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CALLS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()

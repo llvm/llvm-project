@@ -49,6 +49,7 @@
 //    should pre-register the `acc::OpenACCSupport` analysis.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -73,7 +74,6 @@ namespace acc {
 } // namespace mlir
 
 namespace {
-
 using namespace mlir;
 
 class ACCImplicitRoutine
@@ -246,6 +246,11 @@ private:
 public:
   using ACCImplicitRoutineBase<ACCImplicitRoutine>::ACCImplicitRoutineBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCImplicitRoutineBase<ACCImplicitRoutine>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     auto module = getOperation();
     mlir::OpBuilder builder(module.getContext());
@@ -278,5 +283,4 @@ public:
       return signalPassFailure();
   }
 };
-
 } // namespace

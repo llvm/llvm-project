@@ -5126,18 +5126,15 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 }
 
 void ModuleBitcodeWriterBase::writeGUIDList() {
-  const ValueEnumerator::ValueList &Vals = VE.getValues();
-  const size_t Max = Vals.size();
-
-  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  SmallVector<GlobalValue::GUID> GUIDs;
   for (const GlobalValue &GV : M.global_values()) {
     auto MaybeGUID = GV.getGUIDIfAssigned();
-    if (!MaybeGUID)
+    if (!MaybeGUID || *MaybeGUID == 0)
       continue;
-    auto GUID = *MaybeGUID;
-
     const auto ValueID = VE.getValueID(&GV);
-    GUIDs[ValueID] = GUID;
+    if (ValueID >= GUIDs.size())
+      GUIDs.resize(ValueID + 1);
+    GUIDs[ValueID] = *MaybeGUID;
   }
 
   auto Abbv = std::make_shared<BitCodeAbbrev>();
@@ -5147,7 +5144,7 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
   unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   SmallVector<uint32_t> RecordVals;
-  RecordVals.reserve(Max * 2);
+  RecordVals.reserve(GUIDs.size() * 2);
   for (auto GUID : GUIDs) {
     RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
     RecordVals.push_back(static_cast<uint32_t>(GUID));

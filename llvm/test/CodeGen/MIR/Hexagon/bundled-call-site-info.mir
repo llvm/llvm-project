@@ -8,7 +8,7 @@
 
 # CHECK: name: caller
 # CHECK: callSites:
-# CHECK-NEXT: bb: 0, offset: 3, fwdArgRegs:
+# CHECK-NEXT: bb: '%bb.0', offset: 3, fwdArgRegs:
 # CHECK-NEXT:   arg: 0, reg: '$r0'
 
 # XXX: Please note that at the time of creating this test the Hexagon target
@@ -32,7 +32,7 @@
 name:            caller
 tracksRegLiveness: true
 callSites:
-  - { bb: 0, offset: 3, fwdArgRegs:
+  - { bb: '%bb.0', offset: 3, fwdArgRegs:
       - { arg: 0, reg: '$r0' } }
 body:             |
   bb.0.entry:

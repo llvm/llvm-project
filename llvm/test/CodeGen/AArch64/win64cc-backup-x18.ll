@@ -5,6 +5,10 @@
 
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu --frame-pointer=non-leaf | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu --frame-pointer=non-leaf -mattr=+reserve-x18 | FileCheck %s
+;; On Windows and UEFI win64cc is the native convention: x18 is not backed up
+;; and the call can be a tail call.
+; RUN: llc < %s -mtriple=aarch64-pc-windows-msvc --frame-pointer=non-leaf | FileCheck %s --check-prefix=WIN
+; RUN: llc < %s -mtriple=aarch64-unknown-uefi --frame-pointer=non-leaf | FileCheck %s --check-prefix=WIN
 
 declare dso_local void @other()
 
@@ -18,6 +22,10 @@ define dso_local win64cc void @func() #0 {
 ; CHECK-NEXT:    ldr x18, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
+;
+; WIN-LABEL: func:
+; WIN:       // %bb.0: // %entry
+; WIN-NEXT:    b other
 entry:
   tail call void @other()
   ret void

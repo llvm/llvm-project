@@ -38,7 +38,7 @@ using namespace lldb_private;
 
 // Include RegisterInfos_arm to declare our g_register_infos_arm structure.
 #define DECLARE_REGISTER_INFOS_ARM_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_arm.h"
+#include "Register/Arch/RegisterInfos_arm.h"
 #undef DECLARE_REGISTER_INFOS_ARM_STRUCT
 
 static size_t k_num_register_infos = std::size(g_register_infos_arm);

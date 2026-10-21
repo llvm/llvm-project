@@ -48,11 +48,9 @@ using namespace llvm;
 
 #define CHR_DEBUG(X) LLVM_DEBUG(X)
 
-static StringSet<> CHRModules;
-static StringSet<> CHRFunctions;
-
-static void parseCHRFilterFiles() {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+static void parseCHRFilterFiles(const InstrumentationOptions &Opts,
+                                StringSet<> &CHRModules,
+                                StringSet<> &CHRFunctions) {
   if (!Opts.chr_module_list.empty()) {
     auto FileOrErr = MemoryBuffer::getFile(Opts.chr_module_list);
     if (!FileOrErr) {
@@ -262,11 +260,12 @@ class CHRScope {
 
 class CHR {
 public:
-  CHR(const InstrumentationOptions &Opts, Function &Fin,
-      BlockFrequencyInfo &BFIin, DominatorTree &DTin, ProfileSummaryInfo &PSIin,
-      RegionInfo &RIin, OptimizationRemarkEmitter &OREin)
-      : Opts(Opts), F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin),
-        ORE(OREin) {}
+  CHR(const InstrumentationOptions &Opts, const StringSet<> &CHRModules,
+      const StringSet<> &CHRFunctions, Function &Fin, BlockFrequencyInfo &BFIin,
+      DominatorTree &DTin, ProfileSummaryInfo &PSIin, RegionInfo &RIin,
+      OptimizationRemarkEmitter &OREin)
+      : Opts(Opts), CHRModules(CHRModules), CHRFunctions(CHRFunctions), F(Fin),
+        BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
 
   ~CHR() {
     for (CHRScope *Scope : Scopes) {
@@ -347,6 +346,8 @@ public:
   }
 
   const InstrumentationOptions &Opts;
+  const StringSet<> &CHRModules;
+  const StringSet<> &CHRFunctions;
   Function &F;
   BlockFrequencyInfo &BFI;
   DominatorTree &DT;
@@ -387,7 +388,9 @@ raw_ostream &operator<<(raw_ostream &OS, const CHRScope &Scope) {
   return OS;
 }
 
-static bool shouldApply(const InstrumentationOptions &Opts, Function &F,
+static bool shouldApply(const InstrumentationOptions &Opts,
+                        const StringSet<> &CHRModules,
+                        const StringSet<> &CHRFunctions, Function &F,
                         ProfileSummaryInfo &PSI) {
   if (Opts.disable_chr)
     return false;
@@ -2006,7 +2009,7 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
 }
 
 bool CHR::run() {
-  if (!shouldApply(Opts, F, PSI))
+  if (!shouldApply(Opts, CHRModules, CHRFunctions, F, PSI))
     return false;
 
   CHR_DEBUG(dumpIR(F, "before", nullptr));
@@ -2082,10 +2085,6 @@ bool CHR::run() {
   return Changed;
 }
 
-ControlHeightReductionPass::ControlHeightReductionPass() {
-  parseCHRFilterFiles();
-}
-
 PreservedAnalyses ControlHeightReductionPass::run(
     Function &F,
     FunctionAnalysisManager &FAM) {
@@ -2099,8 +2098,17 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  const InstrumentationOptions &Opts =
+      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  if (&Opts != ParsedOpts &&
+      (!Opts.chr_module_list.empty() || !Opts.chr_function_list.empty())) {
+    CHRModules.clear();
+    CHRFunctions.clear();
+    parseCHRFilterFiles(Opts, CHRModules, CHRFunctions);
+    ParsedOpts = &Opts;
+  }
   bool Changed =
-      CHR(InstrumentationOptions::Global, F, BFI, DT, PSI, RI, ORE).run();
+      CHR(Opts, CHRModules, CHRFunctions, F, BFI, DT, PSI, RI, ORE).run();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

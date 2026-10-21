@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def InstrumentationOptions : OptionsStruct<perContext = false>;
+def InstrumentationOptions : OptionsStruct;
 
 // AddressSanitizer.cpp
 defm : BoolField<"asan-always-slow-path", "false",

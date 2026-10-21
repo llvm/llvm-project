@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <climits>
+#include <limits>
 
 using namespace mlir;
 
@@ -171,6 +172,20 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   bool exponentIsNegative = false;
   if (exponentValue < 0) {
     exponentIsNegative = true;
+    // Integer division by zero is UB (unlike float/complex, where the
+    // division is defined and yields Inf). base isn't necessarily constant
+    // here, so defer negative-exponent IPowIOp to MathToFuncs's
+    // createElementIPowIFunc, which returns 0 for base == 0 without
+    // dividing. MathToFuncs does not lower index, so index keeps the
+    // strength reduction below.
+    if constexpr (std::is_same_v<PowIOpTy, math::IPowIOp>)
+      if (isa<IntegerType>(getElementTypeOrSelf(op.getType())))
+        return failure();
+    // INT64_MIN has no positive representation in int64_t, so negating it
+    // below would overflow. Bail out rather than negate. This is reached by
+    // FPowIOp, complex::PowiOp and index-typed IPowIOp.
+    if (exponentValue == std::numeric_limits<int64_t>::min())
+      return failure();
     exponentValue *= -1;
   }
 

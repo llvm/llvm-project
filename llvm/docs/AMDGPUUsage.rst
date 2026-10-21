@@ -670,8 +670,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                    work-item
                                                                                    IDs
 
-     ``gfx1250-strict``                 ``amdgpu12.50s``  dGPU  - sramecc        - Architected                   *TBA*
-                                                                - xnack            flat
+     ``gfx1250-strict``                 ``amdgpu12.50s``  dGPU  - xnack          - Architected                   *TBA*
+                                                                                   flat
                                                                                    scratch                         .. TODO::
                                                                                  - Packed
                                                                                    work-item                         Add product
@@ -682,8 +682,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                  - Workgroup
                                                                                    Clusters
 
-     ``gfx1250``                        ``amdgpu12.50``   APU   - sramecc        - Architected                   *TBA*
-                                                                - xnack            flat
+     ``gfx1250``                        ``amdgpu12.50``   APU   - xnack          - Architected                   *TBA*
+                                                                                   flat
                                                                                    scratch                         .. TODO::
                                                                                  - Packed
                                                                                    work-item                         Add product
@@ -694,8 +694,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                  - Workgroup
                                                                                    Clusters
 
-     ``gfx1251``                        ``amdgpu12.51``   APU   - sramecc        - Architected                   *TBA*
-                                                                - xnack            flat
+     ``gfx1251``                        ``amdgpu12.51``   APU   - xnack          - Architected                   *TBA*
+                                                                                   flat
                                                                                    scratch                       .. TODO::
                                                                                  - Packed
                                                                                    work-item                       Add product
@@ -831,8 +831,8 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                 work-item
                                                                                 IDs
 
-     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``     - sramecc          - Architected     Functionally equivalent to
-                                         - ``gfx1251``     - xnack              flat scratch    gfx1250.
+     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``     - xnack            - Architected     Functionally equivalent to
+                                         - ``gfx1251``                          flat scratch    gfx1250.
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -11356,6 +11356,11 @@ For GFX942:
 
   * PCIe access from the GPU to the CPU can be kept coherent by using the MTYPE
     UC (uncached) which bypasses the L2.
+
+* A ``buffer_inv`` with neither sc0 nor sc1 set (or ``BUFFER_INV 0`` in MIR)
+  does not invalidate the L1 or L2 caches. It is functionally ``s_nop`` with
+  the side effect of incrementing ``vmcnt``. This side effect is also present
+  when ``EXEC`` is zero.
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant

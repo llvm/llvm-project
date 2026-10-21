@@ -1125,9 +1125,12 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
+  std::string var_name = name.str();
   if (ts) {
-    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser()) {
       ast_builder->EnsureVariable(var_id);
+      var_name = ast_builder->GetQualifiedName(name);
+    }
   }
 
   DWARFExpressionList location(module_sp, location_expr, nullptr);
@@ -1139,7 +1142,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   bool location_is_constant_data = false;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), name.str().c_str(), mangled_name.str().c_str(),
+      toOpaqueUid(var_id), var_name.c_str(), mangled_name.str().c_str(),
       type_sp, scope, comp_unit.get(), ranges, &decl, location, is_external,
       artificial, location_is_constant_data, static_member);
 
@@ -1161,8 +1164,6 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
                    "Failed to deserialize ConstantSym record: {0}");
     return nullptr;
   }
-  std::string global_name("::");
-  global_name += constant.Name;
   PdbTypeSymId tid(constant.Type, false);
   SymbolFileTypeSP type_sp =
       std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
@@ -1180,14 +1181,25 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   }
   DWARFExpressionList location(module, std::move(*location_or_err), nullptr);
 
+  std::string var_name = constant.Name.str();
+  auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  if (auto err = ts_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to get type system for {1}: {0}", constant.Name);
+  } else if (auto ts = *ts_or_err) {
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+      var_name = ast_builder->GetQualifiedName(constant.Name);
+  }
+
   bool external = false;
   bool artificial = false;
   bool location_is_constant_data = true;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),
-      type_sp, eValueTypeVariableGlobal, module.get(), ranges, &decl, location,
-      external, artificial, location_is_constant_data, static_member);
+      toOpaqueUid(var_id), var_name.c_str(),
+      /*mangled=*/nullptr, type_sp, eValueTypeVariableGlobal, module.get(),
+      ranges, &decl, location, external, artificial, location_is_constant_data,
+      static_member);
   return var_sp;
 }
 
@@ -2224,11 +2236,16 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
   CacheGlobalBaseNames();
 
+  // A leading "::" requests a variable from the global namespace.
+  llvm::StringRef lookup_name = name.GetStringRef();
+  bool is_rooted = lookup_name.consume_front("::");
+
   llvm::StringRef context;
   llvm::StringRef basename;
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
-                                                      context, basename))
-    basename = name.GetStringRef();
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(lookup_name, context,
+                                                      basename))
+    basename = lookup_name;
+  std::string scoped_suffix = ("::" + lookup_name).str();
 
   std::vector<uint32_t> results;
   m_global_variable_base_names.GetValues(ConstString(basename), results);
@@ -2244,9 +2261,12 @@ void SymbolFileNativePDB::FindGlobalVariables(
     VariableSP var = GetOrCreateGlobalVariable(global);
     if (!var)
       continue;
-    if (!context.empty() &&
-        !var->GetName().GetStringRef().contains(name.GetStringRef()))
-      continue;
+    if (is_rooted || !context.empty()) {
+      llvm::StringRef var_name = var->GetName().GetStringRef();
+      if (var_name != lookup_name &&
+          (is_rooted || !var_name.ends_with(scoped_suffix)))
+        continue;
+    }
     variables.AddVariable(var);
 
     if (++n_matches >= max_matches)
@@ -2365,6 +2385,49 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
         return;
     }
   }
+
+  // Typedefs aren't type records, they only exist as S_UDT symbols.
+  std::vector<uint32_t> typedef_matches;
+  m_typedef_base_names.GetValues(query.GetTypeBasename(), typedef_matches);
+  for (uint32_t gid : typedef_matches) {
+    PdbGlobalSymId global{gid, false};
+    if (!query.ContextMatches(GetContextForTypedef(global)))
+      continue;
+
+    TypeSP type_sp = GetOrCreateTypedef(global);
+    if (!type_sp)
+      continue;
+
+    results.InsertUnique(type_sp);
+    if (results.Done(query))
+      return;
+  }
+}
+
+std::vector<CompilerContext>
+SymbolFileNativePDB::GetContextForTypedef(PdbGlobalSymId id) {
+  CVSymbol sym = m_index->ReadSymbolRecord(id);
+  if (sym.kind() != S_UDT)
+    return {};
+  auto udt_or_err = SymbolDeserializer::deserializeAs<UDTSym>(sym);
+  if (!udt_or_err) {
+    llvm::consumeError(udt_or_err.takeError());
+    return {};
+  }
+
+  std::optional<Type::ParsedName> parsed_name =
+      Type::GetTypeScopeAndBasename(udt_or_err->Name);
+  if (!parsed_name)
+    return {{CompilerContextKind::Typedef, ConstString(udt_or_err->Name)}};
+
+  // Typedefs nested in a record are LF_NESTTYPE members of its field list, not
+  // S_UDT symbols, so every scope of an S_UDT is a namespace.
+  std::vector<CompilerContext> ctx;
+  for (llvm::StringRef scope : parsed_name->scope)
+    ctx.emplace_back(CompilerContextKind::Namespace, ConstString(scope));
+  ctx.emplace_back(CompilerContextKind::Typedef,
+                   ConstString(parsed_name->basename));
+  return ctx;
 }
 
 void SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
@@ -2413,16 +2476,7 @@ size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
                      "Failed to deserialize UDTSym record: {0}");
       continue;
     }
-    UDTSym udt = std::move(*udt_or_err);
-    bool is_typedef = true;
-    if (IsTagRecord(PdbTypeSymId{udt.Type, false}, m_index->tpi())) {
-      CVType cvt = m_index->tpi().getType(udt.Type);
-      llvm::StringRef name = CVTagRecord::create(cvt).name();
-      if (name == udt.Name)
-        is_typedef = false;
-    }
-
-    if (is_typedef)
+    if (IsTypedefUdt(*udt_or_err))
       GetOrCreateTypedef(global);
   }
 
@@ -2608,7 +2662,18 @@ TypeSP SymbolFileNativePDB::GetOrCreateTypedef(PdbGlobalSymId id) {
   if (iter != m_types.end())
     return iter->second;
 
-  return CreateTypedef(id);
+  TypeSP type = CreateTypedef(id);
+  if (type)
+    m_types[toOpaqueUid(id)] = type;
+  return type;
+}
+
+bool SymbolFileNativePDB::IsTypedefUdt(const UDTSym &udt) {
+  // Clang and MSVC also emit an S_UDT for each tag type, named like the tag.
+  if (!IsTagRecord(PdbTypeSymId{udt.Type, false}, m_index->tpi()))
+    return true;
+  CVType cvt = m_index->tpi().getType(udt.Type);
+  return CVTagRecord::create(cvt).name() != udt.Name;
 }
 
 size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
@@ -2975,6 +3040,23 @@ void SymbolFileNativePDB::BuildParentMap() {
   // After calling Append(), the type-name map needs to be sorted again to be
   // able to look up a type by its name.
   m_type_base_names.Sort(std::less<uint32_t>());
+
+  for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
+    CVSymbol sym = m_index->symrecords().readRecord(gid);
+    if (sym.kind() != S_UDT)
+      continue;
+    auto udt_or_err = SymbolDeserializer::deserializeAs<UDTSym>(sym);
+    if (!udt_or_err) {
+      llvm::consumeError(udt_or_err.takeError());
+      continue;
+    }
+    if (!IsTypedefUdt(*udt_or_err))
+      continue;
+    llvm::StringRef base_name =
+        MSVCUndecoratedNameParser::DropScope(udt_or_err->Name);
+    m_typedef_base_names.Append(ConstString(base_name), gid);
+  }
+  m_typedef_base_names.Sort(std::less<uint32_t>());
 
   // Now that we know the forward -> full mapping of all type indices, we can
   // re-write all the indices.  At the end of this process, we want a mapping

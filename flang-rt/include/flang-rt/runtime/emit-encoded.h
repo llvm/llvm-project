@@ -15,6 +15,7 @@
 #include "environment.h"
 #include "tools.h"
 #include "utf.h"
+#include "flang/Common/numeric-limits.h"
 
 namespace Fortran::runtime::io {
 
@@ -41,7 +42,7 @@ RT_API_ATTRS bool EmitEncoded(
     }
   }
   if (connection.useUTF8<CHAR>()) {
-    using UnsignedChar = std::make_unsigned_t<CHAR>;
+    using UnsignedChar = common::make_unsigned_t<CHAR>;
     const UnsignedChar *uData{reinterpret_cast<const UnsignedChar *>(data)};
     char buffer[256];
     std::size_t at{0};

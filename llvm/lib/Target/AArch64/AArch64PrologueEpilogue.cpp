@@ -55,6 +55,8 @@ static bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) {
     return false;
   case AArch64::LD1B_2Z_IMM:
   case AArch64::ST1B_2Z_IMM:
+  case AArch64::LD1B_4Z_IMM:
+  case AArch64::ST1B_4Z_IMM:
   case AArch64::STR_ZXI:
   case AArch64::LDR_ZXI:
   case AArch64::PTRUE_C_B:

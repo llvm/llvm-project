@@ -521,6 +521,9 @@ public:
   llvm::Expected<std::string> ReadExtFeature(llvm::StringRef object,
                                              llvm::StringRef annex);
 
+  /// Read the siginfo of the given thread using the qXfer:siginfo:read packet.
+  llvm::Expected<std::string> ReadSiginfo(lldb::tid_t tid);
+
   void ServeSymbolLookups(lldb_private::Process *process);
 
   // Sends QPassSignals packet to the server with given signals to ignore.

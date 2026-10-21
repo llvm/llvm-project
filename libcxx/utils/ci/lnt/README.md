@@ -106,34 +106,51 @@ run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>                 \
 
 This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
 of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
-The results can then be submitted to a LNT instance if desired.
+The results can then be submitted to a LNT instance with `submit-benchmarks` if desired (requires an
+API key).
 
 Note that `run-benchmarks` does not build anything: the library being benchmarked must have been built
 or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
 passed.
 
+## Finding when a benchmark changed
+
+`detect-changepoints` reports the points at which a single benchmark changed, which allows finding regressions
+and progressions in a benchmark. In many cases, pin-pointing the exact commit at which the change happened
+requires gathering finer-grained data (essentially benchmarking between anchor commits). `detect-changepoints`
+reads JSONL with one object per measurement:
+
+```
+# Print every measurement of a benchmark on a machine, one page of the query API at a time.
+fetch_series() {
+  local cursor=null page
+  while
+    page=$(jq -n --arg machine "$1" --arg test "$2" --argjson cursor "${cursor}"       \
+                '{metric: "execution_time", machine: $machine, test: [$test],
+                  sort: "commit", limit: 10000, cursor: $cursor}'                      \
+           | curl -sS --fail-with-body -X POST https://lnt.llvm.org/api/suites/libcxx/query \
+                  -H 'Content-Type: application/json' -d @-)
+    jq -c '.items[]' <<< "${page}"
+    cursor=$(jq '.cursor.next' <<< "${page}")
+    [ "${cursor}" != null ]
+  do :; done
+}
+
+fetch_series linux-x86_64-20260812 'rng::find_if_not(vector<bool>)_(process_all)/1024' \
+  | detect-changepoints --aggregate median
+```
+
+Repeated measurements of a commit must be combined with `--aggregate`. See
+`detect-changepoints --help` for details and other options.
+
 ## Test suite schemas
 
 `schemas/` holds the schemas of the `libcxx` and `libstdcxx` test suites as we submit them to LNT.
-This describes the various metrics and fields we submit to the instance. For the `libcxx` test suite,
-the ordinal (the ordering between commits) is obtained by `git rev-list --count`.
+This describes the various metrics and fields we submit to the instance.
 
-## Setting up a local LNT instance
+For the `libcxx` test suite, the commits are libc++ commits and their ordinal (the ordering between
+commits) is obtained by `git rev-list --count`. Commits not on the `main` branch (e.g. commits made
+on PR branches) don't have an ordinal.
 
-```
-# Create an instance and run a server
-lnt create my-instance
-echo "api_auth_token = 'example_token'" >> my-instance/lnt.cfg
-lnt runserver my-instance
-
-# In another terminal, create the libcxx test suite on the locally-running server
-cat <<EOF > lnt-admin-config.yaml
-lnt_url: "http://localhost:8000"
-database: default
-auth_token: example_token
-EOF
-lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schemas/libcxx.yaml
-
-# Then submit to the local instance
-submit-benchmarks --lnt-url http://localhost:8000 --test-suite libcxx result.json
-```
+For the `libstdcxx` test suite, the commits are versions of libstdc++ (e.g. `16.2.0`), and their
+ordinal is `major * 10000 + minor * 100 + patch`.

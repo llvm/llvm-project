@@ -291,8 +291,7 @@ public:
   }
 };
 
-template <typename BucketT, unsigned InlineBuckets = 4>
-class SmallDenseMapStorage {
+template <typename BucketT, unsigned InlineBuckets> class SmallDenseMapStorage {
   static_assert(isPowerOf2_64(InlineBuckets),
                 "InlineBuckets must be a power of 2.");
 
@@ -717,7 +716,7 @@ public:
   [[nodiscard]] bool empty() const { return getNumEntries() == 0; }
   [[nodiscard]] unsigned size() const { return getNumEntries(); }
 
-  /// Grow the densemap so that it can contain at least \p NumEntries items
+  /// Grow the DenseMap so that it can contain at least \p NumEntries items
   /// before resizing again.
   void reserve(size_type NumEntries) {
     auto NumBuckets = getMinBucketToReserveForEntries(NumEntries);
@@ -810,15 +809,15 @@ public:
 
   /// Return the entry for the specified key, or abort if no such entry exists.
   [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
-    auto Iter = this->find(std::move(Val));
-    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    auto Iter = find(std::move(Val));
+    assert(Iter != end() && "DenseMap::at failed due to a missing key");
     return Iter->second;
   }
 
   /// Return the entry for the specified key, or abort if no such entry exists.
   [[nodiscard]] const ValueT &at(const_arg_type_t<KeyT> Val) const {
-    auto Iter = this->find(std::move(Val));
-    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    auto Iter = find(std::move(Val));
+    assert(Iter != end() && "DenseMap::at failed due to a missing key");
     return Iter->second;
   }
 
@@ -891,7 +890,7 @@ public:
       insert(*I);
   }
 
-  /// Inserts range of 'std::pair<KeyT, ValueT>' values into the map.
+  /// Inserts a range of 'std::pair<KeyT, ValueT>' values into the map.
   template <typename Range> void insert_range(Range &&R) {
     insert(adl_begin(R), adl_end(R));
   }
@@ -962,7 +961,7 @@ public:
     }
     if (Removed) {
       incrementEpoch();
-      this->grow(NumBuckets);
+      grow(NumBuckets);
     }
     return Removed;
   }
@@ -976,7 +975,7 @@ public:
   }
 
   void swap(DenseMapBase &RHS) {
-    this->incrementEpoch();
+    incrementEpoch();
     RHS.incrementEpoch();
     Storage.swap(RHS.Storage);
   }
@@ -990,16 +989,14 @@ public:
         Storage, getMinBucketToReserveForEntries(NumElementsToReserve));
   }
 
-  DenseMapBase(const DenseMapBase &other) : DenseMapBase() {
-    this->copyFrom(other);
-  }
+  DenseMapBase(const DenseMapBase &other) : DenseMapBase() { copyFrom(other); }
 
-  DenseMapBase(DenseMapBase &&other) : DenseMapBase() { this->swap(other); }
+  DenseMapBase(DenseMapBase &&other) : DenseMapBase() { swap(other); }
 
   template <typename InputIt>
   DenseMapBase(const InputIt &I, const InputIt &E)
       : DenseMapBase(std::distance(I, E)) {
-    this->insert(I, E);
+    insert(I, E);
   }
 
   template <typename RangeT>
@@ -1010,28 +1007,28 @@ public:
       : DenseMapBase(Vals.begin(), Vals.end()) {}
 
   ~DenseMapBase() {
-    this->destroyAll();
+    destroyAll();
     Storage.deallocateBuckets();
   }
 
   DenseMapBase &operator=(const DenseMapBase &other) {
     if (&other != this)
-      this->copyFrom(other);
+      copyFrom(other);
     return *this;
   }
 
   DenseMapBase &operator=(DenseMapBase &&other) {
-    this->destroyAll();
+    destroyAll();
     Storage.deallocateBuckets();
     initWithExactBucketCount(Storage, 0);
-    this->swap(other);
+    swap(other);
     return *this;
   }
 
   /// Return the approximate size (in bytes) of the actual map.
   /// This is just the raw memory used by DenseMap.
   /// If entries are pointers to objects, the size of the referenced objects
-  /// are not included.
+  /// is not included.
   [[nodiscard]] size_t getMemorySize() const {
     return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
   }
@@ -1077,17 +1074,13 @@ private:
 
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
   /// accommodate \p NumEntries without need to grow().
-  unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
+  static unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
     // Ensure that "NumEntries * 4 < NumBuckets * 3"
     if (NumEntries == 0)
       return 0;
     // +1 is required because of the strict inequality.
     // For example, if NumEntries is 48, we need to return 128.
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
-  }
-
-  static constexpr llvm::densemap::detail::BucketHasher hasher() {
-    return llvm::densemap::detail::hasherFor<KeyT, KeyInfoT>();
   }
 
   // Move key/value from Src to Dst.
@@ -1114,7 +1107,7 @@ private:
   }
 
   LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &other) {
-    this->destroyAll();
+    destroyAll();
     Storage.deallocateBuckets();
     setNumEntries(0);
     if (!Storage.allocateBuckets(other.getNumBuckets())) {
@@ -1229,7 +1222,8 @@ private:
     assert((MinNumBuckets == 0 || isPowerOf2_32(MinNumBuckets)) &&
            "bucket count must be zero or a power of two");
     if constexpr (llvm::densemap::detail::isRelocatableBucket<BucketT>) {
-      Storage.grow(MinNumBuckets, hasher());
+      Storage.grow(MinNumBuckets,
+                   llvm::densemap::detail::hasherFor<KeyT, KeyInfoT>());
     } else {
       unsigned NumBuckets = StorageT::roundUpNumBuckets(MinNumBuckets);
       StorageT Tmp;
@@ -1254,7 +1248,7 @@ private:
     unsigned NewNumEntries = getNumEntries() + 1;
     unsigned NumBuckets = getNumBuckets();
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
-      this->grow(NumBuckets * 2);
+      grow(NumBuckets * 2);
       LookupBucketFor(Lookup, TheBucket);
     }
     assert(TheBucket);

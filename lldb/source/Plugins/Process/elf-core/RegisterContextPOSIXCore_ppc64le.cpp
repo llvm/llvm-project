@@ -12,7 +12,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include <memory>

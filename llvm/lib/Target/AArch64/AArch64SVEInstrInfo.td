@@ -270,7 +270,9 @@ def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
 
 multiclass def_strict_fp_op<string short_opcode, SDTypeProfile typeprof> {
   def _nonstrict : SDNode<"AArch64ISD::" # short_opcode,        typeprof>;
-  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]>;
+  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]> {
+    let IsStrictFP = true;
+  }
 }
 
 multiclass def_strict_fp_3op<string short_opcode, SDTypeProfile typeprof>
@@ -5320,4 +5322,12 @@ let Predicates = [HasSVE, HasCPA] in {
 
   // Multiply-add vectors, writing addend
   def MLA_CPA : sve_int_mla_cpa<"mlapt">;
+}
+
+//===----------------------------------------------------------------------===//
+// Load-Acquire/Store-Release octaword (FEAT_SVE_LRCPC)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE_LRCPC] in {
+  defm LDAPRO_ZXI : sve_mem_z_acq_fill<"ldapro">;
+  defm STLRO_ZXI  : sve_mem_z_rel_spill<"stlro">;
 }

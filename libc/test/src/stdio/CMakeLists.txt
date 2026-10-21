@@ -605,6 +605,29 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
+
+  add_libc_test(
+    popen_pclose_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      popen_pclose_test.cpp
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_wait_macros
+      libc.hdr.types.FILE
+      libc.src.fcntl.fcntl
+      libc.src.stdio.fgets
+      libc.src.stdio.fileno
+      libc.src.stdio.fputs
+      libc.src.stdio.pclose
+      libc.src.stdio.popen
+      libc.src.stdio.snprintf
+      libc.src.sys.wait.wait
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
 endif()
 
 add_libc_test(

@@ -170,6 +170,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::UnitAttr":$last_use,
      "::mlir::UnitAttr":$no_remote_memory,
      "::mlir::UnitAttr":$no_fine_grained_memory,
+     // Deprecated: use `ignore_denormal_mode` on `llvm.atomicrmw` instead.
      "::mlir::UnitAttr":$ignore_denormal_mode
   );
 

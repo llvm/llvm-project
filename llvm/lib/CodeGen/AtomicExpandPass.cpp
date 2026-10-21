@@ -274,7 +274,7 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return Alignment >= Size && Size <= MaxSize;
+  return Size <= MaxSize && TLI->isAtomicAlignmentSupported(Alignment, Size);
 }
 
 template <typename Inst>
@@ -284,7 +284,7 @@ static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < Size) {
+  if (!TLI->isAtomicAlignmentSupported(Alignment, Size)) {
     OS << "instruction alignment " << Alignment.value()
        << " is smaller than the required " << Size
        << "-byte alignment for this atomic operation";

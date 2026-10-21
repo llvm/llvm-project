@@ -146,7 +146,10 @@ public:
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
                        mlir::omp::PrivateClauseOps *clauseOps,
-                       std::optional<llvm::omp::Directive> dir = std::nullopt);
+                       std::optional<llvm::omp::Directive> dir = std::nullopt,
+                       bool isLinear = false);
+
+  bool usesDelayedPrivatization() const { return useDelayedPrivatization; }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getConditionalLastprivateSymbols() const {

@@ -16,8 +16,8 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoNetBSD_x86_64.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_i386.h"
+#include "Register/NetBSD/RegisterInfoNetBSD_x86_64.h"
 
 // clang-format off
 #include <sys/types.h>

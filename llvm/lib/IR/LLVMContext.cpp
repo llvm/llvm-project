@@ -188,6 +188,17 @@ void LLVMContext::setLLVMRemarkStreamer(
   pImpl->LLVMRS = std::move(RemarkStreamer);
 }
 
+vfs::FileSystem &LLVMContext::getVirtualFileSystem() const {
+  return *getVirtualFileSystemPtr();
+}
+IntrusiveRefCntPtr<vfs::FileSystem>
+LLVMContext::getVirtualFileSystemPtr() const {
+  return pImpl->FS ? pImpl->FS : vfs::getRealFileSystem();
+}
+void LLVMContext::setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  pImpl->FS = std::move(FS);
+}
+
 DiagnosticHandler::DiagnosticHandlerTy
 LLVMContext::getDiagnosticHandlerCallBack() const {
   return pImpl->DiagHandler->DiagHandlerCallback;

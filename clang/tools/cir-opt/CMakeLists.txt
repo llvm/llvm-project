@@ -13,19 +13,15 @@ if(CLANG_INCLUDE_TESTS)
   target_compile_definitions(cir-opt PRIVATE CLANG_INCLUDE_TESTS)
 endif()
 
-clang_target_link_libraries(cir-opt
-  PRIVATE
-  clangCIR
-  clangCIRLoweringDirectToLLVM
-  CIRRegisterAllDialects
-  MLIRCIR
-  MLIRCIRTransforms
-)
-
 target_link_libraries(cir-opt
   PRIVATE
   ${cir_opt_test_libs}
+  CIRRegisterAllDialects
+  clangCIR
+  clangCIRLoweringDirectToLLVM
   MLIRAnalysis
+  MLIRCIR
+  MLIRCIRTransforms
   MLIRDialect
   MLIRIR
   MLIRLLVMDialect

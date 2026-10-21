@@ -1223,8 +1223,8 @@ bool Parser::isLambdaSpecifier() {
   return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
                      tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
                      tok::kw___private, tok::kw___global, tok::kw___local,
-                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                     tok::kw_requires, tok::kw_noexcept) ||
+                     tok::kw___constant, tok::kw___generic, tok::kw_requires,
+                     tok::kw_noexcept) ||
          Tok.isRegularKeywordAttribute() ||
          (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 }
