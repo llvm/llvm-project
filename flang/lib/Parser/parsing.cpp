@@ -120,6 +120,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.showColors) {
     allSources.setShowColors(/*showColors=*/true);
   }
+  if (options.showAbsolutePaths) {
+    allSources.setShowAbsolutePaths(/*showAbsolutePaths=*/true);
+  }
   return sourceFile;
 }
 
