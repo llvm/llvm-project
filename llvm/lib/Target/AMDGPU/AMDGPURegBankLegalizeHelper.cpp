@@ -225,10 +225,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
       buildReadFirstLane(B, CurrentLaneReg, OpReg, RBI);
 
       // Build the comparison(s), CurrentLaneReg == OpReg.
-      unsigned OpSize = static_cast<unsigned>(OpTy.getSizeInBits());
+      TypeSize OpSize = OpTy.getSizeInBits();
       unsigned PartSize = (OpSize % 64 == 0) ? 64 : 32;
       LLT PartTy = LLT::integer(PartSize);
-      unsigned NumParts = OpSize / PartSize;
+      uint64_t NumParts = OpSize / PartSize;
       SmallVector<Register, 8> OpParts;
       SmallVector<Register, 8> CurrentLaneParts;
 
