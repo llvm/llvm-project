@@ -1,0 +1,156 @@
+# RUN: llc -mtriple=agx -mcpu=agx-g14c -run-pass=agx-lower-control-flow -verify-machineinstrs %s -o - | FileCheck %s
+
+# The flow block before an else runs with the threads of the then side; its
+# code (here a copy the register allocator placed there, which the else side
+# reads) runs again for the threads of the else side after the switch.
+# CHECK-LABEL: bb.2.Flow:
+# CHECK:      $r6 = BITOP_I32 10, 0, renamable $r4, 0, 0
+# CHECK-NEXT: ELSE_FCMP
+# CHECK-NEXT: $r6 = BITOP_I32 10, 0, renamable $r4, 0, 0
+# CHECK-LABEL: bb.3.a:
+
+--- |
+  ; ModuleID = 'ie.ll'
+  source_filename = "ie.ll"
+  target datalayout = "e-m:e-p:64:64-p1:64:64-p3:32:32-p4:64:64-p5:32:32-i1:8-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-v16:16-v32:32-v64:64-v96:32-v128:128-n16:32:64-S32-A5-G1"
+  target triple = "agx"
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare noundef i32 @llvm.agx.thread.position.in.grid.x() #0
+  
+  define agx_kernel void @k(ptr addrspace(1) %p) #1 {
+    %t = call i32 @llvm.agx.thread.position.in.grid.x()
+    %c = icmp uge i32 %t, 7
+    %q = getelementptr i32, ptr addrspace(1) %p, i32 %t
+    %v = load i32, ptr addrspace(1) %q, align 4
+    %1 = call i1 @llvm.agx.if(i1 %c)
+    br i1 %1, label %b, label %Flow
+  
+  b:                                                ; preds = %0
+    %y = add i32 %v, 5
+    br label %Flow
+  
+  Flow:                                             ; preds = %b, %0
+    %2 = phi i32 [ %y, %b ], [ poison, %0 ]
+    %3 = call i1 @llvm.agx.else()
+    br i1 %3, label %a, label %e
+  
+  a:                                                ; preds = %Flow
+    %x = mul i32 %v, 3
+    br label %e
+  
+  e:                                                ; preds = %a, %Flow
+    %r = phi i32 [ %2, %Flow ], [ %x, %a ]
+    call void @llvm.agx.end.cf()
+    store i32 %r, ptr addrspace(1) %q, align 4
+    ret void
+  }
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn
+  declare i1 @llvm.agx.if(i1) #2
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn
+  declare i1 @llvm.agx.else() #2
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn
+  declare void @llvm.agx.end.cf() #2
+  
+  attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="agx-g14c" }
+  attributes #1 = { "target-cpu"="agx-g14c" }
+  attributes #2 = { nocallback nofree nounwind willreturn }
+...
+---
+name:            k
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$u0_u1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $u0_u1
+  
+    renamable $r5 = GET_SR 80
+    renamable $r4 = DEVICE_LOAD_32 0, 2, 1, $u0_u1, renamable $r5, 0, 0 :: (load (s32) from %ir.q, addrspace 1)
+    $r2 = BITOP_I32 10, 0, $u0, 0, 0
+    $r3 = BITOP_I32 10, 0, $u1, 0, 0
+    renamable $r2_r3 = IADD_I64_I32 0, killed renamable $r2_r3, 4, renamable $r5, 2
+    renamable $r1 = IMPLICIT_DEF
+    AGX_IF_ICMP 2, 0, killed renamable $r5, 0, 6, %bb.2, implicit-def $r0l, implicit $r0l
+    AGX_BR %bb.1
+  
+  bb.1.b:
+    successors: %bb.2(0x80000000)
+    liveins: $r4, $r2_r3
+  
+    renamable $r1 = IADD_I32 0, renamable $r4, 0, 5, 0
+  
+  bb.2.Flow:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $r1, $r4, $r2_r3
+  
+    renamable $r6 = BITOP_I32 10, 0, killed renamable $r4, 0, 0
+    AGX_ELSE %bb.4, implicit-def dead $r0l, implicit $r0l
+    AGX_BR %bb.3
+  
+  bb.3.a:
+    successors: %bb.4(0x80000000)
+    liveins: $r6, $r2_r3
+  
+    renamable $r1 = IMADD_I32 0, killed renamable $r6, 0, 3, 0, 0, 0
+  
+  bb.4.e:
+    liveins: $r1, $r2_r3
+  
+    AGX_END_CF implicit-def dead $r0l, implicit $r0l
+    DEVICE_STORE_32 0, 2, 1, killed renamable $r1, killed renamable $r2_r3, 0, 0, 0 :: (store (s32) into %ir.q, addrspace 1)
+    AGX_STOP
+...

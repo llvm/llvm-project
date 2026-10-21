@@ -182,6 +182,27 @@ static void buildSkip(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MBB.removeSuccessor(Target);
 }
 
+/// The instructions of MBB before its else pseudo Else, other than the
+/// reconvergence of inner constructs at its start.
+static SmallVector<MachineInstr *, 8> flowBody(MachineBasicBlock &MBB,
+                                               MachineInstr &Else) {
+  SmallVector<MachineInstr *, 8> Body;
+  for (MachineInstr &MI : MBB) {
+    if (&MI == &Else)
+      break;
+    unsigned Opc = MI.getOpcode();
+    if (MI.isMetaInstruction() || Opc == AGX::AGX_END_CF ||
+        Opc == AGX::POP_EXEC)
+      continue;
+    if (isShuffle(Opc) || isControlFlowPseudo(Opc) || MI.isConvergent() ||
+        AGXInstrInfo::isExecMaskOp(MI))
+      report_fatal_error(Twine("AGX: unsupported instruction before an else: ") +
+                         MBB.getParent()->getSubtarget().getInstrInfo()->getName(Opc));
+    Body.push_back(&MI);
+  }
+  return Body;
+}
+
 /// Pass the register index of a shuffle in r0h. Returns true if MI was
 /// changed.
 static bool lowerShuffleIndex(MachineInstr &MI, const AGXInstrInfo &TII) {
@@ -279,15 +300,28 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         buildSkip(MBB, I, DL, TII, MI.getOperand(1).getMBB());
         break;
       }
-      case AGX::AGX_ELSE:
+      case AGX::AGX_ELSE: {
+        SmallVector<MachineInstr *, 8> Body = flowBody(MBB, MI);
         buildExecOp(MBB, I, DL, TII, AGX::ELSE_FCMP, FCondEQ)
             .addImm(0)
             .addImm(FPImmZero)
             .addImm(0)
             .addImm(FPImmZero)
             .addImm(1);
+        // The flow block before the else runs with the threads of the then
+        // side only, but its code (copies and spill code of the register
+        // allocator, which sees the threads of both sides pass through it)
+        // is also meant for the threads of the else side: run it again for
+        // them, after the switch.
+        for (MachineInstr *B : Body) {
+          for (MachineOperand &MO : B->operands())
+            if (MO.isReg() && MO.isUse())
+              MO.setIsKill(false);
+          MBB.insert(I, MF.CloneMachineInstr(B));
+        }
         buildSkip(MBB, I, DL, TII, MI.getOperand(0).getMBB());
         break;
+      }
       case AGX::AGX_LOOP:
         // Threads stay in the loop while brk is zero.
         buildExecOp(MBB, I, DL, TII, AGX::WHILE_ICMP, ICondUEQ)
