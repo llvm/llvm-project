@@ -2623,7 +2623,8 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
-      if (dynamicCondition)
+      // An omitted directive is ranked without its condition.
+      if (dynamicCondition && isExplicit)
         rawVMI.UserCondition = getConditionKey(*dynamicCondition);
       if (llvm::any_of(
               rawVMI.ConstructTraits, [](llvm::omp::TraitProperty property) {

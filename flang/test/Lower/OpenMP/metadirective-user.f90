@@ -701,6 +701,26 @@ subroutine test_constant_and_runtime_conditions_match_any(b)
   !$omp &      taskwait)
 end subroutine
 
+! The first and third WHEN clauses are identical, so the first wins the tie, also
+! through `vendor(llvm)` when `a` is false.
+! CHECK-LABEL: func.func @_QPtest_same_condition_match_any(
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         omp.taskyield
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         return
+subroutine test_same_condition_match_any(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      taskyield) &
+  !$omp & when(user={condition(command_argument_count() > 0)}, &
+  !$omp &      implementation={vendor(score(2): llvm)}: taskwait) &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      barrier)
+end subroutine
+
 ! Constant conditions are compared by truth value, whatever their kind.
 ! CHECK-LABEL: func.func @_QPtest_constant_condition_kinds(
 ! CHECK-NOT:     omp.taskyield

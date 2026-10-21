@@ -389,6 +389,17 @@ TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
   C.UserCondition = "";
   C.addTrait(TraitProperty::user_condition_true, "");
   EXPECT_EQ(Best(C, B), 0);
+
+  // A condition left out of the traits still counts as one, so D, which only
+  // has the key, is not a strict subset of E, which also has the trait.
+  VariantMatchInfo D, E;
+  D.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  D.UserCondition = "a";
+  E.addTrait(TraitProperty::user_condition_true, "");
+  E.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  E.UserCondition = "a";
+  EXPECT_EQ(Best(D, E), 0);
+  EXPECT_EQ(Best(E, D), 0);
 }
 
 } // namespace
