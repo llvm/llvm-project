@@ -2146,7 +2146,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
 
   uint32_t Scope = static_cast<uint32_t>(
       getMemScope(STI.getTargetTriple(), Context, MemOp.getSyncScopeID()));
-  Register ScopeReg = buildI32Constant(Scope, I);
+  Register ScopeReg = buildI32ConstantInEntryBlock(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
@@ -2156,7 +2156,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   uint32_t Sem = getMemSemanticsWithStorageClass(STI.getTargetTriple(), MemSem,
                                                  StorageClass);
-  Register MemSemReg = buildI32Constant(Sem, I);
+  Register MemSemReg = buildI32ConstantInEntryBlock(Sem, I);
 
   MachineIRBuilder MIRBuilder(I);
 
@@ -2322,7 +2322,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   uint32_t Scope = static_cast<uint32_t>(
       getMemScope(STI.getTargetTriple(), Context, MemOp.getSyncScopeID()));
-  Register ScopeReg = buildI32Constant(Scope, I);
+  Register ScopeReg = buildI32ConstantInEntryBlock(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(
@@ -2332,7 +2332,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   uint32_t Sem = getMemSemanticsWithStorageClass(STI.getTargetTriple(), MemSem,
                                                  StorageClass);
-  Register MemSemReg = buildI32Constant(Sem, I);
+  Register MemSemReg = buildI32ConstantInEntryBlock(Sem, I);
   MachineIRBuilder MIRBuilder(I);
 
   if (PointeeType.isTypePtr()) {
@@ -2391,7 +2391,7 @@ bool SPIRVInstructionSelector::selectMaskedGather(Register ResVReg,
   const uint32_t Alignment = I.getOperand(3).getImm();
   const Register MaskReg = I.getOperand(4).getReg();
   const Register PassthruReg = I.getOperand(5).getReg();
-  const Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register AlignmentReg = buildI32ConstantInEntryBlock(Alignment, I);
 
   MachineBasicBlock &BB = *I.getParent();
   auto MIB =
@@ -2418,7 +2418,7 @@ bool SPIRVInstructionSelector::selectMaskedScatter(MachineInstr &I) const {
   const Register PtrsReg = I.getOperand(2).getReg();
   const uint32_t Alignment = I.getOperand(3).getImm();
   const Register MaskReg = I.getOperand(4).getReg();
-  const Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register AlignmentReg = buildI32ConstantInEntryBlock(Alignment, I);
   MachineBasicBlock &BB = *I.getParent();
 
   auto MIB =
@@ -2615,14 +2615,14 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   uint32_t Scope = static_cast<uint32_t>(
       getMemScope(STI.getTargetTriple(), GR.CurMF->getFunction().getContext(),
                   MemOp->getSyncScopeID()));
-  Register ScopeReg = buildI32Constant(Scope, I);
+  Register ScopeReg = buildI32ConstantInEntryBlock(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
   uint32_t OrderSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(
+  Register MemSemReg = buildI32ConstantInEntryBlock(
       getMemSemanticsWithStorageClass(STI.getTargetTriple(), OrderSem, ScSem),
       I);
 
@@ -3709,12 +3709,12 @@ bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
 
   // OpControlBarrier needs to also set Execution Scope
   if (WithGroupSync) {
-    Register ExecReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
+    Register ExecReg = buildI32ConstantInEntryBlock(SPIRV::Scope::Workgroup, I);
     MI.addUse(ExecReg);
   }
 
-  Register ScopeReg = buildI32Constant(Scope, I);
-  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register ScopeReg = buildI32ConstantInEntryBlock(Scope, I);
+  Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
 
   MI.addUse(ScopeReg).addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
   return true;
@@ -6027,7 +6027,7 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   SPIRVTypeInst IntPtrType = GR.getOrCreateSPIRVPointerType(
       LLVMIntType, MIRBuilder, SPIRV::StorageClass::StorageBuffer);
 
-  Register Zero = buildI32Constant(0, I);
+  Register Zero = buildI32ConstantInEntryBlock(0, I);
 
   Register PtrToCounter =
       MRI->createVirtualRegister(GR.getRegClass(IntPtrType));
@@ -6040,11 +6040,11 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
 
   // For UAV/SSBO counters, the scope is Device. The counter variable is not
   // used as a flag. So the memory semantics can be None.
-  Register Scope = buildI32Constant(SPIRV::Scope::Device, I);
-  Register Semantics = buildI32Constant(SPIRV::MemorySemantics::None, I);
+  Register Scope = buildI32ConstantInEntryBlock(SPIRV::Scope::Device, I);
+  Register Semantics = buildI32ConstantInEntryBlock(SPIRV::MemorySemantics::None, I);
 
   int64_t IncrVal = getIConstValSext(IncrReg, MRI);
-  Register Incr = buildI32Constant(static_cast<uint32_t>(IncrVal), I);
+  Register Incr = buildI32ConstantInEntryBlock(static_cast<uint32_t>(IncrVal), I);
 
   Register AtomicRes = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
