@@ -28,3 +28,25 @@ exit:
 }
 
 declare i32 @llvm.agx.thread.position.in.threadgroup.x()
+
+; Threadgroup addresses computed in 64-bit integers, whose scaled index also
+; feeds a device access, are computed in 32 bits.
+
+@s = internal addrspace(3) global [64 x i32] poison
+
+; CHECK-LABEL: narrow_threadgroup:
+; CHECK-NOT:     iadd r{{[0-9]+}}_r{{[0-9]+}}
+; CHECK:         device_load 0, i32, x, r{{[0-9]+}}, u0_u1, r{{[0-9]+}}, signed
+; CHECK:         threadgroup_store i32, x, r{{[0-9]+}}, r{{[0-9]+}}l, 0
+define agx_kernel void @narrow_threadgroup(i64 %a) {
+  %i = call i32 @llvm.agx.thread.position.in.threadgroup.x()
+  %e = sext i32 %i to i64
+  %o = shl nsw i64 %e, 2
+  %pa = add i64 %o, %a
+  %la = inttoptr i64 %pa to ptr addrspace(1)
+  %v = load i32, ptr addrspace(1) %la, align 4
+  %ps = add i64 %o, ptrtoint (ptr addrspace(3) @s to i64)
+  %ls = inttoptr i64 %ps to ptr addrspace(3)
+  store i32 %v, ptr addrspace(3) %ls, align 4
+  ret void
+}

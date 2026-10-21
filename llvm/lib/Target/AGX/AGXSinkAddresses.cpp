@@ -15,12 +15,21 @@
 // into the block of each access that can fold them; the copies cost
 // nothing, and the shared 64-bit additions they replace disappear.
 //
+// Threadgroup and private pointers are 32 bits, but PTX computes their
+// addresses in 64-bit integers. 64-bit arithmetic whose results only reach
+// such pointers or truncations (InstCombine narrows it only where each step
+// has one use) is redone in 32 bits.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -160,10 +169,213 @@ static bool splitAddress(Value *P, unsigned ElemLog2, Address &A) {
   return false;
 }
 
+static bool isNarrowPointerSpace(unsigned AS) {
+  return AS == AGX::THREADGROUP_ADDRESS || AS == AGX::PRIVATE_ADDRESS;
+}
+
+/// Whether the low 32 bits of I depend only on the low 32 bits of its
+/// operands that are themselves narrowed.
+static bool isNarrowable(const Instruction &I) {
+  if (!I.getType()->isIntegerTy(64))
+    return false;
+  switch (I.getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::PHI:
+    return true;
+  case Instruction::Shl: {
+    auto *C = dyn_cast<ConstantInt>(I.getOperand(1));
+    return C && C->getZExtValue() < 32;
+  }
+  case Instruction::SExt:
+  case Instruction::ZExt:
+    return I.getOperand(0)->getType()->getIntegerBitWidth() <= 32;
+  case Instruction::PtrToInt:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Whether a use only needs the low 32 bits of its value.
+static bool isNarrowUse(const User *U) {
+  if (auto *ITP = dyn_cast<IntToPtrInst>(U))
+    return isNarrowPointerSpace(ITP->getType()->getPointerAddressSpace());
+  if (auto *T = dyn_cast<TruncInst>(U))
+    return T->getType()->getIntegerBitWidth() <= 32;
+  return false;
+}
+
+/// An index computation narrowed also where its 64-bit value stays in use
+/// (typically folded into device addresses): an extension, possibly scaled.
+static bool isCheapIndex(const Instruction &I) {
+  if (isa<SExtInst>(I) || isa<ZExtInst>(I))
+    return true;
+  if (I.getOpcode() != Instruction::Shl && I.getOpcode() != Instruction::Mul)
+    return false;
+  return isa<ConstantInt>(I.getOperand(1)) &&
+         (isa<SExtInst>(I.getOperand(0)) || isa<ZExtInst>(I.getOperand(0)));
+}
+
+static bool narrowLocalAddresses(Function &F) {
+  // The narrowable instructions all of whose uses only need 32 bits, to a
+  // fixed point; at least one use must be a narrow pointer.
+  SetVector<Instruction *> Set;
+  for (Instruction &I : instructions(F))
+    if (isNarrowable(I))
+      Set.insert(&I);
+  bool Removed = true;
+  while (Removed) {
+    Removed = false;
+    for (Instruction *I : SmallVector<Instruction *, 32>(Set.begin(), Set.end())) {
+      bool OK = !I->use_empty() &&
+                (isCheapIndex(*I) || all_of(I->users(), [&](User *U) {
+                   return isNarrowUse(U) || (isa<Instruction>(U) &&
+                                             Set.contains(cast<Instruction>(U)));
+                 }));
+      if (!OK) {
+        Set.remove(I);
+        Removed = true;
+      }
+    }
+  }
+  // Only worth it where an address is computed.
+  SmallVector<Instruction *, 16> Roots;
+  for (Instruction *I : Set)
+    if (any_of(I->users(), [](User *U) { return isa<IntToPtrInst>(U); }))
+      Roots.push_back(I);
+  if (Roots.empty())
+    return false;
+
+  Type *I32 = Type::getInt32Ty(F.getContext());
+  DenseMap<Value *, Value *> Narrow;
+  SmallVector<std::pair<PHINode *, PHINode *>, 4> Phis;
+  // The 32-bit value of V, created next to its definition.
+  std::function<Value *(Value *)> Get = [&](Value *V) -> Value * {
+    if (Value *N = Narrow.lookup(V))
+      return N;
+    Value *N;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !Set.contains(I)) {
+      // A leaf: truncated where it is defined.
+      if (auto *C = dyn_cast<Constant>(V)) {
+        N = ConstantFoldCastOperand(Instruction::Trunc, C, I32,
+                                    F.getDataLayout());
+        if (!N)
+          N = ConstantExpr::getTrunc(C, I32);
+      } else {
+        IRBuilder<> B(F.getContext());
+        if (auto *A = dyn_cast<Argument>(V))
+          B.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
+        else
+          B.SetInsertPoint(
+              cast<Instruction>(V)->getInsertionPointAfterDef().value());
+        N = B.CreateTrunc(V, I32, V->getName() + ".lo");
+      }
+      return Narrow[V] = N;
+    }
+    if (auto *P = dyn_cast<PHINode>(I)) {
+      PHINode *NP = PHINode::Create(I32, P->getNumIncomingValues(),
+                                    P->getName() + ".lo", P->getIterator());
+      Narrow[V] = NP;
+      Phis.push_back({P, NP});
+      return NP;
+    }
+    IRBuilder<> B(I);
+    switch (I->getOpcode()) {
+    case Instruction::SExt:
+    case Instruction::ZExt: {
+      Value *X = I->getOperand(0);
+      N = X->getType() == I32
+              ? X
+              : B.CreateCast(cast<CastInst>(I)->getOpcode(), X, I32);
+      break;
+    }
+    case Instruction::PtrToInt:
+      N = B.CreatePtrToInt(I->getOperand(0), I32, I->getName() + ".lo");
+      break;
+    default:
+      N = B.CreateBinOp(cast<BinaryOperator>(I)->getOpcode(),
+                        Get(I->getOperand(0)), Get(I->getOperand(1)),
+                        I->getName() + ".lo");
+      break;
+    }
+    return Narrow[V] = N;
+  };
+  for (Instruction *I : Set)
+    Get(I);
+  // Phi operands, which may lead back to the phis themselves.
+  for (unsigned K = 0; K < Phis.size(); ++K) {
+    auto [P, NP] = Phis[K];
+    for (unsigned In = 0; In < P->getNumIncomingValues(); ++In) {
+      Value *V = P->getIncomingValue(In);
+      Value *N;
+      if (auto *I = dyn_cast<Instruction>(V); I && !Set.contains(I)) {
+        // Truncate a leaf at the end of the incoming block.
+        IRBuilder<> B(P->getIncomingBlock(In)->getTerminator());
+        N = B.CreateTrunc(V, I32, V->getName() + ".lo");
+      } else {
+        N = Get(V);
+      }
+      NP->addIncoming(N, P->getIncomingBlock(In));
+    }
+  }
+  // Point the narrow uses at the 32-bit values.
+  for (auto [V, N] : Narrow) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !Set.contains(I))
+      continue;
+    for (User *U : make_early_inc_range(I->users())) {
+      if (!isNarrowUse(U))
+        continue;
+      if (auto *ITP = dyn_cast<IntToPtrInst>(U)) {
+        IRBuilder<> B(ITP);
+        ITP->replaceAllUsesWith(B.CreateIntToPtr(N, ITP->getType()));
+        ITP->eraseFromParent();
+      } else if (auto *T = dyn_cast<TruncInst>(U)) {
+        IRBuilder<> B(T);
+        T->replaceAllUsesWith(B.CreateTrunc(N, T->getType()));
+        T->eraseFromParent();
+      }
+    }
+  }
+  // The 64-bit instructions still used outside the set (cheap indices) stay,
+  // with the set members they use; the others only use each other now
+  // (phis in cycles too).
+  SmallPtrSet<Instruction *, 16> Keep;
+  SmallVector<Instruction *, 16> Work;
+  for (Instruction *I : Set)
+    if (any_of(I->users(), [&](User *U) {
+          return !isa<Instruction>(U) || !Set.contains(cast<Instruction>(U));
+        }))
+      Work.push_back(I);
+  while (!Work.empty()) {
+    Instruction *I = Work.pop_back_val();
+    if (!Keep.insert(I).second)
+      continue;
+    for (Value *Op : I->operands())
+      if (auto *J = dyn_cast<Instruction>(Op); J && Set.contains(J))
+        Work.push_back(J);
+  }
+  SmallVector<Instruction *, 16> Erase;
+  for (Instruction *I : Set)
+    if (!Keep.contains(I))
+      Erase.push_back(I);
+  for (Instruction *I : Erase)
+    I->dropAllReferences();
+  for (Instruction *I : Erase)
+    I->eraseFromParent();
+  return true;
+}
+
 bool AGXSinkAddresses::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
-  bool Changed = false;
+  bool Changed = narrowLocalAddresses(F);
   SmallVector<WeakTrackingVH, 16> Originals;
   for (BasicBlock &BB : F) {
     // The copy of each address in this block.
