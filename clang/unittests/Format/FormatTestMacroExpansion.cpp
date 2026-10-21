@@ -494,6 +494,119 @@ TEST_F(FormatTestMacroExpansion, TokensAfterMacroCallAreNotPartOfCall) {
                Style);
 }
 
+TEST_F(FormatTestMacroExpansion,
+       SeparateDefinitionBlocksWithMacroExpandedStruct) {
+  // Reproduces https://llvm.org/PR78263
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterStruct = true;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.Macros.push_back("PACK(x)=x");
+
+  verifyFormat("static bool foo;\n"
+               "\n"
+               "//! \\brief Blah\n"
+               "PACK(\n"
+               "    struct Foo\n"
+               "    {\n"
+               "      uint16_t a;\n"
+               "    });\n"
+               "\n"
+               "PACK(\n"
+               "    struct Bar\n"
+               "    {\n"
+               "      uint32_t a;\n"
+               "    });\n"
+               "\n"
+               "PACK(\n"
+               "    struct Baz\n"
+               "    {\n"
+               "      uint16_t a;\n"
+               "    });",
+               "static bool foo;\n"
+               "\n"
+               "//! \\brief Blah\n"
+               "PACK(struct Foo\n"
+               "{\n"
+               "  uint16_t a;\n"
+               "});\n"
+               "\n"
+               "PACK(struct Bar\n"
+               "{\n"
+               "  uint32_t a;\n"
+               "});\n"
+               "\n"
+               "PACK(struct Baz\n"
+               "{\n"
+               "  uint16_t a;\n"
+               "});",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, MacroExpansionWithIfElseBranches) {
+  // Reproduces https://llvm.org/PR233300
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("M(x)=x");
+
+  verifyFormat("#if A\n"
+               "auto l = []\n"
+               "#else\n"
+               "if\n"
+               "#endif\n"
+               "    M((int a) {});",
+               Style);
+
+  Style.Macros = {"M(a,b,c)=a b(c)"};
+  verifyNoCrash("({\n"
+                "#if A\n"
+                "{[]\n"
+                "#else\n"
+                "if\n"
+                "#endif\n"
+                "M(, (int a){int b, ))",
+                Style);
+}
+
+TEST_F(FormatTestMacroExpansion, RawStringLiteralInMacroArg) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+
+  StringRef Code1 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(FlowConfig flow_config,\n"
+      "                   ParseTextProto<FlowConfig>(Substitute(\n"
+      "                       R\"pb(\n"
+      "                         key: value\n"
+      "                       )pb\",\n"
+      "                       arg1, arg2, arg3, arg4)));\n"
+      "}";
+  verifyFormat(Code1, Code1, Style);
+
+  StringRef Code2 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(\n"
+      "      FlowConfig flow_config,\n"
+      "      "
+      "proto2::contrib::parse_proto::ParseTextProto<FlowConfig>(absl::"
+      "Substitute(\n"
+      "          R\"pb(\n"
+      "            key: value\n"
+      "          )pb\",\n"
+      "          kPreprocessingFlowConfig, kAudioConfig, kPostConfig)));\n"
+      "}";
+  verifyFormat(Code2, Code2, Style);
+
+  StringRef Code3 =
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(\n"
+      "      // comment\n"
+      "      TestCase test_case, ParseTextProto<TestCase>(R\"pb(\n"
+      "        name: \"foo\"\n"
+      "      )pb\"));\n"
+      "}";
+  verifyFormat(Code3, Code3, Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

@@ -815,7 +815,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
       !parsingPPDirective() ? PreprocessorDirectives.size() : 0;
   addUnwrappedLine();
   size_t OpeningLineIndex =
-      CurrentLines->empty()
+      CurrentLines->empty() || !CurrentExpandedLines.empty()
           ? (UnwrappedLine::kInvalidIndex)
           : (CurrentLines->size() - 1 - NbPreprocessorDirectives);
 
@@ -876,6 +876,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
       if (Previous->is(tok::r_brace) && !Previous->Optional)
         return false;
     }
+    if (OpeningLineIndex == UnwrappedLine::kInvalidIndex)
+      return false;
     assert(!CurrentLines->empty());
     auto &LastLine = CurrentLines->back();
     if (LastLine.Level == InitialLevel + 1 && !mightFitOnOneLine(LastLine))
@@ -933,7 +935,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
   if (MunchSemi && FormatTok->is(tok::semi))
     nextToken();
 
-  if (PPStartHash == PPEndHash) {
+  if (PPStartHash == PPEndHash && CurrentExpandedLines.empty() &&
+      !containsExpansion(*Line)) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
     if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
       // Update the opening line to add the forward reference as well
@@ -4071,9 +4074,10 @@ bool UnwrappedLineParser::parseEnum() {
     if (!ManageWhitesmithsBraces)
       ++Line->Level;
   }
-  const auto OpeningLineIndex = CurrentLines->empty()
-                                    ? UnwrappedLine::kInvalidIndex
-                                    : CurrentLines->size() - 1;
+  const auto OpeningLineIndex =
+      CurrentLines->empty() || !CurrentExpandedLines.empty()
+          ? UnwrappedLine::kInvalidIndex
+          : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
     --Line->Level;
@@ -4083,8 +4087,10 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
   }
   setPreviousRBraceType(TT_EnumRBrace);
-  if (ManageWhitesmithsBraces)
+  if (ManageWhitesmithsBraces && CurrentExpandedLines.empty() &&
+      !containsExpansion(*Line)) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
+  }
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a

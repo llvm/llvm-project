@@ -1246,13 +1246,15 @@ protected:
     }
 
     if (NewLine || Previous.MacroParent) {
-      const ParenState &P = State.Stack.back();
+      ParenState &P = State.Stack.back();
 
       int AdditionalIndent =
           P.Indent.Total - Previous.Children[0]->Level * Style.IndentWidth;
       Penalty +=
           BlockFormatter->format(Previous.Children, DryRun, AdditionalIndent,
                                  /*FixBadIndentation=*/true);
+      if (Previous.MacroParent)
+        P.NestedBlockIndent = P.Indent.Total;
       return true;
     }
 
