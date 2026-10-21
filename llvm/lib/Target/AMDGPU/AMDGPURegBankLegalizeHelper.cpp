@@ -454,7 +454,7 @@ bool RegBankLegalizeHelper::widenMMOToS32(GAnyLoad &MI) const {
   Register Dst = MI.getDstReg();
   Register Ptr = MI.getPointerReg();
   MachineMemOperand &MMO = MI.getMMO();
-  unsigned MemSize = static_cast<unsigned>(8 * MMO.getSize().getValue());
+  unsigned MemSize = 8 * static_cast<unsigned>(MMO.getSize().getValue());
 
   MachineMemOperand *WideMMO = B.getMF().getMachineMemOperand(&MMO, 0, S32);
 
