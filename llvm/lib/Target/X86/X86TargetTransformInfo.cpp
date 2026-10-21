@@ -7334,8 +7334,12 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
 }
 
 // Per-shape break-even TOTAL for znver4+ gather/scatter: the cost at which
-// the LoopVectorizer stops preferring the vectorised operation, measured on a
-// Zen5 9950X. Subtracting the getModeledGSInstrCost body leaves the premium,
+// the LoopVectorizer stops preferring the vectorised operation. The totals
+// were swept on a Zen5 9950X. The bodies they are measured against come from
+// Znver4Model, which was timed on znver4. znver5 and znver6 reuse both without
+// measurement of their own.
+//
+// Subtracting the getModeledGSInstrCost body leaves the premium,
 // so X86ScheduleZnver4.td stays the only source for the hardware half and a
 // retune needs no edit here.
 //
