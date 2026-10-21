@@ -7652,6 +7652,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       return;
     }
     mlir::Location variantLoc = converter.genLocation(spec->source);
+    if (spec->DirId() == llvm::omp::Directive::OMPD_nothing)
+      TODO(variantLoc, "NOTHING with clauses in METADIRECTIVE");
     List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
     ConstructQueue queue{
         buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
