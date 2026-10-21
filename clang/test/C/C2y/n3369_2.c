@@ -5,7 +5,7 @@
 
 typedef typeof(sizeof(0)) size_t;
 
-// CHECK-LABEL: define{{( dso_local)?}} i{{64|32}} @test1(
+// CHECK-LABEL: define{{( dso_local)?}}{{( zeroext)?}} i{{64|32}} @test1(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARRAY:%.*]] = alloca [12 x i32], align
@@ -16,7 +16,7 @@ size_t test1() {
   return _Countof(array);
 }
 
-// CHECK-LABEL: define{{( dso_local)?}} i{{64|32}} @test2(
+// CHECK-LABEL: define{{( dso_local)?}}{{( zeroext)?}} i{{64|32}} @test2(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i{{64|32}} 100
