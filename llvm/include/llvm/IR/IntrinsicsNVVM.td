@@ -1942,8 +1942,6 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_idp4a_ # a_type # _ # b_type : NVVMBuiltin,
           PureIntrinsic<[llvm_i32_ty],
               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
-      // The i1 operand selects the high (true) or low (false) half of the
-      // second operand. Exposed to clang as separate _lo/_hi builtins.
       def int_nvvm_idp2a_ # a_type # _ # b_type :
           PureIntrinsic<[llvm_i32_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],

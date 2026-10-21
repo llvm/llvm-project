@@ -1,10 +1,18 @@
+// The builtin must work with sm_61 and newer architectures (we test on sm_90)
+// specifically. The two runs below look at CHECK lines and ignore
+// expected-error.
+//
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_61 \
 // RUN:            -fcuda-is-device -target-feature +ptx62 \
 // RUN:            -emit-llvm -o - -x cuda %s | FileCheck %s
-// Make sure the builtins still work with newer GPUs.
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_90 \
 // RUN:            -fcuda-is-device -target-feature +ptx80 \
 // RUN:            -emit-llvm -o - -x cuda %s | FileCheck %s
+//
+//
+// The builtin must fail on older GPUs, test on sm_60. The CHECK lines are
+// ignored by this run, we only check expected-error.
+//
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -target-feature +ptx62 \
 // RUN:            -S -o /dev/null -x cuda -verify %s
