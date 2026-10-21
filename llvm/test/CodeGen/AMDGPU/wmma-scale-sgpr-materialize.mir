@@ -2,10 +2,12 @@
 # RUN: llc -mtriple=amdgpu12.50 -passes=si-materialize-wmma-scale -o - %s | FileCheck %s
 
 # Two WMMA instructions reading the same SGPR scale must share one VGPR copy.
-# Both scale operands of a single WMMA count as one va_ssrc issue, so that
-# case stays on the SGPR. A scale defined outside a loop is copied there.
-# V_WMMA_SCALE16_* scale operands are 64 bits. A subregister use is copied at
-# that lane's width; the other lane of the tuple stays an SGPR.
+# Both scale operands of one WMMA are one va_ssrc issue. (S, T0) and (S, T1)
+# stay on SGPRs: copying only S removes nothing, and copying all three adds
+# more issues than it removes. A physical SGPR partner cannot be rewritten, so
+# it keeps the shared scale on the counter too. A scale defined outside a loop
+# is copied there. V_WMMA_SCALE16_* scale operands are 64 bits. A subregister
+# use is copied at that lane's width; the other lane of the tuple stays an SGPR.
 
 ---
 name: two_wmma_shared_sgpr_scale
@@ -404,5 +406,63 @@ body: |
     %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %3, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %5, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %7:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %6, %0.sub1, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: mixed_shared_sgpr_scales
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2
+    ; Two WMMAs read (S, T0) and (S, T1). Copying S leaves both on va_ssrc.
+    ; CHECK-LABEL: name: mixed_shared_sgpr_scales
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %s:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: %t0:sreg_32 = COPY $sgpr1
+    ; CHECK-NEXT: %t1:sreg_32 = COPY $sgpr2
+    ; CHECK-NEXT: %a:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: %b:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: %c:vreg_256_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: early-clobber %w0:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %c, %s, %t0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: early-clobber %w1:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %w0, %s, %t1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %s:sreg_32 = COPY $sgpr0
+    %t0:sreg_32 = COPY $sgpr1
+    %t1:sreg_32 = COPY $sgpr2
+    %a:vreg_512_align2 = IMPLICIT_DEF
+    %b:vreg_512_align2 = IMPLICIT_DEF
+    %c:vreg_256_align2 = IMPLICIT_DEF
+    %w0:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %c, %s, %t0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %w1:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %w0, %s, %t1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: shared_scale_with_physical_sgpr
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2
+    ; $sgpr1 and $sgpr2 cannot be copied. Both WMMAs still occupy va_ssrc.
+    ; CHECK-LABEL: name: shared_scale_with_physical_sgpr
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %s:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: %a:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: %b:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: %c:vreg_256_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: early-clobber %w0:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %c, %s, $sgpr1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: early-clobber %w1:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %w0, %s, $sgpr2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %s:sreg_32 = COPY $sgpr0
+    %a:vreg_512_align2 = IMPLICIT_DEF
+    %b:vreg_512_align2 = IMPLICIT_DEF
+    %c:vreg_256_align2 = IMPLICIT_DEF
+    %w0:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %c, %s, $sgpr1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %w1:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %a, %b, 0, %w0, %s, $sgpr2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
