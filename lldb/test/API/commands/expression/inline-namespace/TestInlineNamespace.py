@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestInlineNamespace(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

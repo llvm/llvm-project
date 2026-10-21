@@ -71,6 +71,16 @@
 # PAD46-LDS: Hex dump of section '.data':
 # PAD46-LDS: 0x00002530 00000000 00000000 00000000 09000807 ................
 
+## .eh_frame_hdr uses the address after padding.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/eh.s -o %t/eh.o
+# RUN: ld.lld --randomize-section-padding=6 -z separate-code --eh-frame-hdr %t/eh.o -o %t/eh
+# RUN: llvm-readelf -s --unwind %t/eh | FileCheck --check-prefix=EH %s
+
+# EH:      entry 0 {
+# EH-NEXT:   initial_location: 0x[[#%x,F:]]
+# EH:      [[#%.16x,F]] {{.*}} f{{$}}
+
 #--- a.s
 
 .section .rodata.a,"a",@progbits
@@ -123,3 +133,9 @@ SECTIONS {
   .data : { *(.data.c) *(.data.b) *(.data.a) }
   .bss : { *(.bss.c) *(.bss.b) *(.bss.a) }
 }
+
+#--- eh.s
+f:
+  .cfi_startproc
+  ret
+  .cfi_endproc

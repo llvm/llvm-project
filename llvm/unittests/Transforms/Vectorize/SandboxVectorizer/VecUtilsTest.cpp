@@ -457,6 +457,7 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
 
   auto *I8Ty = sandboxir::IntegerType::get(Ctx, 8);
   auto *I16Ty = sandboxir::IntegerType::get(Ctx, 16);
+  auto *I32Ty = sandboxir::IntegerType::get(Ctx, 32);
   auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
 
   // Check same type.
@@ -466,6 +467,11 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
                 {Store_2xi8, Store_2xi8}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 4));
+
+  // Same-typed FP bundles keep that FP lane type.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f32}, DL),
+      sandboxir::FixedVectorType::get(F32Ty, 2));
 
   // Check different types, power-of-two.
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
@@ -478,10 +484,10 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
                 {Store_2xi8, Store_2xi8, Store_2xi16}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 8));
 
-  // Check different types non-power-of-two.
+  // Check different types non-power-of-two. Mixed FP widths pack as integers.
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f64}, DL),
-      sandboxir::FixedVectorType::get(F32Ty, 3));
+      sandboxir::FixedVectorType::get(I32Ty, 3));
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_i16}, DL),
       sandboxir::FixedVectorType::get(I16Ty, 3));

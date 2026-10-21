@@ -132,6 +132,30 @@ __device__ void test_grid_size(unsigned *out) {
   out[2] = __builtin_amdgcn_grid_size_z();
 }
 
+// CIR-LABEL: @_Z19test_workgroup_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.implicitarg.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u16i, target_address_space(4)>
+// CIR: %[[SIZE:.*]] = cir.load invariant align(2) %[[PTR]]
+// CIR: cir.cast integral %[[SIZE]] : !u16i -> !u32i
+// CIR: cir.const #cir.int<14> : !u64i
+// CIR: cir.const #cir.int<16> : !u64i
+// LLVM-LABEL: @_Z19test_workgroup_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr{{.*}} i8, ptr addrspace(4) [[P]], i64 12
+// LLVM: [[SIZE:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2, {{.*}}!invariant.load
+// LLVM: zext i16 [[SIZE]] to i32
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 14
+// LLVM: getelementptr{{.*}} i8, ptr addrspace(4) %{{.*}}, i64 16
+// LLVM-NOT: @llvm.amdgcn.workgroup.id
+// LLVM: ret void
+__device__ void test_workgroup_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_workgroup_size_x();
+  out[1] = __builtin_amdgcn_workgroup_size_y();
+  out[2] = __builtin_amdgcn_workgroup_size_z();
+}
+
 // CIR-LABEL: @_Z12test_rcp_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z12test_rcp_f32Pff

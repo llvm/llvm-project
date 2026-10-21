@@ -644,7 +644,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -809,12 +809,11 @@ static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
     auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
     if (!Branch)
       break;
-    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrPseudoProbe();
   }
 
   BasicBlock *PBB = Successor->getParent();
   for (; Successor != PBB->end(); Successor = std::next(Successor)) {
-    Successor = skipDebugIntrinsics(Successor);
     auto DL = Successor->getDebugLoc();
     if (DL && DL.getLine() != 0)
       return DL;
@@ -841,8 +840,14 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
-    auto DbgLoc =
-        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
+    auto *NewSuspend = cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend]);
+    DebugLoc DbgLoc = NewSuspend->getDebugLoc();
+    // The projection may update the async context slot of the frame. With a
+    // line 0 location, prologue_end is placed after that update, but debuggers
+    // expect the slot to be unchanged at prologue_end.
+    if (DbgLoc && DbgLoc.getLine() == 0)
+      if (DebugLoc NonZeroLoc = getFirstNonZeroLocAfterSuspend(NewSuspend))
+        DbgLoc = NonZeroLoc;
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(ProjectionFunc->getFunctionType(),
                                              ProjectionFunc, CalleeContext);

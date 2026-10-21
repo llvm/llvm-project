@@ -10,10 +10,14 @@ add_subdirectory(Lowering)
 add_clang_library(CIRRegisterAllDialects
   RegisterAllDialects.cpp
 
+  DEPENDS
+  MLIRArithOpsIncGen
+
   LINK_LIBS PUBLIC
   MLIRCIR
   CIROpenACCSupport
   CIROpenMPSupport
+  MLIRArithDialect
   MLIRDLTIDialect
   MLIRLLVMDialect
 )

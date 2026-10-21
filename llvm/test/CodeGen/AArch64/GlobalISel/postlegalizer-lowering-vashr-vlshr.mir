@@ -85,7 +85,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[C]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_SPLAT_VECTOR [[C]](i32)
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x i32>) = G_LSHR [[COPY]], [[DUP]](<4 x i32>)
     ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0

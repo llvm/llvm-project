@@ -1,12 +1,44 @@
 // RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
 // RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
 // RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23,since-cxx26 %s
 
 // cxx98-no-diagnostics
+
+namespace cwg2900 { // cwg2900: 24
+#if __cplusplus >= 201703L
+// [temp.deduct.type] Example 13.
+template <int &> struct E;
+template <auto x> void f(E<x> *); // #cwg2900-f-E
+int v;
+void g(E<v> *bp) {
+  f(bp);
+  // since-cxx17-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx17-note@#cwg2900-f-E {{candidate template ignored: substitution failure: non-type template argument is not a constant expression}}
+}
+
+template <const int &> struct F;
+template <decltype(auto) x> void f(F<x> *);
+int i;
+void g(F<i> *ap) {
+  f(ap); // OK, deduces x as a constant template parameter of type const int &
+}
+
+template <decltype(auto) q> struct G;
+template <auto x> long *f(G<x> *);            // #1
+template <decltype(auto) x> short *f(G<x> *); // #2
+const int j = 0;
+short *g(G<(j)> *ap) { // OK, q has type const int &
+  return f(ap);        // OK, only #2 matches
+}
+long *g(G<j> *ap) { // OK, q has type int
+  return f(ap);     // OK, #1 is more specialized
+}
+#endif
+} // namespace cwg2900
 
 namespace cwg2913 { // cwg2913: 20
 

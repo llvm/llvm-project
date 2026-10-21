@@ -2,13 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 < %s | FileCheck -check-prefix=GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu13.10 < %s | FileCheck -check-prefix=GFX13-GISEL %s
 
-declare <32 x bfloat> @llvm.amdgcn.cvt.scale.pk32.bf16.bf6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-declare <32 x bfloat> @llvm.amdgcn.cvt.scale.pk32.bf16.fp6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-declare <32 x half> @llvm.amdgcn.cvt.scale.pk32.f16.bf6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-declare <32 x half> @llvm.amdgcn.cvt.scale.pk32.f16.fp6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-declare <32 x float> @llvm.amdgcn.cvt.scale.pk32.f32.bf6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-declare <32 x float> @llvm.amdgcn.cvt.scale.pk32.f32.fp6(<6 x i32> %src, i32 %scale, i32 %scale_sel)
-
 define amdgpu_ps void @test_cvt_scale_pk32_bf16_bf6_vv(ptr addrspace(1) %out, <6 x i32> %src, i32 %scale) {
 ; GFX13-SDAG-LABEL: test_cvt_scale_pk32_bf16_bf6_vv:
 ; GFX13-SDAG:       ; %bb.0:

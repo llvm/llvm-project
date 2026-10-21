@@ -328,5 +328,5 @@ define i32 @select_and_icmp_alt_bad_false_val(i32 %x, i32 %y, i32 %z, i32 %k) {
 
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ;.
