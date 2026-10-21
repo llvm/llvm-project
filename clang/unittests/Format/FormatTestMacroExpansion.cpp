@@ -230,8 +230,63 @@ a))",
 TEST_F(FormatTestMacroExpansion, KeepParensWhenExpandingObjectLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("FN=class C { int f");
-  verifyFormat("void f() { FN(a *b);\n"
+  verifyFormat("void f() {\n"
+               "  FN(a *b);\n"
                "  };\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ShortFunctionsAndBlocksWithMacroExpansion) {
+  FormatStyle Style = getLLVMStyleWithColumns(35);
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.Macros = {
+      "ID(x)=x",
+      "VERY_LONG_MACRO_NAME(x)=x",
+      "EXPANDS_LONG(x)=very_long_function_call(x)",
+      "IF_ERROR_RETURN(x)=if (x) return x",
+      "STMTS=f(); g();",
+      "STMTS_NO_SEMI=f(); g()",
+  };
+
+  verifyFormat("void f() { ID(a *b); }", Style);
+  verifyFormat("void f() { int x = ID(a * b); }", Style);
+  verifyFormat("void f() {\n"
+               "  VERY_LONG_MACRO_NAME(a *b);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  int x = VERY_LONG_MACRO_NAME(x);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  EXPANDS_LONG(a * b) +\n"
+               "      c;\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  IF_ERROR_RETURN(x);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  IF_ERROR_RETURN(a * b);\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  STMTS\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  STMTS_NO_SEMI;\n"
+               "}",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "  if (a) ID(b *c);\n"
+               "  if (a)\n"
+               "    VERY_LONG_MACRO_NAME(b *c);\n"
+               "  if (a)\n"
+               "    IF_ERROR_RETURN(b * c);\n"
                "}",
                Style);
 }

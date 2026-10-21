@@ -230,19 +230,22 @@ void UnwrappedLineParser::parse() {
     // replaced by the expansion.
     if (!ExpandedLines.empty()) {
       LLVM_DEBUG(llvm::dbgs() << "Expanded lines:\n");
-      for (const auto &Line : Lines) {
+      for (auto &Line : Lines) {
         if (!Line.Tokens.empty()) {
           auto it = ExpandedLines.find(Line.Tokens.begin()->Tok);
           if (it != ExpandedLines.end()) {
-            for (const auto &Expanded : it->second) {
+            for (auto &Expanded : it->second) {
+              Expanded.InMacroExpansion = true;
               LLVM_DEBUG(printDebugInfo(Expanded));
               Callback.consumeUnwrappedLine(Expanded);
             }
             continue;
           }
         }
+        Line.InMacroExpansion = true;
         LLVM_DEBUG(printDebugInfo(Line));
         Callback.consumeUnwrappedLine(Line);
+        Line.InMacroExpansion = false;
       }
       Callback.finishRun();
     }
@@ -4854,6 +4857,8 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
         llvm::dbgs() << "Adding unexpanded line:\n";
         printDebugInfo(Reconstructed);
       });
+      if (CurrentExpandedLines.size() > 1)
+        Reconstructed.Tokens.back().Tok->MacroParent = true;
       ExpandedLines[Reconstructed.Tokens.begin()->Tok] = CurrentExpandedLines;
       Lines.push_back(std::move(Reconstructed));
       CurrentExpandedLines.clear();
