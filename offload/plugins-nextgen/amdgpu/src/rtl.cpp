@@ -2331,9 +2331,6 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   /// Get the host agent.
   hsa_agent_t getAgent() const override { return Agent; }
 
-  /// Get all the host agents.
-  llvm::ArrayRef<hsa_agent_t> getAgents() const { return Agents; }
-
   /// Get a memory pool for fine-grained allocations.
   AMDGPUMemoryPoolTy &getFineGrainedMemoryPool() {
     assert(!FineGrainedMemoryPools.empty() && "No fine-grained mempool");
@@ -2408,9 +2405,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // the device over XGMI.
     HostLinkIsXGMI =
         HostWritesDeviceMemory &&
-        llvm::all_of(HostDevice.getAgents(), [&](hsa_agent_t HostAgent) {
-          return CoarseGrainedMemoryPools[0]->isLinkedOverXGMI(HostAgent);
-        });
+        CoarseGrainedMemoryPools[0]->isLinkedOverXGMI(HostDevice.getAgent());
 
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
