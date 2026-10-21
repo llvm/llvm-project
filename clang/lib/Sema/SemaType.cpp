@@ -9072,6 +9072,30 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
+  // A DeclSpec attribute runs this once per declarator, as in
+  // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
+  // node is left without a count.
+  if (LA.TypeToComplete) {
+    QT = QualType(LA.TypeToComplete, 0);
+    return true;
+  }
+
+  // Nesting is checked once the enclosing declarator chunks wrap the node.
+  BoundsAttrFlags Flags;
+  if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
+                                             SourceRange(LA.NameLoc),
+                                             /*PointerNestLevel=*/0, Flags))
+    return false;
+
+  // The argument isn't parsed yet, so build the type without a count.
+  CountAttributedType *CATy = getASTContext().getIncompleteCountAttributedType(
+      QT, Flags.CountInBytes, Flags.OrNull);
+  QT = QualType(CATy, 0);
+  LA.TypeToComplete = CATy;
+  return true;
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
