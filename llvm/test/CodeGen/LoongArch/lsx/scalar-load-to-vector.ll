@@ -7,8 +7,7 @@
 define <16 x i8> @load_to_16xi8(ptr %p) {
 ; CHECK-LABEL: load_to_16xi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
+; CHECK-NEXT:    vldrepl.b $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i8, ptr %p
   %ret = insertelement <16 x i8> poison, i8 %v, i32 0
@@ -18,8 +17,7 @@ define <16 x i8> @load_to_16xi8(ptr %p) {
 define <8 x i16> @load_to_8xi16(ptr %p) {
 ; CHECK-LABEL: load_to_8xi16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vldrepl.h $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i16, ptr %p
   %ret = insertelement <8 x i16> poison, i16 %v, i32 0
@@ -29,8 +27,7 @@ define <8 x i16> @load_to_8xi16(ptr %p) {
 define <4 x i32> @load_to_4xi32(ptr %p) {
 ; CHECK-LABEL: load_to_4xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %ret = insertelement <4 x i32> poison, i32 %v, i32 0
@@ -40,16 +37,14 @@ define <4 x i32> @load_to_4xi32(ptr %p) {
 define <2 x i64> @load_to_2xi64(ptr %p) {
 ; LA32-LABEL: load_to_2xi64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_to_2xi64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    ret
   %v = load i64, ptr %p
   %ret = insertelement <2 x i64> poison, i64 %v, i32 0
@@ -58,11 +53,17 @@ define <2 x i64> @load_to_2xi64(ptr %p) {
 
 ;; Offsets that aren't a multiple of the element size.
 define <8 x i16> @load_to_8xi16_offset(ptr %p) {
-; CHECK-LABEL: load_to_8xi16_offset:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, -3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    ret
+; LA32-LABEL: load_to_8xi16_offset:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, -3
+; LA32-NEXT:    vldrepl.h $vr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: load_to_8xi16_offset:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, -3
+; LA64-NEXT:    vldrepl.h $vr0, $a0, 0
+; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 -3
   %v = load i16, ptr %gep
   %ret = insertelement <8 x i16> poison, i16 %v, i32 0
@@ -72,16 +73,14 @@ define <8 x i16> @load_to_8xi16_offset(ptr %p) {
 define <2 x i64> @load_to_2xi64_offset(ptr %p) {
 ; LA32-LABEL: load_to_2xi64_offset:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 6
-; LA32-NEXT:    ld.w $a0, $a0, 10
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 10
+; LA32-NEXT:    fld.s $fa0, $a0, 6
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_to_2xi64_offset:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 6
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 6
 ; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 6
   %v = load i64, ptr %gep
@@ -111,8 +110,7 @@ define <2 x i64> @load_4xi16_sext(ptr %p) {
 ;
 ; LA64-LABEL: load_4xi16_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vslti.h $vr1, $vr0, 0
 ; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; LA64-NEXT:    vslti.w $vr1, $vr0, 0
@@ -127,18 +125,16 @@ define <2 x i64> @load_4xi16_sext(ptr %p) {
 define <2 x i64> @load_2xi32_sext(ptr %p) {
 ; LA32-LABEL: load_2xi32_sext:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    vslti.w $vr1, $vr0, 0
 ; LA32-NEXT:    vilvl.w $vr0, $vr1, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_2xi32_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vslti.w $vr1, $vr0, 0
 ; LA64-NEXT:    vilvl.w $vr0, $vr1, $vr0
 ; LA64-NEXT:    ret
@@ -150,8 +146,7 @@ define <2 x i64> @load_2xi32_sext(ptr %p) {
 define <4 x i32> @load_2xi16_zext(ptr %p) {
 ; CHECK-LABEL: load_2xi16_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    ret
