@@ -97,9 +97,62 @@ std::string toString(const FormatterBytecode::DataStack &data) {
 
 namespace FormatterBytecode {
 
+/// Check a format string, and remove the layout and options of each
+/// replacement. The format string may contain literal text, escaped braces
+/// ("{{"), and automatically indexed replacements:
+///
+///   "{" [ "," layout ] [ ":" options ] "}"
+///
+/// Explicit indexes are not supported. Layouts and options are accepted, so
+/// that support for them can be added without changing the ABI, but they are
+/// currently ignored. The result contains only literal text, escaped braces,
+/// and "{}", so malformed format strings never reach formatv.
+static llvm::Expected<std::string> SanitizeFormatString(llvm::StringRef fmt) {
+  const llvm::StringRef original = fmt;
+  std::string result;
+  while (!fmt.empty()) {
+    // Copy the literal text up to the next brace.
+    llvm::StringRef literal = fmt.take_front(fmt.find('{'));
+    result += literal;
+    fmt = fmt.drop_front(literal.size());
+    if (fmt.empty())
+      break;
+    if (fmt.consume_front("{{")) {
+      result += "{{";
+      continue;
+    }
+    llvm::StringRef replacement = fmt;
+    fmt = fmt.drop_front();
+    // Skip the layout, which ends at the options or the closing brace.
+    if (fmt.consume_front(","))
+      fmt = fmt.substr(fmt.find_first_of("{}:"));
+    // Skip the options, which end at the closing brace.
+    if (fmt.consume_front(":"))
+      fmt = fmt.substr(fmt.find_first_of("{}"));
+    if (!fmt.consume_front("}"))
+      return llvm::createStringErrorV(
+          "invalid replacement in format string at offset {0}",
+          original.size() - replacement.size());
+    replacement = replacement.drop_back(fmt.size());
+    if (replacement != "{}")
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "ignoring unsupported layout or options in format replacement "
+               "'{0}'",
+               replacement);
+    result += "{}";
+  }
+  return result;
+}
+
 /// Implement the @format function.
-static llvm::Error FormatImpl(DataStack &data) {
+static llvm::Error FormatImpl(DataStack &data, uint32_t version) {
   auto fmt = data.Pop<std::string>();
+  if (version >= 2) {
+    auto sanitized = SanitizeFormatString(fmt);
+    if (!sanitized)
+      return sanitized.takeError();
+    fmt = std::move(*sanitized);
+  }
   auto replacements =
       llvm::formatv_object_base::parseFormatString(fmt, 0, false);
   std::string s;
@@ -144,6 +197,8 @@ static llvm::Error FormatImpl(DataStack &data) {
     else if (std::holds_alternative<DictionarySP>(arg))
       format(FormatFunctor("dict"));
   }
+  // Consume the arguments, leaving only the result.
+  data.erase(data.end() - num_args, data.end());
   data.Push(s);
   return llvm::Error::success();
 }
@@ -826,7 +881,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
       }
       case sel_fmt: {
         TYPE_CHECK(String);
-        if (auto error = FormatImpl(data))
+        if (auto error = FormatImpl(data, version))
           return error;
         break;
       }

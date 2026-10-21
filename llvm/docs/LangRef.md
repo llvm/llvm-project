@@ -14316,9 +14316,10 @@ the `va_arg` macro in C.
 ##### Arguments:
 
 This instruction takes a `va_list*` value and the type of the
-argument. It returns a value of the specified argument type and
-increments the `va_list` to point to the next argument. The actual
-type of `va_list` is target specific.
+argument, which must not be an {ref}`aggregate <t_aggregate>` type. It
+returns a value of the specified argument type and increments the
+`va_list` to point to the next argument. The actual type of `va_list` is
+target specific.
 
 ##### Semantics:
 
@@ -14338,8 +14339,7 @@ function.
 See the {ref}`variable argument processing <int_varargs>` section.
 
 Note that the code generator does not yet fully support `va_arg` on many
-targets. Also, it does not currently support `va_arg` with aggregate
-types on any target.
+targets.
 
 (i_landingpad)=
 
@@ -26913,7 +26913,7 @@ The '`llvm.ubsantrap`' intrinsic.
 
 ##### Arguments:
 
-An integer describing the kind of failure detected.
+An unsigned integer describing the kind of failure detected.
 
 ##### Semantics:
 

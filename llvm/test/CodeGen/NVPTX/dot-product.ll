@@ -28,13 +28,12 @@ define i32 @test_dp4a_u32_u32(i32 %a, i32 %b, i32 %c) {
 define i32 @test_dp4a_u32imm_u32imm(i32 %c) {
 ; CHECK-LABEL: test_dp4a_u32imm_u32imm(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_dp4a_u32imm_u32imm_param_0];
-; CHECK-NEXT:    mov.b32 %r2, 0;
-; CHECK-NEXT:    dp4a.u32.u32 %r3, %r2, %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    dp4a.u32.u32 %r2, 0, 0, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %call = call i32 @llvm.nvvm.idp4a.u.u(i32 0, i32 0, i32 %c)
   ret i32 %call
