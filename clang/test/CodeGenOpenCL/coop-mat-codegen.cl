@@ -82,7 +82,7 @@ kernel void test_muladd(__global float *ptr) {
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_muladd
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixMulAddKHR
 
-// Binary add (float element) -> __spirv_CooperativeMatrixFAdd
+// Binary add (float element) -> __spirv_FAdd
 kernel void test_binary_add(__global float *ptr) {
     MatA_t a; MatA_t b; MatA_t r;
     a = coop_mat_load(ptr, ROW_MAJOR, 16);
@@ -91,7 +91,7 @@ kernel void test_binary_add(__global float *ptr) {
     (void)r;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_binary_add
-// CHECK: call {{.*}} @__spirv_CooperativeMatrixFAdd
+// CHECK: call {{.*}} @__spirv_FAdd
 
 // Scalar multiply -> __spirv_CooperativeMatrixScalarMulKHR
 kernel void test_scalar_mul(__global float *ptr, float s) {
@@ -107,7 +107,7 @@ kernel void test_scalar_mul(__global float *ptr, float s) {
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarMulKHR
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarMulKHR
 
-// Unary minus -> __spirv_CooperativeMatrixScalarNeg
+// Unary minus -> __spirv_FNegate
 kernel void test_unary_neg(__global float *ptr) {
     MatA_t a; MatA_t r;
     a = coop_mat_load(ptr, ROW_MAJOR, 16);
@@ -115,4 +115,4 @@ kernel void test_unary_neg(__global float *ptr) {
     (void)r;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_unary_neg
-// CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarNeg
+// CHECK: call {{.*}} @__spirv_FNegate

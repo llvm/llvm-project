@@ -95,9 +95,10 @@ CodeGenTypes::ConvertTypeForCoopMat(const CooperativeMatrixType *CMT) {
   llvm::Type *ElementTy = ConvertType(CMT->getElementType());
   // Type arguments for TargetExtType
   llvm::Type *Tys[] = {ElementTy};
-  // Unsigned arguments for TargetExtType
-  unsigned Ints[] = {CMT->getScope(), CMT->getNumRows(), CMT->getNumColumns(),
-                     CMT->getUse()};
+  // TODO: Update scope once appropriate changes are made to SPIR-V backend and
+  // translator.
+  unsigned Ints[] = {3 /*SPIRV::Scope::Subgroup*/, CMT->getNumRows(),
+                     CMT->getNumColumns(), CMT->getUse()};
   // Create a TargetExtType to represent the coop matrix type
   llvm::TargetExtType *RetType = llvm::TargetExtType::get(
       getLLVMContext(), "spirv.CooperativeMatrixKHR",
