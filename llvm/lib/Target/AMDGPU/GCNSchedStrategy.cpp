@@ -1620,12 +1620,12 @@ bool PreRARematStage::initGCNSchedStage() {
   }
 
   // Finish initializing candidates.
-  SmallVector<unsigned> CandidateOrder;
+  SmallVector<size_t> CandidateOrder;
   for (auto [CandIdx, Cand] : enumerate(Candidates)) {
     Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     if (!Cand.hasNullScore())
-      CandidateOrder.push_back(static_cast<unsigned>(CandIdx));
+      CandidateOrder.push_back(CandIdx);
   }
 
   if (TargetOcc) {
@@ -1645,7 +1645,7 @@ bool PreRARematStage::initGCNSchedStage() {
     RecomputeRP.reset();
 
     // Sort candidates in increasing score order.
-    sort(CandidateOrder, [&](unsigned LHSIndex, unsigned RHSIndex) {
+    sort(CandidateOrder, [&](size_t LHSIndex, size_t RHSIndex) {
       return Candidates[LHSIndex] < Candidates[RHSIndex];
     });
 
@@ -1749,7 +1749,7 @@ bool PreRARematStage::initGCNSchedStage() {
     // having been useless for a round, so we can freely drop them without
     // losing any future rematerialization opportunity.
     unsigned NumUsefulCandidates = 0;
-    for (unsigned CandIdx : CandidateOrder) {
+    for (size_t CandIdx : CandidateOrder) {
       ScoredRemat &Candidate = Candidates[CandIdx];
       Candidate.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
       if (!Candidate.hasNullScore())
