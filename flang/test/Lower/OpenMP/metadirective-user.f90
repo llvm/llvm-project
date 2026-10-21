@@ -105,16 +105,13 @@ subroutine test_begin_condition_false()
   !$omp end metadirective
 end subroutine
 
-! Only constant conditions of default LOGICAL kind are resolved statically.
-! Other kinds are lowered as a runtime fir.if on a constant.
+! Constant conditions of any LOGICAL kind are resolved statically.
 
 ! CHECK-LABEL: func.func @_QPtest_condition_true_kind8()
-! CHECK:         %[[TRUE:.*]] = arith.constant true
-! CHECK-NEXT:    fir.if %[[TRUE]] {
-! CHECK-NEXT:      omp.taskyield
-! CHECK-NEXT:    } else {
-! CHECK-NEXT:    }
-! CHECK-NEXT:    return
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskyield
+! CHECK-NOT:     fir.if
+! CHECK:         return
 subroutine test_condition_true_kind8()
   !$omp metadirective &
   !$omp & when(user={condition(.true._8)}: taskyield) &
@@ -126,12 +123,9 @@ subroutine test_condition_true_kind8()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_condition_false_kind8()
-! CHECK:         %[[FALSE:.*]] = arith.constant false
-! CHECK-NEXT:    fir.if %[[FALSE]] {
-! CHECK-NEXT:      omp.taskwait
-! CHECK-NEXT:    } else {
-! CHECK-NEXT:    }
-! CHECK-NEXT:    return
+! CHECK-NOT:     omp.taskwait
+! CHECK-NOT:     fir.if
+! CHECK:         return
 subroutine test_condition_false_kind8()
   !$omp metadirective &
   !$omp & when(user={condition(.false._8)}: taskwait) &
@@ -143,12 +137,10 @@ subroutine test_condition_false_kind8()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_condition_true_kind1()
-! CHECK:         %[[TRUE:.*]] = arith.constant true
-! CHECK-NEXT:    fir.if %[[TRUE]] {
-! CHECK-NEXT:      omp.taskyield
-! CHECK-NEXT:    } else {
-! CHECK-NEXT:    }
-! CHECK-NEXT:    return
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskyield
+! CHECK-NOT:     fir.if
+! CHECK:         return
 subroutine test_condition_true_kind1()
   !$omp metadirective &
   !$omp & when(user={condition(.true._1)}: taskyield) &
@@ -160,12 +152,10 @@ subroutine test_condition_true_kind1()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_condition_true_kind2()
-! CHECK:         %[[TRUE:.*]] = arith.constant true
-! CHECK-NEXT:    fir.if %[[TRUE]] {
-! CHECK-NEXT:      omp.taskyield
-! CHECK-NEXT:    } else {
-! CHECK-NEXT:    }
-! CHECK-NEXT:    return
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskyield
+! CHECK-NOT:     fir.if
+! CHECK:         return
 subroutine test_condition_true_kind2()
   !$omp metadirective &
   !$omp & when(user={condition(.true._2)}: taskyield) &
@@ -177,12 +167,11 @@ subroutine test_condition_true_kind2()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_condition_score_kind8()
-! CHECK:         %[[TRUE:.*]] = arith.constant true
-! CHECK-NEXT:    fir.if %[[TRUE]] {
-! CHECK-NEXT:      omp.taskwait
-! CHECK-NEXT:    } else {
-! CHECK-NEXT:    }
-! CHECK-NEXT:    return
+! CHECK-NOT:     omp.taskyield
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskwait
+! CHECK-NOT:     fir.if
+! CHECK:         return
 subroutine test_condition_score_kind8()
   !$omp metadirective &
   !$omp & when(user={condition(.true._8)}: taskyield) &
@@ -802,6 +791,24 @@ subroutine test_constant_condition_kinds()
   !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
   !$omp & when(user={condition(.true._4)}, device={kind(host)}, &
   !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! A false constant of any kind makes the third WHEN clause inapplicable, so the
+! first two tie and TASKYIELD is selected.
+! CHECK-LABEL: func.func @_QPtest_false_constant_condition_kind(
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         omp.taskyield
+! CHECK-NOT:     {{fir.if|omp.taskwait|omp.barrier}}
+! CHECK:         return
+subroutine test_false_constant_condition_kind(b)
+  logical, intent(in) :: b
+  !$omp metadirective &
+  !$omp & when(device={kind(host)}, implementation={vendor(score(3): llvm)}: &
+  !$omp &      taskyield) &
+  !$omp & when(user={condition(b)}, implementation={vendor(score(4): llvm)}: &
+  !$omp &      taskwait) &
+  !$omp & when(user={condition(.false._8)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: barrier)
 end subroutine
 
 ! Calls to intrinsics without arguments are evaluated at runtime.
