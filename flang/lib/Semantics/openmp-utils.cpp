@@ -2372,8 +2372,7 @@ std::optional<bool> EvaluateUserCondition(
     return *constVal != 0;
 
   if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
-              evaluate::LogicalResultKind, foldedExpr))
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
@@ -2627,9 +2626,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
   llvm::SmallVector<SomeExpr, 4> runtimeConditions;
   auto getConditionKey = [&](const DynamicUserCondition &condition) {
     const SomeExpr *expr{GetExpr(context, *condition.expr)};
-    if (!expr ||
-        evaluate::IsActuallyConstant(
-            evaluate::Fold(context.foldingContext(), common::Clone(*expr))))
+    if (!expr)
       return std::string{};
     SomeExpr normalized{NormalizeMetadirectiveCondition(*expr)};
     auto *it{llvm::find_if(runtimeConditions, [&](const SomeExpr &condition) {
