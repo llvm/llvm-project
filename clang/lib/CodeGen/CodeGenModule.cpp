@@ -7065,7 +7065,42 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // want to propagate this information down (e.g. to local static
   // declarations).
   auto *Fn = cast<llvm::Function>(GV);
-  setFunctionLinkage(GD, Fn);
+  if (D->isInlineBuiltinDeclaration()) {
+    // When generating code for a builtin with an inline declaration, use a
+    // mangled name to hold the actual body, while keeping an external
+    // definition in case the function pointer is referenced somewhere.
+    std::string FDInlineName = (Fn->getName() + ".inline").str();
+    llvm::Function *Clone = getModule().getFunction(FDInlineName);
+    if (!Clone) {
+      Clone = llvm::Function::Create(
+          Fn->getFunctionType(), llvm::GlobalValue::InternalLinkage,
+          Fn->getAddressSpace(), FDInlineName, &getModule());
+      Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
+    if (!Clone->isDeclaration())
+      return;
+    Clone->setCallingConv(Fn->getCallingConv());
+    Clone->setAttributes(Fn->getAttributes());
+    Fn = Clone;
+  } else {
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too. Unfortunately, I cannot find a way
+    // to detect that situation before we reach codegen, so do some late
+    // replacement.
+    for (const FunctionDecl *PD = D->getPreviousDecl(); PD;
+         PD = PD->getPreviousDecl()) {
+      if (LLVM_UNLIKELY(PD->isInlineBuiltinDeclaration())) {
+        std::string FDInlineName = (Fn->getName() + ".inline").str();
+        if (llvm::Function *Clone = getModule().getFunction(FDInlineName)) {
+          Clone->replaceAllUsesWith(Fn);
+          Clone->eraseFromParent();
+        }
+        break;
+      }
+    }
+    setFunctionLinkage(GD, Fn);
+  }
 
   if (getTriple().isOSAIX() && D->isTargetClonesMultiVersion())
     Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
