@@ -84,6 +84,7 @@ void AVRPassConfig::addIRPasses() {
   //   %result = shl i32 %n, %amount
   // to a loop so that library calls are avoided.
   addPass(createAVRShiftExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

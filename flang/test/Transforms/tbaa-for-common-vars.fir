@@ -16,10 +16,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %addr2 = fir.address_of(@common1_) : !fir.ref<!fir.array<8xi8>>
     %2 = fir.coordinate_of %addr1, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fir.declare %3 storage(%addr1[0]) {uniq_name = "_QFtest1Ea"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%addr1[0]) uniq_name("_QFtest1Ea") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %5 = fir.coordinate_of %addr2, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %7 = fir.declare %6 storage(%addr2[4]) {uniq_name = "_QFtest1Eb"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %7 = fir.declare %6 storage(%addr2[4]) uniq_name("_QFtest1Eb") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %8 = fir.load %7 : !fir.ref<f32>
     fir.store %8 to %4 : !fir.ref<f32>
     return
@@ -55,8 +55,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@common2_) : !fir.ref<!fir.array<4xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ptr<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest2Ea"} : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
-    %5 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest2Eb"} : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest2Ea") : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
+    %5 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest2Eb") : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
     %6 = fir.load %5 : !fir.ptr<f32>
     fir.store %6 to %4 : !fir.ptr<f32>
     return
@@ -96,15 +96,15 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@common3_) : !fir.ref<!fir.array<8xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest3Ea"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest3Ea") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %7 = fir.declare %6 storage(%1[4]) {uniq_name = "_QFtest3Eb"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %7 = fir.declare %6 storage(%1[4]) uniq_name("_QFtest3Eb") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %8 = fir.load %7 : !fir.ref<f32>
     fir.store %8 to %4 : !fir.ref<f32>
     %9 = fir.dummy_scope : !fir.dscope
-    %10 = fir.declare %4 dummy_scope %9 {uniq_name = "_QFtest3FinnerEc"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-    %11 = fir.declare %7 dummy_scope %9 {uniq_name = "_QFtest3FinnerEd"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %10 = fir.declare %4 dummy_scope %9 uniq_name("_QFtest3FinnerEc") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %11 = fir.declare %7 dummy_scope %9 uniq_name("_QFtest3FinnerEd") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
     %12 = fir.load %11 : !fir.ref<f32>
     fir.store %12 to %10 : !fir.ref<f32>
     return
@@ -157,15 +157,15 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@common4_) : !fir.ref<!fir.array<8xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest4Ea"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest4Ea") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %7 = fir.declare %6 storage(%1[4]) {uniq_name = "_QFtest4Eb"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %7 = fir.declare %6 storage(%1[4]) uniq_name("_QFtest4Eb") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %8 = fir.load %7 : !fir.ref<f32>
     fir.store %8 to %4 : !fir.ref<f32>
     %9 = fir.dummy_scope : !fir.dscope
-    %10 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest4FinnerEc"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
-    %11 = fir.declare %6 storage(%1[4]) {uniq_name = "_QFtest4FinnerEd"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %10 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest4FinnerEc") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %11 = fir.declare %6 storage(%1[4]) uniq_name("_QFtest4FinnerEd") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %12 = fir.load %11 : !fir.ref<f32>
     fir.store %12 to %10 : !fir.ref<f32>
     return
@@ -212,10 +212,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@common5_) : !fir.ref<!fir.array<8xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtest5Ea"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QFtest5Ea") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-//    %7 = fir.declare %6 storage(%1[4]) {uniq_name = "_QFtest5Eb"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+//    %7 = fir.declare %6 storage(%1[4]) uniq_name("_QFtest5Eb") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %8 = fir.load %6 : !fir.ref<f32>
     fir.store %8 to %4 : !fir.ref<f32>
     return
@@ -262,13 +262,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<80xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
     %4 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %5 = fir.declare %3(%4) storage(%1[0]) {uniq_name = "_QMm1Ea"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<10xf32>>
+    %5 = fir.declare %3(%4) storage(%1[0]) uniq_name("_QMm1Ea") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<10xf32>>
     %6 = fir.coordinate_of %1, %c40 : (!fir.ref<!fir.array<80xi8>>, index) -> !fir.ref<i8>
     %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
-    %8 = fir.declare %7(%4) storage(%1[40]) {uniq_name = "_QMm1Eb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<10xf32>>
+    %8 = fir.declare %7(%4) storage(%1[40]) uniq_name("_QMm1Eb") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<10xf32>>
     %9 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<!fir.array<20xf32>>
     %10 = fir.shape %c20 : (index) -> !fir.shape<1>
-    %11 = fir.declare %9(%10) storage(%1[0]) {uniq_name = "_QMm2Ec"} : (!fir.ref<!fir.array<20xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<20xf32>>
+    %11 = fir.declare %9(%10) storage(%1[0]) uniq_name("_QMm2Ec") : (!fir.ref<!fir.array<20xf32>>, !fir.shape<1>, !fir.ref<!fir.array<80xi8>>) -> !fir.ref<!fir.array<20xf32>>
     %12 = fir.array_coor %11(%10) %c1 : (!fir.ref<!fir.array<20xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %13 = fir.load %12 : !fir.ref<f32>
     %14 = fir.array_coor %8(%4) %c1 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
@@ -324,14 +324,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
     %4 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %5 = fir.declare %3(%4) storage(%1[0]) {uniq_name = "_QMm1Ea"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
+    %5 = fir.declare %3(%4) storage(%1[0]) uniq_name("_QMm1Ea") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
     %6 = fir.coordinate_of %1, %c40 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
     %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<i32>
-    %8 = fir.declare %7 storage(%1[40]) {uniq_name = "_QMm1Eb"} : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
+    %8 = fir.declare %7 storage(%1[40]) uniq_name("_QMm1Eb") : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
     %9 = fir.convert %1 : (!fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<24xi8>>
     %10 = fir.coordinate_of %9, %c0 : (!fir.ref<!fir.array<24xi8>>, index) -> !fir.ref<i8>
     %11 = fir.convert %10 : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-    %12 = fir.declare %11 storage(%9[0]) {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm2Ep"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %12 = fir.declare %11 storage(%9[0]) uniq_name("_QMm2Ep") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %13 = fir.load %12 : !fir.ref<!fir.box<!fir.ptr<f32>>>
     %14 = fir.box_addr %13 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
     %15 = fir.load %14 : !fir.ptr<f32>
@@ -394,16 +394,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
     %4 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %5 = fir.declare %3(%4) storage(%1[0]) {uniq_name = "_QMm1Ea"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
+    %5 = fir.declare %3(%4) storage(%1[0]) uniq_name("_QMm1Ea") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
     %6 = fir.coordinate_of %1, %c40 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
     %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<i32>
     %addr = fir.load %tmpmem : !fir.ref<!fir.llvm_ptr<!fir.array<44xi8>>>
     %addrcast = fir.convert %addr : (!fir.llvm_ptr<!fir.array<44xi8>>) -> !fir.ref<!fir.array<44xi8>>
-    %8 = fir.declare %7 storage(%addrcast[40]) {uniq_name = "_QMm1Eb"} : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
+    %8 = fir.declare %7 storage(%addrcast[40]) uniq_name("_QMm1Eb") : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
     %9 = fir.convert %1 : (!fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<24xi8>>
     %10 = fir.coordinate_of %9, %c0 : (!fir.ref<!fir.array<24xi8>>, index) -> !fir.ref<i8>
     %11 = fir.convert %10 : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-    %12 = fir.declare %11 storage(%9[0]) {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm2Ep"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %12 = fir.declare %11 storage(%9[0]) uniq_name("_QMm2Ep") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
     %13 = fir.load %12 : !fir.ref<!fir.box<!fir.ptr<f32>>>
     %14 = fir.box_addr %13 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
     %15 = fir.load %14 : !fir.ptr<f32>
@@ -449,13 +449,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@common1_) : !fir.ref<!fir.array<12xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtarget_comon_tbaaEa"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QFtarget_comon_tbaaEa") : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
     %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
     %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %7 = fir.declare %6 storage(%1[4]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtarget_comon_tbaaEb"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %7 = fir.declare %6 storage(%1[4]) uniq_name("_QFtarget_comon_tbaaEb") fortran_attrs<target> : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
     %8 = fir.coordinate_of %1, %c8 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
     %9 = fir.convert %8 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %10 = fir.declare %9 storage(%1[8]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtarget_comon_tbaaEc"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %10 = fir.declare %9 storage(%1[8]) uniq_name("_QFtarget_comon_tbaaEc") fortran_attrs<target> : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
     %11 = fir.load %7 : !fir.ref<f32>
     fir.store %11 to %4 : !fir.ref<f32>
     return

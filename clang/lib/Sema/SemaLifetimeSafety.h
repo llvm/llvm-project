@@ -72,6 +72,11 @@ inline bool ShouldCheckInapplicableLifetimebound(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_inapplicable_lifetimebound, D->getBeginLoc());
 }
 
+inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
+  return !S.getDiagnostics().isIgnored(
+      diag::warn_lifetime_safety_field_origin_escape, D->getBeginLoc());
+}
+
 inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -114,6 +119,7 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
          ShouldCheckLifetimeboundViolations(S, D) ||
          ShouldCheckMisplacedLifetimebound(S, D) ||
          ShouldCheckInapplicableLifetimebound(S, D) ||
+         ShouldCheckFieldOriginEscape(S, D) ||
          ShouldSuggestLifetimeAnnotations(S, D);
 }
 
@@ -127,6 +133,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
   LSOpts.CheckMisplacedLifetimebound = ShouldCheckMisplacedLifetimebound(S, D);
   LSOpts.CheckInapplicableLifetimebound =
       ShouldCheckInapplicableLifetimebound(S, D);
+  LSOpts.CheckFieldOriginEscape = ShouldCheckFieldOriginEscape(S, D);
   return LSOpts;
 }
 
@@ -158,7 +165,8 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr) override {
+                            const Expr *MovedExpr,
+                            llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
                           : diag::warn_lifetime_safety_return_stack_addr;
@@ -169,6 +177,9 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    reportAliasingChain(ExprChain);
+
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
@@ -343,11 +354,11 @@ public:
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
-    if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
+    if (const auto *EscapeExpr = dyn_cast<const Expr *>(Target))
       S.Diag(EscapeExpr->getBeginLoc(),
              diag::note_lifetime_safety_suggestion_returned_here)
           << EscapeExpr->getSourceRange();
-    else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
+    else if (const auto *EscapeField = dyn_cast<const FieldDecl *>(Target))
       S.Diag(EscapeField->getLocation(),
              diag::note_lifetime_safety_escapes_to_field_here)
           << EscapeField->getSourceRange();
@@ -452,6 +463,22 @@ public:
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
+  }
+
+  void reportFieldOriginEscape(const CXXMethodDecl *MD, const FieldDecl *FD,
+                               const Expr *EscapeExpr) override {
+    std::string FieldDesc = getDiagSubjectDescription(FD);
+    S.Diag(MD->getLocation(), diag::warn_lifetime_safety_field_origin_escape)
+        << FieldDesc << MD->getNameInfo().getSourceRange();
+
+    S.Diag(EscapeExpr->getBeginLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getSourceRange();
+
+    // A raw pointer field may own its storage (e.g., Vector::data()).
+    if (FD->getType()->isPointerType())
+      S.Diag(FD->getLocation(),
+             diag::note_lifetime_safety_owned_field_suggestion)
+          << FieldDesc << FD->getSourceRange();
   }
 
   void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,

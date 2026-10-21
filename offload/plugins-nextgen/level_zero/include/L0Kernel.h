@@ -23,6 +23,7 @@ namespace llvm::omp::target::plugin {
 class L0DeviceTy;
 class L0ProgramTy;
 class L0QueueTy;
+class LevelZeroPluginContextTy;
 struct L0LaunchEnvTy;
 
 /// Kernel properties.
@@ -64,7 +65,9 @@ class L0KernelTy : public GenericKernelTy {
   ze_group_size_t createKernelGroups(L0DeviceTy &L0Device, L0LaunchEnvTy &KEnv,
                                      uint32_t NumThreads[3],
                                      uint32_t NumBlocks[3]) const;
-  Error setIndirectFlags(L0DeviceTy &L0Device, L0LaunchEnvTy &KEnv) const;
+  Error setIndirectFlags(L0DeviceTy &L0Device,
+                         LevelZeroPluginContextTy &UserCtx,
+                         L0LaunchEnvTy &KEnv) const;
 
 public:
   /// Create a L0 kernel with a name and an execution mode.

@@ -1,4 +1,15 @@
 add_entrypoint_object(
+  __cxa_thread_atexit_impl
+  SRCS
+    __cxa_thread_atexit_impl.cpp
+  HDRS
+    __cxa_thread_atexit_impl.h
+  DEPENDS
+    libc.src.__support.threads.thread
+    libc.hdr.types.pthread_t
+)
+
+add_entrypoint_object(
   atoi
   SRCS
     atoi.cpp
@@ -115,8 +126,18 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  strfromf128
+  SRCS
+    strfromf128.cpp
+  HDRS
+    strfromf128.h
+  DEPENDS
+    .str_from_util
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -127,8 +148,7 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -139,8 +159,7 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_header_library(
@@ -148,11 +167,17 @@ add_header_library(
   HDRS
     str_from_util.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.printf_core.converter
     libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.printf_core.writer
     libc.src.__support.str_to_integer
-    libc.src.__support.CPP.type_traits
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -728,6 +753,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.unsetenv
 )
 
+add_entrypoint_object(
+  clearenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clearenv
+)
+
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
@@ -836,6 +868,13 @@ if(TARGET libc.src.__support.threads.thread)
   libc_add_definition(exit_compile_options "LIBC_COPT_SUPPORT_THREADS")
 endif()
 
+if("libc.src.stdio.fflush" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  list(APPEND exit_deps
+    libc.src.stdio.fflush_internal
+  )
+  libc_add_definition(exit_compile_options "LIBC_COPT_EXIT_FLUSH_STREAMS")
+endif()
+
 add_entrypoint_object(
   exit
   SRCS
@@ -872,4 +911,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
-

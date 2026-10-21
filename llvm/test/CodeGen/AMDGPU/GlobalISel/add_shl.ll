@@ -45,8 +45,7 @@ define amdgpu_ps float @add_shl_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 ;
 ; GFX10-LABEL: add_shl_vgpr_c:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_add_i32 s2, s2, s3
-; GFX10-NEXT:    v_lshlrev_b32_e64 v0, v0, s2
+; GFX10-NEXT:    v_add_lshl_u32 v0, s2, s3, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = shl i32 %x, %c

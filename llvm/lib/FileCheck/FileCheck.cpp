@@ -1523,10 +1523,6 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
   return StringRef(OutputBuffer.data(), OutputBuffer.size() - 1);
 }
 
-FileCheckDiag::~FileCheckDiag() {}
-MatchResultDiag::~MatchResultDiag() {}
-MatchNoteDiag::~MatchNoteDiag() {}
-
 static bool IsPartOfWord(char c) {
   return (isAlnum(c) || c == '-' || c == '_');
 }

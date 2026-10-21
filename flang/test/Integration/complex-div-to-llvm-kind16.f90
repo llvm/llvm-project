@@ -1,14 +1,15 @@
 ! Test lowering complex division to llvm ir according to options
 
 ! REQUIRES: flang-supports-f128-math
+! RUN: export FILECHECK_OPTS="-DF128_ALIGN=%if target=s390x{{.*}} %{8%} %else %{16%}"
 ! RUN: %flang -fcomplex-arithmetic=improved -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,IMPRVD
 ! RUN: %flang -fcomplex-arithmetic=basic -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,BASIC
 
 
 ! CHECK-LABEL: @div_test_quad
 ! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
-! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align 16
-! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align 16
+! CHECK: %[[LOAD_LHS:.*]] = load { fp128, fp128 }, ptr %[[LHS]], align [[F128_ALIGN]]
+! CHECK: %[[LOAD_RHS:.*]] = load { fp128, fp128 }, ptr %[[RHS]], align [[F128_ALIGN]]
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 0
 ! CHECK: %[[LHS_IMAG:.*]] = extractvalue { fp128, fp128 } %[[LOAD_LHS]], 1
 ! CHECK: %[[RHS_REAL:.*]] = extractvalue { fp128, fp128 } %[[LOAD_RHS]], 0
@@ -107,7 +108,7 @@
 ! IMPRVD: %[[RESULT_IMAG_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], fp128 %[[RESULT_IMAG_SPECIAL_CASE_1]], fp128 %[[RESULT_IMAG]]
 ! IMPRVD: %[[RESULT_1:.*]] = insertvalue { fp128, fp128 } poison, fp128 %[[RESULT_REAL_WITH_SPECIAL_CASES]], 0
 ! IMPRVD: %[[RESULT_2:.*]] = insertvalue { fp128, fp128 } %[[RESULT_1]], fp128 %[[RESULT_IMAG_WITH_SPECIAL_CASES]], 1
-! IMPRVD: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align 16
+! IMPRVD: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align [[F128_ALIGN]]
 
 ! BASIC-DAG: %[[RHS_REAL_SQ:.*]] = fmul contract fp128 %[[RHS_REAL]], %[[RHS_REAL]]
 ! BASIC-DAG: %[[RHS_IMAG_SQ:.*]] = fmul contract fp128 %[[RHS_IMAG]], %[[RHS_IMAG]]
@@ -122,7 +123,7 @@
 ! BASIC: %[[IMAG:.*]] = fdiv contract fp128 %[[IMAG_TMP_2]], %[[SQ_NORM]]
 ! BASIC: %[[RESULT_1:.*]] = insertvalue { fp128, fp128 } poison, fp128 %[[REAL]], 0
 ! BASIC: %[[RESULT_2:.*]] = insertvalue { fp128, fp128 } %[[RESULT_1]], fp128 %[[IMAG]], 1
-! BASIC: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align 16
+! BASIC: store { fp128, fp128 } %[[RESULT_2]], ptr %[[RET]], align [[F128_ALIGN]]
 
 ! CHECK: ret void
 subroutine div_test_quad(a,b,c)

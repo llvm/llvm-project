@@ -872,6 +872,10 @@ FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
 
 FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
                                                    const Variable &var2) {
+  // Avoid constructing a constraint set for variables that are already known
+  // to be identical.
+  if (var1.map == var2.map && var1.mapOperands == var2.mapOperands)
+    return true;
   return strongCompare(var1, ComparisonOperator::EQ, var2);
 }
 

@@ -47,6 +47,10 @@
 // RUN: llvm-mc -triple=amdgpu9.08-amd-amdhsa -filetype=obj %t/sramecc-off-only.s -o %t-sramecc-off-only.o
 // RUN: llvm-objdump --disassemble-all %t-sramecc-off-only.o | FileCheck --check-prefix=CHECK-SRAMECC-OFF-ONLY %s
 
+// Model a target with SRAMECC hardwired on: neither explicit mode is printed.
+// RUN: llvm-objdump --disassemble-all --mattr=-sramecc-on-off-modes %t-sramecc-only.o | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: llvm-objdump --disassemble-all --mattr=-sramecc-on-off-modes %t-sramecc-off-only.o | FileCheck --check-prefix=CHECK-DEFAULT %s
+
 // CHECK-GFX900: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx900"
 
 // CHECK-GFX908: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx908"

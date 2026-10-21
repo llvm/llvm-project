@@ -20,7 +20,7 @@ subroutine block_implicit_privatization
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPblock_implicit_privatization() {
-! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Ei"}
+! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Ei")
 ! CHECK:         omp.task private(@{{.*}}Ei_private_i32 %[[I_DECL]]#0 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:           fir.do_loop {{.*}} {
 ! Verify that `j` is allocated whithin the same scope of its block (i.e. inside

@@ -16,8 +16,8 @@
 ; RUN: -debug-only=hexagon-xqf-gen 2>&1 < %s | FileCheck %s --check-prefix COMPLIANT-IEEE
 
 ; STRICT-IEEE: Generating code for STRICT-IEEE mode
-; STRICT-IEEE-NEXT: deleting redundant instruction %{{[0-9]+}}:hvxvr = V6_vadd_qf32_mix killed %{{[0-9]+}}:hvxvr, killed %{{[0-9]+}}:hvxvr
-; STRICT-IEEE-NEXT: deleting redundant instruction %{{[0-9]+}}:hvxvr = V6_vadd_qf32_mix killed %{{[0-9]+}}:hvxvr, killed %{{[0-9]+}}:hvxvr
+; STRICT-IEEE-NEXT: deleting redundant instruction %{{[0-9]+}}:hvxvr = V6_vadd_qf32_mix %{{[0-9]+}}:hvxvr, %{{[0-9]+}}:hvxvr
+; STRICT-IEEE-NEXT: deleting redundant instruction %{{[0-9]+}}:hvxvr = V6_vadd_qf32_mix %{{[0-9]+}}:hvxvr, %{{[0-9]+}}:hvxvr
 
 ; COMPLIANT-IEEE: Generating code for IEEE mode
 ; COMPLIANT-IEEE-NOT: deleting redundant instruction

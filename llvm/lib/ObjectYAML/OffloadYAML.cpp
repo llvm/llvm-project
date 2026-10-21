@@ -44,6 +44,12 @@ void ScalarEnumerationTraits<object::OffloadKind>::enumeration(
   IO.enumFallback<Hex16>(Value);
 }
 
+void ScalarEnumerationTraits<compression::Format>::enumeration(
+    IO &IO, compression::Format &Value) {
+  IO.enumCase(Value, "zlib", compression::Format::Zlib);
+  IO.enumCase(Value, "zstd", compression::Format::Zstd);
+}
+
 void MappingTraits<OffloadYAML::Binary>::mapping(IO &IO,
                                                  OffloadYAML::Binary &O) {
   assert(!IO.getContext() && "The IO context is initialized already");
@@ -53,6 +59,7 @@ void MappingTraits<OffloadYAML::Binary>::mapping(IO &IO,
   IO.mapOptional("Size", O.Size);
   IO.mapOptional("EntriesOffset", O.EntriesOffset);
   IO.mapOptional("EntriesCount", O.EntriesCount);
+  IO.mapOptional("Compression", O.Compression);
   IO.mapRequired("Members", O.Members);
   IO.setContext(nullptr);
 }

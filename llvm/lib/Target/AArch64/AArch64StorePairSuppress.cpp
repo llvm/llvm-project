@@ -30,7 +30,6 @@ using namespace llvm;
 namespace {
 class AArch64StorePairSuppress : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
   MachineTraceMetrics *Traces;
@@ -134,7 +133,6 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
   Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
@@ -160,8 +158,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *BaseOp;
       int64_t Offset;
       bool OffsetIsScalable;
-      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
-                                       TRI) &&
+      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable) &&
           BaseOp->isReg()) {
         Register BaseReg = BaseOp->getReg();
         if (PrevBaseReg == BaseReg) {

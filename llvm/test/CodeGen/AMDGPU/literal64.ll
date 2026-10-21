@@ -35,7 +35,7 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 ;
 ; GFX13-LABEL: v_add_u64:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0x12345678, v0
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x12345678
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
 ; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -76,7 +76,7 @@ define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 ;
 ; GFX13-LABEL: v_add_neg_u64:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0xedcba988, v0
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xedcba988
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, -16, v1, vcc_lo
 ; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -219,7 +219,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX1250-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
-; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -248,7 +248,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX13-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX13-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GFX13-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
-; GFX13-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX13-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX13-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX13-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -427,7 +427,7 @@ define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0x12345678, v0
+; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x12345678
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
 ; GFX13-NEXT:    ; return to shader part epilog
   %shl = shl i64 %a, 1

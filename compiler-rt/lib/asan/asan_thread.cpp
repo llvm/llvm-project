@@ -19,6 +19,7 @@
 #include "asan_stack.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_dl.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_thread_history.h"
@@ -117,6 +118,7 @@ void AsanThread::GetStartData(void *out, uptr out_size) const {
 void AsanThread::TSDDtor(void *tsd) {
   AsanThreadContext *context = (AsanThreadContext *)tsd;
   VReport(1, "T%d TSDDtor\n", context->tid);
+  ClearDlerror();
   if (context->thread)
     context->thread->Destroy();
 }

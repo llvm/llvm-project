@@ -1776,6 +1776,14 @@ public:
   LLVM_ABI void setPhysRegsDeadExcept(ArrayRef<Register> UsedRegs,
                                       const TargetRegisterInfo &TRI);
 
+  /// Mark the implicit physreg defs named by the instruction description as
+  /// dead.
+  void setImplicitPhysRegDefsDead() {
+    unsigned Idx = getNumExplicitOperands();
+    for (unsigned E = Idx + MCID->implicit_defs().size(); Idx != E; ++Idx)
+      getOperand(Idx).setIsDead();
+  }
+
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.

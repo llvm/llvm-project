@@ -124,6 +124,41 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat1
 
 // -----
 
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, Int8, Int16, Int64], []> {
+  spirv.func @sat_convert_s_to_u(%arg0 : i32) -> i32 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i32
+    %0 = spirv.SatConvertSToU %arg0 : i32 to i32
+    spirv.ReturnValue %0 : i32
+  }
+  spirv.func @sat_convert_s_to_u_narrow(%arg0 : i32) -> i8 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : i32 to i8
+    %0 = spirv.SatConvertSToU %arg0 : i32 to i8
+    spirv.ReturnValue %0 : i8
+  }
+  spirv.func @sat_convert_s_to_u_widen_vector(%arg0 : vector<4xi16>) -> vector<4xi64> "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertSToU {{%.*}} : vector<4xi16> to vector<4xi64>
+    %0 = spirv.SatConvertSToU %arg0 : vector<4xi16> to vector<4xi64>
+    spirv.ReturnValue %0 : vector<4xi64>
+  }
+  spirv.func @sat_convert_u_to_s(%arg0 : i32) -> i32 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i32 to i32
+    %0 = spirv.SatConvertUToS %arg0 : i32 to i32
+    spirv.ReturnValue %0 : i32
+  }
+  spirv.func @sat_convert_u_to_s_widen(%arg0 : i8) -> i64 "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : i8 to i64
+    %0 = spirv.SatConvertUToS %arg0 : i8 to i64
+    spirv.ReturnValue %0 : i64
+  }
+  spirv.func @sat_convert_u_to_s_narrow_vector(%arg0 : vector<3xi64>) -> vector<3xi32> "None" {
+    // CHECK: {{%.*}} = spirv.SatConvertUToS {{%.*}} : vector<3xi64> to vector<3xi32>
+    %0 = spirv.SatConvertUToS %arg0 : vector<3xi64> to vector<3xi32>
+    spirv.ReturnValue %0 : vector<3xi32>
+  }
+}
+
+// -----
+
 spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, GenericPointer], []> {
   spirv.func @ptr_cast_to_generic(%arg0 : !spirv.ptr<f32, CrossWorkgroup>) "None" {
     // CHECK: {{%.*}} = spirv.PtrCastToGeneric {{%.*}} : !spirv.ptr<f32, CrossWorkgroup> to !spirv.ptr<f32, Generic>

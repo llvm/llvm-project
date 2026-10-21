@@ -76,6 +76,21 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 
   add_integration_test(
+    clearenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      clearenv_test.cpp
+    DEPENDS
+      libc.src.stdlib.clearenv
+      libc.src.stdlib.getenv
+      libc.src.stdlib.putenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.unsetenv
+      libc.src.unistd.environ
+  )
+
+  add_integration_test(
     abort_test
     SUITE
       stdlib-integration-tests
@@ -94,5 +109,17 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.pipe
       libc.src.unistd.read
       libc.src.unistd.write
+  )
+  add_integration_test(
+    atexit_thread_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      atexit_thread_test.cpp
+    DEPENDS
+      libc.src.pthread.pthread_create
+      libc.src.pthread.pthread_exit
+      libc.src.pthread.pthread_join
+      libc.src.stdlib.__cxa_thread_atexit_impl
   )
 endif()

@@ -38,6 +38,11 @@ public:
            "Unknown CIR address space for AMDGPU target");
     return AMDGPUAddrSpaceMap[idx];
   }
+
+  cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const override {
+    return syncScope;
+  }
 };
 
 } // namespace

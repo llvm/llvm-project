@@ -238,8 +238,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
 #ifndef _WIN32 // TODO: Implement on Windows
   if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
       PseudoTerminal::invalid_fd)
-    process_sp->SetSTDIOFileDescriptor(
-        launch_info.GetPTY().ReleasePrimaryFileDescriptor());
+    process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
 #endif
 
   return process_sp;

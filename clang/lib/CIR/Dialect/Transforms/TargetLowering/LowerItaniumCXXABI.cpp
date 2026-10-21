@@ -150,11 +150,21 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
+  case clang::TargetCXXABI::GenericARM:
+  case clang::TargetCXXABI::iOS:
+  case clang::TargetCXXABI::WatchOS:
+  case clang::TargetCXXABI::Fuchsia:
+  case clang::TargetCXXABI::GenericMIPS:
+  case clang::TargetCXXABI::WebAssembly:
+  case clang::TargetCXXABI::XL:
+    // FIXME: these ABIS are not yet implemented by CIR. The error is reported
+    // by consumers of LowerModule/CIRCXXABI when missing CIRCXXABI is
+    // encountered.
+    return nullptr;
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
-  default:
-    llvm_unreachable("Other Itanium ABI?");
   }
+  llvm_unreachable("bad ABI kind");
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {
@@ -705,6 +715,8 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
                                     /*resType=*/cir::VoidType(),
                                     /*operands=*/mlir::ValueRange{});
@@ -738,6 +750,9 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 
   mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
+
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
 
   mlir::Value castedPtr = cir::CallOp::create(builder, loc, dynCastFuncRef,
                                               voidPtrTy, dynCastFuncArgs)

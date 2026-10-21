@@ -623,7 +623,7 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexAdd(op.loc, op.lhs, op.rhs);
 
   auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -651,7 +651,7 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexSub(op.loc, op.lhs, op.rhs);
 
   auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -704,8 +704,7 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexMulOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexMul(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   auto createMul = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
@@ -742,8 +741,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
         getComplexRangeAttr(op.fpFeatures.getComplexRange());
-    return cir::ComplexDivOp::create(builder, op.loc, op.lhs, op.rhs,
-                                     rangeKind);
+    return builder.createComplexDiv(op.loc, op.lhs, op.rhs, rangeKind);
   }
 
   // The C99 standard (G.5.1) defines division of a complex value by a real
@@ -763,7 +761,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
   cir::ComplexRangeKind rangeKind =
       getComplexRangeAttr(op.fpFeatures.getComplexRange());
-  return cir::ComplexDivOp::create(builder, op.loc, lhs, op.rhs, rangeKind);
+  return builder.createComplexDiv(op.loc, lhs, op.rhs, rangeKind);
 }
 
 mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,

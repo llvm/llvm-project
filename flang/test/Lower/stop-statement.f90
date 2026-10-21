@@ -35,7 +35,7 @@ subroutine stop_quiet()
  ! CHECK-DAG: %[[c0:.*]] = arith.constant 0 : i32
  ! CHECK-DAG: %[[false:.*]] = arith.constant false
  ! CHECK-DAG: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "b", uniq_name = "_QFstop_quietEb"}>
- ! CHECK-DAG: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFstop_quietEb"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+ ! CHECK-DAG: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] uniq_name("_QFstop_quietEb") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
  ! CHECK: %[[b:.*]] = fir.load %[[DECL]]#0
  ! CHECK: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
  ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[bi1]])

@@ -1,8 +1,17 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("InstCombineCLOptions") {
+  visibility = [ ":InstCombine" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("InstCombine") {
   output_name = "LLVMInstCombine"
   deps = [
+    ":InstCombineCLOptions",
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
@@ -10,6 +19,7 @@ static_library("InstCombine") {
     "InstCombineAddSub.cpp",
     "InstCombineAndOrXor.cpp",
     "InstCombineAtomicRMW.cpp",
+    "InstCombineCLOptions.cpp",
     "InstCombineCalls.cpp",
     "InstCombineCasts.cpp",
     "InstCombineCompares.cpp",

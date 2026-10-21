@@ -18,18 +18,18 @@
 // CHECK-DAG: local.fir#0 <-> p_dummy.tgt.fir#0: NoAlias
 
 func.func @_QPtest_dummy_ptr(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p"}) {
-  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "p_dummy", uniq_name = "_QFtest_dummy_ptrEp"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFtest_dummy_ptrEp") fortran_attrs<pointer> {test.ptr = "p_dummy"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %1 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QFtest_dummy_ptrEv"}
-  %2:2 = hlfir.declare %1 {test.ptr = "local", uniq_name = "_QFtest_dummy_ptrEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtest_dummy_ptrEv") {test.ptr = "local"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %3 = fir.load %0#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.box_addr %3 {test.ptr = "p_dummy.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
 }
 
 func.func @_QPtest_dummy_ptr.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p"}) {
-  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "p_dummy.fir", uniq_name = "_QFtest_dummy_ptrEp"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %0 = fir.declare %arg0 uniq_name("_QFtest_dummy_ptrEp") fortran_attrs<pointer> {test.ptr = "p_dummy.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %1 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QFtest_dummy_ptrEv"}
-  %2 = fir.declare %1 {test.ptr = "local.fir", uniq_name = "_QFtest_dummy_ptrEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %2 = fir.declare %1 uniq_name("_QFtest_dummy_ptrEv") {test.ptr = "local.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %3 = fir.load %0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %4 = fir.box_addr %3 {test.ptr = "p_dummy.tgt.fir"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
@@ -63,20 +63,20 @@ func.func @_QPtest_dummy_ptr.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.b
 // CHECK-DAG: x.fir#0 <-> x_in_p.tgt.fir#0: MayAlias
 
 func.func @_QMmPnested_ptr(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "x"}) {
-  %0:2 = hlfir.declare %arg0 {test.ptr = "x", uniq_name = "_QMmFnested_ptrEx"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QMmFnested_ptrEx") {test.ptr = "x"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %1 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFnested_ptrEv"}
-  %2:2 = hlfir.declare %1 {test.ptr = "nested_local", uniq_name = "_QMmFnested_ptrEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %1 uniq_name("_QMmFnested_ptrEv") {test.ptr = "nested_local"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %3 = hlfir.designate %0#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %4 = hlfir.designate %3{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "x_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %4 = hlfir.designate %3{"p"} fortran_attrs<pointer> {test.ptr = "x_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %5 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.box_addr %5 {test.ptr = "x_in_p.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
 }
 
 func.func @_QMmPnested_ptr.fir(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "x"}) {
-  %0 = fir.declare %arg0 {test.ptr = "x.fir", uniq_name = "_QMmFnested_ptrEx"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %0 = fir.declare %arg0 uniq_name("_QMmFnested_ptrEx") {test.ptr = "x.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %1 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFnested_ptrEv"}
-  %2 = fir.declare %1 {test.ptr = "nested_local.fir", uniq_name = "_QMmFnested_ptrEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %2 = fir.declare %1 uniq_name("_QMmFnested_ptrEv") {test.ptr = "nested_local.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %3 = fir.coordinate_of %0, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
   %4 = fir.coordinate_of %3, p {test.ptr = "x_in_p.fir"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %5 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -107,13 +107,13 @@ func.func @_QMmPalloc_outer_box() {
   %1 = fir.allocmem !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMmFalloc_outer_boxEy.alloc"}
   %2 = fir.embox %1 : (!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>
   fir.store %2 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
-  %3:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, test.ptr = "y_alloc", uniq_name = "_QMmFalloc_outer_boxEy"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
+  %3:2 = hlfir.declare %0 uniq_name("_QMmFalloc_outer_boxEy") fortran_attrs<allocatable> {test.ptr = "y_alloc"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
   %4 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFalloc_outer_boxEv"}
-  %5:2 = hlfir.declare %4 {test.ptr = "alloc_outer_local", uniq_name = "_QMmFalloc_outer_boxEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QMmFalloc_outer_boxEv") {test.ptr = "alloc_outer_local"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %6 = fir.load %3#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %7 = fir.box_addr %6 : (!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>) -> !fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %8 = hlfir.designate %7{"in"} : (!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %9 = hlfir.designate %8{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "y_alloc_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %9 = hlfir.designate %8{"p"} fortran_attrs<pointer> {test.ptr = "y_alloc_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %10 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %11 = fir.box_addr %10 {test.ptr = "y_alloc_in_p.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
@@ -124,9 +124,9 @@ func.func @_QMmPalloc_outer_box.fir() {
   %1 = fir.allocmem !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMmFalloc_outer_boxEy.alloc"}
   %2 = fir.embox %1 : (!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>
   fir.store %2 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
-  %3 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, test.ptr = "y_alloc.fir", uniq_name = "_QMmFalloc_outer_boxEy"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
+  %3 = fir.declare %0 uniq_name("_QMmFalloc_outer_boxEy") fortran_attrs<allocatable> {test.ptr = "y_alloc.fir"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %4 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFalloc_outer_boxEv"}
-  %5 = fir.declare %4 {test.ptr = "alloc_outer_local.fir", uniq_name = "_QMmFalloc_outer_boxEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %5 = fir.declare %4 uniq_name("_QMmFalloc_outer_boxEv") {test.ptr = "alloc_outer_local.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %6 = fir.load %3 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %7 = fir.box_addr %6 : (!fir.box<!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>) -> !fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %8 = fir.coordinate_of %7, in : (!fir.heap<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
@@ -152,9 +152,9 @@ func.func @_QMmPalloc_outer_box.fir() {
 // CHECK-DAG: t_scalar.fir#0 <-> p_rec.fir#0: MayAlias
 
 func.func @_QMmPtest_derived_ptr_neg(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>> {fir.bindc_name = "p"}, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>> {fir.bindc_name = "q"}, %arg2: !fir.ref<f32> {fir.bindc_name = "tscalar", fir.target}) {
-  %p:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "p_op", uniq_name = "_QMmFp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
-  %q:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "q_op", uniq_name = "_QMmFq"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
-  %t:2 = hlfir.declare %arg2 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "t_scalar", uniq_name = "_QMmFt"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %p:2 = hlfir.declare %arg0 uniq_name("_QMmFp") fortran_attrs<pointer> {test.ptr = "p_op"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
+  %q:2 = hlfir.declare %arg1 uniq_name("_QMmFq") fortran_attrs<pointer> {test.ptr = "q_op"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
+  %t:2 = hlfir.declare %arg2 uniq_name("_QMmFt") fortran_attrs<target> {test.ptr = "t_scalar"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %lp = fir.load %p#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %p_rec = fir.box_addr %lp {test.ptr = "p_rec"} : (!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>) -> !fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %lq = fir.load %q#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
@@ -163,9 +163,9 @@ func.func @_QMmPtest_derived_ptr_neg(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.type
 }
 
 func.func @_QMmPtest_derived_ptr_neg_fir(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>> {fir.bindc_name = "p"}, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>> {fir.bindc_name = "q"}, %arg2: !fir.ref<f32> {fir.bindc_name = "tscalar", fir.target}) {
-  %p = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "p_op.fir", uniq_name = "_QMmFp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
-  %q = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "q_op.fir", uniq_name = "_QMmFq"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
-  %t = fir.declare %arg2 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "t_scalar.fir", uniq_name = "_QMmFt"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %p = fir.declare %arg0 uniq_name("_QMmFp") fortran_attrs<pointer> {test.ptr = "p_op.fir"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
+  %q = fir.declare %arg1 uniq_name("_QMmFq") fortran_attrs<pointer> {test.ptr = "q_op.fir"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
+  %t = fir.declare %arg2 uniq_name("_QMmFt") fortran_attrs<target> {test.ptr = "t_scalar.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %lp = fir.load %p : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %p_rec = fir.box_addr %lp {test.ptr = "p_rec.fir"} : (!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>) -> !fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %lq = fir.load %q : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
@@ -184,15 +184,15 @@ func.func @_QMmPtest_derived_ptr_neg_fir(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.
 // CHECK-DAG: z_p_tgt.fir#0 <-> u_p_tgt.fir#0: MayAlias
 
 func.func @_QMmPtest_derived_target_neg(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "z", fir.target}, %arg1: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "u", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "rptr"}) {
-  %z:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "z_op", uniq_name = "_QMmFz"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
-  %u:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "u_op", uniq_name = "_QMmFu"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
-  %r:2 = hlfir.declare %arg2 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "rptr_op", uniq_name = "_QMmFr"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %z:2 = hlfir.declare %arg0 uniq_name("_QMmFz") fortran_attrs<target> {test.ptr = "z_op"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %u:2 = hlfir.declare %arg1 uniq_name("_QMmFu") fortran_attrs<target> {test.ptr = "u_op"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %r:2 = hlfir.declare %arg2 uniq_name("_QMmFr") fortran_attrs<pointer> {test.ptr = "rptr_op"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %zin = hlfir.designate %z#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %zp = hlfir.designate %zin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "z_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %zp = hlfir.designate %zin{"p"} fortran_attrs<pointer> {test.ptr = "z_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %zpl = fir.load %zp : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %zpt = fir.box_addr %zpl {test.ptr = "z_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %uin = hlfir.designate %u#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %up = hlfir.designate %uin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "u_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %up = hlfir.designate %uin{"p"} fortran_attrs<pointer> {test.ptr = "u_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %upl = fir.load %up : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %upt = fir.box_addr %upl {test.ptr = "u_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %rl = fir.load %r#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -201,9 +201,9 @@ func.func @_QMmPtest_derived_target_neg(%arg0: !fir.ref<!fir.type<_QMmTouter{in:
 }
 
 func.func @_QMmPtest_derived_target_neg_fir(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "z", fir.target}, %arg1: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "u", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "rptr"}) {
-  %z = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "z_op.fir", uniq_name = "_QMmFz"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %u = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "u_op.fir", uniq_name = "_QMmFu"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %r = fir.declare %arg2 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "rptr_op.fir", uniq_name = "_QMmFr"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %z = fir.declare %arg0 uniq_name("_QMmFz") fortran_attrs<target> {test.ptr = "z_op.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %u = fir.declare %arg1 uniq_name("_QMmFu") fortran_attrs<target> {test.ptr = "u_op.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %r = fir.declare %arg2 uniq_name("_QMmFr") fortran_attrs<pointer> {test.ptr = "rptr_op.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %zin = fir.coordinate_of %z, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
   %zp = fir.coordinate_of %zin, p {test.ptr = "z_in_p.fir"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %zpl = fir.load %zp : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -235,15 +235,15 @@ fir.global @_QMmEg_outer : !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.b
 
 func.func @_QMmPtest_global_outer() {
   %0 = fir.address_of(@_QMmEg_outer) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g:2 = hlfir.declare %0 {test.ptr = "g_outer", uniq_name = "_QMmEg_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %g:2 = hlfir.declare %0 uniq_name("_QMmEg_outer") {test.ptr = "g_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %1 = fir.alloca !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMmFloc"}
-  %loc:2 = hlfir.declare %1 {test.ptr = "loc_outer", uniq_name = "_QMmFloc"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %loc:2 = hlfir.declare %1 uniq_name("_QMmFloc") {test.ptr = "loc_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %gin = hlfir.designate %g#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %gp = hlfir.designate %gin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "g_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %gp = hlfir.designate %gin{"p"} fortran_attrs<pointer> {test.ptr = "g_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %gl = fir.load %gp : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %gt = fir.box_addr %gl {test.ptr = "g_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %lin = hlfir.designate %loc#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %lp = hlfir.designate %lin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "loc_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %lp = hlfir.designate %lin{"p"} fortran_attrs<pointer> {test.ptr = "loc_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %ll = fir.load %lp : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %lt = fir.box_addr %ll {test.ptr = "loc_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
@@ -251,9 +251,9 @@ func.func @_QMmPtest_global_outer() {
 
 func.func @_QMmPtest_global_outer_fir() {
   %0 = fir.address_of(@_QMmEg_outer) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g = fir.declare %0 {test.ptr = "g_outer.fir", uniq_name = "_QMmEg_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %g = fir.declare %0 uniq_name("_QMmEg_outer") {test.ptr = "g_outer.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %1 = fir.alloca !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}> {uniq_name = "_QMmFloc"}
-  %loc = fir.declare %1 {test.ptr = "loc_outer.fir", uniq_name = "_QMmFloc"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %loc = fir.declare %1 uniq_name("_QMmFloc") {test.ptr = "loc_outer.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %gin = fir.coordinate_of %g, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
   %gp = fir.coordinate_of %gin, p {test.ptr = "g_in_p.fir"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %gl = fir.load %gp : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -287,15 +287,15 @@ fir.global @_QMmEg2pair : !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.bo
 
 func.func @_QMmPtest_two_globals_outer() {
   %0 = fir.address_of(@_QMmEg1pair) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g1:2 = hlfir.declare %0 {test.ptr = "g1_outer", uniq_name = "_QMmEg1pair"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %g1:2 = hlfir.declare %0 uniq_name("_QMmEg1pair") {test.ptr = "g1_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %1 = fir.address_of(@_QMmEg2pair) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g2:2 = hlfir.declare %1 {test.ptr = "g2_outer", uniq_name = "_QMmEg2pair"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %g2:2 = hlfir.declare %1 uniq_name("_QMmEg2pair") {test.ptr = "g2_outer"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %g1in = hlfir.designate %g1#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %g1p = hlfir.designate %g1in{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "g1_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %g1p = hlfir.designate %g1in{"p"} fortran_attrs<pointer> {test.ptr = "g1_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %g1l = fir.load %g1p : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %g1t = fir.box_addr %g1l {test.ptr = "g1_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %g2in = hlfir.designate %g2#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %g2p = hlfir.designate %g2in{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "g2_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %g2p = hlfir.designate %g2in{"p"} fortran_attrs<pointer> {test.ptr = "g2_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %g2l = fir.load %g2p : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %g2t = fir.box_addr %g2l {test.ptr = "g2_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
@@ -303,9 +303,9 @@ func.func @_QMmPtest_two_globals_outer() {
 
 func.func @_QMmPtest_two_globals_outer_fir() {
   %0 = fir.address_of(@_QMmEg1pair) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g1 = fir.declare %0 {test.ptr = "g1_outer.fir", uniq_name = "_QMmEg1pair"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %g1 = fir.declare %0 uniq_name("_QMmEg1pair") {test.ptr = "g1_outer.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %1 = fir.address_of(@_QMmEg2pair) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %g2 = fir.declare %1 {test.ptr = "g2_outer.fir", uniq_name = "_QMmEg2pair"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %g2 = fir.declare %1 uniq_name("_QMmEg2pair") {test.ptr = "g2_outer.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %g1in = fir.coordinate_of %g1, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
   %g1p = fir.coordinate_of %g1in, p {test.ptr = "g1_in_p.fir"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %g1l = fir.load %g1p : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -345,13 +345,13 @@ fir.global @_QMmEg_tgt_m target : !fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p
 
 func.func @_QMmPtest_global_target_vs_ptr() {
   %0 = fir.address_of(@_QMmEg_nt) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %nt:2 = hlfir.declare %0 {test.ptr = "g_nt", uniq_name = "_QMmEg_nt"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %nt:2 = hlfir.declare %0 uniq_name("_QMmEg_nt") {test.ptr = "g_nt"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %1 = fir.address_of(@_QMmEg_tgt_m) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %tg:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "g_tg", uniq_name = "_QMmEg_tgt_m"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %tg:2 = hlfir.declare %1 uniq_name("_QMmEg_tgt_m") fortran_attrs<target> {test.ptr = "g_tg"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %ntin = hlfir.designate %nt#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %ntp = hlfir.designate %ntin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "g_nt_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %ntp = hlfir.designate %ntin{"p"} fortran_attrs<pointer> {test.ptr = "g_nt_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %tgin = hlfir.designate %tg#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %tgp = hlfir.designate %tgin{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "g_tg_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %tgp = hlfir.designate %tgin{"p"} fortran_attrs<pointer> {test.ptr = "g_tg_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %ntl = fir.load %ntp : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %ntt = fir.box_addr %ntl {test.ptr = "g_nt_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %tgl = fir.load %tgp : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -361,9 +361,9 @@ func.func @_QMmPtest_global_target_vs_ptr() {
 
 func.func @_QMmPtest_global_target_vs_ptr_fir() {
   %0 = fir.address_of(@_QMmEg_nt) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %nt = fir.declare %0 {test.ptr = "g_nt.fir", uniq_name = "_QMmEg_nt"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %nt = fir.declare %0 uniq_name("_QMmEg_nt") {test.ptr = "g_nt.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %1 = fir.address_of(@_QMmEg_tgt_m) : !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
-  %tg = fir.declare %1 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "g_tg.fir", uniq_name = "_QMmEg_tgt_m"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %tg = fir.declare %1 uniq_name("_QMmEg_tgt_m") fortran_attrs<target> {test.ptr = "g_tg.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %ntin = fir.coordinate_of %nt, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
   %ntp = fir.coordinate_of %ntin, p {test.ptr = "g_nt_in_p.fir"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %tgin = fir.coordinate_of %tg, in : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
@@ -404,22 +404,22 @@ func.func @_QMmPtest_global_target_vs_ptr_fir() {
 
 func.func @_QMmPtest_ptr_target_slot(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "tgt", fir.target}) {
   %0 = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>> {uniq_name = "_QMmFtest_ptr_target_slotEptr"}
-  %ptr:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "ptr_op", uniq_name = "_QMmFtest_ptr_target_slotEptr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
-  %tgt:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "tgt_op", uniq_name = "_QMmFtest_ptr_target_slotEtgt"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
+  %ptr:2 = hlfir.declare %0 uniq_name("_QMmFtest_ptr_target_slotEptr") fortran_attrs<pointer> {test.ptr = "ptr_op"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>)
+  %tgt:2 = hlfir.declare %arg0 uniq_name("_QMmFtest_ptr_target_slotEtgt") fortran_attrs<target> {test.ptr = "tgt_op"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>, !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>)
   %local = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFtest_ptr_target_slotEv"}
-  %ldecl:2 = hlfir.declare %local {test.ptr = "slot_local", uniq_name = "_QMmFtest_ptr_target_slotEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %ldecl:2 = hlfir.declare %local uniq_name("_QMmFtest_ptr_target_slotEv") {test.ptr = "slot_local"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   // Access through pointer: ptr%in%p (descriptor slot)
   %lptr = fir.load %ptr#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
   %ptr_addr = fir.box_addr %lptr : (!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>) -> !fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %ptr_in = hlfir.designate %ptr_addr{"in"} : (!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %ptr_in_p = hlfir.designate %ptr_in{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "ptr_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %ptr_in_p = hlfir.designate %ptr_in{"p"} fortran_attrs<pointer> {test.ptr = "ptr_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %ptr_in_p_load = fir.load %ptr_in_p : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %ptr_in_p_tgt = fir.box_addr %ptr_in_p_load {test.ptr = "ptr_in_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 
   // Access through target: tgt%in%p (descriptor slot)
   %tgt_in = hlfir.designate %tgt#0{"in"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>
-  %tgt_in_p = hlfir.designate %tgt_in{"p"} {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "tgt_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %tgt_in_p = hlfir.designate %tgt_in{"p"} fortran_attrs<pointer> {test.ptr = "tgt_in_p"} : (!fir.ref<!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %tgt_in_p_load = fir.load %tgt_in_p : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %tgt_in_p_tgt = fir.box_addr %tgt_in_p_load {test.ptr = "tgt_in_p_tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   return
@@ -427,10 +427,10 @@ func.func @_QMmPtest_ptr_target_slot(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fi
 
 func.func @_QMmPtest_ptr_target_slot_fir(%arg0: !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>> {fir.bindc_name = "tgt", fir.target}) {
   %0 = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>> {uniq_name = "_QMmFtest_ptr_target_slotEptr"}
-  %ptr = fir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "ptr_op.fir", uniq_name = "_QMmFtest_ptr_target_slotEptr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
-  %tgt = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, test.ptr = "tgt_op.fir", uniq_name = "_QMmFtest_ptr_target_slotEtgt"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
+  %ptr = fir.declare %0 uniq_name("_QMmFtest_ptr_target_slotEptr") fortran_attrs<pointer> {test.ptr = "ptr_op.fir"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>
+  %tgt = fir.declare %arg0 uniq_name("_QMmFtest_ptr_target_slotEtgt") fortran_attrs<target> {test.ptr = "tgt_op.fir"} : (!fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>) -> !fir.ref<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>
   %local = fir.alloca f32 {bindc_name = "v", uniq_name = "_QMmFtest_ptr_target_slotEv"}
-  %ldecl = fir.declare %local {test.ptr = "slot_local.fir", uniq_name = "_QMmFtest_ptr_target_slotEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %ldecl = fir.declare %local uniq_name("_QMmFtest_ptr_target_slotEv") {test.ptr = "slot_local.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
 
   // Access through pointer: ptr%in%p (descriptor slot)
   %lptr = fir.load %ptr : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTouter{in:!fir.type<_QMmTinner{p:!fir.box<!fir.ptr<f32>>}>}>>>>

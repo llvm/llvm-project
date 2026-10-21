@@ -31,7 +31,23 @@ define ptr @no_overwrite() {
   ret ptr %c
 }
 
+define internal ptr @wrapper_unknown(i64 %size) alwaysinline {
+  %p = call ptr @malloc(i64 %size), !alloc_token !3
+  ret ptr %p
+}
+
+; Unless it denotes an unknown type (empty type name).
+; CHECK-LABEL: define ptr @overwrite_unknown(
+; CHECK: call ptr @malloc(i64 4){{.*}}, !alloc_token [[CALLER:![0-9]+]]
+define ptr @overwrite_unknown() {
+  %c = call ptr @wrapper_unknown(i64 4), !alloc_token !2
+  ret ptr %c
+}
+
 ; CHECK-DAG: [[MD]] = !{!"Outer", i1 true}
 ; CHECK-DAG: [[OWN]] = !{!"Inner", i1 false}
+; CHECK-DAG: [[CALLER]] = !{!"Outer", i1 true, !"overwrite_unknown"}
 !0 = !{!"Outer", i1 true}
 !1 = !{!"Inner", i1 false}
+!2 = !{!"Outer", i1 true, !"overwrite_unknown"}
+!3 = !{!"", i1 false, !"wrapper_unknown"}

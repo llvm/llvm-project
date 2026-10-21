@@ -67,7 +67,7 @@ protected:
 
   LSPClient &start() {
     EXPECT_FALSE(Server) << "Already initialized";
-    Server.emplace(Client.transport(), FS, Opts);
+    Server.emplace(Client.transport(), FS, std::move(Opts));
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});
     return Client;
@@ -308,9 +308,8 @@ TEST_F(LSPTest, IncomingCalls) {
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {
-  auto CfgProvider =
+  Opts.ConfigProvider =
       config::Provider::fromAncestorRelativeYAMLFiles(".clangd", FS);
-  Opts.ConfigProvider = CfgProvider.get();
 
   // Map bar.cpp to a different compilation database which defines FOO->BAR.
   FS.Files[".clangd"] = R"yaml(

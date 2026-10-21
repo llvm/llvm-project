@@ -124,10 +124,10 @@ func.func @round(%arg0: f32, %arg1: f64) {
 }
 
 func.func @roundeven(%arg0: f32, %arg1: f64) {
-  // c99: emitc.call_opaque "roundevenf"
-  // c99-NEXT: emitc.call_opaque "roundeven"
-  // cpp11: emitc.call_opaque "std::roundeven"
-  // cpp11-NEXT: emitc.call_opaque "std::roundeven"
+  // c99: emitc.call_opaque "__builtin_roundevenf"
+  // c99-NEXT: emitc.call_opaque "__builtin_roundeven"
+  // cpp11: emitc.call_opaque "__builtin_roundevenf"
+  // cpp11-NEXT: emitc.call_opaque "__builtin_roundeven"
   %0 = math.roundeven %arg0 : f32
   %1 = math.roundeven %arg1 : f64
   return

@@ -127,3 +127,23 @@ TEST(ProgramAndKernelManager, CheckRegisterAndUnregister) {
   EXPECT_THAT(Manager.MDeviceImageManagers, IsEmpty());
   EXPECT_THAT(Manager.MDeviceKernelInfoMap, IsEmpty());
 }
+
+TEST(ProgramAndKernelManager, CheckUnknownKernelName) {
+  std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
+  llvm::SmallString<0> Binary =
+      sycl::unittests::createSYCLDeviceBinary(KernelNames);
+
+  MockProgramAndKernelManager Manager;
+  ASSERT_NO_THROW(Manager.registerFatBin(Binary.data(), Binary.size()));
+
+  EXPECT_NO_THROW(Manager.getDeviceKernelInfo("kernel"));
+  EXPECT_THAT(
+      [&]() { Manager.getDeviceKernelInfo("missing_kernel"); },
+      Throws<sycl::exception>(
+          AllOf(Property(&sycl::exception::what,
+                         HasSubstr("No registered device image provides kernel "
+                                   "missing_kernel")),
+                Property(&sycl::exception::code, Eq(sycl::errc::runtime)))));
+
+  EXPECT_NO_THROW(Manager.unregisterFatBin(Binary.data(), Binary.size()));
+}

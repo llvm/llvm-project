@@ -4,8 +4,8 @@
 
 ; GCN-LABEL: {{^}}token_factor_inline_limit_test:
 
-; GCN-TFLID: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
-; GCN-TFLID: buffer_store_dword [[REG7]], {{.*$}}
+; GCN-TFILD: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
+; GCN-TFILD: buffer_store_dword [[REG7]], {{.*$}}
 ; GCN-TFILD: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
 ; GCN-TFILD: buffer_store_dword [[REG8]], {{.*}} offset:4
 ; GCN-TFILD: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
@@ -39,8 +39,8 @@
 ; GCN-TFIL7: buffer_store_dword [[REG9]], {{.*}} offset:8
 ; GCN-TFIL7: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
 ; GCN-TFIL7: buffer_store_dword [[REG8]], {{.*}} offset:4
-; GCN-TFLL7: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
-; GCN-TFLL7: buffer_store_dword [[REG7]], {{.*$}}
+; GCN-TFIL7: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
+; GCN-TFIL7: buffer_store_dword [[REG7]], {{.*$}}
 
 ; GCN: s_getpc
 define void @token_factor_inline_limit_test() {

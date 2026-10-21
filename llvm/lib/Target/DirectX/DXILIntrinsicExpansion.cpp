@@ -225,6 +225,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
+  case Intrinsic::dx_isfinite:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_sdot:
@@ -1330,6 +1331,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::dx_isfinite:
+    Result = expand16BitIsFinite(Orig);
     break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);

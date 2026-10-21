@@ -18,6 +18,7 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[N]]
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = icmp ult i32 1, [[N]]
+; CHECK-UF4-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 2)
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE5:%.*]] ]
@@ -33,7 +34,7 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK-UF4:       pred.store.continue:
 ; CHECK-UF4-NEXT:    br i1 [[ACTIVE_LANE_MASK3]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5]]
-; CHECK-UF4:       pred.store.if4:
+; CHECK-UF4:       pred.store.if6:
 ; CHECK-UF4-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-UF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 [[TMP8]]
 ; CHECK-UF4-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP9]], align 8
@@ -41,12 +42,12 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-NEXT:    [[TMP12:%.*]] = fmul double [[TMP10]], 3.000000e+00
 ; CHECK-UF4-NEXT:    store double [[TMP12]], ptr [[TMP11]], align 8
 ; CHECK-UF4-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK-UF4:       pred.store.continue5:
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX_NEXT]], [[N]]
-; CHECK-UF4-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX_NEXT]], 1
-; CHECK-UF4-NEXT:    [[TMP15]] = icmp ult i32 [[TMP14]], [[N]]
+; CHECK-UF4:       pred.store.continue7:
+; CHECK-UF4-NEXT:    [[TMP13]] = icmp ult i32 [[INDEX]], [[TRIP_COUNT_MINUS_VF]]
+; CHECK-UF4-NEXT:    [[TMP14:%.*]] = add i32 [[INDEX]], 1
+; CHECK-UF4-NEXT:    [[TMP15]] = icmp ult i32 [[TMP14]], [[TRIP_COUNT_MINUS_VF]]
 ; CHECK-UF4-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP13]], true
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-UF4-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;

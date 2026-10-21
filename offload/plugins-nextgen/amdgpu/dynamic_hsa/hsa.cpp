@@ -61,6 +61,7 @@ DLWRAP(hsa_amd_agent_iterate_memory_pools, 3)
 DLWRAP(hsa_amd_memory_pool_allocate, 4)
 DLWRAP(hsa_amd_memory_pool_free, 1)
 DLWRAP(hsa_amd_memory_async_copy, 8)
+DLWRAP(hsa_amd_memory_async_copy_on_engine, 10)
 DLWRAP(hsa_amd_memory_pool_get_info, 3)
 DLWRAP(hsa_amd_agents_allow_access, 4)
 DLWRAP(hsa_amd_memory_lock, 5)
@@ -96,8 +97,31 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #endif
 
+static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
+  for (size_t I = 0; I < dlwrap::size(); I++) {
+    const char *Sym = dlwrap::symbol(I);
+
+    void *P = Lib.getAddressOfSymbol(Sym);
+    if (P == nullptr) {
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
+      return false;
+    }
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
+
+    *dlwrap::pointer(I) = P;
+  }
+  return true;
+}
+
 static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found
+
+  // Resolve through the process rather than the library handle so that
+  // definitions already in the global scope take precedence like a normal link.
+  auto Process = llvm::sys::DynamicLibrary::getPermanentLibrary(nullptr);
+  if (resolveSymbols(Process, "<process>"))
+    return true;
 
   const char *HsaLib = DYNAMIC_HSA_PATH ".1";
   std::string ErrMsg;
@@ -113,22 +137,7 @@ static bool checkForHSA() {
     return false;
   }
 
-  for (size_t I = 0; I < dlwrap::size(); I++) {
-    const char *Sym = dlwrap::symbol(I);
-
-    void *P = DynlibHandle->getAddressOfSymbol(Sym);
-    if (P == nullptr) {
-      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << HsaLib
-                      << "'!";
-      return false;
-    }
-    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
-                    << ") -> " << P;
-
-    *dlwrap::pointer(I) = P;
-  }
-
-  return true;
+  return resolveSymbols(Process, HsaLib);
 }
 
 hsa_status_t hsa_init() {

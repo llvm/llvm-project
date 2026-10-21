@@ -37,3 +37,29 @@ func.func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+func.func @for_constant_operand(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %ub = affine.min affine_map<(d0)[s0] -> (d0, s0)>(%n)[%c8]
+  scf.for %i = %c0 to %ub step %c1 {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @for_constant_operand(
+// CHECK-SAME:    [[N:%.*]]: index)
+// CHECK:         [[C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[MIN:%.*]] = affine.min #{{.*}}([[N]]){{\[}}[[C8]]]
+// CHECK:         [[SPECIALIZED_C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[PRED:%.*]] = arith.cmpi eq, [[MIN]], [[SPECIALIZED_C8]]
+// CHECK:         scf.if [[PRED]] {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[SPECIALIZED_C8]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         } else {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[MIN]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         }

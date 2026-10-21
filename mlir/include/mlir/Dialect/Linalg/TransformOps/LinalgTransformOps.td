@@ -176,6 +176,17 @@ def ApplySwapExtractSliceWithFillPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyEraseUnusedOperandsAndResultsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.erase_unused_operands_and_results",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that deduplicate operands and remove dead results of
+    `linalg.generic` ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

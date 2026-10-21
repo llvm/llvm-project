@@ -72,8 +72,6 @@ using CompiledModelType = llvm::InlinerSizeModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
-constexpr bool HaveMLIRLoweringInliner = true;
 #include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/Analysis/InlinerModels.h"
 
@@ -107,15 +105,6 @@ createEmitCModelRunner(LLVMContext &Ctx,
   }
   llvm_unreachable("Unknown MLGO model type!");
 }
-#else
-constexpr bool HaveMLIRLoweringInliner = false;
-enum class EmitCModelChoice { Default };
-static const EmitCModelChoice SelectedMLGOModel = EmitCModelChoice::Default;
-static inline std::unique_ptr<MLModelRunner>
-createEmitCModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
-  return nullptr;
-}
-#endif
 
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
@@ -125,8 +114,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
     return nullptr;
   auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
       -> std::unique_ptr<MLModelRunner> {
-    return createReleaseModeModelRunner<CompiledModelType,
-                                        HaveMLIRLoweringInliner>(
+    return createReleaseModeModelRunner<CompiledModelType>(
         M.getContext(), InputFeatures, DecisionName, InteractiveChannelBaseName,
         InlineDecisionSpec, createEmitCModelRunner,
         EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));

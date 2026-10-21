@@ -3,9 +3,9 @@
 
 define void @foo(i32 %n, i32 %N) {
 ; PROMO-LABEL: @foo
-; PROMO: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
+; PROMO: {{.*}} = load {{.*}} @__profc_foo{{.*}} 24)
 ; PROMO-NEXT: add
-; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}3)
+; PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 24)
 bb:
   %tmp = add nsw i32 %n, 1
   %tmp1 = add nsw i32 %n, -1
@@ -49,15 +49,15 @@ bb12:                                             ; preds = %bb9
 ; NONATOMIC_PROMO: %[[PROMO1:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}}
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO1]], %[[LIVEOUT1]] 
 ; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}
-; NONATOMIC_PROMO-NEXT: %[[PROMO2:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 1)
+; NONATOMIC_PROMO-NEXT: %[[PROMO2:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 8)
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO2]], %[[LIVEOUT2]]
-; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}1)
-; NONATOMIC_PROMO-NEXT: %[[PROMO3:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 2)
+; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 8)
+; NONATOMIC_PROMO-NEXT: %[[PROMO3:[a-z0-9.]+]] = load {{.*}} @__profc_foo{{.*}} 16)
 ; NONATOMIC_PROMO-NEXT: add {{.*}} %[[PROMO3]], %[[LIVEOUT3]]
-; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}}2)
+; NONATOMIC_PROMO-NEXT: store {{.*}}@__profc_foo{{.*}} 16)
 ; ATOMIC_PROMO: atomicrmw add {{.*}} @__profc_foo{{.*}}, i64 %[[LIVEOUT1]] monotonic
-; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}1), i64 %[[LIVEOUT2]] monotonic
-; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}}2), i64 %[[LIVEOUT3]] monotonic
+; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}} 8), i64 %[[LIVEOUT2]] monotonic
+; ATOMIC_PROMO-NEXT: atomicrmw add {{.*}} @__profc_foo{{.*}} 16), i64 %[[LIVEOUT3]] monotonic
 ; PROMO-NOT: @__profc_foo{{.*}})
 
 

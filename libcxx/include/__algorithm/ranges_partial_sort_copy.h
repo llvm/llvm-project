@@ -52,7 +52,7 @@ struct __partial_sort_copy {
             class _Proj2 = identity>
     requires indirectly_copyable<_Iter1, _Iter2> && sortable<_Iter2, _Comp, _Proj2> &&
              indirect_strict_weak_order<_Comp, projected<_Iter1, _Proj1>, projected<_Iter2, _Proj2>>
-  _LIBCPP_HIDE_FROM_ABI constexpr partial_sort_copy_result<_Iter1, _Iter2> operator()(
+  constexpr partial_sort_copy_result<_Iter1, _Iter2> operator()(
       _Iter1 __first,
       _Sent1 __last,
       _Iter2 __result_first,
@@ -80,8 +80,7 @@ struct __partial_sort_copy {
              indirect_strict_weak_order<_Comp,
                                         projected<iterator_t<_Range1>, _Proj1>,
                                         projected<iterator_t<_Range2>, _Proj2>>
-  _LIBCPP_HIDE_FROM_ABI constexpr partial_sort_copy_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>>
-  operator()(
+  constexpr partial_sort_copy_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>> operator()(
       _Range1&& __range, _Range2&& __result_range, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     return std::__partial_sort_copy<_RangeAlgPolicy>(
         ranges::begin(__range),

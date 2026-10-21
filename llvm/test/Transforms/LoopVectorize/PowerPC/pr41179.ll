@@ -4,9 +4,9 @@
 define void @foo(ptr %start, ptr %end) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[START2]] to i32
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[START2]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[END1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMIN]] to i32

@@ -106,7 +106,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -132,49 +132,49 @@ body:             |
   ; MM-LABEL: name: expand_BEQ_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BNEZC_MM $at, %bb.2, implicit-def $at
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BNEZC_MM $r1, %bb.2, implicit-def $r1
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BEQ_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BNEZC_MM $at, %bb.3, implicit-def $at
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BNEZC_MM $r1, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BEQ_MM killed renamable $at, $zero, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BEQ_MM killed renamable $r1, $r0, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -182,7 +182,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -197,7 +197,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -223,53 +223,53 @@ body:             |
   ; MM-LABEL: name: expand_BGEZ_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BLTZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BLTZ_MM $r1, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BGEZ_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BLTZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BLTZ_MM $r1, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BGEZ_MM killed renamable $at, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BGEZ_MM killed renamable $r1, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -277,7 +277,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -292,7 +292,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -318,53 +318,53 @@ body:             |
   ; MM-LABEL: name: expand_BGTZ_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BLEZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BLEZ_MM $r1, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BGTZ_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BLEZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BLEZ_MM $r1, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BGTZ_MM killed renamable $at, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BGTZ_MM killed renamable $r1, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -372,7 +372,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -387,7 +387,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -413,53 +413,53 @@ body:             |
   ; MM-LABEL: name: expand_BLEZ_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BGTZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BGTZ_MM $r1, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BLEZ_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BGTZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BGTZ_MM $r1, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BLEZ_MM killed renamable $at, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BLEZ_MM killed renamable $r1, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -467,7 +467,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -482,7 +482,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -508,53 +508,53 @@ body:             |
   ; MM-LABEL: name: expand_BLTZ_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BGEZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BGEZ_MM $r1, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BLTZ_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BGEZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BGEZ_MM $r1, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BLTZ_MM killed renamable $at, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BLTZ_MM killed renamable $r1, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -562,7 +562,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -577,7 +577,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -603,49 +603,49 @@ body:             |
   ; MM-LABEL: name: expand_BNE_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $at = ANDi killed renamable $a0, 1
-  ; MM:   BEQZC_MM $at, %bb.2, implicit-def $at
+  ; MM:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; MM:   BEQZC_MM $r1, %bb.2, implicit-def $r1
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BNE_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $at = ANDi killed renamable $a0, 1
-  ; PIC:   BEQZC_MM $at, %bb.3, implicit-def $at
+  ; PIC:   renamable $r1 = ANDi killed renamable $r4, 1
+  ; PIC:   BEQZC_MM $r1, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $at = ANDi killed renamable $a0, 1
-    BNE_MM killed renamable $at, $zero, %bb.2, implicit-def $at
+    renamable $r1 = ANDi killed renamable $r4, 1
+    BNE_MM killed renamable $r1, $r0, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -653,7 +653,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -668,7 +668,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -694,53 +694,53 @@ body:             |
   ; MM-LABEL: name: expand_BEQZ16_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; MM:   BNEZ16_MM $v0, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r2 = ANDi killed renamable $r4, 1
+  ; MM:   BNEZ16_MM $r2, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BEQZ16_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; PIC:   BNEZ16_MM $v0, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r2 = ANDi killed renamable $r4, 1
+  ; PIC:   BNEZ16_MM $r2, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $v0 = ANDi killed renamable $a0, 1
-    BEQZ16_MM killed renamable $v0, %bb.2, implicit-def $at
+    renamable $r2 = ANDi killed renamable $r4, 1
+    BEQZ16_MM killed renamable $r2, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -748,7 +748,7 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...
 ---
@@ -763,7 +763,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -789,53 +789,53 @@ body:             |
   ; MM-LABEL: name: expand_BNEZ16_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; MM:   BEQZ16_MM $v0, %bb.2, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   renamable $r2 = ANDi killed renamable $r4, 1
+  ; MM:   BEQZ16_MM $r2, %bb.2, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
-  ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     $zero = SLL_MM $zero, 0
+  ; MM:   J %bb.3, implicit-def $r1 {
+  ; MM:     $r0 = SLL_MM $r0, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   INLINEASM &".space 131068", sideeffect attdialect
   ; MM: bb.3.tail:
-  ; MM:   JRC16_MM undef $ra
+  ; MM:   JRC16_MM undef $r31
   ; PIC-LABEL: name: expand_BNEZ16_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; PIC:   BEQZ16_MM $v0, %bb.3, implicit-def $at {
-  ; PIC:     $zero = SLL_MM $zero, 0
+  ; PIC:   renamable $r2 = ANDi killed renamable $r4, 1
+  ; PIC:   BEQZ16_MM $r2, %bb.3, implicit-def $r1 {
+  ; PIC:     $r0 = SLL_MM $r0, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   BAL_BR_MM %bb.2, implicit-def $ra {
-  ; PIC:     $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   BAL_BR_MM %bb.2, implicit-def $r31 {
+  ; PIC:     $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   JR $at {
-  ; PIC:     $sp = ADDiu $sp, 8
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   JR $r1 {
+  ; PIC:     $r29 = ADDiu $r29, 8
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
   ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
-  ; PIC:   JRC16_MM undef $ra
+  ; PIC:   JRC16_MM undef $r31
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0
+    liveins: $r4
 
-    renamable $v0 = ANDi killed renamable $a0, 1
-    BNEZ16_MM killed renamable $v0, %bb.2, implicit-def $at
+    renamable $r2 = ANDi killed renamable $r4, 1
+    BNEZ16_MM killed renamable $r2, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -843,6 +843,6 @@ body:             |
     INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 
 ...

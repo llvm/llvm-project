@@ -240,7 +240,7 @@ define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; GFX10-NEXT:    v_add_f32_e64 v1, s3, 2.0
-; GFX10-NEXT:    v_add_f32_e64 v2, 0x40400000, s4
+; GFX10-NEXT:    v_add_f32_e64 v2, s4, 0x40400000
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog

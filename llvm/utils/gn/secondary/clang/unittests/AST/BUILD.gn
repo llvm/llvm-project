@@ -16,6 +16,7 @@ unittest("ASTTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "APValueTest.cpp",
     "ASTContextParentMapTest.cpp",
     "ASTDumperTest.cpp",
     "ASTExprTest.cpp",

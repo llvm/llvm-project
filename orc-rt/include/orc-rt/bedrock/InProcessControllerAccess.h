@@ -33,8 +33,8 @@ public:
   /// and InProcessControllerAccess without relying on anything but C ABI.
   /// Must be kept in-sync with the corresponding struct in InProcessEPC.
   struct Connection {
-    void (*Retain)(Connection *C) = nullptr;
-    void (*Release)(Connection *C) = nullptr;
+    void (*Retain)(Connection *C) noexcept = nullptr;
+    void (*Release)(Connection *C) noexcept = nullptr;
     void (*Disconnect)(Connection *C) = nullptr;
     int (*EnterMessageScope)(Connection *C) = nullptr;
     void (*LeaveMessageScope)(Connection *C) = nullptr;
@@ -94,7 +94,7 @@ public:
                                                BootstrapInfoAccess *BCA)>;
 
   /// Create an InProcessControllerAccess instance.
-  InProcessControllerAccess(Session &S, OnConnectFn OnConnect)
+  InProcessControllerAccess(Session &S, OnConnectFn OnConnect) noexcept
       : Session::ControllerAccess(S), OnConnect(std::move(OnConnect)) {}
 
   InProcessControllerAccess(const InProcessControllerAccess &) = delete;

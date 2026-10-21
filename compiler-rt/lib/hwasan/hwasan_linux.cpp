@@ -37,6 +37,7 @@
 #  include "hwasan_thread.h"
 #  include "hwasan_thread_list.h"
 #  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_dl.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
 #  include "sanitizer_common/sanitizer_stackdepot.h"
 
@@ -599,6 +600,7 @@ extern "C" void __hwasan_thread_exit() {
     // Bionic already calls __hwasan_thread_exit with blocked signals.
     if (SANITIZER_GLIBC)
       BlockSignals();
+    ClearDlerror();
     hwasanThreadList().ReleaseThread(t);
   }
 }

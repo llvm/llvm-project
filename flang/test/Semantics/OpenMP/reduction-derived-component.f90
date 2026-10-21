@@ -8,3 +8,13 @@ subroutine intrinsic_reduction
 !$omp parallel reduction(+:a%alpha)
 !$omp end parallel
 end subroutine intrinsic_reduction
+
+subroutine unresolved_component
+  type local
+     integer alpha
+  end type local
+  type(local) a
+!ERROR: Component 'missing' not found in derived type 'local'
+!$omp parallel reduction(+:a%missing(1:2))
+!$omp end parallel
+end subroutine unresolved_component

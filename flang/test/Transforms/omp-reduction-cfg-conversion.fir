@@ -8,7 +8,7 @@ omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.a
   %0 = fir.alloca !fir.box<!fir.array<3xi32>>
   %1 = fir.alloca !fir.array<3xi32> {bindc_name = "omp.reduction.array.init"}
   %2 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %3 = fir.declare %1(%2) {uniq_name = "omp.reduction.array.init"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xi32>>
+  %3 = fir.declare %1(%2) uniq_name("omp.reduction.array.init") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xi32>>
   %4 = fir.embox %3(%2) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
   %5 = fir.alloca i32
   fir.store %c0_i32 to %5 : !fir.ref<i32>

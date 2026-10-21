@@ -47,5 +47,5 @@ for.cond.cleanup.loopexit:
 ; CHECK:       !1 = !{!"llvm.loop.vectorize.disable"}
 ; CHECK:       !2 = !{!3}
 ; CHECK:       !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_d"}
-; CHECK:       !4 = distinct !{!4, !"polly.alias.scope.domain"}
+; CHECK:       !4 = distinct !{!4, i1 false, !"polly.alias.scope.domain"}
 ; CHECK:       !5 = !{}

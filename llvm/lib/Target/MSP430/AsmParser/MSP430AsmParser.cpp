@@ -112,14 +112,13 @@ class MSP430Operand : public MCParsedAsmOperand {
   SMLoc Start, End;
 
 public:
-  MSP430Operand(StringRef Tok, SMLoc const &S)
+  MSP430Operand(StringRef Tok, SMLoc S)
       : Kind(k_Tok), Tok(Tok), Start(S), End(S) {}
-  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc S, SMLoc E)
       : Kind(Kind), Reg(Reg), Start(S), End(E) {}
-  MSP430Operand(MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(MCExpr const *Imm, SMLoc S, SMLoc E)
       : Kind(k_Imm), Imm(Imm), Start(S), End(E) {}
-  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc const &S,
-                SMLoc const &E)
+  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc S, SMLoc E)
       : Kind(k_Mem), Mem({Reg, Expr}), Start(S), End(E) {}
 
   void addRegOperands(MCInst &Inst, unsigned N) const {

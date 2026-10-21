@@ -20,6 +20,8 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     @skipIfLinux
     @skipIfNoSBHeaders
     @skipIfHostIncompatibleWithTarget
+    # Flaky on Windows on Arm buildbot - https://github.com/llvm/llvm-project/issues/233425.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_multiple_debuggers(self):
         self.driver_exe = self.getBuildArtifact("multi-process-driver")
         self.buildDriver(

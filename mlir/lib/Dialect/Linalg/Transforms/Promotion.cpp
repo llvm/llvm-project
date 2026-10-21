@@ -32,8 +32,6 @@ using namespace mlir;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
-using llvm::MapVector;
-
 #define DEBUG_TYPE "linalg-promotion"
 
 /// Alloc a new buffer of `size` * `width` i8; where `width` is given by the

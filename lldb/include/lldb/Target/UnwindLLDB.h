@@ -16,7 +16,6 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Unwind.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
@@ -111,13 +110,13 @@ protected:
   ///
   /// The Platform is one source of trap handler function names; that
   /// may be augmented via a setting.  The setting needs to be converted
-  /// into an array of ConstStrings before it can be used - we only want
+  /// into an array of strings before it can be used - we only want
   /// to do that once per thread so it's here in the UnwindLLDB object.
   ///
   /// \return
-  ///     Vector of ConstStrings of trap handler function names.  May be
+  ///     Vector of strings of trap handler function names.  May be
   ///     empty.
-  const std::vector<ConstString> &GetUserSpecifiedTrapHandlerFunctionNames() {
+  const std::vector<std::string> &GetUserSpecifiedTrapHandlerFunctionNames() {
     return m_user_supplied_trap_handler_functions;
   }
 
@@ -149,7 +148,7 @@ private:
   // and m_frames.size()
   // is how far we've currently gone.
 
-  std::vector<ConstString> m_user_supplied_trap_handler_functions;
+  std::vector<std::string> m_user_supplied_trap_handler_functions;
 
   // Check if Full UnwindPlan of First frame is valid or not.
   // If not then try Fallback UnwindPlan of the frame. If Fallback

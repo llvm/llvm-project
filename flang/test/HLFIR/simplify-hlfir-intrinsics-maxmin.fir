@@ -5,10 +5,10 @@
 func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.maxval %3#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.maxval %3#0 fastmath(contract) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -42,10 +42,10 @@ func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.maxval %3#0 {fastmath = #arith.fastmath<nnan>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.maxval %3#0 fastmath(nnan) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -74,10 +74,10 @@ func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.maxval %3#0 {fastmath = #arith.fastmath<nsz>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.maxval %3#0 fastmath(nsz) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -111,10 +111,10 @@ func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.maxval %3#0 {fastmath = #arith.fastmath<nnan,nsz>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.maxval %3#0 fastmath("nnan,nsz") : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -139,11 +139,11 @@ func.func @_QPtest_masked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_maxEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_maxEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.maxval %5#0 mask %2#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.maxval %5#0 mask %2#0 fastmath(contract) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -178,11 +178,11 @@ func.func @_QPtest_masked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_maxEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_maxEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.maxval %5#0 mask %2#0 {fastmath = #arith.fastmath<nnan>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.maxval %5#0 mask %2#0 fastmath(nnan) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -214,11 +214,11 @@ func.func @_QPtest_masked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_maxEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_maxEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.maxval %5#0 mask %2#0 {fastmath = #arith.fastmath<nsz>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.maxval %5#0 mask %2#0 fastmath(nsz) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -253,11 +253,11 @@ func.func @_QPtest_masked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_maxEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_maxEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_maxEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_maxEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_maxEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.maxval %5#0 mask %2#0 {fastmath = #arith.fastmath<nnan,nsz>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_maxEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.maxval %5#0 mask %2#0 fastmath("nnan,nsz") : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -283,10 +283,10 @@ func.func @_QPtest_masked_max(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
 func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.minval %3#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.minval %3#0 fastmath(contract) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -320,10 +320,10 @@ func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.minval %3#0 {fastmath = #arith.fastmath<nnan>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.minval %3#0 fastmath(nnan) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -352,10 +352,10 @@ func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.minval %3#0 {fastmath = #arith.fastmath<nsz>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.minval %3#0 fastmath(nsz) : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -389,10 +389,10 @@ func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %ar
 func.func @_QPtest_unmasked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "y"}) {
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_unmasked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_unmasked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %2 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_unmasked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %4 = hlfir.minval %3#0 {fastmath = #arith.fastmath<nnan,nsz>} : (!fir.ref<!fir.array<100xf32>>) -> f32
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 arg 2 uniq_name("_QFtest_unmasked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = hlfir.minval %3#0 fastmath("nnan,nsz") : (!fir.ref<!fir.array<100xf32>>) -> f32
   hlfir.assign %4 to %1#0 : f32, !fir.ref<f32>
   return
 }
@@ -417,11 +417,11 @@ func.func @_QPtest_masked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_minEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_minEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.minval %5#0 mask %2#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.minval %5#0 mask %2#0 fastmath(contract) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -456,11 +456,11 @@ func.func @_QPtest_masked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_minEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_minEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.minval %5#0 mask %2#0 {fastmath = #arith.fastmath<nnan>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.minval %5#0 mask %2#0 fastmath(nnan) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -492,11 +492,11 @@ func.func @_QPtest_masked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_minEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_minEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.minval %5#0 mask %2#0 {fastmath = #arith.fastmath<nsz>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.minval %5#0 mask %2#0 fastmath(nsz) : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }
@@ -531,11 +531,11 @@ func.func @_QPtest_masked_min(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 {uniq_name = "_QFtest_masked_minEl"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_masked_minEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %arg2(%1) dummy_scope %0 arg 3 uniq_name("_QFtest_masked_minEl") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_masked_minEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 {uniq_name = "_QFtest_masked_minEy"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-  %6 = hlfir.minval %5#0 mask %2#0 {fastmath = #arith.fastmath<nnan,nsz>} : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
+  %5:2 = hlfir.declare %arg1(%4) dummy_scope %0 arg 2 uniq_name("_QFtest_masked_minEy") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %6 = hlfir.minval %5#0 mask %2#0 fastmath("nnan,nsz") : (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100x!fir.logical<4>>>) -> f32
   hlfir.assign %6 to %3#0 : f32, !fir.ref<f32>
   return
 }

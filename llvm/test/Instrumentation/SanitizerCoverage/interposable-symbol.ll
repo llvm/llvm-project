@@ -1,4 +1,5 @@
-; Test that interposable symbols do not get put in comdats.
+; Test that interposable symbols do not get put in comdats, and that noipa
+; (which doesn't affect linkage) does not prevent it.
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-linux-gnu -S | FileCheck %s --check-prefixes=CHECK,ELF
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-windows-msvc -S | FileCheck %s --check-prefixes=CHECK,COFF
 
@@ -6,6 +7,8 @@ $WeakComdat = comdat any
 
 define void @Vanilla() {
 entry:
+  call i32 @0()
+  call i32 @1()
   ret void
 }
 
@@ -36,17 +39,36 @@ entry:
   ret void
 }
 
+; noipa doesn't affect linkage, so this is treated like @Vanilla.
+define void @NoIPA() noipa {
+entry:
+  ret void
+}
+
+define private i32 @0() {
+  ret i32 0
+}
+
+define i32 @1() {
+  ret i32 1
+}
 
 ; CHECK:      $Vanilla = comdat nodeduplicate
 ; ELF:        $LinkOnceOdr = comdat nodeduplicate
 ; COFF:       $LinkOnceOdr = comdat any
 ; CHECK:      $WeakComdat = comdat any
-; CHECK:      @__sancov_gen_ = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($Vanilla), align 4{{$}}
-; CHECK-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}
-; CHECK-NEXT: @__sancov_gen_.2 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}
-; CHECK-NEXT: @__sancov_gen_.3 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($LinkOnceOdr), align 4{{$}}
-; CHECK-NEXT: @__sancov_gen_.4 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($WeakOdr), align 4{{$}}
-; CHECK-NEXT: @__sancov_gen_.5 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($WeakComdat), align 4{{$}}
+; CHECK:      $NoIPA = comdat nodeduplicate
+; CHECK:      @__sancov_gen_ = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($Vanilla), align 4{{$}}
+; ELF-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($LinkOnce), align 4{{$}}
+; ELF-NEXT:   @__sancov_gen_.2 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($Weak), align 4{{$}}
+; COFF-NEXT:  @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", align 4{{$}}
+; COFF-NEXT:  @__sancov_gen_.2 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.3 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($LinkOnceOdr), align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.4 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($WeakOdr), align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.5 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($WeakComdat), align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.6 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", comdat($NoIPA), align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.7 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.8 = private global [1 x i32] zeroinitializer, section "{{[^"]*}}", align 4{{$}}
 
 ; CHECK: define void @Vanilla() comdat {
 ; ELF:   define linkonce void @LinkOnce() comdat {
@@ -57,3 +79,6 @@ entry:
 ; CHECK: define linkonce_odr void @LinkOnceOdr() comdat {
 ; CHECK: define weak_odr void @WeakOdr() comdat {
 ; CHECK: define weak void @WeakComdat() comdat {
+; CHECK: define void @NoIPA() #{{[0-9]+}} comdat {
+; CHECK: define private i32 @0() {
+; CHECK: define i32 @1() {

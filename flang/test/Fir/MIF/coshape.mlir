@@ -28,19 +28,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %9 = fir.coordinate_of %0, %c1_4 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
     fir.store %c3_i64_3 to %9 : !fir.ref<i64>
     %10 = fir.embox %0 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
-    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
-    %11:2 = hlfir.declare %3 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 uniq_name("_QFEa") : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
+    %11:2 = hlfir.declare %3 uniq_name("_QFEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c3 = arith.constant 3 : index
     %12 = fir.alloca !fir.array<3xi32> {bindc_name = "res", uniq_name = "_QFEres"}
     %13 = fir.shape %c3 : (index) -> !fir.shape<1>
-    %14:2 = hlfir.declare %12(%13) {uniq_name = "_QFEres"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+    %14:2 = hlfir.declare %12(%13) uniq_name("_QFEres") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
     %c3_5 = arith.constant 3 : index
     %15 = fir.alloca !fir.array<3xi64> {bindc_name = "res2", uniq_name = "_QFEres2"}
     %16 = fir.shape %c3_5 : (index) -> !fir.shape<1>
-    %17:2 = hlfir.declare %15(%16) {uniq_name = "_QFEres2"} : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
+    %17:2 = hlfir.declare %15(%16) uniq_name("_QFEres2") : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
     %18 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
     %19 = mif.coshape coarray %18 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
-    %20:2 = hlfir.declare %19 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    %20:2 = hlfir.declare %19 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false = arith.constant false
     %21 = hlfir.as_expr %20#0 move %false : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_6 = arith.constant 0 : index
@@ -57,7 +57,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     hlfir.destroy %21 : !hlfir.expr<?xi64>
     %25 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
     %26 = mif.coshape coarray %25 : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
-    %27:2 = hlfir.declare %26 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+    %27:2 = hlfir.declare %26 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
     %false_7 = arith.constant false
     %28 = hlfir.as_expr %27#0 move %false_7 : (!fir.box<!fir.array<?xi64>>, i1) -> !hlfir.expr<?xi64>
     %c0_8 = arith.constant 0 : index
@@ -93,8 +93,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %lb = fir.embox %lc : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
     %ub = fir.embox %uc : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
     %c_ref = fir.address_of(@_QFEc) : !fir.ref<i32>
-    mif.alloc_coarray %c_ref lcobounds %lb ucobounds %ub {uniq_name = "_QFEc"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
-    %c_decl:2 = hlfir.declare %c_ref {uniq_name = "_QFEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %c_ref lcobounds %lb ucobounds %ub uniq_name("_QFEc") : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+    %c_decl:2 = hlfir.declare %c_ref uniq_name("_QFEc") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %cobox = fir.embox %c_decl#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:2>
     %res = mif.coshape coarray %cobox : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi32>>
     return

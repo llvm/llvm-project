@@ -1,0 +1,162 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Name the referenced generic and the selected specific in call diagnostics.
+module generic_targets
+  type :: bound_targets
+    contains
+    procedure, nopass :: host_binding => host_integer
+    procedure, nopass :: device_binding => device_integer
+    generic :: host_bound => host_binding
+    generic :: device_bound => device_binding
+  end type
+  interface host_generic
+    module procedure host_integer, host_real
+  end interface
+  interface device_generic
+    module procedure device_integer
+  end interface
+  interface both_generic
+    module procedure both_integer
+  end interface
+  interface host_sub_generic
+    module procedure host_sub
+  end interface
+  interface device_sub_generic
+    module procedure device_sub
+  end interface
+contains
+  integer function host_integer(n)
+    integer, value :: n
+    host_integer = n
+  end function
+  real function host_real(n)
+    real, value :: n
+    host_real = n
+  end function
+  attributes(device) integer function device_integer(n)
+    integer, value :: n
+    device_integer = n
+  end function
+  attributes(host,device) integer function both_integer(n)
+    integer, value :: n
+    both_integer = n
+  end function
+  subroutine host_sub(n)
+    integer, value :: n
+    n = 1
+  end subroutine
+  attributes(device) subroutine device_sub(n)
+    integer, value :: n
+    n = 1
+  end subroutine
+end module
+
+module generic_callers
+  use generic_targets
+  use cudadevice, only: on_device
+contains
+  attributes(host,device) subroutine unguarded(n, x)
+    integer :: n
+    real :: x
+    !ERROR: 'host_generic' (specific procedure 'host_integer') may not be called in device code
+    n = host_generic(n)
+    !ERROR: 'host_generic' (specific procedure 'host_real') may not be called in device code
+    x = host_generic(x)
+    !ERROR: 'device_generic' (specific procedure 'device_integer') may not be called in host code
+    n = device_generic(n)
+    !ERROR: 'host_sub_generic' (specific procedure 'host_sub') may not be called in device code
+    call host_sub_generic(n)
+    !ERROR: 'device_sub_generic' (specific procedure 'device_sub') may not be called in host code
+    call device_sub_generic(n)
+    ! Ordinary calls keep their single-name diagnostics.
+    !ERROR: 'host_integer' may not be called in device code
+    n = host_integer(n)
+    !ERROR: 'device_integer' may not be called in host code
+    n = device_integer(n)
+    n = both_generic(n)
+  end subroutine
+  attributes(device) subroutine device_caller(n)
+    integer :: n
+    !ERROR: 'host_generic' (specific procedure 'host_integer') may not be called in device code
+    n = host_generic(n)
+    n = device_generic(n)
+  end subroutine
+  attributes(host,device) subroutine guarded(n)
+    integer :: n
+    if (on_device()) then
+      n = device_generic(n)
+      call device_sub_generic(n)
+    else
+      n = host_generic(n)
+      call host_sub_generic(n)
+    end if
+  end subroutine
+end module
+
+module generic_alias_callers
+  use generic_targets, only: renamed_host => host_generic, another_host => host_generic
+  use generic_targets, only: renamed_device => device_generic, renamed_sub => host_sub_generic
+  use generic_targets, only: both_generic, specific_alias => host_integer
+contains
+  attributes(host,device) subroutine aliases(n)
+    integer :: n
+    !ERROR: 'renamed_host' (specific procedure 'host_integer') may not be called in device code
+    n = renamed_host(n)
+    !ERROR: 'another_host' (specific procedure 'host_integer') may not be called in device code
+    n = another_host(n)
+    !ERROR: 'renamed_device' (specific procedure 'device_integer') may not be called in host code
+    n = renamed_device(n)
+    !ERROR: 'renamed_sub' (specific procedure 'host_sub') may not be called in device code
+    call renamed_sub(n)
+    !ERROR: 'renamed_host' (specific procedure 'host_integer') may not be called in device code
+    n = both_generic(renamed_host(n))
+    ! A USE alias of an ordinary specific is not a generic reference.
+    !ERROR: 'specific_alias' may not be called in device code
+    n = specific_alias(n)
+  end subroutine
+end module
+
+module bound_generic_callers
+  use generic_targets
+contains
+  attributes(host,device) subroutine bound_calls(t, poly, n)
+    type(bound_targets) :: t
+    class(bound_targets) :: poly
+    integer :: n
+    !ERROR: 'host_bound' (specific procedure 'host_integer') may not be called in device code
+    n = t%host_bound(n)
+    !ERROR: 'device_bound' (specific procedure 'device_integer') may not be called in host code
+    n = t%device_bound(n)
+    !ERROR: 'host_bound' (specific procedure 'host_integer') may not be called in device code
+    n = poly%host_bound(n)
+    !ERROR: 'device_bound' (specific procedure 'device_integer') may not be called in host code
+    n = poly%device_bound(n)
+  end subroutine
+end module
+
+module native_cuda_generic
+  use cudadevice, only: atomicadd
+contains
+  attributes(host,device) subroutine atomic_call(a, n, old)
+    integer, device :: a(*)
+    integer :: n, old
+    !ERROR: 'atomicadd' (specific procedure 'atomicaddi') may not be called in host code
+    old = atomicadd(a(1), n)
+  end subroutine
+end module
+
+module identical_generic_name
+  interface same_name
+    module procedure same_name
+  end interface
+contains
+  integer function same_name(n)
+    integer, value :: n
+    same_name = n
+  end function
+  attributes(host,device) subroutine caller(n)
+    integer :: n
+    ! Do not repeat the name when generic and specific have the same spelling.
+    !ERROR: 'same_name' may not be called in device code
+    n = same_name(n)
+  end subroutine
+end module

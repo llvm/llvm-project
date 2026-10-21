@@ -134,8 +134,6 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 
 Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
-  if (auto Err = ContextTLSTable.deinit())
-    return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;
@@ -171,13 +169,6 @@ Error LevelZeroPluginTy::flushQueueImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
-Expected<bool> LevelZeroPluginTy::isELFCompatible(uint32_t DeviceId,
-                                                  StringRef Image) const {
-  uint64_t MajorVer, MinorVer;
-  return isValidOneOmpImage(Image, MajorVer, MinorVer);
-}
-
-// We only need to check for formats other than ELF here.
 Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   switch (identify_magic(Image)) {
   case file_magic::spirv_object:
@@ -305,11 +296,9 @@ Error LevelZeroPluginContextTy::initAllocators() {
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
-                                                    int64_t Size,
-                                                    void * /*HostPtr*/,
-                                                    TargetAllocTy Kind,
-                                                    size_t Alignment) {
+Expected<void *> LevelZeroPluginContextTy::allocate(
+    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
+    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
   int32_t ResolvedKind = Kind;
   if (Kind == TARGET_ALLOC_HOST) {
@@ -334,8 +323,9 @@ Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
                           AllocOptionTy::ALLOC_OPT_NONE);
 }
 
-Error LevelZeroPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                           TargetAllocTy Kind) {
+Error LevelZeroPluginContextTy::deallocate(
+    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+    GenericProfilerTy * /*ProfilerPtr*/) {
   if (Kind == TARGET_ALLOC_HOST) {
     if (!HostAllocator)
       return Plugin::error(ErrorCode::NOT_FOUND,

@@ -1023,7 +1023,7 @@ exit:
 !3 = !{!5, !5, i64 0}
 !4 = !{!"int", !1}
 !5 = !{!"float", !1}
-!6 = !{!6}
+!6 = !{!6, i1 false}
 !7 = !{!7, !6}
 !8 = !{!7}
 
@@ -1037,5 +1037,5 @@ exit:
 ; CHECK: [[META5]] = !{!"float", [[META2]]}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]]}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false}
 ;.

@@ -36,7 +36,7 @@ define amdgpu_kernel void @kern_i8_noundef(i8 noundef %arg) #0 {
 ; HSA-LABEL: @kern_i8_noundef(
 ; HSA-NEXT:    [[KERN_I8_NOUNDEF_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I8_NOUNDEF_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]{{$}}
+; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
 ; HSA-NEXT:    store i8 [[TMP2]], ptr addrspace(1) poison, align 1
 ; HSA-NEXT:    ret void
@@ -44,7 +44,7 @@ define amdgpu_kernel void @kern_i8_noundef(i8 noundef %arg) #0 {
 ; MESA-LABEL: @kern_i8_noundef(
 ; MESA-NEXT:    [[KERN_I8_NOUNDEF_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I8_NOUNDEF_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META0]]{{$}}
+; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META0]]
 ; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
 ; MESA-NEXT:    store i8 [[TMP2]], ptr addrspace(1) poison, align 1
 ; MESA-NEXT:    ret void
@@ -1928,10 +1928,10 @@ attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="40" }
 ; HSA: [[META5]] = !{i64 1024}
 ; HSA: [[META6]] = !{[[META7:![0-9]+]]}
 ; HSA: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"ptr"}
-; HSA: [[META8]] = distinct !{[[META8]], !"kern_noalias_global_ptr"}
+; HSA: [[META8]] = distinct !{[[META8]], i1 false, !"kern_noalias_global_ptr"}
 ; HSA: [[META9]] = !{[[META10:![0-9]+]], [[META12:![0-9]+]]}
 ; HSA: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"ptr0"}
-; HSA: [[META11]] = distinct !{[[META11]], !"kern_noalias_global_ptr_x2"}
+; HSA: [[META11]] = distinct !{[[META11]], i1 false, !"kern_noalias_global_ptr_x2"}
 ; HSA: [[META12]] = distinct !{[[META12]], [[META11]], !"ptr1"}
 ;.
 ; MESA: [[META0]] = !{}
@@ -1942,9 +1942,9 @@ attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="40" }
 ; MESA: [[META5]] = !{i64 1024}
 ; MESA: [[META6]] = !{[[META7:![0-9]+]]}
 ; MESA: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"ptr"}
-; MESA: [[META8]] = distinct !{[[META8]], !"kern_noalias_global_ptr"}
+; MESA: [[META8]] = distinct !{[[META8]], i1 false, !"kern_noalias_global_ptr"}
 ; MESA: [[META9]] = !{[[META10:![0-9]+]], [[META12:![0-9]+]]}
 ; MESA: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"ptr0"}
-; MESA: [[META11]] = distinct !{[[META11]], !"kern_noalias_global_ptr_x2"}
+; MESA: [[META11]] = distinct !{[[META11]], i1 false, !"kern_noalias_global_ptr_x2"}
 ; MESA: [[META12]] = distinct !{[[META12]], [[META11]], !"ptr1"}
 ;.

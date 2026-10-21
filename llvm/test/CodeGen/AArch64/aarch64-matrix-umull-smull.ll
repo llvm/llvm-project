@@ -194,23 +194,21 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ;
 ; CHECK-GI-LABEL: matrix_mul_double_shuffle:
 ; CHECK-GI:       // %bb.0: // %vector.header
-; CHECK-GI-NEXT:    and w9, w3, #0xffff
-; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
-; CHECK-GI-NEXT:    dup v0.4s, w9
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-NEXT:    and x8, x9, #0xfffffff8
+; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    dup v0.4s, w8
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w9, [x2], #16
 ; CHECK-GI-NEXT:    subs x8, x8, #8
-; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    fmov s1, w9
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
-; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
-; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    str q2, [x1, x9]
+; CHECK-GI-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    str q1, [x1, x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
 ; CHECK-GI-NEXT:  // %bb.2: // %for.end12
 ; CHECK-GI-NEXT:    ret
@@ -587,8 +585,7 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
-; CHECK-SD-NEXT:    mov w8, wzr
-; CHECK-SD-NEXT:    mov w0, w8
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB5_4: // %vector.ph
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
@@ -762,8 +759,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    mov x8, xzr
 ; CHECK-SD-NEXT:    b .LBB6_13
 ; CHECK-SD-NEXT:  .LBB6_3:
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:    mov x0, x8
+; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB6_4: // %vector.main.loop.iter.check
 ; CHECK-SD-NEXT:    cmp w2, #16
@@ -935,8 +931,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-GI-NEXT:    mov x0, x8
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB6_7:
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:    mov x0, x8
+; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB6_8: // %vec.epilog.iter.check
 ; CHECK-GI-NEXT:    cbz x8, .LBB6_12

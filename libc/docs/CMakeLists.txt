@@ -46,6 +46,7 @@ if(LLVM_ENABLE_SPHINX)
         strings
         sys/ipc
         sys/mman
+        sys/msg
         sys/resource
         sys/select
         sys/sem
@@ -56,6 +57,7 @@ if(LLVM_ENABLE_SPHINX)
         sys/uio
         sys/utsname
         sys/wait
+        syslog
         termios
         threads
         time

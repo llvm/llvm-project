@@ -35,7 +35,6 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -85,11 +84,6 @@ ModuleListProperties::ModuleListProperties() {
                                            [this] { UpdateSymlinkMappings(); });
 
   llvm::SmallString<128> path;
-  if (clang::driver::Driver::getDefaultModuleCachePath(path)) {
-    lldbassert(SetClangModulesCachePath(FileSpec(path)));
-  }
-
-  path.clear();
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
     llvm::sys::path::append(path, "IndexCache");
@@ -155,6 +149,18 @@ bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
 }
 
+bool ModuleListProperties::GetEnableLLDBIndexCacheMemoryModules() const {
+  const uint32_t idx = ePropertyEnableLLDBIndexCacheMemoryModules;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetEnableLLDBIndexCacheMemoryModules(
+    bool new_value) {
+  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCacheMemoryModules,
+                            new_value);
+}
+
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
   const uint32_t idx = ePropertyLLDBIndexCacheMaxByteSize;
   return GetPropertyAtIndexAs<uint64_t>(
@@ -196,6 +202,12 @@ bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+uint64_t ModuleListProperties::GetDemangledNameInfoCacheSize() const {
+  const uint32_t idx = ePropertyDemangledNameInfoCacheSize;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
 }
 
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}

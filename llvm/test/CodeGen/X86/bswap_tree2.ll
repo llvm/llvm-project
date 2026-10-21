@@ -11,7 +11,6 @@
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $16711935, %ecx # imm = 0xFF00FF
 ; CHECK-NEXT:    shll $8, %ecx
 ; CHECK-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; CHECK-NEXT:    shrl $8, %eax
@@ -21,7 +20,6 @@
 ; CHECK64-LABEL: test1:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
 ; CHECK64-NEXT:    shll $8, %eax
 ; CHECK64-NEXT:    orl $-16777216, %edi # imm = 0xFF000000
 ; CHECK64-NEXT:    shrl $8, %edi

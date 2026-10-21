@@ -1589,6 +1589,12 @@ public:
     Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
   }
 
+  /// Adds the attribute to the indicated argument
+  void maybeAddParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.maybeAddParamAttribute(getContext(), ArgNo, Kind);
+  }
+
   /// removes the attribute from the list of attributes.
   void removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) {
     Attrs = Attrs.removeAttributeAtIndex(getContext(), i, Kind);

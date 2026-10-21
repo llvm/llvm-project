@@ -63,11 +63,11 @@ program test_vector
 !CHECK: vector: Use from vector in vector_mod
 
 !CHECK: OtherConstruct scope:
-!CHECK: omp_in size=12 offset=0: ObjectEntity type: TYPE(vector)
-!CHECK: omp_out size=12 offset=12: ObjectEntity type: TYPE(vector)
+!CHECK: omp_in (OmpInVar) size=12 offset=0: ObjectEntity type: TYPE(vector)
+!CHECK: omp_out (OmpOutVar) size=12 offset=12: ObjectEntity type: TYPE(vector)
 !CHECK: OtherConstruct scope:
-!CHECK: omp_orig size=12 offset=0: ObjectEntity type: TYPE(vector)
-!CHECK: omp_priv size=12 offset=12: ObjectEntity type: TYPE(vector)
+!CHECK: omp_orig (OmpOrigVar) size=12 offset=0: ObjectEntity type: TYPE(vector)
+!CHECK: omp_priv (OmpPrivVar) size=12 offset=12: ObjectEntity type: TYPE(vector)
 
   v2 = Vector(0.0, 0.0, 0.0)
   v1 = Vector(1.0, 2.0, 3.0)

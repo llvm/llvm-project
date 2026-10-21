@@ -414,22 +414,6 @@ template <typename T> static Precedence ToPrecedence(const Expr<T> &expr) {
   return common::visit([](const auto &x) { return ToPrecedence(x); }, expr.u);
 }
 
-template <typename T> static bool IsNegatedScalarConstant(const Expr<T> &expr) {
-  static constexpr TypeCategory cat{T::category};
-  if constexpr (cat == TypeCategory::Integer || cat == TypeCategory::Real) {
-    if (auto n{GetScalarConstantValue<T>(expr)}) {
-      return n->IsNegative();
-    }
-  }
-  return false;
-}
-
-template <TypeCategory CAT>
-static bool IsNegatedScalarConstant(const Expr<SomeKind<CAT>> &expr) {
-  return common::visit(
-      [](const auto &x) { return IsNegatedScalarConstant(x); }, expr.u);
-}
-
 struct OperatorSpelling {
   const char *prefix{""}, *infix{","}, *suffix{""};
 };
@@ -824,6 +808,10 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
   }
   if (stat_) {
     EmitVar(o << separator, stat_, "STAT=");
+    separator = ',';
+  }
+  if (notify_) {
+    EmitVar(o << separator, notify_, "NOTIFY=");
     separator = ',';
   }
   if (team_) {

@@ -122,6 +122,14 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
+
+      for (MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical() && !MO.isDead() && !MRI->isReserved(Reg) &&
+            LivePhysRegs.available(Reg))
+          MO.setIsDead();
+      }
+
       LivePhysRegs.stepBackward(MI);
     }
   }

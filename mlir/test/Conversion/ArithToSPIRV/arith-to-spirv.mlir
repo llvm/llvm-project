@@ -743,6 +743,21 @@ func.func @constant_16bit() {
   return
 }
 
+// Without the Int8 capability, 8-bit floats are emulated as i8 and then
+// widened to i32 like any other 8-bit integer.
+// CHECK-LABEL: @constant_8bit_float
+func.func @constant_8bit_float() {
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %0 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : tensor<2xi32> : !spirv.array<2 x i32>
+  %1 = arith.constant dense<[1.0, -0.5]> : tensor<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %2 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3>
+  // CHECK: spirv.Constant dense<[56, -80, 64, -72]> : tensor<4xi32> : !spirv.array<4 x i32>
+  %3 = arith.constant dense<[[1.0, -0.5], [2.0, -1.0]]> : tensor<2x2xf8E4M3FN>
+  return
+}
+
 // CHECK-LABEL: @constant_size1
 func.func @constant_size1() {
   // CHECK: spirv.Constant 4 : i32

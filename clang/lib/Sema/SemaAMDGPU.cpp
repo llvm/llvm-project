@@ -213,6 +213,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);

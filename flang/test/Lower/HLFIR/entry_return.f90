@@ -8,9 +8,9 @@ complex function f1()
 end function
 ! CHECK-LABEL:   func.func @_QPf1() -> complex<f32> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> <{bindc_name = "f1", uniq_name = "_QFf1Ef1"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf1Ef1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFf1Ef1") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1Ee1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFf1Ee1") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant false
@@ -22,9 +22,9 @@ end function
 
 ! // CHECK-LABEL:   func.func @_QPe1() -> !fir.logical<4> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> <{bindc_name = "f1", uniq_name = "_QFf1Ef1"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf1Ef1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFf1Ef1") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1Ee1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFf1Ee1") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant false
@@ -41,9 +41,9 @@ logical function f2()
 end function
 ! CHECK-LABEL:   func.func @_QPf2() -> !fir.logical<4> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> <{bindc_name = "e2", uniq_name = "_QFf2Ee2"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf2Ee2"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFf2Ee2") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf2Ef2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFf2Ef2") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
@@ -64,9 +64,9 @@ end function
 
 ! CHECK-LABEL:   func.func @_QPe2() -> complex<f32> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> <{bindc_name = "e2", uniq_name = "_QFf2Ee2"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf2Ee2"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFf2Ee2") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf2Ef2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFf2Ef2") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32

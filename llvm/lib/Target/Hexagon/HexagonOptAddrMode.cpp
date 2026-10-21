@@ -364,13 +364,13 @@ bool HexagonOptAddrMode::isValidOffset(MachineInstr *MI, int Offset) {
     case Hexagon::V6_vgathermhq_pseudo:
     case Hexagon::V6_vgathermwq_pseudo:
     case Hexagon::V6_vgathermhwq_pseudo:
-      return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+      return HII->isValidOffset(MI->getOpcode(), Offset, false);
     default:
       if (HII->getAddrMode(*MI) == HexagonII::BaseImmOffset) {
         // The immediates are mentioned in multiples of vector counts
         unsigned AlignMask = HII->getMemAccessSize(*MI) - 1;
         if ((AlignMask & Offset) == 0)
-          return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+          return HII->isValidOffset(MI->getOpcode(), Offset, false);
       }
       return false;
     }
@@ -399,7 +399,7 @@ bool HexagonOptAddrMode::isValidOffset(MachineInstr *MI, int Offset) {
 
   if ((AlignMask & Offset) != 0)
     return false;
-  return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+  return HII->isValidOffset(MI->getOpcode(), Offset, false);
 }
 
 unsigned HexagonOptAddrMode::getBaseOpPosition(MachineInstr *MI) {

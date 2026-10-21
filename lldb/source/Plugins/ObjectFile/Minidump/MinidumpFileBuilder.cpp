@@ -554,7 +554,7 @@ class ArchThreadContexts {
   union {
     lldb_private::minidump::MinidumpContext_x86_64 x86_64;
     lldb_private::minidump::RegisterContextMinidump_ARM64::Context arm64;
-  };
+  } context;
 
 public:
   ArchThreadContexts(llvm::Triple::ArchType arch) : m_arch(arch) {}
@@ -562,10 +562,10 @@ public:
   bool prepareRegisterContext(RegisterContext *reg_ctx) {
     switch (m_arch) {
     case llvm::Triple::ArchType::x86_64:
-      x86_64 = GetThreadContext_x86_64(reg_ctx);
+      context.x86_64 = GetThreadContext_x86_64(reg_ctx);
       return true;
     case llvm::Triple::ArchType::aarch64:
-      arm64 = GetThreadContext_ARM64(reg_ctx);
+      context.arm64 = GetThreadContext_ARM64(reg_ctx);
       return true;
     default:
       break;
@@ -573,14 +573,14 @@ public:
     return false;
   }
 
-  const void *data() const { return &x86_64; }
+  const void *data() const { return &context; }
 
   size_t size() const {
     switch (m_arch) {
     case llvm::Triple::ArchType::x86_64:
-      return sizeof(x86_64);
+      return sizeof(context.x86_64);
     case llvm::Triple::ArchType::aarch64:
-      return sizeof(arm64);
+      return sizeof(context.arm64);
     default:
       break;
     }

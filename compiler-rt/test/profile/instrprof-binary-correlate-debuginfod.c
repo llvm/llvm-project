@@ -33,7 +33,7 @@
 // MISSING-FLAG: error: Expected --debuginfod or --debug-file-directory when --correlate is provided
 
 // Test error for llvm-profdata merge profile correlation when a proper --correlate option is not provided.
-// RUN: not llvm-profdata merge -o %t.correlate-error.profdata --debug-file-directory %t --correlate="" %t.correlate.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-CORRELATION-KIND
+// RUN: not llvm-profdata merge -o %t.correlate-error.profdata --debug-file-directory %t %t.correlate.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-CORRELATION-KIND
 // MISSING-CORRELATION-KIND: error: Expected --correlate when --debug-file-directory is provided
 
 // Test error for llvm-profdata merge profile correlation with mixing correlation options.

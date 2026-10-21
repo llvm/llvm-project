@@ -24,7 +24,7 @@ func.func @double(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
   %c1_i32 = arith.constant 1 : i32
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "double"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("double") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi slt, %2, %c0_i32 : i32
   fir.if %3 {
@@ -51,7 +51,7 @@ func.func @double(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
 func.func @single(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "single"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("single") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi sgt, %2, %c0_i32 : i32
   fir.if %3 {
@@ -77,7 +77,7 @@ func.func @single(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}) {
 func.func @if_result(%arg0: !fir.ref<i32> {fir.bindc_name = "c"}) -> i32 {
   %c0 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "c"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("c") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi sgt, %2, %c0 : i32
   %4 = fir.if %3 -> i32 {
@@ -105,7 +105,7 @@ func.func @if_result(%arg0: !fir.ref<i32> {fir.bindc_name = "c"}) -> i32 {
 func.func @if_result_multi(%arg0: !fir.ref<i32> {fir.bindc_name = "c"}) -> i32 {
   %c0 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "c"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("c") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi sgt, %2, %c0 : i32
   %4:2 = fir.if %3 -> (i32, i32) {

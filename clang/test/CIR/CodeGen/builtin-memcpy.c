@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -o - %s | FileCheck %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-cir -o - %s | FileCheck %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -emit-cir -o - %s | FileCheck %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=LLVM
 
 typedef unsigned long size_t;
 

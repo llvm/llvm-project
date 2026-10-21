@@ -584,13 +584,14 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
-  if ((!IsDataForm(m_form)) || m_form == llvm::dwarf::DW_FORM_sdata)
+  if ((!IsDataForm(m_form) && !IsFlagForm(m_form)) ||
+      m_form == llvm::dwarf::DW_FORM_sdata)
     return std::nullopt;
   return m_value.uval;
 }
 
 std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
-  if ((!IsDataForm(m_form)) ||
+  if ((!IsDataForm(m_form) && !IsFlagForm(m_form)) ||
       (m_form == llvm::dwarf::DW_FORM_udata &&
        uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
     return std::nullopt;
@@ -633,6 +634,17 @@ bool DWARFFormValue::IsDataForm(const dw_form_t form) {
   case DW_FORM_data2:
   case DW_FORM_data4:
   case DW_FORM_data8:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("All cases handled above!");
+}
+
+bool DWARFFormValue::IsFlagForm(const dw_form_t form) {
+  switch (form) {
+  case DW_FORM_flag:
+  case DW_FORM_flag_present:
     return true;
   default:
     return false;

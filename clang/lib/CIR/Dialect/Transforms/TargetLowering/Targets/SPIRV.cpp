@@ -8,6 +8,7 @@
 
 #include "../TargetLoweringInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace cir {
 
@@ -25,10 +26,13 @@ constexpr unsigned SPIRVAddrSpaceMap[] = {
     6, // GlobalHost
 };
 
-class SPIRVTargetLoweringInfo : public TargetLoweringInfo {
+class CommonSPIRTargetLoweringInfo : public TargetLoweringInfo {
 public:
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
       cir::LangAddressSpace addrSpace) const override {
+    // TODO(cir): SYCL and CUDA/HIP device code map Default to Generic
+    // (SPIRDefIsGenMap).
+    assert(!cir::MissingFeatures::spirvDefaultIsGenericAddrSpace());
     auto idx = static_cast<unsigned>(addrSpace);
     assert(idx < std::size(SPIRVAddrSpaceMap) &&
            "Unknown CIR address space for SPIR-V target");
@@ -36,7 +40,19 @@ public:
   }
 };
 
+class SPIRVTargetLoweringInfo : public CommonSPIRTargetLoweringInfo {
+public:
+  cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const override {
+    return syncScope;
+  }
+};
+
 } // namespace
+
+std::unique_ptr<TargetLoweringInfo> createCommonSPIRTargetLoweringInfo() {
+  return std::make_unique<CommonSPIRTargetLoweringInfo>();
+}
 
 std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo() {
   return std::make_unique<SPIRVTargetLoweringInfo>();

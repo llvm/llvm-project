@@ -123,12 +123,12 @@ liveins:
   - { reg: '$edx', virtual-reg: '' }
   - { reg: '$ecx', virtual-reg: '' }
 callSites:       
-  - { bb: 0, offset: 23, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 23, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' }
       - { arg: 2, reg: '$rdx' }
       - { arg: 3, reg: '$ecx' } }
-  - { bb: 0, offset: 49, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 49, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' }
       - { arg: 2, reg: '$rdx' }

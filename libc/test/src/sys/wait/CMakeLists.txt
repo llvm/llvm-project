@@ -27,3 +27,17 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  waitid_test
+  SUITE
+    libc_sys_wait_unittests
+  SRCS
+    waitid_test.cpp
+  DEPENDS
+    libc.include.sys_wait
+    libc.src.errno.errno
+    libc.src.sys.wait.waitid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -34,7 +34,7 @@ define void @throw(ptr %p) {
 ; CHECK:       call      foo
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
-; CHECK:       i32.store __wasm_lpad_context
+; CHECK:       call       $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
 ; CHECK:       call       $drop=, __gxx_wasm_personality_v0, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0

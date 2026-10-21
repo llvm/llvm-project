@@ -36,6 +36,14 @@ TEST_P(olGetPlatformInfoTest, SuccessBackend) {
                                    sizeof(ol_platform_backend_t), &Backend));
 }
 
+TEST_P(olGetPlatformInfoTest, SuccessActive) {
+  // The fixture obtained a device from this platform, so it must be active.
+  bool Active = false;
+  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                   sizeof(Active), &Active));
+  ASSERT_TRUE(Active);
+}
+
 TEST_P(olGetPlatformInfoTest, InvalidNullHandle) {
   ol_platform_backend_t Backend;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

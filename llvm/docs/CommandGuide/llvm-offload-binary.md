@@ -29,6 +29,8 @@ version and size. Each binary contains its own header, allowing tools to locate
 offloading sections even when merged by a linker. Each offload entry includes
 metadata such as the device image kind, producer kind, and key-value string
 metadata. Multiple offloading images are concatenated to form a fat binary.
+Images can be compressed with zlib or zstd for better size efficiency.
+Extraction handles compressed binaries automatically.
 
 ## EXAMPLE
 
@@ -60,6 +62,18 @@ $ llvm-offload-binary in.bin --image=file=output.a,triple=nvptx64 --archive
 :::{option} --archive
 When extracting from an input binary, write all extracted images into a static
 archive instead of separate files.
+:::
+
+:::{option} --compress
+Compress the packaged offload binary.
+:::
+
+:::{option} --compression-format=<zstd|zlib>
+Select the compression format. The default is `zstd`.
+:::
+
+:::{option} --compression-level=<level>
+Specify a compression level for the selected format.
 :::
 
 :::{option} --image=<<key>=<value>,...>
@@ -112,13 +126,14 @@ an image buffer.
 :name: table-binary_header
 :widths: auto
 
-| Type     | Identifier   | Description                                        |
-| -------- | ------------ | -------------------------------------------------- |
-| uint8_t  | magic        | The magic bytes for the binary format (0x10FF10AD) |
-| uint32_t | version      | Version of this format (currently version 1)       |
-| uint64_t | size         | Size of this binary in bytes                       |
-| uint64_t | entry offset | Absolute offset of the offload entries in bytes    |
-| uint64_t | entry size   | Size of the offload entries in bytes               |
+| Type     | Identifier    | Description                                         |
+| -------- | ------------- | --------------------------------------------------- |
+| uint32_t | magic         | The magic bytes for the binary format (0x10FF10AD)  |
+| uint32_t | version       | Version of this format (currently version 3)        |
+| uint64_t | size          | Size of this binary in bytes                        |
+| uint64_t | entry offset  | Absolute offset of the offload entries in bytes     |
+| uint64_t | entry count   | Number of offload entries                           |
+| uint64_t | inflated size | Uncompressed size, or zero if compression is unused |
 :::
 
 Each offload entry describes a bundled image along with its associated metadata.

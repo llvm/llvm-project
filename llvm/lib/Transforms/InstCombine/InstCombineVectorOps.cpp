@@ -908,7 +908,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
         PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
-  if (isa<ConstantAggregateZero>(V)) {
+  if (match(V, m_ZeroForbidPoison())) {
     Mask.assign(NumElts, 0);
     return std::make_pair(V, nullptr);
   }
@@ -1312,7 +1312,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // Note that the same block can be a predecessor more than once,
   // and we need to preserve that invariant for the PHI node.
   BuilderTy::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(UseBB, UseBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(UseBB->getFirstNonPHIIt());
   auto *PHI =
       Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
   for (BasicBlock *Pred : Preds)

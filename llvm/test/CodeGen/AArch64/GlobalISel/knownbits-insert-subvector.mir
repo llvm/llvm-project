@@ -40,9 +40,9 @@ body: |
   ; CHECK-NEXT: %src:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %sub:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
   ; CHECK-NEXT: %res:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
-    %zero:_(s16) = G_CONSTANT i16 0
-    %bad0:_(s16) = COPY $h0
-    %bad1:_(s16) = COPY $h1
+    %zero:_(i16) = G_CONSTANT i16 0
+    %bad0:_(i16) = COPY $h0
+    %bad1:_(i16) = COPY $h1
 
     %src:_(<4 x i16>) = G_BUILD_VECTOR %zero, %zero, %bad0, %bad1
     %sub:_(<2 x i16>) = G_BUILD_VECTOR %zero, %zero
@@ -61,10 +61,10 @@ body: |
   ; CHECK-NEXT: %src:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %sub:_ KnownBits:0000111111111111 SignBits:4 IsKnownNeverZero:1
   ; CHECK-NEXT: %res:_ KnownBits:0000????11111111 SignBits:4 IsKnownNeverZero:1
-    %srcval:_(s16) = G_CONSTANT i16 255
-    %subval:_(s16) = G_CONSTANT i16 4095
-    %bad0:_(s16) = COPY $h0
-    %bad1:_(s16) = COPY $h1
+    %srcval:_(i16) = G_CONSTANT i16 255
+    %subval:_(i16) = G_CONSTANT i16 4095
+    %bad0:_(i16) = COPY $h0
+    %bad1:_(i16) = COPY $h1
 
     %src:_(<4 x i16>) = G_BUILD_VECTOR %srcval, %srcval, %bad0, %bad1
     %sub:_(<2 x i16>) = G_BUILD_VECTOR %subval, %subval
@@ -81,8 +81,8 @@ body: |
   ; CHECK-NEXT: %src:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
   ; CHECK-NEXT: %sub:_ KnownBits:0000111111111111 SignBits:4 IsKnownNeverZero:1
   ; CHECK-NEXT: %res:_ KnownBits:0000????11111111 SignBits:4 IsKnownNeverZero:1
-    %srcval:_(s16) = G_CONSTANT i16 255
-    %subval:_(s16) = G_CONSTANT i16 4095
+    %srcval:_(i16) = G_CONSTANT i16 255
+    %subval:_(i16) = G_CONSTANT i16 4095
     %src:_(<vscale x 4 x i16>) = G_SPLAT_VECTOR %srcval
     %sub:_(<vscale x 2 x i16>) = G_SPLAT_VECTOR %subval
     %res:_(<vscale x 4 x i16>) = G_INSERT_SUBVECTOR %src, %sub, 2
@@ -97,8 +97,8 @@ body: |
   ; CHECK-NEXT: %src:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
   ; CHECK-NEXT: %sub:_ KnownBits:0000111111111111 SignBits:4 IsKnownNeverZero:1
   ; CHECK-NEXT: %res:_ KnownBits:0000????11111111 SignBits:4 IsKnownNeverZero:1
-    %srcval:_(s16) = G_CONSTANT i16 255
-    %subval:_(s16) = G_CONSTANT i16 4095
+    %srcval:_(i16) = G_CONSTANT i16 255
+    %subval:_(i16) = G_CONSTANT i16 4095
     %src:_(<vscale x 4 x i16>) = G_SPLAT_VECTOR %srcval
     %sub:_(<2 x i16>) = G_BUILD_VECTOR %subval, %subval
     %res:_(<vscale x 4 x i16>) = G_INSERT_SUBVECTOR %src, %sub, 2

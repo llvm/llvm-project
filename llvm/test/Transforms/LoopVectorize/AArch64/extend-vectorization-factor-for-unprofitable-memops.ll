@@ -85,7 +85,7 @@ exit:
 ; vectorization factor.
 define void @test_load_i8_store_i64_large(ptr noalias %src, ptr noalias %dst, ptr noalias %dst.2, ptr noalias %dst.3, ptr noalias %dst.4, ptr noalias %dst.5, i64%off, i64 %off.2, i64 %N) {
 ; CHECK-LABEL: @test_load_i8_store_i64_large
-; CHECK: <8 x i64>
+; CHECK: <2 x i64>
 ;
 entry:
   br label %loop

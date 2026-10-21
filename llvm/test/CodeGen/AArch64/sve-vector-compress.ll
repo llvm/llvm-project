@@ -182,16 +182,17 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
-; CHECK-SVE-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-SVE-NEXT:    punpkhi p0.h, p0.b
-; CHECK-SVE-NEXT:    inch x8
-; CHECK-SVE-NEXT:    cntp x9, p1, p1.s
+; CHECK-SVE-NEXT:    inch x9
+; CHECK-SVE-NEXT:    cntp x8, p1, p1.s
 ; CHECK-SVE-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-SVE-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    cmp x9, x8
+; CHECK-SVE-NEXT:    mov w8, w8
 ; CHECK-SVE-NEXT:    str z0, [sp]
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lo
+; CHECK-SVE-NEXT:    cmp x8, x9
+; CHECK-SVE-NEXT:    csel x8, x8, x9, lo
 ; CHECK-SVE-NEXT:    mov x9, sp
 ; CHECK-SVE-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SVE-NEXT:    ldr z0, [sp]
@@ -209,17 +210,18 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SME2p2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-SME2p2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SME2p2-NEXT:    punpklo p1.h, p0.b
-; CHECK-SME2p2-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-SME2p2-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-SME2p2-NEXT:    ptrue pn8.s
 ; CHECK-SME2p2-NEXT:    punpkhi p0.h, p0.b
-; CHECK-SME2p2-NEXT:    inch x8
-; CHECK-SME2p2-NEXT:    cntp x9, p1, p1.s
+; CHECK-SME2p2-NEXT:    inch x9
+; CHECK-SME2p2-NEXT:    cntp x8, p1, p1.s
 ; CHECK-SME2p2-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-SME2p2-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SME2p2-NEXT:    ptrue p0.s
-; CHECK-SME2p2-NEXT:    cmp x9, x8
+; CHECK-SME2p2-NEXT:    mov w8, w8
 ; CHECK-SME2p2-NEXT:    str z0, [sp]
-; CHECK-SME2p2-NEXT:    csel x8, x9, x8, lo
+; CHECK-SME2p2-NEXT:    cmp x8, x9
+; CHECK-SME2p2-NEXT:    csel x8, x8, x9, lo
 ; CHECK-SME2p2-NEXT:    mov x9, sp
 ; CHECK-SME2p2-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SME2p2-NEXT:    ld1w { z0.s, z1.s }, pn8/z, [sp]

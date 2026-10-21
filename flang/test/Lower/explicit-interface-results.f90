@@ -117,7 +117,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMcallerPalloc()
 subroutine alloc()
   ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = ".result"}>
-  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.func_result")
   ! CHECK: %[[VAL_6:.*]] = fir.call @_QMcalleePreturn_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! CHECK: fir.save_result %[[VAL_6]] to %[[VAL_5]]#0 : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   print *, return_alloc()
@@ -132,7 +132,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMcallerPcst_char_alloc()
 subroutine cst_char_alloc()
   ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> <{bindc_name = ".result"}>
-  ! CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %{{.*}} {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %{{.*}} uniq_name(".tmp.func_result")
   ! CHECK: %[[VAL_10:.*]] = fir.call @_QMcalleePreturn_cst_char_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
   ! CHECK: fir.save_result %[[VAL_10]] to %[[VAL_9]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
   print *, return_cst_char_alloc()
@@ -147,7 +147,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMcallerPdef_char_alloc()
 subroutine def_char_alloc()
   ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = ".result"}>
-  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.func_result")
   ! CHECK: %[[VAL_6:.*]] = fir.call @_QMcalleePreturn_def_char_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[VAL_6]] to %[[VAL_5]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_def_char_alloc()
@@ -264,7 +264,7 @@ end subroutine
 subroutine dyn_char_alloc(l)
   integer :: l
   ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = ".result"}>
-  ! CHECK: %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11:.*]] {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11:.*]] uniq_name(".tmp.func_result")
   ! CHECK: %[[VAL_14:.*]] = fir.call @_QMcalleePreturn_dyn_char_alloc({{.*}}) {{.*}}: (!fir.ref<i32>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[VAL_14]] to %[[VAL_13]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_dyn_char_alloc(l)
@@ -278,7 +278,7 @@ subroutine dyn_char_pointer(l)
   ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = ".result"}>
   ! CHECK: %[[VAL_13:.*]] = fir.call @_QMcalleePreturn_dyn_char_pointer({{.*}}) {{.*}}: (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[VAL_13]] to %[[VAL_0]] : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK: %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11:.*]] {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11:.*]] uniq_name(".tmp.func_result")
   print *, return_dyn_char_pointer(l)
   ! CHECK-NOT: fir.freemem
 end subroutine
@@ -305,7 +305,7 @@ subroutine test_result_depends_on_equiv_sym()
   ! CHECK: %[[equiv:.*]] = fir.address_of(@_QMm_with_equivEarray) : !fir.ref<!fir.array<24xi8>>
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[equiv]], %c{{.*}} : (!fir.ref<!fir.array<24xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[l:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<i64>
-  ! CHECK: %[[l_decl:.*]]:2 = hlfir.declare %[[l]] storage(%[[equiv]][8]) {uniq_name = "_QMm_with_equivEl"}
+  ! CHECK: %[[l_decl:.*]]:2 = hlfir.declare %[[l]] storage(%[[equiv]][8]) uniq_name("_QMm_with_equivEl")
   ! CHECK: %[[load:.*]] = fir.load %[[l_decl]]#0 : !fir.ptr<i64>
   ! CHECK: %[[lcast:.*]] = fir.convert %[[load]] : (i64) -> index
   ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[lcast]], %{{.*}} : index
@@ -380,7 +380,7 @@ function test_recursion(n) result(res)
     ! CHECK: %[[nLoad:.*]] = fir.load %[[n_decl:.*]]#0 : !fir.ref<i64>
     ! CHECK: %[[sub:.*]] = arith.subi %[[nLoad]], %c1{{.*}} : i64
     ! CHECK: %[[nInCall_assoc:.*]]:3 = hlfir.associate %[[sub]] {adapt.valuebyref} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
-    ! CHECK: %[[nInCall_decl:.*]]:2 = hlfir.declare %[[nInCall_assoc]]#0 {uniq_name = "_QFtest_recursionEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+    ! CHECK: %[[nInCall_decl:.*]]:2 = hlfir.declare %[[nInCall_assoc]]#0 uniq_name("_QFtest_recursionEn") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 
     ! CHECK-NOT: fir.alloca !fir.array<?xi32>
 

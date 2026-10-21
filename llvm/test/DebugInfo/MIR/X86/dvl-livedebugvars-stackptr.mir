@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virt-reg-rewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
 #
 # This is a copy of the adjacent "-movements.mir" file, but where one of the
 # operands to DBG_VALUE_LIST is a stack _pointer_ rather than a spilt value.

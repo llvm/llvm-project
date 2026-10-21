@@ -18,7 +18,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY %ptr(p0)
     ; CHECK-NEXT: $x1 = COPY %width(i64)
-    ; CHECK-NEXT: BL &bzero, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+    ; CHECK-NEXT: BL &bzero, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0

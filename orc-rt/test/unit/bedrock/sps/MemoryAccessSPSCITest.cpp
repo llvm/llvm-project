@@ -15,6 +15,7 @@
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
@@ -24,7 +25,7 @@ static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 
 TEST(MemoryAccessSPSCITest, Registration) {
   SimpleSymbolTable CI;
-  cantFail(sps_ci::addMemoryAccess(CI));
+  ASSERT_THAT_ERROR(sps_ci::addMemoryAccess(CI), Succeeded());
 
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint8s")));
   EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint16s")));
@@ -48,7 +49,8 @@ TEST(MemoryAccessSPSCITest, WriteUInt8s) {
       {ExecutorAddr::fromPtr(&X), 42}, {ExecutorAddr::fromPtr(&Y), 255}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_uint8s),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(X, 42U);
   EXPECT_EQ(Y, 255U);
 }
@@ -60,7 +62,8 @@ TEST(MemoryAccessSPSCITest, WriteUInt16s) {
       {ExecutorAddr::fromPtr(&X), 1000}, {ExecutorAddr::fromPtr(&Y), 65535}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_uint16s),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(X, 1000U);
   EXPECT_EQ(Y, 65535U);
 }
@@ -73,7 +76,8 @@ TEST(MemoryAccessSPSCITest, WriteUInt32s) {
       {ExecutorAddr::fromPtr(&Y), 0xdeadbeef}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_uint32s),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(X, 100000U);
   EXPECT_EQ(Y, 0xdeadbeefU);
 }
@@ -86,7 +90,8 @@ TEST(MemoryAccessSPSCITest, WriteUInt64s) {
       {ExecutorAddr::fromPtr(&Y), 0xdeadbeefcafef00dULL}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_uint64s),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(X, 0x0102030405060708ULL);
   EXPECT_EQ(Y, 0xdeadbeefcafef00dULL);
 }
@@ -100,7 +105,8 @@ TEST(MemoryAccessSPSCITest, WritePointers) {
       {ExecutorAddr::fromPtr(&Y), ExecutorAddr::fromPtr(&B)}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_pointers),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(X, static_cast<void *>(&A));
   EXPECT_EQ(Y, static_cast<void *>(&B));
 }
@@ -114,7 +120,8 @@ TEST(MemoryAccessSPSCITest, WriteBuffers) {
       {ExecutorAddr::fromPtr(Buf), span<char>(Content, sizeof(Content))}};
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_write_buffers),
-      [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
+      [](Error Err) { EXPECT_THAT_ERROR(std::move(Err), Succeeded()); },
+      std::move(Writes));
   EXPECT_EQ(Buf[0], 'h');
   EXPECT_EQ(Buf[1], 'e');
   EXPECT_EQ(Buf[2], 'l');
@@ -132,7 +139,8 @@ TEST(MemoryAccessSPSCITest, ReadUInt8s) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_uint8s),
       [&](Expected<std::vector<uint8_t>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
@@ -149,7 +157,8 @@ TEST(MemoryAccessSPSCITest, ReadUInt16s) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_uint16s),
       [&](Expected<std::vector<uint16_t>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
@@ -166,7 +175,8 @@ TEST(MemoryAccessSPSCITest, ReadUInt32s) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_uint32s),
       [&](Expected<std::vector<uint32_t>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
@@ -183,7 +193,8 @@ TEST(MemoryAccessSPSCITest, ReadUInt64s) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_uint64s),
       [&](Expected<std::vector<uint64_t>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
@@ -200,7 +211,10 @@ TEST(MemoryAccessSPSCITest, ReadPointers) {
   std::vector<void *> Result;
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_pointers),
-      [&](Expected<std::vector<void *>> R) { Result = cantFail(std::move(R)); },
+      [&](Expected<std::vector<void *>> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
+      },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
   EXPECT_EQ(Result[0], static_cast<void *>(&A));
@@ -218,7 +232,8 @@ TEST(MemoryAccessSPSCITest, ReadBuffers) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_buffers),
       [&](Expected<std::vector<std::vector<char>>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Reads));
   ASSERT_EQ(Result.size(), 2U);
@@ -236,7 +251,8 @@ TEST(MemoryAccessSPSCITest, ReadStrings) {
   SPSWrapperFunction<SPSSig>::call(
       caller(orc_rt_ci_sps_mem_read_strings),
       [&](Expected<std::vector<std::string>> R) {
-        Result = cantFail(std::move(R));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
       },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);

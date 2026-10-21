@@ -59,8 +59,8 @@ public:
                                 const MCSubtargetInfo &STI, raw_ostream &O);
   void printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
                                  const MCSubtargetInfo &STI, raw_ostream &O);
-  void printHexu32imm(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                      raw_ostream &O);
+  void printRegOrHexImm(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O);
   void printPrmtMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
   void printTmaReductionMode(const MCInst *MI, int OpNum,

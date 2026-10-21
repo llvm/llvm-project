@@ -1081,6 +1081,8 @@ CodeViewContext &MCContext::getCVContext() {
 
 void MCContext::diagnose(const SMDiagnostic &SMD) {
   assert(DiagHandler && "MCContext::DiagHandler is not set");
+  if (SMD.getKind() == SourceMgr::DK_Error)
+    HadError = true;
   bool UseInlineSrcMgr = false;
   const SourceMgr *SMP = nullptr;
   if (SrcMgr) {

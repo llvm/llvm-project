@@ -81,10 +81,10 @@ void DetailedRecordsEmitter::printVariables(raw_ostream &OS) {
 
 // Print classes, including the template arguments, superclasses, and fields.
 void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
-  const auto &ClassList = Records.getClasses();
+  ArrayRef<const Record *> ClassList = Records.getClasses();
   printSectionHeading("Classes", ClassList.size(), OS);
 
-  for (const auto &[Name, Class] : ClassList) {
+  for (const Record *Class : ClassList) {
     OS << formatv("\n{0}  |{1}|\n", Class->getNameInitAsString(),
                   SrcMgr.getFormattedLocationNoOffset(Class->getLoc().front()));
     printTemplateArgs(*Class, OS);
@@ -95,10 +95,10 @@ void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
 
 // Print the records, including the defm sequences, supercasses, and fields.
 void DetailedRecordsEmitter::printRecords(raw_ostream &OS) {
-  const auto &RecordList = Records.getDefs();
+  ArrayRef<const Record *> RecordList = Records.getDefs();
   printSectionHeading("Records", RecordList.size(), OS);
 
-  for (const auto &[DefName, Rec] : RecordList) {
+  for (const Record *Rec : RecordList) {
     std::string Name = Rec->getNameInitAsString();
     OS << formatv("\n{0}  |{1}|\n", Name.empty() ? "\"\"" : Name,
                   SrcMgr.getFormattedLocationNoOffset(Rec->getLoc().front()));

@@ -34,7 +34,7 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 
-#include <numeric>
+#include <string>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTXEGPUTOXEVMPASS
@@ -214,32 +214,131 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 
 //
 // High-D (>2D) nd descriptors are lowered by viewing the source as a single
-// flattened 2D plane: `base_height` is the product of all dims but the
-// innermost, so the 2D-block surface covers every leading (batch) plane at
-// once, and a batch position becomes a row offset into it. Leaving `base_ptr`
-// at the true base means an out-of-range batch index lands past `base_height`,
-// where the HW boundary check handles it, instead of aiming the surface at
-// unmapped memory. Encoding the leading strides as row counts (`stride[d] /
-// stride[R-2]`) also makes them dimensionless, so they survive element-type
-// repacking (e.g. the f16 -> i32 transpose repack) without a unit conversion.
+// flattened 2D plane, so the 2D-block surface covers every leading (batch)
+// plane at once and a batch position becomes a row offset into it. The surface
+// height is the row extent the leading dims reach:
+//   base_height = size[R-2] + sum_d (size[d] - 1) * (stride[d] / stride[R-2])
+//
+// Leaving `base_ptr` at the true base means an out-of-range batch index lands
+// past `base_height`, where the HW boundary check handles it, instead of aiming
+// the surface at unmapped memory. Encoding the leading strides as row counts
+// (`stride[d] / stride[R-2]`) also makes them dimensionless, so they survive
+// element-type repacking (e.g. the f16 -> i32 transpose repack) without a unit
+// conversion.
 //
 // Limitations of the flattened-plane view:
 //  1. Each leading stride must be a whole number of rows. A source with gaps
 //     between planes (`stride[d] % stride[R-2] != 0`) is not lowered. This can
 //     only be checked when the strides are static; for dynamic strides the
 //     divisibility is assumed.
-//  2. `base_height` grows to the product of the leading dims, so a source with
-//     a large batch x head x sequence extent can exceed the HW 2D-block
-//     surface height.
-//  3. Plane boundaries are invisible to the boundary check: a tile whose rows
-//     run past `size[R-2]` reads the next plane's rows instead of the zero
-//     padding a per-plane surface would return. This only matters when
-//     `size[R-2]` is not a multiple of the tile height.
+//  2. `base_height` grows with the leading extent, so a source with a large
+//     batch x head x sequence extent can exceed the HW 2D-block surface height.
+//  3. Plane boundaries are invisible to the boundary check, which only knows
+//     the surface: a tile whose rows run past `size[R-2]` spills into the
+//     following rows of the surface -- the next plane, or the padding between
+//     planes -- rather than being clipped there as it would be on a per-plane
+//     surface. A load reads those rows instead of returning zeros, and a store
+//     overwrites them, so it can corrupt the next plane. This only matters
+//     when `size[R-2]` is not a multiple of the tile height.
 //
 
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
+
+  // Checks the surface width and pitch against the target's 2D block memory
+  // restrictions. Only these two are enforced: both are backed by the source's
+  // static shape and strides, whereas the base address alignment is a property
+  // of the allocation that is not visible here. The width and the pitch are
+  // checked independently, each only when it is static; a value known only at
+  // runtime is left alone, as guarding it inside the kernel would cost far more
+  // than it is worth.
+  //
+  // A violation is a dead end rather than a pattern that does not apply: the op
+  // has no other legalization path, so it is reported with an error that names
+  // the limit it misses.
+  LogicalResult checkMemoryRestrictions(xegpu::CreateNdDescOp op,
+                                        int64_t rank) const {
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    // Without a known target chip there is no uArch to check against, so the
+    // descriptor must be accepted as-is.
+    if (!uArch)
+      return success();
+    const xegpu::uArch::BlockIOMemoryRestrictions &limits =
+        uArch->getBlockIOMemoryRestrictions();
+
+    // Recover the width and the pitch as a number of elements. A memref source
+    // carries both in its type, and either one may be dynamic independently of
+    // the other, so they are queried separately instead of being dropped
+    // together when the source is not fully static. `getMixedSizes` /
+    // `getMixedStrides` are only consulted for an integer source, where the op
+    // itself holds the extents.
+    std::optional<int64_t> widthElems;
+    std::optional<int64_t> pitchElems;
+    if (auto memrefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
+      if (!ShapedType::isDynamic(memrefTy.getDimSize(rank - 1)))
+        widthElems = memrefTy.getDimSize(rank - 1);
+      // The source is known to be strided; the caller checked that already.
+      SmallVector<int64_t> staticStrides;
+      int64_t staticOffset;
+      if (succeeded(
+              memrefTy.getStridesAndOffset(staticStrides, staticOffset)) &&
+          !ShapedType::isDynamic(staticStrides[rank - 2]))
+        pitchElems = staticStrides[rank - 2];
+    } else {
+      widthElems = getConstantIntValue(op.getMixedSizes()[rank - 1]);
+      pitchElems = getConstantIntValue(op.getMixedStrides()[rank - 2]);
+    }
+
+    unsigned elemBitSize =
+        op.getType().getElementType().getIntOrFloatBitWidth();
+    // The restrictions are expressed in bytes, but a sub-byte element type can
+    // leave the width or the pitch on a fraction of a byte, so the comparisons
+    // are done in bits. Such a size meets no byte alignment at all and is
+    // reported as a violation rather than waved through.
+    auto describe = [](int64_t bits) -> std::string {
+      if (bits % 8 == 0)
+        return llvm::formatv("{0} bytes", bits / 8).str();
+      return llvm::formatv("{0} bits", bits).str();
+    };
+    auto check = [&](std::optional<int64_t> elems, int64_t minBytes,
+                     int64_t alignBytes,
+                     llvm::StringRef what) -> LogicalResult {
+      if (!elems)
+        return success();
+      int64_t bits = *elems * elemBitSize;
+      if (bits < minBytes * 8)
+        return op.emitError(llvm::formatv(
+            "2D block surface {0} must be at least {1} bytes on this "
+            "target, got {2}.",
+            what, minBytes, describe(bits)));
+      if (alignBytes > 0 && bits % (alignBytes * 8) != 0)
+        return op.emitError(llvm::formatv(
+            "2D block surface {0} must be a multiple of {1} bytes on this "
+            "target, got {2}.",
+            what, alignBytes, describe(bits)));
+      return success();
+    };
+
+    if (failed(check(widthElems, limits.minBaseWidthBytes,
+                     limits.baseWidthAlignmentBytes, "width")))
+      return failure();
+    // The pitch is the row stride of the innermost 2D tile.
+    if (failed(check(pitchElems, limits.minBasePitchBytes,
+                     limits.basePitchAlignmentBytes, "pitch")))
+      return failure();
+    // Consecutive rows may not overlap, so the pitch has to span the full
+    // width.
+    if (widthElems && pitchElems && *pitchElems < *widthElems)
+      return op.emitError(
+          llvm::formatv("2D block surface pitch must be at least the surface "
+                        "width, got a pitch of {0} for a surface {1} wide.",
+                        describe(*pitchElems * elemBitSize),
+                        describe(*widthElems * elemBitSize)));
+    return success();
+  }
+
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
@@ -298,6 +397,11 @@ class CreateNdDescToXeVMPattern
         }
       }
     }
+    // Enforce the target's 2D block memory restrictions. A rank-1 descriptor is
+    // just a base address and is not consumed by a 2D block op, so it is
+    // exempt.
+    if (rank >= 2 && failed(checkMemoryRestrictions(op, rank)))
+      return failure();
 
     Type payloadElemTy = rewriter.getI32Type();
     Type i64Ty = rewriter.getI64Type();
@@ -347,15 +451,37 @@ class CreateNdDescToXeVMPattern
     };
     // The descriptor's innermost 2 dims are the 2D tile (H, W).
     Value baseShapeW = createOffset(mixedSizes, rank - 1);
-    // Height of the flattened plane: every leading (batch) plane is stacked
-    // into the surface, so the boundary check covers an out-of-range batch.
-    // For rank 2 this is just size[0].
-    Value baseShapeH = createOffset(mixedSizes, rank - 2);
-    for (int64_t d = 0; d < rank - 2; ++d)
-      baseShapeH = arith::MulIOp::create(rewriter, loc, baseShapeH,
-                                         createOffset(mixedSizes, d));
     // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
     Value basePitch = createOffset(mixedStrides, rank - 2);
+    // Leading (batch) strides as a number of rows (`stride[d] / pitch`).
+    SmallVector<Value> leadingRowStrides;
+    for (int64_t d = 0; d < rank - 2; ++d) {
+      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
+      std::optional<int64_t> pitch =
+          getConstantIntValue(mixedStrides[rank - 2]);
+      if (leading && pitch && *pitch != 0)
+        leadingRowStrides.push_back(arith::ConstantIntOp::create(
+            rewriter, loc, payloadElemTy, *leading / *pitch));
+      else
+        leadingRowStrides.push_back(arith::DivUIOp::create(
+            rewriter, loc, createOffset(mixedStrides, d), basePitch));
+    }
+    // Height of the flattened plane: every leading (batch) plane is stacked
+    // into the surface, so the boundary check covers an out-of-range batch.
+    //   base_height = size[R-2] + sum_d (size[d] - 1) * leadingRowStride[d]
+    // For rank 2 this is just size[0].
+    Value baseShapeH = createOffset(mixedSizes, rank - 2);
+    if (rank > 2) {
+      Value one = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 1);
+      for (int64_t d = 0; d < rank - 2; ++d) {
+        Value planesBelow = rewriter.createOrFold<arith::SubIOp>(
+            loc, createOffset(mixedSizes, d), one);
+        Value rows = rewriter.createOrFold<arith::MulIOp>(loc, planesBelow,
+                                                          leadingRowStrides[d]);
+        baseShapeH =
+            rewriter.createOrFold<arith::AddIOp>(loc, baseShapeH, rows);
+      }
+    }
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -372,26 +498,13 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
-    // Leading (batch) strides go into the spare payload slots as a number of
-    // rows; the load/store/prefetch lowering turns the batch offsets into a row
-    // offset with them. Row units keep them independent of the element type, so
-    // an element-type repack cannot put them out of step with the pitch.
-    for (int64_t d = 0; d < rank - 2; ++d) {
-      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
-      std::optional<int64_t> pitch =
-          getConstantIntValue(mixedStrides[rank - 2]);
-      Value leadingRowStride;
-      if (leading && pitch && *pitch != 0) {
-        leadingRowStride = arith::ConstantIntOp::create(
-            rewriter, loc, payloadElemTy, *leading / *pitch);
-      } else {
-        leadingRowStride = arith::DivUIOp::create(
-            rewriter, loc, createOffset(mixedStrides, d), basePitch);
-      }
+    // The leading (batch) row strides go into the spare payload slots; the
+    // load/store/prefetch lowering turns the batch offsets into a row offset
+    // with them.
+    for (int64_t d = 0; d < rank - 2; ++d)
       payload = vector::InsertOp::create(
-          rewriter, loc, leadingRowStride, payload,
+          rewriter, loc, leadingRowStrides[d], payload,
           static_cast<int>(NdTdescOffset::LeadingStride0) + d);
-    }
     rewriter.replaceOp(op, payload);
     return success();
   }
@@ -1025,7 +1138,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 };
 
 class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::PrefetchOp op, xegpu::PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1092,7 +1205,7 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
 };
 
 class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::FenceOp op, xegpu::FenceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1165,7 +1278,7 @@ static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
 }
 
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, xegpu::DpasOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1276,7 +1389,7 @@ matchSimpleAtomicOp(arith::AtomicRMWKind arithKind) {
 }
 
 class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::AtomicRMWOp op, xegpu::AtomicRMWOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1315,7 +1428,7 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
 };
 
 class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1452,7 +1565,7 @@ static bool isXeVMTruncf(arith::TruncFOp op) {
 }
 
 class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::ExtFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1487,7 +1600,7 @@ class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
 };
 
 class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::TruncFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1566,7 +1679,7 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
 // same-width integer vector on the way in and back on the way out.
 class LaneShuffleToXeVMPattern
     : public OpConversionPattern<xegpu::LaneShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

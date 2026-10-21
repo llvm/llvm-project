@@ -118,11 +118,11 @@
 ; LAXX-NEXT:       Process Implicit Definitions
 ; LAXX-NEXT:       Remove unreachable machine basic blocks
 ; LAXX-NEXT:       Live Variable Analysis
-; LAXX-NEXT:       Eliminate PHI nodes for register allocation
-; LAXX-NEXT:       Two-Address instruction pass
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Slot index numbering
 ; LAXX-NEXT:       Live Interval Analysis
+; LAXX-NEXT:       Eliminate PHI nodes for register allocation
+; LAXX-NEXT:       Two-Address instruction pass
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler

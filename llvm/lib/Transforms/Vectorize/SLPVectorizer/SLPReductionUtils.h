@@ -16,13 +16,17 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
+class BasicBlock;
 class DataLayout;
+class DominatorTree;
 class FastMathFlags;
 class IRBuilderBase;
 class Instruction;
+class LoopInfo;
 class PHINode;
 class Type;
 class Value;
@@ -55,6 +59,14 @@ BoolBitmask isBoolBitmaskRdx(
     const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
     const DataLayout &DL);
 
+/// Matches \p V as the zero-extended fields, placed one after another from the
+/// lowest bit and filling \p V completely. The instructions are looked through
+/// up to \p MaxDepth. Appends the fields in the order of their positions to
+/// \p Fields and the instructions of the pack to \p Chain.
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain);
+
 /// \returns the first operand of \p I that does not match \p Phi. If
 /// the operand is not an instruction, returns nullptr.
 Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
@@ -72,6 +84,12 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   RecurKind RdxKind, Value *Vec,
                                   const Value *Root, FastMathFlags FMF,
                                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
 
 } // namespace llvm::slpvectorizer
 

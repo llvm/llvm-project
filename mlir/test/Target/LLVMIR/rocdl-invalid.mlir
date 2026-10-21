@@ -17,3 +17,11 @@ llvm.func @reqd_work_group_size_max_flat_work_group_size_mismatch()
       rocdl.reqd_work_group_size = array<i32: 32, 2, 1>} {
   llvm.return
 }
+
+// -----
+
+llvm.func @rocdl_deprecated_ignore_denormal_mode(%ptr: !llvm.ptr<1>, %data: f32) {
+  // expected-warning @below {{rocdl.ignore_denormal_mode is deprecated; use ignore_denormal_mode on llvm.atomicrmw instead}}
+  llvm.atomicrmw fadd %ptr, %data monotonic {rocdl.ignore_denormal_mode} : !llvm.ptr<1>, f32
+  llvm.return
+}

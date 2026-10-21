@@ -7089,7 +7089,7 @@ def VREV16q8  : VREV16Q<0b00, "vrev16", "8", v16i8>;
 //  Aligned extractions: really just dropping registers
 
 class AlignedVEXTq<ValueType DestTy, ValueType SrcTy, SDNodeXForm LaneCVT>
-      : Pat<(DestTy (vector_extract_subvec (SrcTy QPR:$src), (i32 imm:$start))),
+      : Pat<(DestTy (extract_subvector (SrcTy QPR:$src), (i32 imm:$start))),
              (EXTRACT_SUBREG (SrcTy QPR:$src), (LaneCVT imm:$start))>,
         Requires<[HasNEON]>;
 

@@ -247,6 +247,13 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   const bool IsLDS = I.getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 
+  // The iterative scan runs once per active lane and costs more than the
+  // hardware serialization of a native LDS atomic.
+  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::Iterative &&
+      ST.getTargetLowering()->shouldExpandAtomicRMWInIR(&I) ==
+          TargetLowering::AtomicExpansionKind::None)
+    return;
+
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
@@ -404,7 +411,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
                                                  Value *V,
                                                  Value *const Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
 
   // Reduce within each row of 16 lanes.
   for (unsigned Idx = 0; Idx < 4; Idx++) {
@@ -448,7 +455,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
                                             AtomicRMWInst::BinOp Op, Value *V,
                                             Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
@@ -508,7 +515,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                                                   Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
   if (ST.hasDPPWavefrontShifts()) {
@@ -985,7 +992,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
     if (IsPixelShader) {
       // Need a final PHI to reconverge to above the helper lane branch mask.
-      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
+      B.SetInsertPoint(PixelExitBB->getFirstNonPHIIt());
 
       PHINode *const PHI = B.CreatePHI(Ty, 2);
       PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);

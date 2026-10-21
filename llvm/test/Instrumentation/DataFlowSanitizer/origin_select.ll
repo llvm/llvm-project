@@ -8,8 +8,8 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
 ; TRACK_CONTROL_FLOW-LABEL: define i8 @select8(
 ; TRACK_CONTROL_FLOW-SAME: i1 [[C:%.*]], i8 [[T:%.*]], i8 [[F:%.*]]) {
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP6:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -25,8 +25,8 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
 ;
 ; NO_TRACK_CONTROL_FLOW-LABEL: define i8 @select8(
 ; NO_TRACK_CONTROL_FLOW-SAME: i1 [[C:%.*]], i8 [[T:%.*]], i8 [[F:%.*]]) {
-; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP5:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -45,7 +45,7 @@ define i8 @select8e(i1 %c, i8 %tf) {
 ; TRACK_CONTROL_FLOW-LABEL: define i8 @select8e(
 ; TRACK_CONTROL_FLOW-SAME: i1 [[C:%.*]], i8 [[TF:%.*]]) {
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP3]]
@@ -58,7 +58,7 @@ define i8 @select8e(i1 %c, i8 %tf) {
 ;
 ; NO_TRACK_CONTROL_FLOW-LABEL: define i8 @select8e(
 ; NO_TRACK_CONTROL_FLOW-SAME: i1 [[C:%.*]], i8 [[TF:%.*]]) {
-; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[A:%.*]] = select i1 [[C]], i8 [[TF]], i8 [[TF]]
@@ -74,8 +74,8 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
 ; TRACK_CONTROL_FLOW-LABEL: define <4 x i8> @select8v(
 ; TRACK_CONTROL_FLOW-SAME: <4 x i1> [[C:%.*]], <4 x i8> [[T:%.*]], <4 x i8> [[F:%.*]]) {
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CONTROL_FLOW-NEXT:    [[TMP6:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
@@ -92,8 +92,8 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
 ;
 ; NO_TRACK_CONTROL_FLOW-LABEL: define <4 x i8> @select8v(
 ; NO_TRACK_CONTROL_FLOW-SAME: <4 x i1> [[C:%.*]], <4 x i8> [[T:%.*]], <4 x i8> [[F:%.*]]) {
-; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CONTROL_FLOW-NEXT:    [[TMP5:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2

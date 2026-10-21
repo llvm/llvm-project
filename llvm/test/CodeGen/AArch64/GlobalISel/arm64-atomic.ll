@@ -762,6 +762,8 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0:       ; %bb.0:
 ; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32
 ; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Spill
+; CHECK-NOLSE-O0-NEXT:    mov w8, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #24] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    ldr w8, [x0]
 ; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Spill
 ; CHECK-NOLSE-O0-NEXT:    b LBB8_1
@@ -770,7 +772,7 @@ define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB8_2 Depth 2
 ; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Reload
-; CHECK-NOLSE-O0-NEXT:    mov w8, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Reload
 ; CHECK-NOLSE-O0-NEXT:    orr w12, w10, w8
 ; CHECK-NOLSE-O0-NEXT:  LBB8_2: ; %atomicrmw.start
 ; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB8_1 Depth=1
@@ -1829,8 +1831,8 @@ define void @atomic_truncstore_relaxed_32(ptr %p, i32 %off32, i64 %inp1, i64 %in
 ; CHECK-NOLSE-O0-NEXT:    str w8, [x0, w1, sxtw #2]
 ; CHECK-NOLSE-O0-NEXT:    mov w8, w4
 ; CHECK-NOLSE-O0-NEXT:    stur w8, [x0, #-256]
-; CHECK-NOLSE-O0-NEXT:    mov w8, w5
 ; CHECK-NOLSE-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O0-NEXT:    mov w8, w5
 ; CHECK-NOLSE-O0-NEXT:    str w8, [x9]
 ; CHECK-NOLSE-O0-NEXT:    ret
 ;
@@ -1842,8 +1844,8 @@ define void @atomic_truncstore_relaxed_32(ptr %p, i32 %off32, i64 %inp1, i64 %in
 ; CHECK-OUTLINE-O0-NEXT:    str w8, [x0, w1, sxtw #2]
 ; CHECK-OUTLINE-O0-NEXT:    mov w8, w4
 ; CHECK-OUTLINE-O0-NEXT:    stur w8, [x0, #-256]
-; CHECK-OUTLINE-O0-NEXT:    mov w8, w5
 ; CHECK-OUTLINE-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-OUTLINE-O0-NEXT:    mov w8, w5
 ; CHECK-OUTLINE-O0-NEXT:    str w8, [x9]
 ; CHECK-OUTLINE-O0-NEXT:    ret
 ;
@@ -1864,8 +1866,8 @@ define void @atomic_truncstore_relaxed_32(ptr %p, i32 %off32, i64 %inp1, i64 %in
 ; CHECK-LSE-O0-NEXT:    str w8, [x0, w1, sxtw #2]
 ; CHECK-LSE-O0-NEXT:    mov x8, x4
 ; CHECK-LSE-O0-NEXT:    stur w8, [x0, #-256]
-; CHECK-LSE-O0-NEXT:    mov x8, x5
 ; CHECK-LSE-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-LSE-O0-NEXT:    mov x8, x5
 ; CHECK-LSE-O0-NEXT:    str w8, [x9]
 ; CHECK-LSE-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i32, ptr %p, i32 4095
@@ -2081,14 +2083,17 @@ define void @store_trunc(i32 %val, ptr %p8, ptr %p16, i64 %inp64) {
 ; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NOLSE-O0-NEXT:    .cfi_offset w30, -8
 ; CHECK-NOLSE-O0-NEXT:    .cfi_offset w29, -16
-; CHECK-NOLSE-O0-NEXT:    stlrb w0, [x1]
-; CHECK-NOLSE-O0-NEXT:    strh w0, [x2]
-; CHECK-NOLSE-O0-NEXT:    add x2, sp, #12
-; CHECK-NOLSE-O0-NEXT:    mov w8, w3
-; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #12]
-; CHECK-NOLSE-O0-NEXT:    mov w8, #4 ; =0x4
-; CHECK-NOLSE-O0-NEXT:    mov w0, w8
+; CHECK-NOLSE-O0-NEXT:    mov w9, w0
+; CHECK-NOLSE-O0-NEXT:    mov x10, x2
+; CHECK-NOLSE-O0-NEXT:    mov x8, x3
+; CHECK-NOLSE-O0-NEXT:    mov w11, #4 ; =0x4
+; CHECK-NOLSE-O0-NEXT:    mov w0, w11
 ; CHECK-NOLSE-O0-NEXT:    mov w3, #5 ; =0x5
+; CHECK-NOLSE-O0-NEXT:    add x2, sp, #12
+; CHECK-NOLSE-O0-NEXT:    stlrb w9, [x1]
+; CHECK-NOLSE-O0-NEXT:    strh w9, [x10]
+; CHECK-NOLSE-O0-NEXT:    ; kill: def $w8 killed $w8 killed $x8
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #12]
 ; CHECK-NOLSE-O0-NEXT:    bl ___atomic_store
 ; CHECK-NOLSE-O0-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32
@@ -2101,14 +2106,17 @@ define void @store_trunc(i32 %val, ptr %p8, ptr %p16, i64 %inp64) {
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
-; CHECK-OUTLINE-O0-NEXT:    stlrb w0, [x1]
-; CHECK-OUTLINE-O0-NEXT:    strh w0, [x2]
-; CHECK-OUTLINE-O0-NEXT:    add x2, sp, #12
-; CHECK-OUTLINE-O0-NEXT:    mov w8, w3
-; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #12]
-; CHECK-OUTLINE-O0-NEXT:    mov w8, #4 ; =0x4
-; CHECK-OUTLINE-O0-NEXT:    mov w0, w8
+; CHECK-OUTLINE-O0-NEXT:    mov w9, w0
+; CHECK-OUTLINE-O0-NEXT:    mov x10, x2
+; CHECK-OUTLINE-O0-NEXT:    mov x8, x3
+; CHECK-OUTLINE-O0-NEXT:    mov w11, #4 ; =0x4
+; CHECK-OUTLINE-O0-NEXT:    mov w0, w11
 ; CHECK-OUTLINE-O0-NEXT:    mov w3, #5 ; =0x5
+; CHECK-OUTLINE-O0-NEXT:    add x2, sp, #12
+; CHECK-OUTLINE-O0-NEXT:    stlrb w9, [x1]
+; CHECK-OUTLINE-O0-NEXT:    strh w9, [x10]
+; CHECK-OUTLINE-O0-NEXT:    ; kill: def $w8 killed $w8 killed $x8
+; CHECK-OUTLINE-O0-NEXT:    str w8, [sp, #12]
 ; CHECK-OUTLINE-O0-NEXT:    bl ___atomic_store
 ; CHECK-OUTLINE-O0-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-OUTLINE-O0-NEXT:    add sp, sp, #32
@@ -2139,14 +2147,17 @@ define void @store_trunc(i32 %val, ptr %p8, ptr %p16, i64 %inp64) {
 ; CHECK-LSE-O0-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LSE-O0-NEXT:    .cfi_offset w30, -8
 ; CHECK-LSE-O0-NEXT:    .cfi_offset w29, -16
-; CHECK-LSE-O0-NEXT:    stlrb w0, [x1]
-; CHECK-LSE-O0-NEXT:    strh w0, [x2]
-; CHECK-LSE-O0-NEXT:    add x2, sp, #12
+; CHECK-LSE-O0-NEXT:    mov x9, x0
+; CHECK-LSE-O0-NEXT:    mov x10, x2
 ; CHECK-LSE-O0-NEXT:    mov x8, x3
-; CHECK-LSE-O0-NEXT:    str w8, [sp, #12]
-; CHECK-LSE-O0-NEXT:    mov w8, #4 ; =0x4
-; CHECK-LSE-O0-NEXT:    mov x0, x8
+; CHECK-LSE-O0-NEXT:    mov w11, #4 ; =0x4
+; CHECK-LSE-O0-NEXT:    mov x0, x11
 ; CHECK-LSE-O0-NEXT:    mov w3, #5 ; =0x5
+; CHECK-LSE-O0-NEXT:    add x2, sp, #12
+; CHECK-LSE-O0-NEXT:    stlrb w9, [x1]
+; CHECK-LSE-O0-NEXT:    strh w9, [x10]
+; CHECK-LSE-O0-NEXT:    ; kill: def $w8 killed $w8 killed $x8
+; CHECK-LSE-O0-NEXT:    str w8, [sp, #12]
 ; CHECK-LSE-O0-NEXT:    bl ___atomic_store
 ; CHECK-LSE-O0-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-LSE-O0-NEXT:    add sp, sp, #32

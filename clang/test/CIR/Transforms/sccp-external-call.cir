@@ -1,0 +1,26 @@
+// Regression test: SCCP must treat a call to a declaration as producing an
+// unknown value. cir::FuncOp::getCallableRegion() must return null for
+// declarations; otherwise the call result is never initialized and joining it
+// with a constant arm folds the whole ternary to that constant.
+// RUN: cir-opt %s --sccp | FileCheck %s
+
+module {
+  cir.func private @g() -> !cir.bool
+
+  cir.func @f(%arg0: !cir.bool) -> !cir.bool {
+    %0 = cir.ternary(%arg0, true {
+      %1 = cir.call @g() : () -> !cir.bool
+      cir.yield %1 : !cir.bool
+    }, false {
+      %1 = cir.const #cir.bool<false> : !cir.bool
+      cir.yield %1 : !cir.bool
+    }) : (!cir.bool) -> !cir.bool
+    cir.return %0 : !cir.bool
+  }
+}
+
+// CHECK: cir.func{{.*}} @f
+// CHECK:   %[[#ret:]] = cir.ternary
+// CHECK:     %[[#call:]] = cir.call @g()
+// CHECK:     cir.yield %[[#call]]
+// CHECK:   cir.return %[[#ret]] : !cir.bool

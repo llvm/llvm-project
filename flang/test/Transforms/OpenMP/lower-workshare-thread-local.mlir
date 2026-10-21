@@ -42,7 +42,7 @@ func.func @thread_local_alloca_store() {
 func.func @thread_local_with_declare() {
   omp.parallel {
     %alloca = fir.alloca i32
-    %declare = fir.declare %alloca {uniq_name = "local_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %declare = fir.declare %alloca uniq_name("local_var") : (!fir.ref<i32>) -> !fir.ref<i32>
     omp.workshare {
       %c42 = arith.constant 42 : i32
       // Store through declare should still be recognized as thread-local
@@ -98,7 +98,7 @@ func.func @private_clause_thread_local(%arg0: !fir.ref<i32>) {
 // CHECK-LABEL: func.func @hlfir_assign_private_clause
 func.func @hlfir_assign_private_clause(%arg0: !fir.ref<i32>) {
   omp.parallel private(@x_private %arg0 -> %priv_arg : !fir.ref<i32>) {
-    %decl:2 = hlfir.declare %priv_arg {uniq_name = "x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %decl:2 = hlfir.declare %priv_arg uniq_name("x") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     omp.workshare {
       %c1 = arith.constant 1 : i32
       // hlfir.assign to private variable should NOT be in omp.single
@@ -130,7 +130,7 @@ omp.private {type = private} @y_private : i32
 // CHECK-LABEL: func.func @hlfir_assign_shared_to_private
 func.func @hlfir_assign_shared_to_private(%arg0: !fir.ref<i32>, %shared: !fir.ref<i32>) {
   omp.parallel private(@y_private %arg0 -> %priv_arg : !fir.ref<i32>) {
-    %decl:2 = hlfir.declare %priv_arg {uniq_name = "x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %decl:2 = hlfir.declare %priv_arg uniq_name("x") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     omp.workshare {
       // hlfir.assign with a shared RHS variable should stay in omp.single
       hlfir.assign %shared to %decl#0 : !fir.ref<i32>, !fir.ref<i32>
@@ -545,7 +545,7 @@ func.func @written_then_read_thread_local_is_broadcast(%shared: !fir.ref<i32>, %
 func.func @broadcast_when_read_through_declare(%shared: !fir.ref<i32>, %sink: !fir.ref<i32>) {
   omp.parallel {
     %tl = fir.alloca i32
-    %d = fir.declare %tl {uniq_name = "tl"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %d = fir.declare %tl uniq_name("tl") : (!fir.ref<i32>) -> !fir.ref<i32>
     omp.workshare {
       %v = fir.load %shared : !fir.ref<i32>
       fir.store %v to %tl : !fir.ref<i32>
@@ -571,7 +571,7 @@ func.func @broadcast_when_read_through_declare(%shared: !fir.ref<i32>, %sink: !f
 func.func @broadcast_when_written_through_declare(%shared: !fir.ref<i32>, %sink: !fir.ref<i32>) {
   omp.parallel {
     %tl = fir.alloca i32
-    %d = fir.declare %tl {uniq_name = "tl"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %d = fir.declare %tl uniq_name("tl") : (!fir.ref<i32>) -> !fir.ref<i32>
     omp.workshare {
       %v = fir.load %shared : !fir.ref<i32>
       fir.store %v to %d : !fir.ref<i32>
@@ -602,7 +602,7 @@ omp.private {type = private} @z_private : i32
 func.func @broadcast_private_write_through_declare_read_direct(
     %arg0: !fir.ref<i32>, %shared: !fir.ref<i32>, %sink: !fir.ref<i32>) {
   omp.parallel private(@z_private %arg0 -> %priv_arg : !fir.ref<i32>) {
-    %decl:2 = hlfir.declare %priv_arg {uniq_name = "z"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %decl:2 = hlfir.declare %priv_arg uniq_name("z") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     omp.workshare {
       // The value comes from a shared load, so the store stays in the single.
       %v = fir.load %shared : !fir.ref<i32>

@@ -35,7 +35,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
   Opts.UseDirBasedCDB = false;
 
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(*Transport, FS, Opts);
+  ClangdLSPServer LSPServer(*Transport, FS, std::move(Opts));
   LSPServer.run();
   return 0;
 }

@@ -135,7 +135,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
-      .runJITDispatchHandler(
+      .runCallControllerHandler(
           [ResultP = std::move(ResultP)](
               shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));

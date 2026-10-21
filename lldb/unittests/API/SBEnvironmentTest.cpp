@@ -10,9 +10,12 @@
 #include "lldb/API/LLDB.h"
 
 #include "lldb/API/SBEnvironment.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "gtest/gtest.h"
 
 TEST(SBEnvironmentTest, SetAndGetEnv) {
+  lldb::SBDebugger::Initialize();
+  llvm::scope_exit terminate([] { lldb::SBDebugger::Terminate(); });
 
   lldb::SBEnvironment env{};
 

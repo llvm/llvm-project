@@ -206,7 +206,13 @@ def ApplyDecoratorsToFunction(func, decorators):
     return tmp
 
 
-def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=None):
+def MakeInlineTest(
+    __file,
+    __globals,
+    decorators=None,
+    name=None,
+    build_dict=None,
+):
     # Adjust the filename if it ends in .pyc.  We want filenames to
     # reflect the source python file, not the compiled variant.
     if __file is not None and __file.endswith(".pyc"):
@@ -223,7 +229,13 @@ def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=Non
     )
     # Build the test case
     test_class = type(
-        name, (InlineTest,), dict(test=test_func, name=name, _build_dict=build_dict)
+        name,
+        (InlineTest,),
+        dict(
+            test=test_func,
+            name=name,
+            _build_dict=build_dict,
+        ),
     )
 
     # Add the test case to the globals, and hide InlineTest

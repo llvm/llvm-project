@@ -49,7 +49,7 @@ extern template class LLVM_TEMPLATE_ABI
 extern template class LLVM_TEMPLATE_ABI
     DominatorTreeBase<BasicBlock, true>; // PostDomTree
 
-extern template class cfg::Update<BasicBlock *>;
+extern template class LLVM_TEMPLATE_ABI cfg::Update<BasicBlock *>;
 
 namespace DomTreeBuilder {
 using BBDomTree = DomTreeBase<BasicBlock>;

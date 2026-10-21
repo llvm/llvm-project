@@ -787,6 +787,16 @@ void DAP::SendTerminatedEvent() {
 llvm::Error DAP::Disconnect() { return Disconnect(!is_attach); }
 
 llvm::Error DAP::Disconnect(bool terminateDebuggee) {
+  // Serializes with the request handlers, and with a call from
+  // `DAPSessionManager::DisconnectAllSessions()` on another thread.
+  lldb::SBMutex api_mutex = GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> api_guard(api_mutex);
+  {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
+    if (m_queue_state == QueueState::Disconnected)
+      return llvm::Error::success();
+  }
+
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   auto state = process.GetState();
@@ -810,8 +820,11 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   }
   }
 
-  SendTerminatedEvent();
-  TerminateLoop();
+  // Sending the terminated event is handled by `EndSession()`.
+  {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
+    SetQueueState(QueueState::Disconnected);
+  }
   return ToError(error);
 }
 
@@ -890,21 +903,25 @@ void DAP::OnClosed() {
 
 void DAP::TerminateLoop(bool failed) {
   std::lock_guard<std::mutex> guard(m_queue_mutex);
-  if (m_disconnecting)
-    return; // Already disconnecting.
+  if (m_queue_state != QueueState::Running)
+    return; // Already ending the session.
 
   m_error_occurred = failed;
-  m_disconnecting = true;
-  m_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
+  // Keep the main loop running: it still reads the debugger's output while the
+  // session ends. `EndSession()` stops it.
+  SetQueueState(QueueState::InputClosed);
+}
+
+void DAP::SetQueueState(QueueState state) {
+  if (state > m_queue_state)
+    m_queue_state = state;
+  m_queue_cv.notify_all();
 }
 
 void DAP::TransportHandler() {
   llvm::scope_exit scope_guard([this] {
     std::lock_guard<std::mutex> guard(m_queue_mutex);
-    // Ensure we're marked as disconnecting when the reader exits.
-    m_disconnecting = true;
-    m_queue_cv.notify_all();
+    SetQueueState(QueueState::InputClosed);
   });
 
   if (llvm::Error err = transport.RegisterMessageHandler(*this)) {
@@ -923,29 +940,76 @@ void DAP::TransportHandler() {
   }
 }
 
-llvm::Error DAP::Loop() {
-  {
-    // Reset disconnect flag once we start the loop.
-    std::lock_guard<std::mutex> guard(m_queue_mutex);
-    m_disconnecting = false;
+void DAP::EndSession(std::thread &transport_thread) {
+  // The event thread handles the events it already received before it stops.
+  // So the exit of a killed process is reported before "terminated".
+  StopEventHandlers();
+  SendTerminatedEvent();
+
+  // Stop reading from the client. Don't wait to join the transport thread if
+  // our callback wasn't added successfully, or we'll wait forever.
+  if (m_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); })) {
+    transport_thread.join();
+  } else {
+    DAP_LOG(log,
+            "failed to terminate stop the main loop in {}. Detaching the "
+            "Transport Handler thread.",
+            GetClientName());
+    transport_thread.detach();
   }
 
-  auto thread = std::thread([this] { TransportHandler(); });
+  // We may have a pending configuration done callback.
+  if (on_configuration_done) {
+    on_configuration_done();
+    on_configuration_done = nullptr;
+  }
 
-  llvm::scope_exit cleanup([this]() {
-    StopEventHandlers();
+  // Cancel the queued requests. Pass the responses to their reverse request
+  // handlers.
+  std::deque<Message> queue;
+  {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
+    queue.swap(m_queue);
+  }
+  for (const Message &message : queue) {
+    if (const auto *request = std::get_if<Request>(&message)) {
+      Response cancelled{
+          /*request_seq=*/request->seq,
+          /*command=*/request->command,
+          /*success=*/false,
+          /*message=*/eResponseMessageCancelled,
+      };
+      Send(cancelled);
+    } else {
+      HandleObject(message);
+    }
+  }
 
-    // Destroy the debugger when the session ends. This will trigger the
-    // debugger's destroy callbacks for earlier logging and clean-ups, rather
-    // than waiting for the termination of the lldb-dap process.
-    lldb::SBDebugger::Destroy(debugger);
-  });
+  // The 'disconnect' response is the last message.
+  if (on_session_end) {
+    on_session_end();
+    on_session_end = nullptr;
+  }
 
+  // Destroy the debugger when the session ends. This will trigger the
+  // debugger's destroy callbacks for earlier logging and clean-ups, rather
+  // than waiting for the termination of the lldb-dap process.
+  lldb::SBDebugger::Destroy(debugger);
+}
+
+llvm::Error DAP::Loop() {
+  auto transport_thread = std::thread([this] { TransportHandler(); });
+
+  bool unhandled_packet = false;
   while (true) {
     std::unique_lock<std::mutex> lock(m_queue_mutex);
-    m_queue_cv.wait(lock, [&] { return m_disconnecting || !m_queue.empty(); });
+    m_queue_cv.wait(lock, [&] {
+      return m_queue_state != QueueState::Running || !m_queue.empty();
+    });
 
-    if (m_disconnecting && m_queue.empty())
+    // Once the session ends, `EndSession()` cancels the queued requests.
+    if (m_queue_state != QueueState::Running)
       break;
 
     Message next = m_queue.front();
@@ -954,27 +1018,28 @@ llvm::Error DAP::Loop() {
     // Unlock while we're processing the event.
     lock.unlock();
 
-    if (!HandleObject(next))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "unhandled packet");
+    if (!HandleObject(next)) {
+      unhandled_packet = true;
+      break;
+    }
   }
 
-  // Don't wait to join the mainloop thread if our callback wasn't added
-  // successfully, or we'll wait forever.
-  if (m_loop.AddPendingCallback(
-          [](MainLoopBase &loop) { loop.RequestTermination(); })) {
-    thread.join();
-  } else {
-    DAP_LOG(log,
-            "failed to terminate stop the main loop in {}. Detaching the "
-            "Transport Handler thread.",
-            GetClientName());
-    thread.detach();
-  }
+  // A 'cancel' request may have interrupted the debugger. Clear it to run the
+  // "terminateCommands".
+  if (debugger.InterruptRequested())
+    debugger.CancelInterruptRequest();
 
+  // If the session didn't end with a 'disconnect' (the connection closed or the
+  // transport failed), end it the same way, with the default arguments.
+  if (llvm::Error error = Disconnect())
+    DAP_LOG_ERROR(log, std::move(error), "disconnect failed: {0}");
+
+  EndSession(transport_thread);
+
+  if (unhandled_packet)
+    return llvm::createStringError("unhandled packet");
   if (m_error_occurred)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "DAP Loop terminated due to an internal "
+    return llvm::createStringError("DAP Loop terminated due to an internal "
                                    "error, see DAP Logs for more information.");
   return llvm::Error::success();
 }

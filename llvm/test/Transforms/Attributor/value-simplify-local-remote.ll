@@ -426,8 +426,7 @@ bb16:                                             ; preds = %bb
 
 bb19:                                             ; preds = %bb16
   %y = getelementptr inbounds i32, ptr %tmp, i64 0
-  %tmp20 = bitcast ptr %y to ptr
-  %tmp21 = load float, ptr %tmp20, align 4
+  %tmp21 = load float, ptr %y, align 4
   %tmp22 = fadd fast float %tmp21, 0.000000e+00
   br label %bb23
 

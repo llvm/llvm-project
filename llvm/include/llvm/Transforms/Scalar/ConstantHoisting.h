@@ -59,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+struct ScalarOptions;
 class TargetTransformInfo;
 class TargetTransformInfo;
 
@@ -145,6 +146,7 @@ private:
   using ConstPtrUnionType = PointerUnion<ConstantInt *, ConstantExpr *>;
   using ConstCandMapType = DenseMap<ConstPtrUnionType, unsigned>;
 
+  const ScalarOptions *Opts = nullptr;
   const TargetTransformInfo *TTI;
   DominatorTree *DT;
   BlockFrequencyInfo *BFI;

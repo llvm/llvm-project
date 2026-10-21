@@ -237,33 +237,31 @@ define <4 x i64> @smin_v4i64_as_smin_v4i16(<4 x i64> %a0) nounwind {
 ; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    psrad $18, %xmm1
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm5
+; SSE2-NEXT:    pxor %xmm3, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [18446744071562067967,18446744071562067967]
 ; SSE2-NEXT:    movdqa %xmm6, %xmm7
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm7
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[0,0,2,2]
-; SSE2-NEXT:    pand %xmm5, %xmm8
+; SSE2-NEXT:    pand %xmm4, %xmm8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[1,1,3,3]
 ; SSE2-NEXT:    por %xmm8, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm0
+; SSE2-NEXT:    pxor %xmm5, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,0,2,2]
-; SSE2-NEXT:    pand %xmm1, %xmm4
+; SSE2-NEXT:    pxor %xmm2, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[1,1,3,3]
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    pxor %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    pxor %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: smin_v4i64_as_smin_v4i16:

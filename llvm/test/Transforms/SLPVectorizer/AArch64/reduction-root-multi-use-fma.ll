@@ -8,14 +8,15 @@
 define double @fmul_reduction_root_multi_use(ptr %p, double %a, double %b) {
 ; CHECK-LABEL: define double @fmul_reduction_root_multi_use(
 ; CHECK-SAME: ptr [[P:%.*]], double [[A:%.*]], double [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[R:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP4]])
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
 ; CHECK-NEXT:    [[U0:%.*]] = fmul fast double [[R]], [[A]]
-; CHECK-NEXT:    [[U1:%.*]] = fmul fast double [[R]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fdiv fast double [[U0]], [[U1]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[L1]], [[B]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd fast double [[U0]], [[M1]]
+; CHECK-NEXT:    [[U2:%.*]] = fmul fast double [[R1]], [[A]]
+; CHECK-NEXT:    [[U1:%.*]] = fmul fast double [[R1]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv fast double [[U2]], [[U1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %p1 = getelementptr inbounds double, ptr %p, i64 1

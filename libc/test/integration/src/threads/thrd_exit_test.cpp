@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdlib/__cxa_thread_atexit_impl.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_exit.h"
 #include "src/threads/thrd_join.h"
@@ -53,11 +54,9 @@ extern "C" {
 
 using Destructor = void(void *);
 
-int __cxa_thread_atexit_impl(Destructor *, void *, void *);
-
 // We do not link integration tests to C++ runtime pieces like the libcxxabi.
 // So, we provide our own simple __cxa_thread_atexit implementation.
 int __cxa_thread_atexit(Destructor *dtor, void *obj, void *) {
-  return __cxa_thread_atexit_impl(dtor, obj, nullptr);
+  return LIBC_NAMESPACE::__cxa_thread_atexit_impl(dtor, obj, nullptr);
 }
 }

@@ -31,9 +31,9 @@ export void load(tex_t t, int3 loc, vector<int64_t,3> wide_loc, uint3 uloc,
   __builtin_hlsl_resource_load_level(t, loc, foff);
 }
 
-export void load_ms(tex_ms_t t, int2 loc, int sample, int64_t lsample,
+export void load_ms(tex_ms_t t, int2 loc, int sample_index, int64_t lsample,
                     float fsample, int2 off, uint2 uoff, float2 foff) {
-  __builtin_hlsl_resource_load_ms(t, loc, sample);
+  __builtin_hlsl_resource_load_ms(t, loc, sample_index);
   __builtin_hlsl_resource_load_ms(t, loc, 0, off);
 
   // expected-error@+1 {{passing 'int64_t' (aka 'long') to parameter of incompatible type 'int'}}

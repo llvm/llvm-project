@@ -76,10 +76,10 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
         ExportGV.getValueType(), ExportGV.getAddressSpace(),
         GlobalValue::ExternalLinkage, NewName, Aliasee, &ExportM);
     ExternalAlias->setVisibility(GlobalValue::HiddenVisibility);
-    ExportGV.replaceUsesWithIf(
-        ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
 
     if (MustPromote) {
+      ExportGV.replaceUsesWithIf(
+          ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
       PromoteExtra->remove(&ExportGV);
       PromoteExtra->insert(ExternalAlias);
     }

@@ -317,8 +317,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/true));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, minInt);
+    return builder.createIntegerConstant(loc, type,
+                                         llvm::APInt::getSignedMinValue(bits));
   }
   case ReductionIdentifier::MIN: {
     if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
@@ -327,8 +327,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
-    int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, type, maxInt);
+    return builder.createIntegerConstant(loc, type,
+                                         llvm::APInt::getSignedMaxValue(bits));
   }
   case ReductionIdentifier::IOR: {
     unsigned bits = type.getIntOrFloatBitWidth();

@@ -194,7 +194,7 @@ end subroutine
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-NEXT: ------------ scheduling where in _QPwhere_construct_unknown_conflict ------------
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
-!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFwhere_construct_unknown_conflictEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} uniq_name("_QFwhere_construct_unknown_conflictEmask") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
 !CHECK-NEXT: saving eval because write effect prevents re-evaluation
@@ -203,9 +203,9 @@ end subroutine
 !CHECK-NEXT: ------------ scheduling where in _QPelsewhere_construct_unknown_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
-!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFelsewhere_construct_unknown_conflictEmask1"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} uniq_name("_QFelsewhere_construct_unknown_conflictEmask1") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
 !CHECK-NEXT: run 2 save    : where/mask
-!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFelsewhere_construct_unknown_conflictEmask2"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} uniq_name("_QFelsewhere_construct_unknown_conflictEmask2") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
 !CHECK-NEXT: run 2 save    : where/elsewhere1/mask
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
 !CHECK-NEXT: saving eval because write effect prevents re-evaluation

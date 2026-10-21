@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -disable-output -polly-invariant-load-hoisting < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -disable-output -plugin-arg=Polly,-polly-invariant-load-hoisting < %s | FileCheck %s
 
 ; CHECK: if (1 && 1 && (&MemRef_X[1] <= &MemRef_BaseA[0] || &MemRef_BaseA[1024] <= &MemRef_X[0]) && (&MemRef_X[1] <= &MemRef_BaseB[0] || &MemRef_BaseB[1024] <= &MemRef_X[0]))
 

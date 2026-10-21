@@ -10,13 +10,13 @@ define void @widened_select_uniform_cond(ptr %a, i1 %c, i64 %n) !prof !0 {
 ; VF4:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:  [[VECTOR_PH]]:
 ; VF4:  [[VECTOR_BODY:.*]]:
-; VF4:    [[TMP2:%.*]] = select i1 [[C]], <4 x i32> [[WIDE_LOAD:%.*]], <4 x i32> zeroinitializer
+; VF4:    [[TMP2:%.*]] = select i1 [[C]], <4 x i32> [[WIDE_LOAD:%.*]], <4 x i32> zeroinitializer, !prof [[PROF4:![0-9]+]]
 ; VF4:    br i1 [[TMP3:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; VF4:  [[MIDDLE_BLOCK]]:
 ; VF4:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VF4:  [[SCALAR_PH]]:
 ; VF4:  [[LOOP:.*]]:
-; VF4:    [[SEL:%.*]] = select i1 [[C]], i32 [[L:%.*]], i32 0, !prof [[PROF4:![0-9]+]]
+; VF4:    [[SEL:%.*]] = select i1 [[C]], i32 [[L:%.*]], i32 0, !prof [[PROF4]]
 ; VF4:    br i1 [[EC:%.*]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF4:  [[EXIT]]:
 ;
@@ -61,7 +61,7 @@ define void @widened_select_varying_cond(ptr %a, i64 %n) !prof !0 {
 ; VF4:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:  [[VECTOR_PH]]:
 ; VF4:  [[VECTOR_BODY:.*]]:
-; VF4:    [[TMP3:%.*]] = select <4 x i1> [[TMP2:%.*]], <4 x i32> [[WIDE_LOAD:%.*]], <4 x i32> zeroinitializer
+; VF4:    [[TMP3:%.*]] = select <4 x i1> [[TMP2:%.*]], <4 x i32> [[WIDE_LOAD:%.*]], <4 x i32> zeroinitializer{{$}}
 ; VF4:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:  [[MIDDLE_BLOCK]]:
 ; VF4:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -115,7 +115,7 @@ define void @swapped_by_folding_not_into_cmp(ptr %a, ptr %b, i32 %x, i32 %y, i64
 ; VF4:  [[VECTOR_MEMCHECK]]:
 ; VF4:    br i1 [[DIFF_CHECK:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF4:  [[VECTOR_PH]]:
-; VF4:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], <4 x i32> splat (i32 20), <4 x i32> splat (i32 10)
+; VF4:    [[TMP4:%.*]] = select i1 [[TMP3:%.*]], <4 x i32> splat (i32 20), <4 x i32> splat (i32 10), !prof [[PROF8:![0-9]+]]
 ; VF4:  [[VECTOR_BODY:.*]]:
 ; VF4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4:  [[MIDDLE_BLOCK]]:
@@ -135,11 +135,11 @@ define void @swapped_by_folding_not_into_cmp(ptr %a, ptr %b, i32 %x, i32 %y, i64
 ; VF1IC2:  [[VECTOR_BODY:.*]]:
 ; VF1IC2:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:  [[PRED_STORE_IF]]:
-; VF1IC2:    [[TMP8:%.*]] = select i1 [[TMP3:%.*]], i32 20, i32 10, !prof [[PROF1]]
+; VF1IC2:    [[TMP8:%.*]] = select i1 [[TMP3:%.*]], i32 20, i32 10, !prof [[PROF6:![0-9]+]]
 ; VF1IC2:  [[PRED_STORE_CONTINUE]]:
 ; VF1IC2:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; VF1IC2:  [[PRED_STORE_IF3]]:
-; VF1IC2:    [[TMP12:%.*]] = select i1 [[TMP3]], i32 20, i32 10, !prof [[PROF1]]
+; VF1IC2:    [[TMP12:%.*]] = select i1 [[TMP3]], i32 20, i32 10, !prof [[PROF6]]
 ; VF1IC2:  [[PRED_STORE_CONTINUE4]]:
 ; VF1IC2:    br i1 [[TMP15:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF1IC2:  [[MIDDLE_BLOCK]]:
@@ -177,7 +177,7 @@ define void @swapped_by_folding_not_into_select(ptr %a, i32 %x, i64 %n) !prof !0
 ; VF4:  [[ENTRY:.*:]]
 ; VF4:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:  [[VECTOR_PH]]:
-; VF4:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 20, i32 10, !prof [[PROF4]]
+; VF4:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 20, i32 10, !prof [[PROF8]]
 ; VF4:  [[VECTOR_BODY:.*]]:
 ; VF4:    br i1 [[TMP3:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF4:  [[MIDDLE_BLOCK]]:
@@ -192,7 +192,7 @@ define void @swapped_by_folding_not_into_select(ptr %a, i32 %x, i64 %n) !prof !0
 ; VF1IC2-SAME: ptr [[A:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
 ; VF1IC2:  [[ENTRY:.*:]]
 ; VF1IC2:  [[VECTOR_PH:.*:]]
-; VF1IC2:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 20, i32 10, !prof [[PROF1]]
+; VF1IC2:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 20, i32 10, !prof [[PROF6]]
 ; VF1IC2:  [[VECTOR_BODY:.*]]:
 ; VF1IC2:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:  [[PRED_STORE_IF]]:
@@ -372,13 +372,14 @@ exit:
 !1 = !{!"branch_weights", i32 3, i32 5}
 ;.
 ; VF4: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; VF4: [[PROF4]] = !{!"branch_weights", i32 3, i32 5}
 ; VF4: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; VF4: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VF4: [[PROF4]] = !{!"branch_weights", i32 3, i32 5}
 ; VF4: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]], [[META2]]}
 ; VF4: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META3]]}
 ; VF4: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META2]]}
+; VF4: [[PROF8]] = !{!"branch_weights", i32 5, i32 3}
 ; VF4: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META3]]}
 ; VF4: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]]}
 ; VF4: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]]}
@@ -395,6 +396,7 @@ exit:
 ; VF1IC2: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF1IC2: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; VF1IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META3]], [[META4]]}
+; VF1IC2: [[PROF6]] = !{!"branch_weights", i32 5, i32 3}
 ; VF1IC2: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META4]]}
 ; VF1IC2: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]]}
 ; VF1IC2: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META4]]}

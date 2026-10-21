@@ -30,7 +30,7 @@ func.func @_QQmain() {
     %dummy = fir.string_lit "A"(8) : !fir.char<1, 8>
     hlfir.yield_element %dummy : !fir.char<1, 8>
   }
-  %26 = hlfir.maxval %25 {fastmath = #arith.fastmath<contract>} : (!hlfir.expr<?x!fir.char<1, 8>>) -> !hlfir.expr<!fir.char<1, 8>>
+  %26 = hlfir.maxval %25 fastmath(contract) : (!hlfir.expr<?x!fir.char<1, 8>>) -> !hlfir.expr<!fir.char<1, 8>>
   hlfir.assign %26 to %1 : !hlfir.expr<!fir.char<1, 8>>, !fir.ref<!fir.char<1, 8>>   // Assign to %1 directly
   hlfir.destroy %26 : !hlfir.expr<!fir.char<1, 8>>
   hlfir.destroy %25 : !hlfir.expr<?x!fir.char<1, 8>>
@@ -46,7 +46,7 @@ func.func @_QQmain() {
 // CHECK-NEXT:      %[[V4:.*]] = fir.string_lit "A"(8) : !fir.char<1,8>
 // CHECK-NEXT:      hlfir.yield_element %[[V4]] : !fir.char<1,8>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    %[[V3:.*]] = hlfir.maxval %[[V2]] {fastmath = #arith.fastmath<contract>} : (!hlfir.expr<?x!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,8>>
+// CHECK-NEXT:    %[[V3:.*]] = hlfir.maxval %[[V2]] fastmath(contract) : (!hlfir.expr<?x!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,8>>
 // CHECK-NEXT:    hlfir.assign %[[V3]] to %[[V0]] : !hlfir.expr<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>
 // CHECK-NEXT:    hlfir.destroy %[[V3]] : !hlfir.expr<!fir.char<1,8>>
 // CHECK-NEXT:    hlfir.destroy %[[V2]] : !hlfir.expr<?x!fir.char<1,8>>

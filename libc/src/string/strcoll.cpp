@@ -11,6 +11,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -18,9 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, strcoll, (const char *left, const char *right)) {
   LIBC_CRASH_ON_NULLPTR(left);
   LIBC_CRASH_ON_NULLPTR(right);
-  for (; *left && *left == *right; ++left, ++right)
-    ;
-  return static_cast<unsigned char>(*left) - static_cast<unsigned char>(*right);
+  return internal::strcoll(left, right);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

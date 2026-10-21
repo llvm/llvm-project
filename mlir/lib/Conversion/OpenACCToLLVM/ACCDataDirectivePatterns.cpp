@@ -39,21 +39,11 @@ static LogicalResult emitDataRuntimeCall(
     ConversionPatternRewriter &rewriter, OpenACCSupport &accSupport,
     Region &globalSymbolRegion, SymbolTable &symbolTable,
     const ACCRuntimeCallConfig &config, ArrayRef<Value> trailingArguments) {
-  if (mappingOperands.empty())
-    return success();
-
-  Operation *firstMapOp = mappingOperands.front().getDefiningOp();
-  ACCDataRuntimeArgs runtimeArgs;
-  if (failed(emitACCDataRuntimeArgs(
-          loc, mappingOperands, convertedOperands, rewriter, globalSymbolRegion,
-          accSupport, config, runtimeArgs, callKind, &symbolTable)))
-    return rewriter.notifyMatchFailure(
-        firstMapOp, "unsupported OpenACC data-clause operand");
-
-  SmallVector<Value> arguments = runtimeArgs.getCallArgs();
-  arguments.append(trailingArguments.begin(), trailingArguments.end());
-  return createRuntimeCall(loc, rewriter, globalSymbolRegion, symbolTable, fn,
-                           config, arguments);
+  ACCDataCallOptions options;
+  options.callKind = callKind;
+  return emitACCDataRuntimeCall(
+      loc, fn, mappingOperands, convertedOperands, rewriter, accSupport,
+      globalSymbolRegion, symbolTable, config, trailingArguments, options);
 }
 
 /// Returns the action that the declare-action recipe holding \p op carries

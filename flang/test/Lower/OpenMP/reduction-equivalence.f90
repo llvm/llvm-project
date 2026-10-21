@@ -30,16 +30,16 @@ end subroutine reduction_equivalence
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] storage(%[[VAL_0]][0]) {uniq_name = "_QFreduction_equivalenceEva"} : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] storage(%[[VAL_0]][0]) uniq_name("_QFreduction_equivalenceEva") : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_5]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<i8>) -> !fir.ptr<f32>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] storage(%[[VAL_0]][0]) {uniq_name = "_QFreduction_equivalenceEvva"} : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<f32>, !fir.ptr<f32>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] storage(%[[VAL_0]][0]) uniq_name("_QFreduction_equivalenceEvva") : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<f32>, !fir.ptr<f32>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_4]]#0 : i32, !fir.ptr<i32>
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ptr<i32>) -> !fir.ref<i32>
 ! CHECK:           omp.parallel reduction(@add_reduction_i32 %[[VAL_10]] -> %[[VAL_11:.*]] : !fir.ref<i32>) {
-! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFreduction_equivalenceEva"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFreduction_equivalenceEva") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
 ! CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.terminator

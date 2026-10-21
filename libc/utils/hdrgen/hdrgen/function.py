@@ -35,6 +35,7 @@ KEYWORDS = [
     "volatile",
 ]
 NONIDENTIFIER = re.compile("[^a-zA-Z0-9_]+")
+TYPE_SEPARATOR = re.compile("[(),]+")
 
 
 class Function(Symbol):
@@ -63,7 +64,12 @@ class Function(Symbol):
                 if word and not word.isdecimal() and word not in KEYWORDS
             )
 
-        all_types = [self.return_type] + self.arguments
+        all_types = [
+            sub_type
+            for t in [self.return_type] + self.arguments
+            for sub_type in TYPE_SEPARATOR.split(t)
+            if sub_type
+        ]
         return {
             Type(string) for string in filter(None, (collapse(t) for t in all_types))
         }

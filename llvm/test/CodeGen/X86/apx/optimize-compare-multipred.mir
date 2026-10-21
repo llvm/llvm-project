@@ -628,9 +628,9 @@ body: |
 ...
 
 # Self-loop where the below-CmpInstr region holds 7 NF-convertible dead clobbers,
-# exceeding the default MaxNFConversions cap of 6. The below-scan declines
-# staging and the redundant compare is kept. Exercises the cap-bail branch of
-# the below-scan.
+# exceeding the default -x86-max-nf-conversions-for-cmp-reuse cap of 6. The
+# below-scan declines staging and the redundant compare is kept. Exercises the
+# cap-bail branch of the below-scan.
 ---
 name: selfloop_nfconvertible_below_cap
 tracksRegLiveness: true

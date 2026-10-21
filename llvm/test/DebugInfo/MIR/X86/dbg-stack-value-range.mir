@@ -1,4 +1,4 @@
-# RUN: llc -start-before=livedebugvalues %s -filetype=asm -o -| FileCheck %s
+# RUN: llc -start-before=live-debug-values %s -filetype=asm -o -| FileCheck %s
 #
 # DbgEntityHistoryCalculator should close variable's range at the end of
 # the basic block when variable is referenced through non-changing frame

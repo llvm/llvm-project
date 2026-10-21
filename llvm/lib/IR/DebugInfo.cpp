@@ -415,6 +415,10 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       [this](DIImportedEntity *IE) { processImportedEntity(IE); },
       [this](DIType *T) { processType(T); },
       [this](auto *GVE) { return processGlobalVariableExpression(GVE); });
+
+  // Not reached through the scope, type, or retained nodes.
+  if (DISubprogram *Decl = SP->getDeclaration())
+    processSubprogram(Decl);
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {

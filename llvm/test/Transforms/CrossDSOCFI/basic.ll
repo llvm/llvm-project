@@ -1,12 +1,12 @@
 ; RUN: opt -S -passes=cross-dso-cfi < %s | FileCheck %s
 
-; CHECK:     define void @__cfi_check(i64 %[[TYPE:.*]], ptr %[[ADDR:.*]], ptr %[[DATA:.*]]) align 4096
+; CHECK:     define void @__cfi_check(i64 %[[TYPE:.*]], ptr %[[ADDR:.*]], ptr %[[DATA:.*]]) align 4096 !prof ![[UNKNOWN:[0-9]+]] {
 ; CHECK:     switch i64 %[[TYPE]], label %[[FAIL:.*]] [
 ; CHECK-NEXT:   i64 111, label %[[L1:.*]]
 ; CHECK-NEXT:   i64 222, label %[[L2:.*]]
 ; CHECK-NEXT:   i64 333, label %[[L3:.*]]
 ; CHECK-NEXT:   i64 444, label %[[L4:.*]]
-; CHECK-NEXT: {{]$}}
+; CHECK-NEXT: ], !prof ![[UNKNOWN]]{{$}}
 
 ; CHECK:     [[EXIT:.*]]:
 ; CHECK-NEXT:   ret void
@@ -30,6 +30,8 @@
 ; CHECK:     [[L4]]:
 ; CHECK-NEXT:   call i1 @llvm.type.test(ptr %[[ADDR]], metadata i64 444)
 ; CHECK-NEXT:   br {{.*}} label %[[EXIT]], label %[[FAIL]]
+
+; CHECK:     ![[UNKNOWN]] = !{!"unknown", !"cross-dso-cfi"}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

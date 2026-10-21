@@ -335,11 +335,17 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
     // TLS LE relocations:
     case R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case R_AARCH64_TLSLE_ADD_TPREL_LO12:
     case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST8_TPREL_LO12:
     case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST16_TPREL_LO12:
     case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST32_TPREL_LO12:
     case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST64_TPREL_LO12:
     case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST128_TPREL_LO12:
     case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     case R_AARCH64_TLSLE_MOVW_TPREL_G0:
     case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
@@ -729,20 +735,32 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkInt(ctx, loc, val, 21, rel);
     writeMaskedBits32le(loc, (val & 0x1FFFFC) << 3, 0x1FFFFC << 3);
     break;
+  case R_AARCH64_TLSLE_LDST8_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    [[fallthrough]];
   case R_AARCH64_LDST8_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
     write32Imm12(loc, getBits(val, 0, 11));
     break;
+  case R_AARCH64_TLSLE_LDST16_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    [[fallthrough]];
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
     checkAlignment(ctx, loc, val, 2, rel);
     write32Imm12(loc, getBits(val, 1, 11));
     break;
+  case R_AARCH64_TLSLE_LDST32_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    [[fallthrough]];
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
     checkAlignment(ctx, loc, val, 4, rel);
     write32Imm12(loc, getBits(val, 2, 11));
     break;
+  case R_AARCH64_TLSLE_LDST64_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    [[fallthrough]];
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
@@ -753,6 +771,9 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 11));
     break;
+  case R_AARCH64_TLSLE_LDST128_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    [[fallthrough]];
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     checkAlignment(ctx, loc, val, 16, rel);
@@ -829,6 +850,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
       }
     }
     write32Imm12(loc, val >> 12);
+    break;
+  case R_AARCH64_TLSLE_ADD_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    write32Imm12(loc, val);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:

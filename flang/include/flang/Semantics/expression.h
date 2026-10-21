@@ -375,10 +375,24 @@ private:
     const Symbol *specific{nullptr};
     bool failedDueToAmbiguity{false};
     SymbolVector tried{};
+    // Resolution was not attempted because the reference is already in error;
+    // callers must not report a resolution failure too.
+    bool errorReported{false};
   };
+  // Resolves a generic identifier against an argument list.  Does not report
+  // resolution failure; callers do that with EmitGenericResolutionError.  It
+  // is not side-effect free, though: ResolveForward can emit a message and can
+  // set a durable error flag, so speculative callers buffer messages around it.
   GenericResolution ResolveGeneric(const Symbol &, const ActualArguments &,
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
+  // Use this rather than ResolveGeneric for a generic reference that appears in
+  // the source: it also applies the constraints that hold only for such a
+  // reference (F2023 C1545), so it must not be called speculatively.  A
+  // violation sets errorReported and skips resolution.
+  GenericResolution CheckAndResolveGenericReference(const Symbol &,
+      const ActualArguments &, const AdjustActuals &, bool isSubroutine,
+      SymbolVector &&tried, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
       bool isSubroutine, const ActualArguments &, const SymbolVector &,
       const AdjustActuals &);

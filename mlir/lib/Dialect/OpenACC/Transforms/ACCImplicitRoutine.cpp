@@ -32,6 +32,10 @@
 //    implicit routine operations for function calls within these routines,
 //    while avoiding infinite recursion through proper tracking.
 //
+// Calls in a branch that does not execute for `the-device-types` are skipped.
+// That list holds the runtime `acc_device_t` values for which `acc.on_device`
+// is true on the target.
+//
 // Requirements:
 // -------------
 // To use this pass in a pipeline, the following requirements must be met:
@@ -45,10 +49,12 @@
 //    should pre-register the `acc::OpenACCSupport` analysis.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -68,7 +74,6 @@ namespace acc {
 } // namespace mlir
 
 namespace {
-
 using namespace mlir;
 
 class ACCImplicitRoutine
@@ -139,6 +144,8 @@ private:
                                           acc::OpenACCSupport &accSupport) {
     LogicalResult result = success();
     op->walk([&](CallOpInterface callOp) {
+      if (acc::isInOffTargetBranch(callOp.getOperation(), *theDeviceTypes))
+        return;
       if (!callOp.getCallableForCallee())
         return;
 
@@ -196,6 +203,8 @@ private:
       auto func = symTab.lookup<FunctionOpInterface>(
           currentRoutine.getFuncName().getLeafReference());
       func.walk([&](CallOpInterface callOp) {
+        if (acc::isInOffTargetBranch(callOp.getOperation(), *theDeviceTypes))
+          return;
         if (!callOp.getCallableForCallee())
           return;
 
@@ -237,6 +246,11 @@ private:
 public:
   using ACCImplicitRoutineBase<ACCImplicitRoutine>::ACCImplicitRoutineBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCImplicitRoutineBase<ACCImplicitRoutine>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     auto module = getOperation();
     mlir::OpBuilder builder(module.getContext());
@@ -269,5 +283,4 @@ public:
       return signalPassFailure();
   }
 };
-
 } // namespace

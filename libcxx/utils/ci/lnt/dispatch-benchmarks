@@ -53,14 +53,14 @@ class Runs(NamedTuple):
 # The repository and the workflow driven by this tool, and the ref to use for the
 # definition of the workflow.
 REPOSITORY = 'llvm/llvm-project'
-WORKFLOW = 'libcxx-benchmark-commit.yml'
+WORKFLOW = 'libcxx-lnt-pipeline.yml'
 WORKFLOW_REF = 'main'
 
 # The name the benchmark workflow gives its runs. What a run is benchmarking can
 # only be recovered from its name (the inputs a workflow was dispatched with are
 # not available from the API) so this format is a contract with the
-# libcxx-benchmark-commit.yml workflow.
-RUN_NAME_PREFIX = '[libc++] Run benchmark suite against '
+# libcxx-lnt-pipeline.yml workflow.
+RUN_NAME_PREFIX = '[libc++] LNT pipeline: '
 RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)( \(dry run\))?$')
 
 
@@ -110,7 +110,7 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
 
 def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
+    Return the information encoded in a workflow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
@@ -259,22 +259,18 @@ def decide(items: Sequence[common.WorkItem],
 
 def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str, str]:
     """Return the inputs to dispatch the workflow with for a work item."""
-    inputs = {'commit': item.commit,
-              'lnt-machine': item.machine,
-              # Submitting to LNT is mandatory, since a run whose results are not recorded
-              # anywhere would be requested again on every future invocation. When run
-              # with --dry-run, this tool never actually dispatches the workflow with
-              # `submit-lnt: false`.
-              'submit-lnt': 'false' if args.dry_run else 'true'}
-    if args.lnt_url:
-        inputs['lnt-url'] = args.lnt_url
-    return inputs
+    return {'commit': item.commit,
+            'lnt-machine': item.machine,
+            # Submitting to LNT is mandatory, since a run whose results are not recorded
+            # anywhere would be requested again on every future invocation. When run
+            # with --dry-run, this tool never actually dispatches the workflow with
+            # `submit-lnt: false`.
+            'submit-lnt': 'false' if args.dry_run else 'true'}
 
 
 def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) -> None:
     """Print a human-readable summary of what is about to be done."""
     out = sys.stderr
-    print(f'Submitting to: {args.lnt_url or "whatever the workflow defaults to"}', file=out)
     # One line per machine the plan is about, since capacity is per machine.
     for machine in sorted({d.item.machine for d in decisions}):
         in_flight = runs.in_flight_on(machine)
@@ -331,9 +327,6 @@ def main(argv: List[str]) -> int:
              'before it is given up on. This bounds the cost of a job that keeps dying before it '
              'can submit, since such a run leaves no trace in LNT and would otherwise be requested '
              'forever. It is counted per machine.')
-    parser.add_argument('--lnt-url', type=str, required=False,
-        help='The LNT instance the runs should submit to. By default the workflow submits to '
-             'whichever instance it defaults to.')
     parser.add_argument('--token', type=str, required=False, # no default to avoid printing the token in --help
         help='A Github token with write access to the repository, which is needed both to look at '
              'the existing runs and to request new ones. Defaults to the GITHUB_TOKEN environment '
@@ -363,7 +356,7 @@ def main(argv: List[str]) -> int:
 
     decisions = decide(items, runs, args.max_in_flight, args.extra_attempts)
 
-    # Warn then we give up for good on a commit/machine pair (because enough attempts have been done).
+    # Warn when we give up for good on a commit/machine pair (because enough attempts have been done).
     for decision in decisions:
         if decision.action == 'skip' and decision.reason.startswith('giving up'):
             logging.warning(f'{decision.item.commit[:12]} on {decision.item.machine}: {decision.reason}')

@@ -9,18 +9,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     fir.use_stmt "example"
     %c2 = arith.constant 2 : index
     %1 = fir.address_of(@_QMexampleEmod_arr) : !fir.ref<!fir.array<2x2xi32>>
-    %2 = fircg.ext_declare %1(%c2, %c2) {uniq_name = "_QMexampleEmod_arr"} : (!fir.ref<!fir.array<2x2xi32>>, index, index) -> !fir.ref<!fir.array<2x2xi32>> loc(#loc4)
+    %2 = fircg.ext_declare %1(%c2, %c2) uniq_name("_QMexampleEmod_arr") : (!fir.ref<!fir.array<2x2xi32>>, index, index) -> !fir.ref<!fir.array<2x2xi32>> loc(#loc4)
     %3 = fir.address_of(@_QMexampleFmod_subEss) : !fir.ref<i32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QMexampleFmod_subEss"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc5)
+    %4 = fircg.ext_declare %3 uniq_name("_QMexampleFmod_subEss") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc5)
     return
   } loc(#loc6)
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
     %c3 = arith.constant 3 : index
     %c4 = arith.constant 4 : index
     %1 = fir.address_of(@_QFEarr) : !fir.ref<!fir.array<3x4xi32>>
-    %2 = fircg.ext_declare %1(%c3, %c4) {uniq_name = "_QFEarr"} : (!fir.ref<!fir.array<3x4xi32>>, index, index) -> !fir.ref<!fir.array<3x4xi32>> loc(#loc2)
+    %2 = fircg.ext_declare %1(%c3, %c4) uniq_name("_QFEarr") : (!fir.ref<!fir.array<3x4xi32>>, index, index) -> !fir.ref<!fir.array<3x4xi32>> loc(#loc2)
     %3 = fir.address_of(@_QFEs) : !fir.ref<i32>
-    %4 = fircg.ext_declare %3 {uniq_name = "_QFEs"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
+    %4 = fircg.ext_declare %3 uniq_name("_QFEs") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
     return
   } loc(#loc1)
   fir.global @_QMexampleEmod_arr : !fir.array<2x2xi32> {

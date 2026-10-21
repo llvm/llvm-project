@@ -121,12 +121,15 @@ public:
 
   lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr) override;
 
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
+  lldb::ValueObjectSP GuessValueForRegisterAndOffset(llvm::StringRef reg,
                                                      int64_t offset) override;
 
   StructuredData::ObjectSP GetLanguageSpecificData() override;
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame() override;
+
+  llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) override;
 
   /// Get the underlying borrowed frame.
   lldb::StackFrameSP GetBorrowedFrame() const;

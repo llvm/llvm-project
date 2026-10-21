@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,OGCG
 
 extern "C" {
 // CIR-LABEL: cir.func {{.*}}@add(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -18,6 +18,8 @@ extern "C" {
 
 // LLVM-LABEL: define {{.*}}i32 @add(
 // OGCG-NEXT: entry:
+// Classic codegen doesn't alloca for a return slot.
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -29,9 +31,9 @@ _Accum add(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@add2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_A:.*]] = cir.cast integral %[[LOAD_A]] : !s32i -> !cir.int<s, 47>
@@ -45,6 +47,7 @@ _Accum add(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @add2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -60,9 +63,9 @@ _Accum add2(int a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@sub(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -71,6 +74,7 @@ _Accum add2(int a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @sub(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -82,9 +86,9 @@ _Accum sub(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@sub2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -98,6 +102,7 @@ _Accum sub(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @sub2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -113,9 +118,9 @@ _Accum sub2(_Accum a, short f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@mul(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -125,6 +130,7 @@ _Accum sub2(_Accum a, short f) {
 
 // LLVM-LABEL: define {{.*}}i32 @mul(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -136,9 +142,9 @@ _Accum mul(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@mul2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[S:.*]] = cir.alloca "s" align(2) init : !cir.ptr<!u16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_S:.*]] = cir.load align(2) %[[S]] : !cir.ptr<!u16i>, !u16i
 // CIR-NEXT: %[[WIDEN_S:.*]] = cir.cast integral %[[LOAD_S]] : !u16i -> !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
@@ -154,6 +160,7 @@ _Accum mul(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @mul2(i16 
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[S:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_S:.*]] = load i16, ptr %[[S]], align 2
@@ -170,9 +177,9 @@ _Accum mul2(unsigned short s, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@div(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -182,6 +189,7 @@ _Accum mul2(unsigned short s, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @div(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -193,9 +201,9 @@ _Accum div(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@div2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(4) init : !cir.ptr<!cir.float>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[FLOAT_A:.*]] = cir.cast int_to_float %[[LOAD_A]] : !s32i -> !cir.float
 // CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.05175781E-5> : !cir.float
@@ -209,6 +217,7 @@ _Accum div(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @div2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca float, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -223,9 +232,9 @@ _Accum div2(_Accum a, float f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@umul(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!u32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.int<16> : !u32i
@@ -234,6 +243,7 @@ _Accum div2(_Accum a, float f) {
 
 // LLVM-LABEL: define {{.*}}i32 @umul(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -244,9 +254,9 @@ unsigned _Accum umul(unsigned _Accum a, unsigned _Accum b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@cmp(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -255,6 +265,7 @@ unsigned _Accum umul(unsigned _Accum a, unsigned _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -266,9 +277,9 @@ bool cmp(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@cmp2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -277,6 +288,7 @@ bool cmp(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -288,9 +300,9 @@ bool cmp2(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@cmp3(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(1) : !cir.ptr<!cir.bool>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[WIDEN_F:.*]] = cir.cast integral %[[LOAD_F]] : !s16i -> !s32i
@@ -299,6 +311,7 @@ bool cmp2(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp3(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -310,8 +323,8 @@ bool cmp3(_Accum a, _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shl(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[LOAD_A]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i
@@ -319,6 +332,7 @@ bool cmp3(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @shl(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = shl i32 %[[LOAD_A]], 2
@@ -327,9 +341,9 @@ _Accum shl(_Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shl2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[C:.*]] = cir.alloca "c" align(1) init : !cir.ptr<!u8i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_C:.*]] = cir.load align(1) %[[C]] : !cir.ptr<!u8i>, !u8i
 // CIR-NEXT: %[[WIDEN_C:.*]] = cir.cast integral %[[LOAD_C]] : !u8i -> !s32i
@@ -338,6 +352,7 @@ _Accum shl(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i32 @shl2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -349,9 +364,9 @@ _Accum shl2(_Accum a, unsigned char c) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shl3(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[C:.*]] = cir.alloca "c" align(1) init : !cir.ptr<!u8i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[LOAD_C:.*]] = cir.load align(1) %[[C]] : !cir.ptr<!u8i>, !u8i
 // CIR-NEXT: %[[WIDEN_C:.*]] = cir.cast integral %[[LOAD_C]] : !u8i -> !s32i
@@ -360,6 +375,7 @@ _Accum shl2(_Accum a, unsigned char c) {
 
 // LLVM-LABEL: define {{.*}}i16 @shl3(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -372,8 +388,8 @@ _Fract shl3(_Fract f, unsigned char c) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shr(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_A]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i
@@ -381,6 +397,7 @@ _Fract shl3(_Fract f, unsigned char c) {
 
 // LLVM-LABEL: define {{.*}}i32 @shr(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = ashr i32 %[[LOAD_A]], 2
@@ -389,9 +406,9 @@ _Accum shr(_Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shr2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!u32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_U:.*]] = cir.load align(4) %[[U]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_A]] : !s32i, %[[LOAD_U]] : !u32i) -> !s32i
@@ -399,6 +416,7 @@ _Accum shr(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i32 @shr2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[U:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -409,9 +427,9 @@ _Accum shr2(_Accum a, unsigned u) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@shr3(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!u32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[LOAD_U:.*]] = cir.load align(4) %[[U]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_F]] : !s16i, %[[LOAD_U]] : !u32i) -> !s16i
@@ -419,6 +437,7 @@ _Accum shr2(_Accum a, unsigned u) {
 
 // LLVM-LABEL: define {{.*}}i16 @shr3(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[U:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -430,8 +449,8 @@ _Fract shr3(_Fract f, unsigned u) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@inc(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s32i
@@ -442,6 +461,7 @@ _Fract shr3(_Fract f, unsigned u) {
 
 // LLVM-LABEL: define {{.*}}i32 @inc(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[INC:.*]] = sub i32 %[[LOAD_A]], -32768
@@ -450,8 +470,8 @@ _Accum inc(_Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@inc2(
-// CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
+// CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s16i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s16i
@@ -462,6 +482,7 @@ _Accum inc(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @inc2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[INC:.*]] = sub i16 %[[LOAD_A]], -32768
@@ -470,8 +491,8 @@ _Fract inc2(_Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@dec(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s32i
@@ -482,6 +503,7 @@ _Fract inc2(_Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @dec(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[DEC:.*]] = add i32 %[[LOAD_A]], -32768
@@ -490,8 +512,8 @@ _Accum dec(_Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@dec2(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(2) %[[A]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s16i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !s16i
@@ -502,6 +524,7 @@ _Accum dec(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @dec2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[DEC:.*]] = add i16 %[[LOAD_A]], -32768
@@ -510,9 +533,9 @@ _Fract dec2(_Fract a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satAdd(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
@@ -520,6 +543,7 @@ _Fract dec2(_Fract a) {
 
 // LLVM-LABEL: define {{.*}}i32 @satAdd(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -530,9 +554,9 @@ _Sat _Accum satAdd(_Sat _Accum a, _Accum b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satSub(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SUB:.*]] = cir.sub sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
@@ -540,6 +564,7 @@ _Sat _Accum satAdd(_Sat _Accum a, _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satSub(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -550,9 +575,9 @@ _Sat _Accum satSub(_Sat _Accum a, _Sat _Accum b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satMul(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.int<15> : !s32i
@@ -561,6 +586,7 @@ _Sat _Accum satSub(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satMul(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -571,9 +597,9 @@ _Sat _Accum satMul(_Sat _Accum a, _Sat _Accum b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satDiv(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.int<15> : !s32i
@@ -582,6 +608,7 @@ _Sat _Accum satMul(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satDiv(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -592,8 +619,8 @@ _Sat _Accum satDiv(_Sat _Accum a, _Sat _Accum b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satShl(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.call_llvm_intrinsic "sshl.sat" %[[LOAD_A]], %[[SHIFT_NUM]] : (!s32i, !s32i) -> !s32i
@@ -601,6 +628,7 @@ _Sat _Accum satDiv(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satShl(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = call i32 @llvm.sshl.sat.i32(i32 %[[LOAD_A]], i32 2)
@@ -609,9 +637,9 @@ _Sat _Accum satShl(_Sat _Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satShl2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[C:.*]] = cir.alloca "c" align(1) init : !cir.ptr<!s8i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(2) %[[A]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[LOAD_C:.*]] = cir.load align(1) %[[C]] : !cir.ptr<!s8i>, !s8i
 // CIR-NEXT: %[[WIDEN_C:.*]] = cir.cast integral %[[LOAD_C]] : !s8i -> !s32i
@@ -622,6 +650,7 @@ _Sat _Accum satShl(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satShl2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -634,8 +663,8 @@ _Sat _Fract satShl2(_Sat _Fract a, char c) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satShr(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_A]] : !s32i, %[[SHIFT_NUM]] : !s32i) -> !s32i
@@ -643,6 +672,7 @@ _Sat _Fract satShl2(_Sat _Fract a, char c) {
 
 // LLVM-LABEL: define {{.*}}i32 @satShr(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = ashr i32 %[[LOAD_A]], 2
@@ -651,9 +681,9 @@ _Sat _Accum satShr(_Sat _Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satShr2(
+// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
-// CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[LOAD_I:.*]] = cir.load align(4) %[[I]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_F]] : !s16i, %[[LOAD_I]] : !s32i) -> !s16i
@@ -661,6 +691,7 @@ _Sat _Accum satShr(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satShr2(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[I:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -673,8 +704,8 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satInc(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !cir.int<s, 47>
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !cir.int<s, 47>
@@ -692,6 +723,7 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 
 // LLVM-LABEL: define {{.*}}i32 @satInc(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[ADD:.*]] = call i32 @llvm.ssub.sat.i32(i32 %[[LOAD_A]], i32 -32768)
@@ -701,8 +733,8 @@ _Sat _Accum satInc(_Sat _Accum a) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satDec(
-// CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!s16i>
+// CIR-NEXT: %[[F:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR:      %[[LOAD_F:.*]] = cir.load align(2) %[[F]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[NEG_1:.*]] = cir.const #cir.int<-1> : !cir.int<s, 31>
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<15> : !cir.int<s, 31>
@@ -720,6 +752,7 @@ _Sat _Accum satInc(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satDec(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
 // LLVM-NEXT: %[[ADD:.*]] = call i16 @llvm.sadd.sat.i16(i16 %[[LOAD_F]], i16 -32768)
@@ -730,8 +763,8 @@ _Sat _Fract satDec(_Sat _Fract f) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@satIncUFract(
-// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!u16i>
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(2) : !cir.ptr<!u16i>
+// CIR-NEXT: %[[A:.*]] = cir.alloca "a" align(2) init : !cir.ptr<!u16i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(2) %[[A]] : !cir.ptr<!u16i>, !u16i
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT: %[[SHIFT_NUM:.*]] = cir.const #cir.int<16> : !s32i
@@ -749,6 +782,7 @@ _Sat _Fract satDec(_Sat _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i16 @satIncUFract(
 // OGCG-NEXT: entry:
+// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[ADD:.*]] = call i16 @llvm.uadd.sat.i16(i16 %[[LOAD_A]], i16 -1)

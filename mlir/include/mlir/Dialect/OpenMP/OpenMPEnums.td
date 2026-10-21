@@ -200,12 +200,14 @@ def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
 def DataSharingTypePrivate : I32EnumAttrCase<"Private", 0, "private">;
 def DataSharingTypeFirstPrivate
     : I32EnumAttrCase<"FirstPrivate", 1, "firstprivate">;
+def DataSharingTypeLinear : I32EnumAttrCase<"Linear", 2, "linear">;
 
 def DataSharingClauseType : OpenMP_I32EnumAttr<
     "DataSharingClauseType",
     "Type of a data-sharing clause", [
       DataSharingTypePrivate,
-      DataSharingTypeFirstPrivate
+      DataSharingTypeFirstPrivate,
+      DataSharingTypeLinear
     ]>;
 
 def DataSharingClauseTypeAttr : OpenMP_EnumAttr<DataSharingClauseType,

@@ -8,7 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class CPPEnumLimitsTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
-    TEST_WITH_PDB_DEBUG_INFO = True
 
     def check_signed(self, ty: lldb.SBType, expected):
         self.assertEqual(

@@ -137,7 +137,7 @@ end
 subroutine dd1
 ! CHECK-LABEL:   func.func @_QPdd1() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "kk", uniq_name = "_QFdd1Ekk"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdd1Ekk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : i32
@@ -155,7 +155,7 @@ subroutine dd1
   entry dd2
 ! CHECK-LABEL:   func.func @_QPdd2() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "kk", uniq_name = "_QFdd1Ekk"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdd1Ekk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : i32
@@ -171,7 +171,7 @@ subroutine dd1
 ! CHECK-LABEL:   func.func @_QPdd3() -> index {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca index <{bindc_name = "dd3"}>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "kk", uniq_name = "_QFdd1Ekk"}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFdd1Ekk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFdd1Ekk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           fir.store %[[VAL_3]] to %[[VAL_0]] : !fir.ref<index>
 ! CHECK:           cf.br ^bb1
@@ -198,7 +198,7 @@ subroutine ashapec(asc)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_4]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFashapecEasc"} : (!fir.box<!fir.array<?x!fir.char<1>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.box<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_4]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} uniq_name("_QFashapecEasc") : (!fir.box<!fir.array<?x!fir.char<1>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.box<!fir.array<?x!fir.char<1>>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -209,7 +209,7 @@ subroutine ashapec(asc)
 ! CHECK:           %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_10]], %[[VAL_11]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_13:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_14:.*]] = fir.shape_shift %[[VAL_12]]#0, %[[VAL_12]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) {uniq_name = "_QFashapecEasi"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_14]]) uniq_name("_QFashapecEasi") : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_17]] : (index) -> !fir.shape<1>
@@ -220,12 +220,12 @@ subroutine ashapec(asc)
 ! CHECK:           %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>) -> !fir.heap<!fir.array<?xcomplex<f32>>>
 ! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) {uniq_name = "_QFashapecEasx"} : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) uniq_name("_QFashapecEasx") : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_26:.*]] = fir.address_of(@_QQclX3F) : !fir.ref<!fir.char<1>>
 ! CHECK:           %[[VAL_27:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]] typeparams %[[VAL_27]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX3F"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+! CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]] typeparams %[[VAL_27]] uniq_name("_QQclX3F") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK:           hlfir.assign %[[VAL_28]]#0 to %[[VAL_5]]#0 : !fir.ref<!fir.char<1>>, !fir.box<!fir.array<?x!fir.char<1>>>
 ! CHECK:           cf.br ^bb2
 ! CHECK:         ^bb2:
@@ -251,8 +251,8 @@ entry ashapei(asi)
 ! CHECK:           %[[VAL_11:.*]] = fir.box_elesize %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> index
 ! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> !fir.heap<!fir.array<?x!fir.char<1>>>
 ! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] {uniq_name = "_QFashapecEasc"} : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
-! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFashapecEasi"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] uniq_name("_QFashapecEasc") : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} uniq_name("_QFashapecEasi") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_17]] : (index) -> !fir.shape<1>
@@ -263,7 +263,7 @@ entry ashapei(asi)
 ! CHECK:           %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_20]], %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>) -> !fir.heap<!fir.array<?xcomplex<f32>>>
 ! CHECK:           %[[VAL_24:.*]] = fir.shape_shift %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) {uniq_name = "_QFashapecEasx"} : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]](%[[VAL_24]]) uniq_name("_QFashapecEasx") : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.heap<!fir.array<?xcomplex<f32>>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_26:.*]] = arith.constant 3 : i32
@@ -291,7 +291,7 @@ end
 ! CHECK:           %[[VAL_11:.*]] = fir.box_elesize %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> index
 ! CHECK:           %[[VAL_12:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>) -> !fir.heap<!fir.array<?x!fir.char<1>>>
 ! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] {uniq_name = "_QFashapecEasc"} : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) typeparams %[[VAL_11]] uniq_name("_QFashapecEasc") : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shapeshift<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1>>>, !fir.heap<!fir.array<?x!fir.char<1>>>)
 ! CHECK:           %[[VAL_15:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
@@ -302,8 +302,8 @@ end
 ! CHECK:           %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_19]], %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_23:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_23]]) {uniq_name = "_QFashapecEasi"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFashapecEasx"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
+! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_23]]) uniq_name("_QFashapecEasi") : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} uniq_name("_QFashapecEasx") : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           hlfir.assign %{{.*}} to %[[VAL_25]]#0 : complex<f32>, !fir.box<!fir.array<?xcomplex<f32>>>
@@ -343,15 +343,15 @@ function f1(n1) result(res1)
 ! CHECK-SAME:                     %[[VAL_1:.*]]: index,
 ! CHECK-SAME:                     %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n1"}) -> !fir.boxchar<1> {
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFf1En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} uniq_name("_QFf1En1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "n2", uniq_name = "_QFf1En2"}>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFf1En2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFf1En2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] uniq_name("_QFf1Eres1") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] uniq_name("_QFf1Ef2") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] uniq_name("_QFf1Ef3") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
@@ -390,14 +390,14 @@ entry f2(n2)
 ! CHECK-SAME:                     %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "n2"}) -> !fir.boxchar<1> {
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "n1", uniq_name = "_QFf1En1"}>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFf1En1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFf1En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFf1En1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} uniq_name("_QFf1En2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_7]] uniq_name("_QFf1Eres1") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] uniq_name("_QFf1Ef2") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_11]] uniq_name("_QFf1Ef3") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_13:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_14]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
@@ -428,15 +428,15 @@ entry f3
 ! CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.char<1,5>>,
 ! CHECK-SAME:                     %[[VAL_1:.*]]: index) -> !fir.boxchar<1> {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "n1", uniq_name = "_QFf1En1"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1En1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFf1En1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "n2", uniq_name = "_QFf1En2"}>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFf1En2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFf1En2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_6]] {uniq_name = "_QFf1Eres1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_6]] uniq_name("_QFf1Eres1") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_8]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef2"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_8]] uniq_name("_QFf1Ef2") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFf1Ef3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_10]] uniq_name("_QFf1Ef3") fortran_attrs<internal_assoc> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_13]] : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
@@ -480,7 +480,7 @@ subroutine assumed_size()
 ! CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_6]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_8:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_9:.*]] = fir.shape_shift %[[VAL_7]]#0, %[[VAL_7]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFassumed_sizeEx"} : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) uniq_name("_QFassumed_sizeEx") : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           return
@@ -493,7 +493,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFassumed_sizeEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QFassumed_sizeEx") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           return

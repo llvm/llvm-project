@@ -17,6 +17,16 @@
 #if SANITIZER_APPLE
 #include "sanitizer_posix.h"
 
+// The earliest (macOS-aligned) version that requires debug memory
+#  define DARWIN_DEBUG_MEMORY_VERSION_FLOOR (MacosVersion(27, 0))
+
+// VM size threshold threshold above which we will use debug memory (448GB)
+#  define DARWIN_DEBUG_MEMORY_VMOFFSET_FLOOR 0x7000000000UL
+
+// The lowest address which sanitizers should expect to map
+// on embedded devices with debug memory (VM_MEMORY_DEBUG)
+#  define DARWIN_DEBUG_MEMORY_START 0x40000000000UL
+
 namespace __sanitizer {
 
 struct MemoryMappingLayoutData {
@@ -64,11 +74,19 @@ struct ReservedRange {
 
 MacosVersion GetMacosAlignedVersion();
 DarwinKernelVersion GetDarwinKernelVersion();
-void GetAppReservedRanges(InternalMmapVector<ReservedRange>& ranges);
+void GetAppRanges(InternalMmapVector<ReservedRange>& ranges);
+
+extern bool debug_region_activated;
+ALWAYS_INLINE static bool DebugMemoryActive() { return debug_region_activated; }
+bool ActivateDebugMemory();
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
+                              uptr* largest_gap_found, uptr* max_occupied_addr,
+                              bool use_debug_vm);
 
 char **GetEnviron();
 
 void RestrictMemoryToMaxAddress(uptr max_address);
+bool MemoryRangeIsKernelReserved(uptr range_start, uptr range_end);
 
 using ThreadEventCallback = void (*)(uptr thread);
 using ThreadCreateEventCallback = void (*)(uptr thread, bool gcd_worker);

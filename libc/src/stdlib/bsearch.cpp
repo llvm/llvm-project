@@ -26,19 +26,18 @@ LLVM_LIBC_FUNCTION(void *, bsearch,
     const void *elem =
         reinterpret_cast<const uint8_t *>(array) + mid * elem_size;
     int compare_result = compare(key, elem);
-    if (compare_result == 0)
-      return const_cast<void *>(elem);
-
     if (compare_result < 0) {
       // This means that key is less than the element at |mid|.
       // So, in the next iteration, we only compare elements less
       // than mid.
       array_size = mid;
-    } else {
+    } else if (compare_result > 0) {
       // |mid| is strictly less than |array_size|. So, the below
       // decrement in |array_size| will not lead to a wrap around.
       array_size -= (mid + 1);
       array = reinterpret_cast<const uint8_t *>(elem) + elem_size;
+    } else {
+      return const_cast<void *>(elem);
     }
   }
 

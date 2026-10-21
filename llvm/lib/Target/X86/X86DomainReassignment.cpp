@@ -35,10 +35,6 @@ using namespace llvm;
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");
 STATISTIC(NumClosuresBuilt, "Number of closures built by the pass");
 
-static cl::opt<bool> DisableX86DomainReassignment(
-    "disable-x86-domain-reassignment", cl::Hidden,
-    cl::desc("X86: Disable Virtual Register Reassignment."), cl::init(false));
-
 namespace {
 enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain, NumDomains };
 
@@ -759,14 +755,14 @@ void X86DomainReassignmentImpl::initConverters() {
 }
 
 bool X86DomainReassignmentImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (DisableX86DomainReassignment)
+  STI = &MF.getSubtarget<X86Subtarget>();
+  if (STI->getCLOpts().disable_x86_domain_reassignment)
     return false;
 
   LLVM_DEBUG(
       dbgs() << "***** Machine Function before Domain Reassignment *****\n");
   LLVM_DEBUG(MF.print(dbgs()));
 
-  STI = &MF.getSubtarget<X86Subtarget>();
   // GPR->K is the only transformation currently supported, bail out early if no
   // AVX512.
   // TODO: We're also bailing of AVX512BW isn't supported since we use VK32 and

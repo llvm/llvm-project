@@ -50,7 +50,6 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:    s_mov_b32 s14, s55
 ; CHECK-NEXT:    s_mov_b32 s15, s54
 ; CHECK-NEXT:    s_mov_b32 s0, s16
-; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr0

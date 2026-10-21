@@ -20,7 +20,7 @@
 ; Case 1 (for (j = i; j < M; j++)): Inner loop with divergent IV start.
 
 ; CHECK-LABEL: iv_start
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -70,7 +70,7 @@ for.end15:
 ; Case 2 (for (j = 0; j < i; j++)): Inner loop with divergent upper-bound.
 
 ; CHECK-LABEL: loop_ub
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 define void @loop_ub(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
@@ -116,7 +116,7 @@ for.end15:
 ; Case 3 (for (j = 0; j < M; j+=i)): Inner loop with divergent step.
 
 ; CHECK-LABEL: iv_step
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 define void @iv_step(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DynamicAllocator.h"
-#include "InterpBlock.h"
 
 using namespace clang;
 using namespace clang::interp;

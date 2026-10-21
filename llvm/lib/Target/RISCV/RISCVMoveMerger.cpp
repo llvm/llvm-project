@@ -290,8 +290,15 @@ RISCVMoveMerge::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
       RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
   Register DestGPRPair = TRI->getMatchingSuperReg(
       RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+
+  if (!SrcGPRPair.isValid() || !DestGPRPair.isValid())
+    return E;
+
   Register ExpectedSourceReg = TRI->getSubReg(SrcGPRPair, SecondPairIdx);
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+
+  if (!ExpectedSourceReg.isValid() || !ExpectedDestReg.isValid())
+    return E;
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -389,7 +396,9 @@ RISCVMoveMerge::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
   // Get the expected destination register of the matching lane.
   Register DestGPRPair = TRI->getMatchingSuperReg(FirstDestReg, RegPairIdx,
                                                   &RISCV::GPRPairRegClass);
+  assert(DestGPRPair.isValid());
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+  assert(ExpectedDestReg.isValid());
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {

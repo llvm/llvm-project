@@ -10,18 +10,14 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    cmp r2, #16
 ; CHECK-NEXT:    blo .LBB0_5
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    movs r6, #2
-; CHECK-NEXT:    lsrs r7, r2, #3
-; CHECK-NEXT:    rsb r6, r6, r2, lsr #3
-; CHECK-NEXT:    cmp r7, #2
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    csel r7, r6, r5, hs
-; CHECK-NEXT:    add.w lr, r7, #1
-; CHECK-NEXT:    mov r4, r5
+; CHECK-NEXT:    mov.w r7, #-1
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    add.w lr, r7, r2, lsr #3
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #32
+; CHECK-NEXT:    mov r4, r5
 ; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    mov r8, r5
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #32
+; CHECK-NEXT:    mov r8, r5
 ; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q1
 ; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
 ; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q1

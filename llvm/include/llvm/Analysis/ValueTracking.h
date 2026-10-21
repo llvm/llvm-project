@@ -667,7 +667,8 @@ inline bool isValidAssumeForContext(const Instruction *I,
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
 /// (including through synchronization).
 LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
-                                 const Instruction *CtxI);
+                                 const Instruction *CtxI,
+                                 const DominatorTree *DT = nullptr);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
@@ -935,9 +936,8 @@ struct SelectPatternResult {
 ///
 /// -> LHS = %a, RHS = i32 4, *CastOp = Instruction::SExt
 ///
-LLVM_ABI SelectPatternResult
-matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
-                   Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
+LLVM_ABI SelectPatternResult matchSelectPattern(
+    Value *V, Value *&LHS, Value *&RHS, Instruction::CastOps *CastOp = nullptr);
 
 inline SelectPatternResult matchSelectPattern(const Value *V, const Value *&LHS,
                                               const Value *&RHS) {
@@ -953,8 +953,8 @@ inline SelectPatternResult matchSelectPattern(const Value *V, const Value *&LHS,
 /// predicate and given values as its true/false operands would match.
 LLVM_ABI SelectPatternResult matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    FastMathFlags FMF = FastMathFlags(), Instruction::CastOps *CastOp = nullptr,
-    unsigned Depth = 0);
+    FastMathFlags FMF = FastMathFlags(),
+    Instruction::CastOps *CastOp = nullptr);
 
 /// Determine the pattern for predicate `X Pred Y ? X : Y`.
 LLVM_ABI SelectPatternResult getSelectPattern(

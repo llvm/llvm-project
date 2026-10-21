@@ -13,8 +13,9 @@ declare void @init_mem(ptr, i64) nofree
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
 ; CHECK-DEBUG:       Found an early exit loop with symbolic max backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG-NOT:   LV: Not vectorizing:
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i32]
   %p2 = alloca [1024 x i32]
@@ -51,8 +52,9 @@ exit:
 define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
 ; CHECK-DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG-NOT:   LV: Not vectorizing
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -83,7 +85,8 @@ loop.end:
 define i64 @loop_contains_safe_call() {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_call'
 ; CHECK-DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -113,7 +116,8 @@ loop.end:
 define i64 @loop_contains_safe_div() {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_safe_div'
 ; CHECK-DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -143,8 +147,9 @@ loop.end:
 define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(8) %p2) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
 ; CHECK-DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG-NOT:   LV: Not vectorizing
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   call void @init_mem(ptr %p1, i64 1024)
@@ -173,7 +178,7 @@ loop.end:
 define i64 @one_uncountable_two_countable_same_exit_phi_of_consts() !dbg !39 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'one_uncountable_two_countable_same_exit_phi_of_consts'
 ; CHECK-DEBUG:       LV: Found an early exit loop with symbolic max backedge taken count: 61
-; CHECK-DEBUG-NEXT:  LV: We can vectorize this loop!
+; CHECK-DEBUG-NEXT:  LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops requiring a scalar epilogue is unsupported.
 ; CHECK-REMARK:      foo.c:60:3: loop not vectorized: Auto-vectorization of early exit loops requiring a scalar epilogue is unsupported
 entry:
@@ -326,7 +331,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() !dbg !47 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:100:3: loop not vectorized: Cannot vectorize early exit loop
 entry:
   %p1 = alloca [1024 x i8]
@@ -358,7 +363,8 @@ loop.end:
 ; Multiple uncountable early exits are now supported.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -483,8 +489,8 @@ loop.end:
 
 define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceable(40) %array, ptr readonly align 2 dereferenceable(40) %pred) !dbg !57 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'exit_conditions_combined_in_single_branch'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot vectorize uncountable loop.
-; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Cannot vectorize uncountable loop
+; CHECK-DEBUG: LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit and side effects is not enabled.
+; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Auto-vectorization of loops with uncountable early exit and side effects is not enabled
 entry:
   br label %for.body, !dbg !58
 
@@ -612,7 +618,8 @@ loop.end:
 ; This is now supported with predicated early exits.
 define i64 @uncountable_exits_on_parallel_branches() {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exits_on_parallel_branches'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -653,7 +660,7 @@ loop.end:
 ; exit count (loop is infinite without early exits).
 define void @uncountable_exits_invariant_conditions(ptr %p, i1 %cond1, i1 %cond2, i1 %cond3) !dbg !67 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exits_invariant_conditions'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:200:3: loop not vectorized: Cannot vectorize early exit loop
 ; CHECK-REMARK-NEXT: foo.c:200:3: loop not vectorized: could not determine number of loop iterations
 entry:

@@ -58,8 +58,9 @@ static bool checkHasPAuth() {
 #elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 static bool checkHasPAuth() {
   constexpr unsigned long hwcap_paca = (1UL << 30);
-  unsigned long hwcap = 0;
-  elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+  unsigned long hwcap;
+  if (elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap)) != 0)
+    return false;
   return (hwcap & hwcap_paca) != 0;
 }
 #else
