@@ -11,6 +11,7 @@
 
 // REQUIRES: target={{aarch64.*}}
 // UNSUPPORTED: target={{.*-windows.*}}
+// UNSUPPORTED: target={{.*-apple.*}}
 
 // clang-format on
 
@@ -68,9 +69,7 @@ static bool checkHasPAuthLR() {
   return hasPAuthLR();
 }
 #elif defined(_LIBUNWIND_IS_BAREMETAL)
-static bool checkHasPAuthLR() {
-  return hasPAuthLR();
-}
+static bool checkHasPAuthLR() { return hasPAuthLR(); }
 #else
 static bool checkHasPAuthLR() {
   // TODO: Support other platforms.

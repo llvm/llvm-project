@@ -3792,7 +3792,8 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // Pseudo instruction to tell the streamer to emit an 'N' character into the
-// augmentation string.
+// augmentation string, indicating that non hint-space FEAT_PAuth_LR
+// instructions are used for signing/authenticating the return address.
 def EMITPAUTH : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
