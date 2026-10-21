@@ -165,6 +165,7 @@ int ab;
 // CPU_V2: int z;
 // CPU_V3: int z;
 // CPU_V4: int z;
+// CPU_V5: int z;
 
 // CPU_V5: int ab;
 
