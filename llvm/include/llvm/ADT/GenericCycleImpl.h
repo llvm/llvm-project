@@ -337,13 +337,12 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
       ++X.EntryBegin;
   }
   addToBlockMap(Block, C);
-  // Cyc and its ancestors gain the new block: extend each one's slice and
-  // invalidate its exit-block cache in a single walk up the tree.
-  for (CycleRef I = C; I; I = deref(I).Parent) {
+  // Cyc and its ancestors gain the new block: extend each one's slice.
+  for (CycleRef I = C; I; I = deref(I).Parent)
     ++deref(I).IdxEnd;
-    if (!ExitBlocksCaches.empty())
-      ExitBlocksCaches[I.Index].clear();
-  }
+  // The new block may also have become an exit of a cycle that does not
+  // contain it, e.g. a child of Cyc whose exit edge was split.
+  ExitBlocksCaches.clear();
 }
 
 /// Lay the discovered cycle forest out into Info's flat preorder array: number
@@ -578,7 +577,9 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
                                                    BlockT *NewBlock) {
   // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
-  // cycles that had blocks Pred and Succ also get NewBlock.
+  // cycles that had blocks Pred and Succ also get NewBlock. Any cycle that
+  // contains Pred but not Succ now exits to NewBlock instead of Succ.
+  ExitBlocksCaches.clear();
   CycleRef C = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
   if (!C)
     return;
