@@ -228,6 +228,103 @@ benchmark kernels on ``agx-g13g`` and ``agx-g14c``): 6.0% more code (3142 to
 float atomic add becomes a compare-and-swap loop (1449.7 to 1514.4 cycles);
 on G13, which has no native float atomic, the cycles are the same.
 
+Checked mode
+------------
+
+The ``agx-checked`` feature (``-mattr=+agx-checked``, or the module flag
+``!{i32 1, !"agx-checked", i32 1}``) checks memory accesses as the kernel
+runs and reports the first bad one to the runtime, which turns it into an
+error such as ``CUDA_ERROR_ILLEGAL_ADDRESS``. It is meant for debugging: the
+hardware reports nothing about a bad access (shader faults on Asahi are soft:
+loads from unmapped memory read 0 and stores are dropped), and the checks are
+ordinary instructions, so the mode can be combined with ``agx-strict``.
+
+Each check runs before its access:
+
+============================  ================================================
+Access                        Check
+============================  ================================================
+device load, store, atomic    the address is at least 4096 (null); it is a
+                              multiple of the access size, up to 16 bytes
+                              (alignment); and, when the pointer is based on a
+                              kernel argument or a module global, the whole
+                              access lies in the allocation that pointer was
+                              in at launch (bounds)
+threadgroup                   the access lies in its threadgroup array, or for
+                              dynamic shared memory in the threadgroup memory
+                              of the launch
+stack (``alloca``)            a variable offset stays within the object
+============================  ================================================
+
+A pointer whose base cannot be traced to an argument or a global (one loaded
+from memory, for example) gets the null and alignment checks only. Bases are
+traced through address arithmetic, including the integer form front ends
+like ZLUDA use (``inttoptr`` of a 64-bit parameter plus an offset).
+
+Accesses in one basic block at constant offsets from the same base are
+checked together, once, before the first of them, and an access whose bytes
+an earlier check of its block covers is not checked again. A failure of such
+a merged check is reported with the address and size of the whole range, and
+before the earlier accesses of the range have run.
+
+On the agx-bench kernels the mode costs about 1.5 times the cycles (from 1.1
+times for compute-bound kernels to 5 times for very short ones) and 5 times
+the code, mostly a fixed part per kernel.
+
+A thread whose check fails writes the error record if no other thread has
+(see below) and returns from the kernel; the rest of the launch continues.
+The threadgroup barrier does not wait for threads that have returned
+(measured on G14C). Every checked kernel first reads the error record and
+returns at once if an error is already recorded, so that later launches do
+not run on bad data.
+
+**Runtime interface (version 1).** The backend adds hidden arguments to each
+checked kernel, after the source arguments, passed in uniform registers like
+the others: the 64-bit device address of the error record, the threadgroup
+memory bytes of the launch (static and dynamic, 32-bit), and for each *bounds
+slot* of the kernel two 64-bit addresses, the first and one past the last
+byte of the allocation that the slot's pointer was in at launch. A pointer
+that is not in any allocation gets its own value twice, so that any access
+through it fails. At most 16 slots are used; a kernel with more pointer bases
+checks the others for null and alignment only.
+
+The kernel's ``.agx.kernels`` record gets the extension ``2, version, N,
+record half, threadgroup bytes half``, then for each of the N slots ``argument,
+offset, first half, last half``: the source argument the slot's pointer comes
+from, the byte offset of the 64-bit pointer in that argument's bytes (or
+``0xffffffff`` when the argument itself is the pointer), and the uniform halves
+of its two bounds. The hidden arguments are not in the record's argument
+table.
+
+The *error record* is 64 bytes of device memory, 8-byte aligned, zeroed by
+the runtime:
+
+==========  =====  ===========================================================
+Offset      Size   Field
+==========  =====  ===========================================================
+0           4      claimed: 0 while there is no error; the first failing
+                   thread sets it to 1 with a compare-and-swap
+4           4      kind (bits 0-7): 1 out of bounds, 2 null, 3 misaligned,
+                   4 threadgroup out of bounds, 5 stack out of bounds; bit 8
+                   set for a store, bit 9 for an atomic
+8           8      the address (for threadgroup and stack accesses, the offset)
+16          4      access size in bytes
+20          4      check site (0 if unknown)
+24          12     the thread's position in its threadgroup (x, y, z)
+36          12     the threadgroup's position in the grid (x, y, z)
+48          16     zero
+==========  =====  ===========================================================
+
+The fields are written after ``claimed``, so the runtime reads the record
+after the launch has finished. It keeps the error until the context is reset
+(and must then zero ``claimed``).
+
+*Check sites* are described by the constant global ``__agx_checked_sites``
+(in the module's global data), a text with one line per site:
+``<site>\t<kind>\t<frame>[\t<frame>...]\n``, where each frame is ``<function>
+<file>:<line>:<column>``, the innermost (inlined) one first, from the debug
+locations. Without debug information the frame is the kernel's name.
+
 Occupancy attributes
 --------------------
 

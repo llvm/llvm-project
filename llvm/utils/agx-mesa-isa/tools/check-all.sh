@@ -11,6 +11,8 @@
 #   simulator  the AGX Performance Simulator's Mesa ISA tests
 #   zluda      ZLUDA's PTX tests compiled in strict mode
 #   sail       the Sail AGX model against Mesa's forms and corpus
+#   checked    agx-checked kernels on the simulator: each bug caught, correct
+#              kernels unchanged (llvm/utils/agx-checked/checked_tests.py)
 #
 #   check-all.sh [-k CHECK,...]
 #
@@ -135,6 +137,14 @@ sail() {
     --corpus "$SIMULATOR/rust/src/isa/mesa_corpus.txt"
 }
 
+checked() {
+  have "${LLVM_BUILD:-}" || skip "LLVM_BUILD unset"
+  have "${SIMULATOR:-}" || skip "SIMULATOR unset"
+  run_="$SIMULATOR/rust/target/release/agx_run"
+  [ -x "$run_" ] || (cd "$SIMULATOR/rust" && cargo build -q --release --bin agx_run) || exit 1
+  python3 -I "$LLVM/utils/agx-checked/checked_tests.py" --llvm-build "$LLVM_BUILD" --agx-run "$run_"
+}
+
 run tables tables
 run fuzz fuzz
 run lit lit
@@ -144,4 +154,5 @@ run fatbin fatbin
 run simulator simulator
 run zluda zluda
 run sail sail
+run checked checked
 exit $FAILED

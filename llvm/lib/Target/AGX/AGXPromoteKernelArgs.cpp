@@ -212,12 +212,17 @@ static bool promote(Function &F) {
 
   std::string Desc;
   raw_string_ostream OS(Desc);
+  bool FirstItem = true;
   for (Argument &A : F.args()) {
     unsigned I = A.getArgNo();
     const Plan &P = Plans[I];
-    if (I)
-      OS << ',';
-    OS << (P.ByRef && !P.Promote ? 'p' : 'v') << P.Bytes << ':' << FirstNew[I];
+    // The hidden arguments of checked mode are not source arguments: the
+    // record describes them separately (AGXCheckedAccesses).
+    if (!Attrs.getParamAttr(I, "agx-checked").isValid()) {
+      OS << (FirstItem ? "" : ",") << (P.ByRef && !P.Promote ? 'p' : 'v')
+         << P.Bytes << ':' << FirstNew[I];
+      FirstItem = false;
+    }
     if (!P.Promote) {
       Argument *NA = NF->getArg(FirstNew[I]);
       NA->takeName(&A);

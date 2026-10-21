@@ -28,6 +28,7 @@ add_llvm_target(AGXCodeGen
   AGXInsertWaits.cpp
   AGXInstrInfo.cpp
   AGXLowerControlFlow.cpp
+  AGXCheckedAccesses.cpp
   AGXLowerGenericAddresses.cpp
   AGXMachineFunctionInfo.cpp
   AGXMCInstLower.cpp

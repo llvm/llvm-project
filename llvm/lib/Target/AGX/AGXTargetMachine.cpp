@@ -40,6 +40,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
   initializeAGXPromoteKernelArgsPass(PR);
+  initializeAGXCheckedAccessesPass(PR);
   initializeAGXCodeGenPreparePass(PR);
   initializeAGXStrictFPPass(PR);
   initializeAGXLowerFPEnvPass(PR);
@@ -91,6 +92,10 @@ AGXTargetMachine::getSubtargetImpl(const Function &F) const {
           F.getParent()->getModuleFlag("agx-strict")))
     if (!Flag->isZero())
       FS = FS.empty() ? "+agx-strict" : FS + ",+agx-strict";
+  if (const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("agx-checked")))
+    if (!Flag->isZero())
+      FS = FS.empty() ? "+agx-checked" : FS + ",+agx-checked";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
@@ -167,6 +172,9 @@ void AGXPassConfig::addIRPasses() {
     addPass(createInferAddressSpacesPass());
     addPass(createSROAPass());
   }
+  // Checked mode: check every access, adding the hidden arguments the
+  // runtime fills (before generic pointers and kernel arguments change form).
+  addPass(createAGXCheckedAccessesPass(&getAGXTargetMachine()));
   // Generic pointers that may name threadgroup memory become tagged integers.
   addPass(createAGXLowerGenericAddressesPass());
   // By-reference kernel arguments become uniform register values.

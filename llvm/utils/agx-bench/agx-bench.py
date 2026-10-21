@@ -14,6 +14,9 @@ baseline.json; a metric that gets worse by more than --tolerance is a regression
   agx-bench.py --llc build/bin/llc --cost path/to/agx_cost [--objcopy build/bin/llvm-objcopy]
                [--zoc ZLUDA/target/debug/zoc --ptx a.ptx b.ptx] [--agx-strict] [--update]
 
+--agx-checked compiles with the agx-checked feature and costs the kernels with every check passing (the hidden
+bounds cover all memory), which shows what checked mode costs.
+
 --agx-strict compiles with the agx-strict feature (only the instruction forms Mesa's AGX compiler emits; zoc --agx-strict)
 and costs with agx_cost --agx-strict, which rejects any other instruction; compared with the default baseline it shows
 what the mode costs.
@@ -94,6 +97,30 @@ def cost(costbin, code, tmp, args=()):
     return None, False
 
 
+def checked_uniforms(obj, name, objcopy, given=()):
+    """agx_cost uniforms for the hidden arguments of a checked kernel: no error recorded, 64 KiB of threadgroup
+    memory, and bounds covering all of memory, so that every check passes."""
+    sys.path.insert(0, os.path.join(HERE, "..", "agx-checked"))
+    import run_checked
+    k = run_checked.kernels(obj, objcopy).get(name)
+    if not k or not k.checked:
+        return []
+    rec, tgb, slots = k.checked
+    # the record in agx_cost's zero-filled table memory (TABLE_VA), so it reads as no error
+    table_va = 0x1100100000
+    u = {tgb // 2: 65536, rec // 2: table_va & 0xFFFFFFFF, rec // 2 + 1: table_va >> 32}
+    set_ = {int(x.split("=")[0]) for x in given if "=" in x and x.split("=")[0].isdigit()}
+    for n, (arg, off, lo, hi) in enumerate(slots):
+        u[lo // 2], u[lo // 2 + 1] = 0, 0
+        u[hi // 2], u[hi // 2 + 1] = 0xFFFFFFFF, 0xFFFFFFFF
+        # the pointer itself: not null (which the unchecked kernel reads as zeros), in the zero-filled table
+        first = k.args[arg][2] // 2 + (0 if off == 0xFFFFFFFF else off // 4)
+        if first not in set_:
+            va = table_va + 0x1000 * (n + 1)
+            u[first], u[first + 1] = va & 0xFFFFFFFF, va >> 32
+    return [x for k_, v in sorted(u.items()) if k_ not in set_ for x in ("--uniform", "%d=%d" % (k_, v))]
+
+
 def compile_ll(llc, src, chip, tmp):
     asm = run([llc, "-mtriple=agx", "-mcpu=" + chip, *MATTR, src, "-o", "-"]).stdout
     obj = os.path.join(tmp, "k.o")
@@ -136,11 +163,15 @@ def main():
     ap.add_argument("--update", action="store_true")
     ap.add_argument("--agx-strict", action="store_true",
                     help="only Mesa's instruction forms (llc -mattr=+agx-strict, zoc and agx_cost --agx-strict)")
+    ap.add_argument("--agx-checked", action="store_true",
+                    help="checked mode (llc -mattr=+agx-checked), costed with every check passing")
     ap.add_argument("--tolerance", type=float, default=0.02, help="relative slack before a change counts")
     a = ap.parse_args()
     objcopy = a.objcopy or os.path.join(os.path.dirname(a.llc), "llvm-objcopy")
     if a.agx_strict:
         MATTR.append("-mattr=+agx-strict")
+    if a.agx_checked:
+        MATTR.append("-mattr=+agx-checked")
 
     sources = [("ll", os.path.join(HERE, "kernels", f)) for f in sorted(os.listdir(os.path.join(HERE, "kernels")))
                if f.endswith(".ll")]
@@ -164,12 +195,17 @@ def main():
                     m = kernel_metrics(asm, name)
                     code = single_kernel_code(asm, obj, name, objcopy, tmp)
                     m["bytes"] = len(code)
-                    m["cycles"], m["launch_inputs"] = cost(a.cost, code, tmp, launch_args(src))
+                    args = launch_args(src)
+                    if a.agx_checked:
+                        hidden = checked_uniforms(obj, name, objcopy, args or [])
+                        args = (args or []) + hidden
+                    m["cycles"], m["launch_inputs"] = cost(a.cost, code, tmp, args)
                     key = "%s:%s:%s" % (os.path.basename(src), name, chip)
                     results[key] = m
                     print(json.dumps(dict(key=key, **m)))
 
-    if (a.update or not os.path.exists(a.baseline)) and not (a.agx_strict and a.baseline.endswith("/baseline.json")):
+    if (a.update or not os.path.exists(a.baseline)) and not ((a.agx_strict or a.agx_checked) and
+                                                             a.baseline.endswith("/baseline.json")):
         json.dump(results, open(a.baseline, "w"), indent=1, sort_keys=True)
         print("baseline written: %d kernels" % len(results), file=sys.stderr)
         return 0

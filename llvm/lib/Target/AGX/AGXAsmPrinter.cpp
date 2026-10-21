@@ -178,6 +178,8 @@ void AGXAsmPrinter::recordKernel() {
     }
   } else {
     for (const Argument &A : F.args()) {
+      if (F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked").isValid())
+        continue;
       Type *T = A.getType()->isPointerTy() ? A.getParamByRefType() : nullptr;
       Args.append({T ? 1u : 0u,
                    uint32_t(T ? DL.getTypeAllocSize(T)
@@ -187,6 +189,32 @@ void AGXAsmPrinter::recordKernel() {
   }
   R.push_back(Args.size() / 3);
   R.append(Args);
+  Attribute Slots = F.getFnAttribute("agx-checked-slots");
+  if (Slots.isValid()) {
+    // Checked mode: 2, version 1, N, record half, threadgroup bytes half,
+    // then per slot: argument, offset, low bound half, high bound half.
+    DenseMap<StringRef, unsigned> Hidden;
+    for (const Argument &A : F.args()) {
+      Attribute Role =
+          F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked");
+      if (Role.isValid())
+        Hidden[Role.getValueAsString()] = Half(A.getArgNo());
+    }
+    SmallVector<StringRef, 8> Items;
+    if (!Slots.getValueAsString().empty())
+      Slots.getValueAsString().split(Items, ',');
+    R.append({2, 1, uint32_t(Items.size()), Hidden.lookup("record"),
+              Hidden.lookup("threadgroup-bytes")});
+    for (auto [S, Item] : enumerate(Items)) {
+      auto [ArgStr, OffStr] = Item.split(':');
+      unsigned Arg = 0;
+      int64_t Off = -1;
+      ArgStr.getAsInteger(10, Arg);
+      OffStr.getAsInteger(10, Off);
+      R.append({Arg, uint32_t(Off), Hidden.lookup(("lo" + Twine(S)).str()),
+                Hidden.lookup(("hi" + Twine(S)).str())});
+    }
+  }
   Attribute Cluster = F.getFnAttribute("agx-cluster-dims");
   if (Cluster.isValid()) {
     SmallVector<StringRef, 3> Dims;

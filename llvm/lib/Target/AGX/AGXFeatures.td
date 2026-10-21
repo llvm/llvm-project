@@ -160,6 +160,14 @@ def FeatureMesaISA : SubtargetFeature<"agx-strict", "HasMesaISA", "true",
   "Emit only the instruction forms Mesa's AGX compiler emits"
 >;
 
+// Every load, store and atomic is checked before it runs, and the first bad
+// one is reported to the runtime (AGXUsage.rst, "Checked mode"). In IR: the
+// function attribute "target-features"="+agx-checked", or the module flag
+// !"agx-checked" = 1.
+def FeatureChecked : SubtargetFeature<"agx-checked", "HasChecked", "true",
+  "Check memory accesses and report the first bad one to the runtime"
+>;
+
 def FeatureSourceLifetime : SubtargetFeature<"source-lifetime",
   "HasSourceLifetime", "true",
   "ALU sources carry release flags that free the register after the read; "

@@ -25,6 +25,7 @@ class PassRegistry;
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
 ModulePass *createAGXPromoteKernelArgsPass();
+ModulePass *createAGXCheckedAccessesPass(const AGXTargetMachine *TM);
 FunctionPass *createAGXCodeGenPreparePass();
 FunctionPass *createAGXStrictFPPass();
 FunctionPass *createAGXLowerFPEnvPass();
@@ -44,6 +45,7 @@ FunctionPass *createAGXInsertWaitsPass();
 
 void initializeAGXAlwaysInlinePass(PassRegistry &);
 void initializeAGXPromoteKernelArgsPass(PassRegistry &);
+void initializeAGXCheckedAccessesPass(PassRegistry &);
 void initializeAGXCodeGenPreparePass(PassRegistry &);
 void initializeAGXStrictFPPass(PassRegistry &);
 void initializeAGXLowerFPEnvPass(PassRegistry &);
