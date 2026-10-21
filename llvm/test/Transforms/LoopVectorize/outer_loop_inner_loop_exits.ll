@@ -91,6 +91,40 @@ exit:
   ret void
 }
 
+; The inner loop's exit condition depends on the outer loop's induction
+; variable, so its backedge branch is divergent across outer-loop iterations
+; and the outer loop must not be vectorized.
+define void @inner_loop_divergence_exit(ptr %a, i64 %N) {
+; CHECK-LABEL: LV: Checking a loop in 'inner_loop_divergence_exit'
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
+; CHECK: LV: Not vectorizing: Unsupported outer loop.
+; CHECK: LV: Not vectorizing: Cannot prove legality.
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %inc6, %outer.latch ]
+  %invariant.gep = getelementptr [4 x i8], ptr %a, i64 %outer.iv
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ %outer.iv, %outer.header ], [ %inc, %inner.body ]
+  %mul = mul i64 %inner.iv, %N
+  %gep = getelementptr [4 x i8], ptr %invariant.gep, i64 %mul
+  store i32 0, ptr %gep
+  %inc = add nuw i64 %inner.iv, 1
+  %exitcond.not = icmp eq i64 %inc, %N
+  br i1 %exitcond.not, label %outer.latch, label %inner.body
+
+outer.latch:
+  %inc6 = add nuw i64 %outer.iv, 1
+  %exitcond18.not = icmp eq i64 %inc6, %N
+  br i1 %exitcond18.not, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !2 = !{!"llvm.loop.vectorize.enable"}

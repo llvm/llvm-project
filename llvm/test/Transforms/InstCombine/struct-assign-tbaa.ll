@@ -116,18 +116,18 @@ entry:
   ret void
 }
 
-; A !tbaa.struct field tag that is not a valid access tag (here it is itself
-; !tbaa.struct-shaped) must not be promoted to !tbaa.
-define void @test9_invalid_field_tag(ptr nocapture %a, ptr nocapture %b) {
-; CHECK-LABEL: define void @test9_invalid_field_tag(
+; A !tbaa.struct field tag with a struct base type (base != access type) is
+; not a scalar access tag and is not promoted to !tbaa.
+define void @test9_struct_path_field_tag(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: define void @test9_struct_path_field_tag(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 4, i1 false), !tbaa.struct !13
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 8, i1 false), !tbaa.struct !13
   ret void
 }
 
@@ -144,8 +144,9 @@ entry:
 !10 = !{!"int", !0}
 !11 = !{i64 0, i64 4, !9, i64 4, i64 4, !2}
 !12 = !{i128 0, i128 4, !2, i128 18446744073709551616, i128 4, !2}
-!13 = !{i64 0, i64 2, !14, i64 2, i64 2, !14}
-!14 = !{i64 0, i64 4, null}
+!13 = !{i64 0, i64 4, !14, i64 4, i64 4, !14}
+!14 = !{!15, !10, i64 0}
+!15 = !{!"S", !10, i64 0, !10, i64 4}
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

@@ -24,23 +24,23 @@ func.func @_QPupdate() {
   %c0 = arith.constant 0 : index
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.address_of(@_QMles3d_dataEdu) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMles3d_dataEdu"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>)
+  %1:2 = hlfir.declare %0 uniq_name("_QMles3d_dataEdu") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?xf64>>>>)
   %2 = fir.alloca i32 {bindc_name = "i2", uniq_name = "_QFupdateEi2"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFupdateEi2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFupdateEi2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.address_of(@_QMles3d_dataEimax) : !fir.ref<i32>
-  %5:2 = hlfir.declare %4 {uniq_name = "_QMles3d_dataEimax"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QMles3d_dataEimax") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %6 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFupdateEj"}
-  %7:2 = hlfir.declare %6 {uniq_name = "_QFupdateEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFupdateEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %8 = fir.address_of(@_QMles3d_dataEjmax) : !fir.ref<i32>
-  %9:2 = hlfir.declare %8 {uniq_name = "_QMles3d_dataEjmax"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %9:2 = hlfir.declare %8 uniq_name("_QMles3d_dataEjmax") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %10 = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFupdateEk"}
-  %11:2 = hlfir.declare %10 {uniq_name = "_QFupdateEk"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %11:2 = hlfir.declare %10 uniq_name("_QFupdateEk") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %12 = fir.address_of(@_QMles3d_dataEkmax) : !fir.ref<i32>
-  %13:2 = hlfir.declare %12 {uniq_name = "_QMles3d_dataEkmax"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %13:2 = hlfir.declare %12 uniq_name("_QMles3d_dataEkmax") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %14 = fir.alloca i32 {bindc_name = "m", uniq_name = "_QFupdateEm"}
-  %15:2 = hlfir.declare %14 {uniq_name = "_QFupdateEm"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %15:2 = hlfir.declare %14 uniq_name("_QFupdateEm") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %16 = fir.address_of(@_QMles3d_dataEq) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>
-  %17:2 = hlfir.declare %16 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMles3d_dataEq"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>)
+  %17:2 = hlfir.declare %16 uniq_name("_QMles3d_dataEq") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>)
   %18 = fir.load %5#0 : !fir.ref<i32>
   %19 = arith.subi %18, %c1_i32 : i32
   hlfir.assign %19 to %3#0 : i32, !fir.ref<i32>

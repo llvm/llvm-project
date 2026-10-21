@@ -59,15 +59,16 @@ defm VQWBDOTAS : VBdotVV<"vqwbdotas.vv", 0b101111>;  // Signed (funct6 = 0x2f)
 } // Predicates = [HasStdExtZvqwbdota8iOrZvqwbdota16i]
 
 // BF16 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfwbdota16bf] in
+let Predicates = [HasStdExtZvfwbdota16bf], mayRaiseFPException = true in
 defm VFWBDOTA : VBdotFVV<"vfwbdota.vv", 0b101100>; // funct6 = 0x2c
 
 // OCP FP8 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfqwbdota8f] in {
+let Predicates = [HasStdExtZvfqwbdota8f], mayRaiseFPException = true in {
 defm VFQWBDOTA : VBdotFVV<"vfqwbdota.vv", 0b101110>;         // E4M3 (funct6 = 0x2e)
 defm VFQWBDOTA_ALT : VBdotFVV<"vfqwbdota.alt.vv", 0b101111>; // E5M2 (funct6 = 0x2f)
 } // Predicates = [HasStdExtZvfqwbdota8f]
 
 // FP32 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfbdota32f] in
+let Predicates = [HasStdExtZvfbdota32f],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in
 defm VFBDOTA : VBdotFVV<"vfbdota.vv", 0b101011>;  // funct6 = 0x2b

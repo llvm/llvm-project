@@ -20,6 +20,7 @@ TEST_P(olDestroyQueueTest, Success) {
 
 TEST_P(olDestroyQueueTest, SuccessDelayedResolution) {
   ManuallyTriggeredTask Manual;
+  SKIP_IF_FORCE_SYNC_OPS();
   ASSERT_SUCCESS(Manual.enqueue(Queue));
   ASSERT_SUCCESS(olDestroyQueue(Queue));
   Queue = nullptr;

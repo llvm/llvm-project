@@ -188,7 +188,7 @@ define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    psrld $31, %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    movl %ecx, %ecx
+; SSE2-NEXT:    movzwl %cx, %ecx
 ; SSE2-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; SSE2-NEXT:    retq
 ;
@@ -435,7 +435,7 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm1
@@ -462,7 +462,7 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $64, %rsp
+; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovw2m %xmm1, %k1
 ; AVX512-NEXT:    vmovdqa %ymm0, (%rsp)
@@ -552,7 +552,7 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm3
@@ -583,7 +583,7 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovb2m %xmm1, %k1
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsp)
@@ -654,6 +654,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE2-NEXT:    psrlw $8, %xmm5
 ; SSE2-NEXT:    pmaxub %xmm1, %xmm5
 ; SSE2-NEXT:    movd %xmm5, %eax
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    pmovmskb %xmm3, %ecx
 ; SSE2-NEXT:    pandn %xmm0, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
@@ -667,7 +668,8 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE2-NEXT:    psrlw $8, %xmm1
 ; SSE2-NEXT:    pmaxub %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %edx
-; SSE2-NEXT:    addl $16, %edx
+; SSE2-NEXT:    movzbl %dl, %edx
+; SSE2-NEXT:    addq $16, %rdx
 ; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    cmoveq %rax, %rdx
 ; SSE2-NEXT:    andl $31, %edx
@@ -682,9 +684,9 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-LABEL: extract_last_active_split:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pxor %xmm4, %xmm4
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
+; SSE42-NEXT:    movdqa %xmm3, %xmm5
 ; SSE42-NEXT:    pcmpeqb %xmm4, %xmm5
-; SSE42-NEXT:    pcmpeqb %xmm3, %xmm4
+; SSE42-NEXT:    pcmpeqb %xmm2, %xmm4
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm6
 ; SSE42-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE42-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -698,7 +700,6 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-NEXT:    movd %xmm1, %eax
 ; SSE42-NEXT:    notb %al
 ; SSE42-NEXT:    movzbl %al, %eax
-; SSE42-NEXT:    addl $16, %eax
 ; SSE42-NEXT:    pandn %xmm0, %xmm5
 ; SSE42-NEXT:    pxor %xmm6, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -708,8 +709,9 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-NEXT:    movd %xmm0, %ecx
 ; SSE42-NEXT:    notb %cl
 ; SSE42-NEXT:    movzbl %cl, %ecx
+; SSE42-NEXT:    addq $16, %rcx
 ; SSE42-NEXT:    ptest %xmm3, %xmm3
-; SSE42-NEXT:    cmovneq %rax, %rcx
+; SSE42-NEXT:    cmoveq %rax, %rcx
 ; SSE42-NEXT:    andl $31, %ecx
 ; SSE42-NEXT:    por %xmm3, %xmm2
 ; SSE42-NEXT:    ptest %xmm2, %xmm2
@@ -723,7 +725,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm2
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -753,7 +755,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $64, %rsp
+; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vptestmb %ymm1, %ymm1, %k1
 ; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512-NEXT:    vmovdqu8 {{.*#+}} ymm0 {%k1} {z} = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]

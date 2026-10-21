@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
@@ -1777,7 +1778,6 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
     const auto *version =
         reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
     if ((version->major_ < 2)) {
-      llvm::outs() << "downgrading op properties...\n";
       return;
     }
   }
@@ -1818,6 +1818,10 @@ void TestOpWithVersionedProperties::writeToMlirBytecode(
     mlir::DialectBytecodeWriter &writer,
     const test::VersionedProperties &prop) {
   writer.writeVarInt(prop.value1);
+  auto version = writer.getDialectVersion<test::TestDialect>();
+  if (succeeded(version) &&
+      static_cast<const TestDialectVersion *>(*version)->major_ < 2)
+    return;
   writer.writeVarInt(prop.value2);
 }
 
@@ -1836,7 +1840,7 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+  return TestOpConstant::create(builder, getLoc(), slot.valueType,
                                 builder.getI32IntegerAttr(42));
 }
 
@@ -1991,10 +1995,10 @@ Value TestTransparentCastAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2002,10 +2006,10 @@ Value TestTransparentCastAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -2047,10 +2051,10 @@ Value TestTransparentDualAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2058,10 +2062,10 @@ Value TestTransparentDualAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -2098,7 +2102,7 @@ Value TestPartialAlias::projectSlotValueToAliasValue(
     Value slotValue, OpBuilder &builder) {
   // Sub-value extraction: 1-input cast.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2109,7 +2113,7 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
   // Sub-value insertion into the current reaching definition: emit a 2-input
   // cast taking both the new alias value and the existing parent value.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType,
+                                            parentSlot.valueType,
                                             ValueRange{aliasValue, reachingDef})
       .getResult(0);
 }

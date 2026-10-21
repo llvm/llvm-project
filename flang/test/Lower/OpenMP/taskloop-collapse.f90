@@ -11,11 +11,11 @@
 
 ! CHECK-LABEL: func.func @_QPtest()
 ! CHECK: %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtestEi"}>
-! CHECK: %[[DECLARE_I:.*]]:2 = hlfir.declare %1 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECLARE_I:.*]]:2 = hlfir.declare %1 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[ALLOCA_J:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFtestEj"}>
-! CHECK: %[[DECLARE_J:.*]]:2 = hlfir.declare %3 {uniq_name = "_QFtestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECLARE_J:.*]]:2 = hlfir.declare %3 uniq_name("_QFtestEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[ALLOCA_SUM:.*]] = fir.alloca i32 <{bindc_name = "sum", uniq_name = "_QFtestEsum"}>
-! CHECK: %[[DECLARE_SUM:.*]]:2 = hlfir.declare %5 {uniq_name = "_QFtestEsum"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECLARE_SUM:.*]]:2 = hlfir.declare %5 uniq_name("_QFtestEsum") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 subroutine test()
     integer :: i, j, sum

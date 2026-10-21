@@ -205,7 +205,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObjectSP m_pair;
@@ -966,8 +966,9 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     NSDictionary1SyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_pair(nullptr) {}
 
-llvm::Expected<size_t> lldb_private::formatters::
-    NSDictionary1SyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t>
+lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
+    GetIndexOfChildWithName(llvm::StringRef name) {
   static constexpr llvm::StringLiteral g_zero("[0]");
   if (name == g_zero)
     return 0;

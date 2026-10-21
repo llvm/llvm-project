@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s --check-prefixes=CHECK,PARALLEL-CHECK
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only check-parallel-regions=false" -split-input-file | FileCheck %s --check-prefixes=CHECK,NO-PARALLEL-CHECK
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only may-have-parallel-regions=false" -split-input-file | FileCheck %s --check-prefixes=CHECK,NO-PARALLEL-CHECK
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs-from-loops bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null

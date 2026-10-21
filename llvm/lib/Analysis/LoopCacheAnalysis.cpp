@@ -329,7 +329,11 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
       // For the multiplication result to fit, request a type twice as wide.
-      WiderType = WiderType->getExtendedType();
+      // Bail out if doubling would exceed MAX_INT_BITS.
+      auto *WiderIntTy = cast<IntegerType>(WiderType);
+      if (WiderIntTy->getBitWidth() > IntegerType::MAX_INT_BITS / 2)
+        return CacheCostTy::getInvalid();
+      WiderType = WiderIntTy->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -415,9 +419,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(
-            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
-            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagNone);
+        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
+                                    SE.getNegativeSCEV(StepRec),
+                                    AccessFnAR->getLoop(), SCEVFlags::FlagNone);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);

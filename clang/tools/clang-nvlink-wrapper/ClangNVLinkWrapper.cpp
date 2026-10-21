@@ -39,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -369,9 +370,13 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   return Args.MakeArgString(*TempFileOrErr);
 }
 
-Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
+Expected<std::unique_ptr<lto::LTO>>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          const ArgList &Args) {
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -522,7 +527,8 @@ Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
   }
 }
 
-Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
+Expected<SmallVector<StringRef>>
+getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
@@ -626,7 +632,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
   if (!BitcodeFiles.empty()) {
-    auto LTOBackendOrErr = createLTO(Args);
+    auto LTOBackendOrErr = createLTO(LibraryOptions, Args);
     if (!LTOBackendOrErr)
       return LTOBackendOrErr.takeError();
     lto::LTO &LTOBackend = **LTOBackendOrErr;
@@ -817,10 +823,11 @@ int main(int argc, char **argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   // Get the input files to pass to 'nvlink'.
-  auto FilesOrErr = getInput(Args);
+  auto FilesOrErr = getInput(LibraryOptions, Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
 

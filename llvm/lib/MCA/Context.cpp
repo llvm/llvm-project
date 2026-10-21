@@ -41,7 +41,8 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
   auto LSU = std::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
                                       Opts.StoreQueueSize, Opts.AssumeNoAlias);
-  auto HWS = std::make_unique<Scheduler>(SM, *LSU);
+  auto HWS =
+      std::make_unique<Scheduler>(SM, *LSU, Opts.ReservationStationScaleFactor);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
@@ -79,7 +80,8 @@ Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, CB, *LSU);
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(
+      STI, *PRF, CB, *LSU, Opts.ReservationStationScaleFactor);
   auto StagePipeline = std::make_unique<Pipeline>();
 
   // Pass the ownership of all the hardware units to this Context.

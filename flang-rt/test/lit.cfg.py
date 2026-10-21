@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import shlex
+import platform
 import lit.util
 
 from lit.llvm import llvm_config
@@ -111,3 +112,10 @@ if config.flang_rt_fortran_modules:
 # Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "64"
+
+# Detect Windows Subsystem for Linux (WSL)
+uname_r = platform.uname().release
+if uname_r.endswith("-Microsoft"):
+    config.available_features.add("wsl1")
+elif uname_r.endswith("microsoft-standard-WSL2"):
+    config.available_features.add("wsl2")

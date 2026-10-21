@@ -18,7 +18,7 @@ class AbiTagStructorsTestCase(TestBase):
         bugnumber="Required Clang flag not supported",
     )
     @requireClang
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
     @requireExpressionEvaluation
     def test_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})

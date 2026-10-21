@@ -12,37 +12,37 @@ Vector<char> &getVectorRef();
 namespace loan_shapes {
 void reference_loan(Vector<char> &vec) {
   char &c = vec[0];
-  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void pointer_loan(Vector<char> &vec) {
   char *p = vec.data();
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void view_loan(Vector<char> &vec) {
   StringView sv = vec.data();
-  // expected-warning@-1{{Local variable 'sv' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'sv' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void gsl_pointer_loan(Vector<char> &vec) {
   CharSpan s = makeSpan(vec);
-  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void simple_container(SimpleContainer<char> &container) {
   char &c = container[0];
-  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'SimpleContainer<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'SimpleContainer<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void two_hops(Vector<char> &vec) {
   StringView sv = makeView(vec.data());
-  // expected-warning@-1{{Local variable 'sv' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'sv' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 } // namespace loan_shapes
@@ -100,19 +100,19 @@ void no_initializer() {
 namespace lifetimebound_edge {
 void forwarded_reference(Vector<char> &someVec) {
   Vector<char> &a = forwardRef(someVec);
-  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void forwarded_pointer(Vector<char> &someVec) {
   Vector<char> *a = forwardPtr(someVec);
-  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void self_similar_container(Node &node) {
   Node &child = node.firstChild();
-  // expected-warning@-1{{Local variable 'child' is a loan on CanBorrow type 'Node' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'child' is a loan on CanBorrow type 'Node' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   node.appendChild();
   (void)child;
 }
@@ -173,27 +173,27 @@ void borrow_in_enclosing_scope(Vector<char> &vec) {
   Borrow<Vector<char>> b(vec);
   {
     char &c = vec[0];
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
   }
 }
 
 void const_reference_parameter(const Vector<char> &vec) {
   const char &c = vec[0];
-  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void const_pointer_parameter(const Vector<char> *vec) {
   const char *p = vec->data();
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void local_container() {
   Vector<char> vec;
   char &c = vec[0];
-  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   vec.append('x');
 }
@@ -202,7 +202,7 @@ void local_container() {
 namespace nested_containers {
 void loan_on_outer(Vector<Vector<char>> &outer) {
   Vector<char> &inner = outer[0];
-  // expected-warning@-1{{Local variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -232,7 +232,7 @@ void alias_on_outer(Vector<Vector<char>> &outer) {
 namespace assignment_sink {
 void assign_loan(Vector<char> &vec) {
   char *p = nullptr;
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   p = vec.data();
   someFunction();
 }
@@ -256,7 +256,7 @@ namespace conditional_origin {
 void one_unguarded_arm(Vector<char> &vec, bool flag) {
   Borrow<Vector<char>> b(vec);
   char *p = flag ? b.get().data() : vec.data();
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -272,7 +272,7 @@ void both_arms_guarded(Vector<char> &vec, Vector<char> &other, bool flag) {
 namespace forked_trace {
 void call_one_unguarded(Vector<char> &vec, Borrow<Vector<char>> &b) {
   const char *p = pick(b.get().data(), vec.data());
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -284,7 +284,7 @@ void call_both_guarded(Borrow<Vector<char>> &b, Borrow<Vector<char>> &c) {
 
 void construct_one_unguarded(Vector<char> &vec, Borrow<Vector<char>> &b) {
   TwoStringViews v(b.get().data(), vec.data());
-  // expected-warning@-1{{Local variable 'v' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'v' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -298,13 +298,13 @@ void construct_both_guarded(Borrow<Vector<char>> &b, Borrow<Vector<char>> &c) {
 namespace escape_paths {
 void out_parameter_by_reference(Vector<char> &vec, char *&out) {
   out = vec.data();
-  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void outer_scope_local(Vector<char> &vec) {
   char *p = nullptr;
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   {
     p = vec.data();
     someFunction();
@@ -326,14 +326,14 @@ void borrow_outlives_assignment(Vector<char> &vec) {
 
 void store_through_out_pointer(Vector<char> &vec, char **out) {
   *out = vec.data();
-  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void store_through_local_pointer(Vector<char> &vec) {
   char *p = nullptr;
   char **pp = &p;
-  // expected-warning@-1{{Local variable 'pp' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'pp' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   *pp = vec.data();
   someFunction();
   (void)p;
@@ -341,13 +341,13 @@ void store_through_local_pointer(Vector<char> &vec) {
 
 void store_into_pointer_array(Vector<char> &vec, char *arr[]) {
   arr[0] = vec.data();
-  // expected-warning@-1{{Parameter 'arr' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'arr' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
 void store_through_double_indirection(Vector<char> &vec, char ***out) {
   **out = vec.data();
-  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'out' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -391,7 +391,7 @@ void owning_temporary_from_borrow(Vector<char> &vec) {
 
 void owning_temporary_from_unguarded(Vector<char> &vec) {
   char *p = makeOwningBuffer(vec).data();
-  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   // expected-warning@-2{{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   someFunction();
   (void)p;
@@ -399,7 +399,7 @@ void owning_temporary_from_unguarded(Vector<char> &vec) {
 
 void extended_owning_from_unguarded(Vector<char> &vec) {
   const OwningBuffer &buf = makeOwningBuffer(vec);
-  // expected-warning@-1{{Local variable 'buf' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'buf' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)buf;
 }
@@ -414,14 +414,14 @@ void extended_owning_from_borrow(Vector<char> &vec) {
 namespace known_gaps {
 void unannotated_view_constructor(Vector<char> &vec) {
   CharSpan s(vec.data());
-  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)s;
 }
 
 void unannotated_function_parameter(Vector<char> &vec) {
   CharSpan s = makeSpanUnannotated(vec);
-  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)s;
 }
@@ -452,7 +452,7 @@ void borrow_escapes_via_out_pointer(Vector<char> &vec, char **out) {
 namespace range_for {
 void reference_loop(Vector<char> &vec) {
   for (char &c : vec) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -460,7 +460,7 @@ void reference_loop(Vector<char> &vec) {
 
 void auto_reference_loop(Vector<char> &vec) {
   for (auto &c : vec) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -468,7 +468,7 @@ void auto_reference_loop(Vector<char> &vec) {
 
 void const_reference_loop(const Vector<char> &vec) {
   for (const char &c : vec) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -476,7 +476,7 @@ void const_reference_loop(const Vector<char> &vec) {
 
 void nested_loop(Vector<Vector<char>> &outer) {
   for (Vector<char> &inner : outer) {
-    // expected-warning@-1{{Local variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'inner' is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)inner;
   }
@@ -485,7 +485,7 @@ void nested_loop(Vector<Vector<char>> &outer) {
 void local_container_loop() {
   Vector<char> vec;
   for (char &c : vec) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -523,7 +523,6 @@ void array_loop() {
 
 void temporary_range_loop() {
   for (char &c : makeVector()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -532,7 +531,7 @@ void temporary_range_loop() {
 void named_temporary_loop() {
   Vector<char> &&r = makeVector();
   for (char &c : r) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -540,7 +539,7 @@ void named_temporary_loop() {
 
 void returned_pointer_loop() {
   for (char &c : *getVectorPtr()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -548,7 +547,7 @@ void returned_pointer_loop() {
 
 void returned_reference_loop() {
   for (char &c : getVectorRef()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -556,7 +555,7 @@ void returned_reference_loop() {
 
 void manual_iterator_loop(Vector<char> &vec) {
   for (char *it = vec.begin(); it != vec.end(); ++it) {
-    // expected-warning@-1{{Local variable 'it' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'it' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)*it;
   }
@@ -564,7 +563,7 @@ void manual_iterator_loop(Vector<char> &vec) {
 
 void copy_into_local(Vector<char> &vec) {
   char *first = vec.data();
-  // expected-warning@-1{{Local variable 'first' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'first' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   char *second = first;
   someFunction();
   (void)second;
@@ -580,8 +579,8 @@ PointerPair getPair(Vector<char> &vec LIFETIME_BOUND);
 
 void from_lifetimebound_call(Vector<char> &vec) {
   auto [a, b] = getPair(vec);
-  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
-  // expected-warning@-2{{Local variable 'b' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-2{{Local variable 'b' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -597,7 +596,7 @@ void per_element_sources(Vector<char> &vec, Vector<char> &other) {
   Borrow<Vector<char>> b(other);
   PointerPair p{b.get().data(), vec.data()};
   auto [guarded, unguarded] = PointerPair{b.get().data(), vec.data()};
-  // expected-warning@-1{{Local variable 'unguarded' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'unguarded' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)p;
   (void)guarded;
@@ -609,7 +608,7 @@ void non_view_binding(Vector<char> &vec) {
     char *data;
   };
   auto [size, data] = SizeAndData{vec.size(), vec.data()};
-  // expected-warning@-1{{Local variable 'data' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'data' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)size;
 }
@@ -623,7 +622,7 @@ void use(char);
 
 void interior_destroyed_through_cursor() {
   for (Cursor<char> c : makeRegistry()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Registry<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Registry<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     char &name = c.value();
     c.remove();
     use(name);
@@ -632,7 +631,7 @@ void interior_destroyed_through_cursor() {
 
 void interior_destroyed_named_container() {
   for (Cursor<char> c : namedRegistry()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Registry<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Registry<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     char &name = c.value();
     c.remove();
     use(name);
@@ -647,13 +646,25 @@ void borrowed_temporary_is_silent() {
     use(name);
   }
 }
+
+struct Entry {
+  Vector<Entry> *parent;
+};
+Vector<Entry> copyEntries();
+
+void element_points_back_to_container() {
+  for (Entry &entry : copyEntries()) {
+    someFunction();
+    (void)entry;
+  }
+}
 } // namespace iterator_reach_back
 
 namespace dependent_initializers {
 
 template <typename T> void view_from_dependent_paren_init(T &source) {
   StringView view(source.data());
-  // expected-warning@-1{{Local variable 'view' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'view' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
 }
 
@@ -678,7 +689,7 @@ unsigned indexFor(const Key &);
 
 void unrelated_temporary_is_still_a_loan(Vector<char> &vec) {
   char &c = vec[indexFor(makeKey())];
-  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)c;
 }
@@ -693,9 +704,115 @@ void unrelated_temporary_through_borrow(Vector<char> &vec) {
 void borrow_temporary_dies_with_the_statement(Vector<char> &vec) {
   char &c = borrow(vec).get()[0];
   // expected-warning@-1{{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
-  // expected-warning@-2{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-2{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)c;
 }
 
 } // namespace short_lived_temporaries
+
+namespace prvalue_temporary {
+
+void loan_outliving_temporary() {
+  char &c = makeVector()[0];
+  // expected-warning@-1{{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
+  someFunction();
+  (void)c;
+}
+
+} // namespace prvalue_temporary
+
+namespace const_object {
+
+class Holder {
+public:
+  void use_const_member() const {
+    const char *p = m_vector.data();
+    someFunction();
+    (void)p;
+  }
+
+private:
+  const Vector<char> m_vector;
+};
+
+void const_local() {
+  const Vector<char> vec = makeVector();
+  const char *p = vec.data();
+  someFunction();
+  (void)p;
+}
+
+void const_local_range_loop() {
+  const Vector<char> vec = makeVector();
+  for (const char &c : vec) {
+    someFunction();
+    (void)c;
+  }
+}
+
+void const_value_parameter(const Vector<char> vec) {
+  const char *p = vec.data();
+  someFunction();
+  (void)p;
+}
+
+void const_local_moved_from_builder() {
+  Vector<char> builder;
+  builder.append('x');
+  const Vector<char> vec = static_cast<Vector<char> &&>(builder);
+  const char *p = vec.data();
+  someFunction();
+  (void)p;
+}
+
+void const_pointer_to_mutable_container(const Vector<char> *const vec) {
+  const char *p = vec->data();
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  someFunction();
+  (void)p;
+}
+
+std::optional<Vector<char>> makeOptionalVector();
+
+template <typename T> class MutableThroughConst {
+public:
+  T &operator*() const { return *m_ptr; }
+  T *operator->() const { return m_ptr; }
+
+private:
+  T *m_ptr { nullptr };
+};
+
+void const_wrapper_propagates_const() {
+  const std::optional<Vector<char>> opt = makeOptionalVector();
+  const char *p = opt->data();
+  someFunction();
+  (void)p;
+}
+
+void const_wrapper_propagates_const_deref() {
+  const std::optional<Vector<char>> opt = makeOptionalVector();
+  for (const char &c : *opt) {
+    someFunction();
+    (void)c;
+  }
+}
+
+void const_wrapper_does_not_propagate_const() {
+  const MutableThroughConst<Vector<char>> handle;
+  char *p = handle->data();
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  someFunction();
+  (void)p;
+}
+
+void non_const_wrapper() {
+  std::optional<Vector<char>> opt = makeOptionalVector();
+  const char *p = opt->data();
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  someFunction();
+  (void)p;
+}
+
+} // namespace const_object

@@ -82,7 +82,8 @@ public:
     // The target is the 3rd operand of cond inst and the 1st of uncond inst.
     int32_t Imm;
     if (isConditionalBranch(Inst)) {
-      if (Inst.getOpcode() == BPF::JCOND)
+      if (Inst.getOpcode() == BPF::JCOND ||
+          Inst.getOpcode() == BPF::UNWIND_GOTO)
         Imm = (short)Inst.getOperand(0).getImm();
       else
         Imm = (short)Inst.getOperand(2).getImm();

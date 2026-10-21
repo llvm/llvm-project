@@ -25,13 +25,13 @@ module {
     fir.use_stmt "testmod2" renames[[#fir.use_rename<"var_z", @_QMtestmod2Evar_y>]]
 
     %0 = fir.address_of(@_QMtestmodEvar_b) : !fir.ref<i32>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QMtestmodEvar_b"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_b)
+    %1 = fircg.ext_declare %0 uniq_name("_QMtestmodEvar_b") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_b)
 
     %2 = fir.address_of(@_QMtestmodEvar_c) : !fir.ref<i32>
-    %3 = fircg.ext_declare %2 {uniq_name = "_QMtestmodEvar_c"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_c)
+    %3 = fircg.ext_declare %2 uniq_name("_QMtestmodEvar_c") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_c)
 
     %4 = fir.address_of(@_QMtestmod2Evar_y) : !fir.ref<f32>
-    %5 = fircg.ext_declare %4 {uniq_name = "_QMtestmod2Evar_y"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc_y)
+    %5 = fircg.ext_declare %4 uniq_name("_QMtestmod2Evar_y") : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc_y)
 
     return
   } loc(#loc_main)

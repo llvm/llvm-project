@@ -29,7 +29,7 @@ namespace {
 namespace {
 class ConvertCstrRequireOp : public OpRewritePattern<shape::CstrRequireOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(shape::CstrRequireOp op,
                                 PatternRewriter &rewriter) const override {
     cf::AssertOp::create(rewriter, op.getLoc(), op.getPred(), op.getMsgAttr());

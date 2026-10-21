@@ -92,10 +92,6 @@ char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
-  return new SIFormMemoryClausesLegacy();
-}
-
 static bool isVMEMClauseInst(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI);
 }
@@ -385,8 +381,8 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         // bundle.
         Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
                        DebugLoc(), TII->get(AMDGPU::KILL));
-        for (auto &Op : KillOps)
-          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        for (auto [State, SubReg] : KillOps)
+          Kill.addUse(Reg, State, SubReg);
         Ind->insertMachineInstrInMaps(*Kill);
       }
 

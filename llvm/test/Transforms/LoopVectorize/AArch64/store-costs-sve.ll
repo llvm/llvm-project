@@ -68,16 +68,17 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 101)
+; PRED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 101, i64 [[TMP3]])
 ; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PRED:       vector.body:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP7]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 101)
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; PRED-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
 ; PRED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br label [[EXIT:%.*]]
@@ -202,14 +203,13 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED-NEXT:    [[TMP3:%.*]] = trunc <vscale x 16 x i64> [[BROADCAST_SPLAT3]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP2:%.*]] = trunc <vscale x 16 x i16> [[BROADCAST_SPLAT]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP5:%.*]] = and <vscale x 16 x i8> [[TMP3]], [[TMP2]]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 1000)
 ; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PRED:       vector.body:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ splat (i1 true), [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP5]], ptr align 1 [[TMP6]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 1000)
 ; PRED-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP8:%.*]] = xor i1 [[TMP7]], true
@@ -264,7 +264,7 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; DEFAULT: [[META6]] = !{[[META7:![0-9]+]]}
 ; DEFAULT: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; DEFAULT: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; DEFAULT: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; DEFAULT: [[META9]] = !{[[META10:![0-9]+]]}
 ; DEFAULT: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; DEFAULT: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
@@ -277,7 +277,7 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ; PRED: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; PRED: [[META3]] = !{[[META4:![0-9]+]]}
 ; PRED: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; PRED: [[META5]] = distinct !{[[META5]], !"LVerDomain"}
+; PRED: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
 ; PRED: [[META6]] = !{[[META7:![0-9]+]]}
 ; PRED: [[META7]] = distinct !{[[META7]], [[META5]]}
 ; PRED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}

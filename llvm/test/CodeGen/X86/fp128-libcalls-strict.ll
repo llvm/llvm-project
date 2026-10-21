@@ -111,7 +111,7 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -240,7 +240,7 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -369,7 +369,7 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx
@@ -498,7 +498,7 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 8(%ebp), %esi
 ; WIN-X86-NEXT:    movl 36(%ebp), %edi
 ; WIN-X86-NEXT:    movl 40(%ebp), %ebx

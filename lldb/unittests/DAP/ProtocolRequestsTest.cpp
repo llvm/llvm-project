@@ -55,6 +55,9 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
   body.breakMode = eExceptionBreakModeNever;
   body.details = ExceptionDetails{};
   body.details->message = "some message";
+  body.lldbExtStopReasonExtendedInfo =
+      json::Object{{"instrumentation_class", "AddressSanitizer"}};
+  body.lldbExtExtendedCrashInformation = json::Object{{"crash-info", "abort"}};
 
   Expected<json::Value> expected_opt = parse(
       R"({
@@ -63,6 +66,12 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
     "breakMode": "never",
     "details": {
       "message": "some message"
+    },
+    "$__lldb_stopReasonExtendedInfo": {
+      "instrumentation_class": "AddressSanitizer"
+    },
+    "$__lldb_extendedCrashInformation": {
+      "crash-info": "abort"
     }
   })");
 

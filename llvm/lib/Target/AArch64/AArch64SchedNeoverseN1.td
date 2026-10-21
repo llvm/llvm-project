@@ -89,10 +89,8 @@ def N1Write_4c3_1M    : SchedWriteRes<[N1UnitM]>  { let Latency = 4;
                                                     let ReleaseAtCycles = [3]; }
 def N1Write_5c3_1M    : SchedWriteRes<[N1UnitM]>  { let Latency = 5;
                                                     let ReleaseAtCycles = [3]; }
-def N1Write_12c5_1M   : SchedWriteRes<[N1UnitM]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [5]; }
-def N1Write_20c5_1M   : SchedWriteRes<[N1UnitM]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [5]; }
+def N1Write_7c7_1M    : SchedWriteRes<[N1UnitM]>  { let Latency = 7;
+                                                    let ReleaseAtCycles = [7]; }
 def N1Write_4c_1L     : SchedWriteRes<[N1UnitL]>  { let Latency = 4; }
 def N1Write_5c_1L     : SchedWriteRes<[N1UnitL]>  { let Latency = 5; }
 def N1Write_7c_1L     : SchedWriteRes<[N1UnitL]>  { let Latency = 7; }
@@ -365,8 +363,8 @@ def : InstRW<[N1Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
 // -----------------------------------------------------------------------------
 
 // Divide
-def : SchedAlias<WriteID32, N1Write_12c5_1M>;
-def : SchedAlias<WriteID64, N1Write_20c5_1M>;
+def : SchedAlias<WriteID32, N1Write_7c7_1M>;
+def : SchedAlias<WriteID64, N1Write_7c7_1M>;
 
 // Multiply accumulate, W-form
 // Multiply accumulate, X-form

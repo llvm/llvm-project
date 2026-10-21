@@ -14,6 +14,9 @@ tablegen(LLVM SparcGenSDNodeInfo.inc -gen-sd-node-info -sdnode-namespace=SPISD)
 tablegen(LLVM SparcGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM SparcGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS SparcOptions.td)
+tablegen(LLVM SparcOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(SparcCommonTableGen)
 
 add_llvm_target(SparcCodeGen
@@ -39,6 +42,7 @@ add_llvm_target(SparcCodeGen
   CodeGenTypes
   Core
   MC
+  Option
   SelectionDAG
   SparcDesc
   SparcInfo

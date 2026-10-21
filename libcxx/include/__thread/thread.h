@@ -22,6 +22,7 @@
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
 #include <__system_error/throw_system_error.h>
+#include <__thread/hardware_concurrency.h>
 #include <__thread/id.h>
 #include <__thread/support.h>
 #include <__type_traits/decay.h>
@@ -262,7 +263,14 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI id get_id() const _NOEXCEPT { return __libcpp_thread_get_id(&__t_); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
 
+#  if defined(_LIBCPP_BUILDING_LIBRARY) || !_LIBCPP_AVAILABILITY_HAS_HARDWARE_CONCURRENCY_FREE_FUNCTION
   [[__nodiscard__]] static unsigned hardware_concurrency() _NOEXCEPT;
+#  else
+  // Always inline to avoid an ODR violation with the symbol defined in the built library
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static unsigned hardware_concurrency() _NOEXCEPT {
+    return std::__thread_hardware_concurrency();
+  }
+#  endif
 };
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }

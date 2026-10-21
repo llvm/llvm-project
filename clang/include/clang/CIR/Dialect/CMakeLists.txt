@@ -5,8 +5,12 @@ add_custom_target(clang-cir-doc)
 # which is not the case for CIR (and also FIR, both have similar workarounds).
 function(add_clang_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
+  # NB: MLIR_*_INCLUDE_DIR variables cannot be used here: MLIR configures
+  # after Clang, so they are still empty at this point. Derive the same
+  # roots from LLVM dirs instead (as CIR/CMakeLists.txt already does).
   tablegen(MLIR ${output_file}.md ${command} ${ARGN}
-           EXTRA_INCLUDES ${MLIR_MAIN_SRC_DIR} ${MLIR_INCLUDE_DIR})
+           EXTRA_INCLUDES ${LLVM_MAIN_SRC_DIR}/../mlir/include
+                          ${CMAKE_BINARY_DIR}/tools/mlir/include)
   set(GEN_DOC_FILE ${CLANG_BINARY_DIR}/docs/CIR/_raw/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}
@@ -25,3 +29,5 @@ mlir_tablegen(Passes.h.inc -gen-pass-decls -name CIR)
 mlir_tablegen(Passes.capi.h.inc -gen-pass-capi-header --prefix CIR)
 mlir_tablegen(Passes.capi.cpp.inc -gen-pass-capi-impl --prefix CIR)
 add_public_tablegen_target(MLIRCIRPassIncGen)
+
+add_clang_mlir_doc(Passes CIRPasses ./ -gen-pass-doc)

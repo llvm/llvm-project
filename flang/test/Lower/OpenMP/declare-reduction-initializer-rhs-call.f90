@@ -43,8 +43,8 @@ end subroutine
 !CHECK: } init {
 !CHECK: ^bb0(%[[INIT_ARG0:.*]]: !fir.ref<!fir.type<_QMmTt{member:i32}>>,
 !CHECK-SAME: %[[INIT_ARG1:.*]]: !fir.ref<!fir.type<_QMmTt{member:i32}>>):
-!CHECK:   %[[OMP_ORIG:.*]]:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_orig"}
-!CHECK:   %[[OMP_PRIV:.*]]:2 = hlfir.declare %[[INIT_ARG1]] {uniq_name = "omp_priv"}
+!CHECK:   %[[OMP_ORIG:.*]]:2 = hlfir.declare %[[INIT_ARG0]] uniq_name("omp_orig")
+!CHECK:   %[[OMP_PRIV:.*]]:2 = hlfir.declare %[[INIT_ARG1]] uniq_name("omp_priv")
 !CHECK:   %[[CALL:.*]] = fir.call @_QMmPinit_val() {{.*}} : () -> i32
 !CHECK:   %[[MEMBER:.*]] = hlfir.designate %[[OMP_PRIV]]#0{"member"} : (!fir.ref<!fir.type<_QMmTt{member:i32}>>) -> !fir.ref<i32>
 !CHECK:   hlfir.assign %[[CALL]] to %[[MEMBER]] : i32, !fir.ref<i32>

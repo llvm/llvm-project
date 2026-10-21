@@ -38,15 +38,13 @@ using move_result = in_out_result<_InIter, _OutIter>;
 struct __move {
   template <input_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_movable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_result<_InIter, _OutIter>
-  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  constexpr move_result<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     return std::__move<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
   }
 
   template <input_range _Range, weakly_incrementable _OutIter>
     requires indirectly_movable<iterator_t<_Range>, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_result<borrowed_iterator_t<_Range>, _OutIter>
-  operator()(_Range&& __range, _OutIter __result) const {
+  constexpr move_result<borrowed_iterator_t<_Range>, _OutIter> operator()(_Range&& __range, _OutIter __result) const {
     return std::__move<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), std::move(__result));
   }
 };

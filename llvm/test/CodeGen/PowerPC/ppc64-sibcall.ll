@@ -1,7 +1,7 @@
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-SCO
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
-; RUN: llc < %s -relocation-model=static -O1 -disable-ppc-sco=false -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -code-model=small | FileCheck %s -check-prefix=SCM
+; RUN: llc < %s -relocation-model=static -O1 -ppc-sco -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-SCO
+; RUN: llc < %s -relocation-model=static -O1 -ppc-sco -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
+; RUN: llc < %s -relocation-model=static -O1 -ppc-sco -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-SCO
+; RUN: llc < %s -relocation-model=static -O1 -ppc-sco -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -code-model=small | FileCheck %s -check-prefix=SCM
 
 ; No combination of "powerpc64le-unknown-linux-gnu" + "CHECK-SCO", because
 ; only Power8 (and later) fully support LE.

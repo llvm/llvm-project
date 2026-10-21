@@ -1,0 +1,39 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @spir_callee(!s32i) -> !s32i cc(spir_function)
+  cir.func private @c_callee()
+
+  cir.func @direct(%arg0: !s32i) -> !s32i cc(spir_function) {
+    %0 = cir.call @spir_callee(%arg0) cc(spir_function) nothrow : (!s32i) -> !s32i
+    cir.call @c_callee() : () -> ()
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func @direct(%arg0: !s32i) -> !s32i cc(spir_function) {
+  // CHECK:   %[[R:.*]] = cir.call @spir_callee(%arg0) cc(spir_function) nothrow : (!s32i) -> !s32i
+  // CHECK:   cir.call @c_callee() : () -> ()
+
+  cir.func @indirect(%fn: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg0: !s32i) -> !s32i {
+    %0 = cir.call %fn(%arg0) cc(spir_function) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func @indirect(%arg0: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg1: !s32i) -> !s32i {
+  // CHECK:   %{{.*}} = cir.call %arg0(%arg1) cc(spir_function) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+
+  cir.func @try_call(%arg0: !s32i) {
+    %0 = cir.try_call @spir_callee(%arg0) ^normal, ^unwind cc(spir_function) : (!s32i) -> !s32i
+  ^normal:
+    cir.br ^end
+  ^unwind:
+    cir.br ^end
+  ^end:
+    cir.return
+  }
+
+  // CHECK: cir.func @try_call(%arg0: !s32i) {
+  // CHECK:   %{{.*}} = cir.try_call @spir_callee(%arg0) ^bb1, ^bb2 cc(spir_function) : (!s32i) -> !s32i
+}

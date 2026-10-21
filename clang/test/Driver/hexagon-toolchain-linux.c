@@ -71,7 +71,7 @@
 // -----------------------------------------------------------------------------
 // Not Passing -fno-use-init-array when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK005 %s
 // CHECK005-NOT:          -fno-use-init-array
@@ -87,7 +87,7 @@
 // -----------------------------------------------------------------------------
 // c++ when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -stdlib=libc++ \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK007 %s
@@ -95,14 +95,14 @@
 // -----------------------------------------------------------------------------
 // internal-isystem for linux with and without musl
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK008-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clang -### --target=hexagon-unknown-linux \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -110,7 +110,7 @@
 // CHECK009-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -Werror -L/tmp \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
 // CHECK010-NOT:  "-lstandalone"
 // CHECK010-NOT:  crt0_standalone.o
@@ -122,7 +122,7 @@
 // unwindlib
 // -----------------------------------------------------------------------------
 // RUN: %clangxx --unwindlib=none \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK011 %s
 // CHECK011:   "--eh-frame-hdr"
 // CHECK011:   crt1.o
@@ -132,10 +132,10 @@
 
 
 // RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // RUN: %clangxx \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // CHECK012:   crt1.o
 // CHECK012:  "-lunwind"
@@ -143,7 +143,7 @@
 // CHECK012-NOT:  "-lgcc_s"
 
 // RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK013 %s
 // CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
 // CHECK013-NOT:  "-lgcc_eh"

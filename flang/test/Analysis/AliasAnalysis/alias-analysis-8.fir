@@ -23,7 +23,7 @@ func.func @_QMmmPsub() {
   %c1_i64 = arith.constant 1 : i64
   %c0 = arith.constant 0 : index
   %0 = fir.address_of(@_QMmmEarr) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmmEarr", test.ptr = "box"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.declare %0 uniq_name("_QMmmEarr") fortran_attrs<allocatable> {test.ptr = "box"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %2 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %3:3 = fir.box_dims %2, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
   %4 = fir.convert %3#1 : (index) -> i64

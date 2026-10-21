@@ -417,7 +417,7 @@ func.func @placement_loop_declare() {
     // operand is now available
     %4 = fir.allocmem !fir.array<?xi32>, %3
     %shape = fir.shape %3 : (index) -> !fir.shape<1>
-    %5 = fir.declare %4(%shape) {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
+    %5 = fir.declare %4(%shape) uniq_name("temp") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
     // ...
     fir.freemem %5 : !fir.heap<!fir.array<?xi32>>
     fir.result %3, %c1_i32 : index, i32
@@ -444,7 +444,7 @@ func.func @lookthrough() {
   %0 = fir.allocmem !fir.array<42xi32>
   %c42 = arith.constant 42 : index
   %shape = fir.shape %c42 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%shape) {uniq_name = "name"} : (!fir.heap<!fir.array<42xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<42xi32>>
+  %1 = fir.declare %0(%shape) uniq_name("name") : (!fir.heap<!fir.array<42xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<42xi32>>
   %2 = fir.convert %1 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
   // use the ref so the converts aren't folded
   %3 = fir.load %2 : !fir.ref<!fir.array<42xi32>>
@@ -464,7 +464,7 @@ func.func @finding_freemem_in_block() {
   %c10_i32 = arith.constant 10 : i32
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca i32 {bindc_name = "k", uniq_name = "k"}
-  %1 = fir.declare %0 {uniq_name = "k"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("k") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c1_i32 to %1 : !fir.ref<i32>
   cf.br ^bb1
 ^bb1:  // 2 preds: ^bb0, ^bb2
@@ -472,7 +472,7 @@ func.func @finding_freemem_in_block() {
   %3 = arith.cmpi sle, %2, %c10_i32 : i32
   cf.cond_br %3, ^bb2, ^bb3
 ^bb2:  // pred: ^bb1
-  %4 = fir.declare %1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %1 uniq_name("x") fortran_attrs<intent_in> : (!fir.ref<i32>) -> !fir.ref<i32>
   %5 = fir.load %4 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = arith.cmpi sgt, %6, %c0 : index
@@ -480,7 +480,7 @@ func.func @finding_freemem_in_block() {
   %9 = fir.shape %8 : (index) -> !fir.shape<1>
   %10 = fir.allocmem !fir.array<?xi32>, %8 {bindc_name = ".tmp.expr_result", uniq_name = ""}
   %11 = fir.convert %10 : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-  %12 = fir.declare %11(%9) {uniq_name = ".tmp.expr_result"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+  %12 = fir.declare %11(%9) uniq_name(".tmp.expr_result") : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
   %13 = fir.embox %12(%9) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   %14 = fir.call @_QPfunc(%1) fastmath<fast> : (!fir.ref<i32>) -> !fir.array<?xi32>
   fir.save_result %14 to %12(%9) : !fir.array<?xi32>, !fir.ref<!fir.array<?xi32>>, !fir.shape<1>
@@ -510,7 +510,7 @@ func.func @freemem_through_convert_in_loop(%arg0: i1, %n: index) {
 ^bb2:  // pred: ^bb1
   %shape = fir.shape %n : (index) -> !fir.shape<1>
   %mem = fir.allocmem !fir.array<?xf64>, %n {bindc_name = ".tmp.array", uniq_name = ""}
-  %decl = fir.declare %mem(%shape) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf64>>
+  %decl = fir.declare %mem(%shape) uniq_name(".tmp.array") : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf64>>
   %ref = fir.convert %decl : (!fir.heap<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
   fir.call @_QPuse_array(%ref) : (!fir.ref<!fir.array<?xf64>>) -> ()
   %heap = fir.convert %ref : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>

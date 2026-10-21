@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=amdgpu9.00 -passes='require<live-intervals>,phi-node-elimination,print<live-intervals>' -filetype=null %s 2>&1 | FileCheck %s
+
+# %0 is only an undef PHI operand on the critical edge from %bb.1 to
+# %bb.2, so splitting the edge must not leave %0 live through the new
+# block.
+
+# CHECK: ********** INTERVALS **********
+# CHECK-NEXT: %0 [16r,[[SPLIT:[0-9]+]]B:0)
+# CHECK: [[SPLIT]]B{{[[:space:]]+}}bb.5:
+
+---
+name: split_critical_edge_undef_phi_source
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.4
+
+  bb.1:
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    %2:vgpr_32 = PHI undef %0, %bb.1, %1, %bb.4
+    S_ENDPGM 0, implicit %2
+
+  bb.3:
+    S_ENDPGM 0, implicit %0
+
+  bb.4:
+    S_BRANCH %bb.2
+...

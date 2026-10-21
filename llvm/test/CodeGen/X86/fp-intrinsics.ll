@@ -1423,14 +1423,14 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; AVX1-LABEL: f20u64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX1-NEXT:    vcomisd %xmm1, %xmm0
-; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
+; AVX1-NEXT:    vcomisd %xmm2, %xmm0
+; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    jb .LBB25_2
 ; AVX1-NEXT:  # %bb.1: # %entry
-; AVX1-NEXT:    vmovapd %xmm1, %xmm2
+; AVX1-NEXT:    vmovapd %xmm2, %xmm1
 ; AVX1-NEXT:  .LBB25_2: # %entry
-; AVX1-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
 ; AVX1-NEXT:    setae %al
 ; AVX1-NEXT:    movzbl %al, %eax

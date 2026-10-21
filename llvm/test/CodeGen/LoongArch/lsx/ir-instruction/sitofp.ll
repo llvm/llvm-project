@@ -226,3 +226,57 @@ define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
   %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %shuf
 }
+
+define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
+; LA32-LABEL: sitofp_v5i32_v5f64:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ld.w $a2, $a1, 16
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    ld.w $a2, $a1, 0
+; LA32-NEXT:    ld.w $a3, $a1, 4
+; LA32-NEXT:    ld.w $a4, $a1, 8
+; LA32-NEXT:    ld.w $a1, $a1, 12
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 2
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
+; LA32-NEXT:    vslti.w $vr2, $vr1, 0
+; LA32-NEXT:    vilvl.w $vr3, $vr2, $vr1
+; LA32-NEXT:    vffint.d.l $vr3, $vr3
+; LA32-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LA32-NEXT:    vffint.d.l $vr1, $vr1
+; LA32-NEXT:    vslti.w $vr2, $vr0, 0
+; LA32-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA32-NEXT:    vffint.d.l $vr0, $vr0
+; LA32-NEXT:    vstelm.d $vr0, $a0, 32, 0
+; LA32-NEXT:    vst $vr1, $a0, 16
+; LA32-NEXT:    vst $vr3, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: sitofp_v5i32_v5f64:
+; LA64:       # %bb.0:
+; LA64-NEXT:    ld.w $a2, $a1, 32
+; LA64-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    ld.w $a3, $a1, 8
+; LA64-NEXT:    ld.w $a4, $a1, 16
+; LA64-NEXT:    ld.w $a1, $a1, 24
+; LA64-NEXT:    vinsgr2vr.w $vr1, $a2, 0
+; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
+; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 2
+; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
+; LA64-NEXT:    vslti.w $vr2, $vr1, 0
+; LA64-NEXT:    vilvl.w $vr3, $vr2, $vr1
+; LA64-NEXT:    vffint.d.l $vr3, $vr3
+; LA64-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LA64-NEXT:    vffint.d.l $vr1, $vr1
+; LA64-NEXT:    vslti.w $vr2, $vr0, 0
+; LA64-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA64-NEXT:    vffint.d.l $vr0, $vr0
+; LA64-NEXT:    vstelm.d $vr0, $a0, 32, 0
+; LA64-NEXT:    vst $vr1, $a0, 16
+; LA64-NEXT:    vst $vr3, $a0, 0
+; LA64-NEXT:    ret
+  %v = sitofp <5 x i32> %a to <5 x double>
+  ret <5 x double> %v
+}

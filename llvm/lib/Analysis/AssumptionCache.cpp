@@ -344,13 +344,6 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
   return *IP.first->second;
 }
 
-AssumptionCache *AssumptionCacheTracker::lookupAssumptionCache(Function &F) {
-  auto I = AssumptionCaches.find_as(&F);
-  if (I != AssumptionCaches.end())
-    return I->second.get();
-  return nullptr;
-}
-
 void AssumptionCacheTracker::verifyAnalysis() const {
   // FIXME: In the long term the verifier should not be controllable with a
   // flag. We should either fix all passes to correctly update the assumption

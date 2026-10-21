@@ -1,4 +1,7 @@
-//RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-swap-extract-slice-with-fill-pattern %s | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-swap-extract-slice-with-fill-pattern | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/swap-extract-slice-with-fill.mlir' \
+// RUN: -transform-interpreter=entry-point=swap_extract_slice_with_fill | FileCheck %s
 
 // CHECK-LABEL: func.func @swap_fill_insert_slice
 //  CHECK-SAME: (%[[INIT:.+]]: tensor<?x?x?xf32>, %[[OFFSET0:.+]]: index, %[[SIZE1:.+]]: index)

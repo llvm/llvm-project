@@ -231,7 +231,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 }
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   MDNode *MD =
       MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
   Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
@@ -240,7 +240,7 @@ Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
 }
 
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   if (TargetTriple.getArch() == Triple::aarch64)
     return memtag::readRegister(IRB, "pc");
   return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(),
@@ -258,7 +258,7 @@ Value *getFP(IRBuilder<> &IRB) {
 }
 
 Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   // FIXME: This should use the thread_pointer intrinsic. However, the
   // intrinsic is not currently implemented on Darwin correctly. The
   // TPIDRRO_EL0 register became part of the ABI to access TSD on recent
@@ -277,7 +277,7 @@ Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot) {
 }
 
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
   Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(

@@ -29,7 +29,7 @@ namespace llvm {
 /// operation. The result is either an error, or a value of type T. This is
 /// designed to emulate the usage of returning a pointer where nullptr indicates
 /// failure. However instead of just knowing that the operation failed, we also
-/// have an error_code and optional user data that describes why it failed.
+/// have an error_code that describes why it failed.
 ///
 /// It is used like the following.
 /// \code

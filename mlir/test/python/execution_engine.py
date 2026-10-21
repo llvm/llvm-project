@@ -262,6 +262,38 @@ func.func private @some_callback_into_python(memref<2x2xf32>) -> () attributes {
 run(testRankedMemRefCallback)
 
 
+# CHECK-LABEL: TEST: testRankZeroMemRefRoundTripAndOffset
+def testRankZeroMemRefRoundTripAndOffset():
+    # CHECK: rank-zero round trip and offset: float32
+    # CHECK: rank-zero round trip and offset: float16
+    # CHECK: rank-zero round trip and offset: complex64
+    for dtype in (np.float32, np.float16, np.complex64):
+        storage = np.arange(4, dtype=dtype)
+        scalar = storage[2:3].reshape(())
+        descriptor = get_ranked_memref_descriptor(scalar)
+        result = ranked_memref_to_numpy(ctypes.pointer(descriptor))
+        assert result.shape == ()
+        assert result.dtype == scalar.dtype
+        np.testing.assert_array_equal(result, scalar)
+        assert np.shares_memory(result, storage)
+        result[...] = 9
+        assert storage[2] == 9
+
+        descriptor.aligned = storage.ctypes.data_as(type(descriptor.aligned))
+        descriptor.offset = 1
+        result = ranked_memref_to_numpy(ctypes.pointer(descriptor))
+        assert result.shape == ()
+        assert result.dtype == scalar.dtype
+        np.testing.assert_array_equal(result, storage[1])
+        assert np.shares_memory(result, storage)
+        result[...] = 7
+        assert storage[1] == 7
+        log(f"rank-zero round trip and offset: {np.dtype(dtype)}")
+
+
+run(testRankZeroMemRefRoundTripAndOffset)
+
+
 # Test callback with a ranked memref with non-zero offset.
 # CHECK-LABEL: TEST: testRankedMemRefWithOffsetCallback
 def testRankedMemRefWithOffsetCallback():

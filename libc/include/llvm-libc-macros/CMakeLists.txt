@@ -154,9 +154,25 @@ add_macro_header(
 )
 
 add_macro_header(
+  common_threads_macros
+  HDR
+    common-threads-macros.h
+)
+
+add_macro_header(
+  threads_macros
+  HDR
+    threads-macros.h
+  DEPENDS
+    .common_threads_macros
+)
+
+add_macro_header(
   limits_macros
   HDR
     limits-macros.h
+  DEPENDS
+    .common_threads_macros
 )
 
 add_macro_header(
@@ -274,6 +290,12 @@ add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_macro_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
 )
 
 add_macro_header(

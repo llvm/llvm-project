@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -28,8 +29,11 @@ TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32ExtendedExp) {
 
 TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32NegativeExp) {
   clinger_fast_path_test(1, -5, 0xa7c5ac, 110);
+  clinger_fast_path_test(1, -5, 0xa7c5ac, 110, internal::RoundDirection::Up);
+  clinger_fast_path_test(1, -5, 0xa7c5ac, 110, internal::RoundDirection::Down);
   clinger_fast_path_test(1, -10, 0xdbe6ff, 93);
   clinger_fast_path_fails_test(1, -15);
+  clinger_fast_path_fails_test(1, INT32_MIN);
 }
 
 // Check the fallback states for the algorithm:

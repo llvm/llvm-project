@@ -24,6 +24,28 @@ end:
   ret float %c2
 }
 
+define amdgpu_ps i32 @constant_defined_on_non_dominating_path(i32 %x) #0 {
+; OPT-LABEL: @constant_defined_on_non_dominating_path(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[CC:%.*]] = icmp slt i32 [[X:%.*]], 0
+; OPT-NEXT:    br i1 [[CC]], label [[IF:%.*]], label [[END:%.*]]
+; OPT:       if:
+; OPT-NEXT:    br label [[END]]
+; OPT:       end:
+; OPT-NEXT:    ret i32 42
+;
+entry:
+  %cc = icmp slt i32 %x, 0
+  br i1 %cc, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %result = phi i32 [ 42, %if ], [ poison, %entry ]
+  ret i32 %result
+}
+
 define amdgpu_ps float @with_uniform_region_inside(float inreg %c, i32 inreg %d, i32 %x) #0 {
 ; OPT-LABEL: @with_uniform_region_inside(
 ; OPT-NEXT:  entry:

@@ -62,6 +62,14 @@ bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
   return value >= intMin.getSExtValue() && value <= intMax.getSExtValue();
 }
 
+APFloat mlir::tosa::getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
+                                           bool negative,
+                                           bool allowNonFinites) {
+  if (allowNonFinites && APFloat::semanticsHasInf(semantics))
+    return APFloat::getInf(semantics, negative);
+  return APFloat::getLargest(semantics, negative);
+}
+
 namespace {
 // Given two tensors of high and low ranks, derive the output shape
 // to reshape the lower rank to.

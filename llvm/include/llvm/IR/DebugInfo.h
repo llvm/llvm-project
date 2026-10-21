@@ -32,9 +32,6 @@
 
 namespace llvm {
 
-class DbgDeclareInst;
-class DbgValueInst;
-class DbgVariableIntrinsic;
 class DbgVariableRecord;
 class Instruction;
 class Module;

@@ -202,219 +202,219 @@ define i256 @udiv256(i256 %a, i256 %b) nounwind {
 define i256 @sdiv256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: sdiv256:
 ; CHECK:       // %bb.0: // %_udiv-special-cases
-; CHECK-NEXT:    asr x12, x3, #63
+; CHECK-NEXT:    asr x11, x3, #63
 ; CHECK-NEXT:    asr x13, x7, #63
-; CHECK-NEXT:    eor x8, x0, x12
-; CHECK-NEXT:    eor x9, x1, x12
+; CHECK-NEXT:    eor x8, x0, x11
+; CHECK-NEXT:    eor x9, x1, x11
 ; CHECK-NEXT:    eor x10, x4, x13
-; CHECK-NEXT:    subs x14, x8, x12
-; CHECK-NEXT:    eor x8, x2, x12
-; CHECK-NEXT:    eor x11, x5, x13
-; CHECK-NEXT:    sbcs x15, x9, x12
-; CHECK-NEXT:    eor x9, x3, x12
-; CHECK-NEXT:    clz x16, x14
-; CHECK-NEXT:    sbcs x18, x8, x12
-; CHECK-NEXT:    clz x17, x15
-; CHECK-NEXT:    add x16, x16, #64
-; CHECK-NEXT:    sbc x0, x9, x12
+; CHECK-NEXT:    subs x0, x8, x11
+; CHECK-NEXT:    eor x8, x2, x11
+; CHECK-NEXT:    eor x12, x5, x13
+; CHECK-NEXT:    sbcs x1, x9, x11
+; CHECK-NEXT:    eor x9, x3, x11
+; CHECK-NEXT:    clz x14, x0
+; CHECK-NEXT:    sbcs x4, x8, x11
+; CHECK-NEXT:    clz x15, x1
+; CHECK-NEXT:    add x14, x14, #64
+; CHECK-NEXT:    sbc x5, x9, x11
 ; CHECK-NEXT:    subs x8, x10, x13
 ; CHECK-NEXT:    eor x10, x6, x13
-; CHECK-NEXT:    sbcs x9, x11, x13
-; CHECK-NEXT:    eor x11, x7, x13
-; CHECK-NEXT:    orr x1, x14, x18
+; CHECK-NEXT:    sbcs x9, x12, x13
+; CHECK-NEXT:    eor x12, x7, x13
+; CHECK-NEXT:    orr x16, x0, x4
 ; CHECK-NEXT:    sbcs x10, x10, x13
-; CHECK-NEXT:    orr x4, x15, x0
-; CHECK-NEXT:    clz x5, x8
-; CHECK-NEXT:    sbc x11, x11, x13
-; CHECK-NEXT:    orr x2, x8, x10
-; CHECK-NEXT:    orr x1, x1, x4
-; CHECK-NEXT:    orr x3, x9, x11
-; CHECK-NEXT:    add x5, x5, #64
-; CHECK-NEXT:    orr x6, x10, x11
-; CHECK-NEXT:    orr x2, x2, x3
-; CHECK-NEXT:    clz x3, x10
-; CHECK-NEXT:    eor x12, x13, x12
-; CHECK-NEXT:    cmp x2, #0
+; CHECK-NEXT:    orr x2, x1, x5
+; CHECK-NEXT:    clz x3, x8
+; CHECK-NEXT:    sbc x12, x12, x13
+; CHECK-NEXT:    orr x17, x8, x10
+; CHECK-NEXT:    orr x16, x16, x2
+; CHECK-NEXT:    orr x18, x9, x12
 ; CHECK-NEXT:    add x3, x3, #64
-; CHECK-NEXT:    clz x2, x9
-; CHECK-NEXT:    ccmp x1, #0, #4, ne
-; CHECK-NEXT:    clz x1, x11
-; CHECK-NEXT:    cset w4, eq
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x1, x1, x3, ne
+; CHECK-NEXT:    orr x6, x10, x12
+; CHECK-NEXT:    orr x17, x17, x18
+; CHECK-NEXT:    clz x18, x10
+; CHECK-NEXT:    eor x11, x13, x11
+; CHECK-NEXT:    cmp x17, #0
+; CHECK-NEXT:    add x18, x18, #64
+; CHECK-NEXT:    clz x17, x9
+; CHECK-NEXT:    ccmp x16, #0, #4, ne
+; CHECK-NEXT:    clz x16, x12
+; CHECK-NEXT:    cset w2, eq
+; CHECK-NEXT:    cmp x12, #0
+; CHECK-NEXT:    csel x16, x16, x18, ne
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    clz x3, x18
-; CHECK-NEXT:    csel x2, x2, x5, ne
+; CHECK-NEXT:    clz x18, x4
+; CHECK-NEXT:    csel x17, x17, x3, ne
 ; CHECK-NEXT:    cmp x6, #0
-; CHECK-NEXT:    add x3, x3, #64
-; CHECK-NEXT:    add x2, x2, #128
-; CHECK-NEXT:    clz x5, x0
-; CHECK-NEXT:    csel x1, x1, x2, ne
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x2, x5, x3, ne
-; CHECK-NEXT:    cmp x15, #0
-; CHECK-NEXT:    orr x3, x18, x0
-; CHECK-NEXT:    csel x16, x17, x16, ne
-; CHECK-NEXT:    cmp x3, #0
-; CHECK-NEXT:    mov w3, #255 // =0xff
-; CHECK-NEXT:    add x16, x16, #128
-; CHECK-NEXT:    csel x16, x2, x16, ne
-; CHECK-NEXT:    subs x2, x1, x16
+; CHECK-NEXT:    add x18, x18, #64
+; CHECK-NEXT:    add x17, x17, #128
+; CHECK-NEXT:    clz x3, x5
+; CHECK-NEXT:    csel x16, x16, x17, ne
+; CHECK-NEXT:    cmp x5, #0
+; CHECK-NEXT:    csel x17, x3, x18, ne
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    orr x18, x4, x5
+; CHECK-NEXT:    csel x14, x15, x14, ne
+; CHECK-NEXT:    cmp x18, #0
+; CHECK-NEXT:    mov w18, #255 // =0xff
+; CHECK-NEXT:    add x14, x14, #128
+; CHECK-NEXT:    csel x14, x17, x14, ne
+; CHECK-NEXT:    subs x17, x16, x14
+; CHECK-NEXT:    ngcs x14, xzr
 ; CHECK-NEXT:    ngcs x16, xzr
-; CHECK-NEXT:    ngcs x17, xzr
-; CHECK-NEXT:    ngc x1, xzr
-; CHECK-NEXT:    cmp x3, x2
+; CHECK-NEXT:    ngc x15, xzr
+; CHECK-NEXT:    cmp x18, x17
+; CHECK-NEXT:    ngcs xzr, x14
 ; CHECK-NEXT:    ngcs xzr, x16
-; CHECK-NEXT:    ngcs xzr, x17
-; CHECK-NEXT:    ngcs xzr, x1
-; CHECK-NEXT:    csinc w5, w4, wzr, hs
-; CHECK-NEXT:    cmp w5, #0
-; CHECK-NEXT:    csel x13, xzr, x0, ne
-; CHECK-NEXT:    csel x4, xzr, x18, ne
-; CHECK-NEXT:    csel x7, xzr, x15, ne
-; CHECK-NEXT:    csel x3, xzr, x14, ne
-; CHECK-NEXT:    tbnz w5, #0, .LBB1_6
+; CHECK-NEXT:    ngcs xzr, x15
+; CHECK-NEXT:    csinc w3, w2, wzr, hs
+; CHECK-NEXT:    cmp w3, #0
+; CHECK-NEXT:    csel x13, xzr, x5, ne
+; CHECK-NEXT:    csel x2, xzr, x4, ne
+; CHECK-NEXT:    csel x7, xzr, x1, ne
+; CHECK-NEXT:    csel x18, xzr, x0, ne
+; CHECK-NEXT:    tbnz w3, #0, .LBB1_6
 ; CHECK-NEXT:  // %bb.1: // %_udiv-special-cases
-; CHECK-NEXT:    eor x5, x2, #0xff
-; CHECK-NEXT:    orr x6, x16, x1
-; CHECK-NEXT:    orr x5, x5, x17
-; CHECK-NEXT:    orr x5, x5, x6
-; CHECK-NEXT:    cbz x5, .LBB1_6
+; CHECK-NEXT:    eor x3, x17, #0xff
+; CHECK-NEXT:    orr x6, x14, x15
+; CHECK-NEXT:    orr x3, x3, x16
+; CHECK-NEXT:    orr x3, x3, x6
+; CHECK-NEXT:    cbz x3, .LBB1_6
 ; CHECK-NEXT:  // %bb.2: // %udiv-bb1
 ; CHECK-NEXT:    sub sp, sp, #208
 ; CHECK-NEXT:    mov w13, #255 // =0xff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    add x4, sp, #64
-; CHECK-NEXT:    sub x3, x13, x2
-; CHECK-NEXT:    add x4, x4, #32
+; CHECK-NEXT:    add x2, sp, #64
+; CHECK-NEXT:    sub x18, x13, x17
+; CHECK-NEXT:    add x2, x2, #32
 ; CHECK-NEXT:    stp x28, x27, [sp, #128] // 16-byte Folded Spill
-; CHECK-NEXT:    lsr x13, x3, #3
+; CHECK-NEXT:    lsr x13, x18, #3
 ; CHECK-NEXT:    stp x26, x25, [sp, #144] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #160] // 16-byte Folded Spill
 ; CHECK-NEXT:    and x13, x13, #0x18
 ; CHECK-NEXT:    stp x22, x21, [sp, #176] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #192] // 16-byte Folded Spill
-; CHECK-NEXT:    sub x4, x4, x13
-; CHECK-NEXT:    adds x13, x2, #1
-; CHECK-NEXT:    stp x14, x15, [sp, #96]
-; CHECK-NEXT:    and x19, x3, #0x3f
-; CHECK-NEXT:    adcs x16, x16, xzr
-; CHECK-NEXT:    stp x18, x0, [sp, #112]
-; CHECK-NEXT:    mvn w20, w3
+; CHECK-NEXT:    sub x2, x2, x13
+; CHECK-NEXT:    adds x13, x17, #1
+; CHECK-NEXT:    stp x0, x1, [sp, #96]
+; CHECK-NEXT:    and x19, x18, #0x3f
+; CHECK-NEXT:    adcs x14, x14, xzr
+; CHECK-NEXT:    stp x4, x5, [sp, #112]
+; CHECK-NEXT:    mvn w20, w18
 ; CHECK-NEXT:    eor x19, x19, #0x3f
 ; CHECK-NEXT:    stp q0, q0, [sp, #64]
-; CHECK-NEXT:    adcs x17, x17, xzr
-; CHECK-NEXT:    ldp x2, x6, [x4, #8]
-; CHECK-NEXT:    ldr x7, [x4]
-; CHECK-NEXT:    ldr x5, [x4, #24]
+; CHECK-NEXT:    adcs x16, x16, xzr
+; CHECK-NEXT:    ldp x17, x6, [x2, #8]
+; CHECK-NEXT:    ldr x7, [x2]
+; CHECK-NEXT:    ldr x3, [x2, #24]
 ; CHECK-NEXT:    lsr x22, x7, #1
-; CHECK-NEXT:    lsr x4, x2, #1
+; CHECK-NEXT:    lsr x2, x17, #1
 ; CHECK-NEXT:    lsr x21, x6, #1
-; CHECK-NEXT:    lsl x5, x5, x3
-; CHECK-NEXT:    lsl x6, x6, x3
-; CHECK-NEXT:    lsl x2, x2, x3
-; CHECK-NEXT:    lsr x20, x4, x20
+; CHECK-NEXT:    lsl x3, x3, x18
+; CHECK-NEXT:    lsl x6, x6, x18
+; CHECK-NEXT:    lsl x17, x17, x18
+; CHECK-NEXT:    lsr x20, x2, x20
 ; CHECK-NEXT:    lsr x21, x21, x19
 ; CHECK-NEXT:    lsr x19, x22, x19
-; CHECK-NEXT:    adcs x4, x1, xzr
-; CHECK-NEXT:    lsl x1, x7, x3
+; CHECK-NEXT:    adcs x2, x15, xzr
+; CHECK-NEXT:    lsl x15, x7, x18
 ; CHECK-NEXT:    cset w22, hs
-; CHECK-NEXT:    orr x5, x5, x21
-; CHECK-NEXT:    orr x3, x6, x20
-; CHECK-NEXT:    orr x2, x2, x19
+; CHECK-NEXT:    orr x3, x3, x21
+; CHECK-NEXT:    orr x18, x6, x20
+; CHECK-NEXT:    orr x17, x17, x19
 ; CHECK-NEXT:    mov x6, xzr
 ; CHECK-NEXT:    tbnz w22, #0, .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %udiv-preheader
 ; CHECK-NEXT:    lsr x21, x13, #3
-; CHECK-NEXT:    stp x14, x15, [sp]
-; CHECK-NEXT:    mov x15, sp
+; CHECK-NEXT:    stp x0, x1, [sp]
+; CHECK-NEXT:    mov x1, sp
 ; CHECK-NEXT:    stp q0, q0, [sp, #32]
 ; CHECK-NEXT:    mov x19, xzr
 ; CHECK-NEXT:    mov x20, xzr
-; CHECK-NEXT:    and x14, x21, #0x18
-; CHECK-NEXT:    stp x18, x0, [sp, #16]
-; CHECK-NEXT:    and x0, x13, #0x3f
-; CHECK-NEXT:    add x14, x15, x14
+; CHECK-NEXT:    and x0, x21, #0x18
+; CHECK-NEXT:    stp x4, x5, [sp, #16]
+; CHECK-NEXT:    and x5, x13, #0x3f
+; CHECK-NEXT:    add x0, x1, x0
 ; CHECK-NEXT:    mvn w21, w13
-; CHECK-NEXT:    eor x0, x0, #0x3f
-; CHECK-NEXT:    ldp x15, x18, [x14, #16]
+; CHECK-NEXT:    eor x5, x5, #0x3f
+; CHECK-NEXT:    ldp x1, x4, [x0, #16]
 ; CHECK-NEXT:    mov x7, xzr
-; CHECK-NEXT:    ldp x24, x22, [x14]
-; CHECK-NEXT:    lsl x14, x15, #1
-; CHECK-NEXT:    lsl x23, x18, #1
-; CHECK-NEXT:    lsr x25, x15, x13
-; CHECK-NEXT:    lsl x15, x22, #1
+; CHECK-NEXT:    ldp x24, x22, [x0]
+; CHECK-NEXT:    lsl x0, x1, #1
+; CHECK-NEXT:    lsl x23, x4, #1
+; CHECK-NEXT:    lsr x25, x1, x13
+; CHECK-NEXT:    lsl x1, x22, #1
 ; CHECK-NEXT:    lsr x27, x22, x13
 ; CHECK-NEXT:    lsr x28, x24, x13
-; CHECK-NEXT:    lsl x26, x14, x21
-; CHECK-NEXT:    subs x14, x8, #1
-; CHECK-NEXT:    lsl x23, x23, x0
-; CHECK-NEXT:    lsl x0, x15, x0
-; CHECK-NEXT:    sbcs x15, x9, xzr
-; CHECK-NEXT:    lsr x22, x18, x13
-; CHECK-NEXT:    sbcs x18, x10, xzr
+; CHECK-NEXT:    lsl x26, x0, x21
+; CHECK-NEXT:    subs x0, x8, #1
+; CHECK-NEXT:    lsl x23, x23, x5
+; CHECK-NEXT:    lsl x5, x1, x5
+; CHECK-NEXT:    sbcs x1, x9, xzr
+; CHECK-NEXT:    lsr x22, x4, x13
+; CHECK-NEXT:    sbcs x4, x10, xzr
 ; CHECK-NEXT:    orr x21, x23, x25
 ; CHECK-NEXT:    orr x24, x27, x26
-; CHECK-NEXT:    orr x23, x0, x28
-; CHECK-NEXT:    sbc x0, x11, xzr
+; CHECK-NEXT:    orr x23, x5, x28
+; CHECK-NEXT:    sbc x5, x12, xzr
 ; CHECK-NEXT:  .LBB1_4: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    extr x25, x23, x5, #63
+; CHECK-NEXT:    extr x25, x23, x3, #63
 ; CHECK-NEXT:    extr x26, x24, x23, #63
 ; CHECK-NEXT:    extr x27, x21, x24, #63
 ; CHECK-NEXT:    extr x22, x22, x21, #63
-; CHECK-NEXT:    extr x5, x5, x3, #63
-; CHECK-NEXT:    extr x3, x3, x2, #63
-; CHECK-NEXT:    cmp x14, x25
-; CHECK-NEXT:    sbcs xzr, x15, x26
-; CHECK-NEXT:    orr x3, x20, x3
-; CHECK-NEXT:    orr x5, x7, x5
-; CHECK-NEXT:    sbcs xzr, x18, x27
+; CHECK-NEXT:    extr x3, x3, x18, #63
+; CHECK-NEXT:    extr x18, x18, x17, #63
+; CHECK-NEXT:    cmp x0, x25
+; CHECK-NEXT:    sbcs xzr, x1, x26
+; CHECK-NEXT:    orr x18, x20, x18
+; CHECK-NEXT:    orr x3, x7, x3
+; CHECK-NEXT:    sbcs xzr, x4, x27
 ; CHECK-NEXT:    mov x7, xzr
-; CHECK-NEXT:    sbc x21, x0, x22
+; CHECK-NEXT:    sbc x21, x5, x22
 ; CHECK-NEXT:    asr x28, x21, #63
 ; CHECK-NEXT:    and x21, x28, x8
 ; CHECK-NEXT:    subs x23, x25, x21
 ; CHECK-NEXT:    and x21, x28, x9
-; CHECK-NEXT:    and x25, x28, x11
+; CHECK-NEXT:    and x25, x28, x12
 ; CHECK-NEXT:    sbcs x24, x26, x21
 ; CHECK-NEXT:    and x21, x28, x10
 ; CHECK-NEXT:    sbcs x21, x27, x21
 ; CHECK-NEXT:    sbc x22, x22, x25
 ; CHECK-NEXT:    subs x13, x13, #1
-; CHECK-NEXT:    extr x25, x2, x1, #63
-; CHECK-NEXT:    sbcs x16, x16, xzr
-; CHECK-NEXT:    orr x1, x6, x1, lsl #1
+; CHECK-NEXT:    extr x25, x17, x15, #63
+; CHECK-NEXT:    sbcs x14, x14, xzr
+; CHECK-NEXT:    orr x15, x6, x15, lsl #1
 ; CHECK-NEXT:    and x6, x28, #0x1
-; CHECK-NEXT:    sbcs x17, x17, xzr
-; CHECK-NEXT:    orr x2, x19, x25
-; CHECK-NEXT:    sbc x4, x4, xzr
-; CHECK-NEXT:    orr x20, x13, x17
-; CHECK-NEXT:    orr x19, x16, x4
+; CHECK-NEXT:    sbcs x16, x16, xzr
+; CHECK-NEXT:    orr x17, x19, x25
+; CHECK-NEXT:    sbc x2, x2, xzr
+; CHECK-NEXT:    orr x20, x13, x16
+; CHECK-NEXT:    orr x19, x14, x2
 ; CHECK-NEXT:    orr x25, x20, x19
 ; CHECK-NEXT:    mov x19, xzr
 ; CHECK-NEXT:    mov x20, xzr
 ; CHECK-NEXT:    cbnz x25, .LBB1_4
 ; CHECK-NEXT:  .LBB1_5: // %udiv-loop-exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #192] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x7, x2, x1, #63
+; CHECK-NEXT:    extr x7, x17, x15, #63
 ; CHECK-NEXT:    ldp x22, x21, [sp, #176] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x4, x3, x2, #63
+; CHECK-NEXT:    extr x2, x18, x17, #63
 ; CHECK-NEXT:    ldp x24, x23, [sp, #160] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x13, x5, x3, #63
+; CHECK-NEXT:    extr x13, x3, x18, #63
 ; CHECK-NEXT:    ldp x26, x25, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    orr x3, x6, x1, lsl #1
+; CHECK-NEXT:    orr x18, x6, x15, lsl #1
 ; CHECK-NEXT:    ldp x28, x27, [sp, #128] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #208
 ; CHECK-NEXT:  .LBB1_6: // %udiv-end
-; CHECK-NEXT:    eor x8, x3, x12
-; CHECK-NEXT:    eor x9, x7, x12
-; CHECK-NEXT:    subs x0, x8, x12
-; CHECK-NEXT:    eor x8, x4, x12
-; CHECK-NEXT:    sbcs x1, x9, x12
-; CHECK-NEXT:    eor x9, x13, x12
-; CHECK-NEXT:    sbcs x2, x8, x12
-; CHECK-NEXT:    sbc x3, x9, x12
+; CHECK-NEXT:    eor x8, x18, x11
+; CHECK-NEXT:    eor x9, x7, x11
+; CHECK-NEXT:    subs x0, x8, x11
+; CHECK-NEXT:    eor x8, x2, x11
+; CHECK-NEXT:    sbcs x1, x9, x11
+; CHECK-NEXT:    eor x9, x13, x11
+; CHECK-NEXT:    sbcs x2, x8, x11
+; CHECK-NEXT:    sbc x3, x9, x11
 ; CHECK-NEXT:    ret
   %r = sdiv i256 %a, %b
   ret i256 %r
@@ -463,12 +463,12 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    subs x12, x8, x9
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    ngcs x9, xzr
-; CHECK-NEXT:    ngcs x10, xzr
-; CHECK-NEXT:    ngc x11, xzr
+; CHECK-NEXT:    ngcs x11, xzr
+; CHECK-NEXT:    ngc x10, xzr
 ; CHECK-NEXT:    cmp x8, x12
 ; CHECK-NEXT:    ngcs xzr, x9
-; CHECK-NEXT:    ngcs xzr, x10
 ; CHECK-NEXT:    ngcs xzr, x11
+; CHECK-NEXT:    ngcs xzr, x10
 ; CHECK-NEXT:    csinc w15, w13, wzr, hs
 ; CHECK-NEXT:    cmp w15, #0
 ; CHECK-NEXT:    csel x13, xzr, x3, ne
@@ -478,8 +478,8 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    tbnz w15, #0, .LBB2_6
 ; CHECK-NEXT:  // %bb.1: // %_udiv-special-cases
 ; CHECK-NEXT:    eor x15, x12, #0xff
-; CHECK-NEXT:    orr x16, x9, x11
-; CHECK-NEXT:    orr x15, x15, x10
+; CHECK-NEXT:    orr x16, x9, x10
+; CHECK-NEXT:    orr x15, x15, x11
 ; CHECK-NEXT:    orr x15, x15, x16
 ; CHECK-NEXT:    cbz x15, .LBB2_6
 ; CHECK-NEXT:  // %bb.2: // %udiv-bb1
@@ -504,7 +504,7 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    mvn w20, w13
 ; CHECK-NEXT:    adcs x9, x9, xzr
 ; CHECK-NEXT:    stp x0, x1, [sp, #112]
-; CHECK-NEXT:    adcs x10, x10, xzr
+; CHECK-NEXT:    adcs x11, x11, xzr
 ; CHECK-NEXT:    stp x2, x3, [sp, #128]
 ; CHECK-NEXT:    stp q0, q0, [sp, #80]
 ; CHECK-NEXT:    ldp x12, x16, [x14, #8]
@@ -519,8 +519,8 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    lsr x21, x14, x20
 ; CHECK-NEXT:    lsr x20, x17, #1
 ; CHECK-NEXT:    lsr x19, x19, x18
-; CHECK-NEXT:    adcs x14, x11, xzr
-; CHECK-NEXT:    lsl x11, x17, x13
+; CHECK-NEXT:    adcs x14, x10, xzr
+; CHECK-NEXT:    lsl x10, x17, x13
 ; CHECK-NEXT:    lsr x18, x20, x18
 ; CHECK-NEXT:    cset w20, hs
 ; CHECK-NEXT:    orr x15, x15, x19
@@ -586,14 +586,14 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    sbcs x24, x30, x24
 ; CHECK-NEXT:    sbc x25, x25, x28
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    extr x28, x12, x11, #63
+; CHECK-NEXT:    extr x28, x12, x10, #63
 ; CHECK-NEXT:    sbcs x9, x9, xzr
-; CHECK-NEXT:    orr x11, x16, x11, lsl #1
+; CHECK-NEXT:    orr x10, x16, x10, lsl #1
 ; CHECK-NEXT:    and x16, x20, #0x1
-; CHECK-NEXT:    sbcs x10, x10, xzr
+; CHECK-NEXT:    sbcs x11, x11, xzr
 ; CHECK-NEXT:    orr x12, x18, x28
 ; CHECK-NEXT:    sbc x14, x14, xzr
-; CHECK-NEXT:    orr x19, x8, x10
+; CHECK-NEXT:    orr x19, x8, x11
 ; CHECK-NEXT:    orr x18, x9, x14
 ; CHECK-NEXT:    orr x20, x19, x18
 ; CHECK-NEXT:    mov x18, xzr
@@ -601,13 +601,13 @@ define i256 @urem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    cbnz x20, .LBB2_4
 ; CHECK-NEXT:  .LBB2_5: // %udiv-loop-exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #224] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x14, x12, x11, #63
+; CHECK-NEXT:    extr x14, x12, x10, #63
 ; CHECK-NEXT:    ldp x22, x21, [sp, #208] // 16-byte Folded Reload
 ; CHECK-NEXT:    extr x17, x13, x12, #63
 ; CHECK-NEXT:    ldp x24, x23, [sp, #192] // 16-byte Folded Reload
 ; CHECK-NEXT:    extr x13, x15, x13, #63
 ; CHECK-NEXT:    ldp x26, x25, [sp, #176] // 16-byte Folded Reload
-; CHECK-NEXT:    orr x8, x16, x11, lsl #1
+; CHECK-NEXT:    orr x8, x16, x10, lsl #1
 ; CHECK-NEXT:    ldp x28, x27, [sp, #160] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #144] // 16-byte Folded Reload
@@ -718,12 +718,12 @@ define i256 @srem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    subs x2, x18, x17
 ; CHECK-NEXT:    mov w17, #255 // =0xff
 ; CHECK-NEXT:    ngcs x18, xzr
-; CHECK-NEXT:    ngcs x0, xzr
-; CHECK-NEXT:    ngc x1, xzr
+; CHECK-NEXT:    ngcs x1, xzr
+; CHECK-NEXT:    ngc x0, xzr
 ; CHECK-NEXT:    cmp x17, x2
 ; CHECK-NEXT:    ngcs xzr, x18
-; CHECK-NEXT:    ngcs xzr, x0
 ; CHECK-NEXT:    ngcs xzr, x1
+; CHECK-NEXT:    ngcs xzr, x0
 ; CHECK-NEXT:    csinc w5, w3, wzr, hs
 ; CHECK-NEXT:    cmp w5, #0
 ; CHECK-NEXT:    csel x3, xzr, x11, ne
@@ -733,8 +733,8 @@ define i256 @srem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    tbnz w5, #0, .LBB3_6
 ; CHECK-NEXT:  // %bb.1: // %_udiv-special-cases
 ; CHECK-NEXT:    eor x5, x2, #0xff
-; CHECK-NEXT:    orr x6, x18, x1
-; CHECK-NEXT:    orr x5, x5, x0
+; CHECK-NEXT:    orr x6, x18, x0
+; CHECK-NEXT:    orr x5, x5, x1
 ; CHECK-NEXT:    orr x5, x5, x6
 ; CHECK-NEXT:    cbz x5, .LBB3_6
 ; CHECK-NEXT:  // %bb.2: // %udiv-bb1
@@ -758,7 +758,7 @@ define i256 @srem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    adcs x18, x18, xzr
 ; CHECK-NEXT:    stp x23, x22, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    adcs x0, x0, xzr
+; CHECK-NEXT:    adcs x1, x1, xzr
 ; CHECK-NEXT:    lsl x3, x3, x9
 ; CHECK-NEXT:    lsr x4, x2, #1
 ; CHECK-NEXT:    lsr x19, x5, #1
@@ -768,8 +768,8 @@ define i256 @srem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    lsr x7, x4, x7
 ; CHECK-NEXT:    lsr x19, x19, x6
 ; CHECK-NEXT:    lsr x6, x20, x6
-; CHECK-NEXT:    adcs x4, x1, xzr
-; CHECK-NEXT:    lsl x1, x10, x9
+; CHECK-NEXT:    adcs x4, x0, xzr
+; CHECK-NEXT:    lsl x0, x10, x9
 ; CHECK-NEXT:    cset w20, hs
 ; CHECK-NEXT:    orr x5, x3, x19
 ; CHECK-NEXT:    orr x3, x21, x7
@@ -835,24 +835,24 @@ define i256 @srem256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    and x9, x10, x16
 ; CHECK-NEXT:    sbc x26, x26, x9
 ; CHECK-NEXT:    subs x17, x17, #1
-; CHECK-NEXT:    extr x9, x2, x1, #63
+; CHECK-NEXT:    extr x9, x2, x0, #63
 ; CHECK-NEXT:    sbcs x18, x18, xzr
-; CHECK-NEXT:    orr x1, x6, x1, lsl #1
+; CHECK-NEXT:    orr x0, x6, x0, lsl #1
 ; CHECK-NEXT:    and x6, x10, #0x1
-; CHECK-NEXT:    sbcs x0, x0, xzr
+; CHECK-NEXT:    sbcs x1, x1, xzr
 ; CHECK-NEXT:    orr x2, x19, x9
 ; CHECK-NEXT:    sbc x4, x4, xzr
-; CHECK-NEXT:    orr x19, x17, x0
+; CHECK-NEXT:    orr x19, x17, x1
 ; CHECK-NEXT:    orr x9, x18, x4
 ; CHECK-NEXT:    orr x9, x19, x9
 ; CHECK-NEXT:    mov x19, xzr
 ; CHECK-NEXT:    cbnz x9, .LBB3_4
 ; CHECK-NEXT:  .LBB3_5: // %udiv-loop-exit
 ; CHECK-NEXT:    ldp x23, x22, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x4, x2, x1, #63
+; CHECK-NEXT:    extr x4, x2, x0, #63
 ; CHECK-NEXT:    extr x7, x3, x2, #63
 ; CHECK-NEXT:    extr x3, x5, x3, #63
-; CHECK-NEXT:    orr x17, x6, x1, lsl #1
+; CHECK-NEXT:    orr x17, x6, x0, lsl #1
 ; CHECK-NEXT:  .LBB3_6: // %udiv-end
 ; CHECK-NEXT:    umulh x10, x17, x15
 ; CHECK-NEXT:    ldp x20, x19, [sp, #224] // 16-byte Folded Reload
@@ -927,22 +927,22 @@ define i256 @sdiv256_const(i256 %a) nounwind {
 ; CHECK-NEXT:    mov w13, #255 // =0xff
 ; CHECK-NEXT:    eor x9, x0, x8
 ; CHECK-NEXT:    eor x10, x1, x8
-; CHECK-NEXT:    subs x18, x9, x8
+; CHECK-NEXT:    subs x4, x9, x8
 ; CHECK-NEXT:    eor x9, x2, x8
-; CHECK-NEXT:    sbcs x0, x10, x8
+; CHECK-NEXT:    sbcs x2, x10, x8
 ; CHECK-NEXT:    eor x10, x3, x8
-; CHECK-NEXT:    sbcs x1, x9, x8
-; CHECK-NEXT:    clz x9, x18
-; CHECK-NEXT:    clz x11, x0
+; CHECK-NEXT:    sbcs x3, x9, x8
+; CHECK-NEXT:    clz x9, x4
+; CHECK-NEXT:    clz x11, x2
 ; CHECK-NEXT:    sbcs x5, x10, x8
-; CHECK-NEXT:    clz x10, x1
+; CHECK-NEXT:    clz x10, x3
 ; CHECK-NEXT:    add x9, x9, #64
 ; CHECK-NEXT:    add x10, x10, #64
 ; CHECK-NEXT:    clz x12, x5
-; CHECK-NEXT:    orr x14, x0, x5
+; CHECK-NEXT:    orr x14, x2, x5
 ; CHECK-NEXT:    csel x10, x12, x10, ne
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    orr x12, x1, x5
+; CHECK-NEXT:    cmp x2, #0
+; CHECK-NEXT:    orr x12, x3, x5
 ; CHECK-NEXT:    csel x9, x11, x9, ne
 ; CHECK-NEXT:    cmp x12, #0
 ; CHECK-NEXT:    mov w11, #253 // =0xfd
@@ -950,24 +950,24 @@ define i256 @sdiv256_const(i256 %a) nounwind {
 ; CHECK-NEXT:    csel x9, x10, x9, ne
 ; CHECK-NEXT:    subs x9, x11, x9
 ; CHECK-NEXT:    ngcs x10, xzr
-; CHECK-NEXT:    ngcs x11, xzr
-; CHECK-NEXT:    ngc x12, xzr
+; CHECK-NEXT:    ngcs x12, xzr
+; CHECK-NEXT:    ngc x11, xzr
 ; CHECK-NEXT:    cmp x13, x9
-; CHECK-NEXT:    orr x13, x18, x1
+; CHECK-NEXT:    orr x13, x4, x3
 ; CHECK-NEXT:    ngcs xzr, x10
 ; CHECK-NEXT:    orr x13, x13, x14
-; CHECK-NEXT:    ngcs xzr, x11
 ; CHECK-NEXT:    ngcs xzr, x12
+; CHECK-NEXT:    ngcs xzr, x11
 ; CHECK-NEXT:    ccmp x13, #0, #4, hs
 ; CHECK-NEXT:    csel x13, xzr, x5, eq
-; CHECK-NEXT:    csel x15, xzr, x1, eq
-; CHECK-NEXT:    csel x2, xzr, x0, eq
-; CHECK-NEXT:    csel x14, xzr, x18, eq
+; CHECK-NEXT:    csel x15, xzr, x3, eq
+; CHECK-NEXT:    csel x18, xzr, x2, eq
+; CHECK-NEXT:    csel x14, xzr, x4, eq
 ; CHECK-NEXT:    b.eq .LBB5_6
 ; CHECK-NEXT:  // %bb.1: // %_udiv-special-cases
 ; CHECK-NEXT:    eor x16, x9, #0xff
-; CHECK-NEXT:    orr x17, x10, x12
-; CHECK-NEXT:    orr x16, x16, x11
+; CHECK-NEXT:    orr x17, x10, x11
+; CHECK-NEXT:    orr x16, x16, x12
 ; CHECK-NEXT:    orr x16, x16, x17
 ; CHECK-NEXT:    cbz x16, .LBB5_6
 ; CHECK-NEXT:  // %bb.2: // %udiv-bb1
@@ -982,65 +982,65 @@ define i256 @sdiv256_const(i256 %a) nounwind {
 ; CHECK-NEXT:    stp x24, x23, [sp, #144] // 16-byte Folded Spill
 ; CHECK-NEXT:    adds x9, x9, #1
 ; CHECK-NEXT:    stp x22, x21, [sp, #160] // 16-byte Folded Spill
-; CHECK-NEXT:    and x3, x13, #0x3f
+; CHECK-NEXT:    and x0, x13, #0x3f
 ; CHECK-NEXT:    adcs x10, x10, xzr
 ; CHECK-NEXT:    and x14, x14, #0x18
 ; CHECK-NEXT:    stp x20, x19, [sp, #176] // 16-byte Folded Spill
-; CHECK-NEXT:    mvn w4, w13
-; CHECK-NEXT:    stp x18, x0, [sp, #96]
+; CHECK-NEXT:    mvn w1, w13
+; CHECK-NEXT:    stp x4, x2, [sp, #96]
 ; CHECK-NEXT:    sub x14, x15, x14
-; CHECK-NEXT:    eor x3, x3, #0x3f
-; CHECK-NEXT:    str x1, [sp, #112]
-; CHECK-NEXT:    adcs x11, x11, xzr
+; CHECK-NEXT:    eor x0, x0, #0x3f
+; CHECK-NEXT:    str x3, [sp, #112]
+; CHECK-NEXT:    adcs x12, x12, xzr
 ; CHECK-NEXT:    stp q0, q0, [sp, #64]
-; CHECK-NEXT:    ldp x16, x2, [x14, #8]
+; CHECK-NEXT:    ldp x16, x18, [x14, #8]
 ; CHECK-NEXT:    ldr x17, [x14, #24]
 ; CHECK-NEXT:    ldr x14, [x14]
 ; CHECK-NEXT:    lsl x17, x17, x13
 ; CHECK-NEXT:    lsr x15, x16, #1
-; CHECK-NEXT:    lsr x6, x2, #1
+; CHECK-NEXT:    lsr x6, x18, #1
 ; CHECK-NEXT:    lsr x7, x14, #1
-; CHECK-NEXT:    lsl x2, x2, x13
+; CHECK-NEXT:    lsl x18, x18, x13
 ; CHECK-NEXT:    lsl x19, x16, x13
-; CHECK-NEXT:    lsr x4, x15, x4
-; CHECK-NEXT:    lsr x6, x6, x3
-; CHECK-NEXT:    lsr x3, x7, x3
-; CHECK-NEXT:    adcs x15, x12, xzr
-; CHECK-NEXT:    lsl x12, x14, x13
+; CHECK-NEXT:    lsr x1, x15, x1
+; CHECK-NEXT:    lsr x6, x6, x0
+; CHECK-NEXT:    lsr x0, x7, x0
+; CHECK-NEXT:    adcs x15, x11, xzr
+; CHECK-NEXT:    lsl x11, x14, x13
 ; CHECK-NEXT:    cset w7, hs
 ; CHECK-NEXT:    orr x16, x17, x6
-; CHECK-NEXT:    orr x14, x2, x4
-; CHECK-NEXT:    orr x13, x19, x3
+; CHECK-NEXT:    orr x14, x18, x1
+; CHECK-NEXT:    orr x13, x19, x0
 ; CHECK-NEXT:    mov x17, xzr
 ; CHECK-NEXT:    tbnz w7, #0, .LBB5_5
 ; CHECK-NEXT:  // %bb.3: // %udiv-preheader
 ; CHECK-NEXT:    lsr x6, x9, #3
-; CHECK-NEXT:    stp x18, x0, [sp]
-; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    stp x4, x2, [sp]
+; CHECK-NEXT:    mov x4, sp
 ; CHECK-NEXT:    stp q0, q0, [sp, #32]
 ; CHECK-NEXT:    mvn w7, w9
-; CHECK-NEXT:    mov x3, xzr
-; CHECK-NEXT:    and x18, x6, #0x18
-; CHECK-NEXT:    stp x1, x5, [sp, #16]
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    and x2, x6, #0x18
+; CHECK-NEXT:    stp x3, x5, [sp, #16]
 ; CHECK-NEXT:    and x6, x9, #0x3f
-; CHECK-NEXT:    add x0, x0, x18
-; CHECK-NEXT:    mov w18, #7 // =0x7
+; CHECK-NEXT:    add x3, x4, x2
+; CHECK-NEXT:    mov w2, #7 // =0x7
 ; CHECK-NEXT:    eor x6, x6, #0x3f
-; CHECK-NEXT:    ldp x1, x5, [x0, #16]
-; CHECK-NEXT:    mov x4, xzr
-; CHECK-NEXT:    ldp x21, x19, [x0]
-; CHECK-NEXT:    mov x2, xzr
-; CHECK-NEXT:    lsl x0, x1, #1
+; CHECK-NEXT:    ldp x4, x5, [x3, #16]
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    ldp x21, x19, [x3]
+; CHECK-NEXT:    mov x18, xzr
+; CHECK-NEXT:    lsl x3, x4, #1
 ; CHECK-NEXT:    lsl x20, x5, #1
-; CHECK-NEXT:    lsr x22, x1, x9
-; CHECK-NEXT:    lsl x1, x19, #1
+; CHECK-NEXT:    lsr x22, x4, x9
+; CHECK-NEXT:    lsl x4, x19, #1
 ; CHECK-NEXT:    lsr x24, x19, x9
 ; CHECK-NEXT:    lsr x21, x21, x9
-; CHECK-NEXT:    lsl x23, x0, x7
-; CHECK-NEXT:    subs x0, x18, #1
+; CHECK-NEXT:    lsl x23, x3, x7
+; CHECK-NEXT:    subs x3, x2, #1
 ; CHECK-NEXT:    lsl x20, x20, x6
-; CHECK-NEXT:    lsl x6, x1, x6
-; CHECK-NEXT:    ngcs x1, xzr
+; CHECK-NEXT:    lsl x6, x4, x6
+; CHECK-NEXT:    ngcs x4, xzr
 ; CHECK-NEXT:    lsr x19, x5, x9
 ; CHECK-NEXT:    ngcs x5, xzr
 ; CHECK-NEXT:    orr x7, x20, x22
@@ -1055,46 +1055,46 @@ define i256 @sdiv256_const(i256 %a) nounwind {
 ; CHECK-NEXT:    extr x19, x19, x7, #63
 ; CHECK-NEXT:    extr x16, x16, x14, #63
 ; CHECK-NEXT:    extr x14, x14, x13, #63
-; CHECK-NEXT:    cmp x0, x22
-; CHECK-NEXT:    sbcs xzr, x1, x23
-; CHECK-NEXT:    orr x14, x4, x14
-; CHECK-NEXT:    orr x16, x2, x16
+; CHECK-NEXT:    cmp x3, x22
+; CHECK-NEXT:    sbcs xzr, x4, x23
+; CHECK-NEXT:    orr x14, x1, x14
+; CHECK-NEXT:    orr x16, x18, x16
 ; CHECK-NEXT:    sbcs xzr, x5, x24
-; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    mov x18, xzr
 ; CHECK-NEXT:    sbc x7, x6, x19
 ; CHECK-NEXT:    asr x25, x7, #63
-; CHECK-NEXT:    and x7, x25, x18
+; CHECK-NEXT:    and x7, x25, x2
 ; CHECK-NEXT:    subs x21, x22, x7
-; CHECK-NEXT:    extr x22, x13, x12, #63
-; CHECK-NEXT:    orr x12, x17, x12, lsl #1
+; CHECK-NEXT:    extr x22, x13, x11, #63
+; CHECK-NEXT:    orr x11, x17, x11, lsl #1
 ; CHECK-NEXT:    sbcs x20, x23, xzr
 ; CHECK-NEXT:    and x17, x25, #0x1
 ; CHECK-NEXT:    sbcs x7, x24, xzr
-; CHECK-NEXT:    orr x13, x3, x22
+; CHECK-NEXT:    orr x13, x0, x22
 ; CHECK-NEXT:    sbc x19, x19, xzr
 ; CHECK-NEXT:    subs x9, x9, #1
 ; CHECK-NEXT:    sbcs x10, x10, xzr
-; CHECK-NEXT:    sbcs x11, x11, xzr
+; CHECK-NEXT:    sbcs x12, x12, xzr
 ; CHECK-NEXT:    sbc x15, x15, xzr
-; CHECK-NEXT:    orr x4, x9, x11
-; CHECK-NEXT:    orr x3, x10, x15
-; CHECK-NEXT:    orr x22, x4, x3
-; CHECK-NEXT:    mov x3, xzr
-; CHECK-NEXT:    mov x4, xzr
+; CHECK-NEXT:    orr x1, x9, x12
+; CHECK-NEXT:    orr x0, x10, x15
+; CHECK-NEXT:    orr x22, x1, x0
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    cbnz x22, .LBB5_4
 ; CHECK-NEXT:  .LBB5_5: // %udiv-loop-exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
-; CHECK-NEXT:    extr x2, x13, x12, #63
+; CHECK-NEXT:    extr x18, x13, x11, #63
 ; CHECK-NEXT:    ldp x22, x21, [sp, #160] // 16-byte Folded Reload
 ; CHECK-NEXT:    extr x15, x14, x13, #63
 ; CHECK-NEXT:    ldp x24, x23, [sp, #144] // 16-byte Folded Reload
 ; CHECK-NEXT:    extr x13, x16, x14, #63
-; CHECK-NEXT:    orr x14, x17, x12, lsl #1
+; CHECK-NEXT:    orr x14, x17, x11, lsl #1
 ; CHECK-NEXT:    ldr x25, [sp, #128] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:  .LBB5_6: // %udiv-end
 ; CHECK-NEXT:    eor x9, x14, x8
-; CHECK-NEXT:    eor x10, x2, x8
+; CHECK-NEXT:    eor x10, x18, x8
 ; CHECK-NEXT:    subs x0, x9, x8
 ; CHECK-NEXT:    eor x9, x15, x8
 ; CHECK-NEXT:    sbcs x1, x10, x8

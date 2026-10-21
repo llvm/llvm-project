@@ -16,7 +16,7 @@
 !                [...]
 !CHECK:          omp.task in_reduction(@[[RED_I32_NAME]] %[[VAL_1:.*]]#0  -> %[[ARG0]] : !fir.ref<i32>) {
 !CHECK:            %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG0]]
-!CHECK-SAME:       {uniq_name = "_QFomp_task_in_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-SAME:       uniq_name("_QFomp_task_in_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:            %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 !CHECK:            %[[VAL_6:.*]] = arith.constant 1 : i32
 !CHECK:            %[[VAL_7:.*]] = arith.addi %[[VAL_5]], %[[VAL_6]] : i32

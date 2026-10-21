@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
-#define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
+#ifndef _LIBSYCL_SRC_DETAIL_SUPPRESS_EXTRA_WARNINGS_HPP
+#define _LIBSYCL_SRC_DETAIL_SUPPRESS_EXTRA_WARNINGS_HPP
 
 #define _LIBSYCL_DO_PRAGMA(x) _Pragma(#x)
 #define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN                                 \
@@ -22,4 +22,4 @@
 #define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END                                   \
   _LIBSYCL_DO_PRAGMA(GCC diagnostic pop)
 
-#endif // _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
+#endif // _LIBSYCL_SRC_DETAIL_SUPPRESS_EXTRA_WARNINGS_HPP

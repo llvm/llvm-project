@@ -4,8 +4,8 @@
 ! CHECK-SAME:                     %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "ptr1"},
 ! CHECK-SAME:                     %[[VAL_1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>> {fir.bindc_name = "ptr2"}) {
 ! CHECK:         %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[VAL_131:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg 1 {uniq_name = "_QFtestEptr1"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
-! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg 2 {uniq_name = "_QFtestEptr2"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
+! CHECK:         %[[VAL_131:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg 1 uniq_name("_QFtestEptr1") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
+! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg 2 uniq_name("_QFtestEptr2") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
 ! CHECK:         %[[VAL_133:.*]] = fir.coordinate_of %[[VAL_131]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_134:.*]] = fir.load %[[VAL_133]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_135:.*]] = fir.convert %[[VAL_134]] : (i64) -> !fir.ref<i64>
@@ -36,12 +36,12 @@ end
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> <{bindc_name = "local", uniq_name = "_QFtest_callee_c_ptrElocal"}>
-! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtest_callee_c_ptrElocal"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
+! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFtest_callee_c_ptrElocal") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK:         %[[VAL_133:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_134:.*]] = fir.coordinate_of %[[VAL_133]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_135:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:         fir.store %[[VAL_135]] to %[[VAL_134]] : !fir.ref<i64>
-! CHECK:         %[[VAL_136:.*]]:2 = hlfir.declare %[[VAL_133]] dummy_scope %[[VAL_1]] arg 1 {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_callee_c_ptrEptr1"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
+! CHECK:         %[[VAL_136:.*]]:2 = hlfir.declare %[[VAL_133]] dummy_scope %[[VAL_1]] arg 1 uniq_name("_QFtest_callee_c_ptrEptr1") fortran_attrs<value> : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
 ! CHECK:         hlfir.assign %[[VAL_136]]#0 to %[[VAL_132]]#0 : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 ! CHECK:         return
 ! CHECK:       }
@@ -57,12 +57,12 @@ end subroutine
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:         %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}> <{bindc_name = "local", uniq_name = "_QFtest_callee_c_funptrElocal"}>
-! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtest_callee_c_funptrElocal"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
+! CHECK:         %[[VAL_132:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFtest_callee_c_funptrElocal") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
 ! CHECK:         %[[VAL_133:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>
 ! CHECK:         %[[VAL_134:.*]] = fir.coordinate_of %[[VAL_133]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_135:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> i64
 ! CHECK:         fir.store %[[VAL_135]] to %[[VAL_134]] : !fir.ref<i64>
-! CHECK:         %[[VAL_136:.*]]:2 = hlfir.declare %[[VAL_133]] dummy_scope %[[VAL_1]] arg 1 {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_callee_c_funptrEptr1"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
+! CHECK:         %[[VAL_136:.*]]:2 = hlfir.declare %[[VAL_133]] dummy_scope %[[VAL_1]] arg 1 uniq_name("_QFtest_callee_c_funptrEptr1") fortran_attrs<value> : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>)
 ! CHECK:         hlfir.assign %[[VAL_136]]#0 to %[[VAL_132]]#0 : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>
 ! CHECK:         return
 ! CHECK:       }

@@ -755,7 +755,10 @@ C++ code:
    safely removed in the middle-end.
 
 `CodeGen` is similarly relaxed, with implicitly `__host__` functions being
-emitted as well.
+emitted as well. Because CUDA device code generation otherwise discards the
+exception-handling representation of a C++ `try` statement, HIPStdPar emits an
+unsupported-operation marker that is diagnosed later only if the containing
+function is reachable from an accelerator kernel.
 
 ## Implementation - Middle-End
 
@@ -766,6 +769,8 @@ We add two `opt` passes:
    - For all kernels in a `Module`, compute reachability, where a function
      `F` is reachable from a kernel `K` if and only if there exists a direct
      call-chain rooted in `F` that includes `K`;
+   - Diagnose unsupported constructs, including C++ exception handling, when
+     they are reachable from a kernel;
    - Remove all functions that are not reachable from kernels;
    - This pass is only run when compiling for the accelerator.
 

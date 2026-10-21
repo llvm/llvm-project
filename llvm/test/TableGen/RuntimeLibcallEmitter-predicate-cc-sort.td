@@ -15,13 +15,16 @@ def impl_default : RuntimeLibcallImpl<FUNC_DEFAULT>;
 def IsWin : LibcallPredicate<[{TT.isOSWindows()}]>;
 def isWin : RuntimeLibcallAvailability<(all_of IsWin)>;
 
-def WinLibrary : SystemRuntimeLibrary<isWin,
+def WinLibc : LibcallLibrary<"libc",
   (add LibcallsWithCC<(add impl_aapcs), ARM_AAPCS, isWin>,
        LibcallImpls<(add impl_default), isWin>)
 >;
 
+def WinLibrary : SystemRuntimeLibrary<isWin, (add WinLibc)>;
+
 // The ARM_AAPCS group sorts after the default-CC group (empty calling
 // convention name orders before "ARM_AAPCS").
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK: if (TT.isOSWindows()) {
 // CHECK:   static const RTLIB::LibcallImpl LibraryCalls_isWin[] = {
 // CHECK-NEXT:       RTLIB::impl_impl_default, // impl_default

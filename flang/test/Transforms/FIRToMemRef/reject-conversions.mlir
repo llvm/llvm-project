@@ -16,7 +16,7 @@ func.func @reject_zero_array() {
   %c-6 = arith.constant -6 : index
   %1 = fir.address_of(@_QFEc) : !fir.ref<!fir.array<0x0xi32>>
   %2 = fir.shape_shift %c-2, %c0, %c-5, %c0 : (index, index, index, index) -> !fir.shapeshift<2>
-  %3 = fir.declare %1(%2) {uniq_name = "c"} : (!fir.ref<!fir.array<0x0xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<0x0xi32>>
+  %3 = fir.declare %1(%2) uniq_name("c") : (!fir.ref<!fir.array<0x0xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<0x0xi32>>
   fir.do_loop %arg0 = %c1 to %c0 step %c1 unordered {
     fir.do_loop %arg1 = %c1 to %c0 step %c1 unordered {
       %11 = arith.addi %arg1, %c-3 : index

@@ -659,8 +659,8 @@ void OmpStructureChecker::CheckTraitRequires(
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_requires, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_requires, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause from the requirement clause set"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()));
@@ -684,8 +684,8 @@ void OmpStructureChecker::CheckTraitSimd(
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_declare_simd, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_declare_simd, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause that is allowed on the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()),

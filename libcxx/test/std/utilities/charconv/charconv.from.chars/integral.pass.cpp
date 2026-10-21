@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// FIXME: Enable this for all tests once possible
+// ADDITIONAL_COMPILE_FLAGS(ubsan): -fsanitize=unsigned-integer-overflow
+
 // <charconv>
 
 // constexpr from_chars_result from_chars(const char* first, const char* last,
@@ -19,9 +22,9 @@
 #include "test_macros.h"
 #include "charconv_test_helpers.h"
 
-template <typename T>
 struct test_basics
 {
+    template <typename T>
     TEST_CONSTEXPR_CXX23 void operator()()
     {
         std::from_chars_result r;
@@ -83,9 +86,9 @@ struct test_basics
     }
 };
 
-template <typename T>
 struct test_signed
 {
+    template <typename T>
     TEST_CONSTEXPR_CXX23 void operator()()
     {
         std::from_chars_result r;
@@ -134,13 +137,22 @@ struct test_signed
             // the member ec is equal to errc::invalid_argument.
             assert(r.ec == std::errc::invalid_argument);
         }
+
+        {
+            // Ensure "-0" does not trigger unsigned integer overflow.
+            char s[] = "-0";
+            r = std::from_chars(s, s + sizeof(s), x);
+            assert(r.ec == std::errc{});
+            assert(r.ptr == s + 2);
+            assert(x == 0);
+        }
     }
 };
 
 TEST_CONSTEXPR_CXX23 bool test()
 {
-    run<test_basics>(integrals);
-    run<test_signed>(all_signed);
+    types::for_each(integrals(), test_basics());
+    types::for_each(types::signed_integer_types(), test_signed());
 
     return true;
 }

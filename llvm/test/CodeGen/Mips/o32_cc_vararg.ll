@@ -27,10 +27,10 @@ entry:
 
 ; CHECK-LABEL: va1:
 ; CHECK: addiu   $sp, $sp, -16
+; CHECK: move    $2, $5
 ; CHECK: sw      $7, 28($sp)
 ; CHECK: sw      $6, 24($sp)
 ; CHECK: sw      $5, 20($sp)
-; CHECK: move    $2, $5
 }
 
 ; check whether the variable double argument will be accessed from the 8-byte
@@ -77,9 +77,9 @@ entry:
 
 ; CHECK-LABEL: va3:
 ; CHECK: addiu   $sp, $sp, -16
+; CHECK: move    $2, $6
 ; CHECK: sw      $7, 28($sp)
 ; CHECK: sw      $6, 24($sp)
-; CHECK: move    $2, $6
 }
 
 ; double
@@ -124,8 +124,8 @@ entry:
 
 ; CHECK-LABEL: va5:
 ; CHECK: addiu   $sp, $sp, -24
-; CHECK: sw      $7, 36($sp)
 ; CHECK: move    $2, $7
+; CHECK: sw      $7, 36($sp)
 }
 
 ; double

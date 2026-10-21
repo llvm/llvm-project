@@ -812,7 +812,7 @@ define <8 x i16> @test_x86_sse2_pmulh_w(<8 x i16> %a0, <8 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
@@ -828,7 +828,7 @@ define <8 x i16> @test_x86_sse2_pmulhu_w(<8 x i16> %a0, <8 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;

@@ -1117,7 +1117,7 @@ OffsetRange HCE::getOffsetRange(const ExtDesc &ED) const {
 // all uses of Rd.
 OffsetRange HCE::getOffsetRange(Register Rd) const {
   OffsetRange Range;
-  for (const MachineOperand &Op : MRI->use_operands(Rd.Reg)) {
+  for (const MachineOperand &Op : MRI->use_nodbg_operands(Rd.Reg)) {
     // Make sure that the register being used by this operand is identical
     // to the register that was defined: using a different subregister
     // precludes any non-trivial range.
@@ -1861,7 +1861,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
   // must follow the Rd in the operand list.
   std::vector<std::pair<MachineInstr*,unsigned>> RegOps;
   if (ED.IsDef && Diff != 0) {
-    for (MachineOperand &Op : MRI->use_operands(ED.Rd.Reg)) {
+    for (MachineOperand &Op : MRI->use_nodbg_operands(ED.Rd.Reg)) {
       MachineInstr &UI = *Op.getParent();
       RegOps.push_back({&UI, getOperandIndex(UI, Op)});
     }

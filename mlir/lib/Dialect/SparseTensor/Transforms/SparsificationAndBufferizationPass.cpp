@@ -59,7 +59,7 @@ class SparsificationAndBufferizationPass
     : public impl::SparsificationAndBufferizationBase<
           SparsificationAndBufferizationPass> {
 public:
-  // Private pass options only.
+  // Bufferization, sparsification, and sparse storage options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
@@ -68,8 +68,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization) {}
+        enableBufferInitialization(enableBufferInitialization) {
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
+  }
   // Private pass options and visible pass options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
@@ -81,9 +82,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
         enableBufferInitialization(enableBufferInitialization) {
     // Set the visible pass options explicitly.
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
     vectorLength = vl;
     enableVLAVectorization = vla;
     enableSIMDIndex32 = index32;
@@ -128,6 +129,9 @@ public:
 
     // Overrides the default parallelization strategy using user-provided value.
     this->sparsificationOptions.parallelizationStrategy = parallelization;
+
+    // Keep sparsification and sparse storage lowering on the same runtime path.
+    this->sparsificationOptions.enableRuntimeLibrary = enableRuntimeLibrary;
 
     // Run enabling transformations.
     {
@@ -207,7 +211,6 @@ private:
   bufferization::OneShotBufferizationOptions bufferizationOptions;
   SparsificationOptions sparsificationOptions;
   bool createSparseDeallocs;
-  bool enableRuntimeLibrary;
   bool enableBufferInitialization;
 };
 

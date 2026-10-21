@@ -26,6 +26,7 @@
 #include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Remarks.h"
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -206,6 +207,26 @@ private:
   MlirLlvmThreadPool threadPool;
 };
 
+/// The kinds, emitting policies and file formats of the remark engine
+/// (mlir-c/Remarks.h).
+enum class PyRemarkKind : std::underlying_type_t<MlirRemarkKind> {
+  Unknown = MlirRemarkKindUnknown,
+  Passed = MlirRemarkKindPassed,
+  Missed = MlirRemarkKindMissed,
+  Failure = MlirRemarkKindFailure,
+  Analysis = MlirRemarkKindAnalysis
+};
+
+enum class PyRemarkPolicy : std::underlying_type_t<MlirRemarkPolicy> {
+  All = MlirRemarkPolicyAll,
+  Final = MlirRemarkPolicyFinal
+};
+
+enum class PyRemarkFormat : std::underlying_type_t<MlirRemarkFileFormat> {
+  YAML = MlirRemarkFileFormatYAML,
+  Bitstream = MlirRemarkFileFormatBitstream
+};
+
 /// Wrapper around MlirContext.
 using PyMlirContextRef = PyObjectRef<PyMlirContext>;
 class MLIR_PYTHON_API_EXPORTED PyMlirContext {
@@ -252,6 +273,26 @@ public:
   /// Attaches a Python callback as a diagnostic handler, returning a
   /// registration object (internally a PyDiagnosticHandler).
   nanobind::object attachDiagnosticHandler(nanobind::object callback);
+
+  /// Enables the optimization remark engine of the context, streaming to
+  /// `outputFile`, to `callback`, or (without either) to MLIR remark
+  /// diagnostics. Raises ValueError on an invalid combination, when an engine
+  /// is already enabled or when the file cannot be written.
+  void enableRemarks(PyRemarkPolicy policy,
+                     const std::optional<std::string> &outputFile,
+                     PyRemarkFormat format, const std::string &allFilter,
+                     const std::string &passedFilter,
+                     const std::string &missedFilter,
+                     const std::string &analysisFilter,
+                     const std::string &failedFilter, nanobind::object callback,
+                     std::optional<bool> printAsEmitRemarks);
+  /// Finalizes and removes the remark engine; no-op when none is enabled.
+  void finalizeRemarks();
+  /// Whether a remark engine is enabled on the context.
+  bool getRemarksEnabled();
+  /// Whether `context` still has a live Python wrapper (false while it is
+  /// being destroyed).
+  static bool isLiveContext(MlirContext context);
 
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
@@ -407,6 +448,32 @@ private:
   /// be populated with the corresponding objects (all castable to
   /// PyDiagnostic).
   std::optional<nanobind::tuple> materializedNotes;
+  bool valid = true;
+};
+
+/// Wrapper around an MlirRemark as delivered to a remark callback. Like a
+/// PyDiagnostic it is only valid for the duration of the callback; accessing
+/// an invalidated remark raises ValueError.
+class MLIR_PYTHON_API_EXPORTED PyRemark {
+public:
+  explicit PyRemark(MlirRemark remark) : remark(remark) {}
+  void invalidate() { valid = false; }
+  bool isValid() const { return valid; }
+  PyRemarkKind getKind() const;
+  nanobind::str getRemarkName() const;
+  nanobind::str getCategoryName() const;
+  nanobind::str getFullCategoryName() const;
+  nanobind::str getFunctionName() const;
+  nanobind::typed<nanobind::object, PyLocation> getLocation() const;
+  uint64_t getId() const;
+  /// The key/value arguments as a list of `(key, value)` tuples.
+  nanobind::list getArgs() const;
+  /// The textual form of the remark, without its location.
+  nanobind::str getMessage() const;
+
+private:
+  void checkValid() const;
+  MlirRemark remark;
   bool valid = true;
 };
 
@@ -2018,6 +2085,7 @@ public:
 
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
+MLIR_PYTHON_API_EXPORTED void populateIRRemarks(nanobind::module_ &m);
 MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 
 /// Helper for creating an @classmethod.

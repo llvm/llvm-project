@@ -20,7 +20,7 @@ module {
 cir.global external @target = #cir.int<42> : !s32i
 
 // expected-error @below {{global alias shall not have an initializer or constructor/destructor regions}}
-cir.global external @bad_alias_with_ctor alias(@target) = ctor : !s32i {
+cir.global external @bad_alias_with_ctor alias(@target) = #cir.int<0> : !s32i ctor {
   cir.yield
 }
 
@@ -47,5 +47,31 @@ module {
 
 // expected-error @below {{global type cannot be a function type}}
 cir.global "private" external @bad_func_type : !cir.func<()>
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// expected-error @below {{custom op 'cir.global' expected string}}
+cir.global external comdat(1) @bad_comdat = #cir.int<42> : !s32i
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// The custom syntax always carries an initial value, so use the generic form.
+// expected-error @below {{cannot have a constructor region without an initial value}}
+"cir.global"() <{global_visibility = 0 : i32, linkage = #cir.linkage<external>, sym_name = "ctor_without_init", sym_type = !s32i}> ({
+  cir.yield
+}, {
+}) : () -> ()
 
 }

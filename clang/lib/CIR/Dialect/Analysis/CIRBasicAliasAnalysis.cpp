@@ -191,7 +191,7 @@ static PointerOffset decomposePointer(mlir::Value val,
     if (auto baseOp = mlir::dyn_cast<cir::BaseClassAddrOp>(defOp)) {
       LDBG() << "Walking past BaseClassAddrOp";
       addToOffset(offset, baseOp.getOffset().tryZExtValue());
-      val = baseOp.getDerivedAddr();
+      val = baseOp.getSrcAddr();
       continue;
     }
 
@@ -205,7 +205,7 @@ static PointerOffset decomposePointer(mlir::Value val,
       if (baseOffset)
         baseOffset = -*baseOffset;
       addToOffset(offset, baseOffset);
-      val = derivedOp.getBaseAddr();
+      val = derivedOp.getSrcAddr();
       continue;
     }
 

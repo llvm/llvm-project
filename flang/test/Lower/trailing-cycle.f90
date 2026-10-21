@@ -49,7 +49,7 @@ subroutine trailing_cycle(a, n)
   ! CHECK:       15 CycleStmt! -> 17: cycle outer
   ! CHECK:       16 ^EndDoStmt -> 13: end do
   ! CHECK:     <<End DoConstruct!>>
-  ! CHECK:     17 ^EndDoStmt -> 12: end do outer
+  ! CHECK:     17 ^EndDoStmt -> 12 <- 15: end do outer
   ! CHECK:   <<End DoConstruct>>
   outer: do i = 1, n
     do j = 1, n
@@ -58,8 +58,10 @@ subroutine trailing_cycle(a, n)
     end do
   end do outer
 
-  ! A labeled CYCLE may be a branch target and is kept.
-  ! CHECK:   <<DoConstruct!>> -> 25
+  ! A labeled CYCLE may be a branch target and is kept. Its branches stay
+  ! inside the loop body, so the loop is category (c): structured control with
+  ! unstructured internals, marked '~' rather than '!'.
+  ! CHECK:   <<DoConstruct~>> -> 25
   ! CHECK:     18 NonLabelDoStmt -> 24: do i = 1, n
   ! CHECK:     <<IfConstruct>> -> 23
   ! CHECK:       19 ^IfStmt [negate] -> 23: if(a(i) > 0.0) goto 10
@@ -67,21 +69,22 @@ subroutine trailing_cycle(a, n)
   ! CHECK:       21 EndIfStmt
   ! CHECK:     <<End IfConstruct>>
   ! CHECK:     23 CycleStmt! -> 24: 10 cycle
-  ! CHECK:     24 ^EndDoStmt -> 18: end do
-  ! CHECK:   <<End DoConstruct!>>
+  ! CHECK:     24 ^EndDoStmt -> 18 <- 23: end do
+  ! CHECK:   <<End DoConstruct~>>
   do i = 1, n
     if (a(i) > 0.0) goto 10
     a(i) = 4.0
 10  cycle
   end do
 
-  ! A CYCLE that is not last is a real branch and is kept.
-  ! CHECK:   <<DoConstruct!>> -> 29
+  ! A CYCLE that is not last is a real branch and is kept. It targets the
+  ! EndDoStmt, which is the loop-body boundary, so this is category (c) too.
+  ! CHECK:   <<DoConstruct~>> -> 29
   ! CHECK:     25 ^NonLabelDoStmt -> 28: do i = 1, n
   ! CHECK:     26 ^CycleStmt! -> 28: cycle
   ! CHECK:     27 ^AssignmentStmt: a(i) = 5.0
-  ! CHECK:     28 ^EndDoStmt -> 25: end do
-  ! CHECK:   <<End DoConstruct!>>
+  ! CHECK:     28 ^EndDoStmt -> 25 <- 26: end do
+  ! CHECK:   <<End DoConstruct~>>
   do i = 1, n
     cycle
     a(i) = 5.0

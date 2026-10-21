@@ -110,7 +110,7 @@ inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
     MIB.add(MI->getOperand(1));
     MIB.addImm(0);
     MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(Register());
   } else {
     MachineInstrBuilder MIB =
         BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
@@ -118,7 +118,7 @@ inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
     MIB.add(MI->getOperand(1));
     MIB.addImm(0);
     MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(Register());
     MIB.addReg(ARM::CPSR, RegState::Define);
   }
 
@@ -175,7 +175,7 @@ inline void RevertLoopEnd(MachineInstr *MI, const TargetInstrInfo *TII,
     MIB.add(MI->getOperand(0));
     MIB.addImm(0);
     MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(Register());
   }
 
   // Create bne

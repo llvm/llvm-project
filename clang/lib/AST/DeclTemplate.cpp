@@ -1023,7 +1023,7 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
 ClassTemplateDecl *
 ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
+          dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
   return cast<ClassTemplateDecl *>(SpecializedTemplate);
 }
@@ -1487,7 +1487,7 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
 
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+          dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
   return cast<VarTemplateDecl *>(SpecializedTemplate);
 }
@@ -1631,7 +1631,13 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
       BTK(BTK) {}
 
 bool BuiltinTemplateDecl::isPackProducingBuiltinTemplate() const {
-  return getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
+  switch (getBuiltinTemplateKind()) {
+  case BTK__builtin_dedup_pack:
+  case BTK__builtin_sort_pack:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool clang::isPackProducingBuiltinTemplateName(TemplateName N) {

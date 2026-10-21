@@ -367,9 +367,44 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %result
 }
 
+define nofpclass(nan inf pzero norm) float @ret__nzero_sub__log_select__pnorm__unknown(i1 %cond, float nofpclass(nan inf zero sub nnorm) %must.be.pnorm, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan inf pzero norm) float @ret__nzero_sub__log_select__pnorm__unknown(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero sub nnorm) [[MUST_BE_PNORM:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret float poison
+;
+  %select = select i1 %cond, float %must.be.pnorm, float %unknown
+  %result = call float @llvm.log.f32(float %select)
+  ret float %result
+}
+
+; log(x) can be negative zero or subnormal if x is close to +1.0 for ppc_fp128.
+define nofpclass(nan inf pzero norm) ppc_fp128 @ret__nzero_sub__log_select__pnorm__unknown_ppcf128(i1 %cond, ppc_fp128 nofpclass(nan inf zero sub nnorm) %must.be.pnorm, ppc_fp128 %unknown) {
+; CHECK-LABEL: define nofpclass(nan inf pzero norm) ppc_fp128 @ret__nzero_sub__log_select__pnorm__unknown_ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan inf zero sub nnorm) [[MUST_BE_PNORM:%.*]], ppc_fp128 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[MUST_BE_PNORM]], ppc_fp128 [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf ppc_fp128 @llvm.log.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %must.be.pnorm, ppc_fp128 %unknown
+  %result = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+; Note that DoubleAPFloat::isDenormal considers 1.0 + DBL_TRUE_MIN to be
+; denormal, which APFloat::classify treats as fcSubnormal.
+define nofpclass(nan inf pzero norm) ppc_fp128 @ret__nzero_sub__log_select__psub__unknown_ppcf128(i1 %cond, ppc_fp128 nofpclass(nan inf zero nsub norm) %must.be.psub, ppc_fp128 %unknown) {
+; CHECK-LABEL: define nofpclass(nan inf pzero norm) ppc_fp128 @ret__nzero_sub__log_select__psub__unknown_ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan inf zero nsub norm) [[MUST_BE_PSUB:%.*]], ppc_fp128 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[MUST_BE_PSUB]], ppc_fp128 [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf ppc_fp128 @llvm.log.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %must.be.psub, ppc_fp128 %unknown
+  %result = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
 
 !0 = !{}
-
-

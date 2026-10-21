@@ -85,7 +85,7 @@ public:
   const char *getProfileLocation() const { return SourceStr.data(); }
   int32_t getLine() const { return Line; }
   int32_t getColumn() const { return Column; }
-  bool isAvailible() const { return (Line || Column); }
+  bool isAvailable() const { return (Line || Column); }
 };
 
 /// Standalone function for getting the variable name of a mapping.

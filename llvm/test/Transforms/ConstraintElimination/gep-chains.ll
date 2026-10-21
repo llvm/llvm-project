@@ -389,3 +389,59 @@ then:
 else:
   ret i1 false
 }
+
+; The constant offsets sum to -2^63 - 1, which sign-wraps, so they must not be
+; combined and %cmp is unknown.
+define i1 @nested_nusw_constant_offset_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 -9223372036854775808
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[OUTER]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 -9223372036854775808
+  %outer = getelementptr nusw i8, ptr %inner, i64 -1
+  %cmp = icmp ult ptr %outer, %p
+  ret i1 %cmp
+}
+
+; Same with positive offsets: 2 * (2^62 + 1) sign-wraps, so %cmp is unknown.
+define i1 @nested_nusw_constant_offset_positive_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_positive_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 4611686018427387905
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 4611686018427387905
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[OUTER]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 4611686018427387905
+  %outer = getelementptr nusw i8, ptr %inner, i64 4611686018427387905
+  %cmp = icmp ult ptr %outer, %p
+  ret i1 %cmp
+}
+
+; The sum (-2^63) is representable, so the offsets combine and %cmp folds to
+; false.
+define i1 @nested_nusw_constant_offset_no_signed_wrap(ptr %p) {
+; CHECK-LABEL: @nested_nusw_constant_offset_no_signed_wrap(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 -9223372036854775807
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nusw i8, ptr [[INNER]], i64 -1
+; CHECK-NEXT:    ret i1 false
+;
+  %inner = getelementptr nusw i8, ptr %p, i64 -9223372036854775807
+  %outer = getelementptr nusw i8, ptr %inner, i64 -1
+  %cmp = icmp uge ptr %outer, %p
+  ret i1 %cmp
+}
+
+; Small offsets combine without wrapping, so this is still known to be true.
+define i1 @nested_nuw_constant_offset_combined(ptr %p) {
+; CHECK-LABEL: @nested_nuw_constant_offset_combined(
+; CHECK-NEXT:    [[INNER:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    [[OUTER:%.*]] = getelementptr nuw i8, ptr [[INNER]], i64 3
+; CHECK-NEXT:    ret i1 true
+;
+  %inner = getelementptr nuw i8, ptr %p, i64 5
+  %outer = getelementptr nuw i8, ptr %inner, i64 3
+  %cmp = icmp uge ptr %outer, %p
+  ret i1 %cmp
+}

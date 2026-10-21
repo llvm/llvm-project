@@ -61,7 +61,7 @@ acting as "hardened custom containers" to replace raw pointers.
 However, such approach would be very unergonomic in C, and safety guarantees
 will be lower due to lack of good encapsulation technology. A better approach
 to bounds safety for non-C++ programs,
-[-fbounds-safety](https://clang.llvm.org/docs/BoundsSafety.html),
+[-fbounds-safety](BoundsSafety.md),
 is currently in development.
 
 Technically, safety guarantees cannot be provided without hardening
@@ -321,7 +321,7 @@ int get_last_element(int *pointer, size_t size) {
 }
 ```
 
-This behavior is analogous to `#pragma clang diagnostic` ([documentation](https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas))
+This behavior is analogous to `#pragma clang diagnostic` ([documentation](UsersManual.md#controlling-diagnostics-via-pragmas))
 However, `#pragma clang unsafe_buffer_usage` is specialized and recommended
 over `#pragma clang diagnostic` for a number of technical and non-technical
 reasons. Most importantly, `#pragma clang unsafe_buffer_usage` is more
@@ -352,6 +352,11 @@ There are a few natural reasons to use this pragma:
   will never follow the programming model (such as plain C code that will
   never be converted to C++) or with the code that simply haven't been converted
   yet.
+
+- In `main(int argc, char **argv)`, where the function signature is fixed by the
+  language standard and `argv` cannot be changed to a `std::span`. Warnings on
+  `main`'s `argv` parameter can also be selectively suppressed via the
+  `-Wno-unsafe-buffer-usage-main-argv` compiler flag.
 
 Interoperation with unsafe code may require a lot of suppressions.
 You are encouraged to introduce "unsafe wrapper functions" for various unsafe
@@ -391,7 +396,7 @@ passed into the wrapper is correct.**
 ### Flag bounds information discontinuities with `[[clang::unsafe_buffer_usage]]`
 
 The clang attribute `[[clang::unsafe_buffer_usage]]`
-([attribute documentation](https://clang.llvm.org/docs/AttributeReference.html#unsafe-buffer-usage))
+([attribute documentation](AttributeReference.md#unsafe-buffer-usage))
 allows the user to annotate various objects, such as functions or member
 variables, as incompatible with the Safe Buffers programming model.
 You are encouraged to do that for arbitrary reasons, but typically the main
@@ -587,4 +592,3 @@ significantly fewer warnings. It will also need to bypass
 `#pragma clang unsafe_buffer_usage` suppressions and "see through"
 unsafe wrappers such as `unsafe_forge_span` -- something that
 the static analyzer is naturally capable of doing.
-

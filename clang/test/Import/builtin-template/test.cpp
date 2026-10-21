@@ -1,11 +1,13 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DSEQ | FileCheck --check-prefix=CHECK-SEQ %s
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK | FileCheck --check-prefix=CHECK-PACK %s
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DDEDUP | FileCheck --check-prefix=CHECK-DEDUP %s
-// RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK -Xcc -DSEQ -Xcc -DDEDUP | FileCheck --check-prefixes=CHECK-SEQ,CHECK-PACK,CHECK-DEDUP %s
+// RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DSORT | FileCheck --check-prefix=CHECK-SORT %s
+// RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s -Xcc -DPACK -Xcc -DSEQ -Xcc -DDEDUP -Xcc -DSORT | FileCheck --check-prefixes=CHECK-SEQ,CHECK-PACK,CHECK-DEDUP,CHECK-SORT %s
 
 // CHECK-SEQ:  BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __make_integer_seq{{$}}
 // CHECK-PACK: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __type_pack_element{{$}}
 // CHECK-DEDUP: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __builtin_dedup_pack{{$}}
+// CHECK-SORT: BuiltinTemplateDecl {{.+}} <<invalid sloc>> <invalid sloc> implicit referenced __builtin_sort_pack{{$}}
 
 void expr() {
 #ifdef SEQ
@@ -29,5 +31,12 @@ void expr() {
   static_assert(!__is_same(TypePackDedup<TypeList, int, double, int>, TypeList<double, int>), "");
   static_assert(__is_same(TypePackDedup<TypeList, X<0>, X<1>, X<1>, X<2>, X<0>>, TypeList<X<0>, X<1>, X<2>>), "");
   static_assert(__is_same(TypePackDedup<TypeList, X0, SameAsX<1>, X<1>, X<0>>, TypeList<X<0>,X<1>>), "");
+#endif
+
+#ifdef SORT
+  static_assert(__is_same(TypePackSort<TypeList>, TypeList<>), "");
+  static_assert(__is_same(TypePackSort<TypeList, A, B>, TypeList<A, B>), "");
+  static_assert(__is_same(TypePackSort<TypeList, B, A>, TypeList<A, B>), "");
+  static_assert(__is_same(TypePackSort<TypeList, B, A, B>, TypeList<A, B, B>), "");
 #endif
 }

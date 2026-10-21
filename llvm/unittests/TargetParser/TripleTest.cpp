@@ -3411,9 +3411,9 @@ TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::WinEH,
             Triple("x86_64-pc-windows-coreclr").getDefaultExceptionHandling());
 
-  EXPECT_EQ(ExceptionHandling::None,
+  EXPECT_EQ(ExceptionHandling::SjLj,
             Triple("ve-unknown-linux").getDefaultExceptionHandling());
-  EXPECT_EQ(ExceptionHandling::None,
+  EXPECT_EQ(ExceptionHandling::SjLj,
             Triple("ve-unknown-unknown").getDefaultExceptionHandling());
 
   EXPECT_EQ(ExceptionHandling::DwarfCFI,

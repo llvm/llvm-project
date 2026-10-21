@@ -96,7 +96,7 @@ define <4 x i16> @f1(i1 %c, ptr %p) {
 ; CHECK-NEXT:    store i32 42, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[XOR:%.*]] = phi <4 x i16> [ <i16 3, i16 346, i16 undef, i16 undef>, %[[ENTRY]] ], [ <i16 7, i16 74, i16 undef, i16 undef>, %[[THEN]] ]
+; CHECK-NEXT:    [[XOR:%.*]] = phi <4 x i16> [ <i16 3, i16 346, i16 poison, i16 poison>, %[[ENTRY]] ], [ <i16 7, i16 74, i16 poison, i16 poison>, %[[THEN]] ]
 ; CHECK-NEXT:    ret <4 x i16> [[XOR]]
 ;
 entry:

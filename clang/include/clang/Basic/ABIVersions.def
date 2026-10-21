@@ -167,6 +167,8 @@ ABI_VER_MAJOR(22)
 ///     faithfully reproduces Clang 23, including its crash on aggregates such
 ///     as a run of `__int128` bit-fields, where skipping the unnamed field
 ///     leaves part of a wider access unit unclassified.)
+///   - On 32-bit x86, use the legacy `regparm` classification for floating-point
+///     types other than `float` and `double`, complex types, and unions.
 ABI_VER_MAJOR(23)
 
 /// Conform to the underlying platform's C and C++ ABIs as closely as we can.

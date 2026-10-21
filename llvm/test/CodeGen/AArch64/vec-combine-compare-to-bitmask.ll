@@ -560,22 +560,21 @@ define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    cmeq v1.4s, v1.4s, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI8_4
-; CHECK-GI-NEXT:    adrp x9, .LCPI8_0
-; CHECK-GI-NEXT:    ldr d2, [x9, :lo12:.LCPI8_0]
-; CHECK-GI-NEXT:    adrp x9, .LCPI8_1
-; CHECK-GI-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_4]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI8_3
+; CHECK-GI-NEXT:    movi v2.2s, #1, lsl #16
+; CHECK-GI-NEXT:    adrp x9, .LCPI8_1
 ; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI8_1]
+; CHECK-GI-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_3]
+; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_3]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI8_2
-; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    eor v0.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI8_2]
-; CHECK-GI-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    eor v2.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_2]
+; CHECK-GI-NEXT:    and v1.8b, v2.8b, v1.8b
 ; CHECK-GI-NEXT:    orr v0.8b, v3.8b, v0.8b
 ; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0

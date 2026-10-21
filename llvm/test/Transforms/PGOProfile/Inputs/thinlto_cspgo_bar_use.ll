@@ -31,7 +31,7 @@ if.end:
 
 declare void @clobber()
 
-define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOFuncName !35 {
+define internal fastcc i32 @cond(i32 %i) #1 !prof !29 {
 entry:
   %rem = srem i32 %i, 2
   ret i32 %rem
@@ -72,4 +72,3 @@ attributes #1 = { inlinehint noinline }
 !27 = !{i32 999999, i64 1, i32 6}
 !29 = !{!"function_entry_count", i64 200000}
 !30 = !{!"branch_weights", i32 100000, i32 100000}
-!35 = !{!"cspgo_bar.c:cond"}

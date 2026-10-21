@@ -2,8 +2,8 @@
 
 module {
 func.func private @foo1(%arg0: !fir.vector<20:bf16>)
-// CHECK-DAG: #[[F16:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=2)", sizeInBits = 16, encoding = DW_ATE_float>
-// CHECK-DAG: #llvm.di_composite_type<tag = DW_TAG_array_type, name = "vector real(kind=2) (20)", baseType = #[[F16]], flags = Vector, sizeInBits = 320, elements = #llvm.di_subrange<count = 20 : i64>>
+// CHECK-DAG: #[[BF16:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=3)", sizeInBits = 16, encoding = DW_ATE_float>
+// CHECK-DAG: #llvm.di_composite_type<tag = DW_TAG_array_type, name = "vector real(kind=3) (20)", baseType = #[[BF16]], flags = Vector, sizeInBits = 320, elements = #llvm.di_subrange<count = 20 : i64>>
 
 func.func private @foo2(%arg0: !fir.vector<30:f32>)
 // CHECK-DAG: #[[F32:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=4)", sizeInBits = 32, encoding = DW_ATE_float>

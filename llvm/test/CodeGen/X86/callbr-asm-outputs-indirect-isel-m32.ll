@@ -2,7 +2,7 @@
 ; FIXME(ndesaulniers): get this test to pass with -verify-machineinstrs
 ; enabled. https://github.com/llvm/llvm-project/issues/60827
 ; RUN: llc -mtriple=i386-linux-gnu %s -o - -stop-after=finalize-isel \
-; RUN:   -verify-machineinstrs=0 -start-before=x86-isel | FileCheck %s
+; RUN:   -verify-machineinstrs=0 -disable-mir-output-verify -start-before=x86-isel | FileCheck %s
 
 define i8 @emulator_cmpxchg_emulated() {
   ; CHECK-LABEL: name: emulator_cmpxchg_emulated

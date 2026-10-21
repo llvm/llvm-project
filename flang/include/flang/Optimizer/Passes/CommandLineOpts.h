@@ -56,6 +56,7 @@ extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> disableFirLICM;
 extern llvm::cl::opt<bool> disableFirMao;
 extern llvm::cl::opt<bool> useOldAliasTags;
+extern llvm::cl::opt<bool> forceNoAlias;
 
 /// Experimental option to replace the stack-arrays and memory-allocation-opt
 /// passes with the unified allocation-placement pass.

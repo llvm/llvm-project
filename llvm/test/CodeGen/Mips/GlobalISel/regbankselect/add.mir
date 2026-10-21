@@ -12,19 +12,19 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: add_i32
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[ADD:%[0-9]+]]:gprb(s32) = G_ADD [[COPY]], [[COPY1]]
-    ; MIPS32: $v0 = COPY [[ADD]](s32)
-    ; MIPS32: RetRA implicit $v0
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    ; MIPS32: $r2 = COPY [[ADD]](s32)
+    ; MIPS32: RetRA implicit $r2
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_ADD %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

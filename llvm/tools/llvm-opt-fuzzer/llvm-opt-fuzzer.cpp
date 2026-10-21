@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -189,8 +190,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Parse input options
   //
 
-  handleExecNameEncodedOptimizerOpts(ExecName);
-  parseFuzzerCLOpts(*argc, *argv);
+  // Created after the targets register their library options.
+  static cl::LibraryOptionsContext LibraryOptions;
+  handleExecNameEncodedOptimizerOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
 
   // Create TargetMachine
   //
@@ -201,7 +204,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
 
   Triple TT(Triple::normalize(TargetTripleStr));
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(LibraryOptions, TT));
 
   // Check that pass pipeline is specified and correct
   //

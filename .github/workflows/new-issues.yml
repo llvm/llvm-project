@@ -22,6 +22,7 @@ jobs:
           client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: ${{ github.repository }}
           permission-contents: read
           permission-issues: write
       - uses: llvm/actions/issue-labeler@89a8cf80982d830faab019237860b344a6390c30 # main

@@ -35,17 +35,20 @@ struct QuarantineBatch {
   uptr getQuarantinedSize() const { return Size - sizeof(QuarantineBatch); }
 
   void push_back(void *Ptr, uptr Size) {
-    DCHECK_LT(Count, MaxCount);
+    CHECK_LT(Count, MaxCount);
     Batch[Count++] = Ptr;
     this->Size += Size;
   }
 
   bool canMerge(const QuarantineBatch *const From) const {
-    return Count + From->Count <= MaxCount;
+    // Validate both counts before computing the available capacity.
+    CHECK_LE(Count, MaxCount);
+    CHECK_LE(From->Count, MaxCount);
+    return From->Count <= MaxCount - Count;
   }
 
   void merge(QuarantineBatch *const From) {
-    DCHECK_LE(Count + From->Count, MaxCount);
+    CHECK(canMerge(From));
     DCHECK_GE(Size, sizeof(QuarantineBatch));
 
     for (uptr I = 0; I < From->Count; ++I)
@@ -57,7 +60,10 @@ struct QuarantineBatch {
     From->Size = sizeof(QuarantineBatch);
   }
 
-  void shuffle(u32 State) { ::scudo::shuffle(Batch, Count, &State); }
+  void shuffle(u32 State) {
+    CHECK_LE(Count, MaxCount);
+    ::scudo::shuffle(Batch, Count, &State);
+  }
 };
 
 static_assert(sizeof(QuarantineBatch) <= (1U << 13), ""); // 8Kb.

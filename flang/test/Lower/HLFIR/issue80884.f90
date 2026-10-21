@@ -12,8 +12,8 @@ subroutine issue80884(p, targ)
   p(1:100) => targ%array
 end subroutine
 ! CHECK-LABEL:   func.func @_QPissue80884(
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFissue80884Ep"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFissue80884Etarg"} : (!fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>, !fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFissue80884Ep") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFissue80884Etarg") fortran_attrs<target> : (!fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>, !fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>)
 ! CHECK:           %[[VAL_6:.*]] = hlfir.designate %[[VAL_3]]#0{"t0"}   : (!fir.ref<!fir.type<_QFissue80884Tt{t0:!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>}>>) -> !fir.ref<!fir.type<_QFissue80884Tt0{array:!fir.array<10x10xf32>}>>
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 10 : index

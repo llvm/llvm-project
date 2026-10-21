@@ -49,8 +49,14 @@ void struct_dest(int v) {
 
 void mismatched_orig_type(int v) {
   uint orig;
-  InterlockedExchange(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedExchange'}}
-  // expected-note@*:* 10 {{candidate function}}
+  InterlockedExchange(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void float_orig_type(int v) {
+  float orig;
+  InterlockedExchange(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 void direct_too_few() {

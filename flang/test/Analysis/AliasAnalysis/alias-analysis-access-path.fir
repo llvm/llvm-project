@@ -70,7 +70,7 @@ func.func @_QPtest_unknown_op(%cond: i1) {
 
 func.func @_QPtest_dynamic_index(%idx1: index, %idx2: index) {
   %0 = fir.alloca !fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}> {uniq_name = "_QFtestEobj"}
-  %obj = fir.declare %0 {uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}>>) -> !fir.ref<!fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}>>
+  %obj = fir.declare %0 uniq_name("_QFtestEobj") : (!fir.ref<!fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}>>) -> !fir.ref<!fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}>>
   %arrref = fir.coordinate_of %obj, arr : (!fir.ref<!fir.type<_QMmTty2{arr:!fir.array<10xf32>,b:f32}>>) -> !fir.ref<!fir.array<10xf32>>
   %elem1 = fir.coordinate_of %arrref, %idx1 {test.ptr = "arr_elem1"} : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
   %elem2 = fir.coordinate_of %arrref, %idx2 {test.ptr = "arr_elem2"} : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
@@ -94,7 +94,7 @@ func.func @_QPtest_dynamic_index(%idx1: index, %idx2: index) {
 
 func.func @_QPtest_nested() {
   %0 = fir.alloca !fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}> {uniq_name = "_QFtestEobj"}
-  %obj = fir.declare %0 {uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>
+  %obj = fir.declare %0 uniq_name("_QFtestEobj") : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>
   %inner = fir.coordinate_of %obj, inner : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTinner{a:f32,b:f32}>>
   %a = fir.coordinate_of %inner, a {test.ptr = "inner_a"} : (!fir.ref<!fir.type<_QMmTinner{a:f32,b:f32}>>) -> !fir.ref<f32>
   %b = fir.coordinate_of %inner, b {test.ptr = "inner_b"} : (!fir.ref<!fir.type<_QMmTinner{a:f32,b:f32}>>) -> !fir.ref<f32>
@@ -117,7 +117,7 @@ func.func @_QPtest_nested() {
 
 func.func @_QPtest_multi_field_coord() {
   %0 = fir.alloca !fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}> {uniq_name = "_QFtestEobj"}
-  %obj = fir.declare %0 {uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>
+  %obj = fir.declare %0 uniq_name("_QFtestEobj") : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>
   %a = fir.coordinate_of %obj, inner, a {test.ptr = "mf_inner_a"} : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<f32>
   %b = fir.coordinate_of %obj, inner, b {test.ptr = "mf_inner_b"} : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<f32>
   %j = fir.coordinate_of %obj, j {test.ptr = "mf_outer_j"} : (!fir.ref<!fir.type<_QMmTouter{inner:!fir.type<_QMmTinner{a:f32,b:f32}>,j:f32}>>) -> !fir.ref<f32>
@@ -142,7 +142,7 @@ func.func @_QPtest_multi_field_coord() {
 
 func.func @_QPtest_interleaved_1d(%idx1: index, %idx2: index) {
   %0 = fir.alloca !fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}> {uniq_name = "_QFtestEobj"}
-  %obj = fir.declare %0 {uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>
+  %obj = fir.declare %0 uniq_name("_QFtestEobj") : (!fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>) -> !fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>
   %a = fir.coordinate_of %obj, arr_of_inner, %idx1, a {test.ptr = "arr_inner_a"} : (!fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>, index) -> !fir.ref<f32>
   %b = fir.coordinate_of %obj, arr_of_inner, %idx2, b {test.ptr = "arr_inner_b"} : (!fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>, index) -> !fir.ref<f32>
   %j = fir.coordinate_of %obj, j {test.ptr = "outer_j"} : (!fir.ref<!fir.type<_QMmTwrap{arr_of_inner:!fir.array<10x!fir.type<_QMmTinner{a:f32,b:f32}>>,j:f32}>>) -> !fir.ref<f32>
@@ -167,7 +167,7 @@ func.func @_QPtest_interleaved_1d(%idx1: index, %idx2: index) {
 
 func.func @_QPtest_nested_2d_arrays(%idx1: index, %idx2: index, %idx3: index, %idx4: index, %idx5: index, %idx6: index, %idx7: index, %idx8: index) {
   %0 = fir.alloca !fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}> {uniq_name = "_QFtestEobj"}
-  %obj = fir.declare %0 {uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>) -> !fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>
+  %obj = fir.declare %0 uniq_name("_QFtestEobj") : (!fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>) -> !fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>
   %x = fir.coordinate_of %obj, arr_of_inner, %idx1, %idx2, x, %idx3, %idx4 {test.ptr = "nested_x"} : (!fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>, index, index, index, index) -> !fir.ref<f32>
   %y = fir.coordinate_of %obj, arr_of_inner, %idx5, %idx6, y, %idx7, %idx8 {test.ptr = "nested_y"} : (!fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>, index, index, index, index) -> !fir.ref<f32>
   %k = fir.coordinate_of %obj, k {test.ptr = "outer_k"} : (!fir.ref<!fir.type<_QMmTouter2{arr_of_inner:!fir.array<10x20x!fir.type<_QMmTinner2{x:!fir.array<5x10xf32>,y:!fir.array<5x10xf32>}>>,k:f32}>>) -> !fir.ref<f32>

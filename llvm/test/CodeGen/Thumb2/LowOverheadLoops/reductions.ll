@@ -68,7 +68,7 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_add_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB1_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    sub.w r12, r3, #8
 ; CHECK-NEXT:    movs r3, #1
@@ -77,16 +77,16 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_add_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u16 q1, [r0], #8
+; CHECK-NEXT:    vldrbt.u16 q0, [r0], #8
 ; CHECK-NEXT:    vldrbt.u16 q2, [r1], #8
 ; CHECK-NEXT:    subs r2, #8
-; CHECK-NEXT:    vadd.i16 q1, q0, q1
-; CHECK-NEXT:    vadd.i16 q1, q1, q2
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vadd.i16 q0, q0, q2
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u16 r0, q0
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    sxth r0, r0
@@ -139,7 +139,7 @@ define dso_local arm_aapcs_vfpcc zeroext i8 @one_loop_sub_add_v16i8(ptr nocaptur
 ; CHECK-NEXT:  .LBB2_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    add.w r3, r2, #15
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #15
 ; CHECK-NEXT:    sub.w r12, r3, #16
 ; CHECK-NEXT:    movs r3, #1
@@ -148,16 +148,16 @@ define dso_local arm_aapcs_vfpcc zeroext i8 @one_loop_sub_add_v16i8(ptr nocaptur
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.8 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u8 q1, [r1], #16
+; CHECK-NEXT:    vldrbt.u8 q0, [r1], #16
 ; CHECK-NEXT:    vldrbt.u8 q2, [r0], #16
 ; CHECK-NEXT:    subs r2, #16
-; CHECK-NEXT:    vsub.i8 q1, q2, q1
-; CHECK-NEXT:    vadd.i8 q1, q1, q0
+; CHECK-NEXT:    vsub.i8 q0, q2, q0
+; CHECK-NEXT:    vadd.i8 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB2_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u8 r0, q0
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    uxtb r0, r0
@@ -208,7 +208,7 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_sub_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB3_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    sub.w r12, r3, #8
 ; CHECK-NEXT:    movs r3, #1
@@ -217,16 +217,16 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_sub_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u16 q1, [r0], #8
+; CHECK-NEXT:    vldrbt.u16 q0, [r0], #8
 ; CHECK-NEXT:    vldrbt.u16 q2, [r1], #8
 ; CHECK-NEXT:    subs r2, #8
-; CHECK-NEXT:    vsub.i16 q1, q2, q1
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
+; CHECK-NEXT:    vsub.i16 q0, q2, q0
+; CHECK-NEXT:    vadd.i16 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB3_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u16 r0, q0
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    sxth r0, r0
@@ -279,7 +279,7 @@ define dso_local arm_aapcs_vfpcc zeroext i8 @one_loop_mul_add_v16i8(ptr nocaptur
 ; CHECK-NEXT:  .LBB4_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    add.w r3, r2, #15
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #15
 ; CHECK-NEXT:    sub.w r12, r3, #16
 ; CHECK-NEXT:    movs r3, #1
@@ -288,16 +288,16 @@ define dso_local arm_aapcs_vfpcc zeroext i8 @one_loop_mul_add_v16i8(ptr nocaptur
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.8 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u8 q1, [r0], #16
+; CHECK-NEXT:    vldrbt.u8 q0, [r0], #16
 ; CHECK-NEXT:    vldrbt.u8 q2, [r1], #16
 ; CHECK-NEXT:    subs r2, #16
-; CHECK-NEXT:    vmul.i8 q1, q2, q1
-; CHECK-NEXT:    vadd.i8 q1, q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q2, q0
+; CHECK-NEXT:    vadd.i8 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB4_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u8 r0, q0
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    uxtb r0, r0
@@ -348,7 +348,7 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_mul_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB5_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    sub.w r12, r3, #8
 ; CHECK-NEXT:    movs r3, #1
@@ -357,16 +357,16 @@ define dso_local arm_aapcs_vfpcc signext i16 @one_loop_mul_add_v8i16(ptr nocaptu
 ; CHECK-NEXT:  .LBB5_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u16 q1, [r0], #8
+; CHECK-NEXT:    vldrbt.u16 q0, [r0], #8
 ; CHECK-NEXT:    vldrbt.u16 q2, [r1], #8
 ; CHECK-NEXT:    subs r2, #8
-; CHECK-NEXT:    vmul.i16 q1, q2, q1
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q2, q0
+; CHECK-NEXT:    vadd.i16 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB5_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u16 r0, q0
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    sxth r0, r0
@@ -418,7 +418,7 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(ptr nocapture read
 ; CHECK-NEXT:  .LBB6_1: @ %vector.ph
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    adds r3, r2, #3
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    subs r7, r3, #4
@@ -430,16 +430,16 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(ptr nocapture read
 ; CHECK-NEXT:  .LBB6_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u32 q1, [r4], #4
+; CHECK-NEXT:    vldrbt.u32 q0, [r4], #4
 ; CHECK-NEXT:    vldrbt.u32 q2, [r5], #4
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmul.i32 q1, q2, q1
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vmul.i32 q0, q2, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB6_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u32 r12, q0
 ; CHECK-NEXT:    cbz r2, .LBB6_7
 ; CHECK-NEXT:  @ %bb.4: @ %vector.ph47
@@ -543,9 +543,9 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:    adds r3, r2, #7
 ; CHECK-NEXT:    movs r4, #1
 ; CHECK-NEXT:    bic r3, r3, #7
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    add.w r12, r4, r3, lsr #3
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r4, r1
@@ -553,21 +553,21 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:  .LBB7_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q2, q0
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u16 q1, [r3], #8
+; CHECK-NEXT:    vldrbt.u16 q0, [r3], #8
 ; CHECK-NEXT:    vldrbt.u16 q4, [r4], #8
-; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    subs r2, #8
-; CHECK-NEXT:    vsub.i16 q3, q4, q1
-; CHECK-NEXT:    vmul.i16 q1, q4, q1
-; CHECK-NEXT:    vadd.i16 q3, q3, q2
-; CHECK-NEXT:    vadd.i16 q1, q1, q0
+; CHECK-NEXT:    vsub.i16 q1, q4, q0
+; CHECK-NEXT:    vmul.i16 q0, q4, q0
+; CHECK-NEXT:    vadd.i16 q1, q1, q3
+; CHECK-NEXT:    vadd.i16 q0, q0, q2
 ; CHECK-NEXT:    le lr, .LBB7_2
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vaddv.u16 r4, q2
+; CHECK-NEXT:    vpsel q1, q1, q3
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vaddv.u16 r4, q1
 ; CHECK-NEXT:    vaddv.u16 r2, q0
 ; CHECK-NEXT:    b .LBB7_5
 ; CHECK-NEXT:  .LBB7_4:

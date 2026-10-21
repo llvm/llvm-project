@@ -47,7 +47,7 @@ struct MemorySlotDestructuringInfo {
 static std::optional<MemorySlotDestructuringInfo>
 computeDestructuringInfo(DestructurableMemorySlot &slot,
                          const DataLayout &dataLayout) {
-  assert(isa<DestructurableTypeInterface>(slot.elemType));
+  assert(isa<DestructurableTypeInterface>(slot.valueType));
 
   if (slot.ptr.use_empty())
     return {};

@@ -137,6 +137,8 @@ static constexpr const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_arm_arm64_32, "arm64_32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_aarch64, "aarch64"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
+     ArchSpec::eCore_arm_arm64ex1, "arm64e.x1"},
 
     // mips32, mips32r2, mips32r3, mips32r5, mips32r6
     {eByteOrderBig, 4, 2, 4, llvm::Triple::mips, ArchSpec::eCore_mips32,
@@ -425,6 +427,7 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_arm_armv8m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_armv8_1m_main,     llvm::MachO::CPU_TYPE_ARM,        llvm::MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64e,      llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64E,        UINT32_MAX, SUBTYPE_MASK},
+    {ArchSpec::eCore_arm_arm64ex1,    llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64E_X1,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_ALL,     UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      llvm::MachO::CPU_SUBTYPE_ARM64_V8,      UINT32_MAX, SUBTYPE_MASK},
     {ArchSpec::eCore_arm_arm64,       llvm::MachO::CPU_TYPE_ARM64,      13,                                     UINT32_MAX, SUBTYPE_MASK},
@@ -1709,6 +1712,8 @@ static bool cores_match_one_direction(const ArchSpec::Core core1,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
     }
     break;
 
@@ -1720,6 +1725,8 @@ static bool cores_match_one_direction(const ArchSpec::Core core1,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
     }
     break;
   case ArchSpec::eCore_arm_aarch64:
@@ -1729,6 +1736,8 @@ static bool cores_match_one_direction(const ArchSpec::Core core1,
       if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
         return true;
     }
     break;
@@ -1740,6 +1749,21 @@ static bool cores_match_one_direction(const ArchSpec::Core core1,
       if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_arm64ex1)
+        return true;
+    }
+    break;
+
+  case ArchSpec::eCore_arm_arm64ex1:
+    if (!enforce_exact_match) {
+      if (core2 == ArchSpec::eCore_arm_arm64e)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_arm64)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_aarch64)
+        return true;
+      if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
     }
     break;

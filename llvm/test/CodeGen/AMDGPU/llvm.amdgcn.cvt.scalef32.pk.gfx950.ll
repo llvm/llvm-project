@@ -2,37 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.50 < %s | FileCheck --check-prefixes=GCN,GFX950-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.50 < %s | FileCheck --check-prefixes=GCN,GFX950-GISEL %s
 
-declare <6 x i32> @llvm.amdgcn.cvt.scalef32.2xpk16.bf6.f32(<16 x float> %src0, <16 x float> %src1, float %scale)
-declare <6 x i32> @llvm.amdgcn.cvt.scalef32.2xpk16.fp6.f32(<16 x float> %src0, <16 x float> %src1, float %scale)
-declare <2 x half> @llvm.amdgcn.cvt.scalef32.f16.fp8(<2 x half>, i32, float, i32, i1)
-declare float @llvm.amdgcn.cvt.scalef32.f32.fp8(i32, float, i32)
-declare <2 x half> @llvm.amdgcn.cvt.scalef32.f16.bf8(<2 x half>, i32, float, i32, i1)
-declare float @llvm.amdgcn.cvt.scalef32.f32.bf8(i32, float, i32)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.fp8.f32(<2 x i16>, float, float, float, i1)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.bf8.f32(<2 x i16>, float, float, float, i1)
-declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp8(i32, float, i1)
-declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.bf8(i32, float, i1)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.fp8.f16(<2 x i16>, <2 x half>, float, i1)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.fp8.fb16(<2 x i16>, <2 x bfloat>, float, i1)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.bf8.f16(<2 x i16>, <2 x half>, float, i1)
-declare <2 x i16> @llvm.amdgcn.cvt.scalef32.pk.bf8.fb16(<2 x i16>, <2 x bfloat>, float, i1)
-declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp4(i32, float, i32)
-declare i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32, float, float, float, i32)
-declare <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.fp4(i32, float, i32)
-declare <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp4(i32, float, i32)
-declare <32 x float> @llvm.amdgcn.cvt.scalef32.pk32.f32.fp6(<6 x i32>, float)
-declare <32 x float> @llvm.amdgcn.cvt.scalef32.pk32.f32.bf6(<6 x i32>, float)
-declare <32 x half> @llvm.amdgcn.cvt.scalef32.pk32.f16.fp6(<6 x i32>, float)
-declare <32 x bfloat> @llvm.amdgcn.cvt.scalef32.pk32.bf16.fp6(<6 x i32>, float)
-declare <32 x half> @llvm.amdgcn.cvt.scalef32.pk32.f16.bf6(<6 x i32>, float)
-declare <32 x bfloat> @llvm.amdgcn.cvt.scalef32.pk32.bf16.bf6(<6 x i32>, float)
-declare <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.fp8(i32, float, i1)
-declare <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.bf8(i32, float, i1)
-declare <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp8(i32, float, i1)
-declare <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.bf8(i32, float, i1)
-declare i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f16(i32, <2 x half>, float, i32)
-declare i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.bf16(i32, <2 x bfloat>, float, i32)
-
 define amdgpu_ps void @test_scalef32_pk32_fp6_f32_vv(<16 x float> %src, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_pk32_fp6_f32_vv:
 ; GFX950-SDAG:       ; %bb.0:

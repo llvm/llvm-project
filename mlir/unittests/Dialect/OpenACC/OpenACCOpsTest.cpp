@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -36,6 +37,9 @@ static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
 class OpenACCOpsTest : public ::testing::Test {
 protected:
   OpenACCOpsTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         memref::MemRefDialect>();
   }

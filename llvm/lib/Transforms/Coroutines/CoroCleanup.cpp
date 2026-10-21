@@ -29,7 +29,7 @@ struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
   Constant *NoopCoro = nullptr;
 
-  Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
+  Lowerer(Module &M) : LowererBase(M), Builder(M) {}
   bool lower(Function &F);
 
 private:
@@ -43,7 +43,7 @@ class NoopCoroElider : public PtrUseVisitor<NoopCoroElider> {
   IRBuilder<> Builder;
 
 public:
-  NoopCoroElider(const DataLayout &DL, LLVMContext &C) : Base(DL), Builder(C) {}
+  NoopCoroElider(Module &M) : Base(M.getDataLayout()), Builder(M) {}
 
   void run(IntrinsicInst *II);
 
@@ -95,7 +95,7 @@ bool Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed = F.isPresplitCoroutine() && F.hasLocalLinkage();
   bool Changed = false;
 
-  NoopCoroElider NCE(F.getDataLayout(), F.getContext());
+  NoopCoroElider NCE(*F.getParent());
   SmallPtrSet<Instruction *, 8> DeadInsts{};
   for (Instruction &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

@@ -235,11 +235,11 @@ void l4() {
 // CIR:   }
 
 // LLVM: define{{.*}} void @_Z2l4v(){{.*}} {
+// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   %[[RANGE_ADDR:.*]] = alloca ptr
 // LLVM:   %[[BEGIN_ADDR:.*]] = alloca ptr
 // LLVM:   %[[END_ADDR:.*]] = alloca ptr
 // LLVM:   %[[N_ADDR:.*]] = alloca i32
-// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
 // LLVM:   store ptr %[[A_ADDR]], ptr %[[RANGE_ADDR]]

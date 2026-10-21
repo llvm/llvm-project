@@ -1441,3 +1441,21 @@ define <4 x i16> @PR176951(<32 x i64> %shuffle, <16 x i16> %0, <16 x i1> %cmp) n
   %shuffle38 = shufflevector <8 x i16> zeroinitializer, <8 x i16> %sext37, <4 x i32> <i32 2, i32 13, i32 7, i32 12>
   ret <4 x i16> %shuffle38
 }
+
+define <4 x double> @PR231453(ptr %p0) {
+; X86-LABEL: PR231453:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vbroadcastsd (%eax), %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR231453:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-NEXT:    retq
+  %ld = load <3 x double>, ptr %p0, align 16
+  %elt = extractelement <3 x double> %ld, i64 0
+  %ins = insertelement <2 x double> zeroinitializer, double %elt, i64 0
+  %shuf0 = shufflevector <2 x double> %ins, <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 poison, i32 poison, i32 0>
+  ret <4 x double> %shuf0
+}

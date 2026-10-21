@@ -767,6 +767,7 @@ private:
   SDValue LowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
@@ -987,7 +988,8 @@ FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
 
 // Determine the effective TLS model for an ELF global, applying
 // AArch64-specific restrictions and configuration.
-TLSModel::Model getELFTLSModel(const GlobalValue *GV, const TargetMachine &TM,
+TLSModel::Model getELFTLSModel(const GlobalValue *GV,
+                               const AArch64TargetMachine &TM,
                                bool HasELFSignedGOT);
 } // end namespace AArch64
 

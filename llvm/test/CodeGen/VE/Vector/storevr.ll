@@ -20,8 +20,8 @@ define fastcc void @storev256i64stk(<256 x i64>) {
 ; CHECK-LABEL: storev256i64stk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s11, -2048(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -30,7 +30,7 @@ define fastcc void @storev256i64stk(<256 x i64>) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    lea %s0, 256
 ; CHECK-NEXT:    lea %s1, (, %s11)
 ; CHECK-NEXT:    lvl %s0

@@ -48,6 +48,7 @@ call_weak_libfunc:
 #      CHECK: Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     MemorySize:      0
 # CHECK-NEXT:     MemoryAlignment: 0
 # CHECK-NEXT:     TableSize:       0

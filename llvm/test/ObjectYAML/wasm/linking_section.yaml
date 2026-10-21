@@ -31,6 +31,7 @@ Sections:
   - Type:            CUSTOM
     Name:            linking
     Version:         2
+    TargetArch:      wasm32
     SymbolTable:
       - Index:           0
         Kind:            FUNCTION
@@ -50,7 +51,10 @@ Sections:
       - Priority:      1
         Symbol:        0
 ...
-# CHECK:         SymbolTable:
+# CHECK:         Name:            linking
+# CHECK-NEXT:    Version:         2
+# CHECK-NEXT:    TargetArch:      wasm32
+# CHECK-NEXT:    SymbolTable:
 # CHECK-NEXT:      - Index:           0
 # CHECK-NEXT:        Kind:            FUNCTION
 # CHECK-NEXT:        Name:            bar

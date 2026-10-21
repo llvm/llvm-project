@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
@@ -791,14 +792,17 @@ void StackArraysPass::runOnOperation() {
     return;
   }
 
-  if (candidateOps->empty())
-    return;
-  runCount += candidateOps->size();
-
+  // An offload region runs on the device stack, which is far smaller than the
+  // host one, so its allocations stay on the heap like in a device procedure.
   llvm::SmallVector<mlir::Operation *> opsToConvert;
   opsToConvert.reserve(candidateOps->size());
   for (auto [op, _] : *candidateOps)
-    opsToConvert.push_back(op);
+    if (!fir::isInOffloadRegion(op))
+      opsToConvert.push_back(op);
+
+  if (opsToConvert.empty())
+    return;
+  runCount += opsToConvert.size();
 
   mlir::MLIRContext &context = getContext();
   mlir::RewritePatternSet patterns(&context);

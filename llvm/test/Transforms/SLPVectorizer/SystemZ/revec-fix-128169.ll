@@ -30,7 +30,7 @@ define void @e(<4 x i16> %0) {
 ; THRESH-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ zeroinitializer, [[ENTRY:%.*]] ], [ zeroinitializer, [[VECTOR_BODY]] ]
 ; THRESH-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP26:%.*]], [[VECTOR_BODY]] ]
 ; THRESH-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[VEC_IND]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 0, i16 0, i16 0, i16 0>, <8 x i16> [[TMP1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; THRESH-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> <i16 poison, i16 poison, i16 poison, i16 poison, i16 0, i16 0, i16 0, i16 0>, <8 x i16> [[TMP1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; THRESH-NEXT:    [[TMP3:%.*]] = add <8 x i16> zeroinitializer, [[TMP8]]
 ; THRESH-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i16> [[TMP8]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; THRESH-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP0:%.*]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

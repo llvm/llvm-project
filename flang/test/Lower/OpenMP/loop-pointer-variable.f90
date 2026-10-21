@@ -8,11 +8,11 @@ program loop_var
   integer, pointer :: ip1, ip2
   integer, allocatable :: ia1
 
-!CHECK:  %[[IA1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEia1"}
+!CHECK:  %[[IA1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEia1") fortran_attrs<allocatable>
 !CHECK:  omp.wsloop private(@_QFEip1_private_box_ptr_i32 %{{.*}}#0 -> %[[IP1_PVT:.*]], @_QFEip2_private_box_ptr_i32 %{{.*}}#0 -> %[[IP2_PVT:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:  omp.loop_nest (%[[IP1_INDX:.*]], %[[IP2_INDX:.*]]) : i64 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}})
-!CHECK:    %[[IP1_PVT_DECL:.*]]:2 = hlfir.declare %[[IP1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEip1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHECK:    %[[IP2_PVT_DECL:.*]]:2 = hlfir.declare %[[IP2_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEip2"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK:    %[[IP1_PVT_DECL:.*]]:2 = hlfir.declare %[[IP1_PVT]] uniq_name("_QFEip1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK:    %[[IP2_PVT_DECL:.*]]:2 = hlfir.declare %[[IP2_PVT]] uniq_name("_QFEip2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:    %[[IP1:.*]] = fir.convert %[[IP1_INDX]] : (i64) -> i32
 !CHECK:    %[[IP1_BOX:.*]] = fir.load %[[IP1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[IP1_ADDR:.*]] = fir.box_addr %[[IP1_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>

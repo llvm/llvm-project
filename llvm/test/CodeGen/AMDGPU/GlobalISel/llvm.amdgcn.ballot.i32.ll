@@ -418,15 +418,13 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 2, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    ; implicit-def: $vgpr2
-; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
-; GFX10-NEXT:    s_or_b32 s0, s0, s2
+; GFX10-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX10-NEXT:  ; %bb.2: ; %Flow
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s1, s1
 ; GFX10-NEXT:  ; %bb.3: ; %A
 ; GFX10-NEXT:    v_cmp_le_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
-; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
-; GFX10-NEXT:    s_or_b32 s0, s0, s2
+; GFX10-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX10-NEXT:  ; %bb.4: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -446,15 +444,13 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; GFX11-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 2, v2
 ; GFX11-NEXT:    s_and_not1_b32 s0, s0, exec_lo
 ; GFX11-NEXT:    ; implicit-def: $vgpr2
-; GFX11-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
-; GFX11-NEXT:    s_or_b32 s0, s0, s2
+; GFX11-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX11-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s1, s1
 ; GFX11-NEXT:  ; %bb.3: ; %A
 ; GFX11-NEXT:    v_cmp_le_u32_e32 vcc_lo, 1, v2
 ; GFX11-NEXT:    s_and_not1_b32 s0, s0, exec_lo
-; GFX11-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
-; GFX11-NEXT:    s_or_b32 s0, s0, s2
+; GFX11-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GFX11-NEXT:  ; %bb.4: ; %exit
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo

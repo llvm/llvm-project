@@ -21,6 +21,7 @@ if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     DEPENDS
       libc.hdr.regex_macros
       libc.hdr.types.regex_t
+      libc.src.__support.CPP.scope
       libc.src.regex.regcomp
       libc.src.regex.regexec
       libc.src.regex.regfree

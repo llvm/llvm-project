@@ -1,5 +1,5 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL %}
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; A DIGlobalVariable with no backing llvm::GlobalVariable but whose
 ; DIGlobalVariableExpression carries a non-empty DIExpression (a constant
@@ -7,21 +7,6 @@
 ; DebugExpression rather than DebugInfoNone: Constu (8) carrying 42, then
 ; StackValue (7) to say the operand stack holds the value itself.
 ; Flags encode IsLocal|IsDefinition (12).
-;
-; spirv-val rejects that, so the second RUN line expects it to fail. The
-; extension permits it: "If the variable is optimized out, this operand can be
-; the <id> of a DebugExpression instruction that contains the constant value of
-; the variable that was optimized out." The validator instead shares one rule
-; with OpenCL.DebugInfo.100, whose wording stops at DebugInfoNone, and checks
-; the operand against a fixed list of OpVariable and constant opcodes.
-;
-; This is KhronosGroup/SPIRV-Tools#6469, open, where the maintainers agree the
-; validator is at fault twice over: it should accept a DebugExpression for
-; NonSemantic.Shader.DebugInfo.100, and it should not be accepting the OpConstant
-; variants that only the OpenCL wording allows. Every version tried rejects it,
-; from 2022.2 to 2026.2, and SPIRV-LLVM-Translator emits the same thing, so this
-; is not a stale-binary problem. When the fix lands this RUN line will start
-; failing, which is the signal to restore a plain spirv-val invocation.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
@@ -39,10 +24,6 @@
 ; CHECK-DAG: [[SV:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugOperation [[C7]]{{ *$}}
 ; CHECK-DAG: [[EXPR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugExpression [[CONSTU]] [[SV]]{{ *$}}
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] {{%[0-9]+}} {{%[0-9]+}} [[NAME]] [[EXPR]] [[C12]]
-
-; The operand list the validator will accept has varied across releases, so
-; match only up to it.
-; VAL: DebugGlobalVariable: expected operand Variable must be a result id of
 
 target triple = "spirv64-unknown-unknown"
 

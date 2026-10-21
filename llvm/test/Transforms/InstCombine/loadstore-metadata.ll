@@ -415,7 +415,7 @@ entry:
 !2 = !{!"root"}
 !3 = !{!4}
 !4 = distinct !{!4, !5}
-!5 = distinct !{!5}
+!5 = distinct !{!5, i1 false}
 !6 = !{i32 0, i32 42}
 !7 = distinct !{}
 !8 = !{i32 1}
@@ -426,7 +426,7 @@ entry:
 !13 = distinct !{}
 !14 = !{!15}
 !15 = distinct !{!15, !16}
-!16 = distinct !{!16}
+!16 = distinct !{!16, i1 false}
 !17 = !{ i32 0, !18 }
 !18 = !{ !"nvvm.l1_eviction", !"first" }
 
@@ -436,7 +436,7 @@ entry:
 ; CHECK: [[META2]] = !{!"root"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]]}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false}
 ; CHECK: [[META6]] = distinct !{}
 ; CHECK: [[META7]] = !{i32 1}
 ; CHECK: [[META8]] = !{i64 8}
@@ -446,7 +446,7 @@ entry:
 ; CHECK: [[RNG12]] = !{i32 0, i32 42}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META15:![0-9]+]]}
-; CHECK: [[META15]] = distinct !{[[META15]]}
+; CHECK: [[META15]] = distinct !{[[META15]], i1 false}
 ; CHECK: [[ACC_GRP16]] = distinct !{}
 ; CHECK: [[META17]] = !{i32 3}
 ; CHECK: [[META18]] = !{i32 0, [[META19:![0-9]+]]}

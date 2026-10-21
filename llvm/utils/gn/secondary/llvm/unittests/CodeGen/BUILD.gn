@@ -51,6 +51,7 @@ unittest("CodeGenTests") {
     "SelectionDAGCSETest.cpp",
     "SelectionDAGNodeConstructionTest.cpp",
     "SelectionDAGPatternMatchTest.cpp",
+    "SlotIndexesTest.cpp",
     "TargetOptionsTest.cpp",
     "TestAsmPrinter.cpp",
     "TypeTraitsTest.cpp",

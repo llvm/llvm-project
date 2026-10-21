@@ -18,6 +18,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/pair.h>
 
@@ -28,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_n_forward_impl(
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_n_forward_impl(
     _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   if (__count <= 0)
     return std::make_pair(__first, __first);
@@ -66,7 +67,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_
 
 // Finds the longest suffix in [__first, __last) where each element satisfies __pred.
 template <class _RAIter, class _Pred, class _Proj, class _ValueT>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RAIter
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _RAIter
 __find_longest_suffix(_RAIter __first, _RAIter __last, const _ValueT& __value, _Pred& __pred, _Proj& __proj) {
   while (__first != __last) {
     if (!std::__invoke(__pred, std::__invoke(__proj, *--__last), __value)) {
@@ -77,15 +78,20 @@ __find_longest_suffix(_RAIter __first, _RAIter __last, const _ValueT& __value, _
 }
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _SizeT, class _Type, class _Proj, class _DiffT>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
+_LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
     _Iter __first, _SizeT __count_in, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size) {
-  auto __last  = __first + __size;
-  auto __count = static_cast<_DiffT>(__count_in);
-
-  if (__count == 0)
+  // Trivially match if count is non-positive. This must be checked before we perform arithmetic on the count.
+  if (__count_in <= 0)
     return std::make_pair(__first, __first);
-  if (__size < __count)
+
+  auto __last = __first + __size;
+
+  // If count is larger than the sequence size, no match is possible. Compare as unsigned to prevent
+  // truncation between _DiffT and _SizeT.
+  if (std::__to_unsigned_like(__size) < std::__to_unsigned_like(__count_in))
     return std::make_pair(__last, __last);
+
+  auto __count = static_cast<_DiffT>(__count_in); // representable as _DiffT since `0 < __count_in <= __size`
 
   // [__match_start, __match_start + __count) is the subrange which we currently check whether it only contains matching
   // elements. This subrange is returned in case all the elements match.
@@ -128,7 +134,7 @@ template <class _Iter,
           class _Pred,
           class _Proj,
           __enable_if_t<__has_random_access_iterator_category<_Iter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
 __search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(
       __first, __count, __value, __pred, __proj, __last - __first);
@@ -143,13 +149,13 @@ template <class _Iter1,
           __enable_if_t<__has_forward_iterator_category<_Iter1>::value &&
                             !__has_random_access_iterator_category<_Iter1>::value,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1>
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1>
 __search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_forward_impl<_ClassicAlgPolicy>(__first, __last, __count, __value, __pred, __proj);
 }
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator search_n(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator search_n(
     _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value, _BinaryPredicate __pred) {
   static_assert(
       __is_callable<_BinaryPredicate&, decltype(*__first), const _Tp&>::value, "The comparator has to be callable");
@@ -158,7 +164,7 @@ template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to());
 }

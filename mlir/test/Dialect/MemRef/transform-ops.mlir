@@ -681,3 +681,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func private @consume(memref<4xi32>)
+
+// The call may read %buf, so nothing may be erased.
+// CHECK-LABEL: func.func @alloc_used_by_unknown_effect_call
+func.func @alloc_used_by_unknown_effect_call(%v: i32) {
+  // CHECK: memref.alloc
+  // CHECK: memref.store
+  // CHECK: call @consume
+  // CHECK: memref.dealloc
+  %c0 = arith.constant 0 : index
+  %buf = memref.alloc() : memref<4xi32>
+  memref.store %v, %buf[%c0] : memref<4xi32>
+  call @consume(%buf) : (memref<4xi32>) -> ()
+  memref.dealloc %buf : memref<4xi32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.memref.erase_dead_alloc_and_stores %0 : (!transform.any_op) -> ()
+    transform.yield
+  }
+}

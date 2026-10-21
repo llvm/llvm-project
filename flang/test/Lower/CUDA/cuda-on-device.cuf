@@ -1,0 +1,23 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! on_device() lowers to cuf.on_device. Folding to a host or device constant
+! happens later, once each copy is in its final execution context.
+
+subroutine on_host(r)
+  use cudadevice
+  logical :: r
+  r = on_device()
+end subroutine
+
+attributes(device) subroutine on_dev(r)
+  logical, device :: r
+  r = on_device()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPon_host
+! CHECK: cuf.on_device : i1
+! CHECK-NOT: fir.call @on_device
+
+! CHECK-LABEL: func.func @_QPon_dev
+! CHECK: cuf.on_device : i1
+! CHECK-NOT: fir.call @on_device

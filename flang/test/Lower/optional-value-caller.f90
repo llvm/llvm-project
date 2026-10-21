@@ -167,7 +167,7 @@ subroutine test_ptr_2()
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = ".result"}>
 ! CHECK:  %[[VAL_2:.*]] = fir.call @_QPreturns_ptr() {{.*}}: () -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.save_result %[[VAL_2]] to %[[VAL_0]] : !fir.box<!fir.ptr<i32>>, !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"}
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.func_result")
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<i32>) -> i64
@@ -383,7 +383,7 @@ subroutine test_char_array(c)
   character(*), optional :: c(:)
   call dyn_char_array(c, n)
 ! CHECK:  %[[VAL_C:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK:  %[[VAL_N:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMtestFtest_char_arrayEn"}
+! CHECK:  %[[VAL_N:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMtestFtest_char_arrayEn")
 ! CHECK:  %[[VAL_3:.*]] = fir.is_present %[[VAL_C]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 ! CHECK:  %[[VAL_4:.*]]:3 = fir.if %[[VAL_3]] -> (!fir.boxchar<1>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, i1) {
 ! CHECK:    %[[VAL_EXPR:.*]] = hlfir.as_expr %[[VAL_C]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !hlfir.expr<?x!fir.char<1,?>>

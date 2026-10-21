@@ -74,6 +74,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.sinf
+    libc.src.__support.math.sinf_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -93,21 +94,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
-)
-
-add_fp_unittest(
-  sinf_float_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    sinf_float_test.cpp
-  LINK_LIBRARIES
-    -lpthread
-  DEPENDS
-    .exhaustive_test
-    libc.src.__support.math.sincosf_utils
 )
 
 add_fp_unittest(
@@ -137,6 +123,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.cosf
+    libc.src.__support.math.cosf_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -156,21 +143,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
-)
-
-add_fp_unittest(
-  cosf_float_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    cosf_float_test.cpp
-  LINK_LIBRARIES
-    -lpthread
-  DEPENDS
-    .exhaustive_test
-    libc.src.__support.math.sincosf_utils
 )
 
 add_fp_unittest(
@@ -216,6 +188,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.tanf
+    libc.src.__support.math.tanf_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -283,8 +256,11 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     .exhaustive_test
+    .exhaustive_test_static_rounding
     libc.src.math.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
+    libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

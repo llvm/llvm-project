@@ -55,7 +55,7 @@ def SDT_PPCSpToDp : SDTypeProfile<1, 1, [ SDTCisVT<0, v2f64>,
 ]>;
 
 def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
-  SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
+  SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, i32>
 ]>;
 
 def SDT_PPCVecShiftQuad : SDTypeProfile<1, 2, [

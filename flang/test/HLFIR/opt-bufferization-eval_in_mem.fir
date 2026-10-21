@@ -6,7 +6,7 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x"}) {
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %3 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
   ^bb0(%arg1: !fir.ref<!fir.array<10xf32>>):
     %4 = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
@@ -23,7 +23,7 @@ func.func private @_QPfoo() -> !fir.array<10xf32>
 // CHECK:         %[[VAL_1:.*]] = arith.constant 10 : index
 // CHECK:         %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:         %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:         %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+// CHECK:         %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_2]] uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 // CHECK:         %[[VAL_5:.*]] = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
 // CHECK:         fir.save_result %[[VAL_5]] to %[[VAL_4]]#0(%[[VAL_3]]) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
 // CHECK:         return
@@ -36,7 +36,7 @@ func.func @_QPnegative_test_is_target(%arg0: !fir.ref<!fir.array<10xf32>> {fir.b
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFnegative_test_is_targetEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFnegative_test_is_targetEx") fortran_attrs<target> : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %3 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
   ^bb0(%arg1: !fir.ref<!fir.array<10xf32>>):
     %4 = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
@@ -68,14 +68,14 @@ func.func @_QPtest_shape_of_user(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %3 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
   ^bb0(%arg2: !fir.ref<!fir.array<10xf32>>):
     %4 = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
     fir.save_result %4 to %arg2(%1) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
   }
   %shp = hlfir.shape_of %3 : (!hlfir.expr<10xf32>) -> !fir.shape<1>
-  %ext = hlfir.get_extent %shp {dim = 0 : index} : (!fir.shape<1>) -> index
+  %ext = hlfir.get_extent %shp dim(0) : (!fir.shape<1>) -> index
   hlfir.assign %3 to %2#0 : !hlfir.expr<10xf32>, !fir.ref<!fir.array<10xf32>>
   hlfir.destroy %3 : !hlfir.expr<10xf32>
   fir.store %ext to %arg1 : !fir.ref<index>

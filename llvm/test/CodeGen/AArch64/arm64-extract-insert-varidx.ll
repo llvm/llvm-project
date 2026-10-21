@@ -24,17 +24,15 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    mov b1, v0.b[1]
 ; CHECK-GI-NEXT:    add x8, sp, #8
-; CHECK-GI-NEXT:    and x9, x9, #0x7
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
+; CHECK-GI-NEXT:    and x9, x9, #0x7
 ; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    sub x9, x10, x9
 ; CHECK-GI-NEXT:    ldrb w8, [x8, x9]
+; CHECK-GI-NEXT:    mov b0, v0.b[3]
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    fmov w8, s2
@@ -85,8 +83,6 @@ define <8 x i8> @test_varidx_extract_v16s8(<16 x i8> %x, i32 %idx) {
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    sub x9, x10, x9
 ; CHECK-GI-NEXT:    ldr b1, [x8, x9]
 ; CHECK-GI-NEXT:    mov v1.b[1], v0.b[1]
 ; CHECK-GI-NEXT:    mov v1.b[2], v0.b[2]

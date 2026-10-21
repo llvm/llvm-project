@@ -34,6 +34,8 @@ vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode) {
     MAP_CASE(XOR);
     MAP_CASE(MINIMUMF);
     MAP_CASE(MAXIMUMF);
+    MAP_CASE(MINIMUMNUMF);
+    MAP_CASE(MAXIMUMNUMF);
 
 #undef MAP_CASE
   }

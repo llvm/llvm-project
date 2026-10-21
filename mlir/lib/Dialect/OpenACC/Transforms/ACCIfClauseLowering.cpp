@@ -54,6 +54,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -82,10 +83,15 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 class ACCIfClauseLowering
     : public acc::impl::ACCIfClauseLoweringBase<ACCIfClauseLowering> {
   using ACCIfClauseLoweringBase<ACCIfClauseLowering>::ACCIfClauseLoweringBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCIfClauseLoweringBase<ACCIfClauseLowering>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
 private:
   OpenACCSupport *accSupport = nullptr;
@@ -325,5 +331,4 @@ void ACCIfClauseLowering::runOnOperation() {
     }
   } while (erased);
 }
-
 } // namespace

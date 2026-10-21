@@ -10,6 +10,7 @@
 #define LLVM_SANDBOXIR_MODULE_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
@@ -32,8 +33,10 @@ class GlobalIFunc;
 class Module {
   llvm::Module &LLVMM;
   Context &Ctx;
+  IRBuilder<ConstantFolder> LLVMIRBuilder;
 
-  Module(llvm::Module &LLVMM, Context &Ctx) : LLVMM(LLVMM), Ctx(Ctx) {}
+  Module(llvm::Module &LLVMM, Context &Ctx)
+      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {}
   friend class Context; // For constructor.
 
 public:
@@ -43,9 +46,14 @@ public:
 
   const DataLayout &getDataLayout() const { return LLVMM.getDataLayout(); }
 
+  /// Get the target triple which is a string describing the target host.
+  const Triple &getTargetTriple() const { return LLVMM.getTargetTriple(); }
+
   const std::string &getSourceFileName() const {
     return LLVMM.getSourceFileName();
   }
+
+  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
   /// Look up the specified global variable in the module symbol table. If it
   /// does not exist, return null. If AllowInternal is set to true, this

@@ -2,7 +2,9 @@
 ; RUN: opt -passes="loop-vectorize" -pass-remarks-output=%t.yaml -S %s | FileCheck %s
 ; RUN: FileCheck --input-file=%t.yaml --check-prefix=REMARKS %s
 
-; REMARKS: the cost-model indicates that vectorization is not beneficial
+; NOTE: The reason we cannot vectorise this test is because the target has no
+; vector registers.
+; REMARKS: vectorization is not possible
 
 ; Test for https://github.com/llvm/llvm-project/issues/116375.
 define void @test_i24_load_for(ptr noalias %src, ptr %dst) {

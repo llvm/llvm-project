@@ -111,6 +111,11 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
+  bool runs_as_top_level_code = options.GetREPLEnabled();
+  if (runs_as_top_level_code)
+    m_error_backstop_runtime =
+        m_process.GetLanguageRuntime(options.GetLanguage().AsLanguageType());
+
   lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
   lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
   ABI *abi = nullptr;
@@ -439,6 +444,9 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       m_objc_language_runtime->SetExceptionBreakpoints();
     }
   }
+  if (m_error_backstop_runtime)
+    m_error_backstop_bp_sp =
+        m_error_backstop_runtime->CreateErrorBackstopBreakpoint();
 }
 
 void ThreadPlanCallFunction::ClearBreakpoints() {
@@ -448,6 +456,8 @@ void ThreadPlanCallFunction::ClearBreakpoints() {
     if (m_objc_language_runtime && m_should_clear_objc_exception_bp)
       m_objc_language_runtime->ClearExceptionBreakpoints();
   }
+  if (m_error_backstop_bp_sp)
+    GetTarget().RemoveBreakpointByID(m_error_backstop_bp_sp->GetID());
 }
 
 bool ThreadPlanCallFunction::BreakpointsExplainStop() {
@@ -471,6 +481,21 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
       // can't let that happen, so force the ShouldStop here.
       stop_info_sp->OverrideShouldStop(true);
       return true;
+    }
+  }
+  if (m_error_backstop_bp_sp && stop_info_sp &&
+      stop_info_sp->GetStopReason() == eStopReasonBreakpoint &&
+      m_process.GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
+          stop_info_sp->GetValue(), m_error_backstop_bp_sp->GetID())) {
+    // This was top-level code that threw an error.
+    SetPlanComplete(true);
+    if (StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0)) {
+      m_return_valobj_sp =
+          m_error_backstop_runtime->GetErrorValueAtBackstop(*frame_sp);
+      if (m_return_valobj_sp) {
+        m_hit_error_backstop = true;
+        return true;
+      }
     }
   }
 

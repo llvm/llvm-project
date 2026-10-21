@@ -2051,6 +2051,55 @@ entry:
 }
 declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
 
+define <4 x i64> @PR228264(<2 x i128> %a, <2 x i128> %b) {
+; SSE-LABEL: PR228264:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %r8, %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movq %rdx, %xmm2
+; SSE-NEXT:    movq %rdi, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR228264:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %rdx, %xmm0
+; AVX1-NEXT:    vmovq %rdi, %xmm1
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovq %r8, %xmm1
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR228264:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdx, %xmm0
+; AVX2-NEXT:    vmovq %rdi, %xmm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vmovq %r8, %xmm1
+; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR228264:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq %rdx, %xmm0
+; AVX512-NEXT:    vmovq %rdi, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmovq %r8, %xmm1
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+  %lo_b = trunc <2 x i128> %b to <2 x i64>
+  %lo_a = trunc <2 x i128> %a to <2 x i64>
+  %result = shufflevector <2 x i64> %lo_b, <2 x i64> %lo_a, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i64> %result
+}
+
 ; Store merging must not infinitely fight store splitting.
 
 define void @store_merge_split(<8 x i32> %w1, <8 x i32> %w2, i64 %idx, ptr %p) align 2 {

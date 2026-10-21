@@ -135,7 +135,7 @@ public:
   }
 
   void test_inexact_results(AddFunc func) {
-    func(InType(1.0), in.min_denormal);
+    [[maybe_unused]] volatile OutType res = func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
 

@@ -1,10 +1,10 @@
 # RUN: llc -mtriple=aarch64-apple-darwin -run-pass=prolog-epilog \
 # RUN:   -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
 
-# Each call replacing an outlined sequence takes the first source location from
-# the sequence it replaces. Any link register save/restore the target inserts
-# around that call takes the same location, so that the call site does not
-# begin with a line 0 address.
+# Each call replacing an outlined sequence takes the location of the last call
+# in the sequence it replaces, or else its first source location. Any link
+# register save/restore the target inserts around that call takes the same
+# location, so that the call site does not begin with a line 0 address.
 
 # The link register is dead here, so the call needs no save/restore.
 # CHECK-LABEL: name: caller
@@ -39,6 +39,16 @@
 # CHECK-NEXT:  BL @OUTLINED_FUNCTION_{{[0-9]+}}{{.*}}debug-location !DILocation(line: 222,
 # CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16, debug-location !DILocation(line: 222,
 
+# The sequence ends in a call, so it is outlined as a thunk that tail-calls
+# @getpc, which returns directly after the outlined call. The outlined call
+# takes the location of the original call rather than the inlined location of
+# the sequence's first instruction.
+# CHECK-LABEL: name: thunk
+# CHECK:       BL @OUTLINED_FUNCTION_{{[0-9]+}}
+# CHECK-SAME:  debug-location !DILocation(line: 410, column: 1, scope: ![[#]]){{$}}
+# CHECK:       BL @OUTLINED_FUNCTION_{{[0-9]+}}
+# CHECK-SAME:  debug-location !DILocation(line: 420, column: 1, scope: ![[#]]){{$}}
+
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
   target triple = "aarch64--"
@@ -48,6 +58,7 @@
   declare void @callee2()
   declare void @callee3()
   declare void @callee4()
+  declare void @getpc()
 
   define void @caller() #0 !dbg !6 {
     ret void
@@ -58,6 +69,10 @@
   }
 
   define void @stack_save() #0 !dbg !30 {
+    ret void
+  }
+
+  define void @thunk() #0 !dbg !40 {
     ret void
   }
 
@@ -90,6 +105,12 @@
   !31 = !DILocation(line: 111, column: 1, scope: !30)
   !32 = !DILocation(line: 222, column: 1, scope: !30)
   !33 = !DILocation(line: 333, column: 1, scope: !30)
+  !40 = distinct !DISubprogram(name: "thunk", scope: !1, file: !1, line: 400, type: !5, scopeLine: 400, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !41 = distinct !DISubprogram(name: "inlinee", scope: !1, file: !1, line: 900, type: !5, scopeLine: 900, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !42 = !DILocation(line: 410, column: 1, scope: !40)
+  !43 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !42)
+  !44 = !DILocation(line: 420, column: 1, scope: !40)
+  !45 = !DILocation(line: 901, column: 1, scope: !41, inlinedAt: !44)
 
 ...
 ---
@@ -200,5 +221,26 @@ body:             |
     $w12 = ORRWri $wzr, 2, debug-location !33
   bb.3:
     liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28
+    RET undef $lr
+...
+---
+name:            thunk
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $w11 = ORRWri $wzr, 7, debug-location !43
+    $w11 = ORRWri $wzr, 8, debug-location !43
+    $w11 = ORRWri $wzr, 9, debug-location !43
+    $w11 = ORRWri $wzr, 10, debug-location !43
+    $w11 = ORRWri $wzr, 11, debug-location !43
+    BL @getpc, implicit-def dead $lr, implicit $sp, debug-location !42
+    $w0 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 7, debug-location !45
+    $w11 = ORRWri $wzr, 8, debug-location !45
+    $w11 = ORRWri $wzr, 9, debug-location !45
+    $w11 = ORRWri $wzr, 10, debug-location !45
+    $w11 = ORRWri $wzr, 11, debug-location !45
+    BL @getpc, implicit-def dead $lr, implicit $sp, debug-location !44
+    $w0 = ORRWri $wzr, 2
     RET undef $lr
 ...

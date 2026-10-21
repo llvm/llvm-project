@@ -47,6 +47,14 @@ add_header(
 )
 
 add_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
+  DEPENDS
+    .fcntl_macros
+)
+
+add_header(
   sys_ipc_macros
   HDR
     sys-ipc-macros.h

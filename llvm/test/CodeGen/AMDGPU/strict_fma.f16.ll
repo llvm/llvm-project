@@ -117,18 +117,12 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX9-LABEL: v_constained_fma_v4f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
-; GFX9-NEXT:    v_fma_f16 v6, v8, v7, v6
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
-; GFX9-NEXT:    v_fma_f16 v7, v9, v8, v7
+; GFX9-NEXT:    v_fma_f16 v6, v1, v3, v5 op_sel:[1,1,1,0]
 ; GFX9-NEXT:    v_fma_f16 v1, v1, v3, v5
+; GFX9-NEXT:    v_fma_f16 v3, v0, v2, v4 op_sel:[1,1,1,0]
 ; GFX9-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v7, v0, s4
+; GFX9-NEXT:    v_perm_b32 v0, v3, v0, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v6, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

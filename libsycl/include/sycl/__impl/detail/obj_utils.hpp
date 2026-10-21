@@ -18,8 +18,9 @@
 #include <sycl/__impl/detail/config.hpp>
 
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -30,9 +31,9 @@ namespace detail {
 
 // SYCL interface classes are required to contain an `impl` data member
 // which points to the corresponding implementation object. The data
-// member is required to be accessible by the `ImpUtils` class. SYCL
+// member is required to be accessible by the `ImplUtils` class. SYCL
 // interface classes that declare the data member private or protected
-// are required to befriend the `ImpUtils` class.
+// are required to befriend the `ImplUtils` class.
 struct ImplUtils {
   // Helper function to access an implementation object from a SYCL interface
   // object.

@@ -1,5 +1,9 @@
 add_custom_target(libc_stack_chk_guard_unittests)
 
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  return()
+endif()
+
 add_libc_test(
   stack_chk_guard_test
   SUITE

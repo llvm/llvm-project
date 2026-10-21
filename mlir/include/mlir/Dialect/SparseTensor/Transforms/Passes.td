@@ -201,6 +201,7 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   }];
   let constructor = "mlir::createStageSparseOperationsPass()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }
@@ -497,6 +498,9 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
            "Enable i32 indexing into vectors (for efficient gather/scatter)">,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
            "Enable GPU acceleration by means of direct library calls">,
+    //
+    // The options below are SparsificationPass' options copied over.
+    //
     Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
            "mlir::SparseEmitStrategy::kFunctional",
            "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
@@ -523,6 +527,8 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "false", "Enable runtime library for manipulating sparse tensors">,
   ];
 }
 

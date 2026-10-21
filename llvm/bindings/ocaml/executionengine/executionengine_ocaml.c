@@ -98,7 +98,7 @@ value llvm_ee_run_static_dtors(value EE) {
 
 extern value llvm_alloc_data_layout(LLVMTargetDataRef TargetData);
 
-/* ExecutionEngine.t -> Llvm_target.DataLayout.t */
+/* ExecutionEngine.t -> Llvm.DataLayout.t */
 value llvm_ee_get_data_layout(value EE) {
   value DataLayout;
   LLVMTargetDataRef OrigDataLayout;

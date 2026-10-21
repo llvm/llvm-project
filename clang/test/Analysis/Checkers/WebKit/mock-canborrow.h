@@ -282,6 +282,19 @@ template <typename A, typename B> struct pair {
 template <size_t I, typename A, typename B> A &get(pair<A, B> &);
 
 template <typename T> T *data(Vector<T> &);
+
+template <typename T> class optional {
+public:
+  optional();
+  optional(T);
+  const T &operator*() const { return m_value; }
+  T &operator*() { return m_value; }
+  const T *operator->() const { return &m_value; }
+  T *operator->() { return &m_value; }
+
+private:
+  T m_value;
+};
 } // namespace __1
 } // namespace std
 

@@ -169,10 +169,10 @@ private:
   CIRGenFunction *cgf = nullptr;
 
   /// When true, pushCleanup() does not create a cir.cleanup.scope op for the
-  /// pushed cleanup. This is set while emitting a loop's condition variable so
-  /// its destructor can be captured on the stack and later emitted into the
-  /// loop op's per-iteration cleanup region.
-  bool capturingLoopConditionCleanups = false;
+  /// pushed cleanup. This is set while emitting a variable whose cleanups are
+  /// captured on the stack and later emitted into a cleanup region owned by an
+  /// enclosing op, such as a loop's per-iteration cleanup region.
+  bool capturingCleanups = false;
 
   // This class uses a custom allocator for maximum efficiency because cleanups
   // are allocated and freed very frequently. It's basically a bump pointer
@@ -231,12 +231,8 @@ public:
 
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
 
-  bool isCapturingLoopConditionCleanups() const {
-    return capturingLoopConditionCleanups;
-  }
-  void setCapturingLoopConditionCleanups(bool value) {
-    capturingLoopConditionCleanups = value;
-  }
+  bool isCapturingCleanups() const { return capturingCleanups; }
+  void setCapturingCleanups(bool value) { capturingCleanups = value; }
 
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.
   void popCleanup();

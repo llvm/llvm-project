@@ -17,9 +17,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
 #include "llvm/Support/Error.h"
 
 #include <initializer_list>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -272,6 +276,46 @@ private:
   UnderlyingVector Symbols;
 };
 
+/// The result of looking up a SymbolLookupSet in the executor: one entry per
+/// element of the set, in the same order.
+///
+/// An empty optional indicates that a required symbol was not found. A missing
+/// weakly referenced symbol is reported as a present optional holding a null
+/// address.
+using SymbolLookupResult = std::vector<std::optional<ExecutorAddr>>;
+
 } // namespace llvm::orc
+
+// SPS serialization for SymbolLookupSet. This lives here rather than in
+// Shared/SymbolLookupSetSPS.h because that header is shared with
+// OrcTargetProcess, which doesn't depend on ORC's core types.
+namespace llvm::orc::shared {
+
+// Serialize a SymbolLookupSet directly as an SPSSymbolLookupSet, avoiding a
+// std::string copy of each (potentially large) symbol name.
+template <>
+class SPSSerializationTraits<SPSSymbolLookupSetElement,
+                             SymbolLookupSet::value_type> {
+public:
+  static size_t size(const SymbolLookupSet::value_type &V) {
+    return SPSArgList<SPSString, bool>::size(
+        *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const SymbolLookupSet::value_type &V) {
+    return SPSArgList<SPSString, bool>::serialize(
+        OB, *V.first, V.second == SymbolLookupFlags::RequiredSymbol);
+  }
+};
+
+template <>
+class TrivialSPSSequenceSerialization<SPSSymbolLookupSetElement,
+                                      SymbolLookupSet> {
+public:
+  static constexpr bool available = true;
+};
+
+} // namespace llvm::orc::shared
 
 #endif // LLVM_EXECUTIONENGINE_ORC_SYMBOLLOOKUPSET_H

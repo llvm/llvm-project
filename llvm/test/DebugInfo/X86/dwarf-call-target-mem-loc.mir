@@ -1,4 +1,4 @@
-# RUN: llc %s --start-after=livedebugvalues -o - --filetype=obj | llvm-dwarfdump -  | FileCheck %s
+# RUN: llc %s --start-after=live-debug-values -o - --filetype=obj | llvm-dwarfdump -  | FileCheck %s
 
 ## Check the memory location of the target address for the indirect call
 ## (virtual in this case) is described by a DW_AT_call_target_clobbered
@@ -7,7 +7,7 @@
 # CHECK: DW_TAG_call_site
 # CHECK-NEXT: DW_AT_call_target_clobbered (DW_OP_breg0 RAX+8)
 
-## Generated from this C++ with llc -stop-after=livedebugvalues -simplify-mir:
+## Generated from this C++ with llc -stop-after=live-debug-values -simplify-mir:
 ## struct Base {
 ##   virtual int zz() { return x; }
 ##   [[clang::noinline]]

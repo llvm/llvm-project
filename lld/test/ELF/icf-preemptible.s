@@ -9,11 +9,11 @@
 
 ## Definitions are non-preemptible in an executable.
 # EXE-NOT:  {{.}}
-# EXE:      selected section {{.*}}:(.text.g1)
+# EXE:      selected section {{.*}}:(.text.f1)
+# EXE-NEXT:   removing identical section {{.*}}:(.text.f2)
+# EXE-NEXT: selected section {{.*}}:(.text.g1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.g2)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.g3)
-# EXE-NEXT: selected section {{.*}}:(.text.f1)
-# EXE-NEXT:   removing identical section {{.*}}:(.text.f2)
 # EXE-NEXT: selected section {{.*}}:(.text.h1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h2)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h3)
@@ -21,10 +21,10 @@
 
 ## Definitions are preemptible in a DSO. Only leaf functions can be folded.
 # DSO-NOT:  {{.}}
-# DSO:      selected section {{.*}}:(.text.g1)
-# DSO-NEXT:   removing identical section {{.*}}:(.text.g3)
-# DSO-NEXT: selected section {{.*}}:(.text.f1)
+# DSO:      selected section {{.*}}:(.text.f1)
 # DSO-NEXT:   removing identical section {{.*}}:(.text.f2)
+# DSO-NEXT: selected section {{.*}}:(.text.g1)
+# DSO-NEXT:   removing identical section {{.*}}:(.text.g3)
 # DSO-NOT:  {{.}}
 
 .globl _start, f1, f2, g1, g2, g3

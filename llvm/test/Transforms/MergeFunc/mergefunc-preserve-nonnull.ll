@@ -73,10 +73,10 @@ define void @noalias_2(ptr %0, ptr %1) {
 
 !0 = !{}
 !1 = !{}
-!2 = !{!2}
+!2 = !{!2, i1 false}
 !3 = !{!3, !2}
 !4 = !{!3}
-!5 = !{!5}
+!5 = !{!5, i1 false}
 !6 = !{!6, !5}
 !7 = !{!6}
 !8 = !DILocation(line: 1, column: 1, scope: !{})

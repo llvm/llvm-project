@@ -128,41 +128,8 @@ define <8 x half> @select(<8 x half> %x) {
 ; CHECK-LABEL: select:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm1
-; CHECK-NEXT:    vmovsh {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    vucomish %xmm2, %xmm1
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vucomish %xmm2, %xmm0
-; CHECK-NEXT:    seta %cl
-; CHECK-NEXT:    vmovd %ecx, %xmm1
-; CHECK-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vucomish %xmm2, %xmm3
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero,xmm1[4],zero,zero,zero,zero,zero,zero,zero,xmm1[5],zero,zero,zero,zero,zero,zero,zero,xmm1[6],zero,zero,zero,zero,zero,zero,zero,xmm1[7],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vcmpltph %zmm0, %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper
@@ -186,4 +153,124 @@ entry:
   %2 = icmp eq <4 x i32> %0, zeroinitializer
   %3 = select <4 x i1> %2, <4 x half> %1, <4 x half> <half 0xH5600, half 0xH5610, half 0xH5620, half 0xH5630>
   ret <4 x half> %3
+}
+
+define i8 @fcmp_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fcmp_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vcmpltph %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %c = fcmp olt <8 x half> %x, %y
+  %r = bitcast <8 x i1> %c to i8
+  ret i8 %r
+}
+
+define i16 @fcmp_v16f16(<16 x half> %x, <16 x half> %y) {
+; CHECK-LABEL: fcmp_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vcmpleph %zmm0, %zmm1, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %c = fcmp oge <16 x half> %x, %y
+  %r = bitcast <16 x i1> %c to i16
+  ret i16 %r
+}
+
+define i8 @fcmp_v8f16_and(<8 x half> %x, <8 x half> %y, <8 x half> %z) {
+; CHECK-LABEL: fcmp_v8f16_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vcmpltph %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vcmpneqph %zmm2, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %c0 = fcmp ogt <8 x half> %x, %y
+  %c1 = fcmp une <8 x half> %x, %z
+  %c = and <8 x i1> %c0, %c1
+  %r = bitcast <8 x i1> %c to i8
+  ret i8 %r
+}
+
+define i8 @fcmp_v8f16_broadcast(<8 x half> %x, ptr %p) {
+; CHECK-LABEL: fcmp_v8f16_broadcast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vcmpleph (%rdi){1to32}, %zmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <8 x half> poison, half %s, i64 0
+  %b = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %c = fcmp ole <8 x half> %x, %b
+  %r = bitcast <8 x i1> %c to i8
+  ret i8 %r
+}
+
+define i16 @fcmp_v16f16_broadcast_commuted(<16 x half> %x, ptr %p) {
+; CHECK-LABEL: fcmp_v16f16_broadcast_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vcmpgtph (%rdi){1to32}, %zmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <16 x half> poison, half %s, i64 0
+  %b = shufflevector <16 x half> %i, <16 x half> poison, <16 x i32> zeroinitializer
+  %c = fcmp olt <16 x half> %b, %x
+  %r = bitcast <16 x i1> %c to i16
+  ret i16 %r
+}
+
+define i8 @fcmp_v8f16_broadcast_and(<8 x half> %x, <8 x half> %y, ptr %p) {
+; CHECK-LABEL: fcmp_v8f16_broadcast_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vcmpltph %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vcmpeqph (%rdi){1to32}, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <8 x half> poison, half %s, i64 0
+  %b = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %c0 = fcmp ogt <8 x half> %x, %y
+  %c1 = fcmp oeq <8 x half> %x, %b
+  %c = and <8 x i1> %c0, %c1
+  %r = bitcast <8 x i1> %c to i8
+  ret i8 %r
+}
+
+; convertIntLogicToFPLogic forms v8f16 compares from scalar ones.
+define i1 @fcmp_f16_and(half %w, half %x, half %y, half %z) {
+; CHECK-LABEL: fcmp_f16_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmplesh %xmm3, %xmm2, %k0
+; CHECK-NEXT:    vcmpltsh %xmm1, %xmm0, %k1
+; CHECK-NEXT:    kandw %k0, %k1, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %c0 = fcmp olt half %w, %x
+  %c1 = fcmp ole half %y, %z
+  %r = and i1 %c0, %c1
+  ret i1 %r
 }

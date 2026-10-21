@@ -32,22 +32,22 @@ public:
   }
 
 private:
-  void retain() {
+  void retain() noexcept {
     std::scoped_lock<std::mutex> Lock(M);
     ++RefCount;
   }
 
-  static void retainEntry(Connection *C) {
+  static void retainEntry(Connection *C) noexcept {
     static_cast<ConnectionImpl *>(C)->retain();
   }
 
-  int release() {
+  int release() noexcept {
     std::scoped_lock<std::mutex> Lock(M);
     --RefCount;
     return RefCount == 0;
   }
 
-  static void releaseEntry(Connection *C) {
+  static void releaseEntry(Connection *C) noexcept {
     if (static_cast<ConnectionImpl *>(C)->release())
       delete static_cast<ConnectionImpl *>(C);
   }

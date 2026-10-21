@@ -15,7 +15,7 @@ omp.private {type = firstprivate} @_QFFbEl_firstprivate_box_Uxi32 : !fir.box<!fi
   %2 = fir.shape %1#1 : (index) -> !fir.shape<1>
   %3 = fir.allocmem !fir.array<?xi32>, %1#1 {bindc_name = ".tmp", uniq_name = ""}
   %true = arith.constant true
-  %4:2 = hlfir.declare %3(%2) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+  %4:2 = hlfir.declare %3(%2) uniq_name(".tmp") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
   %c0_0 = arith.constant 0 : index
   %5:3 = fir.box_dims %0, %c0_0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %6 = fir.shape_shift %5#0, %5#1 : (index, index) -> !fir.shapeshift<1>

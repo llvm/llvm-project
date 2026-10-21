@@ -1,0 +1,82 @@
+# RUN: llc -O0 -mtriple=aarch64-apple-macosx -run-pass=localizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=aarch64-apple-macosx -passes=localizer %s -o - | FileCheck %s
+
+# CHECK-DAG: ![[Y:[0-9]+]] = !DILocalVariable(name: "y"
+# CHECK-DAG: ![[Z:[0-9]+]] = !DILocalVariable(name: "z"
+
+--- |
+  @g = external global i64
+
+  define void @debug_use_other_block() !dbg !4 { ret void }
+  define void @debug_use_before_sink() !dbg !7 { ret void }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+  !4 = distinct !DISubprogram(name: "debug_use_other_block", scope: !2, file: !2, type: !11, spFlags: DISPFlagDefinition, unit: !1)
+  !5 = !DILocalVariable(name: "x", scope: !4, file: !2, type: !3)
+  !6 = !DILocation(line: 1, scope: !4)
+  !7 = distinct !DISubprogram(name: "debug_use_before_sink", scope: !2, file: !2, type: !11, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !{!8, !9})
+  !8 = !DILocalVariable(name: "y", scope: !7, file: !2, type: !3)
+  !9 = !DILocalVariable(name: "z", scope: !7, file: !2, type: !3)
+  !10 = !DILocation(line: 2, scope: !7)
+  !11 = !DISubroutineType(types: !{null})
+...
+
+# A debug use in another block stays with the original definition, while a real
+# use gets a copy of it.
+# CHECK-LABEL: name: debug_use_other_block
+# CHECK:       bb.1:
+# CHECK-NOT:   G_GLOBAL_VALUE
+# CHECK:       DBG_VALUE %gv(p0), $noreg
+# CHECK:       bb.2:
+# CHECK:       [[COPY:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g
+# CHECK-NEXT:  G_STORE [[COPY]](p0), %p(p0)
+---
+name:            debug_use_other_block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    %p:_(p0) = COPY $x0
+    %gv:_(p0) = G_GLOBAL_VALUE @g
+    G_STORE %gv(p0), %p(p0) :: (store (p0))
+    G_BR %bb.1
+
+  bb.1:
+    DBG_VALUE %gv(p0), $noreg, !5, !DIExpression(), debug-location !6
+    G_BR %bb.2
+
+  bb.2:
+    G_STORE %gv(p0), %p(p0) :: (store (p0))
+    RET_ReallyLR
+...
+
+# Sinking the definition to its first real use leaves the debug use of y behind
+# as undef, and puts a copy of it right behind the definition. The one of z is
+# replaced by a later debug value before that, so it only becomes undef.
+# CHECK-LABEL: name: debug_use_before_sink
+# CHECK:       DBG_VALUE $noreg, $noreg, ![[Y]], !DIExpression()
+# CHECK-NEXT:  DBG_VALUE $noreg, $noreg, ![[Z]], !DIExpression()
+# CHECK-NEXT:  DBG_VALUE 0, $noreg, ![[Z]], !DIExpression()
+# CHECK-NEXT:  %p:_(p0) = COPY $x0
+# CHECK-NEXT:  %gv:_(p0) = G_GLOBAL_VALUE @g
+# CHECK-NEXT:  DBG_VALUE %gv(p0), $noreg, ![[Y]], !DIExpression()
+# CHECK-NEXT:  G_STORE %gv(p0), %p(p0)
+---
+name:            debug_use_before_sink
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    %gv:_(p0) = G_GLOBAL_VALUE @g
+    DBG_VALUE %gv(p0), $noreg, !8, !DIExpression(), debug-location !10
+    DBG_VALUE %gv(p0), $noreg, !9, !DIExpression(), debug-location !10
+    DBG_VALUE 0, $noreg, !9, !DIExpression(), debug-location !10
+    %p:_(p0) = COPY $x0
+    G_STORE %gv(p0), %p(p0) :: (store (p0))
+    RET_ReallyLR
+...

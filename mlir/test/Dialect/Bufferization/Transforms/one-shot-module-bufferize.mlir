@@ -852,3 +852,33 @@ func.func @ranked_return_via_unranked_call(%arg0: tensor<64x20x40xf32>) -> tenso
   return %b : tensor<64x20x40xf32>
 }
 func.func private @relu_unranked(tensor<*xf32>) -> tensor<*xf32>
+
+
+// -----
+
+// Test that a non-identity layout (strided subview) crossing a function
+// boundary under IdentityLayoutMap triggers an explicit alloc+copy instead
+// of an illegal memref.cast that would silently strip the offset.
+// Reproduces issue #83276.
+//
+// CHECK-NO-LAYOUT-MAP-LABEL: func.func @caller(
+// CHECK-NO-LAYOUT-MAP-SAME:      %[[ARG0:.*]]: memref<5xf32>
+// CHECK-NO-LAYOUT-MAP:          %[[SUBVIEW:.*]] = memref.subview %[[ARG0]][%{{.*}}] [%{{.*}}] [1]
+// CHECK-NO-LAYOUT-MAP-SAME:       : memref<5xf32> to memref<?xf32, strided<[1], offset: ?>>
+// CHECK-NO-LAYOUT-MAP-NOT:      memref.cast %[[SUBVIEW]]
+// CHECK-NO-LAYOUT-MAP:          %[[DIM:.*]] = memref.dim %[[SUBVIEW]]
+// CHECK-NO-LAYOUT-MAP:          %[[ALLOC:.*]] = memref.alloc(%[[DIM]])
+// CHECK-NO-LAYOUT-MAP:          memref.copy %[[SUBVIEW]], %[[ALLOC]]
+// CHECK-NO-LAYOUT-MAP:          call @callee(%[[ALLOC]])
+func.func @caller(%arg0: tensor<5xf32>, %offset: index, %size: index) -> (f32) {
+  %extracted_slice = tensor.extract_slice %arg0[%offset] [%size] [1]
+      : tensor<5xf32> to tensor<?xf32>
+  %result = func.call @callee(%extracted_slice) : (tensor<?xf32>) -> (f32)
+  return %result : f32
+}
+func.func private @callee(%arg0: tensor<?xf32>) -> (f32) {
+  %0 = arith.constant 0 : index
+  %extracted = tensor.extract %arg0[%0] : tensor<?xf32>
+  return %extracted : f32
+}
+

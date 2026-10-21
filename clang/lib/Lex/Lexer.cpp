@@ -1614,9 +1614,9 @@ static bool isUnicodeWhitespace(uint32_t Codepoint) {
 static bool isMathematicalExtensionID(uint32_t C, const LangOptions &LangOpts,
                                       bool IsStart, bool &IsExtension) {
   static const llvm::sys::UnicodeCharSet MathStartChars(
-      MathematicalNotationProfileIDStartRanges);
+      GeneratedMathematicalNotationProfileIDStartRanges);
   static const llvm::sys::UnicodeCharSet MathContinueChars(
-      MathematicalNotationProfileIDContinueRanges);
+      GeneratedMathematicalNotationProfileIDContinueRanges);
   if (MathStartChars.contains(C) ||
       (!IsStart && MathContinueChars.contains(C))) {
     IsExtension = true;
@@ -1633,11 +1633,13 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
-    // XIDContinueRanges doesn't contains characters also in XIDStartRanges,
-    // so we need to check both tables.
+    // GeneratedXIDContinueRanges doesn't contain characters also in
+    // GeneratedXIDStartRanges, so we need to check both tables.
     // '_' doesn't have the XID_Continue property but is allowed in C and C++.
-    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
-    static const llvm::sys::UnicodeCharSet XIDContinueChars(XIDContinueRanges);
+    static const llvm::sys::UnicodeCharSet XIDStartChars(
+        GeneratedXIDStartRanges);
+    static const llvm::sys::UnicodeCharSet XIDContinueChars(
+        GeneratedXIDContinueRanges);
     if (C == '_' || XIDStartChars.contains(C) || XIDContinueChars.contains(C))
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/false,
@@ -1661,7 +1663,8 @@ static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts,
     return false;
   }
   if (LangOpts.CPlusPlus || LangOpts.C23) {
-    static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
+    static const llvm::sys::UnicodeCharSet XIDStartChars(
+        GeneratedXIDStartRanges);
     if (XIDStartChars.contains(C))
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/true,
@@ -1685,9 +1688,9 @@ diagnoseMathematicalNotationInIdentifier(DiagnosticsEngine &Diags,
                                          uint32_t C, CharSourceRange Range) {
 
   static const llvm::sys::UnicodeCharSet MathStartChars(
-      MathematicalNotationProfileIDStartRanges);
+      GeneratedMathematicalNotationProfileIDStartRanges);
   static const llvm::sys::UnicodeCharSet MathContinueChars(
-      MathematicalNotationProfileIDContinueRanges);
+      GeneratedMathematicalNotationProfileIDContinueRanges);
 
   (void)MathStartChars;
   (void)MathContinueChars;
@@ -4663,11 +4666,8 @@ LexNextToken:
 const char *Lexer::convertDependencyDirectiveToken(
     const dependency_directives_scan::Token &DDTok, Token &Result) {
   const char *TokPtr = BufferStart + DDTok.Offset;
-  Result.startToken();
-  Result.setLocation(getSourceLocation(TokPtr));
-  Result.setKind(DDTok.Kind);
+  Result = Token::create(DDTok.Kind, getSourceLocation(TokPtr), DDTok.Length);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
-  Result.setLength(DDTok.Length);
   if (Result.is(tok::raw_identifier))
     Result.setRawIdentifierData(TokPtr);
   else if (Result.isLiteral())
@@ -4678,6 +4678,8 @@ const char *Lexer::convertDependencyDirectiveToken(
 
 bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   assert(isDependencyDirectivesLexer());
+
+  Result.startToken();
 
   using namespace dependency_directives_scan;
 
@@ -4702,7 +4704,6 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   const char *DDTokPtr = BufferStart + DDTok.Offset;
   if (ParsingFilename && *DDTokPtr == '<') {
-    Result.startToken();
     Result.setFlag((clang::Token::TokenFlags)DDTok.Flags);
     Result.clearFlag(clang::Token::NeedsCleaning);
     BufferPtr = DDTokPtr;

@@ -20,11 +20,10 @@ f:
 // CHECK-NEXT: jr a2
   jr a2
 .Lcont:
-/// FIXME: the branch below is currently replaced by an unconditional tail call,
-/// which drops both the condition and the fall-through path.
+/// The branch to the end of the function must stay a conditional branch.
 /// NOTE: This seems not reasonable in general, however this might created when
 ///       program has __builtin_unreachable or undefined behavior.
-// CHECK-NEXT: j {{.*}} <g>
+// CHECK-NEXT: beqz a0, {{.*}} <g>
   beqz a0, .Lend
 // CHECK-NEXT: li a0, 0x1
   li a0, 1

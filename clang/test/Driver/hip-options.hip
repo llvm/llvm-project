@@ -286,3 +286,8 @@
 // NO-COV-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-instr-generate
 // NO-COV-NOT: --device-compiler=amdgcn-amd-amdhsa=-fcoverage-mapping
 
+// Check that AMDGCNSPIRV size optimization is forwarded to -cc1
+// RUN: %clang -### -nogpuinc -nogpulib -fenable-spirv-size-optimization \
+// RUN:   --offload-arch=amdgcnspirv  %s 2>&1 | FileCheck -check-prefix=AMDGCNSPIRV-SIZE-OPT %s
+// AMDGCNSPIRV-SIZE-OPT: "-cc1"{{.*}} "-triple" "spirv64-amd-amdhsa" {{.*}} "-fenable-spirv-size-optimization"
+

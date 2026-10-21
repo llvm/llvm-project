@@ -1843,6 +1843,20 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
                                         "__builtin_hlsl_interlocked_add");
   addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_and");
+  addByteAddressBufferInterlockedCompareMethod(
+      "InterlockedCompareExchange", AST.UnsignedIntTy,
+      "__builtin_hlsl_interlocked_compare_exchange",
+      /*WithOriginalValue=*/true);
+  addByteAddressBufferInterlockedCompareMethod(
+      "InterlockedCompareExchangeFloatBitwise", AST.FloatTy,
+      "__builtin_hlsl_interlocked_compare_exchange_float_bitwise",
+      /*WithOriginalValue=*/true);
+  addByteAddressBufferInterlockedCompareMethod(
+      "InterlockedCompareStore", AST.UnsignedIntTy,
+      "__builtin_hlsl_interlocked_compare_store");
+  addByteAddressBufferInterlockedCompareMethod(
+      "InterlockedCompareStoreFloatBitwise", AST.FloatTy,
+      "__builtin_hlsl_interlocked_compare_store_float_bitwise");
   addByteAddressBufferInterlockedMethod(
       "InterlockedExchange", AST.UnsignedIntTy,
       "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
@@ -1875,6 +1889,13 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAnd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_and");
+    addByteAddressBufferInterlockedCompareMethod(
+        "InterlockedCompareExchange64", AST.UnsignedLongTy,
+        "__builtin_hlsl_interlocked_compare_exchange",
+        /*WithOriginalValue=*/true);
+    addByteAddressBufferInterlockedCompareMethod(
+        "InterlockedCompareStore64", AST.UnsignedLongTy,
+        "__builtin_hlsl_interlocked_compare_store");
     addByteAddressBufferInterlockedMethod(
         "InterlockedExchange64", AST.UnsignedLongTy,
         "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
@@ -2799,6 +2820,36 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
   if (!RequiresOriginalValue)
     BuildOverload(/*WithOriginalValue=*/false);
   BuildOverload(/*WithOriginalValue=*/true);
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedCompareMethod(
+    StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+    bool WithOriginalValue) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+
+  BuiltinTypeMethodBuilder MMB(*this, MethodName, AST.VoidTy);
+  MMB.addParam("Offset", AST.UnsignedIntTy)
+      .addParam("CompareValue", ValueTy)
+      .addParam("Value", ValueTy);
+  if (WithOriginalValue)
+    MMB.addParam("OriginalValue", ValueTy, HLSLParamModifierAttr::Keyword_out);
+  MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                  PH::Handle, PH::_0, ValueTy)
+      .dereference(PH::LastStmt);
+  if (WithOriginalValue)
+    MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2,
+                    PH::_3);
+  else
+    MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2);
+  MMB.finalize();
   return *this;
 }
 

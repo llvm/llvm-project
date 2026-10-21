@@ -141,15 +141,16 @@ define i128 @ti128(i1 %c, ptr %p, i128 %a, i128 %b) {
 ;
 ; CHECK-GI-LABEL: ti128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    mov x8, x1
 ; CHECK-GI-NEXT:    mov x0, x4
-; CHECK-GI-NEXT:    tbz w8, #0, .LBB4_2
+; CHECK-GI-NEXT:    mov x1, x5
+; CHECK-GI-NEXT:    tbz w9, #0, .LBB4_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov x0, x2
-; CHECK-GI-NEXT:    mov x5, x3
-; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:    mov x1, x3
+; CHECK-GI-NEXT:    str wzr, [x8]
 ; CHECK-GI-NEXT:  .LBB4_2: // %e
-; CHECK-GI-NEXT:    mov x1, x5
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -193,15 +194,26 @@ e:
 }
 
 define half @tf16(i1 %c, ptr %p, half %a, half %b) {
-; CHECK-LABEL: tf16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB6_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov s1, s0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB6_2: // %e
-; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tf16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB6_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov s1, s0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB6_2: // %e
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tf16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s2, s0
+; CHECK-GI-NEXT:    fmov s0, s1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB6_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB6_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -213,15 +225,26 @@ e:
 }
 
 define float @tf32(i1 %c, ptr %p, float %a, float %b) {
-; CHECK-LABEL: tf32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB7_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov s1, s0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB7_2: // %e
-; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tf32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB7_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov s1, s0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB7_2: // %e
+; CHECK-SD-NEXT:    fmov s0, s1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tf32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s2, s0
+; CHECK-GI-NEXT:    fmov s0, s1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB7_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov s0, s2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB7_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -233,15 +256,26 @@ e:
 }
 
 define double @tf64(i1 %c, ptr %p, double %a, double %b) {
-; CHECK-LABEL: tf64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB8_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB8_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tf64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB8_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB8_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tf64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB8_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB8_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -413,15 +447,26 @@ e:
 }
 
 define <8 x i8> @tv8i8(i1 %c, ptr %p, <8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: tv8i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB13_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB13_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv8i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB13_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB13_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv8i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB13_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB13_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -433,15 +478,26 @@ e:
 }
 
 define <16 x i8> @tv16i8(i1 %c, ptr %p, <16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: tv16i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB14_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB14_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv16i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB14_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB14_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv16i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB14_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB14_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -468,14 +524,15 @@ define <32 x i8> @tv32i8(i1 %c, ptr %p, <32 x i8> %a, <32 x i8> %b) {
 ; CHECK-GI-LABEL: tv32i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB15_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB15_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -521,15 +578,26 @@ e:
 }
 
 define <3 x i16> @tv3i16(i1 %c, ptr %p, <3 x i16> %a, <3 x i16> %b) {
-; CHECK-LABEL: tv3i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB17_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB17_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv3i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB17_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB17_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv3i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB17_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB17_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -541,15 +609,26 @@ e:
 }
 
 define <4 x i16> @tv4i16(i1 %c, ptr %p, <4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: tv4i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB18_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB18_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv4i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB18_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB18_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv4i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB18_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB18_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -561,15 +640,26 @@ e:
 }
 
 define <8 x i16> @tv8i16(i1 %c, ptr %p, <8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: tv8i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB19_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB19_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv8i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB19_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB19_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv8i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB19_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB19_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -596,14 +686,15 @@ define <16 x i16> @tv16i16(i1 %c, ptr %p, <16 x i16> %a, <16 x i16> %b) {
 ; CHECK-GI-LABEL: tv16i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB20_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB20_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -616,15 +707,26 @@ e:
 }
 
 define <2 x i32> @tv2i32(i1 %c, ptr %p, <2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: tv2i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB21_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB21_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB21_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB21_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB21_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB21_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -636,15 +738,26 @@ e:
 }
 
 define <3 x i32> @tv3i32(i1 %c, ptr %p, <3 x i32> %a, <3 x i32> %b) {
-; CHECK-LABEL: tv3i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB22_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB22_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv3i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB22_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB22_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv3i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB22_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB22_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -656,15 +769,26 @@ e:
 }
 
 define <4 x i32> @tv4i32(i1 %c, ptr %p, <4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: tv4i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB23_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB23_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv4i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB23_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB23_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv4i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB23_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB23_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -691,14 +815,15 @@ define <8 x i32> @tv8i32(i1 %c, ptr %p, <8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-LABEL: tv8i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB24_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB24_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -711,15 +836,26 @@ e:
 }
 
 define <2 x i64> @tv2i64(i1 %c, ptr %p, <2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: tv2i64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB25_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB25_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2i64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB25_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB25_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB25_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB25_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -804,14 +940,15 @@ define <4 x i64> @tv4i64(i1 %c, ptr %p, <4 x i64> %a, <4 x i64> %b) {
 ; CHECK-GI-LABEL: tv4i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB27_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB27_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -869,15 +1006,26 @@ e:
 }
 
 define <2 x ptr> @tv2p0(i1 %c, ptr %p, <2 x ptr> %a, <2 x ptr> %b) {
-; CHECK-LABEL: tv2p0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB29_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB29_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2p0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB29_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB29_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2p0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB29_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB29_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -962,14 +1110,15 @@ define <4 x ptr> @tv4p0(i1 %c, ptr %p, <4 x ptr> %a, <4 x ptr> %b) {
 ; CHECK-GI-LABEL: tv4p0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB31_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB31_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -982,15 +1131,26 @@ e:
 }
 
 define <2 x half> @tv2f16(i1 %c, ptr %p, <2 x half> %a, <2 x half> %b) {
-; CHECK-LABEL: tv2f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB32_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB32_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB32_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB32_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB32_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB32_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1002,15 +1162,26 @@ e:
 }
 
 define <3 x half> @tv3f16(i1 %c, ptr %p, <3 x half> %a, <3 x half> %b) {
-; CHECK-LABEL: tv3f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB33_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB33_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv3f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB33_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB33_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv3f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB33_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB33_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1022,15 +1193,26 @@ e:
 }
 
 define <4 x half> @tv4f16(i1 %c, ptr %p, <4 x half> %a, <4 x half> %b) {
-; CHECK-LABEL: tv4f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB34_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB34_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv4f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB34_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB34_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv4f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB34_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB34_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1042,15 +1224,26 @@ e:
 }
 
 define <8 x half> @tv8f16(i1 %c, ptr %p, <8 x half> %a, <8 x half> %b) {
-; CHECK-LABEL: tv8f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB35_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB35_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv8f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB35_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB35_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv8f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB35_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB35_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1077,14 +1270,15 @@ define <16 x half> @tv16f16(i1 %c, ptr %p, <16 x half> %a, <16 x half> %b) {
 ; CHECK-GI-LABEL: tv16f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB36_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB36_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -1097,15 +1291,26 @@ e:
 }
 
 define <2 x float> @tv2f32(i1 %c, ptr %p, <2 x float> %a, <2 x float> %b) {
-; CHECK-LABEL: tv2f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB37_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB37_2: // %e
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB37_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB37_2: // %e
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB37_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB37_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1117,15 +1322,26 @@ e:
 }
 
 define <3 x float> @tv3f32(i1 %c, ptr %p, <3 x float> %a, <3 x float> %b) {
-; CHECK-LABEL: tv3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB38_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB38_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv3f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB38_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB38_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv3f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB38_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB38_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1137,15 +1353,26 @@ e:
 }
 
 define <4 x float> @tv4f32(i1 %c, ptr %p, <4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: tv4f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB39_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB39_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv4f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB39_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB39_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv4f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB39_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB39_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1172,14 +1399,15 @@ define <8 x float> @tv8f32(i1 %c, ptr %p, <8 x float> %a, <8 x float> %b) {
 ; CHECK-GI-LABEL: tv8f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB40_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB40_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -1192,15 +1420,26 @@ e:
 }
 
 define <2 x double> @tv2f64(i1 %c, ptr %p, <2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: tv2f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB41_2
-; CHECK-NEXT:  // %bb.1: // %t
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:  .LBB41_2: // %e
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: tv2f64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w0, #0, .LBB41_2
+; CHECK-SD-NEXT:  // %bb.1: // %t
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str wzr, [x1]
+; CHECK-SD-NEXT:  .LBB41_2: // %e
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: tv2f64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    tbz w0, #0, .LBB41_2
+; CHECK-GI-NEXT:  // %bb.1: // %t
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    str wzr, [x1]
+; CHECK-GI-NEXT:  .LBB41_2: // %e
+; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
 t:
@@ -1285,14 +1524,15 @@ define <4 x double> @tv4f64(i1 %c, ptr %p, <4 x double> %a, <4 x double> %b) {
 ; CHECK-GI-LABEL: tv4f64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v4.16b, v0.16b
+; CHECK-GI-NEXT:    mov v5.16b, v1.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB43_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov v0.16b, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.16b, v5.16b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:  .LBB43_2: // %e
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -1349,3 +1589,5 @@ e:
     %h = phi <2 x fp128> [%a, %t], [%b, %entry]
     ret <2 x fp128> %h
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

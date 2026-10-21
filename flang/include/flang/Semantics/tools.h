@@ -724,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();

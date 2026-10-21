@@ -355,9 +355,9 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     FileSpecList containingModules;
     if (interpreter)
       containingModules.Append(interpreter->GetFileSpec());
-    else
-      containingModules.Append(
-          m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
+    else if (Module *executable =
+                 m_process->GetTarget().GetExecutableModulePointer())
+      containingModules.Append(executable->GetFileSpec());
 
     dyld_break = target.CreateBreakpoint(
         &containingModules, /*containingSourceFiles=*/nullptr,
@@ -1019,7 +1019,7 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
     return;
   }
 
-  target.SetExecutableModule(module_sp, eLoadDependentsNo);
+  target.RebuildModuleListWithExecutable(module_sp, eLoadDependentsNo);
 }
 
 bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(

@@ -1,0 +1,76 @@
+## Check that llvm-gsymutil reads function symbols from .gnu_debugdata. The
+## file has no .symtab. exported_func is in .dynsym and the other two functions
+## are in the compressed object in .gnu_debugdata.
+##
+## To regenerate the .gnu_debugdata content, run yaml2obj on the YAML below and
+## pipe the output through `xz --check=crc32 -9 | xxd -p -u | tr -d '\n'`.
+##
+##   --- !ELF
+##   FileHeader:
+##     Class:   ELFCLASS64
+##     Data:    ELFDATA2LSB
+##     Type:    ET_EXEC
+##     Machine: EM_X86_64
+##   Sections:
+##     - Name:         .text
+##       Type:         SHT_NOBITS
+##       Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+##       Address:      0x1000
+##       AddressAlign: 0x10
+##       Size:         0x100
+##   Symbols:
+##     - Name:    stripped_func_one
+##       Type:    STT_FUNC
+##       Section: .text
+##       Value:   0x1000
+##       Size:    0x10
+##     - Name:    stripped_func_two
+##       Type:    STT_FUNC
+##       Section: .text
+##       Value:   0x1010
+##       Size:    0x20
+
+# REQUIRES: lzma
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil --address=0x1000 --address=0x1015 \
+# RUN:   --address=0x1040 %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDR
+# RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
+
+# CONVERT: Loaded 0 functions from symbol table.
+# CONVERT: Loaded 1 functions from dynamic symbol table.
+# CONVERT: Loaded 2 functions from .gnu_debugdata symbol table.
+
+# ADDR: 0x0000000000001000: stripped_func_one
+# ADDR: 0x0000000000001015: stripped_func_two
+# ADDR: 0x0000000000001040: exported_func
+
+# DUMP: FunctionInfo{{.*}}[0x0000000000001000 - 0x0000000000001010) "stripped_func_one"
+# DUMP: FunctionInfo{{.*}}[0x0000000000001010 - 0x0000000000001030) "stripped_func_two"
+# DUMP: FunctionInfo{{.*}}[0x0000000000001040 - 0x0000000000001050) "exported_func"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x10
+    Size:         0x100
+  - Name:         .gnu_debugdata
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      FD377A585A0000016922DE36020021011C00000010CF58CCE0020F008C5D003F914584683D89A6DA8ACC93E24EF1EE3B78669FB5B98EBEAC1DC974D88DE7124A21E9F0D754ED55DCEFDB3E3C730E745C4E5C27E3056A372EB6ACFC8FB5654B4E6104F1883013142F15DB09F0654B2C9AFD33E66D5546A422F8F6E98B95220575393CFBF2854A89BEB2BFE11749A0D163B224EDED9CF3BB4D3767F6D413D98522B1AF4618F87EDB990745A300129E923E0001A40190040000EDE7F1C63E300D8B020000000001595A
+DynamicSymbols:
+  - Name:    exported_func
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1040
+    Size:    0x10
+    Binding: STB_GLOBAL

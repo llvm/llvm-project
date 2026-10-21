@@ -7,7 +7,7 @@ define signext i32 @fn1(i32 %baz) {
   %2 = zext i32 %1 to i64
   %3 = shl i64 %2, 48
   %4 = ashr exact i64 %3, 48
-; CHECK: RLWINM8 killed {{[^,]+}}, 0, 16, 27
+; CHECK: RLWINM8 {{[^,]+}}, 0, 16, 27
 ; CHECK: CMPLDI
 ; CHECK: BCC
 
@@ -28,7 +28,7 @@ bar:
 define signext i32 @fn2(i64 %a, i64 %b) {
 ; CHECK: OR8_rec {{[^, ]+}}, {{[^, ]+}}, implicit-def $cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY killed $cr
-; CHECK: BCC 12, killed [[CREG]]
+; CHECK: BCC 12, [[CREG]]
   %1 = or i64 %b, %a
   %2 = icmp sgt i64 %1, -1
   br i1 %2, label %foo, label %bar
@@ -42,9 +42,9 @@ bar:
 
 ; CHECK-LABEL: fn3
 define signext i32 @fn3(i32 %a) {
-; CHECK: ANDI_rec killed {{[%0-9]+}}{{[^,]*}}, 10, implicit-def $cr0
+; CHECK: ANDI_rec {{[%0-9]+}}{{[^,]*}}, 10, implicit-def $cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY $cr0
-; CHECK: BCC 76, killed [[CREG]]
+; CHECK: BCC 76, [[CREG]]
   %1 = and i32 %a, 10
   %2 = icmp ne i32 %1, 0
   br i1 %2, label %foo, label %bar

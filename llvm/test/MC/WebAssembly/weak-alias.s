@@ -174,6 +174,7 @@ alias_address:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            linking
 # CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     SymbolTable:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Kind:            FUNCTION
@@ -347,6 +348,7 @@ alias_address:
 # REF-NEXT:   - Type:            CUSTOM
 # REF-NEXT:     Name:            linking
 # REF-NEXT:     Version:         2
+# REF-NEXT:     TargetArch:      wasm32
 # REF-NEXT:     SymbolTable:
 # REF-NEXT:       - Index:           0
 # REF-NEXT:         Kind:            FUNCTION

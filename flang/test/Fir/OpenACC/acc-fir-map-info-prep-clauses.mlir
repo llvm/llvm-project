@@ -215,7 +215,7 @@ func.func @managed_copy() {
   %c10 = arith.constant 10 : index
   %0 = fir.alloca !fir.array<10xf32> {cuf.data_attr = #cuf.cuda<managed>}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%shape) {cuf.data_attr = #cuf.cuda<managed>, uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %1 = fir.declare %0(%shape) uniq_name("_QFEa") {cuf.data_attr = #cuf.cuda<managed>} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index)
       extent(%c10 : index) stride(%c1 : index) startIdx(%c1 : index)
   %copy = acc.copyin varPtr(%1 : !fir.ref<!fir.array<10xf32>>) bounds(%bounds)

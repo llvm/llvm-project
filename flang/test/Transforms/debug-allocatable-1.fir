@@ -7,9 +7,9 @@ module {
     %c0 = arith.constant 0 : index
     %0 = fir.undefined !fir.dscope
     %1 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "ar2", uniq_name = "_QFFffEar2"}
-    %4 = fircg.ext_declare %1 {uniq_name = "_QFFffEar2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>  loc(#loc1)
+    %4 = fircg.ext_declare %1 uniq_name("_QFFffEar2") : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>  loc(#loc1)
     %15 = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "sc", uniq_name = "_QFFffEsc"}
-    %18 = fircg.ext_declare %15 {uniq_name = "_QFFffEsc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>> loc(#loc2)
+    %18 = fircg.ext_declare %15 uniq_name("_QFFffEsc") : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>> loc(#loc2)
     return
   } loc(#loc3)
 }
