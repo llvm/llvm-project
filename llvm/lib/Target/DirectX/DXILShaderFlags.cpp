@@ -468,7 +468,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
           CSF.ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer |=
               llvm::any_of(Sig->Outputs, [](const auto &E) {
                 return E.SemanticKind ==
-                       dxbc::PSV::SemanticKind::ViewPortArrayIndex;
+                           dxbc::PSV::SemanticKind::ViewPortArrayIndex ||
+                       E.SemanticKind ==
+                           dxbc::PSV::SemanticKind::RenderTargetArrayIndex;
               });
         // Unallocated elements do not occupy signature registers. Their type
         // requirements come from the instructions that access them.

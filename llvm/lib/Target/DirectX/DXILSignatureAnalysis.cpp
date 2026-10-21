@@ -125,6 +125,12 @@ static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
       return signatureError("SV_ViewportArrayIndex requires a scalar 16- or "
                             "32-bit unsigned integer");
     break;
+  case dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::U16 && E.CompType != ElementType::U32))
+      return signatureError("SV_RenderTargetArrayIndex requires a scalar 16- "
+                            "or 32-bit unsigned integer");
+    break;
   case dxbc::PSV::SemanticKind::Barycentrics:
     if (E.Rows != 1 || E.Cols != 3 ||
         (E.CompType != ElementType::F16 && E.CompType != ElementType::F32))
@@ -167,6 +173,11 @@ static Error diagnoseSemanticIndex(const SemanticSignatureElement &E) {
   case dxbc::PSV::SemanticKind::ViewPortArrayIndex:
     if (E.SemanticIndices.front() != 0)
       return signatureError("SV_ViewportArrayIndex requires semantic index 0");
+    break;
+  case dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
+    if (E.SemanticIndices.front() != 0)
+      return signatureError(
+          "SV_RenderTargetArrayIndex requires semantic index 0");
     break;
   default:
     break;
@@ -592,6 +603,8 @@ static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
     return dxbc::D3DSystemValue::StencilRef;
   case KindTy::ViewPortArrayIndex:
     return dxbc::D3DSystemValue::ViewPortArrayIndex;
+  case KindTy::RenderTargetArrayIndex:
+    return dxbc::D3DSystemValue::RenderTargetArrayIndex;
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
@@ -632,6 +645,8 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
     return "SV_StencilRef";
   case Kind::ViewPortArrayIndex:
     return "SV_ViewportArrayIndex";
+  case Kind::RenderTargetArrayIndex:
+    return "SV_RenderTargetArrayIndex";
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }

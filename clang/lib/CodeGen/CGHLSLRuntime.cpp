@@ -1373,7 +1373,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   if (Kind == llvm::dxbc::PSV::SemanticKind::SampleIndex ||
       Kind == llvm::dxbc::PSV::SemanticKind::PrimitiveID ||
       Kind == llvm::dxbc::PSV::SemanticKind::StencilRef ||
-      Kind == llvm::dxbc::PSV::SemanticKind::ViewPortArrayIndex) {
+      Kind == llvm::dxbc::PSV::SemanticKind::ViewPortArrayIndex ||
+      Kind == llvm::dxbc::PSV::SemanticKind::RenderTargetArrayIndex) {
     if (CompType == llvm::dxil::ElementType::I16)
       CompType = llvm::dxil::ElementType::U16;
     else if (CompType == llvm::dxil::ElementType::I32)
@@ -1751,6 +1752,19 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_RenderTargetArrayIndex is only a system value input to pixel "
+           "shaders");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* Layer */ 9, InterpMode);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
   case llvm::dxbc::PSV::SemanticKind::PrimitiveID:
     assert(Stage == llvm::Triple::Pixel &&
            "SV_PrimitiveID is in an unavailable stage and should have been "
@@ -1875,6 +1889,22 @@ void CGHLSLRuntime::emitSystemSemanticStore(
                              Semantic->getAttrName()->getName(),
                              llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                              /* ViewportIndex */ 10, InterpMode, IsSignedInt);
+      return;
+    }
+    break;
+  case llvm::dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_RenderTargetArrayIndex is only a system value output of vertex "
+           "shaders");
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVOutputStore(B, CGM.getModule(), Source,
+                             Semantic->getAttrName()->getName(),
+                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                             /* Layer */ 9, InterpMode, IsSignedInt);
       return;
     }
     break;

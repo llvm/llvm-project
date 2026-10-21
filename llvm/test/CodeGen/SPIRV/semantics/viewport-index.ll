@@ -13,7 +13,7 @@
 ; VS-DAG: OpExtension "SPV_EXT_shader_viewport_index_layer"
 ; VS-DAG: OpDecorate %[[#VP:]] BuiltIn ViewportIndex
 ; VS-DAG: %[[#VP]] = OpVariable %[[#]] Output
-; ERROR: LLVM ERROR: Writing ViewportIndex requires the following SPIR-V extension: SPV_EXT_shader_viewport_index_layer
+; ERROR: LLVM ERROR: Writing ViewportIndex or Layer requires the following SPIR-V extension: SPV_EXT_shader_viewport_index_layer
 
 ; PS-DAG: OpCapability MultiViewport
 ; PS-DAG: OpDecorate %[[#VP:]] BuiltIn ViewportIndex

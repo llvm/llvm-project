@@ -59,29 +59,31 @@ constexpr Triple::EnvironmentType AllStages[] = {
     Triple::Amplification, Triple::Mesh,  Triple::Library};
 
 // The semantic kinds getAvailableStages knows about.
-constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
-                                           SemanticKind::Position,
-                                           SemanticKind::VertexID,
-                                           SemanticKind::Target,
-                                           SemanticKind::IsFrontFace,
-                                           SemanticKind::ClipDistance,
-                                           SemanticKind::CullDistance,
-                                           SemanticKind::TessFactor,
-                                           SemanticKind::InsideTessFactor,
-                                           SemanticKind::DispatchThreadID,
-                                           SemanticKind::GroupID,
-                                           SemanticKind::GroupIndex,
-                                           SemanticKind::GroupThreadID,
-                                           SemanticKind::InstanceID,
-                                           SemanticKind::ShadingRate,
-                                           SemanticKind::Barycentrics,
-                                           SemanticKind::StartVertexLocation,
-                                           SemanticKind::StartInstanceLocation,
-                                           SemanticKind::SampleIndex,
-                                           SemanticKind::ViewID,
-                                           SemanticKind::PrimitiveID,
-                                           SemanticKind::StencilRef,
-                                           SemanticKind::ViewPortArrayIndex};
+constexpr SemanticKind SupportedKinds[] = {
+    SemanticKind::Arbitrary,
+    SemanticKind::Position,
+    SemanticKind::VertexID,
+    SemanticKind::Target,
+    SemanticKind::IsFrontFace,
+    SemanticKind::ClipDistance,
+    SemanticKind::CullDistance,
+    SemanticKind::TessFactor,
+    SemanticKind::InsideTessFactor,
+    SemanticKind::DispatchThreadID,
+    SemanticKind::GroupID,
+    SemanticKind::GroupIndex,
+    SemanticKind::GroupThreadID,
+    SemanticKind::InstanceID,
+    SemanticKind::ShadingRate,
+    SemanticKind::Barycentrics,
+    SemanticKind::StartVertexLocation,
+    SemanticKind::StartInstanceLocation,
+    SemanticKind::SampleIndex,
+    SemanticKind::ViewID,
+    SemanticKind::PrimitiveID,
+    SemanticKind::StencilRef,
+    SemanticKind::ViewPortArrayIndex,
+    SemanticKind::RenderTargetArrayIndex};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -253,6 +255,17 @@ TEST(HLSLSemanticStagesTest, ViewPortArrayIndexSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
   };
   expectOnlySignaturePoints(SemanticKind::ViewPortArrayIndex, Valid);
+}
+
+// SV_RenderTargetArrayIndex is written by the vertex shader and read by the
+// pixel shader. A vertex input with this name is an arbitrary semantic.
+TEST(HLSLSemanticStagesTest, RenderTargetArrayIndexSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+      {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+      {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+  };
+  expectOnlySignaturePoints(SemanticKind::RenderTargetArrayIndex, Valid);
 }
 
 } // namespace

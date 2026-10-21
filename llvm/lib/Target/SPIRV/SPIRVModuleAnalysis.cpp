@@ -1202,14 +1202,15 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
                                  SPIRV::Extension::SPV_KHR_multiview);
       break;
     case SPIRV::BuiltIn::ViewportIndex:
-      // Writing this from a vertex shader requires
-      // SPV_EXT_shader_viewport_index_layer, as in DXC. Reading it in a
+    case SPIRV::BuiltIn::Layer:
+      // Writing these from a vertex shader requires
+      // SPV_EXT_shader_viewport_index_layer, as in DXC. Reading them in a
       // fragment shader uses the base capability.
       if (isDecoratingOutputVariable(MI)) {
         if (!ST.canUseExtension(
                 SPIRV::Extension::SPV_EXT_shader_viewport_index_layer))
           report_fatal_error(
-              "Writing ViewportIndex requires the following SPIR-V "
+              "Writing ViewportIndex or Layer requires the following SPIR-V "
               "extension: SPV_EXT_shader_viewport_index_layer",
               false);
         Reqs.addCapability(SPIRV::Capability::ShaderViewportIndexLayerEXT);

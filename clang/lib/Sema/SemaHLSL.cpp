@@ -1026,6 +1026,7 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   case SemanticKind::StencilRef:
     return ST == llvm::Triple::Pixel && !IsInput;
   case SemanticKind::ViewPortArrayIndex:
+  case SemanticKind::RenderTargetArrayIndex:
     return (ST == llvm::Triple::Vertex && !IsInput) ||
            (ST == llvm::Triple::Pixel && IsInput);
   default:
@@ -1451,6 +1452,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   case SemanticKind::PrimitiveID:
   case SemanticKind::StencilRef:
   case SemanticKind::ViewPortArrayIndex:
+  case SemanticKind::RenderTargetArrayIndex:
     // SPIR-V declares these built-ins as 32-bit integers and converts 16-bit
     // declarations.
     if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
@@ -2267,7 +2269,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
 
   switch (Kind) {
   // FIXME: These semantics do not yet have CodeGen support.
-  case SemanticKind::RenderTargetArrayIndex:
   case SemanticKind::ClipDistance:
   case SemanticKind::CullDistance:
   case SemanticKind::OutputControlPointID:
