@@ -464,6 +464,14 @@ __packed_pabs(abs_u32, int32_t, uint32_t)
 __packed_pabs(abs_u64, int64_t, uint64_t)
 #endif
 
+/* Scalar Saturation */
+#define __riscv_sati_i32(rs1, width) __builtin_riscv_sati_i32(rs1, width)
+#define __riscv_usati_u32(rs1, width) __builtin_riscv_usati_u32(rs1, width)
+#if __riscv_xlen == 64
+#define __riscv_sati_i64(rs1, width) __builtin_riscv_sati_i64(rs1, width)
+#define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
+#endif
+
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
   static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \
@@ -1184,6 +1192,14 @@ __packed_binary_builtin_mixed(pmqr2add_i32x2, int64_t, int32x2_t, int32x2_t, __b
 __packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __builtin_riscv_pm4add_i16x4)
 __packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
 __packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
+
+/* Packed Multiplication with Widening Horizontal Addition */
+__packed_binary_builtin_mixed(pm2wadd_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_i64)
+__packed_binary_builtin_mixed(pm2wadd_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_x_i64)
+__packed_binary_builtin_mixed(pm2waddu_u64, uint64_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2waddu_u64)
+__packed_binary_builtin_mixed(pm2wsub_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_i64)
+__packed_binary_builtin_mixed(pm2wsub_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_x_i64)
+__packed_binary_builtin_mixed(pm2waddsu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddsu_i64)
 
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)

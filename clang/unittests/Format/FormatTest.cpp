@@ -7792,6 +7792,18 @@ TEST_F(FormatTest, BreakBinaryOperatorsInPresenceOfTemplates) {
                Style);
 }
 
+TEST_F(FormatTest, BreakBinaryOperatorsAfterAttributes) {
+  FormatStyle Style = getLLVMStyleWithColumns(25);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("int long_variable_name\n"
+               "    = 1;\n"
+               "int a [[maybe_unused]]\n"
+               "    = 2;",
+               "int long_variable_name = 1;\n"
+               "int a [[maybe_unused]] = 2;",
+               Style);
+}
+
 TEST_F(FormatTest, ConstructorInitializers) {
   verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}");
   verifyFormat("Constructor() : Inttializer(FitsOnTheLine) {}",
@@ -16679,6 +16691,18 @@ TEST_F(FormatTest, CountsCharactersInMultilineRawStringLiterals) {
   verifyFormat("fffffffffff(R\"(single line raw string)\" + bbbbbb);",
                "fffffffffff(\n"
                " R\"(single line raw string)\" + bbbbbb);");
+}
+
+TEST_F(FormatTest, MultilineRawStringWidthWithCRLF) {
+  auto Style = getLLVMStyleWithColumns(23);
+
+  // The raw string's first line reaches ColumnLimit; CR must not add a column.
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\n"
+                 ")\");",
+                 Style);
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\r\n"
+                 ")\");",
+                 Style);
 }
 
 TEST_F(FormatTest, SkipsUnknownStringLiterals) {
