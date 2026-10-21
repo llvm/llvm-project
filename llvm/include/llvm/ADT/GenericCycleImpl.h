@@ -105,7 +105,8 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(CycleRef C) const
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
+void GenericCycleInfo<ContextT>::verifyCycle(
+    CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const {
 #ifndef NDEBUG
   assert(getNumBlocks(C) != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
@@ -149,10 +150,13 @@ void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
     } else if (!OutsideCyclePreds.empty()) {
       // A non-entry block shouldn't be reachable from outside the cycle,
       // though it is permitted if the predecessor is not itself actually
-      // reachable.
-      BlockT *EntryBB = &BB->getParent()->front();
-      for (BlockT *CB : depth_first(EntryBB))
-        assert(!OutsideCyclePreds.contains(CB) &&
+      // reachable. The entry block is always reachable, so an empty set means
+      // it has not been computed yet.
+      if (Reachable.empty())
+        for (BlockT *CB : depth_first(&BB->getParent()->front()))
+          Reachable.insert(CB);
+      for (BlockT *Pred : OutsideCyclePreds)
+        assert(!Reachable.contains(Pred) &&
                "Non-entry block reachable from outside!");
     }
     assert(BB != &getHeader(C)->getParent()->front() &&
@@ -631,12 +635,13 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
   DenseSet<BlockT *> CycleHeaders;
+  SmallPtrSet<BlockT *, 32> Reachable;
 
   for (auto C : cycles()) {
     BlockT *Header = getHeader(C);
     assert(CycleHeaders.insert(Header).second);
     if (VerifyFull)
-      verifyCycle(C);
+      verifyCycle(C, Reachable);
     else
       verifyCycleNest(C);
     // Check the block map entries for blocks contained in this cycle.
