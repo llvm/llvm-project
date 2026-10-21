@@ -393,7 +393,9 @@ def FinishInitActivate : SuccessOpcode;
 def FinishInitActivatePop : SuccessOpcode;
 def FinishInitGlobal : SuccessOpcode;
 
-def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
+def GetPtrDerivedPop : Opcode {
+  let Args = [ArgBool, ArgTypePtr, ArgTypePtr];
+}
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {

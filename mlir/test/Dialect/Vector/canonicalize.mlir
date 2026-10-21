@@ -3578,9 +3578,9 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 // Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>
 // +---------------------------------------------------------------------------
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_provable_true(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
-func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit_provable_true(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3591,6 +3591,23 @@ func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> ve
   %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<1x4x1x1xi1> to vector<1x4xi1>
   return %2 : vector<1x4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_shape_cast_with_mask_trailing_unit_dynamic_unknown(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @no_fold_shape_cast_with_mask_trailing_unit_dynamic_unknown(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C8]], %[[N]], %[[C1]] : vector<8x1x1xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<8x1x1xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c8, %n, %c1 : vector<8x1x1xi1>
+  %cast = vector.shape_cast %mask : vector<8x1x1xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
 }
 
 // -----
@@ -3645,9 +3662,9 @@ func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
 // +---------------------------------------------------------------------------
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_provable_true(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<4x1xi1> {
-func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_provable_true(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3658,6 +3675,23 @@ func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vec
   %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x4x1xi1>
   %2 = vector.shape_cast %1 : vector<1x1x4x1xi1> to vector<4x1xi1>
   return %2 : vector<4x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_shape_cast_with_mask_leading_unit_dynamic_unknown(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @no_fold_shape_cast_with_mask_leading_unit_dynamic_unknown(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C1]], %[[N]], %[[C8]] : vector<1x1x8xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x8xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c1, %n, %c8 : vector<1x1x8xi1>
+  %cast = vector.shape_cast %mask : vector<1x1x8xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
 }
 
 // -----

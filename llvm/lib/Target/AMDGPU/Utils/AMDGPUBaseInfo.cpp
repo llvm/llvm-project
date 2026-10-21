@@ -438,6 +438,10 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+struct VOP3PHasNoOpSelHiInfo {
+  uint32_t Opcode;
+};
+
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
@@ -468,6 +472,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDXYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_VOP3PHasNoOpSelHiTable_DECL
+#define GET_VOP3PHasNoOpSelHiTable_IMPL
 #define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
@@ -826,6 +832,10 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 }
 
 bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
+
+bool hasNoOpSelHi(unsigned Opc) {
+  return getVOP3PHasNoOpSelHiHelper(Opc) != nullptr;
+}
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
@@ -1831,18 +1841,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
-static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
-                                                int Size,
-                                                const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < Size; ++Idx) {
-    const auto &Op = Opr[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
-
 static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
                                             int Size, unsigned Code,
                                             bool &HasNonDefaultVal,
@@ -1915,10 +1913,13 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  static int Default = -1;
-  if (Default == -1)
-    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-  return Default;
+  unsigned Enc = 0;
+  for (int Idx = 0; Idx < DEP_CTR_SIZE; ++Idx) {
+    const auto &Op = DepCtrInfo[Idx];
+    if (Op.isSupported(STI))
+      Enc |= Op.encode(Op.Default);
+  }
+  return Enc;
 }
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
@@ -3348,8 +3349,14 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct LDSDMAIntrinsic {
+  unsigned Intr;
+};
+const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_LDSDMAIntrinsicTable_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3364,6 +3371,10 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
 
 bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
+}
+
+bool isLDSDMAIntrinsic(unsigned IntrID) {
+  return lookupLDSDMAIntrinsic(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

@@ -1380,12 +1380,12 @@ struct Zero_match {
   bool match(SDValue N) const { return isZeroOrZeroSplat(N, AllowUndefs); }
 };
 
-struct Ones_match {
+struct One_match {
   bool AllowUndefs;
 
-  Ones_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+  One_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
 
-  bool match(SDValue N) { return isOnesOrOnesSplat(N, AllowUndefs); }
+  bool match(SDValue N) { return isOneOrOneSplat(N, AllowUndefs); }
 };
 
 struct AllOnes_match {
@@ -1396,8 +1396,8 @@ struct AllOnes_match {
   bool match(SDValue N) { return isAllOnesOrAllOnesSplat(N, AllowUndefs); }
 };
 
-inline Ones_match m_One(bool AllowUndefs = false) {
-  return Ones_match(AllowUndefs);
+inline One_match m_One(bool AllowUndefs = false) {
+  return One_match(AllowUndefs);
 }
 inline Zero_match m_Zero(bool AllowUndefs = false) {
   return Zero_match(AllowUndefs);

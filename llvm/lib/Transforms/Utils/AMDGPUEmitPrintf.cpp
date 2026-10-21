@@ -182,24 +182,23 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 // specify a string, i.e, the "%s" specifier with optional '*' characters.
 static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
-  size_t SpecPos = 0;
   // Skip the first argument, the format string.
   unsigned ArgIdx = 1;
 
-  while ((SpecPos = Str.find_first_of('%', SpecPos)) != StringRef::npos) {
-    if (Str[SpecPos + 1] == '%') {
-      SpecPos += 2;
+  size_t SpecPos;
+  while ((SpecPos = Str.find('%')) != StringRef::npos) {
+    Str = Str.drop_front(SpecPos + 1);
+    // "%%" prints a '%' and takes no argument.
+    if (Str.consume_front("%"))
       continue;
-    }
-    auto SpecEnd = Str.find_first_of(ConvSpecifiers, SpecPos);
+    size_t SpecEnd = Str.find_first_of(ConvSpecifiers);
     if (SpecEnd == StringRef::npos)
       return;
-    auto Spec = Str.slice(SpecPos, SpecEnd + 1);
-    ArgIdx += Spec.count('*');
-    if (Str[SpecEnd] == 's') {
+    // Each '*' in the specifier takes an argument of its own.
+    ArgIdx += Str.take_front(SpecEnd).count('*');
+    if (Str[SpecEnd] == 's')
       BV.set(ArgIdx);
-    }
-    SpecPos = SpecEnd + 1;
+    Str = Str.drop_front(SpecEnd + 1);
     ++ArgIdx;
   }
 }

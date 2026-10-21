@@ -186,11 +186,6 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // arguments handling.
   llvm::CallingConv::ID CC = FI.getCallingConvention();
 
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
-
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 

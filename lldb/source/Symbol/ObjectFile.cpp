@@ -96,14 +96,15 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     module_sp->GetFileSpec().GetPath(path_with_object);
 
     FileSpec archive_file;
-    ConstString archive_object;
+    llvm::StringRef archive_object;
     const bool must_exist = true;
     if (ObjectFile::SplitArchivePathWithObject(path_with_object, archive_file,
                                                archive_object, must_exist)) {
       file_size = FileSystem::Instance().GetByteSize(archive_file);
       if (file_size > 0) {
         file = &archive_file;
-        module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
+        module_sp->SetFileSpecAndObjectName(archive_file,
+                                            ConstString(archive_object));
         // Check if this is a object container by iterating through all
         // object container plugin instances and then trying to get an
         // object file from the container plugins since we had a name.
@@ -580,19 +581,21 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
                                             FileSpec &archive_file,
-                                            ConstString &archive_object,
+                                            llvm::StringRef &archive_object,
                                             bool must_exist) {
   size_t len = path_with_object.size();
   if (len < 2 || path_with_object.back() != ')')
     return false;
-  llvm::StringRef archive = path_with_object.substr(0, path_with_object.rfind('('));
+  llvm::StringRef archive =
+      path_with_object.substr(0, path_with_object.rfind('('));
   if (archive.empty())
     return false;
-  llvm::StringRef object = path_with_object.substr(archive.size() + 1).drop_back();
+  llvm::StringRef object =
+      path_with_object.substr(archive.size() + 1).drop_back();
   archive_file.SetFile(archive, FileSpec::Style::native);
   if (must_exist && !FileSystem::Instance().Exists(archive_file))
     return false;
-  archive_object.SetString(object);
+  archive_object = object;
   return true;
 }
 
