@@ -73,11 +73,11 @@ inline_logf(cpp::simd<uint32_t, N> ux, cpp::simd<int32_t, N> exponent_bias) {
       cpp::multiply_add(v_squared, cpp::multiply_add(v_squared, p2, p1), p0);
   cpp::simd<float, N> y = cpp::simd_cast<float>(y_d);
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT) &&                                  \
-    defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
+#if !(defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT) ||                                \
+      defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS))
   y = (ux == 0x6f31a8ec) ? 0x1.08b512p+6 : y;
   y = (ux == 0x79e7ec37) ? 0x1.43ff6ep+6 : y;
-#endif // !(LIBC_TARGET_CPU_HAS_FMA_FLOAT && LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
+#endif // !(LIBC_TARGET_CPU_HAS_FMA_FLOAT || LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
 
   return y;
 }
