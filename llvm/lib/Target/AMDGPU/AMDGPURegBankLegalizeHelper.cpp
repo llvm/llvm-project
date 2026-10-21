@@ -1569,8 +1569,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       LLT B128;
       if (DstTy.isVector()) {
         LLT EltTy = DstTy.getElementType();
-        B128 = LLT::fixed_vector(
-            static_cast<unsigned>(128 / EltTy.getSizeInBits()), EltTy);
+        unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
+        B128 = LLT::fixed_vector(128 / EltSize, EltTy);
       } else {
         B128 = LLT::integer(128);
       }
