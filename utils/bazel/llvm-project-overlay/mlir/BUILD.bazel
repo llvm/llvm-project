@@ -11209,13 +11209,20 @@ cc_library(
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":FuncToLLVM",
+        ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefToLLVM",
         ":OpenMPDialect",
         ":OpenMPOpsIncGen",
         ":Pass",
+        ":TransformUtils",
     ],
+)
+
+alias(
+    name = "OpenMPToLLVMConversion",
+    actual = ":OpenMPToLLVM",
 )
 
 td_library(

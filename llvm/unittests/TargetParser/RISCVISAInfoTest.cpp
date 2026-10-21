@@ -975,12 +975,6 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rva23p1s64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rva23p1s64'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rvb23p1s64", false).takeError()),
-      "requires '-menable-experimental-extensions' for profile 'rvb23p1s64'");
-  EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
       "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
@@ -1754,16 +1748,16 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
+    rva23p1s64
     rva23s64
     rva23u64
+    rvb23p1s64
     rvb23s64
     rvb23u64
     rvi20u32
     rvi20u64
 
 Experimental Profiles
-    rva23p1s64
-    rvb23p1s64
     rvm23u32
 
 Use -march to specify the target's extension.
