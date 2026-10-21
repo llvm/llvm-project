@@ -109,6 +109,12 @@ public:
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  /// The first load of a compare-and-swap loop only seeds the loop, which the
+  /// compare-and-swap checks, so it is a plain (single-copy atomic) load, as
+  /// on AMDGPU: an atomic one would be a coherent, fenced load at system scope.
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
   /// A system-scope (or volatile) 32-bit load or store of device memory,
   /// which is a coherent access rather than an atomic.
   static bool isSystemScopeDeviceAccess(const Instruction *I);

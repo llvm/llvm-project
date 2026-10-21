@@ -104,8 +104,7 @@ define agx_kernel void @fadd(ptr addrspace(1) %p, float %v) {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov_imm r0l, 0
-; CHECK-NEXT:    memory_barrier 3, 1, 9
-; CHECK-NEXT:    device_load 0, i32, x, r1, u0_u1, 0, signed, 3
+; CHECK-NEXT:    device_load 0, i32, x, r1, u0_u1, 0, signed
 ; CHECK-NEXT:    if_fcmp r0l, eq, 0.0, 0.0, 1
 ; CHECK-NEXT:    wait 0
 ; CHECK-NEXT:  .LBB3_1: // %atomicrmw.start

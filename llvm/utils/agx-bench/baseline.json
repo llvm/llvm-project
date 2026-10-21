@@ -36,10 +36,10 @@
   "waits": 2
  },
  "reduce.ll:reduce:agx-g13g": {
-  "bytes": 228,
-  "cycles": 1548.5,
+  "bytes": 216,
+  "cycles": 1514.4,
   "gprs": 6,
-  "instructions": 40,
+  "instructions": 38,
   "launch_inputs": false,
   "uniform_halves": 14,
   "waits": 3

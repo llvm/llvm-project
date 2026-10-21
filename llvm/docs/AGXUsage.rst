@@ -215,10 +215,10 @@ The AGX Performance Simulator's ``--mesa-isa GPU`` option applies the same
 check to the code it runs.
 
 What the mode costs (``llvm/utils/agx-bench/agx-bench.py --mesa-isa``, the 8
-benchmark kernels on ``agx-g13g`` and ``agx-g14c``): 6.4% more code (3154 to
-3356 bytes, the long memory forms) and 0.6% more estimated cycles (16689 to
-16788). All of the cycle difference is the ``reduce`` kernel on G14, whose
-float atomic add becomes a compare-and-swap loop (1449.7 to 1548.5 cycles);
+benchmark kernels on ``agx-g13g`` and ``agx-g14c``): 6.0% more code (3142 to
+3332 bytes, the long memory forms) and 0.4% more estimated cycles (16655 to
+16719). All of the cycle difference is the ``reduce`` kernel on G14, whose
+float atomic add becomes a compare-and-swap loop (1449.7 to 1514.4 cycles);
 on G13, which has no native float atomic, the cycles are the same.
 
 Occupancy attributes
