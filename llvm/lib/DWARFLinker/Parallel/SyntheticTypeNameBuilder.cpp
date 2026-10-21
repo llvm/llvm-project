@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace dwarf_linker;
@@ -458,7 +459,14 @@ Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
   if (!isIdentifiedByChildren(InputUnitEntryPair.DieEntry->getTag()))
     return Error::success();
 
+  auto It = ContentsDigests.find(InputUnitEntryPair.DieEntry);
+  if (It != ContentsDigests.end()) {
+    SyntheticName += It->second;
+    return Error::success();
+  }
+
   CompileUnit &CU = *InputUnitEntryPair.CU;
+  size_t ContentsStart = SyntheticName.size();
   SyntheticName += '(';
   for (const DWARFDebugInfoEntry *CurChild =
            CU.getFirstChildEntry(InputUnitEntryPair.DieEntry);
@@ -467,7 +475,7 @@ Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
     if (!isIdentifyingChild(DWARFDie(&CU.getOrigUnit(), CurChild)))
       continue;
 
-    if (SyntheticName.back() != '(')
+    if (SyntheticName.size() != ContentsStart + 1)
       SyntheticName += ", ";
     addTypePrefix(CU, CurChild);
     if (std::optional<DWARFFormValue> Val =
@@ -477,6 +485,16 @@ Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
       return Err;
   }
   SyntheticName += ')';
+
+  // Replace the contents with a fixed-size digest, so the names of the types
+  // referring to this one do not grow with its size or nesting depth.
+  StringRef Contents = StringRef(SyntheticName).substr(ContentsStart);
+  XXH128_hash_t Hash = xxh3_128bits(arrayRefFromStringRef<uint8_t>(Contents));
+  std::string Digest = "<" + utohexstr(Hash.high64, true, 16) +
+                       utohexstr(Hash.low64, true, 16) + ">";
+  SyntheticName.resize(ContentsStart);
+  SyntheticName += Digest;
+  ContentsDigests.try_emplace(InputUnitEntryPair.DieEntry, std::move(Digest));
   return Error::success();
 }
 
