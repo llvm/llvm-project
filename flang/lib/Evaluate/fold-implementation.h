@@ -2503,23 +2503,28 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
       [&, kind](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           ValueWithRealFlags<Scalar<T>> power;
-          if constexpr (T::category == TypeCategory::Complex && T::kind == 4) {
-            // Match flang-rt's cpowi/cpowk (complex-powi.cpp): accumulate in
-            // COMPLEX(8) and round to single once, rather than rounding every
-            // intermediate product (which costs a few single-precision ULPs).
-            using DoubleComplex = Scalar<Type<TypeCategory::Complex, 8>>;
-            using DoublePart = DoubleComplex::Part;
-            using SinglePart = typename Scalar<T>::Part;
-            // Single -> double is exact, so these conversions raise no flags.
-            DoubleComplex wideBase{
-                DoublePart::Convert(folded->first.REAL()).value,
-                DoublePart::Convert(folded->first.AIMAG()).value};
-            auto wide{evaluate::IntPower(wideBase, folded->second)};
-            power.flags = wide.flags;
-            power.value = Scalar<T>{SinglePart::Convert(wide.value.REAL())
-                                        .AccumulateFlags(power.flags),
-                SinglePart::Convert(wide.value.AIMAG())
-                    .AccumulateFlags(power.flags)};
+          if constexpr (T::category == TypeCategory::Complex) {
+            if (kind == 4) {
+              // Match flang-rt's cpowi/cpowk (complex-powi.cpp): accumulate in
+              // COMPLEX(8) and round to single once, rather than rounding every
+              // intermediate product (which costs a few single-precision ULPs).
+              using DoubleComplex = Scalar<Type<TypeCategory::Complex>>;
+              using DoublePart = DoubleComplex::Part;
+              using SinglePart = typename Scalar<T>::Part;
+              // Single -> double is exact, so these conversions raise no flags.
+              DoubleComplex wideBase{
+                  DoublePart::Convert(8, folded->first.REAL()).value,
+                  DoublePart::Convert(8, folded->first.AIMAG()).value};
+              auto wide{evaluate::IntPower(wideBase, folded->second)};
+              power.flags = wide.flags;
+              power.value =
+                  Scalar<T>{SinglePart::Convert(kind, wide.value.REAL())
+                                .AccumulateFlags(power.flags),
+                      SinglePart::Convert(kind, wide.value.AIMAG())
+                          .AccumulateFlags(power.flags)};
+            } else {
+              power = evaluate::IntPower(folded->first, folded->second);
+            }
           } else {
             power = evaluate::IntPower(folded->first, folded->second);
           }
