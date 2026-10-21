@@ -8665,6 +8665,12 @@ bool CodeGenModule::lookupRepresentativeDecl(StringRef MangledName,
   return true;
 }
 
+void CodeGenModule::forgetDecl(GlobalDecl GD) {
+  StringRef MangledName = getMangledName(GD);
+  DeferredDecls.erase(MangledName);
+  Manglings.erase(MangledName);
+}
+
 /// Emits metadata nodes associating all the global values in the
 /// current module with the Decls they came from.  This is useful for
 /// projects using IR gen as a subroutine.
