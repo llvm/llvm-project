@@ -101,7 +101,7 @@ int GCNMinRegScheduler::getReadySuccessors(const SUnit *SU) const {
 }
 
 int GCNMinRegScheduler::getNotReadySuccessors(const SUnit *SU) const {
-  return static_cast<int>(SU->Succs.size() - getReadySuccessors(SU));
+  return static_cast<int>(SU->Succs.size()) - getReadySuccessors(SU);
 }
 
 template <typename Calc>
