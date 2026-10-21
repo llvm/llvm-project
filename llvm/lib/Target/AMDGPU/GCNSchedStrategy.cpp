@@ -155,6 +155,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
 
   ArchVGPRBankLimit = VGPRExcessLimit;
+  AGPRBankLimit = AGPRExcessLimit;
   UnifiedVGPRExcessLimit = ST.hasGFX90AInsts() ? ST.getMaxNumVGPRs(*MF) : 0;
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
@@ -260,7 +261,7 @@ std::pair<unsigned, unsigned>
 GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
   if (!AVGPRBanking)
     return {RP.getArchVGPRNum(), RP.getAGPRNum()};
-  return RP.getBankedVGPRNum(ArchVGPRBankLimit);
+  return RP.getBankedVGPRNum(ArchVGPRBankLimit, AGPRBankLimit);
 }
 
 void GCNSchedStrategy::getRegisterPressures(
@@ -2060,10 +2061,10 @@ void GCNSchedStage::checkScheduling() {
   unsigned ArchVGPRsAfter = PressureAfter.getArchVGPRNum();
   unsigned AGPRsAfter = PressureAfter.getAGPRNum();
   // Distribute against MaxArchVGPRs, the limit tested below, rather than the
-  // strategy's occupancy-derived ArchVGPRBankLimit.
+  // strategy's occupancy-derived bank limits.
   if (AVGPRBanking)
     std::tie(ArchVGPRsAfter, AGPRsAfter) =
-        PressureAfter.getBankedVGPRNum(MaxArchVGPRs);
+        PressureAfter.getBankedVGPRNum(MaxArchVGPRs, MaxArchVGPRs);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
       ArchVGPRsAfter > MaxArchVGPRs || AGPRsAfter > MaxArchVGPRs ||

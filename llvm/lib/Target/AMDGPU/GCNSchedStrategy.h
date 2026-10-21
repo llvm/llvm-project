@@ -103,6 +103,10 @@ protected:
   /// down by ErrorMargin, VGPRLimitBias, or VGPRThresholdPercent.
   unsigned ArchVGPRBankLimit = 0;
 
+  /// Capacity of the AGPR bank, captured before AGPRExcessLimit is cut down by
+  /// ErrorMargin and VGPRLimitBias. Zero when no AGPRs are allocatable.
+  unsigned AGPRBankLimit = 0;
+
   /// Budget for the combined ArchVGPR + AGPR file, or zero on targets without
   /// one.
   unsigned UnifiedVGPRExcessLimit = 0;

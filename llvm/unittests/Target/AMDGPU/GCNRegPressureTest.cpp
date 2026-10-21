@@ -290,24 +290,37 @@ body:             |
   ASSERT_EQ(RP.getNumRegs(GCNRegPressure::AVGPR), 8U);
 
   // No headroom in the ArchVGPR bank, so every flexible value goes to AGPR.
-  EXPECT_EQ(RP.getBankedVGPRNum(0), Banked(4, 10));
-  EXPECT_EQ(RP.getBankedVGPRNum(4), Banked(4, 10));
+  EXPECT_EQ(RP.getBankedVGPRNum(0, 256), Banked(4, 10));
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 256), Banked(4, 10));
 
   // A limit below the rigid ArchVGPR pressure must clamp the headroom to zero
   // rather than wrap around.
-  EXPECT_EQ(RP.getBankedVGPRNum(2), Banked(4, 10));
+  EXPECT_EQ(RP.getBankedVGPRNum(2, 256), Banked(4, 10));
 
   // Partial headroom: 2 of the 8 flexible values fit, the rest go to AGPR.
-  EXPECT_EQ(RP.getBankedVGPRNum(6), Banked(6, 8));
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 256), Banked(6, 8));
 
   // Headroom exactly absorbs the flexible values.
-  EXPECT_EQ(RP.getBankedVGPRNum(12), Banked(12, 2));
+  EXPECT_EQ(RP.getBankedVGPRNum(12, 256), Banked(12, 2));
 
   // With room to spare the result matches the unbanked accounting, which
   // charges every AVGPR to the ArchVGPR bank.
-  EXPECT_EQ(RP.getBankedVGPRNum(256), Banked(12, 2));
-  EXPECT_EQ(RP.getBankedVGPRNum(256),
+  EXPECT_EQ(RP.getBankedVGPRNum(256, 256), Banked(12, 2));
+  EXPECT_EQ(RP.getBankedVGPRNum(256, 256),
             Banked(RP.getArchVGPRNum(), RP.getAGPRNum()));
+
+  // Partial AGPR headroom: 2 of the 8 flexible values fit in the ArchVGPR
+  // bank, 3 in the AGPR bank, and the remaining 3 are charged back to the
+  // ArchVGPR bank as excess.
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 5), Banked(9, 5));
+
+  // No AGPRs allocatable: every flexible value stays in the ArchVGPR bank.
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 0), Banked(12, 2));
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 0), Banked(12, 2));
+
+  // An AGPR limit below the rigid AGPR pressure must clamp the headroom to
+  // zero rather than wrap around.
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 1), Banked(12, 2));
 }
 
 TEST_F(GCNRegPressureBankingTest, BankedVGPRNumWithoutAVGPRs) {
@@ -329,7 +342,7 @@ body:             |
   // With nothing flexible to place, banking must be an exact no-op at every
   // limit.
   for (unsigned ArchLimit : {0U, 1U, 4U, 5U, 256U})
-    EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit),
+    EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit, 256),
               Banked(RP.getArchVGPRNum(), RP.getAGPRNum()))
         << "ArchLimit = " << ArchLimit;
 }
@@ -355,14 +368,19 @@ body:             |
 
   // Check the closed form against placing the flexible values one at a time.
   for (unsigned ArchLimit = 0; ArchLimit <= 32; ++ArchLimit) {
-    unsigned ExpectedArch = Arch, ExpectedAcc = Acc;
-    for (unsigned I = 0; I != Flex; ++I) {
-      if (ExpectedArch < ArchLimit)
-        ++ExpectedArch;
-      else
-        ++ExpectedAcc;
+    for (unsigned AccLimit = 0; AccLimit <= 32; ++AccLimit) {
+      unsigned ExpectedArch = Arch, ExpectedAcc = Acc;
+      for (unsigned I = 0; I != Flex; ++I) {
+        if (ExpectedArch < ArchLimit)
+          ++ExpectedArch;
+        else if (ExpectedAcc < AccLimit)
+          ++ExpectedAcc;
+        else
+          ++ExpectedArch;
+      }
+      EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit, AccLimit),
+                Banked(ExpectedArch, ExpectedAcc))
+          << "ArchLimit = " << ArchLimit << ", AccLimit = " << AccLimit;
     }
-    EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit), Banked(ExpectedArch, ExpectedAcc))
-        << "ArchLimit = " << ArchLimit;
   }
 }
