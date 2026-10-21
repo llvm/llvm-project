@@ -49,6 +49,28 @@ define void @sitofp_v2i64_v2f32(ptr %res, ptr %in){
   ret void
 }
 
+define <1 x float> @sitofp_v1i64_v1f32(<1 x i64> %a) {
+; LA32-LABEL: sitofp_v1i64_v1f32:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    bl __floatdisf
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: sitofp_v1i64_v1f32:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    movgr2fr.d $fa0, $a0
+; LA64-NEXT:    ffint.s.l $fa0, $fa0
+; LA64-NEXT:    ret
+entry:
+  %v = sitofp <1 x i64> %a to <1 x float>
+  ret <1 x float> %v
+}
+
 define <4 x double> @sitofp_v4i64_v4f64(<4 x i64> %a) {
 ; CHECK-LABEL: sitofp_v4i64_v4f64:
 ; CHECK:       # %bb.0:
