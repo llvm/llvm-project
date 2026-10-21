@@ -183,6 +183,27 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_range_non_integer(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_range_bitwidth_mismatch(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i64, 0, 10> : !llvm.ptr -> i32
+}
+
+// -----
+
+func.func @load_range_empty_or_full(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range to be neither empty nor full}}
+  %1 = llvm.load %ptr range<i32, 5, 5> : !llvm.ptr -> i32
+}
+
+// -----
+
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
   "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
@@ -993,6 +1014,14 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_expected_float_ignore_denormal_mode(%i32_ptr : !llvm.ptr, %i32 : i32) {
+  // expected-error@+1 {{expected floating-point operation with 'ignore_denormal_mode'}}
+  %0 = llvm.atomicrmw ignore_denormal_mode add %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   llvm.return
 }
 

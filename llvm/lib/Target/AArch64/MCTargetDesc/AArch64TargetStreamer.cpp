@@ -26,7 +26,8 @@ using namespace llvm;
 // AArch64TargetStreamer Implementation
 //
 AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), CLOpts(AArch64MCOptions::Global),
+    : MCTargetStreamer(S),
+      CLOpts(AArch64_MC::getCLOpts(S.getContext().getTargetOptions())),
       ConstantPools(new AssemblerConstantPools()) {}
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;

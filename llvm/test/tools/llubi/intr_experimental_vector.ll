@@ -17,6 +17,8 @@ define void @main() {
   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99)
   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99)
   %last_poison = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, i32 99)
+  ; Make sure we use the correct poison representation for byte values.
+  %poison_byte = call b8 @llvm.experimental.vector.extract.last.active.v1b8(<1 x b8> zeroinitializer, <1 x i1> poison, b8 0)
 
   %compress = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 true, i1 false, i1 true>, <4 x i32> <i32 101, i32 102, i32 103, i32 104>)
   %compress_all_false = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, <4 x i32> <i32 101, i32 102, i32 103, i32 104>)
@@ -91,6 +93,7 @@ define void @main() {
 ; CHECK-NEXT:   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99) => i32 30
 ; CHECK-NEXT:   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99) => i32 99
 ; CHECK-NEXT:   %last_poison = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, i32 99) => poison
+; CHECK-NEXT:   %poison_byte = call b8 @llvm.experimental.vector.extract.last.active.v1b8(<1 x b8> zeroinitializer, <1 x i1> poison, b8 0) => b8 0x!! 
 ; CHECK-NEXT:   %compress = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 true, i1 false, i1 true>, <4 x i32> <i32 101, i32 102, i32 103, i32 104>) => { i32 20, i32 40, i32 103, i32 104 }
 ; CHECK-NEXT:   %compress_all_false = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, <4 x i32> <i32 101, i32 102, i32 103, i32 104>) => { i32 101, i32 102, i32 103, i32 104 }
 ; CHECK-NEXT:   %compress_poison = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, <4 x i32> zeroinitializer) => { poison, poison, poison, poison }

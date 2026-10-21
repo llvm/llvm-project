@@ -26,17 +26,10 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
-
-namespace {
-static cl::opt<bool> RoundSectionSizes(
-    "mips-round-section-sizes", cl::init(false),
-    cl::desc("Round section sizes up to the section alignment"), cl::Hidden);
-} // end anonymous namespace
 
 static bool isMicroMips(const MCSubtargetInfo *STI) {
   return STI->hasFeature(Mips::FeatureMicroMips);
@@ -300,21 +293,21 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
   unsigned Opc = Mips::SLL;
   if (isMicroMips(STI) && hasShortDelaySlot) {
     Opc = isMips32r6(STI) ? Mips::MOVE16_MMR6 : Mips::MOVE16_MM;
-    emitRR(Opc, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Opc, Mips::R0, Mips::R0, IDLoc, STI);
     return;
   }
 
   if (isMicroMips(STI))
     Opc = isMips32r6(STI) ? Mips::SLL_MMR6 : Mips::SLL_MM;
 
-  emitRRI(Opc, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+  emitRRI(Opc, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
   if (isMicroMips(STI))
-    emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Mips::MOVE16_MM, Mips::R0, Mips::R0, IDLoc, STI);
   else
-    emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+    emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 /// Emit the $gp restore operation for .cprestore.
@@ -351,7 +344,7 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
 
   // Generate the base address in ATReg.
   emitRI(Mips::LUi, ATReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
   // Emit the store with the adjusted base and offset.
   emitRRI(Opcode, SrcReg, ATReg, LoOffset, IDLoc, STI);
@@ -386,7 +379,7 @@ void MipsTargetStreamer::emitLoadWithImmOffset(
 
   // Generate the base address in TmpReg.
   emitRI(Mips::LUi, TmpReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
   // Emit the load with the adjusted base and offset.
   emitRRI(Opcode, DstReg, TmpReg, LoOffset, IDLoc, STI);
@@ -872,7 +865,9 @@ MipsTargetELFStreamer::getISAMode(const MCSubtargetInfo &STI) {
 
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : MipsTargetStreamer(S), Mode(getISAMode(STI)), STI(STI) {
+    : MipsTargetStreamer(S),
+      CLOpts(MIPS_MC::getCLOpts(S.getContext().getTargetOptions())),
+      Mode(getISAMode(STI)), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   ELFObjectWriter &W = getStreamer().getWriter();
 
@@ -982,7 +977,7 @@ void MipsTargetELFStreamer::finish() {
   DataSection.ensureMinAlignment(Align(16));
   BSSSection.ensureMinAlignment(Align(16));
 
-  if (RoundSectionSizes) {
+  if (CLOpts.round_section_sizes) {
     // Make sections sizes a multiple of the alignment. This is useful for
     // verifying the output of IAS against the output of other assemblers but
     // it's not necessary to produce a correct object and increases section
@@ -1377,7 +1372,7 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(MCRegister Reg,
   // Either store the old $gp in a register or on the stack
   if (IsReg) {
     // move $save, $gpreg
-    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::ZERO, SMLoc(), &STI);
+    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::R0, SMLoc(), &STI);
   } else {
     // sd $gpreg, offset($sp)
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
@@ -1416,7 +1411,7 @@ void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
     Inst.setOpcode(Mips::OR);
     Inst.addOperand(MCOperand::createReg(GPReg));
     Inst.addOperand(MCOperand::createReg(SaveLocation));
-    Inst.addOperand(MCOperand::createReg(Mips::ZERO));
+    Inst.addOperand(MCOperand::createReg(Mips::R0));
   } else {
     Inst.setOpcode(Mips::LD);
     Inst.addOperand(MCOperand::createReg(GPReg));

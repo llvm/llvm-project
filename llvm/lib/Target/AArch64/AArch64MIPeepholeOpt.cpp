@@ -567,9 +567,10 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
 
   // If the MOV has multiple uses, do not split the immediate because it causes
   // more instructions.
-  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
+  if (!MRI->hasOneNonDBGUse(MovMI->getOperand(0).getReg()))
     return false;
-  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
+  if (SubregToRegMI &&
+      !MRI->hasOneNonDBGUse(SubregToRegMI->getOperand(0).getReg()))
     return false;
 
   // It is OK to perform this peephole optimization.
@@ -648,10 +649,27 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
     MI.getOperand(0).setReg(DstReg);
   }
 
+  auto SalvageDebugUses = [&](Register Reg, int64_t Val) {
+    for (MachineOperand &MO : make_early_inc_range(MRI->use_operands(Reg))) {
+      MachineInstr &DbgMI = *MO.getParent();
+      if (!DbgMI.isDebugValue())
+        continue;
+      // An immediate cannot express a value in memory at that address.
+      if (DbgMI.isNonListDebugValue() && DbgMI.isIndirectDebugValue())
+        DbgMI.setDebugValueUndef();
+      else
+        MO.ChangeToImmediate(Val);
+    }
+  };
+
   // Record the MIs need to be removed.
   MI.eraseFromParent();
-  if (SubregToRegMI)
+  if (SubregToRegMI) {
+    SalvageDebugUses(SubregToRegMI->getOperand(0).getReg(), Imm);
     SubregToRegMI->eraseFromParent();
+  }
+  SalvageDebugUses(MovMI->getOperand(0).getReg(),
+                   MovMI->getOperand(1).getImm());
   MovMI->eraseFromParent();
 
   return true;
