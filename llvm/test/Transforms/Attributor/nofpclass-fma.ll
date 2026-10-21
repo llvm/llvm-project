@@ -11,7 +11,7 @@ declare nofpclass(pinf pzero psub pnorm) half @returns_negative_or_nan()
 define float @ret_fma_same_mul_arg(float noundef %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fma_same_mul_arg
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -21,7 +21,7 @@ define float @ret_fma_same_mul_arg(float noundef %arg0, float %arg1) {
 define float @ret_fma_same_mul_arg_maybe_undef(float %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fma_same_mul_arg_maybe_undef
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG0]], float [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -31,7 +31,7 @@ define float @ret_fma_same_mul_arg_maybe_undef(float %arg0, float %arg1) {
 define float @ret_fma_same_mul_arg_positive_addend(float noundef %arg0, float nofpclass(ninf nsub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fma_same_mul_arg_positive_addend
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float nofpclass(ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(ninf nsub nnorm) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(ninf nsub nnorm) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -41,7 +41,7 @@ define float @ret_fma_same_mul_arg_positive_addend(float noundef %arg0, float no
 define float @ret_fma_different_mul_arg_positive_addend(float noundef %arg0, float %arg1, float nofpclass(ninf nsub nnorm) %arg2) {
 ; CHECK-LABEL: define float @ret_fma_different_mul_arg_positive_addend
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float [[ARG1:%.*]], float nofpclass(ninf nsub nnorm) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float [[ARG1]], float nofpclass(ninf nsub nnorm) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float [[ARG1]], float nofpclass(ninf nsub nnorm) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -51,7 +51,7 @@ define float @ret_fma_different_mul_arg_positive_addend(float noundef %arg0, flo
 define float @ret_fmuladd_same_mul_arg(float noundef %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fmuladd_same_mul_arg
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fmuladd.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fmuladd.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fmuladd.f32(float %arg0, float %arg0, float %arg1)
@@ -61,7 +61,7 @@ define float @ret_fmuladd_same_mul_arg(float noundef %arg0, float %arg1) {
 define float @ret_fmuladd_same_mul_arg_maybe_undef(float %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fmuladd_same_mul_arg_maybe_undef
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fmuladd.f32(float [[ARG0]], float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fmuladd.f32(float [[ARG0]], float [[ARG0]], float [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fmuladd.f32(float %arg0, float %arg0, float %arg1)
@@ -71,7 +71,7 @@ define float @ret_fmuladd_same_mul_arg_maybe_undef(float %arg0, float %arg1) {
 define float @ret_fmuladd_different_same_arg_positive_addend(float noundef %arg0, float nofpclass(ninf nsub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fmuladd_different_same_arg_positive_addend
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float nofpclass(ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.fmuladd.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(ninf nsub nnorm) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.fmuladd.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(ninf nsub nnorm) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fmuladd.f32(float %arg0, float %arg0, float %arg1)
@@ -250,6 +250,38 @@ define half @ret_fmuladd__pos0__neg1__pos2() {
   ret half %result
 }
 
+define half @ret_fmuladd__pos0__neg1__neg2() {
+;
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) half @ret_fmuladd__pos0__neg1__neg2() {
+; CHECK-NEXT:    [[POS0:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[NEG1:%.*]] = call half @returns_negative_or_nan()
+; CHECK-NEXT:    [[NEG2:%.*]] = call half @returns_negative_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(pinf psub pnorm) half @llvm.fmuladd.f16(half [[POS0]], half [[NEG1]], half [[NEG2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pos0 = call half @returns_positive_or_nan()
+  %neg1 = call half @returns_negative_or_nan()
+  %neg2 = call half @returns_negative_or_nan()
+  %result = call half @llvm.fmuladd.f16(half %pos0, half %neg1, half %neg2)
+  ret half %result
+}
+
+define half @ret_fmuladd__pos0__pos1__pos2() {
+;
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) half @ret_fmuladd__pos0__pos1__pos2() {
+; CHECK-NEXT:    [[POS0:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[POS1:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[POS2:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(ninf nsub nnorm) half @llvm.fmuladd.f16(half [[POS0]], half [[POS1]], half [[POS2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %pos0 = call half @returns_positive_or_nan()
+  %pos1 = call half @returns_positive_or_nan()
+  %pos2 = call half @returns_positive_or_nan()
+  %result = call half @llvm.fmuladd.f16(half %pos0, half %pos1, half %pos2)
+  ret half %result
+}
+
 ;---------------------------------------------------------------------
 ; Sign bit permutations, squared case
 ;---------------------------------------------------------------------
@@ -319,6 +351,20 @@ define half @ret_fmuladd__pos01_pos01__pos2() {
   ret half %result
 }
 
+define half @ret_fmuladd__neg01_neg01__pos2() {
+;
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) half @ret_fmuladd__neg01_neg01__pos2() {
+; CHECK-NEXT:    [[NEG01:%.*]] = call noundef half @returns_negative_or_nan()
+; CHECK-NEXT:    [[POS2:%.*]] = call half @returns_positive_or_nan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(ninf nsub nnorm) half @llvm.fmuladd.f16(half noundef [[NEG01]], half noundef [[NEG01]], half [[POS2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %neg01 = call noundef half @returns_negative_or_nan()
+  %pos2 = call half @returns_positive_or_nan()
+  %result = call half @llvm.fmuladd.f16(half %neg01, half %neg01, half %pos2)
+  ret half %result
+}
+
 ;---------------------------------------------------------------------
 ; Infer not-nan handling
 ;---------------------------------------------------------------------
@@ -327,7 +373,7 @@ define half @ret_fmuladd__pos01_pos01__pos2() {
 define half @ret_fma__no_nan__no_nan__no_nan(half nofpclass(nan) %arg0, half nofpclass(nan) %arg1, half nofpclass(nan) %arg2) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma__no_nan__no_nan__no_nan
 ; CHECK-SAME: (half nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]], half nofpclass(nan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -337,7 +383,7 @@ define half @ret_fma__no_nan__no_nan__no_nan(half nofpclass(nan) %arg0, half nof
 define half @ret_fma__no_nan__no_nan__no_nan_zero(half nofpclass(nan) %arg0, half nofpclass(nan) %arg1, half nofpclass(nan zero) %arg2) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma__no_nan__no_nan__no_nan_zero
 ; CHECK-SAME: (half nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]], half nofpclass(nan zero) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan zero) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan zero) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -347,7 +393,7 @@ define half @ret_fma__no_nan__no_nan__no_nan_zero(half nofpclass(nan) %arg0, hal
 define half @ret_fma__no_nan__no_nan__no_nan_inf(half nofpclass(nan) %arg0, half nofpclass(nan) %arg1, half nofpclass(nan zero inf) %arg2) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma__no_nan__no_nan__no_nan_inf
 ; CHECK-SAME: (half nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]], half nofpclass(nan inf zero) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan inf zero) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan inf zero) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -358,7 +404,7 @@ define half @ret_fma__no_nan__no_nan__no_nan_inf(half nofpclass(nan) %arg0, half
 define half @ret_fma__no_nan_inf__no_nan_inf__no_nan_inf(half nofpclass(nan inf) %arg0, half nofpclass(nan inf) %arg1, half nofpclass(nan inf) %arg2) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma__no_nan_inf__no_nan_inf__no_nan_inf
 ; CHECK-SAME: (half nofpclass(nan inf) [[ARG0:%.*]], half nofpclass(nan inf) [[ARG1:%.*]], half nofpclass(nan inf) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan inf) [[ARG0]], half nofpclass(nan inf) [[ARG1]], half nofpclass(nan inf) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan inf) [[ARG0]], half nofpclass(nan inf) [[ARG1]], half nofpclass(nan inf) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -369,7 +415,7 @@ define half @ret_fma__no_nan_inf__no_nan_inf__no_nan_inf(half nofpclass(nan inf)
 define half @ret_fma__no_nan_zero_inf__no_nan_zero_inf__no_nan_zero_inf(half nofpclass(nan zero) %arg0, half nofpclass(nan zero) %arg1, half nofpclass(nan zero inf) %arg2) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma__no_nan_zero_inf__no_nan_zero_inf__no_nan_zero_inf
 ; CHECK-SAME: (half nofpclass(nan zero) [[ARG0:%.*]], half nofpclass(nan zero) [[ARG1:%.*]], half nofpclass(nan inf zero) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan zero) [[ARG0]], half nofpclass(nan zero) [[ARG1]], half nofpclass(nan inf zero) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan zero) [[ARG0]], half nofpclass(nan zero) [[ARG1]], half nofpclass(nan inf zero) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -379,7 +425,7 @@ define half @ret_fma__no_nan_zero_inf__no_nan_zero_inf__no_nan_zero_inf(half nof
 define half @ret_fma__no_nan_ninf_zero__no_nan_ninf_zero__no_nan_inf(half nofpclass(nan ninf zero) %arg0, half nofpclass(nan ninf zero) %arg1, half nofpclass(nan inf) %arg2) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma__no_nan_ninf_zero__no_nan_ninf_zero__no_nan_inf
 ; CHECK-SAME: (half nofpclass(nan ninf zero) [[ARG0:%.*]], half nofpclass(nan ninf zero) [[ARG1:%.*]], half nofpclass(nan inf) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan ninf zero) [[ARG0]], half nofpclass(nan ninf zero) [[ARG1]], half nofpclass(nan inf) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half nofpclass(nan ninf zero) [[ARG0]], half nofpclass(nan ninf zero) [[ARG1]], half nofpclass(nan inf) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -390,7 +436,7 @@ define half @ret_fma__no_nan_ninf_zero__no_nan_ninf_zero__no_nan_inf(half nofpcl
 define half @ret_fma_square__no_nan__no_nan(half noundef nofpclass(nan) %arg0, half nofpclass(nan) %arg1) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma_square__no_nan__no_nan
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -400,7 +446,7 @@ define half @ret_fma_square__no_nan__no_nan(half noundef nofpclass(nan) %arg0, h
 define half @ret_fma_square__no_nan__no_nan_zero(half noundef nofpclass(nan) %arg0, half nofpclass(nan zero) %arg1) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma_square__no_nan__no_nan_zero
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan zero) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan zero) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan zero) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -410,7 +456,7 @@ define half @ret_fma_square__no_nan__no_nan_zero(half noundef nofpclass(nan) %ar
 define half @ret_fma_square__no_nan__no_nan_inf_zero(half noundef nofpclass(nan) %arg0, half nofpclass(nan inf zero) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan__no_nan_inf_zero
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan inf zero) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan inf zero) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -420,7 +466,7 @@ define half @ret_fma_square__no_nan__no_nan_inf_zero(half noundef nofpclass(nan)
 define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf_zero(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan inf zero) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf_zero
 ; CHECK-SAME: (half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf zero) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf zero) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf zero) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -430,7 +476,7 @@ define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf_zero(half noundef
 define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan inf) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf
 ; CHECK-SAME: (half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -440,7 +486,7 @@ define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_inf(half noundef nofp
 define half @ret_fma_square__no_nan_no_inf__no_nan_inf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan inf) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf__no_nan_inf
 ; CHECK-SAME: (half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan inf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -450,7 +496,7 @@ define half @ret_fma_square__no_nan_no_inf__no_nan_inf(half noundef nofpclass(na
 define half @ret_fma_square__no_nan_no_inf__no_nan_no_inf(half noundef nofpclass(nan inf) %arg0, half nofpclass(nan inf) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf__no_nan_no_inf
 ; CHECK-SAME: (half noundef nofpclass(nan inf) [[ARG0:%.*]], half nofpclass(nan inf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan inf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -460,17 +506,28 @@ define half @ret_fma_square__no_nan_no_inf__no_nan_no_inf(half noundef nofpclass
 define half @ret_fma_square__no_nan_no_inf__no_nan_no_pinf(half noundef nofpclass(nan inf) %arg0, half nofpclass(nan pinf) %arg1) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_fma_square__no_nan_no_inf__no_nan_no_pinf
 ; CHECK-SAME: (half noundef nofpclass(nan inf) [[ARG0:%.*]], half nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan pinf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan pinf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
   ret half %call
 }
 
+define half @ret_fmuladd_square__no_nan_no_inf__no_nan_no_pinf(half noundef nofpclass(nan inf) %arg0, half nofpclass(nan pinf) %arg1) {
+;
+; CHECK-LABEL: define nofpclass(snan) half @ret_fmuladd_square__no_nan_no_inf__no_nan_no_pinf
+; CHECK-SAME: (half noundef nofpclass(nan inf) [[ARG0:%.*]], half nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fmuladd.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan pinf) [[ARG1]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[CALL]]
+;
+  %call = call half @llvm.fmuladd.f16(half %arg0, half %arg0, half %arg1)
+  ret half %call
+}
+
 define half @ret_fma_square__no_nan_no_inf__no_nan_no_ninf(half noundef nofpclass(nan inf) %arg0, half nofpclass(nan ninf) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf__no_nan_no_ninf
 ; CHECK-SAME: (half noundef nofpclass(nan inf) [[ARG0:%.*]], half nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan ninf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf) [[ARG0]], half noundef nofpclass(nan inf) [[ARG0]], half nofpclass(nan ninf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -480,7 +537,7 @@ define half @ret_fma_square__no_nan_no_inf__no_nan_no_ninf(half noundef nofpclas
 define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_no_ninf(half noundef nofpclass(nan inf zero) %arg0, half nofpclass(nan ninf) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_no_ninf
 ; CHECK-SAME: (half noundef nofpclass(nan inf zero) [[ARG0:%.*]], half nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan ninf) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) half @llvm.fma.f16(half noundef nofpclass(nan inf zero) [[ARG0]], half noundef nofpclass(nan inf zero) [[ARG0]], half nofpclass(nan ninf) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -490,7 +547,7 @@ define half @ret_fma_square__no_nan_no_inf_no_zero__no_nan_no_ninf(half noundef 
 define half @ret_fma_ninf_square__no_nan__no_nan(half noundef nofpclass(nan) %arg0, half nofpclass(nan) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan inf) half @ret_fma_ninf_square__no_nan__no_nan
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ninf nofpclass(nan inf) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ninf nofpclass(nan inf) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call ninf half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -500,7 +557,7 @@ define half @ret_fma_ninf_square__no_nan__no_nan(half noundef nofpclass(nan) %ar
 define nofpclass(inf) half @ret_noinf_fma_square__no_nan__no_nan(half noundef nofpclass(nan) %arg0, half nofpclass(nan) %arg1) {
 ; CHECK-LABEL: define nofpclass(snan inf) half @ret_noinf_fma_square__no_nan__no_nan
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -510,7 +567,7 @@ define nofpclass(inf) half @ret_noinf_fma_square__no_nan__no_nan(half noundef no
 define nofpclass(nan) half @ret_nonan_fma_square__no_nan__no_nan(half noundef nofpclass(nan) %arg0, half nofpclass(nan) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan_fma_square__no_nan__no_nan
 ; CHECK-SAME: (half noundef nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half noundef nofpclass(nan) [[ARG0]], half noundef nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg0, half %arg1)
@@ -520,7 +577,7 @@ define nofpclass(nan) half @ret_nonan_fma_square__no_nan__no_nan(half noundef no
 define half @ret_fma_ninf__no_nan_inputs(half nofpclass(nan) %arg0, half nofpclass(nan) %arg1, half nofpclass(nan) %arg2) {
 ; CHECK-LABEL: define nofpclass(nan inf) half @ret_fma_ninf__no_nan_inputs
 ; CHECK-SAME: (half nofpclass(nan) [[ARG0:%.*]], half nofpclass(nan) [[ARG1:%.*]], half nofpclass(nan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ninf nofpclass(nan inf) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ninf nofpclass(nan inf) half @llvm.fma.f16(half nofpclass(nan) [[ARG0]], half nofpclass(nan) [[ARG1]], half nofpclass(nan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call ninf half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -534,7 +591,7 @@ define half @ret_fma_ninf__no_nan_inputs(half nofpclass(nan) %arg0, half nofpcla
 define float @ret_fma__any__any__any(float %arg0, float %arg1, float %arg2) {
 ; CHECK-LABEL: define float @ret_fma__any__any__any
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]], float [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG1]], float [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG1]], float [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -544,7 +601,7 @@ define float @ret_fma__any__any__any(float %arg0, float %arg1, float %arg2) {
 define float @ret_fma__any__any__no_snan(float %arg0, float %arg1, float nofpclass(snan) %arg2) {
 ; CHECK-LABEL: define float @ret_fma__any__any__no_snan
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]], float nofpclass(snan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -554,7 +611,7 @@ define float @ret_fma__any__any__no_snan(float %arg0, float %arg1, float nofpcla
 define float @ret_fma__any__no_snan__any(float %arg0, float nofpclass(snan) %arg1, float %arg2) {
 ; CHECK-LABEL: define float @ret_fma__any__no_snan__any
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]], float [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float nofpclass(snan) [[ARG1]], float [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float nofpclass(snan) [[ARG1]], float [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -564,7 +621,7 @@ define float @ret_fma__any__no_snan__any(float %arg0, float nofpclass(snan) %arg
 define float @ret_fma__any__no_snan__no_snan(float %arg0, float nofpclass(snan) %arg1, float nofpclass(snan) %arg2) {
 ; CHECK-LABEL: define float @ret_fma__any__no_snan__no_snan
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]], float nofpclass(snan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float nofpclass(snan) [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[ARG0]], float nofpclass(snan) [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -574,7 +631,7 @@ define float @ret_fma__any__no_snan__no_snan(float %arg0, float nofpclass(snan) 
 define float @ret_fma__no_snan__any__any(float nofpclass(snan) %arg0, float %arg1, float %arg2) {
 ; CHECK-LABEL: define float @ret_fma__no_snan__any__any
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float [[ARG1:%.*]], float [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float [[ARG1]], float [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float [[ARG1]], float [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -584,7 +641,7 @@ define float @ret_fma__no_snan__any__any(float nofpclass(snan) %arg0, float %arg
 define float @ret_fma__no_snan__any__no_snan(float nofpclass(snan) %arg0, float %arg1, float nofpclass(snan) %arg2) {
 ; CHECK-LABEL: define float @ret_fma__no_snan__any__no_snan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float [[ARG1:%.*]], float nofpclass(snan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -594,7 +651,7 @@ define float @ret_fma__no_snan__any__no_snan(float nofpclass(snan) %arg0, float 
 define float @ret_fma__no_snan__no_snan__any(float nofpclass(snan) %arg0, float nofpclass(snan) %arg1, float %arg2) {
 ; CHECK-LABEL: define float @ret_fma__no_snan__no_snan__any
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]], float [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]], float [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]], float [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -604,7 +661,7 @@ define float @ret_fma__no_snan__no_snan__any(float nofpclass(snan) %arg0, float 
 define float @ret_fma__no_snan__no_snan__no_snan(float nofpclass(snan) %arg0, float nofpclass(snan) %arg1, float nofpclass(snan) %arg2) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_fma__no_snan__no_snan__no_snan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]], float nofpclass(snan) [[ARG2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.fma.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]], float nofpclass(snan) [[ARG2]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
@@ -614,7 +671,7 @@ define float @ret_fma__no_snan__no_snan__no_snan(float nofpclass(snan) %arg0, fl
 define float @ret_fma_square__any__any(float noundef %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fma_square__any__any
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -624,7 +681,7 @@ define float @ret_fma_square__any__any(float noundef %arg0, float %arg1) {
 define float @ret_fma_square__any__no_snan(float noundef %arg0, float nofpclass(snan) %arg1) {
 ; CHECK-LABEL: define float @ret_fma_square__any__no_snan
 ; CHECK-SAME: (float noundef [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -634,7 +691,7 @@ define float @ret_fma_square__any__no_snan(float noundef %arg0, float nofpclass(
 define float @ret_fma_square__no_snan__any(float noundef nofpclass(snan) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_fma_square__no_snan__any
 ; CHECK-SAME: (float noundef nofpclass(snan) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -644,7 +701,7 @@ define float @ret_fma_square__no_snan__any(float noundef nofpclass(snan) %arg0, 
 define float @ret_fma_square__no_snan__no_snan(float noundef nofpclass(snan) %arg0, float nofpclass(snan) %arg1) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_fma_square__no_snan__no_snan
 ; CHECK-SAME: (float noundef nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg1)
@@ -654,7 +711,7 @@ define float @ret_fma_square__no_snan__no_snan(float noundef nofpclass(snan) %ar
 define float @ret_fma_same_arg__any(float noundef %arg0) {
 ; CHECK-LABEL: define noundef float @ret_fma_same_arg__any
 ; CHECK-SAME: (float noundef [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call noundef float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float noundef [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noundef float @llvm.fma.f32(float noundef [[ARG0]], float noundef [[ARG0]], float noundef [[ARG0]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg0)
@@ -664,12 +721,81 @@ define float @ret_fma_same_arg__any(float noundef %arg0) {
 define float @ret_fma_same_arg__no_snan(float noundef nofpclass(snan) %arg0) {
 ; CHECK-LABEL: define noundef nofpclass(snan) float @ret_fma_same_arg__no_snan
 ; CHECK-SAME: (float noundef nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan) float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan) float @llvm.fma.f32(float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]], float noundef nofpclass(snan) [[ARG0]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.fma.f32(float %arg0, float %arg0, float %arg0)
   ret float %call
 }
+
+
+;---------------------------------------------------------------------
+; fmuladd may round and flush subnormals once or twice, depending on
+; what it lowers to.
+;---------------------------------------------------------------------
+
+define half @ret_fma__pnorm__nnorm__pzero(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fma__pnorm__nnorm__pzero
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fma.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define half @ret_fma__pnorm__nnorm__pzero__dynamic_dynamic(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fma__pnorm__nnorm__pzero__dynamic_dynamic
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fma.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define half @ret_fma__pnorm__nnorm__pzero__ftz_daz(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fma__pnorm__nnorm__pzero__ftz_daz
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fma.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define half @ret_fmuladd__pnorm__nnorm__pzero(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fmuladd__pnorm__nnorm__pzero
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fmuladd.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define half @ret_fmuladd__pnorm__nnorm__pzero__dynamic_dynamic(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fmuladd__pnorm__nnorm__pzero__dynamic_dynamic
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fmuladd.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+define half @ret_fmuladd__pnorm__nnorm__pzero__ftz_daz(half nofpclass(nan inf zero sub nnorm) %arg0, half nofpclass(nan inf zero sub pnorm) %arg1, half nofpclass(nan inf nzero sub norm) %arg2) #1 {
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) half @ret_fmuladd__pnorm__nnorm__pzero__ftz_daz
+; CHECK-SAME: (half nofpclass(nan inf zero sub nnorm) [[ARG0:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG1:%.*]], half nofpclass(nan inf nzero sub norm) [[ARG2:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nofpclass(nan pinf psub pnorm) half @llvm.fmuladd.f16(half nofpclass(nan inf zero sub nnorm) [[ARG0]], half nofpclass(nan inf zero sub pnorm) [[ARG1]], half nofpclass(nan inf nzero sub norm) [[ARG2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %result = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
+  ret half %result
+}
+
+attributes #0 = { denormal_fpenv(dynamic) }
+attributes #1 = { denormal_fpenv(preservesign) }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}
