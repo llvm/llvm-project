@@ -48,3 +48,9 @@ subroutine f06
   !WARNING: The DESTROY clause without argument on DEPOBJ construct is deprecated in OpenMP v5.2
   !$omp depobj(obj) update(in) destroy
 end
+
+subroutine f07
+  integer :: obj1, obj2
+  !ERROR: DEPOBJ syntax with no argument is not handled yet
+  !$omp depobj destroy(obj1) destroy(obj2)
+end
