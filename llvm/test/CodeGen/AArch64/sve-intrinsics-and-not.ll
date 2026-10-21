@@ -81,6 +81,28 @@ define <vscale x 4 x i32> @and_not_poison_i32(<vscale x 4 x i32> %a, <vscale x 4
   ret <vscale x 4 x i32> %and
 }
 
+; SVE AND_U with ordinary LLVM NOT.
+
+define <vscale x 4 x i32> @and_u_not_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: and_u_not_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %not = xor <vscale x 4 x i32> %b, splat (i32 -1)
+  %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
+  ret <vscale x 4 x i32> %and
+}
+
+define <vscale x 4 x i32> @and_u_not_commuted_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: and_u_not_commuted_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %not = xor <vscale x 4 x i32> %b, splat (i32 -1)
+  %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %not, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %and
+}
+
 ; SVE AND_U with SVE NOT. Matching predicates make NOT's inactive lanes
 ; irrelevant to AND_U. An all-active NOT can also fold with any AND predicate.
 
