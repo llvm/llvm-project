@@ -61,10 +61,11 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 
-# The unmerge of a merge folds away, but %lo is replaced with %a, so its debug
-# use stays valid.
+# The unmerge of a merge folds away. The debug use of %wide becomes undef, but
+# %lo is replaced with %a, so its debug use stays valid.
 # CHECK-LABEL: name: forwarded_merge
 # CHECK-NOT:   G_MERGE_VALUES
+# CHECK:       DBG_VALUE $noreg, $noreg
 # CHECK:       DBG_VALUE %a(i64), $noreg
 # CHECK:       $x0 = COPY %a(i64)
 ---
@@ -76,6 +77,7 @@ body:             |
     %a:_(i64) = COPY $x0
     %b:_(i64) = COPY $x1
     %wide:_(i128) = G_MERGE_VALUES %a(i64), %b(i64)
+    DBG_VALUE %wide(i128), $noreg, !11, !DIExpression(), debug-location !12
     %lo:_(i64), %hi:_(i64) = G_UNMERGE_VALUES %wide(i128)
     DBG_VALUE %lo(i64), $noreg, !11, !DIExpression(), debug-location !12
     $x0 = COPY %lo(i64)

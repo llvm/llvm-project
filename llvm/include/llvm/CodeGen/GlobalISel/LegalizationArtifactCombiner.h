@@ -594,8 +594,10 @@ public:
       UseMIs.push_back(&UseMI);
       Observer.changingInstr(UseMI);
     }
-    // Replace the registers.
-    MRI.replaceRegWith(DstReg, SrcReg);
+    // Replace the uses only, so that SrcReg does not get a second def.
+    for (MachineOperand &MO :
+         llvm::make_early_inc_range(MRI.use_operands(DstReg)))
+      MO.setReg(SrcReg);
     UpdatedDefs.push_back(SrcReg);
     // Notify the observer that we changed the instructions.
     for (auto *UseMI : UseMIs)
