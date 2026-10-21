@@ -238,7 +238,7 @@ struct CallReturnHandler : public AMDGPUIncomingArgHandler {
 struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   /// For tail calls, the byte offset of the call's argument area from the
   /// callee's. Unused elsewhere.
-  int FPDiff;
+  int64_t FPDiff;
 
   // Cache the SP register vreg if we need it more than once in this call site.
   Register SPReg;
@@ -247,7 +247,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 
   AMDGPUOutgoingArgHandler(MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI, MachineInstrBuilder MIB,
-                           bool IsTailCall = false, int FPDiff = 0)
+                           bool IsTailCall = false, int64_t FPDiff = 0)
       : AMDGPUOutgoingValueHandler(MIRBuilder, MRI, MIB), FPDiff(FPDiff),
         IsTailCall(IsTailCall) {}
 
@@ -1410,12 +1410,12 @@ bool AMDGPUCallLowering::lowerTailCall(
   // by this amount for a tail call. In a sibling call it must be 0 because the
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0.
-  int FPDiff = 0;
+  int64_t FPDiff = 0;
 
   // This will be 0 for sibcalls, potentially nonzero for tail calls produced
   // by -tailcallopt. For sibcalls, the memory operands for the call are
   // already available in the caller's incoming argument space.
-  unsigned NumBytes = 0;
+  uint64_t NumBytes = 0;
   if (!IsSibCall) {
     // We aren't sibcalling, so we need to compute FPDiff. We need to do this
     // before handling assignments, because FPDiff must be known for memory
@@ -1431,8 +1431,7 @@ bool AMDGPUCallLowering::lowerTailCall(
 
     // The callee will pop the argument stack as a tail call. Thus, we must
     // keep it 16-byte aligned.
-    NumBytes = static_cast<unsigned>(
-        alignTo(OutInfo.getStackSize(), ST.getStackAlignment()));
+    NumBytes = alignTo(OutInfo.getStackSize(), ST.getStackAlignment());
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
