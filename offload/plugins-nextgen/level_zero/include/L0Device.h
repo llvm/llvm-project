@@ -25,7 +25,6 @@
 
 namespace llvm::omp::target::plugin {
 
-using OmpInteropTy = omp_interop_val_t *;
 class LevelZeroPluginTy;
 
 // clang-format off
@@ -597,13 +596,17 @@ public:
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
-  Error releaseInterop(omp_interop_val_t *Interop) override;
+  Expected<void *> getNativeHandle(NativeHandleKind Kind) override {
+    switch (Kind) {
+    case NativeHandleKind::Platform:
+      return getZeDriver();
+    case NativeHandleKind::Device:
+      return getZeDevice();
+    }
+    llvm_unreachable("unhandled NativeHandleKind");
+  }
 
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override;
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 };
 
 } // namespace llvm::omp::target::plugin

@@ -47,3 +47,9 @@ TEST_P(olGetQueueInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetQueueInfoSize(Queue, OL_QUEUE_INFO_DEVICE, nullptr));
 }
+
+TEST_P(olGetQueueInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}

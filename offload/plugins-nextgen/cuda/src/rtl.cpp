@@ -567,6 +567,24 @@ struct CUDADeviceTy : public GenericDeviceTy {
   CUcontext getCUDAContext() const { return Context; }
   CUdevice getCUDADevice() const { return Device; }
 
+  Expected<void *> getNativeHandle(NativeHandleKind Kind) override {
+    switch (Kind) {
+    case NativeHandleKind::Platform:
+      return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                           "CUDA has no platform handle");
+    case NativeHandleKind::Device:
+      return reinterpret_cast<void *>(Device);
+    }
+    llvm_unreachable("unhandled NativeHandleKind");
+  }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    if (!AsyncInfo || !AsyncInfo->Queue)
+      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
+                           "no queue associated with the async info");
+    return AsyncInfo->Queue;
+  }
+
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
@@ -978,50 +996,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// operations. This is a no-op for CUDA devices as operations inserted into
   /// a queue are in-order.
   Error dataFence(__tgt_async_info *Async) override {
-    return Plugin::success();
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    return interop_spec_t{tgt_fr_cuda, {true, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_cuda;
-    Ret->vendor_id = omp_vendor_nvidia;
-
-    if (InteropType == kmp_interop_type_target ||
-        InteropType == kmp_interop_type_targetsync) {
-      Ret->device_info.Platform = nullptr;
-      Ret->device_info.Device = reinterpret_cast<void *>(Device);
-      Ret->device_info.Context = Context;
-    }
-
-    if (InteropType == kmp_interop_type_targetsync) {
-      Ret->async_info = new __tgt_async_info();
-      if (auto Err = setContext())
-        return Err;
-      CUstream Stream;
-      if (auto Err = CUDAStreamManager.getResource(Stream))
-        return Err;
-
-      Ret->async_info->Queue = Stream;
-    }
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (!Interop)
-      return Plugin::success();
-
-    if (Interop->async_info)
-      delete Interop->async_info;
-
-    delete Interop;
     return Plugin::success();
   }
 
@@ -1681,6 +1655,16 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<void *> getNativeHandle() override {
+    // Each CUDA device carries its own CUcontext, so a single native handle
+    // only exists for a single-device context.
+    if (Devices.size() != 1)
+      return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                           "CUDA context handle is only defined for a "
+                           "single-device context");
+    return static_cast<CUDADeviceTy &>(*Devices.front()).getCUDAContext();
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
