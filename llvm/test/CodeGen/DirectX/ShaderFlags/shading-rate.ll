@@ -4,9 +4,7 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %t/none.ll | FileCheck %s --check-prefix=NONE
 
 ; Declaring SV_ShadingRate in either signature sets the ShadingRate shader
-; feature flag (bit 24), even when the shader body never touches it. 
-; Mirrors DXC's tests: 
-;  hlsl/semantics/sv_shadingrate/shadingrate1.hlsl and hadingrate2.hlsl
+; feature flag (bit 24), even when the shader body never touches it.
 
 ;--- vs-out.ll
 target triple = "dxil-pc-shadermodel6.8-vertex"
