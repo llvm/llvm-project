@@ -263,3 +263,39 @@ define <2 x i32> @atomicrmw_or_zero_v2i32_used(ptr %p) {
   %r = atomicrmw or ptr %p, <2 x i32> zeroinitializer seq_cst
   ret <2 x i32> %r
 }
+
+; Extra test case 1
+define <2 x i16> @atomicrmw_or_zero_v2i16_used(ptr %p, <2 x i16> %v) {
+; CHECK-LABEL: atomicrmw_or_zero_v2i16_used:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB9_1: # %atomicrmw.start
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    lock cmpxchgl %eax, (%rdi)
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    jne .LBB9_1
+; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-NEXT:    retq
+  %r = atomicrmw or ptr %p, <2 x i16> zeroinitializer seq_cst
+  ret <2 x i16> %r
+}
+
+; Extra test case 2
+define <4 x i8> @atomicrmw_or_zero_v4i8_used(ptr %p, <4 x i8> %v) {
+; CHECK-LABEL: atomicrmw_or_zero_v4i8_used:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB10_1: # %atomicrmw.start
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    lock cmpxchgl %eax, (%rdi)
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    jne .LBB10_1
+; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-NEXT:    retq
+  %r = atomicrmw or ptr %p, <4 x i8> zeroinitializer seq_cst
+  ret <4 x i8> %r
+}
