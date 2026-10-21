@@ -21,6 +21,7 @@
 
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -87,6 +88,52 @@ public:
   bool TraverseCoyieldExpr(CoyieldExpr *e) {
     assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
     return TraverseStmt(e->getOperand());
+  }
+};
+
+/// Owns a copy of a cleanup and its metadata so they remain valid after the
+/// EH stack entry is popped.
+class SavedCleanup {
+  struct alignas(EHScopeStack::ScopeStackAlignment) StorageUnit {
+    char bytes[EHScopeStack::ScopeStackAlignment];
+  };
+  llvm::SmallVector<StorageUnit, 8 * sizeof(void *) / sizeof(StorageUnit)> data;
+  size_t size;
+  CleanupKind kind;
+  Address activeFlag;
+
+public:
+  explicit SavedCleanup(EHCleanupScope &scope)
+      : size(scope.getCleanupSize()), activeFlag(scope.getActiveFlag()) {
+    unsigned cleanupKind = 0;
+    if (scope.isNormalCleanup())
+      cleanupKind |= NormalCleanup;
+    if (scope.isEHCleanup())
+      cleanupKind |= EHCleanup;
+    if (scope.isLifetimeMarker())
+      cleanupKind |= LifetimeMarker;
+    kind = static_cast<CleanupKind>(cleanupKind);
+
+    data.resize_for_overwrite(llvm::divideCeil(size, sizeof(StorageUnit)));
+    memcpy(data.data(), scope.getCleanupBuffer(), size);
+  }
+
+  const void *getData() const { return data.data(); }
+  size_t getSize() const { return size; }
+  CleanupKind getKind() const { return kind; }
+  Address getActiveFlag() const { return activeFlag; }
+
+  EHScopeStack::Cleanup *getCleanup() {
+    return reinterpret_cast<EHScopeStack::Cleanup *>(data.data());
+  }
+
+  EHScopeStack::Cleanup::Flags getFlags() const {
+    EHScopeStack::Cleanup::Flags flags;
+    if (kind & NormalCleanup)
+      flags.setIsNormalCleanupKind();
+    if (kind & EHCleanup)
+      flags.setIsEHCleanupKind();
+    return flags;
   }
 };
 } // namespace
@@ -776,35 +823,7 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
     return;
   }
 
-  // Copy the cleanup emission data out.  This uses either a stack
-  // array or malloc'd memory, depending on the size, which is
-  // behavior that SmallVector would provide, if we could use it
-  // here. Unfortunately, if you ask for a SmallVector<char>, the
-  // alignment isn't sufficient.
-  auto *cleanupSource = reinterpret_cast<char *>(scope.getCleanupBuffer());
-  alignas(EHScopeStack::ScopeStackAlignment) char
-      cleanupBufferStack[8 * sizeof(void *)];
-  std::unique_ptr<char[]> cleanupBufferHeap;
-  size_t cleanupSize = scope.getCleanupSize();
-  EHScopeStack::Cleanup *cleanup;
-
-  // This is necessary because we are going to deallocate the cleanup
-  // (in popCleanup) before we emit it.
-  if (cleanupSize <= sizeof(cleanupBufferStack)) {
-    memcpy(cleanupBufferStack, cleanupSource, cleanupSize);
-    cleanup = reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferStack);
-  } else {
-    cleanupBufferHeap.reset(new char[cleanupSize]);
-    memcpy(cleanupBufferHeap.get(), cleanupSource, cleanupSize);
-    cleanup =
-        reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
-  }
-
-  EHScopeStack::Cleanup::Flags cleanupFlags;
-  if (scope.isNormalCleanup())
-    cleanupFlags.setIsNormalCleanupKind();
-  if (scope.isEHCleanup())
-    cleanupFlags.setIsEHCleanupKind();
+  SavedCleanup cleanup(scope);
 
   // Determine the active flag for the cleanup handler.
   Address cleanupActiveFlag = normalActiveFlag.isValid() ? normalActiveFlag
@@ -816,7 +835,8 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   // pass handles lowering the structured cleanup scope.
   ehStack.popCleanup();
   scope.markEmitted();
-  emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
+  emitCleanup(*this, cleanupScope, cleanup.getCleanup(), cleanup.getFlags(),
+              cleanupActiveFlag);
 }
 
 void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
@@ -831,12 +851,6 @@ void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
     assert(!scope.getCleanupScopeOp() &&
            "captured cleanup should not own a cleanup scope");
 
-    EHScopeStack::Cleanup::Flags cleanupFlags;
-    if (scope.isNormalCleanup())
-      cleanupFlags.setIsNormalCleanupKind();
-    if (scope.isEHCleanup())
-      cleanupFlags.setIsEHCleanupKind();
-
     // A captured cleanup may be guarded by an active flag. The destructor
     // cleanups of a loop condition variable and of the temporaries that its
     // initializer lifetime-extends have one that is false while its
@@ -845,29 +859,36 @@ void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
     // because its lifetime starts before initialization. For a loop, each
     // emission serves both the normal per-iteration exit and the EH unwind
     // path.
-    Address activeFlag = scope.getActiveFlag();
-
-    // Copy the cleanup emission data out before popping, since popCleanup
-    // deallocates the entry. This mirrors popCleanupBlock.
-    auto *cleanupSource = reinterpret_cast<char *>(scope.getCleanupBuffer());
-    alignas(EHScopeStack::ScopeStackAlignment) char
-        cleanupBufferStack[8 * sizeof(void *)];
-    std::unique_ptr<char[]> cleanupBufferHeap;
-    size_t cleanupSize = scope.getCleanupSize();
-    EHScopeStack::Cleanup *cleanup;
-    if (cleanupSize <= sizeof(cleanupBufferStack)) {
-      memcpy(cleanupBufferStack, cleanupSource, cleanupSize);
-      cleanup = reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferStack);
-    } else {
-      cleanupBufferHeap.reset(new char[cleanupSize]);
-      memcpy(cleanupBufferHeap.get(), cleanupSource, cleanupSize);
-      cleanup =
-          reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
-    }
-
+    SavedCleanup cleanup(scope);
     ehStack.popCleanup();
-    emitCleanupBody(*this, cleanup, cleanupFlags, activeFlag, loc);
+    emitCleanupBody(*this, cleanup.getCleanup(), cleanup.getFlags(),
+                    cleanup.getActiveFlag(), loc);
   }
+}
+
+void CIRGenFunction::emitCapturedCleanupsAsScopes(
+    EHScopeStack::stable_iterator depth, mlir::Location loc) {
+  // Copy the captured cleanups off the EH stack, the last captured one first.
+  llvm::SmallVector<SavedCleanup> captured;
+  while (ehStack.stable_begin() != depth) {
+    assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
+    EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
+    assert(!scope.getCleanupScopeOp() &&
+           "captured cleanup should not own a cleanup scope");
+    assert(!scope.hasActiveFlag() && "captured cleanup with an active flag");
+    captured.emplace_back(scope);
+    ehStack.popCleanup();
+  }
+
+  // Push them again in the order in which they were captured, each one
+  // opening a cir.cleanup.scope, and emit them.
+  for (const SavedCleanup &cleanup : llvm::reverse(captured)) {
+    ehStack.pushCopyOfCleanup(cleanup.getKind(), cleanup.getData(),
+                              cleanup.getSize());
+    if (auto scope = cast<EHCleanupScope>(*ehStack.begin()).getCleanupScopeOp())
+      scope->setLoc(loc);
+  }
+  popCleanupBlocks(depth);
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.

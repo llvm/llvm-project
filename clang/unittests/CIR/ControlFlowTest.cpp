@@ -803,13 +803,12 @@ TEST_F(CIRControlFlowTest, CoroutineOp) {
   expectTerminatorSuccessors(coroOp.getFinalSuspend(),
                              {&coroOp.getExit(), &coroOp.getDestroy()});
 
-  // destroy: ordinary dispatch falls through to exit;
+  // destroy: always falls through to exit.
   RegionBranchTerminatorOpInterface destroyTerm =
       getTerminator(coroOp.getDestroy());
   ASSERT_TRUE(destroyTerm);
-  expectSuccessors(coroOp, RegionBranchPoint(destroyTerm),
-                   {&coroOp.getExit(), nullptr});
-  expectTerminatorSuccessors(coroOp.getDestroy(), {&coroOp.getExit(), nullptr});
+  expectSuccessors(coroOp, RegionBranchPoint(destroyTerm), {&coroOp.getExit()});
+  expectTerminatorSuccessors(coroOp.getDestroy(), {&coroOp.getExit()});
 
   // TODO: cir.return doesn't implement RegionBranchTerminatorOpInterface
   // exit always terminates the op.

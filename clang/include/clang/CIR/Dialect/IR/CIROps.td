@@ -4953,13 +4953,15 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
       Reached by an explicit `destroy()` call on a suspended handle, or by
       normal completion through `initial_suspend` or `final_suspend`, and
       falls through to `exit`. It runs the destructors unconditionally, so an
-      exception must not reach it. Exceptional exits are not modeled in
-      `unwind`.
+      exception must not reach it. An exception from one of these destructors
+      still destroys the remaining parameter copies and frees the frame before
+      it leaves the op, through `cir.cleanup.scope` operations of kind `all`
+      around them.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
-      pausing), and from `destroy` when it was entered via ordinary
-      dispatch. Holds `coro.end` + the actual `cir.return`.
+      pausing), and from `destroy`. Holds `coro.end` + the actual
+      `cir.return`.
 
   }];
 
