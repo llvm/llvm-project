@@ -2477,8 +2477,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     unsigned LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     RVFI->setLibCallStackSize(LibCallFrameSize);
-    MFI.CreateFixedSpillStackObject(
-        LibCallFrameSize, -static_cast<int64_t>(LibCallFrameSize));
+    MFI.CreateFixedSpillStackObject(LibCallFrameSize,
+                                    -static_cast<int64_t>(LibCallFrameSize));
   }
 
   return true;
