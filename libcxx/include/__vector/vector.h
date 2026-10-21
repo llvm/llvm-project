@@ -35,6 +35,7 @@
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/assume_aligned.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
@@ -832,10 +833,7 @@ private:
   template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
   static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Ptr
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
-    if (!__libcpp_is_constant_evaluated()) {
-      return static_cast<_Ptr>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
-    }
-    return __p;
+    return std::__assume_aligned<_LIBCPP_ALIGNOF(decltype(*__p))>(__p);
   }
 
   template <class _Ptr = pointer, __enable_if_t<!is_pointer<_Ptr>::value, int> = 0>
