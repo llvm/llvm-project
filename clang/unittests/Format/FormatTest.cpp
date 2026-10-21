@@ -12323,6 +12323,36 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "  p->delete ();\n"
                "}");
 
+  verifyFormat("x = new a *[]{nullptr};");
+  verifyFormat("x = new (a) a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a::a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a) a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a)(a<a> *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
   EXPECT_TRUE(

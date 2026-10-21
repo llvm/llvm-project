@@ -619,7 +619,7 @@ SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
     return m_sections_up.get();
   if (update_module_section_list) {
     if (ModuleSP module_sp = GetModule()) {
-      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      std::lock_guard<std::recursive_mutex> guard(module_sp->m_sections_mutex);
       CreateSections(*module_sp->GetUnifiedSectionList());
     }
   } else {

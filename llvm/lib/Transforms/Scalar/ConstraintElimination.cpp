@@ -641,6 +641,10 @@ static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
+    // Indices narrower or wider than the index type are implicitly
+    // sign-extended or truncated. Don't reason about them.
+    if (Index->getType()->getScalarSizeInBits() != Scale.getBitWidth())
+      return &GEP;
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg. If the index cannot be proven
       // non-negative, keep the GEP as-is instead of decomposing it.

@@ -83,7 +83,7 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT:   switch (SchedClass) {
 // CHECK-NEXT:   case {{.*}}: // Inst_A
 // CHECK-NEXT:     if (CPUID == {{.*}}) { // SchedModel_A
-// CHECK-NEXT:       static const unsigned Targets[] = {{\{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}};
+// CHECK-NEXT:       static const unsigned Targets[] = {{\{[0-9]+}} /* SchedWriteResA */, {{[0-9]+}} /* SchedWriteResB */, {{[0-9]+}} /* SchedWriteResC */, {{[0-9]+}} /* SchedWriteResD */, {{[0-9]+}} /* SchedWriteResE */};
 // CHECK-NEXT:       return Targets;
 // CHECK-NEXT:     }
 // CHECK-NEXT:     break;

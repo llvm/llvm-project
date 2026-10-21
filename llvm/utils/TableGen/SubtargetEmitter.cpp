@@ -1905,34 +1905,37 @@ void SubtargetEmitter::emitVariantSchedClassTargets(raw_ostream &OS) {
   IdxVec VariantClasses;
   collectVariantClasses(SchedModels, VariantClasses,
                         /*OnlyExpandMCInstPredicates=*/false);
-  if (!VariantClasses.empty()) {
-    OS << "  switch (SchedClass) {\n";
-    for (unsigned VC : VariantClasses) {
-      const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
-      IdxVec ProcIndices;
-      collectProcessorIndices(SC, ProcIndices);
-      OS << "  case " << VC << ": // " << SC.Name << '\n';
-      for (unsigned PI : ProcIndices) {
-        OS << "    ";
-        if (PI != 0)
-          OS << "if (CPUID == " << PI << ") ";
-        OS << "{ // " << SchedModels.procModels()[PI].ModelName << '\n'
-           << "      static const unsigned Targets[] = {";
-        ListSeparator LS;
-        for (const CodeGenSchedTransition &T : SC.Transitions)
-          if (PI == 0 || T.ProcIndex == PI)
-            OS << LS << T.ToClassIdx;
-        OS << "};\n"
-           << "      return Targets;\n"
-           << "    }\n";
-        if (PI == 0)
-          break;
-      }
-      OS << "    break;\n";
-    }
-    OS << "  }\n";
+  if (VariantClasses.empty()) {
+    OS << "  return {};\n}\n";
+    return;
   }
-  OS << "  return {};\n"
+  OS << "  switch (SchedClass) {\n";
+  for (unsigned VC : VariantClasses) {
+    const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
+    IdxVec ProcIndices;
+    collectProcessorIndices(SC, ProcIndices);
+    OS << "  case " << VC << ": // " << SC.Name << '\n';
+    for (unsigned PI : ProcIndices) {
+      OS << "    ";
+      if (PI != 0)
+        OS << "if (CPUID == " << PI << ") ";
+      OS << "{ // " << SchedModels.procModels()[PI].ModelName << '\n'
+         << "      static const unsigned Targets[] = {";
+      ListSeparator LS;
+      for (const CodeGenSchedTransition &T : SC.Transitions)
+        if (PI == 0 || T.ProcIndex == PI)
+          OS << LS << T.ToClassIdx << " /* "
+             << SchedModels.getSchedClass(T.ToClassIdx).Name << " */";
+      OS << "};\n"
+         << "      return Targets;\n"
+         << "    }\n";
+      if (PI == 0)
+        break;
+    }
+    OS << "    break;\n";
+  }
+  OS << "  }\n"
+     << "  return {};\n"
      << "}\n";
 }
 

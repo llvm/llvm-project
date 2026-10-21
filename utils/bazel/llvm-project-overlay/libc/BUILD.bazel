@@ -2383,6 +2383,7 @@ libc_support_library(
         ":__support_alloc_checker",
         ":__support_common",
         ":__support_cpp_new",
+        ":__support_cpp_type_traits",
         ":__support_error_or",
         ":__support_file_file",
         ":__support_libc_errno",
@@ -17156,6 +17157,19 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_fchdir",
         ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "getcpu",
+    srcs = ["src/sched/linux/getcpu.cpp"],
+    hdrs = ["src/sched/getcpu.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getcpu",
         ":errno",
     ],
 )

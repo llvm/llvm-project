@@ -1463,6 +1463,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (F.hasFnAttribute(Attribute::Naked))
     return;
 
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return;
+
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return;
 
@@ -1707,7 +1710,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   // function wrapper in the runtime.
   MapVector<Constant *, std::vector<Function *>> PersonalityFns;
   for (Function &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress))
+    if (F.isDeclaration() || !F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+        F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
       continue;
 
     if (F.hasPersonalityFn()) {
