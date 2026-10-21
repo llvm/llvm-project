@@ -2271,7 +2271,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
       // versions at this time. Add this check for completeness (the checks
       // for later versions are done in check-omp-syntax.cpp).
       if (clauses.v.size() != 1) {
-        context_.Say(x.v.source, "The DEPOBJ directive requires a single clause"_err_en_US);
+        context_.Say(x.v.source,
+            "The DEPOBJ directive requires a single clause"_err_en_US);
       }
     }
   } else if (!arguments.v.empty()) {
