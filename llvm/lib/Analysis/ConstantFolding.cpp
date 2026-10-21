@@ -4872,8 +4872,8 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
                                Type *Ty, DenormalMode DenormMode) {
-  if (!DenormMode.isValid() ||
-      DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
+  assert(DenormMode.isValid() && "invalid denormal mode");
+  if (DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
       DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
     return nullptr;
 
@@ -4888,7 +4888,7 @@ Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   Constant *Output = GetConstantFoldFPValue(Result, Ty);
   if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
     return Output;
-  const auto *CFP = static_cast<ConstantFP *>(Output);
+  auto *CFP = cast<ConstantFP>(Output);
   APFloat Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
   return ConstantFP::get(Ty->getContext(), Res);
 }
