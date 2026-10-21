@@ -26,3 +26,9 @@
 // COM: }
 // RUN: mlir-opt %S/versioned-op-with-native-prop-1.12.mlirbc 2>&1 | FileCheck %s --check-prefix=CHECK3
 // CHECK3: test.with_versioned_properties 1 | 0
+
+// Verify emission for both historical and current dialect versions.
+// RUN: mlir-opt %s -emit-bytecode -emit-bytecode-dialect-version=test=1.12 | mlir-opt | FileCheck %s --check-prefix=EMIT
+// RUN: mlir-opt %s -emit-bytecode -emit-bytecode-dialect-version=test=2.0 | mlir-opt | FileCheck %s --check-prefix=EMIT
+// EMIT: test.with_versioned_properties 1 | 0
+test.with_versioned_properties 1 | 0

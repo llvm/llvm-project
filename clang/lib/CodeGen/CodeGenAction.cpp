@@ -202,6 +202,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(
@@ -592,6 +593,7 @@ void CodeGenAction::ExecuteAction() {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

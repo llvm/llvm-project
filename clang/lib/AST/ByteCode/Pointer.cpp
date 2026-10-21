@@ -14,7 +14,6 @@
 #include "Function.h"
 #include "InitMap.h"
 #include "Integral.h"
-#include "InterpBlock.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -769,7 +768,7 @@ Lifetime PtrView::getLifetime() const {
   if (Base < sizeof(InlineDescriptor))
     return Lifetime::Started;
 
-  if (inArray() && !isArrayRoot()) {
+  if (inPrimitiveArray() && !isArrayRoot()) {
     InitMapPtr &IM = getInitMap();
 
     if (!IM.hasInitMap()) {

@@ -1215,7 +1215,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    if (Triple.isOSDarwin() || Triple.isOSWindows())
+    if (Triple.isOSDarwin() || Triple.isOSWindowsOrUEFI())
       return true;
     return false;
 
@@ -1458,9 +1458,9 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
-    // This spelling cannot express a key, and AArch64 Windows only supports
-    // B-key, so default to it there as parseBranchProtection() does.
-    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+    // This spelling cannot express a key, and AArch64 Windows and UEFI only
+    // support B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindowsOrUEFI() ? "b_key" : "a_key";
     IndirectBranches =
         (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;

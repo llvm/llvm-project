@@ -24,13 +24,12 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
-      ArgSize(0), Depth(0) {}
+      ArgSize(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
-      Depth(Caller ? Caller->Depth + 1 : 0) {
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize) {
   assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();

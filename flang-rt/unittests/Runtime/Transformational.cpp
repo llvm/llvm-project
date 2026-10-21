@@ -173,12 +173,15 @@ static void testBesselYnX0(
     return;
   }
 
+  using T = CppTypeFor<TypeCategory::Real, KIND>;
   for (int j{0}; j < (n2 - n1 + 1); ++j) {
-    EXPECT_EQ(
-        (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
-            j)),
-        (-Fortran::common::numeric_limits<
-            CppTypeFor<TypeCategory::Real, KIND>>::infinity()));
+    T value{*result.ZeroBasedIndexedElement<T>(j)};
+    // Avoid numeric_limits<T>, which may not be specialized for the REAL(16)
+    // type: only -Inf is negative and unchanged by doubling.
+    EXPECT_TRUE(value < T{0});
+    EXPECT_TRUE(value + value == value);
+    EXPECT_EQ(value,
+        static_cast<T>(-Fortran::common::numeric_limits<double>::infinity()));
   }
 }
 
