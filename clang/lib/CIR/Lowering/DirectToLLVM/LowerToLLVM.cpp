@@ -4452,7 +4452,9 @@ static void buildCtorDtorList(
 
   // Create a global array llvm.global_ctors with element type of
   // struct { i32, ptr, ptr }
-  auto ctorPFTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  cir::CIRDataLayout cirDataLayout(module);
+  auto ctorPFTy = mlir::LLVM::LLVMPointerType::get(
+      builder.getContext(), cirDataLayout.getProgramAddressSpace());
   llvm::SmallVector<mlir::Type> ctorStructFields;
   ctorStructFields.push_back(builder.getI32Type());
   ctorStructFields.push_back(ctorPFTy);
