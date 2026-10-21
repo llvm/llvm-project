@@ -72,7 +72,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @kernel_uses_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big, target_address_space(4)>
-  // CHECK:        %[[V:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big, target_address_space(4)>, !rec_Big
+  // CHECK:        %[[V:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big, target_address_space(4)>, !rec_Big
   // CHECK-NEXT:   cir.return %[[V]] : !rec_Big
 
   cir.func private @takes_big_as5(%arg0: !rec_Big)
