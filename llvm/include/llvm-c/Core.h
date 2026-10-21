@@ -661,12 +661,23 @@ LLVM_C_ABI void LLVMContextSetDiscardValueNames(LLVMContextRef C,
  * created with LLVMTargetMachineOptionsSetLibraryOptions. The ErrorMessage
  * needs to be disposed with LLVMDisposeMessage. Returns 0 on success, 1
  * otherwise.
+ *
+ * This function is not thread-safe. To configure contexts on multiple threads,
+ * call it once after initializing targets, then use
+ * LLVMContextCopyLibraryOptions.
  */
 LLVM_C_ABI LLVMBool LLVMContextParseCommandLineOptions(LLVMContextRef C,
                                                        int argc,
                                                        const char *const *argv,
                                                        const char *Overview,
                                                        char **ErrorMessage);
+
+/**
+ * Replaces the library options of Dst with those of Src. Calls with different
+ * Dst may run concurrently, but not while a target is being initialized.
+ */
+LLVM_C_ABI void LLVMContextCopyLibraryOptions(LLVMContextRef Dst,
+                                              LLVMContextRef Src);
 
 /**
  * Destroy a context instance.

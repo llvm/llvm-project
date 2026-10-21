@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -152,6 +153,11 @@ LLVMBool LLVMContextParseCommandLineOptions(LLVMContextRef C, int argc,
     return false;
   *ErrorMessage = LLVMCreateMessage(Err.c_str());
   return true;
+}
+
+void LLVMContextCopyLibraryOptions(LLVMContextRef Dst, LLVMContextRef Src) {
+  if (Dst != Src)
+    unwrap(Dst)->getLibraryOptions().assign(unwrap(Src)->getLibraryOptions());
 }
 
 void LLVMContextDispose(LLVMContextRef C) {

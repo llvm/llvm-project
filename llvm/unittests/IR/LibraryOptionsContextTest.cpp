@@ -44,6 +44,11 @@ TEST(LibraryOptionsContextTest, CAPI) {
                                                   Args, "", &Err));
   EXPECT_NE(printRet(C).find("ret void ; 0x"), std::string::npos);
 
+  LLVMContext C2;
+  LLVMContextCopyLibraryOptions(wrap(&C2), wrap(&C));
+  LLVMContextCopyLibraryOptions(wrap(&C2), wrap(&C2));
+  EXPECT_NE(printRet(C2).find("ret void ; 0x"), std::string::npos);
+
   const char *Bad[] = {"prog", "-print-inst-addrs=x"};
   ASSERT_TRUE(LLVMContextParseCommandLineOptions(wrap(&C), std::size(Bad), Bad,
                                                  "", &Err));
