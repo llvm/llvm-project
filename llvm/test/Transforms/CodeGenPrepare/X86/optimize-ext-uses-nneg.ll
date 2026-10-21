@@ -11,7 +11,7 @@ define i64 @drop_nneg_same_block(ptr %p, i1 %c) {
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ID:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[ID]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[ID]] to i64
 ; CHECK-NEXT:    br i1 [[C]], label %[[TEST:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[TEST]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[Z]] to i32
@@ -45,7 +45,7 @@ define i64 @drop_nneg_after_move_to_load(ptr %p, i1 %c) {
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ID:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[ID]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[ID]] to i64
 ; CHECK-NEXT:    br i1 [[C]], label %[[TEST:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[DIRECT:.*]]:
 ; CHECK-NEXT:    ret i64 [[Z]]
