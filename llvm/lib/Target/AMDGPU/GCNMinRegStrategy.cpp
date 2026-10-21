@@ -62,8 +62,7 @@ class GCNMinRegScheduler {
   int getReadySuccessors(const SUnit *SU) const;
   int getNotReadySuccessors(const SUnit *SU) const;
 
-  template <typename Calc>
-  size_t findMax(size_t Num, Calc C);
+  template <typename Calc> size_t findMax(size_t Num, Calc C);
 
   Candidate* pickCandidate();
 

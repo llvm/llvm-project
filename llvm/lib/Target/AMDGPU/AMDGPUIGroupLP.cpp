@@ -1175,8 +1175,8 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          size_t SuccSize = llvm::count_if(
-              Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
+          size_t SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
@@ -1215,8 +1215,8 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          size_t SuccSize = llvm::count_if(
-              Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
+          size_t SuccSize =
+              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
           if (SuccSize >= Size)
