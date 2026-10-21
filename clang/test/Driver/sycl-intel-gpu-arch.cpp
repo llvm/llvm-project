@@ -102,7 +102,8 @@
 // RUN:   | FileCheck -check-prefixes=CHK-CUDA %s
 // CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
 
-/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, or "generic".
+/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, "generic", or
+/// the numeric name of a GPU the list does not know yet.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s
@@ -112,9 +113,9 @@
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-OLD %s
 // CHK-BAD-ARCH-OLD: error: unsupported SYCL gpu architecture: bmg_g21
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60.7 -c %s 2>&1 \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
-// CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.7
+// CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-SUFFIX %s
@@ -140,7 +141,10 @@
 // CHK-NOT-CHECKED-NOT: error:
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
-// RUN:   --offload-arch=generic -c %s 2>&1 \
+// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=graniterapids --offload-arch=xe_40.11.0 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
 // CHK-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
-// CHK-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:generic)"
+// CHK-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_40.11.0)"
