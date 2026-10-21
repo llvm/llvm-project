@@ -584,6 +584,40 @@ int32_t test_mulqr_i32(int32_t a, int32_t b) {
   return __riscv_mulqr_i32(a, b);
 }
 
+/* Scalar "Q-format" Multiply with Widening Accumulate */
+
+// RV32-LABEL: define dso_local i64 @test_mqwacc_i64(
+// RV32-SAME: i64 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mqwacc.i64(i64 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_mqwacc_i64(
+// RV64-SAME: i64 noundef [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mqwacc.i64(i64 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int64_t test_mqwacc_i64(int64_t rd, int32_t a, int32_t b) {
+  return __riscv_mqwacc_i64(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_mqrwacc_i64(
+// RV32-SAME: i64 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mqrwacc.i64(i64 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_mqrwacc_i64(
+// RV64-SAME: i64 noundef [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.mqrwacc.i64(i64 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int64_t test_mqrwacc_i64(int64_t rd, int32_t a, int32_t b) {
+  return __riscv_mqrwacc_i64(rd, a, b);
+}
+
 /* Packed Splat (32-bit) */
 
 // CHECK-LABEL: define dso_local i32 @test_pmv_s_u8x4(
