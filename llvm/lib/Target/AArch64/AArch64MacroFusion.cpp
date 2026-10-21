@@ -586,7 +586,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass,
+                             &AArch64::PNRRegClass}))
     return false;
 
   // (NOT write GPR)
