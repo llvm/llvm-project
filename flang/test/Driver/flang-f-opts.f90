@@ -59,6 +59,28 @@
 ! UNKNOWN-NO-SUGGEST: error: unknown argument: '-not-an-option'{{$}}
 !
 ! ------------------------------------------------------------------------------
+! -fkeep-inline-functions and -fno-keep-inline-functions are implemented by Flang, so
+! using them must not produce the "optimization flag ... is not supported" warning, or
+! any other warning. -fno-keep-inline-functions is the default. The driver forwards only
+! the last occurrence of -fkeep-inline-functions to fc1, if that flag happens to be the
+! final one specified.
+!
+!
+! RUN: %flang -### -fkeep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-KEEP
+! RUN: %flang -### %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fno-keep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fkeep-inline-functions -fno-keep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fno-keep-inline-functions -fkeep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-KEEP
+
+! DRIVER-KEEP-NOT: warning:
+! DRIVER-KEEP: "-fc1"
+! DRIVER-KEEP-SAME: "-fkeep-inline-functions"
+
+! DRIVER-NOKEEP-NOT: warning:
+! DRIVER-NOKEEP: "-fc1"
+! DRIVER-NOKEEP-NOT: "-fkeep-inline-functions"
+!
+! ------------------------------------------------------------------------------
 ! The options in the command below are gfortran-specific optimization flags that
 ! are accepted by flang's driver but ignored. Check that the correct warning
 ! message is displayed when these are used.
@@ -68,8 +90,6 @@
 ! RUN:     -fexpensive-optimizations                                        \
 ! RUN:     -fno-expensive-optimizations                                     \
 ! RUN:     -fno-defer-pop                                                   \
-! RUN:     -fkeep-inline-functions                                          \
-! RUN:     -fno-keep-inline-functions                                       \
 ! RUN:     -freorder-blocks                                                 \
 ! RUN:     -ffloat-store                                                    \
 ! RUN:     -fgcse                                                           \
@@ -122,8 +142,6 @@
 ! CHECK-WARNING-DAG: optimization flag '-fexpensive-optimizations' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-expensive-optimizations' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-defer-pop' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported

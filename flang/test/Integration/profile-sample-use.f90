@@ -1,5 +1,5 @@
 ! Test to check the working of option "-fprofile-sample-use".
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -fprofile-sample-use=%S/inputs/pgo-sample.prof -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -fprofile-sample-use=%S/Inputs/pgo-sample.prof -o - %s | FileCheck %s
 
 ! CHECK: attributes #[[A:.*]] = { {{.*}}"use-sample-profile"{{.*}} }
 ! CHECK: !{i32 {{.*}}, !"ProfileSummary"{{.*}}}

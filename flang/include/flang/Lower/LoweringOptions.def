@@ -114,5 +114,10 @@ ENUM_LOWERINGOPT(InitLocalMode, Fortran::lower::InitLocalKind, 3,
 /// -f[no-]openacc-acc-kernels-do-concurrent-independent.
 ENUM_LOWERINGOPT(OpenACCKernelsDoConcurrentIndependent, unsigned, 1, 1)
 
+/// If true, a procedure named in !dir$ inlinealways <name> is marked so that
+/// it survives the MLIR inliner even with no remaining callers.
+/// Controlled by -fkeep-inline-functions. Off by default.
+ENUM_LOWERINGOPT(KeepInlineFunctions, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT
