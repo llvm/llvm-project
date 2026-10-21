@@ -1174,6 +1174,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
           "Barycentric built-ins require the following SPIR-V extension: "
           "SPV_KHR_fragment_shader_barycentric",
           false);
+    if (BuiltIn == SPIRV::BuiltIn::FragStencilRefEXT &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_stencil_export))
+      report_fatal_error(
+          "FragStencilRefEXT requires the following SPIR-V extension: "
+          "SPV_EXT_shader_stencil_export",
+          false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:
     case SPIRV::BuiltIn::BaseInstance:
