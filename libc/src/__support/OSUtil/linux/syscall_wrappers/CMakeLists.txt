@@ -667,6 +667,19 @@ add_header_library(
 )
 
 add_header_library(
+  pipe2
+  HDRS
+    pipe2.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.include.sys_syscall
+)
+
+add_header_library(
   posix_fadvise
   HDRS
     posix_fadvise.h

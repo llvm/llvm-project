@@ -132,6 +132,26 @@ uint32_t test_abs_u32(int32_t a) { return __riscv_abs_u32(a); }
 uint64_t test_abs_u64(int64_t a) { return __riscv_abs_u64(a); }
 #endif
 
+// CHECK-LABEL: test_sati_i32:
+// RV32:        sati{{[[:space:]]}}
+// RV64:        psati.w
+int32_t test_sati_i32(int32_t a) { return __riscv_sati_i32(a, 16); }
+
+// CHECK-LABEL: test_usati_u32:
+// RV32:        usati{{[[:space:]]}}
+// RV64:        pusati.w
+uint32_t test_usati_u32(int32_t a) { return __riscv_usati_u32(a, 16); }
+
+#if __riscv_xlen == 64
+// RV64-LABEL: test_sati_i64:
+// RV64:        sati{{[[:space:]]}}
+int64_t test_sati_i64(int64_t a) { return __riscv_sati_i64(a, 16); }
+
+// RV64-LABEL: test_usati_u64:
+// RV64:        usati{{[[:space:]]}}
+uint64_t test_usati_u64(int64_t a) { return __riscv_usati_u64(a, 16); }
+#endif
+
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs
 uint8x4_t test_pmv_s_u8x4(uint8_t x) { return __riscv_pmv_s_u8x4(x); }
