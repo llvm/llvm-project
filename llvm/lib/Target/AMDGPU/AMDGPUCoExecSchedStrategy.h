@@ -149,7 +149,7 @@ public:
 
   /// \returns the most recently scheduled SU for this HardwareUnit.
   SUnit *getLastScheduledSU() {
-    unsigned ScheduledCount = ScheduledSUs.size();
+    size_t ScheduledCount = ScheduledSUs.size();
     if (!ScheduledCount)
       return nullptr;
 
