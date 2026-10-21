@@ -351,7 +351,7 @@ private:
       // recorded pointer for the front basic block of this function.
       const BinaryBasicBlock *DstBB = FrontBlocks.lookup(DstBF);
       if (!DstBB)
-	continue;
+        continue;
 
       if (DstBB->getKnownExecutionCount() == 0)
         continue;
