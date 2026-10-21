@@ -7,7 +7,6 @@
 ; both as a read and as a write of HI/LO.
 
 ; A read inside inline assembly followed by a compiled multiply.
-; FIXME: MIPS2 lacks the two nops before the mult.
 define i32 @asm_read_then_mult(i32 %c) {
 ; MIPS2-LABEL: asm_read_then_mult:
 ; MIPS2:       # %bb.0: # %entry
@@ -21,6 +20,8 @@ define i32 @asm_read_then_mult(i32 %c) {
 ; MIPS2-EMPTY:
 ; MIPS2-NEXT:    .set pop
 ; MIPS2-NEXT:    #NO_APP
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    mult $2, $4
 ; MIPS2-NEXT:    mflo $2
 ; MIPS2-NEXT:    jr $ra
@@ -95,12 +96,13 @@ entry:
 }
 
 ; A compiled read followed by inline assembly writing LO without declaring it.
-; FIXME: MIPS2 lacks the two nops before the inline assembly.
 define i32 @read_then_asm_write_undeclared(i32 %a, i32 %b) {
 ; MIPS2-LABEL: read_then_asm_write_undeclared:
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    multu $4, $5
 ; MIPS2-NEXT:    mfhi $2
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    #APP
 ; MIPS2-NEXT:    .set push
 ; MIPS2-NEXT:    .set at
