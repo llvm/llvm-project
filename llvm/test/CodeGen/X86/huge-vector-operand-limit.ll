@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512bw -O0 | FileCheck %s
 
-; Vectors with more than SDNode::getMaxNumOperands() elements (#214666). These
+; Vectors and aggregates with more than 65535 elements (#214666, #7622). These
 ; shapes compile to a lot of code, so only completion is checked; the lane
 ; values are checked in huge-vector-operand-limit-lanes.ll.
 
@@ -27,4 +27,12 @@ define i8 @scalarized_arg_65537(<65537 x i8> %v) {
 ; CHECK: retq
   %e = extractelement <65537 x i8> %v, i32 65536
   ret i8 %e
+}
+
+define void @merge_values_65536(ptr %p, ptr %q) {
+; CHECK-LABEL: merge_values_65536:
+; CHECK: retq
+  %v = load [65536 x i8], ptr %p
+  store [65536 x i8] %v, ptr %q
+  ret void
 }

@@ -3332,9 +3332,7 @@ bool TargetLowering::SimplifyDemandedBits(
   // If we know the value of all of the demanded bits, return this as a
   // constant.
   if (!isTargetCanonicalConstantNode(Op) &&
-      DemandedBits.isSubsetOf(Known.Zero | Known.One) &&
-      (!VT.isVector() ||
-       VT.getVectorMinNumElements() <= SDNode::getMaxNumOperands())) {
+      DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     if (llvm::any_of(Op->ops(), [](SDValue V) {
           auto *C = dyn_cast<ConstantSDNode>(V);

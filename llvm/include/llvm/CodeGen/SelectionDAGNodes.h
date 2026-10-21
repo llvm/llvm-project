@@ -648,8 +648,7 @@ public:
   /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
   /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714). Currently, there are
-  /// two padding bytes after this field.
+  /// benefits (see discussion with @thakis in D120714).
   uint16_t PersistentId = 0xffff;
 
 private:
@@ -671,8 +670,8 @@ private:
   SDUse *UseList = nullptr;
 
   /// The number of entries in the Operand/Value list.
-  unsigned short NumOperands = 0;
-  unsigned short NumValues;
+  unsigned NumOperands = 0;
+  unsigned NumValues;
 
   // The ordering of the SDNodes. It roughly corresponds to the ordering of the
   // original LLVM instructions.
@@ -1232,8 +1231,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(NumValues == VTs.NumVTs &&
-           "NumValues wasn't wide enough for its operands!");
   }
 
   /// Release the operands and set this node to have zero operands.

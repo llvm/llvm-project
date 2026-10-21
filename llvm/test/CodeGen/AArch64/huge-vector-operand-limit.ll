@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -O0 -global-isel=0 | FileCheck %s
 
-; Vectors with more than SDNode::getMaxNumOperands() elements (#214666). Only two
-; lanes are used because widened loads and stores of this size combine slowly.
+; Vectors with more than 65535 elements (#214666). Only two lanes are used
+; because widened loads and stores of this size combine slowly.
 
 define i8 @widen_to_65536(ptr %p) {
 ; CHECK-LABEL: widen_to_65536:
