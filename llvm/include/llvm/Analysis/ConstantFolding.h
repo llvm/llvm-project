@@ -19,7 +19,7 @@
 #ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
-#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Compiler.h"
 #include <stdint.h>
 
@@ -29,6 +29,7 @@ namespace Intrinsic {
 using ID = unsigned;
 }
 
+class APFloat;
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
@@ -110,8 +111,10 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
                            bool AllowNonDeterministic = true);
 
 /// Evaluate \p NativeFP on \p V using the host libm, then convert the result to
-/// \p Ty. Returns nullptr if the host call raised a non-inexact floating-point
-/// exception, or if \p DenormMode is invalid or dynamic.
+/// \p Ty. Denormal inputs and results are flushed according to \p DenormMode.
+/// Returns nullptr if the host call raised a non-inexact floating-point
+/// exception, or if \p DenormMode has a dynamic input or output mode.
+/// \p DenormMode must be valid.
 LLVM_ABI Constant *
 ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
                DenormalMode DenormMode = DenormalMode::getIEEE());
