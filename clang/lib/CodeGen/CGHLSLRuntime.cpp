@@ -1210,17 +1210,18 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
 }
 
 static void
-createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
-                         unsigned Location, StringRef Name,
-                         llvm::dxbc::PSV::InterpolationMode InterpMode) {
+createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
+                       const Twine &Name, bool IsBuiltIn, unsigned Operand,
+                       llvm::dxbc::PSV::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Source->getType(), /* isConstant= */ false,
       llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  addSPIRVInterfaceDecorations(GV, /* Location */ 30, Location, InterpMode);
+  unsigned Decoration = IsBuiltIn ? /* BuiltIn */ 11 : /* Location */ 30;
+  addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   B.CreateStore(Source, GV);
 }
 
@@ -1241,8 +1242,8 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
   llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedOutputSemanticLocation += ElementCount;
-  createSPIRVLocationStore(B, CGM.getModule(), Source, Location,
-                           VariableName.str(), InterpMode);
+  createSPIRVOutputStore(B, CGM.getModule(), Source, VariableName.str(),
+                         /* IsBuiltIn= */ false, Location, InterpMode);
 }
 
 namespace {
@@ -1586,21 +1587,6 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
-static void
-createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
-                        const Twine &Name, unsigned BuiltInID,
-                        llvm::dxbc::PSV::InterpolationMode InterpMode) {
-  auto *GV = new llvm::GlobalVariable(
-      M, Source->getType(), /* isConstant= */ false,
-      llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
-      llvm::GlobalVariable::GeneralDynamicTLSModel,
-      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
-  addSPIRVInterfaceDecorations(GV, /* BuiltIn */ 11, BuiltInID, InterpMode);
-  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  B.CreateStore(Source, GV);
-}
-
 void CGHLSLRuntime::emitSystemSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
@@ -1625,9 +1611,9 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
-                              Semantic->getAttrName()->getName(),
-                              /* BuiltIn::Position */ 0, InterpMode);
+      createSPIRVOutputStore(
+          B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+          /* IsBuiltIn= */ true, /* Position */ 0, InterpMode);
       return;
     }
     break;
