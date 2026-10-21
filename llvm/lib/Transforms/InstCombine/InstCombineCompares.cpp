@@ -1455,8 +1455,10 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     // Direct comparisons on X retain the existing handling. Comparisons on an
     // expression of X are only used when the current comparison is an equality
     // comparison.
-    if (!match(DomCond, m_ICmp(DomPred, m_Value(DomX), m_APInt(DomC))) ||
-        !(Cmp.isEquality() || DomX == X))
+    if (!match(DomCond, m_ICmp(DomPred, m_Value(DomX), m_APInt(DomC))))
+      continue;
+
+    if (DomX != X && !Cmp.isEquality())
       continue;
 
     BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
