@@ -67,7 +67,7 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
     if (ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
       if (ShiftAmt->getZExtValue() == 16) {
         SDValue Result = stripBitcast(Srl.getOperand(0));
-        // V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel. If the
+        // op_sel can only select the high half of a 32-bit source. If the
         // shift source is wider (e.g. a 64-bit D16 image sample result), we
         // cannot fold it directly. Do not assign Out before this check since
         // the caller may pass the same SDValue for both In and Out.
