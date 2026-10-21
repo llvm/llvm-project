@@ -38,6 +38,8 @@ static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
     return RuntimeLibrary::darwin_libsystem_m;
   case VectorLibrary::LIBMVEC:
     return RuntimeLibrary::libmvec;
+  case VectorLibrary::MATHVEC:
+    return RuntimeLibrary::mathvec;
   case VectorLibrary::MASSV:
     return RuntimeLibrary::massv;
   case VectorLibrary::SVML:

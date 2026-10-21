@@ -22,6 +22,7 @@ enum class VectorLibrary {
   Accelerate,       // Use Accelerate framework.
   DarwinLibSystemM, // Use Darwin's libsystem_m.
   LIBMVEC,          // GLIBC Vector Math library.
+  MATHVEC,          // LLVM Vector Math library.
   MASSV,            // IBM MASS vector library.
   SVML,             // Intel short vector math library.
   SLEEFGNUABI,      // SLEEF - SIMD Library for Evaluating Elementary Functions.

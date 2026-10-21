@@ -392,6 +392,8 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Darwin libsystem_m"),
           clEnumValN(VectorLibrary::LIBMVEC, "LIBMVEC",
                      "GLIBC Vector Math library"),
+          clEnumValN(VectorLibrary::MATHVEC, "MATHVEC",
+                     "LLVM Vector Math library"),
           clEnumValN(VectorLibrary::MASSV, "MASSV", "IBM MASS vector library"),
           clEnumValN(VectorLibrary::SVML, "SVML", "Intel SVML library"),
           clEnumValN(VectorLibrary::SLEEFGNUABI, "sleefgnuabi",

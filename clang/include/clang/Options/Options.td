@@ -4069,11 +4069,11 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
              "  Note: -fveclib=libmvec on AArch64 requires GLIBC 2.40 or newer.">,
     HelpTextForVariants<[ClangOption, CC1Option],
       "Use the given vector functions library.\n"
-      "  Note: -fveclib={ArmPL,SLEEF,libmvec} implies -fno-math-errno.\n"
+      "  Note: -fveclib={ArmPL,SLEEF,libmvec,mathvec} implies -fno-math-errno.\n"
       "  Note: -fveclib=libmvec on AArch64 requires GLIBC 2.40 or newer.">,
-    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
+    Values<"Accelerate,libmvec,mathvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
-    NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
+    NormalizedValues<["Accelerate", "LIBMVEC", "MATHVEC", "MASSV", "SVML", "SLEEF",
                       "Darwin_libsystem_m", "ArmPL", "AMDLIBM", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
