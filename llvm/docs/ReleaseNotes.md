@@ -169,6 +169,10 @@ Makes programs 10x faster by doing Special New Thing.
   floating-point `atomicrmw` instructions, generalizing the previously
   AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
 
+* Introduced the `!atomic.fp.aggregation` metadata for `atomicrmw fadd` and
+  `fsub`. It allows operations performed as a single update to add up their
+  values in any order and grouping.
+
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 

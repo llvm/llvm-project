@@ -713,7 +713,7 @@ out:
 define void @hoist_atomic_fp_aggregation_both(i1 %c, ptr %p, float %v) {
 ; CHECK-LABEL: @hoist_atomic_fp_aggregation_both(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = atomicrmw fadd ptr [[P:%.*]], float [[V:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw fadd ptr [[P:%.*]], float [[V:%.*]] monotonic, align 4, !atomic.fp.aggregation [[META2]]
 ; CHECK-NEXT:    ret void
 ;
 if:
