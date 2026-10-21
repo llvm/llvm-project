@@ -4,7 +4,7 @@
 # given by --sarif-conflicts-out= containing one error-level result with
 # two relatedLocations (one per dropped candidate).
 
-# XFAIL: target={{.*}}-zos{{.*}}
+# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

@@ -8,4 +8,4 @@
 
 // MSVC, PS4, PS5 have C++ headers in the same directory as C headers.
 // UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos

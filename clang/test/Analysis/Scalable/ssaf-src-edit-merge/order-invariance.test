@@ -3,7 +3,7 @@
 # the deterministic sort in flattenFileChanges and the dedup-by-key
 # logic don't inadvertently depend on input order.
 
-# XFAIL: target={{.*}}-zos{{.*}}
+# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

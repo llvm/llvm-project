@@ -13,7 +13,7 @@
 # (file, offset, length, text), not just (file, offset), or it will
 # collaterally delete this unrelated insertion.
 
-# XFAIL: target={{.*}}-zos{{.*}}
+# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

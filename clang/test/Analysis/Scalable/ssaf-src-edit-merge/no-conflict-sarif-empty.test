@@ -2,7 +2,7 @@
 # with results: [] (empty array). The merged YAML retains both replacements.
 # Tool exits 0; stderr contains no `conflict:` line.
 
-# XFAIL: target={{.*}}-zos{{.*}}
+# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

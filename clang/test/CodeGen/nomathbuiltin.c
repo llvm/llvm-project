@@ -1,4 +1,4 @@
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 // RUN: %clang_cc1 -fno-math-builtin -emit-llvm -o - %s | FileCheck %s
 
 // Check that the -fno-math-builtin option for -cc1 is working properly.

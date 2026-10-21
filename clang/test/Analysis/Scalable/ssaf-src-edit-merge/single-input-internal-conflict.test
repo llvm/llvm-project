@@ -3,7 +3,7 @@
 # this as a within-input conflict and drops one; the tool reports the
 # cluster on stderr and exits 0.
 
-# XFAIL: target={{.*}}-zos{{.*}}
+# XFAIL: system-zos
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

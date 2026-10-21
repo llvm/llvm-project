@@ -1,4 +1,4 @@
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 // RUN: cd %S
 
 // RUN: %clang_cc1 -emit-pch -x objective-c-header %s -o %t_c00.pch -fno-pch-timestamp
