@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Runs kernels built with the AGX backend's agx-checked feature on the AGX Performance Simulator's agx_run, doing
 what a runtime does for checked mode (llvm/docs/AGXUsage.rst, "Checked mode"): it fills the hidden arguments (the
-error record, the threadgroup memory bytes and the bounds of each slot, from the buffers it maps), runs the launch
-and decodes the error record.
+error record, the threadgroup memory bytes, the bounds of each slot and the table of allocations, from the buffers it
+maps), runs the launch and decodes the error record.
 
 As a library: launch(obj, kernel, args, grid, wg, ...) -> Result. As a script, the scenario suite in
 checked_tests.py uses it.
@@ -17,6 +17,7 @@ KINDS = {1: "out of bounds", 2: "null", 3: "misaligned", 4: "threadgroup out of 
 RECORD_VA = 0x7000000
 GLOBALS_VA = 0x8000000
 BUFFER_VA = 0x1000000  # buffers at 0x1000000 * (k + 1)
+TABLE_VA = 0x6000000
 
 
 class Kernel:
@@ -27,6 +28,7 @@ class Kernel:
         self.glob_half = 0xFFFFFFFF
         self.tg_bytes = 0
         self.checked = None  # (record half, tg bytes half, [(arg, offset, lo half, hi half)])
+        self.table = None  # (table half, count half): extension 3
 
 
 def kernels(obj_path, objcopy):
@@ -58,6 +60,9 @@ def kernels(obj_path, objcopy):
                 slots = [struct.unpack_from("<4I", d, q + 20 + 16 * i) for i in range(n)]
                 k.checked = (rec, tgb, slots)
                 q += 20 + 16 * n
+            elif tag == 3:
+                k.table = struct.unpack_from("<2I", d, q + 4)
+                q += 12
             else:
                 break
         out[k.name] = k
@@ -113,10 +118,11 @@ class Result:
 
 
 def launch(obj_path, kernel, args, grid, wg, agx_run, objcopy, readelf, tg_bytes=None, claimed=0, strict=None,
-           dynamic_shared=0, pre_buffers=()):
+           dynamic_shared=0, pre_buffers=(), table=True):
     """args: per source argument, ('buf', bytes) | ('ptr', value) | ('i32', v) | ('i64', v) |
     ('param', [field, ...]) where a field is ('buf', bytes) or ('i32', v) packed in order (by-reference args).
-    pre_buffers are mapped first, at BUFFER_VA, BUFFER_VA * 2 ..., for 'ptr' arguments into them.
+    pre_buffers are mapped first, at BUFFER_VA, BUFFER_VA * 2 ..., for 'ptr' arguments into them. With table=False
+    the allocation table is left empty (count 0), as a runtime of checked-mode ABI version 1 leaves it.
     Returns a Result with the error record and every buffer's final contents."""
     k = kernels(obj_path, objcopy)[kernel]
     with tempfile.TemporaryDirectory() as t:
@@ -188,6 +194,15 @@ def launch(obj_path, kernel, args, grid, wg, agx_run, objcopy, readelf, tg_bytes
                         lo, hi = alo, ahi
                 put(lo_half, lo, 2)
                 put(hi_half, hi, 2)
+            if k.table:
+                # every allocation, sorted: the buffers and the global data
+                entries = sorted(allocs + ([(GLOBALS_VA, GLOBALS_VA + len(globals_data))] if globals_data else []))
+                if table and entries:
+                    tf = os.path.join(t, "table.bin")
+                    open(tf, "wb").write(b"".join(struct.pack("<QQ", lo, hi) for lo, hi in entries))
+                    cmd += ["--map", "%#x=%s" % (TABLE_VA, tf)]
+                    put(k.table[0], TABLE_VA, 2)
+                    put(k.table[1], len(entries), 1)
         for u, v in sorted(uniforms.items()):
             cmd += ["--uniform", "%d=%d" % (u, v)]
         shared = (k.tg_bytes if tg_bytes is None else tg_bytes) + dynamic_shared

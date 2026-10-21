@@ -230,6 +230,42 @@ kernel("source-location", INLINED, lambda: [("buf", bytes(4 * (N - 1)))], (N, 1,
        check=lambda r: r.site_text() == "store 4\tput put.h:3:7\tk inl.cu:12:5")
 
 
+# out[tid] = *ptrs[tid]: pointers loaded from memory, checked against the allocation table
+CHASE = """
+.visible .entry k(.param .u64 ptrs, .param .u64 out)
+{
+  .reg .b32 %r<3>;
+  .reg .b64 %rd<8>;
+  ld.param.u64 %rd1, [ptrs];
+  ld.param.u64 %rd2, [out];
+  mov.u32 %r1, %tid.x;
+  cvta.to.global.u64 %rd3, %rd1;
+  mul.wide.u32 %rd4, %r1, 8;
+  add.s64 %rd5, %rd3, %rd4;
+  ld.global.u64 %rd6, [%rd5];
+  ld.global.u32 %r2, [%rd6];
+  cvta.to.global.u64 %rd7, %rd2;
+  mul.wide.u32 %rd4, %r1, 4;
+  add.s64 %rd7, %rd7, %rd4;
+  st.global.u32 [%rd7], %r2;
+  ret;
+}
+"""
+
+
+def chase_args(last):
+    # data (N words) is mapped first, at BUFFER_VA; the last thread's pointer is data + 4 * last
+    ptrs = b"".join(struct.pack("<Q", rc.BUFFER_VA + 4 * (t if t < N - 1 else last)) for t in range(N))
+    return [("buf", ptrs), ("buf", bytes(4 * N))]
+
+
+kernel("pointer-chase-in-bounds", CHASE, lambda: chase_args(N - 1), (N, 1, 1), (N, 1, 1), None,
+       check=lambda r: u32s(r.buffers[2]) == tuple(100 + t for t in range(N)), allocs_first=[words(N, lambda i: 100 + i)])
+kernel("pointer-chase-past-end", CHASE, lambda: chase_args(N), (N, 1, 1), (N, 1, 1),
+       dict(kind=1, store=False, size=4, thread=(N - 1, 0, 0), addr=rc.BUFFER_VA + 4 * N),
+       allocs_first=[words(N, lambda i: 100 + i)])
+
+
 def compile_ptx(name, ptx, zoc, cpu, strict, checked, tmp):
     d = os.path.join(tmp, "%s-%s-%d-%d" % (name, cpu, strict, checked))
     os.makedirs(d, exist_ok=True)

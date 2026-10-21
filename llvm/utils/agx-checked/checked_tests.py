@@ -347,6 +347,42 @@ kernel("dynamic-shared-overflow", DYN, lambda: [("buf", words(32, lambda i: 0)),
        (32, 1, 1), dict(kind=4, store=True), check=lambda r: r.thread[0] >= 16, dynamic_shared=64)
 
 
+# Pointers loaded from memory have no slot: they are checked against the allocation table.
+CHASE = """
+define agx_kernel void @k(ptr addrspace(1) %ptrs, ptr addrspace(1) %out, i32 %n) {
+  %i = call i32 @llvm.agx.thread.position.in.grid.x()
+  %pp = getelementptr ptr addrspace(1), ptr addrspace(1) %ptrs, i32 %i
+  %p = load ptr addrspace(1), ptr addrspace(1) %pp, align 8
+  %v = load i32, ptr addrspace(1) %p, align 4
+  %po = getelementptr i32, ptr addrspace(1) %out, i32 %i
+  store i32 %v, ptr addrspace(1) %po, align 4
+  ret void
+}
+"""
+
+
+def chase_args(last):
+    # pre_buffers: data (64 words at BUFFER_VA); args: ptrs (32 pointers into data, the last to word `last`), out
+    ptrs = b"".join(struct.pack("<Q", rc.BUFFER_VA + 4 * (2 * t if t < 31 else last)) for t in range(32))
+    return [("buf", ptrs), ("buf", words(32, lambda i: 0)), ("i32", 32)]
+
+
+def chase_ok(r):
+    return list(u32s(r.buffers[2]))[:31] == [100 + 2 * t for t in range(31)]
+
+
+kernel("pointer-chase-in-bounds", CHASE, lambda: chase_args(63), (32, 1, 1), (32, 1, 1), None,
+       check=lambda r: chase_ok(r) and u32s(r.buffers[2])[31] == 163, pre_buffers=[words(64, lambda i: 100 + i)])
+kernel("pointer-chase-past-end", CHASE, lambda: chase_args(64), (32, 1, 1), (32, 1, 1),
+       dict(kind=1, store=False, size=4, addr=rc.BUFFER_VA + 256), check=lambda r: r.thread[0] == 31,
+       pre_buffers=[words(64, lambda i: 100 + i)])
+kernel("pointer-chase-straddles-end", CHASE, lambda: chase_args(63), (32, 1, 1), (32, 1, 1),
+       dict(kind=1, store=False, size=4, addr=rc.BUFFER_VA + 252),
+       check=lambda r: r.thread[0] == 31, pre_buffers=[words(64, lambda i: 100 + i)[:254]])
+kernel("pointer-chase-without-table", CHASE, lambda: chase_args(63), (32, 1, 1), (32, 1, 1), None,
+       check=lambda r: chase_ok(r), pre_buffers=[words(64, lambda i: 100 + i)], table=False)
+
+
 def poisoned(r):
     return list(u32s(r.buffers[1])) == [0] * N
 
@@ -367,7 +403,8 @@ def run_one(name, a, cpu, strict, tmp, checked=True):
     bin_ = os.path.join(a.llvm_build, "bin")
     r = rc.launch(obj, "k", args(), grid, wg, a.agx_run, os.path.join(bin_, "llvm-objcopy"),
                   os.path.join(bin_, "llvm-readelf"), claimed=kw.get("claimed", 0),
-                  dynamic_shared=kw.get("dynamic_shared", 0),
+                  dynamic_shared=kw.get("dynamic_shared", 0), pre_buffers=kw.get("pre_buffers", ()),
+                  table=kw.get("table", True),
                   strict=("g13" if cpu.startswith("agx-g13") else "g14") if strict else None)
     problems = []
     if expect is None and r.claimed:

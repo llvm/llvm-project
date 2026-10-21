@@ -48,12 +48,18 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "agx-checked-accesses"
+
+static cl::opt<bool> CheckedTable(
+    "agx-checked-table", cl::init(true), cl::Hidden,
+    cl::desc("Bounds-check device pointers of unknown origin against the "
+             "runtime's table of allocations (checked mode)"));
 
 namespace {
 
@@ -284,9 +290,9 @@ static const char *accessName(unsigned Flags) {
   return Flags & KindAtomic ? "atomic" : Flags & KindStore ? "store" : "load";
 }
 
-/// The kernel with its hidden arguments: record, threadgroup bytes, then the
-/// two bounds of each slot.
-static Function *addHiddenArgs(Kernel &K) {
+/// The kernel with its hidden arguments: record, threadgroup bytes, the two
+/// bounds of each slot, then (with Table) the allocation table and its count.
+static Function *addHiddenArgs(Kernel &K, bool Table) {
   Function &F = *K.F;
   LLVMContext &Ctx = F.getContext();
   SmallVector<Type *, 16> Params(F.getFunctionType()->params());
@@ -304,6 +310,10 @@ static Function *addHiddenArgs(Kernel &K) {
   for (unsigned S = 0; S < K.Slots.size(); ++S) {
     Hidden(Type::getInt64Ty(Ctx), ("lo" + Twine(S)).str());
     Hidden(Type::getInt64Ty(Ctx), ("hi" + Twine(S)).str());
+  }
+  if (Table) {
+    Hidden(PointerType::get(Ctx, AGX::DEVICE_ADDRESS), "table");
+    Hidden(Type::getInt32Ty(Ctx), "table-count");
   }
   FunctionType *NFTy = FunctionType::get(F.getReturnType(), Params, false);
   Function *NF = Function::Create(NFTy, F.getLinkage(), F.getAddressSpace());
@@ -378,6 +388,63 @@ static bool cannotFail(Value *Ptr, uint64_t Size, const DataLayout &DL) {
          (Off & Mask) == 0 && GV->getPointerAlignment(DL).value() > Mask;
 }
 
+/// Whether [Addr, Addr + Size) lies outside every allocation of the table:
+/// Count pairs (lo, hi) of 64-bit addresses sorted by lo, searched with a
+/// binary search. Without a table (Count = 0, a runtime of ABI version 1),
+/// only null is bad. The search is new blocks between IB's insertion point
+/// and the rest of its block, where IB is left.
+static Value *outsideTable(IRBuilder<> &IB, Value *Addr, uint64_t Size,
+                           Value *Table, Value *Count) {
+  LLVMContext &Ctx = IB.getContext();
+  Type *I32 = IB.getInt32Ty(), *I64 = IB.getInt64Ty();
+  Function *F = IB.GetInsertBlock()->getParent();
+  BasicBlock *Head = IB.GetInsertBlock();
+  BasicBlock *Rest = SplitBlock(Head, &*IB.GetInsertPoint());
+  BasicBlock *Loop = BasicBlock::Create(Ctx, "checked.table.loop", F, Rest);
+  BasicBlock *Step = BasicBlock::Create(Ctx, "checked.table.step", F, Rest);
+  BasicBlock *Found = BasicBlock::Create(Ctx, "checked.table.found", F, Rest);
+  Head->getTerminator()->eraseFromParent();
+  IRBuilder<> HB(Head);
+  Value *Null = HB.CreateICmpULT(Addr, HB.getInt64(NullLimit));
+  HB.CreateCondBr(HB.CreateICmpEQ(Count, HB.getInt32(0)), Rest, Loop);
+  // [L, H): the first entry whose lo is above Addr is at L when L = H.
+  IRBuilder<> LB(Loop);
+  PHINode *L = LB.CreatePHI(I32, 2, "l"), *H = LB.CreatePHI(I32, 2, "h");
+  L->addIncoming(LB.getInt32(0), Head);
+  H->addIncoming(Count, Head);
+  LB.CreateCondBr(LB.CreateICmpULT(L, H), Step, Found);
+  IRBuilder<> SB(Step);
+  Value *Mid = SB.CreateLShr(SB.CreateAdd(L, H), 1);
+  Value *MidLo = SB.CreateAlignedLoad(
+      I64, SB.CreateGEP(I64, Table, SB.CreateShl(SB.CreateZExt(Mid, I64), 1)),
+      Align(8));
+  Value *Below = SB.CreateICmpULE(MidLo, Addr);
+  L->addIncoming(SB.CreateSelect(Below, SB.CreateAdd(Mid, SB.getInt32(1)), L),
+                 Step);
+  H->addIncoming(SB.CreateSelect(Below, H, Mid), Step);
+  SB.CreateBr(Loop);
+  // The entry before L (the last one starting at or below Addr) must hold
+  // the whole access.
+  IRBuilder<> FB(Found);
+  Value *Before = FB.CreateSub(FB.CreateZExt(FB.CreateBinaryIntrinsic(
+                                   Intrinsic::umax, L, FB.getInt32(1)), I64),
+                               FB.getInt64(1));
+  Value *EntryHi = FB.CreateAlignedLoad(
+      I64, FB.CreateGEP(I64, Table, FB.CreateAdd(FB.CreateShl(Before, 1),
+                                                 FB.getInt64(1))),
+      Align(8));
+  Value *Inside = FB.CreateAnd(
+      FB.CreateICmpNE(L, FB.getInt32(0)),
+      FB.CreateICmpULE(FB.CreateAdd(Addr, FB.getInt64(Size)), EntryHi));
+  Value *Outside = FB.CreateNot(Inside);
+  FB.CreateBr(Rest);
+  IB.SetInsertPoint(Rest, Rest->getFirstInsertionPt());
+  PHINode *R = IB.CreatePHI(IB.getInt1Ty(), 2, "outside");
+  R->addIncoming(Null, Head);
+  R->addIncoming(Outside, Found);
+  return R;
+}
+
 static bool instrument(Kernel &K, std::string &Sites, unsigned &NextSite) {
   Function &F = *K.F;
   Module &M = *F.getParent();
@@ -411,12 +478,24 @@ static bool instrument(Kernel &K, std::string &Sites, unsigned &NextSite) {
     }
     Bases.push_back(B);
   }
+  // Pointers of unknown origin are checked against the allocation table.
+  bool Table = CheckedTable && llvm::any_of(zip(K.Accesses, Bases), [&](auto P) {
+    const Access &A = std::get<0>(P);
+    unsigned AS = A.Ptr->getType()->getPointerAddressSpace();
+    return std::get<1>(P).K == Base::Unknown &&
+           (AS == AGX::DEVICE_ADDRESS || AS == AGX::GENERIC_ADDRESS) &&
+           !cannotFail(A.Ptr, A.Size, DL);
+  });
   unsigned NumSource = F.arg_size();
-  Function &NF = *addHiddenArgs(K);
+  Function &NF = *addHiddenArgs(K, Table);
   Argument *Record = NF.getArg(NumSource);
   Argument *TGBytes = NF.getArg(NumSource + 1);
   auto Lo = [&](unsigned S) { return NF.getArg(NumSource + 2 + 2 * S); };
   auto Hi = [&](unsigned S) { return NF.getArg(NumSource + 3 + 2 * S); };
+  Argument *TableArg =
+      Table ? NF.getArg(NumSource + 2 + 2 * K.Slots.size()) : nullptr;
+  Argument *TableCount =
+      Table ? NF.getArg(NumSource + 3 + 2 * K.Slots.size()) : nullptr;
 
   // The report block: claim the record, fill it, return.
   BasicBlock *Report = BasicBlock::Create(Ctx, "checked.report", &NF);
@@ -560,6 +639,8 @@ static bool instrument(Kernel &K, std::string &Sites, unsigned &NextSite) {
         Range = Size > Bytes ? IB.getTrue()
                              : IB.CreateICmpUGT(IB.CreateSub(Addr, GVAddr),
                                                 IB.getInt64(Bytes - Size));
+      } else if (TableArg) {
+        Range = outsideTable(IB, Addr, Size, TableArg, TableCount);
       } else {
         Range = IB.CreateICmpULT(Addr, IB.getInt64(NullLimit));
       }

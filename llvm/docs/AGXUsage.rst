@@ -269,7 +269,12 @@ stack (``alloca``)            a variable offset stays within the object
 ============================  ================================================
 
 A pointer whose base cannot be traced to an argument or a global (one loaded
-from memory, for example) gets the null and alignment checks only. Bases are
+from memory, for example, or beyond the 16 bounds slots) is checked against
+the runtime's *allocation table*: a binary search finds the allocation it
+points into, which must hold the whole access. With no table (a runtime of
+version 1, or ``-agx-checked-table=false``) it gets the null and alignment
+checks only. The search costs about 80 instructions plus 20 per doubling of
+the number of allocations, per check. Bases are
 traced through address arithmetic, including the integer form front ends
 like ZLUDA use (``inttoptr`` of a 64-bit parameter plus an offset).
 
@@ -315,6 +320,16 @@ from, the byte offset of the 64-bit pointer in that argument's bytes (or
 ``0xffffffff`` when the argument itself is the pointer), and the uniform halves
 of its two bounds. The hidden arguments are not in the record's argument
 table.
+
+**Allocation table (version 2).** A kernel with checks against the table has
+two more hidden arguments after the bounds: the 64-bit address of the table
+and its 32-bit entry count. The table is ``count`` pairs of 64-bit addresses
+``(first byte, one past the last byte)`` of every live allocation (device
+memory and global data buffers), sorted by first byte, not overlapping, and
+8-byte aligned. The record gets a last extension, ``3, table half, count
+half``; a runtime of version 1, which stops at an extension it does not know,
+leaves the count 0. The table must not change while a launch that uses it
+runs (ZLUDA copies it into the launch's staging memory).
 
 The *error record* is 64 bytes of device memory, 8-byte aligned, zeroed by
 the runtime:

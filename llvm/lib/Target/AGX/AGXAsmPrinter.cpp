@@ -143,6 +143,8 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///     1, x, y, z: the kernel runs clusters of x * y * z CTAs as one
 ///     threadgroup (function attribute agx-cluster-dims): the launch divides
 ///     the grid by (x, y, z) and multiplies the threadgroup's z by x * y * z.
+///     2, 1, N, ...: checked mode (AGXUsage.rst, "Checked mode").
+///     3, table half, count half: checked mode's allocation table.
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -189,6 +191,8 @@ void AGXAsmPrinter::recordKernel() {
   }
   R.push_back(Args.size() / 3);
   R.append(Args);
+  // Extension 3 goes last: readers stop at an extension they do not know.
+  SmallVector<uint32_t, 3> TableExt;
   Attribute Slots = F.getFnAttribute("agx-checked-slots");
   if (Slots.isValid()) {
     // Checked mode: 2, version 1, N, record half, threadgroup bytes half,
@@ -214,6 +218,8 @@ void AGXAsmPrinter::recordKernel() {
       R.append({Arg, uint32_t(Off), Hidden.lookup(("lo" + Twine(S)).str()),
                 Hidden.lookup(("hi" + Twine(S)).str())});
     }
+    if (Hidden.count("table"))
+      TableExt = {3, Hidden.lookup("table"), Hidden.lookup("table-count")};
   }
   Attribute Cluster = F.getFnAttribute("agx-cluster-dims");
   if (Cluster.isValid()) {
@@ -227,6 +233,7 @@ void AGXAsmPrinter::recordKernel() {
       R.push_back(std::max(D, 1u));
     }
   }
+  R.append(TableExt);
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }
 
