@@ -490,7 +490,18 @@ llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
 //   *not* pure forwarding: it constrains a relationship (both slots
 //   must hold the same value) that a plain rename wouldn't, the same
 //   kind of real specialization as hardcoding a literal.
-bool isTrivialExtraction(const Stmt *S) {
+// - createParameters orders the extracted function's own parameters by
+//   each captured Decl's declaration order in the *enclosing* function,
+//   not by how they're used in this call. So if a later operand here
+//   refers to a Decl declared *earlier* than an operand before it (e.g.
+//   `foo(B, A)` inside `bar(int A, int B)`), the parameters end up
+//   reordered relative to this call: `extracted(int A, int B) { foo(B,
+//   A); }`. That's not a transparent pass-through either, even though
+//   this one call site still behaves the same after the compensating
+//   reorder at the call site (`extracted(A, B)`) -- `extracted`'s own
+//   signature no longer predicts its behavior the way a plain rename's
+//   would, since it silently permutes its own parameters internally.
+bool isTrivialExtraction(const Stmt *S, const SourceManager &SM) {
   if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
     if (!RS->getRetValue())
       return true;
@@ -500,24 +511,31 @@ bool isTrivialExtraction(const Stmt *S) {
   if (!Call)
     return false;
   llvm::SmallPtrSet<const Decl *, 4> SeenDecls;
+  SourceLocation LastDeclLoc;
   for (const Expr *Operand : relevantCallOperands(Call)) {
     const Decl *D = bareForwardedDecl(Operand);
     if (!D || !SeenDecls.insert(D).second)
       return false;
+    SourceLocation DeclLoc = D->getLocation();
+    if (LastDeclLoc.isValid() &&
+        !SM.isBeforeInTranslationUnit(LastDeclLoc, DeclLoc))
+      return false;
+    LastDeclLoc = DeclLoc;
   }
   return true;
 }
 
 // returns true if Child can be a single RootStmt being extracted from
 // EnclosingFunc.
-bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
+bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc,
+                      const SourceManager &SM) {
   // Extracting the body of EnclosingFunc would remove it's definition.
   assert(EnclosingFunc->hasBody() &&
          "We should always be extracting from a function body.");
   const Stmt *S = Child->ASTNode.get<Stmt>();
   if (S == EnclosingFunc->getBody())
     return false;
-  if (isTrivialExtraction(S))
+  if (isTrivialExtraction(S, SM))
     return false;
   return true;
 }
@@ -535,7 +553,8 @@ std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
   // When there is a single RootStmt, we must check if it's valid for
   // extraction.
   if (ExtZone.Parent->Children.size() == 1 &&
-      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction))
+      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction,
+                        SM))
     return std::nullopt;
   if (auto FuncRange =
           computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))

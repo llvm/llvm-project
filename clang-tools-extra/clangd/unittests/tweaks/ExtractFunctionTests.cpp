@@ -1529,16 +1529,32 @@ TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_RepeatedArg) {
               HasSubstr("extracted"));
 }
 
-TEST_F(ExtractFunctionTest, RejectPureForwardingReorderedArgs) {
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_ReorderedArgs) {
   Context = File;
-  // Passing several distinct locals in a different order than they're
-  // declared doesn't change the verdict: every argument is still
-  // independently a bare forwarded local, used exactly once each, so
-  // this is still just a rename.
-  EXPECT_EQ(apply(R"cpp(
+  // createParameters orders the extracted function's parameters by each
+  // Decl's declaration order in bar (A, then B), not by how they're used
+  // here -- so despite every argument being an independently bare,
+  // distinct local, the extracted function ends up permuting its own
+  // parameters internally (extracted(int A, int B) { foo(B, A); }): not
+  // a transparent pass-through, since its signature alone no longer
+  // predicts its behavior the way a plain rename's would.
+  EXPECT_THAT(apply(R"cpp(
     void foo(int A, int B);
     void bar(int A, int B) {
       [[foo(B, A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingPreservedArgOrder) {
+  Context = File;
+  // Same distinct locals as the reordered case above, but passed in the
+  // same order they're declared in bar: no permutation is hidden in the
+  // extracted function, so this is still just a rename.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(A, B);]]
     })cpp"),
             "unavailable");
 }
