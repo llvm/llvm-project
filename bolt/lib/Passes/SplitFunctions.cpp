@@ -342,9 +342,6 @@ private:
     const size_t ThisGI = GlobalIndices[ThisBB];
 
     for (const BinaryFunction *DstBF : BC.getOutputBinaryFunctions()) {
-      if (!shouldConsiderForCallGraph(*DstBF))
-        continue;
-
       // DstBF->front() might race as another thread might be adding
       // trampoline blocks to it, which potentially invalidates
       // BF::BasicBlocks. Do the safe thing and load a previously
