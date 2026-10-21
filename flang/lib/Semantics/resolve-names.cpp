@@ -8822,9 +8822,14 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
 void DeclarationVisitor::CheckInterfaceNameDeclaredBeforeUse(
     const parser::Name &name) {
   if (const Symbol *symbol{name.symbol}) {
+    // A declaration in a different cooked source, such as a module file,
+    // comes from an earlier compilation and cannot follow the use.
+    const parser::CookedSource *cooked{
+        context().allCookedSources().Find(name.source)};
     if (!context().HasError(*symbol) && symbol->has<ProcEntityDetails>() &&
-        symbol->HasExplicitInterface() &&
-        context().allCookedSources().Precedes(name.source, symbol->name())) {
+        symbol->HasExplicitInterface() && cooked &&
+        cooked->AsCharBlock().Contains(symbol->name()) &&
+        name.source.begin() < symbol->name().begin()) {
       Say(name,
           "'%s' must be declared before it is used as a procedure interface"_err_en_US,
           symbol->name())
@@ -12011,7 +12016,9 @@ public:
     return false;
   }
   void Post(const parser::TypeBoundProcedureStmt::WithInterface &tbps) {
-    resolver_.CheckExplicitInterface(std::get<parser::Name>(tbps.t));
+    const auto &name{std::get<parser::Name>(tbps.t)};
+    resolver_.CheckExplicitInterface(name);
+    resolver_.CheckInterfaceNameDeclaredBeforeUse(name);
   }
   void Post(const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
     if (outerScope_) {

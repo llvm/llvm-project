@@ -25,6 +25,20 @@ module m
   procedure(s_iface), pointer :: q2
 end module
 
+module m2
+  implicit none
+  type, abstract :: t
+  contains
+    !ERROR: 'q' must be declared before it is used as a procedure interface
+    procedure(q), deferred, nopass :: b
+  end type
+  abstract interface
+    subroutine s_iface()
+    end subroutine
+  end interface
+  procedure(s_iface), pointer :: q
+end module
+
 subroutine sub(a, b)
   abstract interface
     subroutine s_iface()
