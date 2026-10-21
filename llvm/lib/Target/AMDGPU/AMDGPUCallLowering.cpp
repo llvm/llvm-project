@@ -33,9 +33,9 @@ namespace {
 /// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
 static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
                                     Register ValVReg, const CCValAssign &VA,
-                                    bool isPhyRegSGPR, const GCNSubtarget &ST) {
-  if (VA.getLocVT().getSizeInBits() < 32 &&
-      (isPhyRegSGPR || !ST.useRealTrue16Insts())) {
+                                    const SIRegisterInfo *TRI) {
+  const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(VA.getLocReg());
+  if (VA.getLocVT().getSizeInBits() < 32 && TRI->getRegSizeInBits(*RC) == 32) {
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
     //
@@ -70,10 +70,9 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                         ISD::ArgFlagsTy Flags = {}) override {
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    const GCNSubtarget &ST = MIRBuilder.getMF().getSubtarget<GCNSubtarget>();
     bool isPhyRegSGPR = TRI->isSGPRReg(MRI, PhysReg);
 
-    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA, isPhyRegSGPR, ST);
+    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA, TRI);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
     // ends up in a VGPR.
@@ -126,13 +125,12 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   }
 
   void copyToReg(Register ValVReg, Register PhysReg, const CCValAssign &VA) {
-    const GCNSubtarget &ST = MIRBuilder.getMF().getSubtarget<GCNSubtarget>();
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    bool isPhyRegSGPR = TRI->isSGPRReg(MRI, PhysReg);
 
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(VA.getLocReg());
     if (VA.getLocVT().getSizeInBits() < 32 &&
-        (isPhyRegSGPR || !ST.useRealTrue16Insts())) {
+        TRI->getRegSizeInBits(*RC) == 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to
       // do a 32-bit copy, and truncate to avoid the verifier complaining
       // about it.
@@ -170,11 +168,25 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     // use WWM_COPY (or similar instructions) and mark it as foldable to enable
     // later optimization passes to eliminate the redundant readfirstlane.
     if (VA.getLocVT().getSizeInBits() < 32) {
-      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
-      auto ToSGPR = MIRBuilder
-                        .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
-                                        {MRI.getType(Copy.getReg(0))})
-                        .addReg(Copy.getReg(0));
+      const SIRegisterInfo *TRI =
+          static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+      const TargetRegisterClass *RC =
+          TRI->getMinimalPhysRegClass(VA.getLocReg());
+      LLT I32 = LLT::integer(32);
+
+      Register SrcReg;
+      if (TRI->getRegSizeInBits(*RC) < 32) {
+        LLT I16 = LLT::integer(16);
+        auto Lo = MIRBuilder.buildCopy(I16, PhysReg);
+        auto Hi = MIRBuilder.buildUndef(I16);
+        SrcReg = MIRBuilder.buildMergeLikeInstr(I32, {Lo, Hi}).getReg(0);
+      } else {
+        SrcReg = MIRBuilder.buildCopy(I32, PhysReg).getReg(0);
+      }
+
+      auto ToSGPR =
+          MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {I32})
+              .addReg(SrcReg);
       auto Extended =
           buildExtensionHint(VA, ToSGPR.getReg(0), LLT(VA.getLocVT()));
       LLT ValTy = MRI.getType(ValVReg);
