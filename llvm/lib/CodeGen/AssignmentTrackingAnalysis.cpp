@@ -384,20 +384,6 @@ public:
   }
 };
 
-void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
-                       const BlockToRPOMap &BBToOrder, RPOWorklist &Worklist,
-                       RPOWorklist &Pending) {
-  LLVM_DEBUG(dbgs() << BB.getName()
-                    << " has new OutLocs, add succs to worklist: [ ");
-  for (BasicBlock *Succ : successors(&BB)) {
-    unsigned SuccRPO = BBToOrder.lookup(Succ);
-    RPOWorklist &Target = SuccRPO > RPO ? Worklist : Pending;
-    if (Target.insert(SuccRPO))
-      LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-  }
-  LLVM_DEBUG(dbgs() << "]\n");
-}
-
 /// Tracks block revisitability (reachability from CFG backedges) and remaining
 /// successor reads so acyclic dataflow states can be retired early.
 class BlockLivenessTracker {
@@ -491,6 +477,20 @@ public:
     }
   }
 };
+
+void enqueueSuccessors(const BasicBlock &BB, unsigned RPO,
+                       const BlockToRPOMap &BBToOrder, RPOWorklist &Worklist,
+                       RPOWorklist &Pending) {
+  LLVM_DEBUG(dbgs() << BB.getName()
+                    << " has new OutLocs, add succs to worklist: [ ");
+  for (const BasicBlock *Succ : successors(&BB)) {
+    unsigned SuccRPO = BBToOrder.lookup(Succ);
+    RPOWorklist &Target = SuccRPO > RPO ? Worklist : Pending;
+    if (Target.insert(SuccRPO))
+      LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+  }
+  LLVM_DEBUG(dbgs() << "]\n");
+}
 
 /// In dwarf emission, the following sequence
 ///    1. dbg.value ... Fragment(0, 64)
