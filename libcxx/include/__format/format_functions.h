@@ -489,8 +489,7 @@ template <class _CharT>
 }
 } // namespace __format
 
-// TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
-// fires too eagerly, see http://llvm.org/PR61563.
+// This is a template to avoid instantiating the formatting machinery in every TU that includes this header.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string vformat(string_view __fmt, format_args __args) {
   auto __result = __format::__try_constant_folding(__fmt, __args);
@@ -502,8 +501,7 @@ template <class = void>
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-// TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
-// fires too eagerly, see http://llvm.org/PR61563.
+// This is a template to avoid instantiating the formatting machinery in every TU that includes this header.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(wstring_view __fmt, wformat_args __args) {
@@ -627,8 +625,7 @@ format_to(_OutIt __out_it, locale __loc, wformat_string<_Args...> __fmt, _Args&&
 }
 #    endif
 
-// TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
-// fires too eagerly, see http://llvm.org/PR61563.
+// This is a template to avoid instantiating the formatting machinery in every TU that includes this header.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string
 vformat(locale __loc, string_view __fmt, format_args __args) {
@@ -638,8 +635,7 @@ vformat(locale __loc, string_view __fmt, format_args __args) {
 }
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-// TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
-// fires too eagerly, see http://llvm.org/PR61563.
+// This is a template to avoid instantiating the formatting machinery in every TU that includes this header.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(locale __loc, wstring_view __fmt, wformat_args __args) {

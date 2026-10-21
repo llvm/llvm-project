@@ -328,12 +328,12 @@ println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, 
 #    endif // _LIBCPP_HAS_UNICODE
 }
 
-template <class _Void = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class _Void = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
   std::print(__stream, (_Void(), "\n"));
 }
 
-template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println() {
   println(stdout);
 }
@@ -344,26 +344,26 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void println(format_string<_Args...>
 }
 
 #    if _LIBCPP_HAS_UNICODE
-template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI inline void
 vprint_unicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__output_unicode(__stream, std::vformat(__fmt, __args));
 }
 
-template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args __args) {
   std::vprint_unicode(stdout, __fmt, __args);
 }
 
 #    endif // _LIBCPP_HAS_UNICODE
 
-template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI inline void
 vprint_nonunicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__output_nonunicode(__stream, std::vformat(__fmt, __args));
 }
 
-template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
+template <class = void> // Template to avoid eagerly instantiating std::vformat, which is costly
 _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_args __args) {
   std::vprint_nonunicode(stdout, __fmt, __args);
 }

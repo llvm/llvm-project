@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// XFAIL: availability-fp_to_chars-missing
-
 // The sample code is based on the bug report
 // https://llvm.org/PR81590
 //
