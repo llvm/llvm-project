@@ -43,7 +43,6 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
