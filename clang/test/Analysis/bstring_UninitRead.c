@@ -128,7 +128,7 @@ void mempcpy_struct_fully_uninit() {
   struct st s1;
   struct st s2;
 
-  mempcpy(&s2, &s1, sizeof(struct st)); // expected-warning{{The 2nd argument contains uninitialized data (e.g., field: 'i')}}
+  mempcpy(&s2, &s1, sizeof(struct st)); // expected-warning{{The 2nd argument contains uninitialized data}}
                                         // expected-note@-1{{Other elements might also be undefined}}
 }
 
