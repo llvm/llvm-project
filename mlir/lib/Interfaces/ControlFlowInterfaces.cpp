@@ -247,69 +247,33 @@ static SmallVector<Region *> getSuccessorRegionsOf(Region *region) {
   return filterRegionSuccessors(successors);
 }
 
-/// Stop condition for `traverseRegionGraph`. The traversal is interrupted if
-/// this function returns "true" for a successor region.
-using StopConditionFn = function_ref<bool(Region *)>;
-
-/// Traverse the region graph starting at `begin`. The traversal is interrupted
-/// if `stopCondition` evaluates to "true" for a successor region. In that case,
-/// this function returns "true". Otherwise, if the traversal was not
-/// interrupted, this function returns "false".
-static bool traverseRegionGraph(Region *begin,
-                                StopConditionFn stopConditionFn) {
-  auto op = cast<RegionBranchOpInterface>(begin->getParentOp());
-  LDBG() << "Starting region graph traversal from region #"
-         << begin->getRegionNumber() << " in operation " << op->getName();
-
-  SmallVector<bool> visited(op->getNumRegions(), false);
-  visited[begin->getRegionNumber()] = true;
-  LDBG() << "Initialized visited array with " << op->getNumRegions()
-         << " regions";
-
-  SmallVector<Region *> worklist = getSuccessorRegionsOf(begin);
-  LDBG() << "Initial worklist size: " << worklist.size();
-
-  // Process all regions in the worklist via DFS.
-  while (!worklist.empty()) {
-    Region *nextRegion = worklist.pop_back_val();
-    LDBG() << "Processing region #" << nextRegion->getRegionNumber()
-           << " from worklist (remaining: " << worklist.size() << ")";
-
-    // Check the stop condition before the visited set. `begin` starts out
-    // visited, and reaching it again must still stop the traversal.
-    if (stopConditionFn(nextRegion)) {
-      LDBG() << "Stop condition met for region #"
-             << nextRegion->getRegionNumber() << ", returning true";
-      return true;
-    }
-    if (!nextRegion->getParentOp()) {
-      llvm::errs() << "Region " << *nextRegion << " has no parent op\n";
-      return false;
-    }
-    if (visited[nextRegion->getRegionNumber()]) {
-      LDBG() << "Region #" << nextRegion->getRegionNumber()
-             << " already visited, skipping";
-      continue;
-    }
-    visited[nextRegion->getRegionNumber()] = true;
-    LDBG() << "Marking region #" << nextRegion->getRegionNumber()
-           << " as visited";
-    llvm::append_range(worklist, getSuccessorRegionsOf(nextRegion));
-  }
-
-  LDBG() << "Traversal completed, returning false";
-  return false;
-}
-
-/// Return `true` if region `r` is reachable from region `begin` according to
-/// the RegionBranchOpInterface (by taking a branch).
+/// Return `true` if region `r` is reachable from region `begin` by taking at
+/// least one branch. So `begin` reaches itself only if it is on a cycle.
 static bool isRegionReachable(Region *begin, Region *r) {
   assert(begin->getParentOp() == r->getParentOp() &&
          "expected that both regions belong to the same op");
-  return traverseRegionGraph(begin, [&](Region *nextRegion) {
-    // Interrupt traversal if `r` was reached.
-    return nextRegion == r;
-  });
+  LDBG() << "Checking if region #" << r->getRegionNumber()
+         << " is reachable from region #" << begin->getRegionNumber();
+
+  SmallVector<bool> visited(begin->getParentOp()->getNumRegions(), false);
+  visited[begin->getRegionNumber()] = true;
+  SmallVector<Region *> worklist = getSuccessorRegionsOf(begin);
+  while (!worklist.empty()) {
+    Region *nextRegion = worklist.pop_back_val();
+    // Check `r` before the visited set. `begin` starts out visited, and
+    // reaching it again must still count.
+    if (nextRegion == r) {
+      LDBG() << "Region #" << r->getRegionNumber() << " is reachable";
+      return true;
+    }
+    if (visited[nextRegion->getRegionNumber()])
+      continue;
+    visited[nextRegion->getRegionNumber()] = true;
+    llvm::append_range(worklist, getSuccessorRegionsOf(nextRegion));
+  }
+
+  LDBG() << "Region #" << r->getRegionNumber() << " is not reachable";
+  return false;
 }
 
 /// Return `true` if `a` and `b` are in mutually exclusive regions.
@@ -364,16 +328,12 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
 
     // `a` and `b` are in mutually exclusive regions if both regions are
     // distinct and neither region is reachable from the other region.
-    bool regionsAreDistinct = (regionA != regionB);
-    bool aNotReachableFromB = !isRegionReachable(regionA, regionB);
-    bool bNotReachableFromA = !isRegionReachable(regionB, regionA);
-
-    LDBG() << "Regions distinct: " << regionsAreDistinct
-           << ", A not reachable from B: " << aNotReachableFromB
-           << ", B not reachable from A: " << bNotReachableFromA;
-
-    bool mutuallyExclusive =
-        regionsAreDistinct && aNotReachableFromB && bNotReachableFromA;
+    if (regionA == regionB) {
+      LDBG() << "Operations are in the same region";
+      return false;
+    }
+    bool mutuallyExclusive = !isRegionReachable(regionA, regionB) &&
+                             !isRegionReachable(regionB, regionA);
     LDBG() << "Operations are mutually exclusive: " << mutuallyExclusive;
 
     return mutuallyExclusive;

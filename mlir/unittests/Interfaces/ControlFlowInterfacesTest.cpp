@@ -383,6 +383,20 @@ TEST_F(RegionGraphTest, DiamondIsNotALoop) {
   EXPECT_FALSE(op.hasLoop());
 }
 
+TEST_F(RegionGraphTest, DiamondReachability) {
+  RegionBranchOpInterface op = createRegionGraphOp(
+      /*entries=*/{0}, /*successors=*/{{1, 2}, {3}, {3}, {}});
+  auto terminator = [&](unsigned index) {
+    return &op->getRegion(index).front().front();
+  };
+  for (unsigned i = 0; i < 4; ++i)
+    EXPECT_FALSE(op.isRepetitiveRegion(i)) << "region " << i;
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(terminator(1), terminator(2)));
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(terminator(2), terminator(1)));
+  EXPECT_FALSE(insideMutuallyExclusiveRegions(terminator(0), terminator(3)));
+  EXPECT_FALSE(insideMutuallyExclusiveRegions(terminator(3), terminator(1)));
+}
+
 TEST_F(RegionGraphTest, LoopAfterEntryRegion) {
   RegionBranchOpInterface op =
       createRegionGraphOp(/*entries=*/{0}, /*successors=*/{{1}, {1}});
