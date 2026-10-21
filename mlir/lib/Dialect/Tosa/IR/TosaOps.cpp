@@ -3720,6 +3720,11 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     return failure();
   }
 
+  // Non-positive scale values are invalid, so the output shape cannot be
+  // inferred here. They are reported by the ERROR_IF check in tosa-validate.
+  if (llvm::any_of(scaleInt, [](int64_t s) { return s <= 0; }))
+    return failure();
+
   // Compute the output shape based on attributes: scale, offset, and border.
   const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
