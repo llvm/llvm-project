@@ -35,8 +35,6 @@ public:
 
   static void Terminate();
 
-  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
-
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
@@ -476,7 +474,6 @@ private:
   // of the types
   mutable llvm::SmallVector<std::unique_ptr<plugin::fortran::FortranType>>
       m_types;
-  std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
 
   TypeSystemFortran(const TypeSystemFortran &) = delete;
   const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;

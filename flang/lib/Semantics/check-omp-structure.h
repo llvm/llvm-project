@@ -269,7 +269,8 @@ private:
 
   // check-omp-atomic.cpp
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
-      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
+      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock,
+      bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
       std::string_view name, bool checkTypeOnPointer = true);

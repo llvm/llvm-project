@@ -647,7 +647,8 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
       .addReg(LoongArch::R1)
       .addDisp(Symbol, 0,
                LoongArchII::encodeFlags(LoongArchII::MO_DESC_CALL,
-                                        EnableRelax && !Large));
+                                        EnableRelax && !Large))
+      .setOperandDead(0); // $r1
   BuildMI(MBB, MBBI, DL, TII->get(ADD), DestReg)
       .addReg(LoongArch::R4)
       .addReg(LoongArch::R2);

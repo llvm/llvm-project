@@ -464,6 +464,14 @@ __packed_pabs(abs_u32, int32_t, uint32_t)
 __packed_pabs(abs_u64, int64_t, uint64_t)
 #endif
 
+/* Scalar Saturation */
+#define __riscv_sati_i32(rs1, width) __builtin_riscv_sati_i32(rs1, width)
+#define __riscv_usati_u32(rs1, width) __builtin_riscv_usati_u32(rs1, width)
+#if __riscv_xlen == 64
+#define __riscv_sati_i64(rs1, width) __builtin_riscv_sati_i64(rs1, width)
+#define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
+#endif
+
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
   static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \
