@@ -285,7 +285,6 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
     // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
     // or none if the loop is empty. If lb + step wraps, the loop has at most
     // one iteration and split falls back to lb, so the main loop does the work.
-    // use signed ops (MinSIOp, MaxSIOp)
     Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
     Value capped = b.createOrFold<arith::MinSIOp>(loc, sum, ubVal);
     splitBound = b.createOrFold<arith::MaxSIOp>(loc, lbVal, capped);

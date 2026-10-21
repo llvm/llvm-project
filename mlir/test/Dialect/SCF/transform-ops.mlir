@@ -75,7 +75,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-
 // -----
 
 // CHECK-LABEL: @loop_peel_first_iter_op
