@@ -113,9 +113,10 @@ class Result:
 
 
 def launch(obj_path, kernel, args, grid, wg, agx_run, objcopy, readelf, tg_bytes=None, claimed=0, strict=None,
-           dynamic_shared=0):
+           dynamic_shared=0, pre_buffers=()):
     """args: per source argument, ('buf', bytes) | ('ptr', value) | ('i32', v) | ('i64', v) |
     ('param', [field, ...]) where a field is ('buf', bytes) or ('i32', v) packed in order (by-reference args).
+    pre_buffers are mapped first, at BUFFER_VA, BUFFER_VA * 2 ..., for 'ptr' arguments into them.
     Returns a Result with the error record and every buffer's final contents."""
     k = kernels(obj_path, objcopy)[kernel]
     with tempfile.TemporaryDirectory() as t:
@@ -144,6 +145,8 @@ def launch(obj_path, kernel, args, grid, wg, agx_run, objcopy, readelf, tg_bytes
             for w in range(words):
                 uniforms[half // 2 + w] = (value >> (32 * w)) & 0xFFFFFFFF
 
+        for data in pre_buffers:
+            buffer(data)
         arg_bytes = []
         for (kind, *v), (akind, nbytes, half) in zip(args, k.args):
             if kind == "param":

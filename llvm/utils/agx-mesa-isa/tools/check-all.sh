@@ -13,6 +13,9 @@
 #   sail       the Sail AGX model against Mesa's forms and corpus
 #   checked    agx-checked kernels on the simulator: each bug caught, correct
 #              kernels unchanged (llvm/utils/agx-checked/checked_tests.py)
+#   zchecked   checked mode through ZLUDA: PTX built by zoc --agx-checked on
+#              the simulator (llvm/utils/agx-checked/zluda_tests.py), and the
+#              runtime's record decoding and fault dump replayed in agx_run
 #
 #   check-all.sh [-k CHECK,...]
 #
@@ -145,6 +148,19 @@ checked() {
   python3 -I "$LLVM/utils/agx-checked/checked_tests.py" --llvm-build "$LLVM_BUILD" --agx-run "$run_"
 }
 
+zchecked() {
+  have "${LLVM_BUILD:-}" || skip "LLVM_BUILD unset"
+  have "${SIMULATOR:-}" || skip "SIMULATOR unset"
+  have "${ZLUDA:-}" || skip "ZLUDA unset"
+  run_="$SIMULATOR/rust/target/release/agx_run"
+  [ -x "$run_" ] || (cd "$SIMULATOR/rust" && cargo build -q --release --bin agx_run) || exit 1
+  (cd "$ZLUDA" && ZLUDA_LLVM_BUILD_DIR="$LLVM_BUILD" cargo build -q --release -p compiler \
+    --no-default-features --features agx) || exit 1
+  python3 -I "$LLVM/utils/agx-checked/zluda_tests.py" --zoc "$ZLUDA/target/release/zoc" \
+    --llvm-build "$LLVM_BUILD" --agx-run "$run_" || exit 1
+  (cd "$ZLUDA" && AGX_RUN="$run_" cargo test -q -p agx_runtime -p zluda_agx)
+}
+
 run tables tables
 run fuzz fuzz
 run lit lit
@@ -155,4 +171,5 @@ run simulator simulator
 run zluda zluda
 run sail sail
 run checked checked
+run zchecked zchecked
 exit $FAILED

@@ -321,9 +321,17 @@ after the launch has finished. It keeps the error until the context is reset
 
 *Check sites* are described by the constant global ``__agx_checked_sites``
 (in the module's global data), a text with one line per site:
-``<site>\t<kind>\t<frame>[\t<frame>...]\n``, where each frame is ``<function>
+``<site>\t<access> <size>\t<frame>[\t<frame>...]\n``, where the access is
+``load``, ``store`` or ``atomic`` and each frame is ``<function>
 <file>:<line>:<column>``, the innermost (inlined) one first, from the debug
 locations. Without debug information the frame is the kernel's name.
+
+ZLUDA's ``zluda_agx`` implements the runtime side (``zoc --agx-checked``,
+``ZLUDA_AGX_CHECKED=1``; its ``docs/src/agx.md``, "Checked mode").
+``llvm/utils/agx-checked/run_checked.py`` does the same for the AGX
+Performance Simulator's ``agx_run``; ``checked_tests.py`` (IR kernels) and
+``zluda_tests.py`` (PTX through ``zoc``) check on it that each bug is reported
+with the right fields and that correct kernels are unchanged.
 
 Occupancy attributes
 --------------------
