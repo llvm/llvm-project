@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Pass.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
@@ -68,11 +69,11 @@ public:
   void addILPOpts(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
-  void addPostFastRegAllocRewrite(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
   Expected<bool>
   addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -200,11 +201,6 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(X86FastPreTileConfigPass(), PMW);
 }
 
-void X86CodeGenPassBuilder::addPostFastRegAllocRewrite(
-    PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
-}
-
 void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86LowerTileCopyPass(), PMW);
   addMachineFunctionPass(X86FPStackifierPass(), PMW);
@@ -320,6 +316,13 @@ static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
                                       const Register Reg) {
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
+}
+
+Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) {
+  Error PossibleError = Base::addRegAssignAndRewriteFast(PMW);
+  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
+  return PossibleError;
 }
 
 Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
