@@ -865,7 +865,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         default:
           llvm_unreachable("unexpected intrinsic");
         }
-        if (TL->getLibcallImpl(LC) != RTLIB::Unsupported)
+        if (TL->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
+            RTLIB::Unsupported)
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });

@@ -331,6 +331,8 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
+  if (Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   bool RegexMatches = true;
   if (ParsedFunctionRegex.isValid())
     RegexMatches = ParsedFunctionRegex.match(Fn.getName());
@@ -397,7 +399,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     ++IIRB.Epoch;
 
     IIRB.IRB.SetInsertPoint(
-        cast<Function>(FPtr)->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+        cast<Function>(FPtr)->getEntryBlock().getFirstNonPHIOrAlloca());
     ensureDbgLoc(IIRB.IRB);
     IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
     IIRB.returnAllocas();
@@ -1656,7 +1658,7 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
     if (!Reload) {
       Reload = new LoadInst(
           GV.getType(), ShadowGV, GV.getName() + ".shadow_load",
-          UserI->getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+          UserI->getFunction()->getEntryBlock().getFirstNonPHIOrAlloca());
       IIRB.NewInsts.insert({Reload, IIRB.Epoch});
     }
     Worklist.push_back({UserI, &UserU});

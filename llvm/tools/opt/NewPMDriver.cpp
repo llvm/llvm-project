@@ -473,7 +473,7 @@ bool llvm::runPassPipeline(
     Debugify.registerCallbacks(PIC, MAM);
   }
 
-  PipelineTuningOptions PTO;
+  PipelineTuningOptions PTO(&M.getContext().getLibraryOptions());
   // LoopUnrolling defaults on to true and DisableLoopUnrolling is initialized
   // to false above so we shouldn't necessarily need to check whether or not the
   // option has been enabled.

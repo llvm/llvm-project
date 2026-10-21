@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Constants.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,14 +35,6 @@
 
 using namespace llvm;
 using namespace PatternMatch;
-
-// As set of temporary options to help migrate how splats are represented.
-static cl::opt<bool> UseConstantIntForFixedLengthSplat(
-    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantIntForScalableSplat(
-    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantInt's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -1585,7 +1578,9 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = isa<ConstantFP>(C);
-  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
+  bool isSplatInt =
+      isa<ConstantInt>(C) &&
+      getIROptions(C->getContext()).use_constant_int_for_fixed_length_splat;
   bool isSplatByte = isa<ConstantByte>(C);
   bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
@@ -1642,7 +1637,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
-      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+      if (isa<ConstantInt>(V) &&
+          getIROptions(V->getContext()).use_constant_int_for_fixed_length_splat)
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
     }
@@ -1659,7 +1655,8 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   // Maintain special handling of zero.
   if (!V->isNullValue()) {
-    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+    if (isa<ConstantInt>(V) &&
+        getIROptions(V->getContext()).use_constant_int_for_scalable_splat)
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
   }

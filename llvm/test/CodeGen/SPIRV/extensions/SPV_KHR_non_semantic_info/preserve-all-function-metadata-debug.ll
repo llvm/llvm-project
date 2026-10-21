@@ -1,20 +1,21 @@
-; Adapted from the SPIRV-LLVM-Translator --spirv-preserve-auxdata forward-path
-; tests. Debug info (!dbg) must never be emitted as NonSemantic.AuxData. The
-; "keep-me" attribute is a positive control: it confirms the feature is active,
-; so the absence of a debug record is meaningful rather than the feature being
-; off.
+; Debug info (!dbg) must never be emitted as NonSemantic.AuxData. The "keep-me"
+; attribute is a positive control: it confirms the feature is active, so the
+; absence of a debug record is meaningful rather than the feature being off.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#Attr:]] = OpString "keep-me"
 ; CHECK-DAG: OpName %[[#Fcn:]] "foo"
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 
-; CHECK: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn]] %[[#Attr]]
-; CHECK-NOT: OpExtInst %[[#VoidT]] %[[#Import]]
+; CHECK: %[[#]] = OpExtInstWithForwardRefsKHR %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn]] %[[#Attr]]
+; CHECK-NOT: OpExtInst{{(WithForwardRefsKHR)?}} %[[#VoidT]] %[[#Import]]
 
 target triple = "spir64-unknown-unknown"
 

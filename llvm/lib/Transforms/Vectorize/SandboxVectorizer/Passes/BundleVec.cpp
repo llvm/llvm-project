@@ -205,9 +205,8 @@ Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
 Action *BundleVec::vectorizeRec(BndlRef<Value *> Bndl,
                                 BndlRef<Value *> UserBndl, unsigned Depth,
                                 LegalityAnalysis &Legality) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
-  bool StopForDebug = DebugBndlCnt++ >= Opts.sbvec_stop_bndl &&
-                      Opts.sbvec_stop_bndl != SBVecStopDisabled;
+  bool StopForDebug = DebugBndlCnt++ >= Opts->sbvec_stop_bndl &&
+                      Opts->sbvec_stop_bndl != SBVecStopDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
   const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
@@ -479,7 +478,7 @@ Value *BundleVec::emitVectors() {
       ActionPtr->Vec = NewVec;
     }
 #ifndef NDEBUG
-    if (VectorizeOptions::Global.sbvec_always_verify) {
+    if (Opts->sbvec_always_verify) {
       // This helps find broken IR by constantly verifying the function. Note
       // that this is very expensive and should only be used for debugging.
       Instruction *I0 = isa<Instruction>(Bndl[0])
@@ -495,10 +494,9 @@ Value *BundleVec::emitVectors() {
 
 bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
                              LegalityAnalysis &Legality) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
   Change = false;
-  if (LLVM_UNLIKELY(InvocationCnt++ >= Opts.sbvec_stop_at &&
-                    Opts.sbvec_stop_at != SBVecStopDisabled))
+  if (LLVM_UNLIKELY(InvocationCnt++ >= Opts->sbvec_stop_at &&
+                    Opts->sbvec_stop_at != SBVecStopDisabled))
     return false;
   Legality.clear();
   Actions.clear();
@@ -513,6 +511,7 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
 }
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
+  Opts = &Rgn.getContext().getLibraryOptions().get<VectorizeOptions>();
   const auto &SeedSlice = Rgn.getAux();
   if (SeedSlice.size() < 2)
     return false;

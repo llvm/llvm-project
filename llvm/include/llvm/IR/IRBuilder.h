@@ -231,7 +231,7 @@ public:
   /// instructions that are at the start.
   void SetInsertPointPastAllocas(Function *F) {
     BB = &F->getEntryBlock();
-    InsertPt = BB->getFirstNonPHIOrDbgOrAlloca();
+    InsertPt = BB->getFirstNonPHIOrAlloca();
   }
 
   /// Set location information used by debugging information.
@@ -2928,14 +2928,16 @@ private:
   }
 
 public:
-  // TODO: Deprecate ctors accepting LLVMContext.
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter)
       : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder),
         Inserter(Inserter) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder)
       : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   explicit IRBuilder(LLVMContext &C)
       : IRBuilderBase(C, this->Folder, CallInsertHelper) {}
 

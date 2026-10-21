@@ -837,10 +837,11 @@ void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
     if (scope.isEHCleanup())
       cleanupFlags.setIsEHCleanupKind();
 
-    // A captured cleanup may be guarded by an active flag. A loop condition
-    // variable's destructor cleanup has one that is false while its
+    // A captured cleanup may be guarded by an active flag. The destructor
+    // cleanups of a loop condition variable and of the temporaries that its
+    // initializer lifetime-extends have one that is false while its
     // initializer runs, so a throwing initializer does not destroy the
-    // not-yet-constructed variable. The lifetime-end cleanup has no flag
+    // not-yet-constructed variables. The lifetime-end cleanup has no flag
     // because its lifetime starts before initialization. For a loop, each
     // emission serves both the normal per-iteration exit and the EH unwind
     // path.

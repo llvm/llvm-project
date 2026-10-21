@@ -88,13 +88,6 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return OffloadArch::getUnknown();
 }
 
-void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values) {
-#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  Values.push_back(NAME);
-#include "llvm/TargetParser/NVPTXTargetParser.def"
-  llvm::AMDGPU::fillValidArchListAMDGCN(Values, llvm::Triple::NoSubArch);
-}
-
 OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch) {
   llvm::AMDGPU::GPUKind AK = llvm::AMDGPU::getGPUKindFromSubArch(SubArch);
   if (AK == llvm::AMDGPU::GK_NONE)
