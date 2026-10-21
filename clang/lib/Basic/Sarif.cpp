@@ -162,11 +162,16 @@ static json::Object createTextRegion(const SourceManager &SM,
   return Region;
 }
 
-static json::Object createLocation(json::Object &&PhysicalLocation,
-                                   StringRef Message = "") {
-  json::Object Ret{{"physicalLocation", std::move(PhysicalLocation)}};
+/// \internal
+/// SARIF allows a location with only a message and no physicalLocation.
+static json::Object
+createLocation(std::optional<json::Object> &&PhysicalLocation,
+               StringRef Message = "") {
+  json::Object Ret;
+  if (PhysicalLocation)
+    Ret["physicalLocation"] = std::move(*PhysicalLocation);
   if (!Message.empty())
-    Ret.insert({"message", createMessage(Message)});
+    Ret["message"] = createMessage(Message);
   return Ret;
 }
 
@@ -205,15 +210,16 @@ createThreadFlowLocation(json::Object &&Location,
 }
 ///  @}
 
-json::Object
+std::optional<json::Object>
 SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
-  assert(R.isValid() &&
-         "Cannot create a physicalLocation from invalid SourceRange!");
+  if (R.isInvalid())
+    return std::nullopt;
   assert(R.isCharRange() &&
          "Cannot create a physicalLocation from a token range!");
   FullSourceLoc Start{R.getBegin(), SourceMgr};
   OptionalFileEntryRef FE = Start.getExpansionLoc().getFileEntryRef();
-  assert(FE && "Diagnostic does not exist within a valid file!");
+  if (!FE)
+    return std::nullopt;
 
   const std::string &FileURI = fileNameToURI(getFileName(*FE));
   auto I = CurrentArtifacts.find(FileURI);
@@ -297,7 +303,11 @@ void SarifDocumentWriter::endRun() {
   SmallVector<std::pair<StringRef, SarifArtifact>, 0> Vec;
   for (const auto &[K, V] : CurrentArtifacts)
     Vec.emplace_back(K, V);
-  llvm::sort(Vec, llvm::less_first());
+  // artifactLocation.index refers to the position in this array.
+  llvm::sort(Vec, [](const std::pair<StringRef, SarifArtifact> &L,
+                     const std::pair<StringRef, SarifArtifact> &R) {
+    return L.second.Location.Index < R.second.Location.Index;
+  });
   for (const auto &[_, A] : Vec) {
     json::Object Loc{{"uri", A.Location.URI}};
     if (A.Location.Index.has_value()) {
@@ -328,8 +338,8 @@ SarifDocumentWriter::createThreadFlows(ArrayRef<ThreadFlow> ThreadFlows) {
   json::Object Ret{{"locations", json::Array{}}};
   json::Array Locs;
   for (const auto &ThreadFlow : ThreadFlows) {
-    json::Object PLoc = createPhysicalLocation(ThreadFlow.Range);
-    json::Object Loc = createLocation(std::move(PLoc), ThreadFlow.Message);
+    json::Object Loc = createLocation(createPhysicalLocation(ThreadFlow.Range),
+                                      ThreadFlow.Message);
     Locs.emplace_back(
         createThreadFlowLocation(std::move(Loc), ThreadFlow.Importance));
   }
@@ -344,21 +354,24 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
 
 void SarifDocumentWriter::createRun(StringRef ShortToolName,
                                     StringRef LongToolName,
-                                    StringRef ToolVersion) {
+                                    StringRef ToolVersion,
+                                    StringRef InformationUri) {
   // Clear resources associated with a previous run.
   endRun();
 
   // Signify a new run has begun.
   Closed = false;
+  StringRef EffectiveInformationUri =
+      InformationUri.empty() ? "https://clang.llvm.org/docs/UsersManual.html"
+                             : InformationUri;
 
   json::Object Tool{
-      {"driver",
-       json::Object{{"name", ShortToolName},
-                    {"fullName", LongToolName},
-                    {"language", "en-US"},
-                    {"version", ToolVersion},
-                    {"informationUri",
-                     "https://clang.llvm.org/docs/UsersManual.html"}}}};
+      {"driver", json::Object{{"name", ShortToolName},
+                              {"fullName", LongToolName},
+                              {"language", "en-US"},
+                              {"version", ToolVersion},
+                              {"informationUri", EffectiveInformationUri},
+                              {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},
                       {"artifacts", {}},
@@ -399,21 +412,30 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     Ret["hostedViewerUri"] = Result.HostedViewerURI;
   }
 
-  if (!Result.Locations.empty()) {
-    json::Array Locs;
-    for (auto &Range : Result.Locations) {
-      Locs.emplace_back(createLocation(createPhysicalLocation(Range)));
-    }
-    Ret["locations"] = std::move(Locs);
+  if (!Result.Properties.empty()) {
+    json::Object Properties;
+    for (const auto &[Key, Value] : Result.Properties)
+      Properties[Key.str()] = Value;
+    Ret["properties"] = std::move(Properties);
   }
 
-  if (!Result.RelatedLocations.empty()) {
-    json::Array ReLocs;
-    for (auto &Range : Result.RelatedLocations) {
-      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
-    }
-    Ret["relatedLocations"] = std::move(ReLocs);
+  json::Array Locs;
+  for (const auto &Range : Result.Locations)
+    if (std::optional<json::Object> PL = createPhysicalLocation(Range))
+      Locs.emplace_back(createLocation(std::move(PL)));
+  if (!Locs.empty())
+    Ret["locations"] = std::move(Locs);
+
+  // The schema requires relatedLocations items to be unique.
+  json::Array ReLocs;
+  for (const auto &[Range, Message] : Result.RelatedLocations) {
+    json::Value Loc = createLocation(createPhysicalLocation(Range), Message);
+    if (!Loc.getAsObject()->empty() && !llvm::is_contained(ReLocs, Loc))
+      ReLocs.emplace_back(std::move(Loc));
   }
+
+  if (!ReLocs.empty())
+    Ret["relatedLocations"] = std::move(ReLocs);
 
   if (!Result.PartialFingerprints.empty()) {
     json::Object fingerprints = {};
