@@ -4238,18 +4238,25 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
       %e = fadd float %d, 1.0
       %div.var = fdiv float 1.0, %e
       %div.var.arcp = fdiv arcp float 1.0, %e
+      %div.nested.arcp = fdiv arcp float 1.0, %div.var
       %min = call float @llvm.minnum.f32(float %u, float 1.0)
       %min.lhs = call float @llvm.minnum.f32(float 1.0, float %u)
       %minimumnum = call float @llvm.minimumnum.f32(float %u, float 1.0)
       %min.var = call float @llvm.minnum.f32(float %u, float %d)
       %maximumnum.var = call float @llvm.maximumnum.f32(float %u, float %e)
       %max.nan = call float @llvm.maxnum.f32(float %arg, float 0.0)
+      %max.snan = call float @llvm.maxnum.f32(float f0x7F800001, float 0.0)
       %canon = call float @llvm.canonicalize.f32(float f0x00000001)
       %ninf = fadd ninf float %arg, %arg
       %finite = fadd nnan ninf float %arg, %arg
       %rhs.unknown = fadd float 1.0, %arg
       %bf = fadd bfloat 0xR3F80, 0xR4000
-      %fpmath = fadd float %u, 0.0, !fpmath !0
+      %fpmath = fdiv float 1.0, 4.0, !fpmath !0
+      %fpmath.zero = fmul float 0.0, 1.0, !fpmath !0
+      %p.add = fadd float poison, 1.0
+      %p.ext = fpext half poison to float
+      %p.min = call float @llvm.minnum.f32(float poison, float 1.0)
+      %p.nnan = fadd nnan float f0x7FC00000, 1.0
       ret float %A
     }
 
@@ -4281,11 +4288,13 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
   EXPECT_EQ(ConstantFPRange(APFloat(0.25f)), Range("div"));
   EXPECT_EQ(Full, Range("div.afn"));
   EXPECT_EQ(ConstantFPRange(APFloat(0.25f)), Range("div.arcp"));
-  EXPECT_EQ(ConstantFPRange::getFull(APFloat::IEEEhalf()),
+  EXPECT_EQ(ConstantFPRange(APFloat(APFloat::IEEEhalf(), "0.25")),
             Range("div.arcp.half"));
-  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(0.25f), APFloat(1.0f)),
-            Range("div.var"));
-  EXPECT_EQ(Full, Range("div.var.arcp"));
+  ConstantFPRange QuarterToOne =
+      ConstantFPRange::getNonNaN(APFloat(0.25f), APFloat(1.0f));
+  EXPECT_EQ(QuarterToOne, Range("div.var"));
+  EXPECT_EQ(QuarterToOne, Range("div.var.arcp"));
+  EXPECT_EQ(Full, Range("div.nested.arcp"));
 
   // minnum/maxnum may return either zero on a +0/-0 tie.
   ConstantFPRange NegZeroToOne =
@@ -4299,6 +4308,8 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(255.0f)),
             Range("maximumnum.var"));
   EXPECT_EQ(Full, Range("max.nan"));
+  // minnum/maxnum may return NaN for an sNaN operand.
+  EXPECT_EQ(Full, Range("max.snan"));
 
   APFloat Denorm = APFloat::getSmallest(Sem);
   EXPECT_EQ(ConstantFPRange(Denorm), Range("canon"));
@@ -4308,8 +4319,31 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
   EXPECT_EQ(Full, Range("rhs.unknown"));
   APFloat BF3(APFloat::BFloat(), "3.0");
   EXPECT_EQ(ConstantFPRange(BF3), Range("bf"));
-  EXPECT_EQ(Full, Range("fpmath"));
+  // !fpmath 2.5 widens each bound by 3.5 ULPs, rounded outward.
+  auto Steps = [](APFloat V, unsigned N, bool Down) {
+    for (unsigned I = 0; I != N; ++I)
+      V.next(Down);
+    return V;
+  };
+  APFloat Quarter(0.25f);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(Steps(Quarter, 7, /*Down=*/true),
+                                       Steps(Quarter, 4, /*Down=*/false)),
+            Range("fpmath"));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(Steps(PosZero, 4, /*Down=*/true),
+                                       Steps(PosZero, 4, /*Down=*/false)),
+            Range("fpmath.zero"));
   EXPECT_EQ(Full, computeConstantFPRange(F->getArg(1), SQ));
+
+  // Poison is empty and propagates; undef can be any value.
+  Type *FloatTy = Type::getFloatTy(Context);
+  ConstantFPRange Empty = ConstantFPRange::getEmpty(Sem);
+  EXPECT_EQ(Empty, computeConstantFPRange(PoisonValue::get(FloatTy), SQ));
+  EXPECT_EQ(Full, computeConstantFPRange(UndefValue::get(FloatTy), SQ));
+  EXPECT_EQ(Empty, Range("p.add"));
+  EXPECT_EQ(Empty, Range("p.ext"));
+  EXPECT_EQ(Empty, Range("p.min"));
+  // nnan on a NaN result is poison.
+  EXPECT_EQ(Empty, Range("p.nnan"));
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantFPRangeUsed) {
@@ -4323,7 +4357,8 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRangeUsed) {
   )");
   SimplifyQuery SQ(M->getDataLayout());
   SmallVector<const Instruction *, 4> Used;
-  computeConstantFPRange(A, SQ, /*Depth=*/0, &Used);
+  ConstantFPRange R = computeConstantFPRange(A, SQ, /*Depth=*/0, &Used);
+  EXPECT_FALSE(R.isFullSet());
   Instruction *FI = &findInstructionByName(F, "f");
   ASSERT_EQ(2u, Used.size());
   EXPECT_EQ(FI, Used[0]);
@@ -4339,6 +4374,7 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRangeDenormal) {
       %A = call float @llvm.canonicalize.f32(float f0x00000001)
       %A2 = fadd float f0x00000001, 0.0
       %A3 = call float @llvm.maxnum.f32(float f0x00000001, float 1.0)
+      %A4 = call float @llvm.canonicalize.f32(float f0x80000001)
       ret float %A
     }
 
@@ -4349,8 +4385,12 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRangeDenormal) {
   APFloat Denorm = APFloat::getSmallest(Sem);
   ConstantFPRange ZeroToDenorm =
       ConstantFPRange::getNonNaN(APFloat::getZero(Sem), Denorm);
+  // canonicalize always flushes.
+  EXPECT_EQ(ConstantFPRange(APFloat::getZero(Sem)),
+            computeConstantFPRange(A, SQ));
+  EXPECT_EQ(ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/true)),
+            computeConstantFPRange(&findInstructionByName(F, "A4"), SQ));
   // Output flushing is optional, so both the subnormal and +0 are possible.
-  EXPECT_EQ(ZeroToDenorm, computeConstantFPRange(A, SQ));
   EXPECT_EQ(ZeroToDenorm, computeConstantFPRange(A2, SQ));
   EXPECT_EQ(ConstantFPRange(APFloat(1.0f)), computeConstantFPRange(A3, SQ));
 }
