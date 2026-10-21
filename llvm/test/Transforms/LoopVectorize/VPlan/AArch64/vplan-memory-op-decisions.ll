@@ -696,7 +696,7 @@ define void @extractvalue_of_with_overflow_address(ptr noalias %A) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%res> = call ir<%iv>, ir<1>, ir<@llvm.sadd.with.overflow.i64>
-; CHECK-NEXT:      EMIT ir<%idx> = extractvalue ir<%res>
+; CHECK-NEXT:      EMIT ir<%idx> = extractvalue ir<%res>, ir<0>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>

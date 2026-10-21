@@ -62,8 +62,11 @@ LLVM_ABI FunctionPass *createUnreachableBlockEliminationPass();
 LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksLegacyPass();
 
 /// createBasicBlockSections Pass - This pass assigns sections to machine
-/// basic blocks and is enabled with -fbasic-block-sections.
-LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
+/// basic blocks and is enabled with -fbasic-block-sections. If
+/// \p SplitWithPGO is true, it also splits functions without a basic block
+/// sections profile using their PGO/AutoFDO profile (-function-splitting=all).
+LLVM_ABI MachineFunctionPass *
+createBasicBlockSectionsPass(bool SplitWithPGO = false);
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
@@ -77,10 +80,6 @@ LLVM_ABI MachineFunctionPass *createInsertCodePrefetchPass();
 
 /// createMachineBlockHashInfoPass - This pass computes basic block hashes.
 LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
-
-/// createMachineFunctionSplitterPass - This pass splits machine functions
-/// using profile information.
-LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
 
 /// createStaticDataSplitterPass - This is a machine-function pass that
 /// categorizes static data hotness using profile information.

@@ -9,9 +9,13 @@
 #include "clang/CodeGen/ModuleLinker.h"
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/CodeGenUtils/BackendDiagnosticHandler.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 
 using namespace clang;
 
@@ -46,4 +50,45 @@ bool clang::loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
                            F.Internalize, F.LinkFlags});
   }
   return false;
+}
+
+bool clang::linkInModules(llvm::Module &M,
+                          llvm::SmallVectorImpl<LinkModule> &LinkModules,
+                          const CodeGenOptions &CodeGenOpts,
+                          const LangOptions &LangOpts,
+                          const TargetOptions &TargetOpts,
+                          BackendDiagnosticConsumer &DiagConsumer) {
+  for (LinkModule &LM : LinkModules) {
+    assert(LM.Module && "LinkModule does not actually have a module");
+
+    if (LM.PropagateAttrs)
+      for (llvm::Function &F : *LM.Module) {
+        // Skip intrinsics. Keep consistent with how intrinsics are created
+        // in LLVM IR.
+        if (F.isIntrinsic())
+          continue;
+        CodeGen::mergeDefaultFunctionDefinitionAttributes(
+            F, CodeGenOpts, LangOpts, TargetOpts, LM.Internalize);
+      }
+
+    DiagConsumer.setCurLinkModule(LM.Module.get());
+    bool Err;
+
+    if (LM.Internalize) {
+      Err = llvm::Linker::linkModules(
+          M, std::move(LM.Module), LM.LinkFlags,
+          [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+            llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+            });
+          });
+    } else
+      Err = llvm::Linker::linkModules(M, std::move(LM.Module), LM.LinkFlags);
+
+    if (Err)
+      return true;
+  }
+
+  LinkModules.clear();
+  return false; // success
 }

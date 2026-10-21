@@ -831,7 +831,7 @@ struct MachineFunction {
   bool Selected = false;
   bool FailedISel = false;
   // Register information
-  bool TracksRegLiveness = false;
+  bool TracksRegLiveness = true;
   bool HasWinCFI = false;
 
   // Computed properties that should be overridable

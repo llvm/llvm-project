@@ -108,11 +108,8 @@ define <2 x i64> @v2i64_37(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: v2i64_37:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI5_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    ret
   %c = shufflevector <4 x i32> %a, <4 x i32> %b, <2 x i32> <i32 3, i32 7>

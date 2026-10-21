@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/MipsABIFlagsSection.h"
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -335,6 +336,7 @@ class MipsTargetELFStreamer : public MipsTargetStreamer {
   enum class ISAMode { Standard, MicroMips, Mips16 };
   static ISAMode getISAMode(const MCSubtargetInfo &STI);
 
+  const MipsMCOptions &CLOpts;
   ISAMode Mode;
   SmallVector<ISAMode, 4> ModeStack;
   const MCSubtargetInfo &STI;

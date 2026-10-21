@@ -778,10 +778,6 @@ static bool isNoopIntrinsic(Instruction *I) {
     case Intrinsic::launder_invariant_group:
     case Intrinsic::assume:
       return true;
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_label:
-    case Intrinsic::dbg_value:
-      llvm_unreachable("Intrinsic should not be modeled in MemorySSA");
     default:
       return false;
     }
@@ -2723,7 +2719,8 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
                                 const CycleInfo &CI) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool MadeChange = false;
   DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, CI);
   // For each store:

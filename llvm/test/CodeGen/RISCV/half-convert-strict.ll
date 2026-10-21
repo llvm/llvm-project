@@ -54,6 +54,9 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs \
 ; RUN:   -target-abi ilp32d -disable-strictnode-mutation < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK32-D %s
+; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs \
+; RUN:   -target-abi lp64d -disable-strictnode-mutation < %s \
+; RUN:   | FileCheck -check-prefixes=CHECK64-D %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32I %s
@@ -123,6 +126,20 @@ define i16 @fcvt_si_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_si_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_si_h:
 ; RV32I:       # %bb.0:
@@ -210,6 +227,20 @@ define i16 @fcvt_ui_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_ui_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_ui_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -296,6 +327,20 @@ define i32 @fcvt_w_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_w_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_w_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -381,6 +426,20 @@ define i32 @fcvt_wu_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_wu_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_h:
 ; RV32I:       # %bb.0:
@@ -493,6 +552,26 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) strictfp {
 ; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_wu_h_multiple_use:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    .cfi_offset ra, -8
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    seqz a1, a0
+; CHECK64-D-NEXT:    add a0, a0, a1
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    .cfi_restore ra
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 0
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_wu_h_multiple_use:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -597,6 +676,20 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_l_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_l_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -684,6 +777,20 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_lu_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.lu.s a0, fa0, rtz
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_lu_h:
 ; RV32I:       # %bb.0:
@@ -787,6 +894,22 @@ define half @fcvt_h_si(i16 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_si:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srai a0, a0, 48
+; CHECK64-D-NEXT:    fcvt.s.w fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_si:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -872,6 +995,20 @@ define half @fcvt_h_si_signext(i16 signext %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_si_signext:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.w fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_si_signext:
 ; RV32I:       # %bb.0:
@@ -973,6 +1110,22 @@ define half @fcvt_h_ui(i16 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_ui:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fcvt.s.wu fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_ui:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1059,6 +1212,20 @@ define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_ui_zeroext:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.wu fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_ui_zeroext:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1140,6 +1307,20 @@ define half @fcvt_h_w(i32 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_w:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.w fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_w:
 ; RV32I:       # %bb.0:
@@ -1233,6 +1414,21 @@ define half @fcvt_h_w_load(ptr %p) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_w_load:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    lw a0, 0(a0)
+; CHECK64-D-NEXT:    fcvt.s.w fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_w_load:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1317,6 +1513,20 @@ define half @fcvt_h_wu(i32 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_wu:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.wu fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_wu:
 ; RV32I:       # %bb.0:
@@ -1409,6 +1619,21 @@ define half @fcvt_h_wu_load(ptr %p) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_wu_load:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    lw a0, 0(a0)
+; CHECK64-D-NEXT:    fcvt.s.wu fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_wu_load:
 ; RV32I:       # %bb.0:
@@ -1509,6 +1734,20 @@ define half @fcvt_h_l(i64 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_l:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.l fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_l:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1605,6 +1844,20 @@ define half @fcvt_h_lu(i64 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_lu:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fcvt.s.lu fa0, a0
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_lu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1682,6 +1935,19 @@ define half @fcvt_h_s(float %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_s:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_s:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1756,6 +2022,19 @@ define float @fcvt_s_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_s_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_h:
 ; RV32I:       # %bb.0:
@@ -1883,6 +2162,19 @@ define half @fcvt_h_d(double %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_d:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    call __truncdfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_d:
 ; RV32I:       # %bb.0:
@@ -2020,6 +2312,20 @@ define double @fcvt_d_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_d_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    fcvt.d.s fa0, fa0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_d_h:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -2131,6 +2437,33 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_w_demanded_bits:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -32
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 32
+; CHECK64-D-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    .cfi_offset ra, -8
+; CHECK64-D-NEXT:    .cfi_offset s0, -16
+; CHECK64-D-NEXT:    .cfi_offset s1, -24
+; CHECK64-D-NEXT:    addiw s0, a0, 1
+; CHECK64-D-NEXT:    fcvt.s.w fa0, s0
+; CHECK64-D-NEXT:    mv s1, a1
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a1, fa0
+; CHECK64-D-NEXT:    mv a0, s0
+; CHECK64-D-NEXT:    sh a1, 0(s1)
+; CHECK64-D-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    .cfi_restore ra
+; CHECK64-D-NEXT:    .cfi_restore s0
+; CHECK64-D-NEXT:    .cfi_restore s1
+; CHECK64-D-NEXT:    addi sp, sp, 32
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 0
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_w_demanded_bits:
 ; RV32I:       # %bb.0:
@@ -2281,6 +2614,33 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_h_wu_demanded_bits:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -32
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 32
+; CHECK64-D-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    .cfi_offset ra, -8
+; CHECK64-D-NEXT:    .cfi_offset s0, -16
+; CHECK64-D-NEXT:    .cfi_offset s1, -24
+; CHECK64-D-NEXT:    addiw s0, a0, 1
+; CHECK64-D-NEXT:    fcvt.s.wu fa0, s0
+; CHECK64-D-NEXT:    mv s1, a1
+; CHECK64-D-NEXT:    call __truncsfhf2
+; CHECK64-D-NEXT:    fmv.x.w a1, fa0
+; CHECK64-D-NEXT:    mv a0, s0
+; CHECK64-D-NEXT:    sh a1, 0(s1)
+; CHECK64-D-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    .cfi_restore ra
+; CHECK64-D-NEXT:    .cfi_restore s0
+; CHECK64-D-NEXT:    .cfi_restore s1
+; CHECK64-D-NEXT:    addi sp, sp, 32
+; CHECK64-D-NEXT:    .cfi_def_cfa_offset 0
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_h_wu_demanded_bits:
 ; RV32I:       # %bb.0:
@@ -2474,6 +2834,19 @@ define half @fcvt_h_q(fp128 %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, 32
 ; CHECK32-D-NEXT:    ret
 ;
+; CHECK64-D-LABEL: fcvt_h_q:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    call __trunctfhf2
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    lui a1, 1048560
+; CHECK64-D-NEXT:    or a0, a0, a1
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_h_q:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
@@ -2658,6 +3031,20 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 32
 ; CHECK32-D-NEXT:    ret
+;
+; CHECK64-D-LABEL: fcvt_q_h:
+; CHECK64-D:       # %bb.0:
+; CHECK64-D-NEXT:    addi sp, sp, -16
+; CHECK64-D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK64-D-NEXT:    fmv.x.w a0, fa0
+; CHECK64-D-NEXT:    slli a0, a0, 48
+; CHECK64-D-NEXT:    srli a0, a0, 48
+; CHECK64-D-NEXT:    fmv.w.x fa0, a0
+; CHECK64-D-NEXT:    call __extendhfsf2
+; CHECK64-D-NEXT:    call __extendsftf2
+; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK64-D-NEXT:    addi sp, sp, 16
+; CHECK64-D-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_q_h:
 ; RV32I:       # %bb.0:

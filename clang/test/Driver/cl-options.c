@@ -622,8 +622,9 @@
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++20 -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX20 %s
 // STDCXX20: -std=c++20
 
-// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23PREVIEW %s
-// STDCXX23PREVIEW: -std=c++23
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23        -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23 %s
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23 %s
+// STDCXX23: -std=c++23
 
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++26preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX26PREVIEW %s
 // STDCXX26PREVIEW: -std=c++26

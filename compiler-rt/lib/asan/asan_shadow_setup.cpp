@@ -137,8 +137,16 @@ void InitializeShadowMemory() {
         GetMaxUserVirtualAddress()) {
       DCHECK_LE(kHighMemBeg, kHighMemEnd);
       ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
+#  if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+      // 64-bit AIX has no shadow gap to protect. Its three mid memory regions
+      // have their own shadows, which are reserved here.
+      ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd, "mid shadow");
+      ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, "mid2 shadow");
+      ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, "mid3 shadow");
+#  else
       ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
       CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
+#  endif
     }
   } else if (kMidMemBeg &&
              MemoryRangeIsAvailable(shadow_start, kMidMemBeg - 1) &&

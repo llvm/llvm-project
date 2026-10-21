@@ -320,6 +320,7 @@ add_proxy_header_library(
   DEPENDS
     .unistd_overlay
   FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.file_seek_macros
     libc.include.llvm-libc-macros.unistd_macros
 )
 
