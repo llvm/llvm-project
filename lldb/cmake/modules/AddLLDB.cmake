@@ -660,9 +660,13 @@ endfunction()
 
 function(lldb_add_rpaths name)
   cmake_parse_arguments(LIST "" "" "BUILD_RPATH;INSTALL_RPATH" ${ARGN})
-  set_property(TARGET ${name} APPEND PROPERTY
+  set_property(TARGET ${name} PROPERTY
     BUILD_WITH_INSTALL_RPATH OFF
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
     BUILD_RPATH "${LIST_BUILD_RPATH}"
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
     INSTALL_RPATH "${LIST_INSTALL_RPATH}"
   )
 endfunction()
