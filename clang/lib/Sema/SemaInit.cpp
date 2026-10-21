@@ -5357,7 +5357,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
       // If the conversion function doesn't return a reference type,
       // it can't be considered for this conversion unless we're allowed to
-      // consider rvalues.
+      // consider rvalues. If it's a template, we should accept it first
+      // and specialize it before deciding whether to reject it.
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
