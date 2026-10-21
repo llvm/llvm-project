@@ -24,6 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, initgroups, (const char *user, gid_t group)) {
   LIBC_CRASH_ON_NULLPTR(user);
 
+  // TODO: Implement setxid propagation across threads.
   const auto res = grp::init_groups(user, group);
   if (!res.has_value()) {
     libc_errno = res.error();

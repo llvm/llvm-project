@@ -1504,6 +1504,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
   AArch64Err843419Patcher a64p(ctx);
   ARMErr657417Patcher a32p(ctx);
+
+  // Transforms that move input sections without reading addresses go here.
+  // After the first assignAddresses, only the loop below may change layout.
+  if (ctx.arg.randomizeSectionPadding)
+    randomizeSectionPadding(ctx);
+  if (ctx.arg.branchToBranch)
+    ctx.target->relaxCFIJumpTables();
   ctx.script->assignAddresses();
 
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
@@ -1516,12 +1523,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     resolveShfLinkOrder();
   };
   finalizeOrderDependentContent();
-
-  if (ctx.arg.randomizeSectionPadding)
-    randomizeSectionPadding(ctx);
-
-  if (ctx.arg.branchToBranch)
-    ctx.target->relaxCFIJumpTables();
 
   // Iterate until a fixed point is reached, skipping relocatable links since
   // the final addresses are unavailable.

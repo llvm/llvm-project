@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of regcomp (stub).
+/// Implementation of regcomp.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -15,36 +15,57 @@
 
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/__support/macros/null_check.h"
+#include "src/__support/regex/regex_ast.h"
+#include "src/__support/regex/regex_internal.h"
+#include "src/__support/regex/regex_parser.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, regcomp,
                    (regex_t *__restrict preg, const char *__restrict pattern,
                     int cflags)) {
-  // Silencing unused parameter warning for the stub.
-  (void)cflags;
+  LIBC_CRASH_ON_NULLPTR(preg);
+  LIBC_CRASH_ON_NULLPTR(pattern);
 
   // Note: POSIX requires callers to call regfree() before reusing a preg
   // object.  We therefore do not attempt to free any previous __internal here
-  // — preg is uninitialized on first use and the pointer would be garbage.
+  // as preg is uninitialised on first use and the pointer would be garbage.
+  // However, we clear __internal and re_nsub immediately so calling regfree()
+  // after a failed regcomp() is guaranteed to be a safe no-op.
+  preg->__internal = nullptr;
+  preg->re_nsub = 0;
 
-  cpp::string_view pattern_view(pattern);
-  size_t len = pattern_view.size();
+  // TODO: Enable BRE (!(cflags & REG_EXTENDED)), REG_ICASE, and REG_NOSPEC as
+  // each feature is implemented in subsequent patches.
+  if (!(cflags & REG_EXTENDED) ||
+      (cflags & ~(REG_EXTENDED | REG_NOSUB | REG_NEWLINE)) != 0)
+    return REG_BADPAT;
+
+  // TODO: Once cpp::unique_ptr and AllocChecker-backed cpp::make_unique are
+  // available in src/__support/CPP/, manage RegexInternal via unique_ptr so
+  // error paths do not require a scope guard.
   AllocChecker ac;
-  char *copy = new (ac) char[len + 1];
+  regex::RegexInternal *internal = new (ac) regex::RegexInternal();
   if (!ac)
     return REG_ESPACE;
+  cpp::scope_exit internal_guard([internal] { delete internal; });
 
-  inline_memcpy(copy, pattern, len + 1);
+  ErrorOr<regex::ExprId> root =
+      regex::parse_ere(cpp::string_view(pattern), cflags, internal->pool);
+  if (!root.has_value())
+    return root.error();
 
-  // TODO: This is a stub. re_nsub is always 0 because parenthesised
-  // subexpressions are not yet parsed. REG_NOSUB is effectively always active.
-  preg->re_nsub = 0;
-  preg->__internal = copy;
+  internal_guard.release();
+  internal->root = *root;
+  internal->cflags = cflags;
+  preg->__internal = internal;
   return 0;
 }
 

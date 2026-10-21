@@ -1,3 +1,5 @@
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r6 -mattr=micromips -filetype=obj | \
+# RUN:   llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=DIS
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips32r6 -mattr=micromips | FileCheck %s
 
   .set noat
@@ -145,6 +147,7 @@
   sub $3, $4, $5           # CHECK: sub $3, $4, $5      # encoding: [0x00,0xa4,0x19,0x90]
   subu $3, $4, $5          # CHECK: subu $3, $4, $5     # encoding: [0x00,0xa4,0x19,0xd0]
   sw $4, 124($sp)          # CHECK: sw $4, 124($sp)     # encoding: [0xc8,0x9f]
+                           # DIS: sw $4, 124($sp)
   sw $4, 128($sp)          # CHECK: sw $4, 128($sp)     # encoding: [0xf8,0x9d,0x00,0x80]
                            # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SW_MMR6
   sw16 $4, 4($17)          # CHECK: sw16 $4, 4($17)     # encoding: [0xea,0x11]
@@ -434,3 +437,6 @@
   neg $4, $4               # CHECK: neg $4, $4             # encoding: [0x00,0x80,0x21,0x90]
   negu  $4, $5             # CHECK: negu  $4, $5           # encoding: [0x00,0xa0,0x21,0xd0]
   negu  $4, $4             # CHECK: negu  $4, $4           # encoding: [0x00,0x80,0x21,0xd0]
+
+  lwm16 $16, $17, $ra, 60($sp)  # CHECK: lwm16 $16, $17, $ra, 60($sp) # encoding: [0x45,0xf2]
+                                # DIS: lwm16 $16, $17, $ra, 60($sp)

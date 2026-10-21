@@ -3,6 +3,7 @@ add_header_library(
   HDRS
     abort_utils.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.OSUtil.linux.syscall_wrappers.raise
     libc.src.__support.OSUtil.osutil
     libc.src.signal.linux.__restore
@@ -96,27 +97,35 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clearenv
+  SRCS
+    clearenv.cpp
+  HDRS
+    ../clearenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
   system
   SRCS
     system.cpp
   HDRS
     ../system.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.types.pid_t
     libc.hdr.types.sigset_t
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
-    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.shell_fork
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigaction
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
-    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
     libc.src.signal.linux.signal_utils
-    libc.src.unistd.environ
 )
 
 add_entrypoint_object(
