@@ -25,6 +25,14 @@ TRIPLE_INLINE void *memcpy(void *a, const void *b, size_t c) {
 void *foo(void *a, const void *b, size_t c) {
   return memcpy(a, b, c);
 }
+
+AVAILABLE_EXTERNALLY __attribute__((preserve_most)) int umask(int m) {
+  return m;
+}
+
+int call_umask(int m) {
+  return umask(m);
+}
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @bar(
 // CHECK-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], i64 noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -91,4 +99,25 @@ void *foo(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = call ptr @memcpy.inline(ptr noundef [[TMP0]], ptr noundef [[TMP1]], i64 noundef [[TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    ret ptr [[CALL]]
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define dso_local i32 @call_umask(
+// CHECK-SAME: i32 noundef [[M:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[CALL:%.*]] = call preserve_mostcc i32 @umask.inline(i32 noundef [[TMP0]]) #[[ATTR4]]
+// CHECK-NEXT:    ret i32 [[CALL]]
+//
+//
+// CHECK: Function Attrs: alwaysinline nobuiltin nounwind
+// CHECK-LABEL: define internal i32 @umask.inline(
+// CHECK-SAME: i32 noundef [[M:%.*]]) #[[ATTR2]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    ret i32 [[TMP0]]
 //
