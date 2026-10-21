@@ -457,10 +457,11 @@ auto BPOrderer<D>::computeOrder(
         currentAddress += D::getSize(*isec);
       }
 
+      ArrayRef traces(reader->getTemporalProfTraces());
       // The area under the curve F where F(t) is the total number of page
       // faults at step t.
-      unsigned area = 0;
-      for (auto &trace : reader->getTemporalProfTraces()) {
+      uint64_t area = 0;
+      for (auto &trace : traces) {
         SmallSet<uint64_t, 0> touchedPages;
         for (unsigned step = 0; step < trace.FunctionNameRefs.size(); step++) {
           auto traceId = trace.FunctionNameRefs[step];
@@ -476,8 +477,8 @@ auto BPOrderer<D>::computeOrder(
           area += touchedPages.size();
         }
       }
-      dbgs() << "Total area under the page fault curve: " << (float)area
-             << "\n";
+      dbgs() << "Average area under the page fault curve: "
+             << (float)area / traces.size() << "\n";
     }
   }
 

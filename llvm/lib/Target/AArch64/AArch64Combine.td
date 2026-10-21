@@ -60,9 +60,8 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
-def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 def simplify_uaddo : GICombineRule<
-  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
   (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
          [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
@@ -155,9 +154,7 @@ def ext: GICombineRule<
 def fullrev: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
-         [{ return mi_match(${src2}.getReg(), MRI, m_GImplicitDef()) &&
-                   ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
-                                                    ${mask}.getShuffleMask().size()); }]),
+         [{ return matchFullRev(*${root}, MRI); }]),
   (apply [{ applyFullRev(*${root}, MRI); }])
 >;
 
@@ -224,8 +221,17 @@ def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
                                        unmerge_duplane32, extract_duplane8,
                                        extract_duplane16, extract_duplane32]>;
 
+def perfectshuffle_matchdata : GIDefMatchData<"SmallVector<ShuffleEntry>">;
+def perfect_shuffle: GICombineRule<
+  (defs root:$root, perfectshuffle_matchdata:$matchinfo),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+         [{ return matchPerfectShuffle(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyPerfectShuffle(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
-                                              uzp, trn, shuf_to_ins, fullrev]>;
+                                              uzp, trn, shuf_to_ins, fullrev,
+                                              perfect_shuffle]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule<
@@ -302,6 +308,13 @@ def build_vector_to_dup : GICombineRule<
   (apply [{ applyBuildVectorToDup(*${root}, ${matchinfo}, MRI, B); }])
 >;
 
+def build_vector_to_half_dup : GICombineRule<
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+          [{ return matchBuildVectorToHalfDup(*${root}, ${matchinfo}, MRI); }]),
+  (apply [{ applyBuildVectorToHalfDup(*${root}, ${matchinfo}, MRI, B); }])
+>;
+
 def build_vector_to_vector_insert : GICombineRule<
   (defs root:$root),
   (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
@@ -309,7 +322,17 @@ def build_vector_to_vector_insert : GICombineRule<
   (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
 >;
 
-def build_vector_lowering : GICombineGroup<[build_vector_to_dup,
+def const_build_vector_to_fneg_matchdata : GIDefMatchData<"std::pair<APInt, unsigned>">;
+def const_build_vector_to_fneg : GICombineRule<
+  (defs root:$root, const_build_vector_to_fneg_matchdata:$matchinfo),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+          [{ return matchConstBuildVectorToFNeg(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyConstBuildVectorToFNeg(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[const_build_vector_to_fneg,
+                                            build_vector_to_dup,
+                                            build_vector_to_half_dup,
                                             build_vector_to_vector_insert]>;
 
 def lower_vector_fcmp : GICombineRule<
@@ -435,5 +458,6 @@ def AArch64PostLegalizerCombiner
                         combine_mul_cmlt, combine_use_vector_truncate,
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
-                        funnel_shift_from_or_shift_constants_are_legal]> {
+                        funnel_shift_from_or_shift_constants_are_legal,
+                        simplify_demanded_bits]> {
 }

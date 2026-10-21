@@ -219,9 +219,7 @@ template <Direction DIR>
 void InternalListIoStatementState<DIR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      if (unit_.furthestPositionInRecord > 0) {
-        unit_.AdvanceRecord(*this);
-      }
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
@@ -923,7 +921,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     auto start{fastField.connection().positionInRecord};
     int r{0};
     do {
-      static auto constexpr clamp{(std::numeric_limits<int>::max() - '9') / 10};
+      static auto constexpr clamp{
+          (common::numeric_limits<int>::max() - '9') / 10};
       if (r >= clamp) {
         r = 0;
         break;
@@ -1485,7 +1484,7 @@ bool InquireUnitState::Inquire(
     } else if (unit().openRecl) {
       result = *unit().openRecl;
     } else {
-      result = std::numeric_limits<std::int32_t>::max();
+      result = common::numeric_limits<std::int32_t>::max();
     }
     return true;
   case HashInquiryKeyword("SIZE"):

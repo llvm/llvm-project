@@ -312,8 +312,7 @@ define i32 @fcmp_ord_same(half %a) nounwind {
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKIZFHMIN-NEXT:    feq.s a1, fa5, fa5
-; CHECKIZFHMIN-NEXT:    and a0, a0, a1
+; CHECKIZFHMIN-NEXT:    and a0, a0, a0
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fcmp ord half %a, %a
   %2 = zext i1 %1 to i32
@@ -331,8 +330,7 @@ define i32 @fcmp_uno_same(half %a) nounwind {
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKIZFHMIN-NEXT:    feq.s a1, fa5, fa5
-; CHECKIZFHMIN-NEXT:    and a0, a0, a1
+; CHECKIZFHMIN-NEXT:    and a0, a0, a0
 ; CHECKIZFHMIN-NEXT:    xori a0, a0, 1
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fcmp uno half %a, %a

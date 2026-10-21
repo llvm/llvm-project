@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -425,8 +426,9 @@ void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  const llvm::Triple &T = getTriple();
   // Target identification.
-  if (getTriple().isWindowsArm64EC()) {
+  if (T.isWindowsArm64EC()) {
     // Define the same set of macros as would be defined on x86_64 to ensure that
     // ARM64EC datatype layouts match those of x86_64 compiled code
     Builder.defineMacro("__amd64__");
@@ -438,7 +440,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
-  if (getTriple().isLFI())
+  // For bare-metal none-elf.
+  if (T.getOS() == llvm::Triple::UnknownOS &&
+      T.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      T.getObjectFormat() == llvm::Triple::ELF && Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
@@ -1889,6 +1898,56 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsARM64TargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
+}
+
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+  // alignment. We are setting these defaults to match the Windows ARM64 target
+  // as it is the only way to build EFI applications with Clang/LLVM today.
+  // This is an LLP64 platform.
+  // int:4, long:4, long long:8, long double:8.
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+  IntWidth = IntAlign = 32;
+  LongWidth = LongAlign = 32;
+  DoubleAlign = LongLongAlign = 64;
+  LongDoubleWidth = LongDoubleAlign = 64;
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLongLong;
+  PtrDiffType = SignedLongLong;
+  IntPtrType = SignedLongLong;
+}
+
+TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+UEFIAArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_PreserveNone:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+TargetInfo::CallingConvKind
+UEFIAArch64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
+  return CCK_MicrosoftWin64;
 }
 
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(

@@ -2059,6 +2059,13 @@ bool OmpVisitor::Pre(const parser::OmpStylizedDeclaration &x) {
   BeginDecl();
   Walk(x.type.get());
   Walk(x.var);
+  // The special variables (omp_in, omp_out, omp_priv, omp_orig) are data
+  // objects. Make them object entities explicitly, so that a reference like
+  // omp_out(1) is not reinterpreted as a call to an external function.
+  // See issue #193431.
+  if (auto *symbol{std::get<parser::ObjectName>(x.var.t).symbol}) {
+    ConvertToObjectEntity(*symbol);
+  }
   return true;
 }
 
@@ -6904,7 +6911,11 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
-      SetBindNameOn(symbol);
+      if (symbol.detailsIf<ProcEntityDetails>() ||
+          symbol.detailsIf<ObjectEntityDetails>() ||
+          symbol.detailsIf<EntityDetails>()) {
+        SetBindNameOn(symbol);
+      }
     }
     return symbol;
   }

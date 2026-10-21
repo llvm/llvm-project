@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=aarch64-windows-msvc -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=aarch64-unknown-uefi -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error:
 ; CHECK-SAME: A-key return address signing is unsupported on AArch64 Windows
