@@ -33,7 +33,6 @@ MACHINE_FUNCTION_ANALYSIS("livedebugvars", LiveDebugVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-intervals", LiveIntervalsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksAnalysis())
-MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-hash", MachineBlockHashInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
