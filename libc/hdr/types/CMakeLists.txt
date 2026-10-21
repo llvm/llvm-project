@@ -794,7 +794,6 @@ add_proxy_header_library(
     struct_ether_addr.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ether_addr
-    libc.include.net_ethernet
 )
 
 add_proxy_header_library(

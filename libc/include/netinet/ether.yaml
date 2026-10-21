@@ -1,7 +1,6 @@
 header: netinet/ether.h
 standards:
   - bsd
-  - gnu
 macros: []
 types: []
 enums: []
