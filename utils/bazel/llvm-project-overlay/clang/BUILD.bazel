@@ -3381,6 +3381,7 @@ cc_library(
         ":cir_transforms",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",

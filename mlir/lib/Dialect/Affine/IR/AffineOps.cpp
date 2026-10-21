@@ -5094,7 +5094,7 @@ namespace {
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5156,7 +5156,7 @@ struct DropUnitExtentBasis
 /// in-bounds the way the outputs of the delinearization would be.
 struct CancelDelinearizeOfLinearizeDisjointExactTail
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5227,7 +5227,7 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
 /// where the original %1:4 is replaced by %1:2 ++ %2:2
 struct SplitDelinearizeSpanningLastLinearizeArg final
     : OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5460,7 +5460,7 @@ namespace {
 /// the operation isn't asserted to be `disjoint`.
 struct DropLinearizeUnitComponentsIfDisjointOrZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
@@ -5557,7 +5557,7 @@ OpFoldResult computeProduct(Location loc, OpBuilder &builder,
 /// becoming `%t = affine.linearize_index [%x, %c0] by (64, 16)`
 struct CancelLinearizeOfDelinearizePortion final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 private:
   // Struct representing a case where the cancellation pattern
@@ -5737,7 +5737,7 @@ public:
 /// to `affine.linearize_index [...a] by (...b)` in all cases.
 struct DropLinearizeLeadingZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {

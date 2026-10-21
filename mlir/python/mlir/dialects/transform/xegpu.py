@@ -14,6 +14,7 @@ try:
         MixedInt,
         get_op_result_or_value as _get_op_result_or_value,
         _dispatch_dynamic_index_list,
+        _dispatch_mixed_values,
     )
 
 except ImportError as e:
@@ -71,24 +72,27 @@ class SetAnchorLayoutOp(SetAnchorLayoutOp):
         inst_data = [] if inst_data is None else inst_data
         (
             dynamic_sg_layout,
+            packed_sg_layout,
             static_sg_layout,
-            _,
-        ) = _dispatch_dynamic_index_list(sg_layout)
+        ) = _dispatch_mixed_values(sg_layout)
         (
             dynamic_sg_data,
+            packed_sg_data,
             static_sg_data,
-            _,
-        ) = _dispatch_dynamic_index_list(sg_data)
+        ) = _dispatch_mixed_values(sg_data)
         (
             dynamic_inst_data,
+            packed_inst_data,
             static_inst_data,
-            _,
-        ) = _dispatch_dynamic_index_list(inst_data)
+        ) = _dispatch_mixed_values(inst_data)
         super().__init__(
             _get_op_result_or_value(target),
             dynamic_sg_layout,
             dynamic_sg_data,
             dynamic_inst_data,
+            packed_sg_layout=packed_sg_layout,
+            packed_sg_data=packed_sg_data,
+            packed_inst_data=packed_inst_data,
             static_sg_layout=static_sg_layout,
             static_sg_data=static_sg_data,
             static_inst_data=static_inst_data,
