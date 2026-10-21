@@ -408,7 +408,8 @@ Arguments passed by reference (``ptr addrspace(4) byref(T)``, as ZLUDA emits
 PTX ``.param`` arguments) whose every use is a load at a constant offset are
 passed by value: their bytes occupy consecutive uniform registers (in 64-bit
 parts and a last 32-bit one) and the loads read the registers. Other
-by-reference arguments, and those beyond 256 bytes per kernel, stay a 64-bit
+by-reference arguments, and those that do not fit in what is left of the 1 KiB
+uniform file (256 32-bit registers, all preloaded at no measured cost), stay a 64-bit
 pointer to the bytes, which the driver places in memory.
 
 The object also describes each kernel in the ``.agx.kernels`` section, for

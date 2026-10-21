@@ -37,10 +37,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "agx-promote-kernel-args"
 
-/// Bytes of by-reference arguments passed in uniform registers per kernel.
-/// The rest of the uniform file holds the implicit arguments, the global data
-/// buffer address and values hoisted by the backend.
-static constexpr uint64_t MaxPromotedBytes = 256;
+/// The uniform file: 256 32-bit registers, all of which the hardware preloads
+/// with no measurable launch cost (ptx-re-blockers B9: 20 to 512 halves).
+static constexpr uint64_t UniformBytes = 1024;
+/// What the uniforms hold besides the arguments: threadgroups_per_grid (12
+/// bytes) and the global data buffer address (8).
+static constexpr uint64_t ImplicitBytes = 12 + 8;
 
 namespace {
 
@@ -158,7 +160,16 @@ static bool promote(Function &F) {
     SmallVector<LoadAt, 4> Loads;
   };
   SmallVector<Plan, 8> Plans(F.arg_size());
-  uint64_t Budget = MaxPromotedBytes;
+  // The uniforms left once every argument takes its unpromoted place (a
+  // by-reference argument its 64-bit pointer, others their bytes rounded to
+  // 32 bits, as the lowering aligns them); promoting an argument gives back
+  // its pointer.
+  uint64_t Fixed = ImplicitBytes;
+  for (Argument &A : F.args())
+    Fixed += A.getType()->isPointerTy() && A.getParamByRefType()
+                 ? 8
+                 : alignTo(DL.getTypeStoreSize(A.getType()), 4);
+  uint64_t Budget = Fixed < UniformBytes ? UniformBytes - Fixed : 0;
   bool Any = false;
   for (Argument &A : F.args()) {
     Plan &P = Plans[A.getArgNo()];
@@ -170,13 +181,13 @@ static bool promote(Function &F) {
     P.ByRef = true;
     P.Bytes = DL.getTypeAllocSize(T);
     uint64_t Words = divideCeil(P.Bytes, 4);
-    if (P.Bytes == 0 || Words * 4 > Budget ||
+    if (P.Bytes == 0 || Words * 4 > Budget + 8 ||
         !collectLoads(&A, 0, P.Bytes, DL, P.Loads)) {
       P.Loads.clear();
       continue;
     }
     P.Promote = true;
-    Budget -= Words * 4;
+    Budget = Budget + 8 - Words * 4;
     Any = true;
   }
   if (!Any)
