@@ -23,6 +23,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <limits>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -2988,6 +2989,143 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
   return LastInst;
 }
 
+struct ByteLoadPackPiece {
+  LoadInst *LI = nullptr;
+  Value *Base = nullptr;
+  int64_t Offset = 0;
+  unsigned Shift = 0;
+};
+
+/// Recursively flatten a byte-pack expression into logical byte lanes.
+///
+/// The matcher accepts a restricted tree shape:
+/// - `or` nodes combine independently packed pieces
+/// - `shl` nodes move an already-packed subexpression upward by a byte count
+/// - `zext i8` exposes the scalar byte being inserted into the pack
+/// - `load i8` is the leaf we ultimately want to widen
+///
+/// BaseShift tracks the cumulative left shift, in bits, from the current node
+/// back up to the root of the whole pack. Each recorded leaf therefore keeps
+/// both its source byte offset in memory and its final bit position in the
+/// assembled integer.
+///
+/// This intentionally does not try to recognize arbitrary bitfield
+/// construction. It is limited to byte-granular packing from i8 loads so the
+/// caller can later prove equivalence with a widened load plus byte swap.
+static bool collectByteLoadPack(Value *V, const DataLayout &DL,
+                                unsigned BaseShift,
+                                SmallVectorImpl<ByteLoadPackPiece> &Pieces) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  if (I->getOpcode() == Instruction::Or)
+    return collectByteLoadPack(I->getOperand(0), DL, BaseShift, Pieces) &&
+           collectByteLoadPack(I->getOperand(1), DL, BaseShift, Pieces);
+
+  auto *Shl = dyn_cast<BinaryOperator>(I);
+  if (Shl && Shl->getOpcode() == Instruction::Shl) {
+    auto *C = dyn_cast<ConstantInt>(Shl->getOperand(1));
+    if (!C || C->getValue().urem(8) != 0)
+      return false;
+    uint64_t Shift = C->getZExtValue();
+    if (Shift > std::numeric_limits<unsigned>::max() - BaseShift)
+      return false;
+    // A shifted sub-pack remains matchable as long as the shift is
+    // byte-granular. Accumulating it here lets nested trees like
+    // `shl((a | b | c), 16)` flatten into the same byte-lane list as an
+    // already-expanded pack.
+    return collectByteLoadPack(Shl->getOperand(0), DL, BaseShift + Shift,
+                               Pieces);
+  }
+
+  if (auto *ZExt = dyn_cast<ZExtInst>(I)) {
+    if (!ZExt->getSrcTy()->isIntegerTy(8))
+      return false;
+    return collectByteLoadPack(ZExt->getOperand(0), DL, BaseShift, Pieces);
+  }
+
+  auto *LI = dyn_cast<LoadInst>(I);
+  if (!LI || !LI->isSimple() || !LI->getType()->isIntegerTy(8))
+    return false;
+  int64_t Offset = 0;
+  Value *Base =
+      GetPointerBaseWithConstantOffset(LI->getPointerOperand(), Offset, DL);
+  if (!Base)
+    return false;
+  // Record one byte lane of the final packed value. Offset is the byte
+  // position relative to the common base pointer; Shift is the final bit
+  // position of this byte in the assembled integer.
+  Pieces.push_back({LI, Base, Offset, BaseShift});
+  return true;
+}
+
+/// Try to replace a byte-pack tree with `load <wide int> + bswap`.
+///
+/// Once collectByteLoadPack() has flattened the expression, we verify that the
+/// leaves describe a complete whole-byte integer assembled from consecutive
+/// loads:
+/// - the result type is a scalar integer with byte granularity
+/// - every leaf is a simple `load i8` from the same underlying base
+/// - the byte offsets form one contiguous range
+/// - each byte is shifted into the position implied by a big-endian assembly
+///   of that contiguous byte sequence
+///
+/// When those conditions hold on a little-endian target, the original scalar
+/// pack is equivalent to a widened load followed by `bswap`.
+static Value *foldByteLoadPackToWideLoad(Instruction &I, InstCombinerImpl &IC) {
+  Type *Ty = I.getType();
+  if (!Ty->isIntegerTy() || IC.getDataLayout().isBigEndian())
+    return nullptr;
+
+  SmallVector<ByteLoadPackPiece, 8> Pieces;
+  if (!collectByteLoadPack(&I, IC.getDataLayout(), 0, Pieces) ||
+      Pieces.size() < 4)
+    return nullptr;
+
+  const unsigned Width = Ty->getScalarSizeInBits();
+  if (Width != Pieces.size() * 8 || Width % 16 != 0)
+    return nullptr;
+
+  Value *Base = Pieces.front().Base;
+  int64_t MinOffset = Pieces.front().Offset;
+  int64_t MaxOffset = Pieces.front().Offset;
+  LoadInst *MinLoad = Pieces.front().LI;
+  SmallBitVector Seen(Pieces.size());
+  for (const ByteLoadPackPiece &Piece : Pieces) {
+    if (Piece.Base != Base)
+      return nullptr;
+    if (Piece.Offset < MinOffset) {
+      MinOffset = Piece.Offset;
+      MinLoad = Piece.LI;
+    }
+    MaxOffset = std::max(MaxOffset, Piece.Offset);
+  }
+  if (MaxOffset - MinOffset + 1 != static_cast<int64_t>(Pieces.size()))
+    return nullptr;
+
+  // We only fold a full contiguous byte range. For bytes [B0, B1, ..., Bn],
+  // the packed scalar must place B0 in the highest byte, B1 in the next byte,
+  // and so on. Any other shift layout is not equivalent to a byte-reversed
+  // wide load.
+  for (const ByteLoadPackPiece &Piece : Pieces) {
+    int64_t ByteOffset = Piece.Offset - MinOffset;
+    if (ByteOffset < 0 || ByteOffset >= static_cast<int64_t>(Pieces.size()) ||
+        Seen.test(ByteOffset))
+      return nullptr;
+    Seen.set(ByteOffset);
+    if (Piece.Shift != 8 * (Pieces.size() - 1 - ByteOffset))
+      return nullptr;
+  }
+
+  auto *WideTy = IntegerType::get(I.getContext(), Width);
+  LoadInst *WideLoad = IC.combineLoadToNewType(*MinLoad, WideTy, ".wide");
+  // Rebuild the tree as one widened load and normalize byte order with
+  // `bswap`. This preserves the scalar semantics while exposing a simpler
+  // canonical form to later combines.
+  return IC.Builder.CreateUnaryIntrinsic(Intrinsic::bswap, WideLoad);
+}
+
 std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
 InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
@@ -4219,6 +4357,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
     return FoldedLogic;
+
+  if (Value *WideLoad = foldByteLoadPackToWideLoad(I, *this))
+    return replaceInstUsesWith(I, WideLoad);
 
   if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
                                                   /*MatchBitReversals*/ true))

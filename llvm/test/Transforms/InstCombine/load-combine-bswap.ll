@@ -4,43 +4,8 @@
 define i64 @load_i64_by_i8_bswap_deep_tree(ptr %arg) {
 ; CHECK-LABEL: define i64 @load_i64_by_i8_bswap_deep_tree(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[ARG]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i64
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i64
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i64
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 4
-; CHECK-NEXT:    [[B4:%.*]] = load i8, ptr [[P4]], align 1
-; CHECK-NEXT:    [[Z4:%.*]] = zext i8 [[B4]] to i64
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 5
-; CHECK-NEXT:    [[B5:%.*]] = load i8, ptr [[P5]], align 1
-; CHECK-NEXT:    [[Z5:%.*]] = zext i8 [[B5]] to i64
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 6
-; CHECK-NEXT:    [[B6:%.*]] = load i8, ptr [[P6]], align 1
-; CHECK-NEXT:    [[Z6:%.*]] = zext i8 [[B6]] to i64
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 7
-; CHECK-NEXT:    [[B7:%.*]] = load i8, ptr [[P7]], align 1
-; CHECK-NEXT:    [[Z7:%.*]] = zext i8 [[B7]] to i64
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw nsw i64 [[Z0]], 56
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i64 [[Z1]], 48
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i64 [[Z2]], 40
-; CHECK-NEXT:    [[S3:%.*]] = shl nuw nsw i64 [[Z3]], 32
-; CHECK-NEXT:    [[S4:%.*]] = shl nuw nsw i64 [[Z4]], 24
-; CHECK-NEXT:    [[S5:%.*]] = shl nuw nsw i64 [[Z5]], 16
-; CHECK-NEXT:    [[S6:%.*]] = shl nuw nsw i64 [[Z6]], 8
-; CHECK-NEXT:    [[O01:%.*]] = or disjoint i64 [[S0]], [[S1]]
-; CHECK-NEXT:    [[O23:%.*]] = or disjoint i64 [[S2]], [[S3]]
-; CHECK-NEXT:    [[O45:%.*]] = or disjoint i64 [[S4]], [[S5]]
-; CHECK-NEXT:    [[O67:%.*]] = or disjoint i64 [[S6]], [[Z7]]
-; CHECK-NEXT:    [[O0123:%.*]] = or disjoint i64 [[O01]], [[O23]]
-; CHECK-NEXT:    [[O4567:%.*]] = or disjoint i64 [[O45]], [[O67]]
-; CHECK-NEXT:    [[RESULT:%.*]] = or disjoint i64 [[O0123]], [[O4567]]
+; CHECK-NEXT:    [[B0_WIDE:%.*]] = load i64, ptr [[ARG]], align 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.bswap.i64(i64 [[B0_WIDE]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %b0 = load i8, ptr %arg, align 1
@@ -86,43 +51,8 @@ define i64 @load_i64_by_i8_bswap_deep_tree(ptr %arg) {
 define i64 @load_i64_by_i8_bswap_nested_tree(ptr %arg) {
 ; CHECK-LABEL: define i64 @load_i64_by_i8_bswap_nested_tree(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[ARG]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i64
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i64
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i64
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 4
-; CHECK-NEXT:    [[B4:%.*]] = load i8, ptr [[P4]], align 1
-; CHECK-NEXT:    [[Z4:%.*]] = zext i8 [[B4]] to i64
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 5
-; CHECK-NEXT:    [[B5:%.*]] = load i8, ptr [[P5]], align 1
-; CHECK-NEXT:    [[Z5:%.*]] = zext i8 [[B5]] to i64
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 6
-; CHECK-NEXT:    [[B6:%.*]] = load i8, ptr [[P6]], align 1
-; CHECK-NEXT:    [[Z6:%.*]] = zext i8 [[B6]] to i64
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 7
-; CHECK-NEXT:    [[B7:%.*]] = load i8, ptr [[P7]], align 1
-; CHECK-NEXT:    [[Z7:%.*]] = zext i8 [[B7]] to i64
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw nsw i64 [[Z0]], 16
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i64 [[Z1]], 8
-; CHECK-NEXT:    [[O01:%.*]] = or disjoint i64 [[S0]], [[S1]]
-; CHECK-NEXT:    [[O012:%.*]] = or disjoint i64 [[O01]], [[Z2]]
-; CHECK-NEXT:    [[S012:%.*]] = shl nuw nsw i64 [[O012]], 16
-; CHECK-NEXT:    [[S3:%.*]] = shl nuw nsw i64 [[Z3]], 8
-; CHECK-NEXT:    [[O0123:%.*]] = or disjoint i64 [[S012]], [[S3]]
-; CHECK-NEXT:    [[O01234:%.*]] = or disjoint i64 [[O0123]], [[Z4]]
-; CHECK-NEXT:    [[S01234:%.*]] = shl nuw nsw i64 [[O01234]], 16
-; CHECK-NEXT:    [[S5:%.*]] = shl nuw nsw i64 [[Z5]], 8
-; CHECK-NEXT:    [[O012345:%.*]] = or disjoint i64 [[S01234]], [[S5]]
-; CHECK-NEXT:    [[O0123456:%.*]] = or disjoint i64 [[O012345]], [[Z6]]
-; CHECK-NEXT:    [[S0123456:%.*]] = shl nuw i64 [[O0123456]], 8
-; CHECK-NEXT:    [[RESULT:%.*]] = or disjoint i64 [[S0123456]], [[Z7]]
+; CHECK-NEXT:    [[B0_WIDE:%.*]] = load i64, ptr [[ARG]], align 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.bswap.i64(i64 [[B0_WIDE]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %b0 = load i8, ptr %arg, align 1
@@ -168,23 +98,8 @@ define i64 @load_i64_by_i8_bswap_nested_tree(ptr %arg) {
 define i32 @load_i32_by_i8_bswap(ptr %arg) {
 ; CHECK-LABEL: define i32 @load_i32_by_i8_bswap(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[ARG]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw nsw i32 [[Z0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[Z1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[Z2]], 8
-; CHECK-NEXT:    [[O01:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[O012:%.*]] = or disjoint i32 [[O01]], [[S2]]
-; CHECK-NEXT:    [[RESULT:%.*]] = or disjoint i32 [[O012]], [[Z3]]
+; CHECK-NEXT:    [[B0_WIDE:%.*]] = load i32, ptr [[ARG]], align 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.bswap.i32(i32 [[B0_WIDE]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %b0 = load i8, ptr %arg, align 1
