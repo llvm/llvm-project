@@ -125,6 +125,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
+  mlir-capi-openacc-test
   mlir-capi-pass-test
   mlir-capi-quant-test
   mlir-capi-remarks-test
