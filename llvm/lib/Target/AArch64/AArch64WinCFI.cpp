@@ -13,12 +13,12 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 
 using namespace llvm;
 
@@ -93,6 +93,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   // Find the physical prologue's SEH marker. Only a prologue outside the entry
   // block needs separate unwind ranges.
   MachineBasicBlock *PrologueBlock = nullptr;
+  SmallPtrSet<const MachineBasicBlock *, 4> EpilogueBlocks;
   for (MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (MI.getOpcode() == AArch64::SEH_StartProc)
@@ -100,6 +101,8 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
             "AArch64 Windows unwind range insertion cannot be run twice");
       if (MI.getOpcode() == AArch64::SEH_PrologEnd)
         PrologueBlock = &MBB;
+      if (MI.getOpcode() == AArch64::SEH_EpilogEnd)
+        EpilogueBlocks.insert(&MBB);
     }
   }
   // No prologue found, or the prologue is in the entry block (so there is no
@@ -127,79 +130,61 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   if (PrologueStart == PrologueBlock->end())
     return false;
 
-  // Track whether the real prologue has completed without a completed epilogue
-  // undoing its effects. On entry, a block inherits this state from its CFG
-  // predecessors; this does not say whether the block contains a prologue.
-  // FP-based recipes recover SP regardless of dynamic allocations, so those
-  // allocations do not change this state.
-  // Function entry starts with no prologue in effect. Analyze before inserting
-  // phantom markers so only real prologue and epilogue transitions count.
-  DenseMap<const MachineBasicBlock *, bool> PrologueInEffectOnEntry;
-  DenseMap<const MachineBasicBlock *, bool> PrologueInEffectOnExit;
-  SmallVector<const MachineBasicBlock *, 16> PendingBlocks{&MF.front()};
-  PrologueInEffectOnEntry[&MF.front()] = false;
+  // The framed region starts at the prologue and includes epilogue blocks,
+  // but not their successors.
+  SmallPtrSet<const MachineBasicBlock *, 16> FramedBlocks;
+  SmallVector<const MachineBasicBlock *, 16> PendingBlocks{PrologueBlock};
   while (!PendingBlocks.empty()) {
     const MachineBasicBlock *Block = PendingBlocks.pop_back_val();
-    bool PrologueInEffect = PrologueInEffectOnEntry.lookup(Block);
-    for (const MachineInstr &MI : *Block) {
-      if (MI.getOpcode() == AArch64::SEH_PrologEnd)
-        PrologueInEffect = true;
-      else if (MI.getOpcode() == AArch64::SEH_EpilogEnd)
-        PrologueInEffect = false;
-    }
-    PrologueInEffectOnExit[Block] = PrologueInEffect;
-    // Propagate this predecessor's exit state to each successor. Its other
-    // predecessors, including loop backedges, must agree.
+    if (!FramedBlocks.insert(Block).second || EpilogueBlocks.contains(Block))
+      continue;
+    append_range(PendingBlocks, Block->successors());
+  }
+
+  // Region membership must agree with the frame state on every reachable edge,
+  // including joins with frameless paths and loop backedges.
+  for (const MachineBasicBlock *Block : depth_first(&MF.front())) {
+    bool FrameOnExit =
+        FramedBlocks.contains(Block) && !EpilogueBlocks.contains(Block);
     for (const MachineBasicBlock *Successor : Block->successors()) {
-      auto [EntryState, FirstVisit] =
-          PrologueInEffectOnEntry.try_emplace(Successor, PrologueInEffect);
-      if (!FirstVisit && EntryState->second != PrologueInEffect)
+      bool FrameOnEntry =
+          Successor != PrologueBlock && FramedBlocks.contains(Successor);
+      if (FrameOnExit != FrameOnEntry)
         reportFatalInternalError(
             "inconsistent Windows ARM64 frame state at CFG join");
-      if (FirstVisit)
-        PendingBlocks.push_back(Successor);
     }
   }
 
-  // Walk final layout to group blocks where the prologue remains in effect
-  // into contiguous records. Other gaps retain leaf-style unwinding.
+  // Group framed blocks into contiguous records in final layout. Other gaps
+  // retain leaf-style unwinding.
   const AArch64InstrInfo &TII = *ST.getInstrInfo();
   MachineBasicBlock *PreviousLayoutBlock = nullptr;
   bool RangeStarted = false;
   for (MachineBasicBlock &MBB : MF) {
-    bool PrologueInEffect = PrologueInEffectOnEntry.lookup(&MBB);
-    // A record cannot span sections or bridge blocks where the prologue is not
-    // in effect, even when they are adjacent in layout.
-    if (RangeStarted && (MBB.isBeginSection() ||
-                         !PrologueInEffectOnExit.lookup(PreviousLayoutBlock) ||
-                         !PrologueInEffect)) {
+    bool IsFramed = FramedBlocks.contains(&MBB);
+    bool IsPhysicalPrologue = &MBB == PrologueBlock;
+    // The physical prologue starts a new record. Otherwise only section
+    // boundaries and frameless gaps separate adjacent framed blocks.
+    if (RangeStarted &&
+        (MBB.isBeginSection() || !IsFramed || IsPhysicalPrologue)) {
       endWinCFIRange(*PreviousLayoutBlock, TII);
       RangeStarted = false;
     }
 
-    // The real prologue is already in effect on entry to this range; this block
-    // does not execute it. Copy its unwind recipe and use end_c so the unwinder
-    // does not treat PCs near the range start as a partially executed prologue.
-    if (PrologueInEffect && !RangeStarted) {
-      assert(&MBB != PrologueBlock &&
-             "Physical prologue cannot start a phantom unwind range");
-      auto InsertPt = MBB.begin();
-      BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_StartProc));
-      for (const MachineInstr *MI : Prologue)
-        MBB.insert(InsertPt, MF.CloneMachineInstr(MI));
-      BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_EndC));
-      BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_PrologEnd));
-      RangeStarted = true;
-    }
-
-    // Mark the real prologue - since we are manually managing the unwind
-    // ranges, AsmPrinter won't insert the start/end for us.
-    if (&MBB == PrologueBlock) {
-      assert(!PrologueInEffect &&
-             "Prologue is already in effect on entry to its physical block");
-      assert(!RangeStarted &&
-             "Physical prologue must start a new unwind range");
-      BuildMI(MBB, PrologueStart, DebugLoc(), TII.get(AArch64::SEH_StartProc));
+    if (IsFramed && !RangeStarted) {
+      if (IsPhysicalPrologue) {
+        BuildMI(MBB, PrologueStart, DebugLoc(),
+                TII.get(AArch64::SEH_StartProc));
+      } else {
+        // This range does not execute the prologue. Copy its recipe and use
+        // end_c to prevent partial-prologue unwinding near the range start.
+        auto InsertPt = MBB.begin();
+        BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_StartProc));
+        for (const MachineInstr *MI : Prologue)
+          MBB.insert(InsertPt, MF.CloneMachineInstr(MI));
+        BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_EndC));
+        BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_PrologEnd));
+      }
       RangeStarted = true;
     }
 
