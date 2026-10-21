@@ -170,7 +170,10 @@ page](https://llvm.org/releases/).
   interface.
 - Added support for the Fortran 2023 non-interoperable `ENUMERATION TYPE`
   (F2023 7.6.2). An enumeration type is a distinct type whose values are
-  ordered, named enumerators. Supported features:
+  ordered, named enumerators.
+
+  Supported features:
+
   - declaration with `ENUMERATION TYPE` / `ENUMERATOR`, including
     `ENUMERATION TYPE, PUBLIC/PRIVATE` and use through modules (module files
     record enumeration types);
@@ -180,15 +183,19 @@ page](https://llvm.org/releases/).
   - the `INT` intrinsic applied to an enumeration value, and the `HUGE`,
     `NEXT` and `PREVIOUS` intrinsics;
   - formatted I/O using the `I`, `B`, `O` and `Z` edit descriptors.
+
   Known Limitations:
   - unformatted I/O of enumeration types is rejected (issue 231638);
   - formatted input is not range-checked (231636);
   - NEXT/PREVIOUS with STAT= inside FORALL is not yet implemented (229873);
   - WHERE with a derived-type vector-subscript gather fails to verify (230617).
+
   Side effects:
   - `-fenumeration-type` and `-fno-enumeration-type` have been removed;
-  - NEXT and PREVIOUS are new intrinsic functions, name re-use requires EXTERNAL
-    declaration or an explicit interface.
+  - NEXT and PREVIOUS are new intrinsic functions; a reference to an external
+    function with either name now requires an EXTERNAL declaration or an
+    explicit interface.  A CALL to an external subroutine with either name is
+    unaffected.
 
 ## Build System Changes
 

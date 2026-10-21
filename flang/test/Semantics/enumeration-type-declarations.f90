@@ -187,3 +187,20 @@ subroutine test_type_parameters(u)
   type is (state(1))
   end select
 end subroutine
+
+! A FUNCTION prefix and IMPLICIT resolve their type-spec on separate paths.
+module enum_type_param_mod
+  enumeration type :: state
+    enumerator :: off, on
+  end enumeration type
+contains
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(1)) function param_result()
+  end function
+end module
+
+subroutine test_type_parameters_implicit()
+  use enum_type_param_mod, only: state
+  !ERROR: Enumeration type 'state' has no type parameters
+  implicit type(state(1)) (z)
+end subroutine

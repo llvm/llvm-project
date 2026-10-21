@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! NEXT and PREVIOUS are F2023 intrinsic functions.  A pre-F2023 program that
-! uses either name for its own procedure must declare it EXTERNAL.
+! references an external function with either name must declare it EXTERNAL
+! or give it an explicit interface.
 
 program p
   integer :: i

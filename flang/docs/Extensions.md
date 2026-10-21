@@ -601,7 +601,7 @@ end program
   value written or read is the ordinal position).  F2023 12.6.3 permits
   only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
   items.  No diagnostic is issued.
-  
+
 ### `SIMPLE` classification of extensions
 
 The following extensions are `SIMPLE`: `IARGC`, `INT2`, `INT8`, `INT_PTR_KIND`, `ISNAN`,

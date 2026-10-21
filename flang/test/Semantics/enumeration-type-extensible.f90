@@ -38,6 +38,11 @@ contains
     classof(e), allocatable :: f
   end subroutine
 
+  !ERROR: Non-extensible derived type 'color' may not be used with CLASS keyword
+  class(color) function class_result()
+    allocatable :: class_result
+  end function
+
   subroutine type_is_ok(u)
     class(*), intent(in) :: u
     select type (u)
@@ -73,6 +78,12 @@ contains
     !ERROR: Actual argument for 'a=' has type 'color', but was expected to be an extensible or unlimited polymorphic type
     print *, same_type_as(a, b)
   end subroutine
+end module
+
+module enum_ext_implicit_mod
+  use enum_ext_mod, only: color
+  !ERROR: Non-extensible derived type 'color' may not be used with CLASS keyword
+  implicit class(color) (c)
 end module
 
 module enum_ext_dio_mod

@@ -86,8 +86,8 @@ end subroutine
 
 #if STEP == 6
 ! Producer for the declaration forms of an enumeration type that reach a
-! module file: TYPE() dummies, TYPEOF() of an enumeration entity, a component
-! with an enumerator default, and TYPE IS in SELECT TYPE.
+! module file: TYPE() dummies, TYPEOF() of an enumeration entity, and a
+! component with an enumerator default.
 module m8
   enumeration type :: state
     enumerator :: off, on
