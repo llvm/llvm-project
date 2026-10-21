@@ -157,6 +157,14 @@ public:
         Features(
             AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
         CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {
+    LLVMContext &Ctx = M.getContext();
+    for (auto [Mask, Name] : ImplicitAttrs)
+      ImplicitAttrList.push_back({Mask, Attribute::get(Ctx, Name)});
+    // Sorted by name, the order of attributes in an attribute set.
+    llvm::sort(ImplicitAttrList, [](const auto &A, const auto &B) {
+      return A.second.getKindAsString() < B.second.getKindAsString();
+    });
+
     unsigned COV = CodeObjectVersion;
     ImplicitArgRanges = {
         {MULTIGRID_SYNC_ARG,
@@ -183,6 +191,13 @@ public:
   }
 
   TargetMachine &TM;
+
+  /// The attributes for the implicit arguments that are not needed, sorted by
+  /// name.
+  ArrayRef<std::pair<ImplicitArgumentMask, Attribute>>
+  getImplicitAttrList() const {
+    return ImplicitAttrList;
+  }
 
   enum ConstantStatus : uint8_t {
     NONE = 0,
@@ -341,6 +356,8 @@ public:
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
+  SmallVector<std::pair<ImplicitArgumentMask, Attribute>, LAST_ARG_POS>
+      ImplicitAttrList;
   const Triple::SubArchType SubArch;
   const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
@@ -634,12 +651,11 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    SmallVector<Attribute, 8> AttrList;
-    LLVMContext &Ctx = getAssociatedFunction()->getContext();
-
-    for (auto Attr : ImplicitAttrs) {
-      if (isKnown(Attr.first))
-        AttrList.push_back(Attribute::get(Ctx, Attr.second));
+    SmallVector<Attribute, LAST_ARG_POS> AttrList;
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    for (auto [Mask, Attr] : InfoCache.getImplicitAttrList()) {
+      if (isKnown(Mask))
+        AttrList.push_back(Attr);
     }
 
     return A.manifestAttrs(getIRPosition(), AttrList,
@@ -1756,8 +1772,12 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
         Ptr = CmpX->getPointerOperand();
 
       if (Ptr) {
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
-        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        // Only flat pointers can be refined to a specific address space.
+        if (Ptr->getType()->getPointerAddressSpace() ==
+            AMDGPUAS::FLAT_ADDRESS) {
+          A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+          A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        }
         if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
           if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
             A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));

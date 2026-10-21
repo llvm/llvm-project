@@ -476,7 +476,7 @@ function(add_libc_fuzzer target_name)
     "LIBC_FUZZER"
     "NEED_MPFR" # Optional arguments
     "" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_FUZZER_SRCS)
@@ -488,13 +488,13 @@ function(add_libc_fuzzer target_name)
       "'add_entrypoint_object' targets.")
   endif()
 
-  list(APPEND LIBC_FUZZER_LINK_LIBRARIES "")
+  set(link_libraries ${LIBC_FUZZER_LINK_LIBRARIES})
   if(LIBC_FUZZER_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message(VERBOSE "Fuzz test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Fuzz test ${target_name} will be skipped as MPFR library is not available.")
       return()
     endif()
-    list(APPEND LIBC_FUZZER_LINK_LIBRARIES mpfr gmp)
+    list(APPEND link_libraries mpfr gmp)
   endif()
 
 
@@ -530,7 +530,7 @@ function(add_libc_fuzzer target_name)
 
   target_link_libraries(${fq_target_name} PRIVATE
     ${link_object_files}
-    ${LIBC_FUZZER_LINK_LIBRARIES}
+    ${link_libraries}
   )
 
   set_target_properties(${fq_target_name}

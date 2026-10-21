@@ -1,0 +1,40 @@
+// RUN: cir-opt %s | cir-opt | FileCheck %s
+
+cir.func @loops(%c: !cir.bool) {
+  // CHECK: cir.while {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // CHECK: } loop_hints < must_progress>
+  } loop_hints < must_progress>
+
+  // CHECK: cir.do {
+  cir.do {
+    cir.yield
+  } while {
+    cir.condition(%c)
+  // CHECK: } loop_hints <>
+  } loop_hints <>
+
+  // CHECK: cir.for : cond {
+  cir.for : cond {
+    cir.condition(%c)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  // CHECK: } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  } loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+
+  // CHECK: cir.for : cond {
+  cir.for : cond {
+    cir.condition(%c)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  // CHECK: } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
+  cir.return
+}

@@ -265,7 +265,8 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
     return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
   ModuleSanitizerCoverage ModuleSancov(Opts, M, DTCallback, PDTCallback,
                                        overrideFromCL(Opts, Options),
                                        Allowlist.get(), Blocklist.get());
@@ -530,7 +531,7 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
   // NumberOfInstrumentedBlocks() might complicate calculation of code coverage
   // percentage. Also, unreachable instructions frequently have no debug
   // locations.
-  if (isa<UnreachableInst>(BB->getFirstNonPHIOrDbgOrLifetime()))
+  if (isa<UnreachableInst>(BB->getFirstNonPHIOrLifetime()))
     return false;
 
   // Don't insert coverage into blocks without a valid insertion point
