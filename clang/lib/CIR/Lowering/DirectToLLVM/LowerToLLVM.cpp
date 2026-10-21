@@ -957,8 +957,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       mlir::Value init = visit(prefix);
       if (!init)
         return {};
-      return mlir::LLVM::InsertValueOp::create(
-          rewriter, loc, result, visit(prefix), llvm::ArrayRef<int64_t>{0});
+      return mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init,
+                                               llvm::ArrayRef<int64_t>{0});
     }
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
       mlir::Value init = visit(elt);
