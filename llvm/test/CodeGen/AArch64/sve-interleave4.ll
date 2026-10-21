@@ -28,8 +28,8 @@ define void @wide_interleave4(ptr %dst, <vscale x 8 x i32> %a, <vscale x 8 x i32
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    mov z28.d, z0.d
-; CHECK-NEXT:    st4w { z28.s - z31.s }, p0, [x0]
 ; CHECK-NEXT:    st4w { z24.s - z27.s }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4w { z28.s - z31.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.vec = tail call <vscale x 32 x i32> @llvm.vector.interleave4.nxv32i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c, <vscale x 8 x i32> %d)
   store <vscale x 32 x i32> %interleaved.vec, ptr %dst, align 4

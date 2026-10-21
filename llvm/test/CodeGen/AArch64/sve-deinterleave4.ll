@@ -52,16 +52,16 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-LABEL: wide_deinterleave4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0]
-; CHECK-NEXT:    ld4w { z4.s - z7.s }, p0/z, [x0, #4, mul vl]
-; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4w { z4.s - z7.s }, p0/z, [x0]
 ; CHECK-NEXT:    // fake_use: $z4
-; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    // fake_use: $z5
-; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z1
 ; CHECK-NEXT:    // fake_use: $z6
-; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    // fake_use: $z2
 ; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
 ; CHECK-NEXT:    ret
   %load = load <vscale x 32 x i32>, ptr %src, align 4
   %deinterleave = tail call { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave4.nxv32i32(<vscale x 32 x i32> %load)

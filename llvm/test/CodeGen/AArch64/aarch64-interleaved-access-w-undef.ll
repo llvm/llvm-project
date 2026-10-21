@@ -144,20 +144,9 @@ BB:
 
 
 define void @f_undef_intrinsic(<8 x i64> %a, ptr %dst) {
-; CHECK-IAENABLED-LABEL: f_undef_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov x8, x0
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8], #32
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #64
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #96
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: f_undef_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: f_undef_intrinsic:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    ret
 BB:
   %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> poison, <8 x i64> poison)
   store <16 x i64> %S, ptr %dst, align 64
@@ -166,20 +155,9 @@ BB:
 
 
 define void @f_poison_intrinsic(<8 x i64> %a, ptr %dst) {
-; CHECK-IAENABLED-LABEL: f_poison_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov x8, x0
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8], #32
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #64
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #96
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: f_poison_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: f_poison_intrinsic:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    ret
 BB:
   %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> poison, <8 x i64> poison)
   store <16 x i64> %S, ptr %dst, align 64
@@ -188,24 +166,12 @@ BB:
 
 
 define void @f_undef_15_intrinsic(<8 x i64> %a, ptr %dst) {
-; CHECK-IAENABLED-LABEL: f_undef_15_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov x8, x0
-; CHECK-IAENABLED-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8], #32
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #64
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #96
-; CHECK-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: f_undef_15_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-IADISABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0], #32
-; CHECK-IADISABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: f_undef_15_intrinsic:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
+; CHECK-NEXT:    st2 { v0.2d, v1.2d }, [x0], #32
+; CHECK-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; CHECK-NEXT:    ret
 BB:
   %a.0 = extractelement <8 x i64> %a, i64 0
   %even = insertelement <8 x i64> poison, i64 %a.0, i64 0
@@ -216,41 +182,22 @@ BB:
 
 
 define void @f_undef_1_intrinsic(<8 x i64> %a, ptr %dst) {
-; CHECK-IAENABLED-LABEL: f_undef_1_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov v16.16b, v0.16b
-; CHECK-IAENABLED-NEXT:    mov v5.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
-; CHECK-IAENABLED-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
-; CHECK-IAENABLED-NEXT:    mov x8, x0
-; CHECK-IAENABLED-NEXT:    mov v2.16b, v1.16b
-; CHECK-IAENABLED-NEXT:    mov v4.16b, v3.16b
-; CHECK-IAENABLED-NEXT:    mov v17.16b, v16.16b
-; CHECK-IAENABLED-NEXT:    mov v6.16b, v5.16b
-; CHECK-IAENABLED-NEXT:    st2 { v16.2d, v17.2d }, [x8], #32
-; CHECK-IAENABLED-NEXT:    st2 { v1.2d, v2.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #64
-; CHECK-IAENABLED-NEXT:    st2 { v5.2d, v6.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    add x8, x0, #96
-; CHECK-IAENABLED-NEXT:    st2 { v3.2d, v4.2d }, [x8]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: f_undef_1_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    mov v5.16b, v2.16b
-; CHECK-IADISABLED-NEXT:    mov v16.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
-; CHECK-IADISABLED-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
-; CHECK-IADISABLED-NEXT:    add x8, x0, #64
-; CHECK-IADISABLED-NEXT:    mov v4.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v1.16b
-; CHECK-IADISABLED-NEXT:    mov v6.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    mov v17.16b, v16.16b
-; CHECK-IADISABLED-NEXT:    st2 { v5.2d, v6.2d }, [x8], #32
-; CHECK-IADISABLED-NEXT:    st2 { v3.2d, v4.2d }, [x8]
-; CHECK-IADISABLED-NEXT:    st2 { v16.2d, v17.2d }, [x0], #32
-; CHECK-IADISABLED-NEXT:    st2 { v1.2d, v2.2d }, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: f_undef_1_intrinsic:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-NEXT:    add x8, x0, #64
+; CHECK-NEXT:    mov v4.16b, v3.16b
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    mov v6.16b, v5.16b
+; CHECK-NEXT:    mov v17.16b, v16.16b
+; CHECK-NEXT:    st2 { v5.2d, v6.2d }, [x8], #32
+; CHECK-NEXT:    st2 { v3.2d, v4.2d }, [x8]
+; CHECK-NEXT:    st2 { v16.2d, v17.2d }, [x0], #32
+; CHECK-NEXT:    st2 { v1.2d, v2.2d }, [x0]
+; CHECK-NEXT:    ret
 BB:
   %even = insertelement <8 x i64> %a, i64 poison, i64 6
   %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> %even, <8 x i64> %a)

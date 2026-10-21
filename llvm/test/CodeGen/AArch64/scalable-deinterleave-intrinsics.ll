@@ -236,18 +236,18 @@ define void @deinterleave_wide_nxi32_factor2(ptr %ptr) #0 {
 ; CHECK-LABEL: deinterleave_wide_nxi32_factor2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
-; CHECK-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #4, mul vl]
-; CHECK-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0, #6, mul vl]
-; CHECK-NEXT:    // fake_use: $z0
-; CHECK-NEXT:    // fake_use: $z2
-; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
 ; CHECK-NEXT:    // fake_use: $z6
-; CHECK-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    // fake_use: $z7 $z6_z7
+; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
 ; CHECK-NEXT:    ret
   %load = load <vscale x 32 x i32>, ptr %ptr, align 4
   %deinterleave = tail call { <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave2.nxv32i32(<vscale x 32 x i32> %load)
@@ -262,12 +262,12 @@ define void @deinterleave_wide_nxdouble_factor2(ptr %ptr) #0 {
 ; CHECK-LABEL: deinterleave_wide_nxdouble_factor2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
-; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0]
 ; CHECK-NEXT:    // fake_use: $z2
-; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x double>, ptr %ptr, align 8
   %deinterleave = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %load)
@@ -286,8 +286,8 @@ define void @interleave_wide_nxdouble_factor2(ptr %ptr, <vscale x 4 x double> %l
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    mov z4.d, z0.d
-; CHECK-NEXT:    st2d { z4.d, z5.d }, p0, [x0]
 ; CHECK-NEXT:    st2d { z2.d, z3.d }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2d { z4.d, z5.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleave = tail call <vscale x 8 x double> @llvm.vector.interleave2.nxv8f64(<vscale x 4 x double> %l, <vscale x 4 x double> %r)
   store <vscale x 8 x double> %interleave, ptr %ptr, align 4
@@ -324,22 +324,22 @@ define void @deinterleave2_nxi64_factor3(ptr %ptr, <vscale x 8 x i64>* %s1, <vsc
 ; CHECK-LABEL: deinterleave2_nxi64_factor3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0]
-; CHECK-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x0, #6, mul vl]
-; CHECK-NEXT:    ld3d { z19.d - z21.d }, p0/z, [x0, #9, mul vl]
-; CHECK-NEXT:    str z16, [x1, #2, mul vl]
-; CHECK-NEXT:    str z3, [x1, #1, mul vl]
-; CHECK-NEXT:    str z19, [x1, #3, mul vl]
-; CHECK-NEXT:    str z0, [x1]
-; CHECK-NEXT:    str z20, [x2, #3, mul vl]
-; CHECK-NEXT:    str z1, [x2]
-; CHECK-NEXT:    str z4, [x2, #1, mul vl]
-; CHECK-NEXT:    str z17, [x2, #2, mul vl]
-; CHECK-NEXT:    str z18, [x3, #2, mul vl]
-; CHECK-NEXT:    str z21, [x3, #3, mul vl]
-; CHECK-NEXT:    str z2, [x3]
-; CHECK-NEXT:    str z5, [x3, #1, mul vl]
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0]
+; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x0, #9, mul vl]
+; CHECK-NEXT:    ld3d { z19.d - z21.d }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    str z16, [x1, #3, mul vl]
+; CHECK-NEXT:    str z0, [x1, #1, mul vl]
+; CHECK-NEXT:    str z19, [x1, #2, mul vl]
+; CHECK-NEXT:    str z3, [x1]
+; CHECK-NEXT:    str z17, [x2, #3, mul vl]
+; CHECK-NEXT:    str z4, [x2]
+; CHECK-NEXT:    str z1, [x2, #1, mul vl]
+; CHECK-NEXT:    str z20, [x2, #2, mul vl]
+; CHECK-NEXT:    str z21, [x3, #2, mul vl]
+; CHECK-NEXT:    str z18, [x3, #3, mul vl]
+; CHECK-NEXT:    str z5, [x3]
+; CHECK-NEXT:    str z2, [x3, #1, mul vl]
 ; CHECK-NEXT:    ret
   %wide.vec = load <vscale x 24 x i64>, ptr %ptr, align 8
   %ldN = tail call { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } @llvm.vector.deinterleave3.nxv24i64(<vscale x 24 x i64> %wide.vec)
@@ -453,15 +453,15 @@ define void @interleave1_nxi64_factor3(ptr %ptr, <vscale x 8 x i64> %s1, <vscale
 ; CHECK-NEXT:    mov z24.d, z2.d
 ; CHECK-NEXT:    mov z27.d, z1.d
 ; CHECK-NEXT:    ldr z8, [x1, #3, mul vl]
-; CHECK-NEXT:    ldr z26, [x1, #2, mul vl]
 ; CHECK-NEXT:    ldr z29, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z26, [x1, #2, mul vl]
 ; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    st3d { z6.d - z8.d }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3d { z27.d - z29.d }, p0, [x0, #3, mul vl]
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    st3d { z3.d - z5.d }, p0, [x0]
-; CHECK-NEXT:    st3d { z27.d - z29.d }, p0, [x0, #3, mul vl]
-; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0, #6, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -481,8 +481,8 @@ define void @interleave2_nxi64_factor3(ptr %ptr, <vscale x 4 x i64> %s1, <vscale
 ; CHECK-NEXT:    mov z25.d, z2.d
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    mov z24.d, z0.d
-; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0]
 ; CHECK-NEXT:    st3d { z3.d - z5.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3d { z24.d - z26.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleave = tail call <vscale x 12 x i64> @llvm.vector.interleave3.nxv12i64(<vscale x 4 x i64> %s1, <vscale x 4 x i64> %s2, <vscale x 4 x i64> %s3)
 
