@@ -38,9 +38,21 @@ LIBC_INLINE_VAR constexpr uint64_t EXP_MANTISSA[64] = {
     0xea4afa2a490da, 0xefa1bee615a27, 0xf50765b6e4540, 0xfa7c1819e90d8,
 };
 
-// Lookup table for ln(1 / R[i]), where R is the reciprocal from the table
+// Lookup table for log(1 / R[i]), where R is the reciprocal from the table
 // found in libc/src/__support/math/common_constants.h, specifically optimised
-// for mathvec RN.
+// for mathvec RN. There are two main differences:
+//  1. The final entry has LOG_TABLE[127] = log(2), rather than 0 in the scalar
+//  table.
+//  2. Some values in the table are adjusted to remove hard-to-round cases,
+//  making the main computation path branchless.
+//  The following adjustments are made, in FP64 ULP:
+//     LOG_TABLE[23] -15
+//     LOG_TABLE[49] +47
+//     LOG_TABLE[65]  +2
+//     LOG_TABLE[88] +51
+//     LOG_TABLE[93] +21
+//     LOG_TABLE[96]  +3
+//     LOG_TABLE[101] -2
 LIBC_INLINE_VAR constexpr double LOG_TABLE[128] = {
     0x0.0000000000000p+0, 0x1.010157588de71p-7, 0x1.0205658935847p-6,
     0x1.8492528c8cabfp-6, 0x1.0415d89e74444p-5, 0x1.466aed42de3eap-5,
