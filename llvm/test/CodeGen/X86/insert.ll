@@ -220,9 +220,8 @@ define i64 @sub8_reg_minsize(i64 %base, i8 %insert) minsize {
 ;
 ; X64-LABEL: sub8_reg_minsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-256, %rdi
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movb %sil, %al
 ; X64-NEXT:    retq
   %high = and i64 %base, -256
   %low = zext i8 %insert to i64
@@ -242,9 +241,8 @@ define i64 @sub16_reg_minsize(i64 %base, i16 %insert) minsize {
 ;
 ; X64-LABEL: sub16_reg_minsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-65536, %rdi # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movw %si, %ax
 ; X64-NEXT:    retq
   %high = and i64 %base, -65536
   %low = zext i16 %insert to i64
@@ -262,9 +260,8 @@ define i64 @sub8_reg_commuted(i64 %base, i8 %insert) minsize {
 ;
 ; X64-LABEL: sub8_reg_commuted:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-256, %rdi
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movb %sil, %al
 ; X64-NEXT:    retq
   %high = and i64 %base, -256
   %low = zext i8 %insert to i64
@@ -284,9 +281,8 @@ define i64 @sub16_reg_commuted(i64 %base, i16 %insert) minsize {
 ;
 ; X64-LABEL: sub16_reg_commuted:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-65536, %rdi # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movw %si, %ax
 ; X64-NEXT:    retq
   %high = and i64 %base, -65536
   %low = zext i16 %insert to i64
@@ -304,9 +300,8 @@ define i64 @sub8_reg_plain_or(i64 %base, i8 %insert) minsize {
 ;
 ; X64-LABEL: sub8_reg_plain_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-256, %rdi
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movb %sil, %al
 ; X64-NEXT:    retq
   %high = and i64 %base, -256
   %low = zext i8 %insert to i64
@@ -326,9 +321,8 @@ define i64 @sub16_reg_plain_or(i64 %base, i16 %insert) minsize {
 ;
 ; X64-LABEL: sub16_reg_plain_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-65536, %rdi # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movw %si, %ax
 ; X64-NEXT:    retq
   %high = and i64 %base, -65536
   %low = zext i16 %insert to i64
@@ -346,9 +340,8 @@ define i64 @sub8_reg_masked(i64 %base, i64 %insert) minsize {
 ;
 ; X64-LABEL: sub8_reg_masked:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-256, %rdi
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movb %sil, %al
 ; X64-NEXT:    retq
   %high = and i64 %base, -256
   %low = and i64 %insert, 255
@@ -368,9 +361,8 @@ define i64 @sub16_reg_masked(i64 %base, i64 %insert) minsize {
 ;
 ; X64-LABEL: sub16_reg_masked:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-65536, %rdi # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movw %si, %ax
 ; X64-NEXT:    retq
   %high = and i64 %base, -65536
   %low = and i64 %insert, 65535
@@ -499,12 +491,10 @@ define void @sub8_reg_multiuse(i64 %base, i8 %insert, ptr %out) minsize {
 ; X64-LABEL: sub8_reg_multiuse:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    andq $-256, %rax
-; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    movb %sil, %al
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    movq %rdi, (%rdx)
-; X64-NEXT:    movb %cl, (%rdx)
+; X64-NEXT:    movb %sil, (%rdx)
 ; X64-NEXT:    retq
   %high = and i64 %base, -256
   %low = zext i8 %insert to i64
@@ -545,12 +535,10 @@ define void @sub16_reg_multiuse(i64 %base, i16 %insert, ptr %out) minsize {
 ; X64-LABEL: sub16_reg_multiuse:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    andq $-65536, %rax # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %si, %ecx
-; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    movw %si, %ax
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    movq %rdi, (%rdx)
-; X64-NEXT:    movw %cx, (%rdx)
+; X64-NEXT:    movw %si, (%rdx)
 ; X64-NEXT:    retq
   %high = and i64 %base, -65536
   %low = zext i16 %insert to i64
@@ -656,9 +644,8 @@ define void @sub8_reg_low_multiuse(i64 %base, i8 %insert, ptr %out) minsize {
 ;
 ; X64-LABEL: sub8_reg_low_multiuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-256, %rdi
 ; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    orq %rax, %rdi
+; X64-NEXT:    movb %al, %dil
 ; X64-NEXT:    movq %rdi, (%rdx)
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
@@ -692,9 +679,8 @@ define void @sub16_reg_low_multiuse(i64 %base, i16 %insert, ptr %out) minsize {
 ;
 ; X64-LABEL: sub16_reg_low_multiuse:
 ; X64:       # %bb.0:
-; X64-NEXT:    andq $-65536, %rdi # imm = 0xFFFF0000
 ; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    orq %rax, %rdi
+; X64-NEXT:    movw %ax, %di
 ; X64-NEXT:    movq %rdi, (%rdx)
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
@@ -847,9 +833,8 @@ define i64 @sub8_reg_call(i64 %base) minsize {
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    callq get_i8@PLT
-; X64-NEXT:    andq $-256, %rbx
-; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    orq %rbx, %rax
+; X64-NEXT:    movb %al, %bl
+; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -889,9 +874,8 @@ define i64 @sub16_reg_call(i64 %base) minsize {
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    callq get_i16@PLT
-; X64-NEXT:    andq $-65536, %rbx # imm = 0xFFFF0000
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    orq %rbx, %rax
+; X64-NEXT:    movw %ax, %bx
+; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
