@@ -218,10 +218,17 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
       if (!ConsiderSM)
         continue;
 
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+
       // If the operation is invalid in the current mode, it should not be
       // inlined.
+      // Target intrinics may not be handled by `getInstructionCost`, so
+      // remain conservative that they may not be compatible in the mode
+      // of the caller.
+      // FIXME: Be less conservative about target intrinsics.
       SmallVector<Value *> Opnds(I.op_begin(), I.op_end());
-      if (!getInstructionCost(&I, Opnds, TTI::TCK_RecipThroughput).isValid())
+      if (!getInstructionCost(&I, Opnds, TTI::TCK_RecipThroughput).isValid() ||
+          (II && Intrinsic::isTargetIntrinsic(II->getIntrinsicID())))
         return true;
 
       if (AssumeVScaleIsEquivalent)
@@ -236,7 +243,7 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
                               })))
         return true;
 
-      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II) {
         unsigned IID = II->getIntrinsicID();
         switch (IID) {
         default:
