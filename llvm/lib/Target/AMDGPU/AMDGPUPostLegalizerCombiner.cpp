@@ -288,10 +288,11 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
     const unsigned Offset = MI.getOpcode() - AMDGPU::G_AMDGPU_CVT_F32_UBYTE0;
 
     unsigned ShiftOffset = 8 * Offset;
+    unsigned ShiftAmtEnc = static_cast<unsigned>(ShiftAmt);
     if (IsShr)
-      ShiftOffset += static_cast<unsigned>(ShiftAmt);
+      ShiftOffset += ShiftAmtEnc;
     else
-      ShiftOffset -= static_cast<unsigned>(ShiftAmt);
+      ShiftOffset -= ShiftAmtEnc;
 
     MatchInfo.CvtVal = Src0;
     MatchInfo.ShiftOffset = ShiftOffset;
