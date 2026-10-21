@@ -201,10 +201,9 @@ LogicalResult PatternApplicator::matchAndRewrite(
           // Operation `op` may be invalidated after applying the rewrite
           // pattern.
           Operation *dumpRootOp = nullptr;
-          // LLVM_DEBUG enables level 1, but IR dumps require level 2. Avoid
-          // walking ancestors to find the dump root when no IR will be printed.
-          LLVM_DEBUG(if (llvm::isCurrentDebugType(DEBUG_TYPE, 2)) dumpRootOp =
-                         getDumpRootOp(op));
+          // Only find the dump root when level-2 IR debugging is enabled.
+          if (llvm::DebugFlag && llvm::isCurrentDebugType(DEBUG_TYPE, 2))
+            dumpRootOp = getDumpRootOp(op);
 #endif
           if (pdlMatch) {
             result =
