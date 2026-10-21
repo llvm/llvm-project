@@ -86,7 +86,8 @@ private:
                                                  PrologInfo &prolog);
 
   __attribute__((target("pauth-lr"))) static pint_t
-  emitPAuthLRInsts(pint_t ptrAuthDiv, pint_t cfa, pint_t returnAddr, bool BKey);
+  nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa, pint_t returnAddr,
+                          bool BKey);
 #endif
 };
 
@@ -210,8 +211,8 @@ DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
 
 template <typename A, typename R>
 __attribute__((target("pauth-lr"))) typename A::pint_t
-DwarfInstructions<A, R>::emitPAuthLRInsts(pint_t ptrAuthDiv, pint_t cfa,
-                                          pint_t returnAddr, bool BKey) {
+DwarfInstructions<A, R>::nonHintLRAuthentication(pint_t ptrAuthDiv, pint_t cfa,
+                                                 pint_t returnAddr, bool BKey) {
   register unsigned long long x15 __asm("x15") = ptrAuthDiv;
   register unsigned long long x16 __asm("x16") = cfa;
   register unsigned long long x17 __asm("x17") = returnAddr;
@@ -362,15 +363,15 @@ int DwarfInstructions<A, R>::stepWithDwarf(
           register unsigned long long x15 __asm("x15") =
               prolog.ptrAuthDiversifier;
           if (cieInfo.nonHintPAuthFrame)
-            x17 =
-                emitPAuthLRInsts(prolog.ptrAuthDiversifier, cfa, returnAddress,
-                                 cieInfo.addressesSignedWithBKey);
+            x17 = nonHintLRAuthentication(prolog.ptrAuthDiversifier, cfa,
+                                          returnAddress,
+                                          cieInfo.addressesSignedWithBKey);
           else {
-            asm("hint 0x27\n\t"); // pacm
-
             if (cieInfo.addressesSignedWithBKey) {
+              asm("hint 0x27\n\t");                             // pacm
               asm("hint 0xe" : "+r"(x17) : "r"(x16), "r"(x15)); // autib1716
             } else {
+              asm("hint 0x27\n\t");                             // pacm
               asm("hint 0xc" : "+r"(x17) : "r"(x16), "r"(x15)); // autia1716
             }
           }
