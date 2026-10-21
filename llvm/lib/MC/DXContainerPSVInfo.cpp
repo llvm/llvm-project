@@ -20,11 +20,13 @@ static constexpr size_t npos = StringRef::npos;
 
 static size_t FindSequence(ArrayRef<uint32_t> Buffer,
                            ArrayRef<uint32_t> Sequence) {
+  if (Sequence.empty())
+    return 0;
   if (Buffer.size() < Sequence.size())
     return npos;
   for (size_t Idx = 0; Idx <= Buffer.size() - Sequence.size(); ++Idx) {
-    if (0 == memcmp(static_cast<const void *>(&Buffer[Idx]),
-                    static_cast<const void *>(Sequence.begin()),
+    if (0 == memcmp(static_cast<const void *>(Buffer.data() + Idx),
+                    static_cast<const void *>(Sequence.data()),
                     Sequence.size() * sizeof(uint32_t)))
       return Idx;
   }
