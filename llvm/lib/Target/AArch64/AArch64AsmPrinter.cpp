@@ -358,6 +358,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
@@ -1153,6 +1154,29 @@ void AArch64AsmPrinter::emitLOHs() {
     OutStreamer->emitLOHDirective(D.getKind(), MCArgs);
     MCArgs.clear();
   }
+}
+
+// Unwinding can get confused if the last instruction in an exception-handling
+// region (function, funclet, try block, etc.) is a call, because the return
+// address then points to the *next* region (see
+// X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH for the X86 equivalent).
+// Trap after a noreturn call that would end a function or funclet, and elide
+// the trap when the next instruction is in the same function.
+void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (MBB.succ_empty() && MF->usesWindowsUnwindInfo()) {
+    auto Next = std::next(MBB.getIterator());
+    if (Next == MF->end() || Next->isEHFuncletEntry()) {
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isMetaInstruction() || AArch64InstrInfo::isSEHInstruction(MI))
+          continue;
+        if (MI.isCall() && !MI.isReturn())
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(1));
+        break;
+      }
+    }
+  }
+
+  AsmPrinter::emitBasicBlockEnd(MBB);
 }
 
 void AArch64AsmPrinter::emitFunctionBodyEnd() {

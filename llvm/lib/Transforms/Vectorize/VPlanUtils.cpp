@@ -864,8 +864,10 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
 
     // The legacy cost model only supports scalarization loads/stores with phi
     // addresses, if the phi is directly used as load/store address. Don't
-    // traverse further for Blends.
-    if (Blend)
+    // traverse further for Blends and first-order recurrence splices.
+    if (Blend ||
+        match(Cur,
+              m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>()))
       continue;
 
     // Only traverse further through users that also define a value (and can

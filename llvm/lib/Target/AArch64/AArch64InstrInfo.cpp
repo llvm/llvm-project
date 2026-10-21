@@ -2701,7 +2701,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addImm(0)
           .addMemOperand(*MI.memoperands_begin())
@@ -2731,7 +2731,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addImm(0)
           .addMemOperand(*MI.memoperands_begin())
@@ -2749,7 +2749,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addGlobalAddress(GV, 0, LoFlags)
           .addMemOperand(*MI.memoperands_begin())

@@ -37,7 +37,6 @@ static cl::opt<std::string> PassPipeline(
     cl::desc("A textual description of the pass pipeline for testing"));
 
 static std::unique_ptr<IRMutator> Mutator;
-static cl::LibraryOptionsContext LibraryOptions;
 static std::unique_ptr<TargetMachine> TM;
 
 std::unique_ptr<IRMutator> createOptMutator() {
@@ -191,8 +190,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Parse input options
   //
 
-  handleExecNameEncodedOptimizerOpts(ExecName);
-  parseFuzzerCLOpts(*argc, *argv);
+  // Created after the targets register their library options.
+  static cl::LibraryOptionsContext LibraryOptions;
+  handleExecNameEncodedOptimizerOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
 
   // Create TargetMachine
   //

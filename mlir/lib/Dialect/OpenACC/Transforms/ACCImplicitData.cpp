@@ -197,6 +197,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
@@ -232,10 +233,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class ACCImplicitData : public acc::impl::ACCImplicitDataBase<ACCImplicitData> {
 public:
   using acc::impl::ACCImplicitDataBase<ACCImplicitData>::ACCImplicitDataBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCImplicitDataBase<ACCImplicitData>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override;
 
@@ -802,5 +808,4 @@ void ACCImplicitData::runOnOperation() {
     }
   });
 }
-
 } // namespace

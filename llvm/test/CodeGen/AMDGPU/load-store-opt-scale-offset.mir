@@ -11,7 +11,7 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[DEF]], [[DEF1]], 0, 1, implicit $exec :: (load (s64) from `ptr addrspace(1) undef` + 4, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[DEF1]], implicit [[COPY]]
     %0:sreg_64_xexec_xnull = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
@@ -71,7 +71,7 @@ body: |
     ; GCN: [[DEF:%[0-9]+]]:sgpr_64 = IMPLICIT_DEF
     ; GCN-NEXT: early-clobber %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[DEF]], 0, 0 :: (dereferenceable invariant load (s64), align 4)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY %3.sub0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY killed %3.sub1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY %3.sub1
     %0:sgpr_64 = IMPLICIT_DEF
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0:sgpr_64, 0, 0 :: (dereferenceable invariant load (s32))
     %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0:sgpr_64, 4, 0 :: (dereferenceable invariant load (s32))

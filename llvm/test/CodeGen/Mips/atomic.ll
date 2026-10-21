@@ -1762,8 +1762,7 @@ define i32 @AtomicSwap32(i32 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicSwap32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap32)))
-; MIPS64R6O0-NEXT:    move $2, $4
-; MIPS64R6O0-NEXT:    sw $2, 12($sp)
+; MIPS64R6O0-NEXT:    sw $4, 12($sp)
 ; MIPS64R6O0-NEXT:    lw $4, 12($sp)
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB6_1: # %entry
@@ -2095,8 +2094,7 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap32)))
 ; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
-; MIPS64R6O0-NEXT:    move $2, $5
-; MIPS64R6O0-NEXT:    sw $2, 12($sp)
+; MIPS64R6O0-NEXT:    sw $5, 12($sp)
 ; MIPS64R6O0-NEXT:    lw $5, 12($sp)
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB7_1: # %entry

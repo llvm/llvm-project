@@ -17,7 +17,6 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_writelane_b32 v42, s30, 0
 ; GFX9-NEXT:    v_writelane_b32 v42, s31, 1
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX9-NEXT:    s_mov_b32 s16, 32
 ; GFX9-NEXT:    v_lshlrev_b64 v[40:41], s16, v[0:1]
 ; GFX9-NEXT:    s_getpc_b64 s[16:17]
@@ -66,7 +65,6 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX12-NEXT:    scratch_store_b32 off, v41, s33 ; 4-byte Folded Spill
 ; GFX12-NEXT:    v_writelane_b32 v42, s30, 0
 ; GFX12-NEXT:    v_writelane_b32 v42, s31, 1
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_mov_b32 s0, 32
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_lshlrev_b64_e64 v[40:41], s0, v[0:1]

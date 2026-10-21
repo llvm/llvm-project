@@ -1266,12 +1266,10 @@ define amdgpu_kernel void @test_rootn_3(ptr addrspace(1) nocapture %a) {
 ; GCN-POSTLINK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.log2.f32(float [[TMP0]])
 ; GCN-POSTLINK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], f0x3EAAAAAB
 ; GCN-POSTLINK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.exp2.f32(float [[TMP2]])
-; GCN-POSTLINK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.copysign.f32(float [[TMP3]], float [[TMP]])
 ; GCN-POSTLINK-NEXT:    [[TMP5:%.*]] = fcmp fast oeq float [[TMP]], 0.000000e+00
-; GCN-POSTLINK-NEXT:    [[TMP6:%.*]] = select fast i1 [[TMP5]], float 0.000000e+00, float +inf
+; GCN-POSTLINK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float 0.000000e+00, float [[TMP3]]
 ; GCN-POSTLINK-NEXT:    [[TMP7:%.*]] = tail call fast float @llvm.copysign.f32(float [[TMP6]], float [[TMP]])
-; GCN-POSTLINK-NEXT:    [[TMP8:%.*]] = select fast i1 [[TMP5]], float [[TMP7]], float [[TMP4]]
-; GCN-POSTLINK-NEXT:    store float [[TMP8]], ptr addrspace(1) [[A]], align 4
+; GCN-POSTLINK-NEXT:    store float [[TMP7]], ptr addrspace(1) [[A]], align 4
 ; GCN-POSTLINK-NEXT:    ret void
 ;
 ; GCN-PRELINK-LABEL: define amdgpu_kernel void @test_rootn_3(
