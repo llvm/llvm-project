@@ -92,8 +92,8 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
     fi
 
-# Baremetal Arm tests run on AArch64
-RUN if [ "$(uname -m)" = "aarch64" ]; then \
+# Baremetal Arm tests run on x86
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
     apt update && \
     apt install -y qemu-system-arm; \
     fi
