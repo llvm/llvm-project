@@ -79,6 +79,19 @@ define half @fptrunc_afn(double %d) #0 {
   ret half %r
 }
 
+define half @fptrunc_afn_f80(x86_fp80 %d) #0 {
+; ALL-LABEL: fptrunc_afn_f80:
+; ALL:       # %bb.0:
+; ALL-NEXT:    subq $24, %rsp
+; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
+; ALL-NEXT:    fstpt (%rsp)
+; ALL-NEXT:    callq __truncxfhf2@PLT
+; ALL-NEXT:    addq $24, %rsp
+; ALL-NEXT:    retq
+  %r = fptrunc afn x86_fp80 %d to half
+  ret half %r
+}
+
 define half @fptrunc_afn_twostep(double %d) #0 {
 ; F16C-LABEL: fptrunc_afn_twostep:
 ; F16C:       # %bb.0:
