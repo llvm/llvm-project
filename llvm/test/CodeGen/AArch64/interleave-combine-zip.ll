@@ -212,8 +212,8 @@ define <2 x double> @interleave2_hi_halves_v2f64(<2 x double> %a, <2 x double> %
   ret <2 x double> %r
 }
 
-define <16 x i8> @interleave2_lo_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: interleave2_lo_halves_v16i8:
+define <16 x i8> @interleave2_hi_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: interleave2_hi_halves_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -223,8 +223,8 @@ define <16 x i8> @interleave2_lo_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %r
 }
 
-define void @interleave2_lo_halves_v16f32_256(<16 x float> %a, <16 x float> %b) vscale_range(2, 2) nounwind {
-; CHECK-LABEL: interleave2_lo_halves_v16f32_256:
+define void @interleave2_hi_halves_v16f32_256(<16 x float> %a, <16 x float> %b) vscale_range(2, 2) nounwind {
+; CHECK-LABEL: interleave2_hi_halves_v16f32_256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
@@ -245,8 +245,8 @@ define void @interleave2_lo_halves_v16f32_256(<16 x float> %a, <16 x float> %b) 
   ret void
 }
 
-define void @interleave2_lo_halves_v16f32_512(<16 x float> %a, <16 x float> %b) vscale_range(4, 4) nounwind {
-; CHECK-LABEL: interleave2_lo_halves_v16f32_512:
+define void @interleave2_hi_halves_v16f32_512(<16 x float> %a, <16 x float> %b) vscale_range(4, 4) nounwind {
+; CHECK-LABEL: interleave2_hi_halves_v16f32_512:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
