@@ -9,8 +9,8 @@ define i32 @add(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY2]], [[COPY3]], implicit-def dead $eflags
   ; CHECK-NEXT:   $eax = COPY [[ADD32rr]]
   ; CHECK-NEXT:   RET64 implicit $eax
@@ -26,8 +26,8 @@ define i32 @uaddo(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[COPY2]], [[COPY3]], implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NEXT:   [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[SETCCr]], 1, implicit-def dead $eflags
@@ -48,8 +48,8 @@ define i32 @umulo(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   MUL32r [[COPY3]], implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr32 = COPY $eax

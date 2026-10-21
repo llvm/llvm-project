@@ -8,6 +8,6 @@ addvl x3, x5, #32
 
 // addvl requires an immediate, not a register.
 addvl x3, x5, x6
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: addvl x3, x5, x6
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

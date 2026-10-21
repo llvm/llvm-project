@@ -7140,8 +7140,8 @@ let Constraints = "$src = $dst" in {
 def EXTRQI : Ii8<0x78, MRMXr, (outs VR128:$dst),
                  (ins VR128:$src, u8imm:$len, u8imm:$idx),
                  "extrq\t{$idx, $len, $src|$src, $len, $idx}",
-                 [(set VR128:$dst, (X86extrqi VR128:$src, timm:$len,
-                                    timm:$idx))]>,
+                 [(set VR128:$dst,
+                   (v2i64 (X86extrqi VR128:$src, timm:$len, timm:$idx)))]>,
                  TB, PD, Sched<[SchedWriteVecALU.XMM]>;
 def EXTRQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src, VR128:$mask),
@@ -7153,8 +7153,9 @@ def EXTRQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
 def INSERTQI : Ii8<0x78, MRMSrcReg, (outs VR128:$dst),
                    (ins VR128:$src, VR128:$src2, u8imm:$len, u8imm:$idx),
                    "insertq\t{$idx, $len, $src2, $src|$src, $src2, $len, $idx}",
-                   [(set VR128:$dst, (X86insertqi VR128:$src, VR128:$src2,
-                                      timm:$len, timm:$idx))]>,
+                   [(set VR128:$dst,
+                     (v2i64 (X86insertqi VR128:$src,VR128:$src2, timm:$len,
+                                         timm:$idx)))]>,
                    TB, XD, Sched<[SchedWriteVecALU.XMM]>;
 def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  (ins VR128:$src, VR128:$mask),
@@ -7164,6 +7165,16 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  TB, XD, Sched<[SchedWriteVecALU.XMM]>;
 }
 } // ExeDomain = SSEPackedInt
+
+def : Pat<(v16i8 (X86extrqi VR128:$src, timm:$len, timm:$idx)),
+          (EXTRQI VR128:$src, timm:$len, timm:$idx)>;
+def : Pat<(v8i16 (X86extrqi VR128:$src, timm:$len, timm:$idx)),
+          (EXTRQI VR128:$src, timm:$len, timm:$idx)>;
+
+def : Pat<(v16i8 (X86insertqi VR128:$src,VR128:$src2, timm:$len, timm:$idx)),
+          (INSERTQI VR128:$src,VR128:$src2, timm:$len, timm:$idx)>;
+def : Pat<(v8i16 (X86insertqi VR128:$src,VR128:$src2, timm:$len, timm:$idx)),
+          (INSERTQI VR128:$src,VR128:$src2, timm:$len, timm:$idx)>;
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions
@@ -7265,13 +7276,11 @@ def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16f16 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
+def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
-            (VBROADCASTF128rm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
@@ -8019,11 +8028,9 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v4i32, v8i32,  loadv4i32,  loadv8i32>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8i16, v16i16, loadv8i16,  loadv16i16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8f16, v16f16, loadv8f16,  loadv16f16>;
+  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
 
 //===----------------------------------------------------------------------===//
 // VEXTRACTI128 - Extract packed integer values
@@ -8043,12 +8050,10 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v8i32,  v4i32>;
   defm : vextract_lowering<"VEXTRACTI128", v16i16, v8i16>;
   defm : vextract_lowering<"VEXTRACTI128", v16f16, v8f16>;
+  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
 }
-
-let Predicates = [HasAVXNECONVERT, NoVLX] in
-  defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
 
 //===----------------------------------------------------------------------===//
 // VPMASKMOV - Conditional SIMD Integer Packed Loads and Stores

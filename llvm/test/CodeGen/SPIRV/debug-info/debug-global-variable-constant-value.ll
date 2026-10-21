@@ -1,6 +1,6 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=ONE --implicit-check-not=DebugOperation --implicit-check-not=DebugExpression
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL %}
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; This HIP code compiles to the metadata below with no optimisations as it is the case for amdgcnspirv:
 ;
@@ -35,9 +35,6 @@
 ; ONE: OpExtInst {{.*}} DebugOperation
 ; ONE: OpExtInst {{.*}} DebugOperation
 ; ONE: OpExtInst {{.*}} DebugExpression
-
-; spirv-val is broken and is rejecting an expression in a DebugGlobalVariable (KhronosGroup/SPIRV-Tools#6469).
-; VAL: DebugGlobalVariable: expected operand Variable must be a result id of
 
 target triple = "spirv64-unknown-unknown"
 

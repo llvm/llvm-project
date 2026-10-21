@@ -267,10 +267,6 @@ INITIALIZE_PASS_END(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
 
 char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
 
-FunctionPass *llvm::createSIWholeQuadModeLegacyPass() {
-  return new SIWholeQuadModeLegacy;
-}
-
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {
   for (const auto &BII : Blocks) {
