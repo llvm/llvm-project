@@ -18,19 +18,19 @@
   "waits": 1
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
-  "bytes": 698,
-  "cycles": 5840.7,
+  "bytes": 692,
+  "cycles": 5808.7,
   "gprs": 39,
-  "instructions": 105,
+  "instructions": 104,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
-  "bytes": 698,
-  "cycles": 5840.7,
+  "bytes": 692,
+  "cycles": 5808.7,
   "gprs": 39,
-  "instructions": 105,
+  "instructions": 104,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
@@ -45,13 +45,13 @@
   "waits": 3
  },
  "reduce.ll:reduce:agx-g14c": {
-  "bytes": 170,
-  "cycles": 1449.7,
+  "bytes": 168,
+  "cycles": 1412.9,
   "gprs": 6,
-  "instructions": 30,
+  "instructions": 29,
   "launch_inputs": false,
   "uniform_halves": 14,
-  "waits": 2
+  "waits": 1
  },
  "saxpy.ll:saxpy:agx-g13g": {
   "bytes": 62,
