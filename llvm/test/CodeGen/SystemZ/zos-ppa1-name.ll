@@ -34,4 +34,5 @@ attributes #0 = { "zos-ppa1-name"="name" }
 ; CHECK-NEXT: DC AD(L#sourcename_end_0-L#EPM_sourcename_0)
 ; CHECK-NEXT: DC XL2'0004'
 ; CHECK-NEXT: DC XL4'95819485'
+; CHECK-NEXT: DC 2XL1'00'
 ; CHECK-NEXT: DC AD(L#EPM_sourcename_0-L#PPA1_sourcename_0)

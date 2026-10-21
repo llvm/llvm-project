@@ -9,21 +9,25 @@
 ; compress made the tree look profitable, when it is cheaper to keep the two
 ; <8 x i8> loads, adds and stores as they are.
 
-; REMARK:      Name: StoresVectorized
+; REMARK:      Name: NotBeneficial
 ; REMARK-NEXT: Function: widened_strided_add
 ; REMARK-NEXT: Args:
-; REMARK-NEXT:   - String: 'Stores SLP vectorized with cost '
-; REMARK-NEXT:   - Cost: '-2'
-; REMARK-NEXT:   - String: ' and with tree size '
-; REMARK-NEXT:   - TreeSize: '5'
+; REMARK-NEXT:   - String: 'List vectorization was possible but not beneficial with cost '
+; REMARK-NEXT:   - Cost: '0'
+; REMARK-NEXT:   - String: ' >= '
+; REMARK-NEXT:   - Treshold: '0'
 define void @widened_strided_add(ptr %in, ptr %out) {
 ; CHECK-LABEL: define void @widened_strided_add(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <24 x i8> @llvm.masked.load.v24i8.p0(ptr align 2 [[IN]], <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <24 x i8> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <24 x i8> [[TMP0]], <24 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <16 x i8> [[TMP1]], splat (i8 5)
-; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[OUT]], align 2
+; CHECK-NEXT:    [[IN1:%.*]] = getelementptr i8, ptr [[IN]], i64 16
+; CHECK-NEXT:    [[L0:%.*]] = load <8 x i8>, ptr [[IN]], align 2
+; CHECK-NEXT:    [[L1:%.*]] = load <8 x i8>, ptr [[IN1]], align 2
+; CHECK-NEXT:    [[A0:%.*]] = add <8 x i8> [[L0]], splat (i8 5)
+; CHECK-NEXT:    [[A1:%.*]] = add <8 x i8> [[L1]], splat (i8 5)
+; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr i8, ptr [[OUT]], i64 8
+; CHECK-NEXT:    store <8 x i8> [[A0]], ptr [[OUT]], align 2
+; CHECK-NEXT:    store <8 x i8> [[A1]], ptr [[OUT1]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
