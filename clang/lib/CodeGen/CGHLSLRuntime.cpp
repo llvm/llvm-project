@@ -1114,16 +1114,17 @@ static bool requiresFlatInterpolation(llvm::Type *Ty) {
 }
 
 static llvm::dxbc::PSV::InterpolationMode
-getSPIRVInterpolationMode(llvm::dxbc::PSV::InterpolationMode Mode,
+getSPIRVInterpolationMode(llvm::dxbc::PSV::InterpolationMode InterpMode,
                           llvm::Type *Ty, llvm::Triple::EnvironmentType Stage,
                           llvm::hlsl::IOType IO) {
   using llvm::dxbc::PSV::InterpolationMode;
   if (!((Stage == llvm::Triple::Pixel && IO == llvm::hlsl::IOType::In) ||
         (Stage == llvm::Triple::Vertex && IO == llvm::hlsl::IOType::Out)))
     return InterpolationMode::Undefined;
-  if (Mode == InterpolationMode::Undefined && requiresFlatInterpolation(Ty))
+  if (InterpMode == InterpolationMode::Undefined &&
+      requiresFlatInterpolation(Ty))
     return InterpolationMode::Constant;
-  return Mode;
+  return InterpMode;
 }
 
 static void addSPIRVInterfaceDecorations(
