@@ -127,19 +127,18 @@ TEST(LibraryOptionsTest, Parser) {
   P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
     Rows.push_back((Spelling + "|" + MetaVar + "|" + Help).str());
   });
-  EXPECT_THAT(Rows,
-              testing::ElementsAre(
-                  "lib-count|=<value>|An unsigned", "lib-disable||",
-                  "lib-enable||A bool", "lib-in-build||Available",
-                  "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
-                  "lib-mode-b||", "lib-modes|=<a|b>|An enum list",
-                  "lib-mode|=<a|b>|An enum", "lib-number|=<value>|",
-                  "lib-old-mode|=<value>|", "lib-override||An optional bool",
-                  "lib-path|=<value>|A string",
-                  "lib-print|[=<a|b>]|A flag or enum",
-                  "lib-ratio|=<value>|A double",
-                  "lib-strings|=<value>|An unsplit list",
-                  "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
+  EXPECT_THAT(
+      Rows,
+      testing::ElementsAre(
+          "lib-count|=<value>|An unsigned", "lib-disable||",
+          "lib-enable||A bool", "lib-in-build||Available",
+          "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
+          "lib-mode-b||", "lib-modes|=<a|b>|An enum list",
+          "lib-mode|=<a|b>|An enum", "lib-number|=<value>|",
+          "lib-old-mode|=<value>|", "lib-override||An optional bool",
+          "lib-path|=<value>|A string", "lib-print|[=<a|b>]|A flag or enum",
+          "lib-ratio|=<value>|A double", "lib-strings|=<value>|An unsplit list",
+          "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
   BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
