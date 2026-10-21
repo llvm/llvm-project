@@ -1580,7 +1580,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
 
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
-      setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
+      setOperationAction({ISD::GET_ACTIVE_LANE_MASK, ISD::MASK_BEFOREFIRST}, VT,
+                         Custom);
 
     for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::FMA, VT, Custom);
@@ -9011,6 +9012,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_INTERLEAVE(Op, DAG);
   case ISD::GET_ACTIVE_LANE_MASK:
     return LowerGET_ACTIVE_LANE_MASK(Op, DAG);
+  case ISD::MASK_BEFOREFIRST:
+    return LowerMASK_BEFOREFIRST(Op, DAG);
   case ISD::VECTOR_MATCH:
     return LowerVectorMatch(Op, DAG);
   case ISD::LRINT:
@@ -35752,6 +35755,23 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
                              Op.getOperand(0), Op.getOperand(1));
   SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return DAG.getExtractSubvector(DL, VT, MaskAsInt, 0);
+}
+
+SDValue AArch64TargetLowering::LowerMASK_BEFOREFIRST(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+         "Lowering fixed length mask_beforefirst requires SVE!");
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT PredVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
+
+  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
+  SDValue Brk = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, PredVT, Mask);
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Brk);
+  return convertFromScalableVector(DAG, VT, MaskAsInt);
 }
 
 static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
