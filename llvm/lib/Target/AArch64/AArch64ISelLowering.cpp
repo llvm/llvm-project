@@ -19396,6 +19396,11 @@ static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
   assert(Rev->getIntrinsicID() == Intrinsic::vector_reverse &&
          "Wrong intrinsic");
 
+  // We look through bitcasts that may change element size, so only proceed
+  // if we're little endian since it's a no-op in that case.
+  if (!Rev->getFunction()->getDataLayout().isLittleEndian())
+    return false;
+
   using namespace llvm::PatternMatch;
   struct RevTblData {
     Instruction *Tbl;
