@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 using namespace llvm;
@@ -47,13 +49,20 @@ static constexpr uint32_t packDevice(uint32_t Major, uint32_t Minor) {
   return (Major << GPUIPMajorShift) | (Minor << GPUIPMinorShift);
 }
 
-StringRef llvm::IntelGPU::getArchName(uint32_t GPUIPVersion) {
+// The device that \p GPUIPVersion identifies, or GK_NONE if the table lists
+// none. Only INTEL_GPU rows are expanded, so a compatibility name can never
+// match.
+static GPUKind getKindForVersion(uint32_t GPUIPVersion) {
   const uint32_t Device = GPUIPVersion & GPUIPDeviceMask;
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
   if (Device == packDevice(MAJOR, MINOR))                                      \
-    return NAME;
+    return GK_##KIND;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-  return "";
+  return GK_NONE;
+}
+
+StringRef llvm::IntelGPU::getArchName(uint32_t GPUIPVersion) {
+  return getArchName(getKindForVersion(GPUIPVersion));
 }
 
 std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
@@ -63,3 +72,29 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
   return ("xe_" + Twine(Major) + "." + Twine(Minor) + "." + Twine(Revision))
       .str();
 }
+
+StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
+  switch (Kind) {
+  case GK_NONE:
+    return "";
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  case GK_##KIND:                                                              \
+    return NAME;
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  case GK_##KIND:                                                              \
+    return NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  }
+  llvm_unreachable("invalid Intel GPU kind");
+}
+
+GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
+  return StringSwitch<GPUKind>(Name)
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  .Case(NAME, GK_##KIND)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  .Case(NAME, GK_##KIND)
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+      .Default(GK_NONE);
+}
+

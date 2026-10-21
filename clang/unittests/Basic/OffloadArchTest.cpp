@@ -36,10 +36,11 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(IntelCPU.isIntelCPU());
   EXPECT_FALSE(IntelCPU.isIntelGPU());
 
-  OffloadArch IntelGPU = parse("bmg_g21");
+  OffloadArch IntelGPU = parse("xe-bmg-g21");
   EXPECT_TRUE(IntelGPU.isIntel());
   EXPECT_FALSE(IntelGPU.isIntelCPU());
   EXPECT_TRUE(IntelGPU.isIntelGPU());
+  EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
 
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
@@ -57,11 +58,17 @@ TEST(OffloadArchTest, Unknown) {
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",
-        "graniterapids", "bmg_g21", "generic"}) {
+        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "generic"}) {
     OffloadArch A = parse(Name);
     EXPECT_FALSE(A.isUnknown()) << Name;
     EXPECT_STREQ(OffloadArchToString(A), Name);
   }
+}
+
+// Each Intel GPU has one name, so other spellings are unknown.
+TEST(OffloadArchTest, IntelGPUOtherSpellings) {
+  EXPECT_TRUE(parse("bmg_g21").isUnknown());
+  EXPECT_TRUE(parse("xe_12.60.7").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {
