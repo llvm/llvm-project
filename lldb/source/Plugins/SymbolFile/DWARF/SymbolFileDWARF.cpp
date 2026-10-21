@@ -1019,32 +1019,35 @@ std::optional<uint32_t> SymbolFileDWARF::GetDWARFUnitIndex(uint32_t cu_idx) {
 }
 
 uint32_t SymbolFileDWARF::CalculateNumCompileUnits() {
-  if (MissingDebugInfo()) {
-    llvm::DWARFDataExtractor line_data =
-        m_context.getOrLoadLineData().GetAsLLVMDWARF();
-    if (line_data.getData().empty())
-      return 0;
-
-    llvm::DWARFContext &context = m_context.GetAsLLVM();
-    llvm::DWARFDebugLine::SectionParser parser(line_data, context,
-                                               context.normal_units());
-    Log *log = GetLog(DWARFLog::DebugInfo);
-    auto error_handler = [&](llvm::Error error) {
-      LLDB_LOG_ERROR(log, std::move(error),
-                     "SymbolFileDWARF failed to parse standalone line "
-                     "table prologue: {0}");
-    };
-    uint32_t num_compile_units = 0;
-    while (!parser.done()) {
-      parser.skip(error_handler, error_handler);
-      ++num_compile_units;
-    }
-    return num_compile_units;
-  }
+  if (MissingDebugInfo())
+    return CountStandaloneCompileUnits();
 
   BuildCuTranslationTable();
   return m_lldb_cu_to_dwarf_unit.empty() ? DebugInfo().GetNumUnits()
                                          : m_lldb_cu_to_dwarf_unit.size();
+}
+
+uint32_t SymbolFileDWARF::CountStandaloneCompileUnits() {
+  llvm::DWARFDataExtractor line_data =
+      m_context.getOrLoadLineData().GetAsLLVMDWARF();
+  if (line_data.getData().empty())
+    return 0;
+
+  llvm::DWARFContext &context = m_context.GetAsLLVM();
+  llvm::DWARFDebugLine::SectionParser parser(line_data, context,
+                                             context.normal_units());
+  Log *log = GetLog(DWARFLog::DebugInfo);
+  auto error_handler = [&](llvm::Error error) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "SymbolFileDWARF failed to parse standalone line "
+                   "table prologue: {0}");
+  };
+  uint32_t num_compile_units = 0;
+  while (!parser.done()) {
+    parser.skip(error_handler, error_handler);
+    ++num_compile_units;
+  }
+  return num_compile_units;
 }
 
 CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
