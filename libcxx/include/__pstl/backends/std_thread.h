@@ -30,8 +30,10 @@
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/swap_ranges.h>
 #include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__pstl/cpu_algos/uninitialized_algorithms.h>
+#include <__pstl/decoupled_lookback.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
 
@@ -68,6 +70,31 @@ struct __cpu_traits<__std_thread_backend_tag> {
   __transform_reduce(_Index __first, _Index __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce) {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
   }
+
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
+  template <class _Value,
+            class _RandomAccessIterator,
+            class _WorkerPrologue,
+            class _ScanHead,
+            class _ScanMiddle,
+            class _ScanTail,
+            class _WorkerEpilogue>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __lookback_scan(
+      _RandomAccessIterator __first,
+      _RandomAccessIterator __last,
+      _WorkerPrologue __worker_prologue,
+      _ScanHead __scan_head,
+      _ScanMiddle /*__scan_middle*/,
+      _ScanTail /*__scan_tail*/,
+      _WorkerEpilogue __worker_epilogue) {
+    if (__first == __last)
+      return __empty{}; // nothing to do
+    auto __ctx = __worker_prologue(static_cast<size_t>(__last - __first));
+    __scan_head(__ctx, __first, __last, nullptr);
+    __worker_epilogue(std::move(__ctx));
+    return __empty{};
+  }
+#  endif // _LIBCPP_STD_VER >= 20
 
   template <class _RandomAccessIterator, class _Compare, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
@@ -158,6 +185,12 @@ struct __transform<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __transform_binary<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_binary<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy> {};
+#  endif // _LIBCPP_STD_VER >= 20
 
 template <class _ExecutionPolicy>
 struct __transform_reduce<__std_thread_backend_tag, _ExecutionPolicy>
