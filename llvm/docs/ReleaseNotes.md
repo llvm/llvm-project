@@ -403,8 +403,8 @@ Makes programs 10x faster by doing Special New Thing.
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
 
-* Deprecated `LLVMBuilderCreateInContext()` in favor of
-  `LLVMBuilderCreateForModule()`, which takes a `LLVMModuleRef` instead of
+* Deprecated `LLVMCreateBuilderInContext()` in favor of
+  `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
   `LLVMContextRef`.
 
 ### Changes to the CodeGen infrastructure
