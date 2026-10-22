@@ -2601,10 +2601,15 @@ public:
     return RejectedLateParsedBoundsTypes.contains(BATy);
   }
 
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
-  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
-  /// owning declaration. \p FD is the field the type belongs to. Returns false
-  /// if the attribute was rejected.
+  /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
+  /// the owning declaration. \p FD is the field the type belongs to. Returns
+  /// false if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
 

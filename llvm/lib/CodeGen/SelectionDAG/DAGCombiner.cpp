@@ -10091,8 +10091,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     // transform may not be safe because order of loads/stores outside of this
     // set may not be preserved.
     // TODO: We could allow multiple sizes by tracking each stored byte.
-    if (Store->getMemoryVT() != MemVT || !Store->isSimple() ||
-        Store->isIndexed() || !Store->hasOneUse())
+    // Keep a differently-sized store in the incoming chain and try to merge
+    // the stores collected after it.
+    if (Store->getMemoryVT() != MemVT)
+      break;
+    if (!Store->isSimple() || Store->isIndexed() || !Store->hasOneUse())
       return SDValue();
     Stores.push_back(Store);
     Chain = Store->getChain();
@@ -28150,6 +28153,33 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     SDLoc DL(N);
     SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
     return DAG.getMergeValues(Ops, DL);
+  }
+
+  // interleave2(extract_lo/hi(a), extract_lo/hi(b))#{0,1}
+  //   -> extract_lo/hi(interleave2(a, b)#{0,1})
+  if (Factor == 2 && Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Op1 = N->getOperand(1);
+    if (Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op0.getOperand(1) == Op1.getOperand(1)) {
+      EVT WideVT = Op0.getOperand(0).getValueType();
+      if (WideVT == VT.getDoubleNumVectorElementsVT(*DAG.getContext()) &&
+          (!LegalOperations || TLI.isVectorInterleaveLegalOrCustom(
+                                   ISD::VECTOR_INTERLEAVE, Factor, WideVT))) {
+        APInt Idx = Op0.getConstantOperandAPInt(1);
+        unsigned HalfNumElts = VT.getVectorMinNumElements();
+        if (Idx.isZero() || Idx == HalfNumElts) {
+          SDLoc DL(N);
+          SDValue Interleave =
+              DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, {WideVT, WideVT},
+                          {Op0.getOperand(0), Op1.getOperand(0)});
+          SDValue WideResult = Interleave.getValue(Idx.isZero() ? 0 : 1);
+          SDValue Results[] = {
+              DAG.getExtractSubvector(DL, VT, WideResult, 0),
+              DAG.getExtractSubvector(DL, VT, WideResult, HalfNumElts)};
+          return CombineTo(N, Results[0], Results[1]);
+        }
+      }
+    }
   }
 
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
