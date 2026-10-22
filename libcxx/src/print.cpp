@@ -68,7 +68,7 @@ static bool __is_handle_terminal_win8_or_greater(NtQueryVolumeInformationFileTyp
   FILE_FS_DEVICE_INFORMATION __info;
   const auto __status =
       __fp(reinterpret_cast<void*>(__handle), &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
-  return (__status >= 0) && (__info.DeviceType == FILE_DEVICE_CONSOLE);
+  return NT_SUCCESS(__status) && (__info.DeviceType == FILE_DEVICE_CONSOLE);
 }
 
 static bool __is_handle_terminal(intptr_t __handle) {
