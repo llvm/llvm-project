@@ -582,6 +582,78 @@ define amdgpu_cs void @cs_to_chain_nonuniform(<3 x i32> %a, <3 x i32> %b) #0 {
   unreachable
 }
 
+define amdgpu_cs void @cs_with_frame_to_chain(<3 x i32> inreg %a, <3 x i32> %b) #0 {
+; GISEL-GFX11-LABEL: cs_with_frame_to_chain:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v3, 42 :: v_dual_mov_b32 v8, v0
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v10, v2
+; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; GISEL-GFX11-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; GISEL-GFX11-NEXT:    scratch_store_b32 off, v3, off
+; GISEL-GFX11-NEXT:    s_mov_b32 s32, 0
+; GISEL-GFX11-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-GFX11-NEXT:    s_setpc_b64 s[4:5]
+;
+; GISEL-GFX10-LABEL: cs_with_frame_to_chain:
+; GISEL-GFX10:       ; %bb.0:
+; GISEL-GFX10-NEXT:    s_getpc_b64 s[100:101]
+; GISEL-GFX10-NEXT:    s_mov_b32 s100, s0
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 42
+; GISEL-GFX10-NEXT:    s_load_dwordx4 s[100:103], s[100:101], 0x10
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v0
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v9, v1
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v10, v2
+; GISEL-GFX10-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; GISEL-GFX10-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; GISEL-GFX10-NEXT:    s_mov_b32 s32, 0
+; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX10-NEXT:    s_bitset0_b32 s103, 21
+; GISEL-GFX10-NEXT:    s_add_u32 s100, s100, s3
+; GISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
+; GISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
+; GISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; GISEL-GFX10-NEXT:    buffer_store_dword v3, off, s[100:103], 0
+; GISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]
+;
+; DAGISEL-GFX11-LABEL: cs_with_frame_to_chain:
+; DAGISEL-GFX11:       ; %bb.0:
+; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v3, 42 :: v_dual_mov_b32 v8, v0
+; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v10, v2
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v3, off
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s32, 0
+; DAGISEL-GFX11-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-GFX11-NEXT:    s_setpc_b64 s[4:5]
+;
+; DAGISEL-GFX10-LABEL: cs_with_frame_to_chain:
+; DAGISEL-GFX10:       ; %bb.0:
+; DAGISEL-GFX10-NEXT:    s_getpc_b64 s[100:101]
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s100, s0
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 42
+; DAGISEL-GFX10-NEXT:    s_load_dwordx4 s[100:103], s[100:101], 0x10
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v0
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v9, v1
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v10, v2
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s32, 0
+; DAGISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; DAGISEL-GFX10-NEXT:    s_bitset0_b32 s103, 21
+; DAGISEL-GFX10-NEXT:    s_add_u32 s100, s100, s3
+; DAGISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; DAGISEL-GFX10-NEXT:    buffer_store_dword v3, off, s[100:103], 0
+; DAGISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]
+  %v = alloca i32, addrspace(5)
+  store i32 42, ptr addrspace(5) %v
+  call void(ptr, i32, <3 x i32>, <3 x i32>, i32, ...) @llvm.amdgcn.cs.chain.v3i32(ptr @chain_callee, i32 -1, <3 x i32> inreg %a, <3 x i32> %b, i32 0)
+  unreachable
+}
+
 define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %a, <3 x i32> %b) #0 {
 ; GISEL-GFX11-LABEL: chain_to_chain:
 ; GISEL-GFX11:       ; %bb.0:
