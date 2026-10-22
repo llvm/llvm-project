@@ -6611,8 +6611,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // If the call doesn't return, finish the basic block and clear the
   // insertion point; this allows the rest of IRGen to discard
-  // unreachable code.
-  if (CI->doesNotReturn()) {
+  // unreachable code. A musttail call must be followed by a return, so it is
+  // handled below even if the callee doesn't return.
+  if (CI->doesNotReturn() && !IsMustTail) {
     if (NeedSRetLifetimeEnd)
       PopCleanupBlock();
 

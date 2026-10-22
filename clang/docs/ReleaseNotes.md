@@ -873,6 +873,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
+- Fixed a crash on a `[[clang::musttail]]` call to a noreturn function, e.g.
+  one declared with `__attribute__((noreturn))`, and on taking the address of
+  a noreturn virtual member function with `-fptrauth-calls`. (#GH60162,
+  #GH120088, #GH120637)
+
 #### Bug Fixes to C++ Support
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
