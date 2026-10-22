@@ -2690,6 +2690,12 @@ public:
       if (!getTLI()->isOperationExpand(ISD, LT.second))
         break;
 
+      // Scalar types are lowered as a not.
+      if (!LT.second.isVector())
+        return LT.first *
+               thisT()->getArithmeticInstrCost(
+                   Instruction::Xor, RetTy->getScalarType(), CostKind);
+
       // Expansion via (get_active_lane_mask 0, (cttz.elts mask))
       RetTy = VectorType::get(RetTy->getScalarType(),
                               LT.second.getVectorElementCount());
