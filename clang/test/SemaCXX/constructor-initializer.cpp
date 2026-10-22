@@ -323,3 +323,21 @@ A f2(const B &b) {
   return b; // expected-error {{no matching constructor for initialization of 'B'}}
 }
 }
+
+namespace PR7179 {
+struct X
+{
+  struct Y
+  {
+    template <class T> Y(T x) : X(x) { } // expected-error {{type 'X' is not a direct or virtual base of 'PR7179::X::Y'}}
+  };
+};
+}
+
+namespace PR201379 {
+struct S1 {
+  template<typename T>
+  S1(T) : d(), T()  {} // expected-error {{type 'T' is not a direct or virtual base of 'PR201379::S1'}}
+  int d;
+};
+}
