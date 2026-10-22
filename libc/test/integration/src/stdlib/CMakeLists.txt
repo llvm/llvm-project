@@ -4,18 +4,20 @@ endif()
 add_custom_target(stdlib-integration-tests)
 add_dependencies(libc-integration-tests stdlib-integration-tests)
 
-add_integration_test(
-  getenv_test
-  SUITE
-    stdlib-integration-tests
-  SRCS
-    getenv_test.cpp
-  DEPENDS
-    libc.src.stdlib.getenv
-  ENV
-    FRANCE=Paris
-    GERMANY=Berlin
-)
+if(TARGET libc.src.stdlib.getenv)
+  add_integration_test(
+    getenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      getenv_test.cpp
+    DEPENDS
+      libc.src.stdlib.getenv
+    ENV
+      FRANCE=Paris
+      GERMANY=Berlin
+  )
+endif()
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
@@ -88,6 +90,23 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.stdlib.setenv
       libc.src.stdlib.unsetenv
       libc.src.unistd.environ
+  )
+
+  add_integration_test(
+    env_thread_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      env_thread_test.cpp
+    DEPENDS
+      libc.include.threads
+      libc.src.__support.CPP.atomic
+      libc.src.__support.CPP.string_view
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.unsetenv
+      libc.src.threads.thrd_create
+      libc.src.threads.thrd_join
   )
 
   add_integration_test(
