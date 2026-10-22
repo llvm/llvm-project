@@ -141,110 +141,26 @@ entry:
 define i32 @fptosi_sat_f32_to_i32(float %a) nounwind {
 ; LA32F-LABEL: fptosi_sat_f32_to_i32:
 ; LA32F:       # %bb.0: # %entry
-; LA32F-NEXT:    lu12i.w $a0, -200704
-; LA32F-NEXT:    movgr2fr.w $fa1, $a0
-; LA32F-NEXT:    fcmp.cult.s $fcc0, $fa0, $fa1
-; LA32F-NEXT:    ftintrz.w.s $fa1, $fa0
-; LA32F-NEXT:    movfr2gr.s $a0, $fa1
-; LA32F-NEXT:    movcf2gr $a1, $fcc0
-; LA32F-NEXT:    masknez $a0, $a0, $a1
-; LA32F-NEXT:    lu12i.w $a2, -524288
-; LA32F-NEXT:    maskeqz $a1, $a2, $a1
-; LA32F-NEXT:    lu12i.w $a2, 323583
-; LA32F-NEXT:    ori $a2, $a2, 4095
-; LA32F-NEXT:    movgr2fr.w $fa1, $a2
-; LA32F-NEXT:    fcmp.clt.s $fcc0, $fa1, $fa0
-; LA32F-NEXT:    or $a0, $a1, $a0
-; LA32F-NEXT:    movcf2gr $a1, $fcc0
-; LA32F-NEXT:    masknez $a0, $a0, $a1
-; LA32F-NEXT:    lu12i.w $a2, 524287
-; LA32F-NEXT:    ori $a2, $a2, 4095
-; LA32F-NEXT:    maskeqz $a1, $a2, $a1
-; LA32F-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA32F-NEXT:    or $a0, $a1, $a0
-; LA32F-NEXT:    movcf2gr $a1, $fcc0
-; LA32F-NEXT:    masknez $a0, $a0, $a1
+; LA32F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32F-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: fptosi_sat_f32_to_i32:
 ; LA32D:       # %bb.0: # %entry
-; LA32D-NEXT:    lu12i.w $a0, -200704
-; LA32D-NEXT:    movgr2fr.w $fa1, $a0
-; LA32D-NEXT:    fcmp.cult.s $fcc0, $fa0, $fa1
-; LA32D-NEXT:    ftintrz.w.s $fa1, $fa0
-; LA32D-NEXT:    movfr2gr.s $a0, $fa1
-; LA32D-NEXT:    movcf2gr $a1, $fcc0
-; LA32D-NEXT:    masknez $a0, $a0, $a1
-; LA32D-NEXT:    lu12i.w $a2, -524288
-; LA32D-NEXT:    maskeqz $a1, $a2, $a1
-; LA32D-NEXT:    lu12i.w $a2, 323583
-; LA32D-NEXT:    ori $a2, $a2, 4095
-; LA32D-NEXT:    movgr2fr.w $fa1, $a2
-; LA32D-NEXT:    fcmp.clt.s $fcc0, $fa1, $fa0
-; LA32D-NEXT:    or $a0, $a1, $a0
-; LA32D-NEXT:    movcf2gr $a1, $fcc0
-; LA32D-NEXT:    masknez $a0, $a0, $a1
-; LA32D-NEXT:    lu12i.w $a2, 524287
-; LA32D-NEXT:    ori $a2, $a2, 4095
-; LA32D-NEXT:    maskeqz $a1, $a2, $a1
-; LA32D-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA32D-NEXT:    or $a0, $a1, $a0
-; LA32D-NEXT:    movcf2gr $a1, $fcc0
-; LA32D-NEXT:    masknez $a0, $a0, $a1
+; LA32D-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32D-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: fptosi_sat_f32_to_i32:
 ; LA64F:       # %bb.0: # %entry
-; LA64F-NEXT:    lu12i.w $a0, -200704
-; LA64F-NEXT:    movgr2fr.w $fa1, $a0
-; LA64F-NEXT:    fcmp.cult.s $fcc0, $fa0, $fa1
-; LA64F-NEXT:    ftintrz.w.s $fa1, $fa0
-; LA64F-NEXT:    movfr2gr.s $a0, $fa1
-; LA64F-NEXT:    movcf2gr $a1, $fcc0
-; LA64F-NEXT:    masknez $a0, $a0, $a1
-; LA64F-NEXT:    lu12i.w $a2, -524288
-; LA64F-NEXT:    maskeqz $a1, $a2, $a1
-; LA64F-NEXT:    lu12i.w $a2, 323583
-; LA64F-NEXT:    ori $a2, $a2, 4095
-; LA64F-NEXT:    movgr2fr.w $fa1, $a2
-; LA64F-NEXT:    fcmp.clt.s $fcc0, $fa1, $fa0
-; LA64F-NEXT:    or $a0, $a1, $a0
-; LA64F-NEXT:    movcf2gr $a1, $fcc0
-; LA64F-NEXT:    masknez $a0, $a0, $a1
-; LA64F-NEXT:    lu12i.w $a2, 524287
-; LA64F-NEXT:    ori $a2, $a2, 4095
-; LA64F-NEXT:    maskeqz $a1, $a2, $a1
-; LA64F-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA64F-NEXT:    or $a0, $a1, $a0
-; LA64F-NEXT:    movcf2gr $a1, $fcc0
-; LA64F-NEXT:    masknez $a0, $a0, $a1
+; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: fptosi_sat_f32_to_i32:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    lu12i.w $a0, -200704
-; LA64D-NEXT:    movgr2fr.w $fa1, $a0
-; LA64D-NEXT:    fcmp.cult.s $fcc0, $fa0, $fa1
-; LA64D-NEXT:    ftintrz.l.s $fa1, $fa0
-; LA64D-NEXT:    movfr2gr.d $a0, $fa1
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    lu12i.w $a2, -524288
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    lu12i.w $a2, 323583
-; LA64D-NEXT:    ori $a2, $a2, 4095
-; LA64D-NEXT:    movgr2fr.w $fa1, $a2
-; LA64D-NEXT:    fcmp.clt.s $fcc0, $fa1, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    lu12i.w $a2, 524287
-; LA64D-NEXT:    ori $a2, $a2, 4095
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
+; LA64D-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64D-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64D-NEXT:    ret
 entry:
   %r = call i32 @llvm.fptosi.sat.i32.f32(float %a)
@@ -377,29 +293,8 @@ define i64 @fptosi_sat_f32_to_i64(float %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_sat_f32_to_i64:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    lu12i.w $a0, -135168
-; LA64D-NEXT:    movgr2fr.w $fa1, $a0
-; LA64D-NEXT:    fcmp.cult.s $fcc0, $fa0, $fa1
-; LA64D-NEXT:    ftintrz.l.s $fa1, $fa0
-; LA64D-NEXT:    movfr2gr.d $a0, $fa1
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    lu52i.d $a2, $zero, -2048
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    lu12i.w $a2, 389119
-; LA64D-NEXT:    ori $a2, $a2, 4095
-; LA64D-NEXT:    movgr2fr.w $fa1, $a2
-; LA64D-NEXT:    fcmp.clt.s $fcc0, $fa1, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    addi.w $a2, $zero, -1
-; LA64D-NEXT:    lu52i.d $a2, $a2, 2047
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
+; LA64D-NEXT:    ftintrz.l.s $fa0, $fa0
+; LA64D-NEXT:    movfr2gr.d $a0, $fa0
 ; LA64D-NEXT:    ret
 entry:
   %r = call i64 @llvm.fptosi.sat.i64.f32(float %a)
@@ -700,18 +595,8 @@ define i32 @fptosi_sat_f64_to_i32(double %a) nounwind {
 ;
 ; LA32D-LABEL: fptosi_sat_f64_to_i32:
 ; LA32D:       # %bb.0: # %entry
-; LA32D-NEXT:    movgr2fr.w $fa1, $zero
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32D-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI6_0)
-; LA32D-NEXT:    lu12i.w $a0, -254464
-; LA32D-NEXT:    movgr2frh.w $fa1, $a0
-; LA32D-NEXT:    fmax.d $fa1, $fa0, $fa1
-; LA32D-NEXT:    fmin.d $fa1, $fa1, $fa2
-; LA32D-NEXT:    ftintrz.w.d $fa1, $fa1
-; LA32D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
-; LA32D-NEXT:    movfr2gr.s $a0, $fa1
-; LA32D-NEXT:    movcf2gr $a1, $fcc0
-; LA32D-NEXT:    masknez $a0, $a0, $a1
+; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: fptosi_sat_f64_to_i32:
@@ -757,18 +642,8 @@ define i32 @fptosi_sat_f64_to_i32(double %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_sat_f64_to_i32:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    lu52i.d $a0, $zero, -994
-; LA64D-NEXT:    movgr2fr.d $fa1, $a0
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
-; LA64D-NEXT:    lu12i.w $a0, -1024
-; LA64D-NEXT:    lu52i.d $a0, $a0, 1053
-; LA64D-NEXT:    movgr2fr.d $fa2, $a0
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
-; LA64D-NEXT:    ftintrz.l.d $fa1, $fa1
-; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
-; LA64D-NEXT:    movfr2gr.d $a0, $fa1
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
+; LA64D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA64D-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64D-NEXT:    ret
 entry:
   %r = call i32 @llvm.fptosi.sat.i32.f64(double %a)
@@ -928,28 +803,8 @@ define i64 @fptosi_sat_f64_to_i64(double %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_sat_f64_to_i64:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    lu52i.d $a0, $zero, -962
-; LA64D-NEXT:    movgr2fr.d $fa1, $a0
-; LA64D-NEXT:    fcmp.cult.d $fcc0, $fa0, $fa1
-; LA64D-NEXT:    ftintrz.l.d $fa1, $fa0
-; LA64D-NEXT:    movfr2gr.d $a0, $fa1
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    lu52i.d $a2, $zero, -2048
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    addi.w $a2, $zero, -1
-; LA64D-NEXT:    lu52i.d $a3, $a2, 1085
-; LA64D-NEXT:    movgr2fr.d $fa1, $a3
-; LA64D-NEXT:    fcmp.clt.d $fcc0, $fa1, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    lu52i.d $a2, $a2, 2047
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
+; LA64D-NEXT:    ftintrz.l.d $fa0, $fa0
+; LA64D-NEXT:    movfr2gr.d $a0, $fa0
 ; LA64D-NEXT:    ret
 entry:
   %r = call i64 @llvm.fptosi.sat.i64.f64(double %a)
@@ -1002,11 +857,8 @@ define i64 @fptosi_nanguard_f32_to_i64(float %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_nanguard_f32_to_i64:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
 ; LA64D-NEXT:    ftintrz.l.s $fa0, $fa0
 ; LA64D-NEXT:    movfr2gr.d $a0, $fa0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
 ; LA64D-NEXT:    ret
 entry:
   %c = fcmp uno float %a, 0.0
@@ -1081,11 +933,8 @@ define i64 @fptosi_nanguard_f64_to_i64(double %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_nanguard_f64_to_i64:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
 ; LA64D-NEXT:    ftintrz.l.d $fa0, $fa0
 ; LA64D-NEXT:    movfr2gr.d $a0, $fa0
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
 ; LA64D-NEXT:    ret
 entry:
   %c = fcmp uno double %a, 0.0
