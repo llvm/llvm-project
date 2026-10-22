@@ -316,6 +316,10 @@ private:
 
   std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
 
+  /// Append the function referenced by the S_PROCREF/S_LPROCREF \p global.
+  void AppendFunctionForProcRef(PdbGlobalSymId global,
+                                SymbolContextList &sc_list);
+
   /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
   /// \p method_type.
   std::optional<PdbCompilandSymId>

@@ -2305,39 +2305,7 @@ void SymbolFileNativePDB::FindFunctions(
           GetDeclContextContainingUID(toOpaqueUid(global)) != parent_decl_ctx)
         continue;
 
-      CVSymbol sym = m_index->ReadSymbolRecord(global);
-      auto kind = sym.kind();
-      if (kind != S_PROCREF && kind != S_LPROCREF) {
-        LLDB_LOG(GetLog(LLDBLog::Symbols), "{0} is not a proc reference",
-                 global);
-        continue;
-      }
-
-      auto proc_or_err = SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
-      if (!proc_or_err) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), proc_or_err.takeError(),
-                       "Failed to deserialize ProcRefSym record: {0}");
-        continue;
-      }
-      ProcRefSym proc = std::move(*proc_or_err);
-
-      if (!IsValidRecord(proc))
-        continue;
-
-      CompilandIndexItem &cci =
-          m_index->compilands().GetOrCreateCompiland(proc.modi());
-      SymbolContext sc;
-
-      sc.comp_unit = GetOrCreateCompileUnit(cci).get();
-      if (!sc.comp_unit)
-        continue;
-
-      PdbCompilandSymId func_id(proc.modi(), proc.SymOffset);
-      sc.function = GetOrCreateFunction(func_id, *sc.comp_unit).get();
-      if (!sc.function)
-        continue;
-
-      sc_list.Append(sc);
+      AppendFunctionForProcRef(global, sc_list);
     }
   };
 
@@ -2351,7 +2319,57 @@ void SymbolFileNativePDB::FindFunctions(
 
 void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
                                         bool include_inlines,
-                                        SymbolContextList &sc_list) {}
+                                        SymbolContextList &sc_list) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  CacheGlobalBaseNames();
+
+  // Like SymbolFileDWARF, match both the basenames and the full names (which
+  // include the mangled names).
+  std::vector<uint32_t> ids;
+  m_func_base_names.GetValues(regex, ids);
+  m_func_full_names.GetValues(regex, ids);
+
+  std::set<uint32_t> resolved_ids;
+  for (uint32_t id : ids)
+    if (resolved_ids.insert(id).second)
+      AppendFunctionForProcRef(PdbGlobalSymId{id, false}, sc_list);
+}
+
+void SymbolFileNativePDB::AppendFunctionForProcRef(PdbGlobalSymId global,
+                                                   SymbolContextList &sc_list) {
+  CVSymbol sym = m_index->ReadSymbolRecord(global);
+  auto kind = sym.kind();
+  if (kind != S_PROCREF && kind != S_LPROCREF) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "{0} is not a proc reference", global);
+    return;
+  }
+
+  auto proc_or_err = SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
+  if (!proc_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), proc_or_err.takeError(),
+                   "Failed to deserialize ProcRefSym record: {0}");
+    return;
+  }
+  ProcRefSym proc = std::move(*proc_or_err);
+
+  if (!IsValidRecord(proc))
+    return;
+
+  CompilandIndexItem &cci =
+      m_index->compilands().GetOrCreateCompiland(proc.modi());
+  SymbolContext sc;
+
+  sc.comp_unit = GetOrCreateCompileUnit(cci).get();
+  if (!sc.comp_unit)
+    return;
+
+  PdbCompilandSymId func_id(proc.modi(), proc.SymOffset);
+  sc.function = GetOrCreateFunction(func_id, *sc.comp_unit).get();
+  if (!sc.function)
+    return;
+
+  sc_list.Append(sc);
+}
 
 void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
                                     lldb_private::TypeResults &results) {
