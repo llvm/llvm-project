@@ -752,11 +752,13 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
   std::int32_t header{
       LoadRecordMarker(Frame() + recordOffsetInFrame_, swapEndianness_)};
 
-  // A negative header starts a subrecord chain, which has to be walked to
-  // learn the record length.  Seeking is required, so this is skipped for
-  // non-positionable files; a chain that does not check out falls through to
-  // the single-marker interpretation below.
-  if (mayPosition() && header < 0) {
+  // A negative header within the subrecord-length limit begins a gfortran
+  // subrecord chain.  Legacy 2–4 GiB single-marker records also have a
+  // negative int32 header, but their magnitude exceeds kMaxSubrecPayload and
+  // fall through to the unsigned path below.  Chain walk requires seeking.
+  if (mayPosition() && header < 0 &&
+      SubrecordPayloadBytes(header) <=
+          static_cast<std::size_t>(kMaxSubrecPayload)) {
     auto readMarkerAt = [&](std::int64_t &pos, std::int32_t &marker) {
       char buf[kRecMarkSize];
       if (Read(pos, buf, kRecMarkSize, kRecMarkSize, handler) < kRecMarkSize) {
@@ -770,16 +772,19 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     std::int64_t filePos{recordStart + static_cast<std::int64_t>(kRecMarkSize)};
     std::int32_t marker{header};
     bool ok{true};
+    bool isFirstSubrecord{true};
     while (true) {
       totalPayload += SubrecordPayloadBytes(marker);
       filePos += static_cast<std::int64_t>(SubrecordPayloadBytes(marker));
       std::int32_t subrecordFooter{0};
       if (!readMarkerAt(filePos, subrecordFooter) ||
           SubrecordPayloadBytes(subrecordFooter) !=
-              SubrecordPayloadBytes(marker)) {
+              SubrecordPayloadBytes(marker) ||
+          (isFirstSubrecord && subrecordFooter < 0)) {
         ok = false;
         break;
       }
+      isFirstSubrecord = false;
       if (marker >= 0) {
         break;
       }
@@ -798,23 +803,40 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     }
   }
 
-  // Single header/footer pair.  The marker is unsigned here, so records
-  // written by earlier versions of this runtime with a length in 2 GiB to
-  // 4 GiB remain readable.
+  // Single header/footer pair.  Treat the marker as unsigned so that legacy
+  // records with lengths in 2–4 GiB remain readable.
   std::uint32_t length{static_cast<std::uint32_t>(header)};
   recordLength = static_cast<std::int64_t>(kRecMarkSize + length);
   unformattedDiskExtent_ =
       static_cast<std::int64_t>(kRecMarkSize + length + kRecMarkSize);
+  // For large records on seekable files peek at just the footer to avoid
+  // buffering gigabytes; non-seekable files fall through to ReadFrame.
+  std::uint32_t footer{0};
+  bool footerOk{false};
   need = recordOffsetInFrame_ + static_cast<std::size_t>(*recordLength) +
       kRecMarkSize;
-  got = ReadFrame(frameOffsetInFile_, need, handler);
-  std::uint32_t footer{0};
-  if (got >= need) {
-    footer = static_cast<std::uint32_t>(LoadRecordMarker(
-        Frame() + recordOffsetInFrame_ + *recordLength, swapEndianness_));
+  if (length > static_cast<std::uint32_t>(kMaxSubrecPayload) && mayPosition()) {
+    char footerBuf[kRecMarkSize];
+    std::int64_t footerPos{
+        recordStart + static_cast<std::int64_t>(kRecMarkSize + length)};
+    if (Read(footerPos, footerBuf, kRecMarkSize, kRecMarkSize, handler) ==
+        kRecMarkSize) {
+      footer = static_cast<std::uint32_t>(
+          LoadRecordMarker(footerBuf, swapEndianness_));
+      footerOk = true;
+    }
+    got = footerOk ? need : 0;
+  } else {
+    got = ReadFrame(frameOffsetInFile_, need, handler);
+    if (got >= need) {
+      footer = static_cast<std::uint32_t>(LoadRecordMarker(
+          Frame() + recordOffsetInFrame_ + *recordLength, swapEndianness_));
+      footerOk = true;
+    }
   }
   const char *error{nullptr};
   if (frameOffsetInFile_ == 0 && recordOffsetInFrame_ == 0 &&
+      length <= static_cast<std::uint32_t>(kMaxSubrecPayload) &&
       (got < need || footer != length)) {
     // Maybe an omitted or incorrect byte swap flag setting?
     // Try it the other way, since this is the first record.
@@ -895,14 +917,53 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     handler.SignalError(IostatBackspaceAtFirstRecord);
     return;
   }
-  std::int32_t marker{0};
-  do {
-    if (ReadFrame(frameOffsetInFile_ - kRecMarkSize, kRecMarkSize, handler) <
+  if (ReadFrame(frameOffsetInFile_ - kRecMarkSize, kRecMarkSize, handler) <
+      kRecMarkSize) {
+    handler.SignalError(IostatShortRead);
+    return;
+  }
+  std::int32_t trailingMarker{LoadRecordMarker(Frame(), swapEndianness_)};
+
+  // Use the unsigned bit pattern as the step: for a legacy 2–4 GiB
+  // single-marker record it equals the true payload; for a gfortran chain
+  // footer it wraps past the file size, making singleMarkerStart negative.
+  std::uint32_t trailingPayloadUnsigned{
+      static_cast<std::uint32_t>(trailingMarker)};
+  std::int64_t singleMarkerStart{frameOffsetInFile_ -
+      static_cast<std::int64_t>(
+          static_cast<std::uint64_t>(trailingPayloadUnsigned) +
+          2 * kRecMarkSize)};
+
+  bool isSingleMarker{false};
+  if (trailingMarker >= 0) {
+    isSingleMarker = true; // positive footer is always single-marker
+  } else if (singleMarkerStart >= 0) {
+    char hbuf[kRecMarkSize];
+    if (Read(singleMarkerStart, hbuf, kRecMarkSize, kRecMarkSize, handler) ==
         kRecMarkSize) {
-      handler.SignalError(IostatShortRead);
-      return;
+      isSingleMarker =
+          static_cast<std::uint32_t>(LoadRecordMarker(hbuf, swapEndianness_)) ==
+          static_cast<std::uint32_t>(trailingMarker);
     }
-    marker = LoadRecordMarker(Frame(), swapEndianness_);
+  }
+
+  std::int32_t marker{trailingMarker};
+  if (isSingleMarker) {
+    if (trailingMarker >= 0) {
+      std::size_t payload{SubrecordPayloadBytes(trailingMarker)};
+      if (payload > static_cast<std::size_t>(kMaxSubrecPayload) ||
+          frameOffsetInFile_ <
+              static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
+        handler.SignalError(IostatBadUnformattedRecord);
+        return;
+      }
+      frameOffsetInFile_ -=
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
+    } else {
+      frameOffsetInFile_ = singleMarkerStart; // unsigned step, already verified
+    }
+  } else {
+    // gfortran chain: walk backward; first subrecord's footer is non-negative.
     auto payload{SubrecordPayloadBytes(marker)};
     if (frameOffsetInFile_ <
         static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
@@ -910,16 +971,38 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
       return;
     }
     frameOffsetInFile_ -= static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
-  } while (marker < 0);
-  // Only the header is needed here; reading the payload too would require a
-  // frame as large as the subrecord.
+    while (marker < 0) {
+      if (ReadFrame(frameOffsetInFile_ - kRecMarkSize, kRecMarkSize, handler) <
+          kRecMarkSize) {
+        handler.SignalError(IostatShortRead);
+        return;
+      }
+      marker = LoadRecordMarker(Frame(), swapEndianness_);
+      payload = SubrecordPayloadBytes(marker);
+      if (frameOffsetInFile_ <
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
+        handler.SignalError(IostatBadUnformattedRecord);
+        return;
+      }
+      frameOffsetInFile_ -=
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
+    }
+  }
   if (ReadFrame(frameOffsetInFile_, kRecMarkSize, handler) < kRecMarkSize) {
     handler.SignalError(IostatShortRead);
     return;
   }
-  if (SubrecordPayloadBytes(LoadRecordMarker(Frame(), swapEndianness_)) !=
-      SubrecordPayloadBytes(marker)) {
-    handler.SignalError(IostatBadUnformattedRecord);
+  std::int32_t firstHeader{LoadRecordMarker(Frame(), swapEndianness_)};
+  if (isSingleMarker) {
+    if (static_cast<std::uint32_t>(firstHeader) !=
+        static_cast<std::uint32_t>(trailingMarker)) {
+      handler.SignalError(IostatBadUnformattedRecord);
+    }
+  } else {
+    // marker is the first subrecord's footer after the backward walk.
+    if (SubrecordPayloadBytes(firstHeader) != SubrecordPayloadBytes(marker)) {
+      handler.SignalError(IostatBadUnformattedRecord);
+    }
   }
 }
 

@@ -93,8 +93,8 @@ struct ExecutionEnvironment {
   // suffix from the first modified element through the end).
   bool copyOutModifiedOnly{true}; // FLANG_RT_COPYOUT_MODIFIED_ONLY
   // Largest payload of one subrecord of an unformatted sequential record,
-  // like gfortran's -fmax-subrecord-length.  Zero selects the default, which
-  // is the largest value that a signed 32-bit record marker can describe.
+  // like gfortran's -fmax-subrecord-length.  Zero selects the default of
+  // 2147483639 (gfortran's default).
   std::size_t maxSubrecordLength{0}; // FLANG_RT_MAX_SUBRECORD_LENGTH
 
   enum InternalDebugging { WorkQueue = 1 };

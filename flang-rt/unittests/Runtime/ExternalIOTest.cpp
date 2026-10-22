@@ -753,11 +753,11 @@ TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
   }
 
   io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
-  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+  EXPECT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for Close";
 
   int status{0};
-  ASSERT_EQ(waitpid(pid, &status, 0), pid) << "waitpid";
+  EXPECT_EQ(waitpid(pid, &status, 0), pid) << "waitpid";
   EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0) << "writer";
 }
 #endif
