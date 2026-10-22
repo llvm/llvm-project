@@ -88,6 +88,32 @@ protected:
                                   // subgroup, workgroup, cluster)
 };
 
+// Restrictions on the 2D memory region accessed by the subgroup 2D block
+// load / store / prefetch instructions. These constrain the memory operand
+// rather than the block shape. All three instructions of a given architecture
+// share them, so they are a property of the uArch rather than of an individual
+// instruction.
+//
+// Unlike the supported block shapes, none of these limits are common across
+// architectures, so only the layout is defined here; the values are supplied by
+// the concrete uArch, see IntelGpuXe2.h and IntelGpuXe3p.h. All quantities are
+// in bytes.
+struct BlockIOMemoryRestrictions {
+  // Required alignment of the base address of the 2D region.
+  int32_t baseAddressAlignmentBytes;
+  // Minimum size of the base width, i.e. the number of bytes in one row of the
+  // 2D region.
+  int32_t minBaseWidthBytes;
+  // Required alignment of the base width.
+  int32_t baseWidthAlignmentBytes;
+  // Minimum size of the base pitch, i.e. the number of bytes between the start
+  // of two consecutive rows of the 2D region.
+  int32_t minBasePitchBytes;
+  // Required alignment of the base pitch. The pitch must additionally be no
+  // smaller than the base width.
+  int32_t basePitchAlignmentBytes;
+};
+
 struct uArch {
   enum class Kind {
     // Xe2 family
@@ -95,9 +121,10 @@ struct uArch {
     PVC = Xe2_First,
     BMG,
     Xe2_Last = BMG,
-    Xe3_First,
-    CRI = Xe3_First,
-    Xe3_Last = CRI
+    // Xe3p family
+    Xe3p_First,
+    CRI = Xe3p_First,
+    Xe3p_Last = CRI
   };
 
   // Constructor
@@ -111,6 +138,10 @@ struct uArch {
 
   virtual int getSubgroupSize() const = 0;
   virtual unsigned getGeneralPackedFormatBitSize() const = 0;
+  // Restrictions on the base address / width / pitch of the 2D memory region
+  // accessed by the subgroup 2D block instructions.
+  virtual const BlockIOMemoryRestrictions &
+  getBlockIOMemoryRestrictions() const = 0;
 
   const Instruction *getInstruction(InstructionKind instKind) const {
     auto it = instructionRegistry.find(instKind);
@@ -191,6 +222,7 @@ struct BlockIOInstructionInterface : public Instruction {
 
   // Bit size of the packed format used by this block instruction.
   virtual int32_t getPackedFormatBitSize() const = 0;
+
   virtual ~BlockIOInstructionInterface() = default;
 
 protected:

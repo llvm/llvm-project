@@ -2206,6 +2206,14 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr) {
   }
 }
 
+LLVMBool LLVMIsDSOLocal(LLVMValueRef Global) {
+  return unwrap<GlobalValue>(Global)->isDSOLocal();
+}
+
+void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal) {
+  unwrap<GlobalValue>(Global)->setDSOLocal(IsDSOLocal);
+}
+
 LLVMBool LLVMHasUnnamedAddr(LLVMValueRef Global) {
   return unwrap<GlobalValue>(Global)->hasGlobalUnnamedAddr();
 }
@@ -3458,11 +3466,17 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
 /*===-- Instruction builders ----------------------------------------------===*/
 
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(new IRBuilder<>(*unwrap(C)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
   return LLVMCreateBuilderInContext(getGlobalContextForCAPI());
+}
+
+LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M) {
+  return wrap(new IRBuilder<>(*unwrap(M)));
 }
 
 static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,

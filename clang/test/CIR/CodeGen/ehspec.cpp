@@ -54,6 +54,25 @@ void target() throw(int) {
 // OGCG:       {{^}}[[RESUME]]:
 // OGCG:         resume { ptr, i32 } %{{.*}}
 
+int target_value(int a) throw(int) {
+  if (a)
+    return a;
+  external();
+  return 0;
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z12target_valuei(
+// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:    %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
+// CIR-NEXT:    cir.try {
+// CIR-NEXT:      cir.store %{{.+}}, %[[A]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: define dso_local noundef i32 @_Z12target_valuei(i32 noundef %{{.+}})
+// LLVM:         %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM-NEXT:    %[[A:.*]] = alloca i32, align 4
+// LLVM:         store i32 %{{.+}}, ptr %[[A]], align 4
+// LLVM:         store i32 %{{.+}}, ptr %[[RETVAL]], align 4
+
 void target2() throw() {
   external();
 }

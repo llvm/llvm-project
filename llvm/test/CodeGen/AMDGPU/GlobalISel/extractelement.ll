@@ -846,29 +846,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset1(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[2:3]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset1:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[2:3]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset1:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[2:3]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset1:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[2:3]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 1
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -896,29 +923,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset2(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset2:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[4:5]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset2:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[4:5]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset2:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[4:5]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 2
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -946,29 +1000,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset3(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[6:7]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset3:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[6:7]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset3:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[6:7]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset3:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[6:7]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 3
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -996,29 +1077,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset4(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[8:9]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset4:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[8:9]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset4:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[8:9]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset4:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[8:9]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 4
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -1046,29 +1154,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset5(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[10:11]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset5:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[10:11]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset5:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[10:11]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset5:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[10:11]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 5
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -1096,29 +1231,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset6(<8 x double> inreg %vec, 
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[12:13]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset6:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[12:13]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset6:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[12:13]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset6:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[12:13]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 6
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -1147,6 +1309,8 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset7(<8 x double> inreg %vec, 
 ; GPRIDX-NEXT:    s_mov_b32 m0, s18
 ; GPRIDX-NEXT:    s_nop 0
 ; GPRIDX-NEXT:    s_movrels_b64 s[0:1], s[14:15]
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; MOVREL-LABEL: dyn_extract_v8f64_s_s_offset7:
@@ -1169,29 +1333,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offset7(<8 x double> inreg %vec, 
 ; MOVREL-NEXT:    s_mov_b32 s15, s17
 ; MOVREL-NEXT:    s_mov_b32 m0, s18
 ; MOVREL-NEXT:    s_movrels_b64 s[0:1], s[14:15]
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offset7:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s18
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[14:15]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offset7:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_mov_b32 m0, s18
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[14:15]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offset7:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_mov_b32 m0, s18
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[14:15]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, 7
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -1219,29 +1410,56 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offsetm1(<8 x double> inreg %vec,
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_mov_b32 s15, s17
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v8f64_s_s_offsetm1:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_add_i32 m0, s18, -1
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_mov_b32 s14, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s15, s17
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[0:1]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v8f64_s_s_offsetm1:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_add_i32 m0, s18, -1
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_mov_b32 s14, s16
+; GFX10-NEXT:    s_mov_b32 s15, s17
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v8f64_s_s_offsetm1:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_add_i32 m0, s18, -1
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_mov_b32 s14, s16
+; GFX11-NEXT:    s_mov_b32 s15, s17
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %add = add i32 %sel, -1
   %ext = extractelement <8 x double> %vec, i32 %add
@@ -1704,28 +1922,25 @@ define amdgpu_ps double @dyn_extract_v16f64_v_s(<16 x double> %vec, i32 inreg %s
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v32, v0
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v32
-; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v32
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; MOVREL-LABEL: dyn_extract_v16f64_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
 ; MOVREL-NEXT:    v_movrels_b32_e32 v32, v0
-; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
-; MOVREL-NEXT:    v_readfirstlane_b32 s0, v32
-; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v1, v1
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v32
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: dyn_extract_v16f64_v_s:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_lshl_b32 m0, s2, 1
 ; GFX10PLUS-NEXT:    v_movrels_b32_e32 v32, v0
-; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v32
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10PLUS-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v32
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <16 x double> %vec, i32 %sel
@@ -1900,42 +2115,82 @@ define amdgpu_ps double @dyn_extract_v16f64_s_s(i32 inreg %sel) {
 ; GCN-NEXT:    s_mov_b32 s41, 0x40080000
 ; GCN-NEXT:    s_mov_b64 s[38:39], 2.0
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[36:37]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v16f64_s_s:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b64 s[36:37], 1.0
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s66, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s67, 0x40300000
-; GFX10PLUS-NEXT:    s_mov_b32 s64, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s65, 0x402e0000
-; GFX10PLUS-NEXT:    s_mov_b32 s62, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s63, 0x402c0000
-; GFX10PLUS-NEXT:    s_mov_b32 s60, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s61, 0x402a0000
-; GFX10PLUS-NEXT:    s_mov_b32 s58, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s59, 0x40280000
-; GFX10PLUS-NEXT:    s_mov_b32 s56, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s57, 0x40260000
-; GFX10PLUS-NEXT:    s_mov_b32 s54, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s55, 0x40240000
-; GFX10PLUS-NEXT:    s_mov_b32 s52, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s53, 0x40220000
-; GFX10PLUS-NEXT:    s_mov_b32 s50, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s51, 0x40200000
-; GFX10PLUS-NEXT:    s_mov_b32 s48, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s49, 0x401c0000
-; GFX10PLUS-NEXT:    s_mov_b32 s46, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s47, 0x40180000
-; GFX10PLUS-NEXT:    s_mov_b32 s44, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s45, 0x40140000
-; GFX10PLUS-NEXT:    s_mov_b64 s[42:43], 4.0
-; GFX10PLUS-NEXT:    s_mov_b32 s40, 0
-; GFX10PLUS-NEXT:    s_mov_b32 s41, 0x40080000
-; GFX10PLUS-NEXT:    s_mov_b64 s[38:39], 2.0
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[36:37]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v16f64_s_s:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b64 s[36:37], 1.0
+; GFX10-NEXT:    s_mov_b32 m0, s2
+; GFX10-NEXT:    s_mov_b32 s66, 0
+; GFX10-NEXT:    s_mov_b32 s67, 0x40300000
+; GFX10-NEXT:    s_mov_b32 s64, 0
+; GFX10-NEXT:    s_mov_b32 s65, 0x402e0000
+; GFX10-NEXT:    s_mov_b32 s62, 0
+; GFX10-NEXT:    s_mov_b32 s63, 0x402c0000
+; GFX10-NEXT:    s_mov_b32 s60, 0
+; GFX10-NEXT:    s_mov_b32 s61, 0x402a0000
+; GFX10-NEXT:    s_mov_b32 s58, 0
+; GFX10-NEXT:    s_mov_b32 s59, 0x40280000
+; GFX10-NEXT:    s_mov_b32 s56, 0
+; GFX10-NEXT:    s_mov_b32 s57, 0x40260000
+; GFX10-NEXT:    s_mov_b32 s54, 0
+; GFX10-NEXT:    s_mov_b32 s55, 0x40240000
+; GFX10-NEXT:    s_mov_b32 s52, 0
+; GFX10-NEXT:    s_mov_b32 s53, 0x40220000
+; GFX10-NEXT:    s_mov_b32 s50, 0
+; GFX10-NEXT:    s_mov_b32 s51, 0x40200000
+; GFX10-NEXT:    s_mov_b32 s48, 0
+; GFX10-NEXT:    s_mov_b32 s49, 0x401c0000
+; GFX10-NEXT:    s_mov_b32 s46, 0
+; GFX10-NEXT:    s_mov_b32 s47, 0x40180000
+; GFX10-NEXT:    s_mov_b32 s44, 0
+; GFX10-NEXT:    s_mov_b32 s45, 0x40140000
+; GFX10-NEXT:    s_mov_b64 s[42:43], 4.0
+; GFX10-NEXT:    s_mov_b32 s40, 0
+; GFX10-NEXT:    s_mov_b32 s41, 0x40080000
+; GFX10-NEXT:    s_mov_b64 s[38:39], 2.0
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[36:37]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v16f64_s_s:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b64 s[36:37], 1.0
+; GFX11-NEXT:    s_mov_b32 m0, s2
+; GFX11-NEXT:    s_mov_b32 s66, 0
+; GFX11-NEXT:    s_mov_b32 s67, 0x40300000
+; GFX11-NEXT:    s_mov_b32 s64, 0
+; GFX11-NEXT:    s_mov_b32 s65, 0x402e0000
+; GFX11-NEXT:    s_mov_b32 s62, 0
+; GFX11-NEXT:    s_mov_b32 s63, 0x402c0000
+; GFX11-NEXT:    s_mov_b32 s60, 0
+; GFX11-NEXT:    s_mov_b32 s61, 0x402a0000
+; GFX11-NEXT:    s_mov_b32 s58, 0
+; GFX11-NEXT:    s_mov_b32 s59, 0x40280000
+; GFX11-NEXT:    s_mov_b32 s56, 0
+; GFX11-NEXT:    s_mov_b32 s57, 0x40260000
+; GFX11-NEXT:    s_mov_b32 s54, 0
+; GFX11-NEXT:    s_mov_b32 s55, 0x40240000
+; GFX11-NEXT:    s_mov_b32 s52, 0
+; GFX11-NEXT:    s_mov_b32 s53, 0x40220000
+; GFX11-NEXT:    s_mov_b32 s50, 0
+; GFX11-NEXT:    s_mov_b32 s51, 0x40200000
+; GFX11-NEXT:    s_mov_b32 s48, 0
+; GFX11-NEXT:    s_mov_b32 s49, 0x401c0000
+; GFX11-NEXT:    s_mov_b32 s46, 0
+; GFX11-NEXT:    s_mov_b32 s47, 0x40180000
+; GFX11-NEXT:    s_mov_b32 s44, 0
+; GFX11-NEXT:    s_mov_b32 s45, 0x40140000
+; GFX11-NEXT:    s_mov_b64 s[42:43], 4.0
+; GFX11-NEXT:    s_mov_b32 s40, 0
+; GFX11-NEXT:    s_mov_b32 s41, 0x40080000
+; GFX11-NEXT:    s_mov_b64 s[38:39], 2.0
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[36:37]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <16 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0>, i32 %sel
   ret double %ext
@@ -2242,8 +2497,6 @@ define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_extract_v6f64_s_v:
@@ -2265,8 +2518,6 @@ define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s12, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s13, vcc_lo
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: dyn_extract_v6f64_s_v:
@@ -2287,8 +2538,6 @@ define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s12, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s13, vcc_lo
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <6 x double> %vec, i32 %sel
@@ -2361,28 +2610,25 @@ define amdgpu_ps double @dyn_extract_v6f64_v_s(<6 x double> %vec, i32 inreg %sel
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v12, v0
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v12
-; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v12
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; MOVREL-LABEL: dyn_extract_v6f64_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
 ; MOVREL-NEXT:    v_movrels_b32_e32 v12, v0
-; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
-; MOVREL-NEXT:    v_readfirstlane_b32 s0, v12
-; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v1, v1
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v12
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: dyn_extract_v6f64_v_s:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_lshl_b32 m0, s2, 1
 ; GFX10PLUS-NEXT:    v_movrels_b32_e32 v12, v0
-; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v12
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10PLUS-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v12
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <6 x double> %vec, i32 %sel
@@ -2406,25 +2652,48 @@ define amdgpu_ps double @dyn_extract_v6f64_s_s(<6 x double> inreg %vec, i32 inre
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v6f64_s_s:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[0:1]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v6f64_s_s:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 m0, s14
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v6f64_s_s:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 m0, s14
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <6 x double> %vec, i32 %sel
   ret double %ext
@@ -2468,8 +2737,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_s_v_bitcast:
@@ -2509,8 +2776,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: dyn_extract_v7f64_s_v_bitcast:
@@ -2536,8 +2801,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v3 :: v_dual_cndmask_b32 v2, v2, v4
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v0 :: v_dual_cndmask_b32 v1, v2, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %bc = bitcast <14 x float> %userData to <7 x double>
@@ -2601,8 +2864,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_s_v:
@@ -2630,8 +2891,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: dyn_extract_v7f64_s_v:
@@ -2657,8 +2916,6 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v1, v0 :: v_dual_cndmask_b32 v1, v2, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <7 x double> %vec, i32 %sel
@@ -2747,28 +3004,25 @@ define amdgpu_ps double @dyn_extract_v7f64_v_s(<7 x double> %vec, i32 inreg %sel
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v14, v0
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v14
-; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v14
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; MOVREL-LABEL: dyn_extract_v7f64_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
 ; MOVREL-NEXT:    v_movrels_b32_e32 v14, v0
-; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
-; MOVREL-NEXT:    v_readfirstlane_b32 s0, v14
-; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v1, v1
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v14
 ; MOVREL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: dyn_extract_v7f64_v_s:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_lshl_b32 m0, s2, 1
 ; GFX10PLUS-NEXT:    v_movrels_b32_e32 v14, v0
-; GFX10PLUS-NEXT:    v_movrels_b32_e32 v0, v1
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v14
-; GFX10PLUS-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10PLUS-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <7 x double> %vec, i32 %sel
@@ -2794,27 +3048,52 @@ define amdgpu_ps double @dyn_extract_v7f64_s_s(<7 x double> inreg %vec, i32 inre
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: dyn_extract_v7f64_s_s:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
-; GFX10PLUS-NEXT:    s_mov_b32 m0, s16
-; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
-; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
-; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
-; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
-; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
-; GFX10PLUS-NEXT:    s_mov_b32 s8, s10
-; GFX10PLUS-NEXT:    s_mov_b32 s9, s11
-; GFX10PLUS-NEXT:    s_mov_b32 s10, s12
-; GFX10PLUS-NEXT:    s_mov_b32 s11, s13
-; GFX10PLUS-NEXT:    s_mov_b32 s12, s14
-; GFX10PLUS-NEXT:    s_mov_b32 s13, s15
-; GFX10PLUS-NEXT:    s_movrels_b64 s[0:1], s[0:1]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: dyn_extract_v7f64_s_s:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 m0, s16
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    s_mov_b32 s8, s10
+; GFX10-NEXT:    s_mov_b32 s9, s11
+; GFX10-NEXT:    s_mov_b32 s10, s12
+; GFX10-NEXT:    s_mov_b32 s11, s13
+; GFX10-NEXT:    s_mov_b32 s12, s14
+; GFX10-NEXT:    s_mov_b32 s13, s15
+; GFX10-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: dyn_extract_v7f64_s_s:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 m0, s16
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    s_mov_b32 s8, s10
+; GFX11-NEXT:    s_mov_b32 s9, s11
+; GFX11-NEXT:    s_mov_b32 s10, s12
+; GFX11-NEXT:    s_mov_b32 s11, s13
+; GFX11-NEXT:    s_mov_b32 s12, s14
+; GFX11-NEXT:    s_mov_b32 s13, s15
+; GFX11-NEXT:    s_movrels_b64 s[0:1], s[0:1]
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <7 x double> %vec, i32 %sel
   ret double %ext
