@@ -212,7 +212,7 @@ void copy14(MayAliasComplexMember *a1, MayAliasComplexMember *a2) {
 // CHECK-LABEL: _Z6copy14P21MayAliasComplexMemberS0_
 // CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) %a1, ptr noundef nonnull align 8 dereferenceable(24) %a2, i64 24, i1 false),
 // CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT24:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA49:![0-9]+]], !tbaa.struct
+// CHECK-NEW-SAME: !tbaa [[TBAA50:![0-9]+]], !tbaa.struct
   *a1 = *a2;
 }
 
@@ -270,4 +270,8 @@ void copy14(MayAliasComplexMember *a1, MayAliasComplexMember *a2) {
 // CHECK-NEW: [[META38]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[META4]], i64 0, i64 8, [[META3]], i64 8, i64 4}
 // CHECK-NEW: [[TBAA41]] = !{[[META42:![0-9]+]], [[META42]], i64 0, i64 16}
 // CHECK-NEW: [[META42]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA45]] = !{[[META46:![0-9]+]], [[META46]], i64 0, i64 32}
+// CHECK-NEW: [[META46]] = !{[[META4]], i64 32, !"_ZTS14ComplexMembers", [[META3]], i64 0, i64 4, [[META4]], i64 4, i64 8, [[META4]], i64 16, i64 16}
+// CHECK-NEW: [[TBAA50]] = !{[[META51:![0-9]+]], [[META51]], i64 0, i64 24}
+// CHECK-NEW: [[META51]] = !{[[META4]], i64 24, !"_ZTS21MayAliasComplexMember", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 16}
 //.
