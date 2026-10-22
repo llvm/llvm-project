@@ -22,6 +22,7 @@
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
+#include <__algorithm/stable_partition.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
@@ -320,6 +321,15 @@ struct __partition<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     return std::partition(std::move(__first), std::move(__last), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __stable_partition<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _Predicate>
+  optional<_BidirectionalIterator> operator()(
+      _Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred) const noexcept {
+    return std::stable_partition(std::move(__first), std::move(__last), std::move(__pred));
   }
 };
 

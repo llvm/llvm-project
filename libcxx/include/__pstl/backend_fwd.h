@@ -393,6 +393,13 @@ struct __sort;
 // operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __stable_partition;
+// template <class _Policy, class _BidirectionalIterator, class _Predicate>
+// optional<_BidirectionalIterator>
+// operator()(_Policy&& __policy, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred)
+// const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __stable_sort;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<__empty>

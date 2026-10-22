@@ -117,4 +117,6 @@ void test() {
   std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1, pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::partition(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stable_partition(std::execution::par, std::begin(a), std::end(a), pred);
 }

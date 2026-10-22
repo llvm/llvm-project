@@ -159,6 +159,8 @@ void f(non_forward_iterator non_fwd,
 
   {
     (void)std::partition(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: partition}}
+    (void)std::stable_partition(
+        pol, non_bidir, non_bidir, pred); // expected-error@*:* {{static assertion failed: stable_partition}}
   }
 
   {

@@ -732,6 +732,20 @@ partition(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterato
 }
 
 template <class _ExecutionPolicy,
+          class _BidirectionalIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _BidirectionalIterator stable_partition(
+    _ExecutionPolicy&& __policy, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
+      _BidirectionalIterator, "stable_partition requires BidirectionalIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__stable_partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
           class _ForwardOutIterator,
