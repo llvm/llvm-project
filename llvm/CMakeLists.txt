@@ -219,7 +219,9 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif ()
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
 option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON)
+endif()
 if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
     NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   message(STATUS "Enabling MLIR as a dependency of ClangIR")
