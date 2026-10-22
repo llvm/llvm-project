@@ -4871,8 +4871,8 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
     auto flag = mlir::LLVM::ModuleFlagAttr::get(
         module.getContext(), mlir::LLVM::ModFlagBehavior::Error,
         builder.getStringAttr("long-double-type"),
-        builder.getStringAttr(cir::stringifyLongDoubleFormat(
-            ldFormat.getValue())));
+        builder.getStringAttr(
+            cir::stringifyLongDoubleFormat(ldFormat.getValue())));
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr({flag}));
   }

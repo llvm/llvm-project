@@ -361,9 +361,8 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                << mlir::ModuleOp::getOperationName() << "'";
     auto format = mlir::dyn_cast<cir::LongDoubleFormatAttr>(attr.getValue());
     if (!format)
-      return op->emitOpError()
-             << "expects '" << getLongDoubleFormatAttrName()
-             << "' to be a #cir.long_double_format attribute";
+      return op->emitOpError() << "expects '" << getLongDoubleFormatAttrName()
+                               << "' to be a #cir.long_double_format attribute";
 
     auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName());
     if (!triple)
