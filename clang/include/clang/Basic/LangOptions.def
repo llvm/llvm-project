@@ -214,6 +214,8 @@ ENUM_LANGOPT(DefaultCallingConv, DefaultCallingConvention, 3, DCC_None, NotCompa
 
 LANGOPT(ShortEnums        , 1, 0, NotCompatible, "short enum types")
 
+LANGOPT(Int64LongLong     , 1, 0, NotCompatible, "type of int64_t is long long")
+
 LANGOPT(OpenCL            , 1, 0, NotCompatible, "OpenCL")
 LANGOPT(OpenCLVersion     , 32, 0, NotCompatible, "OpenCL C version")
 LANGOPT(OpenCLCPlusPlus   , 1, 0, NotCompatible, "C++ for OpenCL")
