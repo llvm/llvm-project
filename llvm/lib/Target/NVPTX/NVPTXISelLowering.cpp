@@ -8147,20 +8147,25 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 }
 
 // clang-format off
-// Atomic load lowering grid (rows: native memory-ordering support; columns:
-// LLVM ordering):
+// Atomic load lowering grid, one (LLVM ordering, native support) combination
+// per line:
 //
-//   ld.acquire    seq_cst                              acquire
-//   supported     fence.sc; ld.acquire                 ld.acquire
-//   unsupported   fence.sc; ld.relaxed; fence.acquire  ld.relaxed; fence.acquireExpand commentComment on line R7609
+//   seq_cst, ld.acquire supported:    fence seq_cst; load acquire
+//   seq_cst, ld.acquire unsupported:  fence seq_cst; load monotonic; fence acquire
+//   acquire, ld.acquire supported:    load acquire
+//   acquire, ld.acquire unsupported:  load monotonic; fence acquire
 //
-// Atomic store lowering grid (same rows; columns are the store-side orderings):
+// Atomic store lowering grid, in the same form:
 //
-//   st.relaxed    seq_cst                       release
-//   supported     fence.sc; st.relaxed          st.release
-//   unsupported   fence.sc; st.relaxed          fence.release; st.relaxed
+//   seq_cst, st.release supported:    fence seq_cst; store monotonic
+//   seq_cst, st.release unsupported:  fence seq_cst; store monotonic
+//   release, st.release supported:    store release
+//   release, st.release unsupported:  fence release; store monotonic
 //
-// "supported" = STI.hasMemoryOrdering() (sm_70+ with PTX 6.0+).
+//  Note that ordered fences are only supported on architectures where
+//  acquire/release loads/stores are supported. On lower architectures, all
+//  LLVM fences are lowered "membar". This is correct, because membar provides
+//  all the guarantees of "fence.sc".
 //  Lowering is based on the PTX Atomics ABI:
 //  https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
 // clang-format on
@@ -8331,12 +8336,6 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
   if (CI || RI) {
-    bool IsEmulated =
-        !STI.hasMemoryOrdering() ||
-        (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                      ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-            : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
-
     bool IsEmulated = !STI.hasMemoryOrdering();
     if (CI)
       IsEmulated |=
