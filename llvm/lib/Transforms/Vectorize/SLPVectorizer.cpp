@@ -2657,10 +2657,6 @@ private:
   /// to in.
   bool matchesSelectOfBits(const TreeEntry &SelectTE) const;
 
-  /// Convert the given compressed load node into a strided
-  /// load if legal and profitable.
-  void convertCompressedLoadToStrided(TreeEntry &E);
-
   class TreeEntry {
   public:
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
@@ -3511,7 +3507,9 @@ private:
   unsigned NumCanonicalSplatSubtreeEntries = 0;
 
   /// Maps compress entries to their mask data for the final codegen.
-  SmallDenseMap<const TreeEntry *, CompressedLoadInfo> CompressEntryToData;
+  SmallDenseMap<const TreeEntry *,
+                std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
+      CompressEntryToData;
 
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
@@ -4544,9 +4542,11 @@ private:
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                  EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
-            Lane = EI.UserTE->ReorderIndices[Lane];
+            Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                 find(EI.UserTE->ReorderIndices, Lane));
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -4610,9 +4610,11 @@ private:
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+            if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                    EI.UserTE->Scalars[Lane]) &&
                 !EI.UserTE->ReorderIndices.empty())
-              Lane = EI.UserTE->ReorderIndices[Lane];
+              Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                   find(EI.UserTE->ReorderIndices, Lane));
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                    "Couldn't find extract lane");
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -14561,58 +14563,6 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   return BitcastCost <= SelectCost;
 }
 
-void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
-  // In cases where a shuffle is mandatory regardless of load type,
-  // prefer Compressed since the reorder/reuse shuffle can be merged
-  // with the compress shuffle.
-  if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
-    return;
-
-  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
-    return cast<LoadInst>(V)->getPointerOperand();
-  });
-
-  Type *ScalarTy = E.getMainOp()->getType();
-  Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
-  StridedPtrInfo SPtrInfo;
-  SmallVector<unsigned> Order;
-  std::optional<int64_t> Diff = Cache.getPointersDiff(
-      ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
-  if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
-                                               CommonAlignment, Order, *Diff,
-                                               PointerOps.front(), SPtrInfo))
-    return;
-
-  auto *LI0 = cast<LoadInst>(E.Scalars.front());
-  std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
-      E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-      [](Value *) { return true; }, Opts.slp_revec, Cache);
-  if (!CompressInfo)
-    return;
-  InstructionCost CompressedCost =
-      getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
-
-  auto *VecTy =
-      cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
-  FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-  InstructionCost StridedCost = getStridedLoadCost(
-      *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
-      LI0->getPointerOperand(), CommonAlignment,
-      TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
-  if (StridedCost >= CompressedCost)
-    return;
-
-  LLVM_DEBUG({
-    dbgs() << "SLP: Converted TreeEntry at Idx " << E.Idx
-           << " from Compressed Load to Strided Load; "
-           << "StridedCost = " << StridedCost
-           << "; CompressedCost = " << CompressedCost << "\n";
-  });
-  E.State = TreeEntry::StridedVectorize;
-  TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
-  CompressEntryToData.erase(&E);
-}
-
 void BoUpSLP::transformNodes() {
   BaseGraphSize = VectorizableTree.size();
   // Turn graph transforming mode on and off, when done.
@@ -14626,21 +14576,6 @@ void BoUpSLP::transformNodes() {
     }
     ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
   } TransformContext(IsGraphTransformMode);
-
-  // Perform transformations that modify nodes in-place last.
-  llvm::scope_exit PreferStridedLoads([&] {
-    for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
-      if (!E->hasState())
-        continue;
-      if (DeletedNodes.contains(E.get()))
-        continue;
-      if (E->getOpcode() == Instruction::Load &&
-          E->State == TreeEntry::CompressVectorize) {
-        convertCompressedLoadToStrided(*E.get());
-      }
-    }
-  });
-
   // Operands are profitable if they are:
   // 1. At least one constant
   // or
@@ -17891,13 +17826,26 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         bool IsReverse = E->isReverse() && !isWidenedStridedLoad(E);
-        VecLdCost = getStridedLoadCost(
-            *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
-            LI0->getPointerOperand(), CommonAlignment, getCastContextHint(*E),
-            CostKind, IsReverse);
+        Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
+                                                 *DL, IsReverse);
+        VecLdCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                       StridedLoadTy, LI0->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       /*I=*/nullptr, Stride),
+            CostKind);
+        if (StridedLoadTy != VecTy)
+          VecLdCost +=
+              getWidenedStridedCastCost(*TTI, StridedLoadTy, VecTy, *DL,
+                                        getCastContextHint(*E), CostKind);
+
         break;
       }
       case TreeEntry::CompressVectorize: {
+        bool IsMasked;
+        unsigned InterleaveFactor;
+        SmallVector<int> CompressMask;
+        VectorType *LoadVecTy;
         SmallVector<Value *> Scalars(VL);
         if (!E->ReorderIndices.empty()) {
           SmallVector<int> Mask(E->ReorderIndices.begin(),
@@ -17907,13 +17855,40 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
+        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            Cache);
-        assert(CompressInfo && "Expected compressed load candidate.");
-        CompressEntryToData.try_emplace(E, *CompressInfo);
-        VecLdCost = getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
+            IsMasked, InterleaveFactor, CompressMask, LoadVecTy, Cache);
+        CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
+                                        InterleaveFactor, IsMasked);
+        Align CommonAlignment = LI0->getAlign();
+        // For REVEC the emitted shuffle uses the compress mask expanded to the
+        // individual elements of the vector scalars.
+        SmallVector<int> CompressCostMask(CompressMask);
+        transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                               CompressCostMask);
+        if (InterleaveFactor) {
+          VecLdCost = TTI->getInterleavedMemoryOpCost(
+              Instruction::Load, LoadVecTy, InterleaveFactor, {},
+              CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
+        } else if (IsMasked) {
+          VecLdCost = TTI->getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                         CommonAlignment,
+                                         LI0->getPointerAddressSpace()),
+              CostKind);
+          // TODO: include this cost into CommonCost.
+          VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
+                                      CostKind, CompressCostMask);
+        } else {
+          VecLdCost = TTI->getMemoryOpCost(
+              Instruction::Load, LoadVecTy, CommonAlignment,
+              LI0->getPointerAddressSpace(), CostKind,
+              TTI::getOperandInfo(LI0->getPointerOperand()));
+          // TODO: include this cost into CommonCost.
+          VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
+                                      CostKind, CompressCostMask);
+        }
         break;
       }
       case TreeEntry::ScatterVectorize: {
@@ -17976,9 +17951,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
-        Value *Stride = getStrideBytesIfConstant(
-            dyn_cast_if_present<ConstantInt>(SPtrInfo.StrideVal), ScalarTy,
-            *DL);
+        Value *Stride =
+            getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy, *DL);
         VecStCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
                                        StridedStoreTy,
@@ -20879,10 +20853,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             count_if(Entry->Scalars, [&](Value *V) {
               return ValueToExtUses->contains(V);
             }) <= 2;
+        // The extracted address index hides the consecutive accesses of the
+        // users from the later trees.
+        auto *GEPUser = dyn_cast_if_present<GetElementPtrInst>(EU.User);
+        const bool IsAddressIndex =
+            GEPUser && GEPUser->getPointerOperand() != EU.Scalar;
         if (IsProfitablePHIUser) {
           KeepScalar = true;
         } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
                    ExtraCost - ScalarCost <= TTI::TCC_Basic &&
+                   !IsAddressIndex &&
                    (!GatheredLoadsEntriesFirst.has_value() ||
                     Entry->Idx < *GatheredLoadsEntriesFirst)) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
@@ -25210,7 +25190,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         NewLI = Builder.CreateAlignedLoad(
             VecTy, PO, commonAlignment(LI->getAlign(), Shift));
       } else if (E->State == TreeEntry::CompressVectorize) {
-        auto [IsMasked, InterleaveFactor, CompressMask, LoadVecTy] =
+        auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             CompressEntryToData.at(E);
         Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
@@ -28124,9 +28104,11 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                  EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
-            Lane = EI.UserTE->ReorderIndices[Lane];
+            Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                 find(EI.UserTE->ReorderIndices, Lane));
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -30955,8 +30937,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType(),
-                              Opts->slp_revec))
+      Type *ValTy = SI->getValueOperand()->getType();
+      if (isa<StructType>(ValTy) || !isValidElementType(ValTy, Opts->slp_revec))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
@@ -35819,9 +35801,7 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
 
   Value *Vec = R.vectorizeTree({}, IVI);
   assert(Vec->getType() == FieldsTy && "Expected the vector of the fields.");
-  IRBuilder<TargetFolder> Builder(IVI->getContext(), TargetFolder(DL));
-  Builder.SetInsertPoint(IVI);
-  Builder.SetCurrentDebugLocation(IVI->getDebugLoc());
+  IRBuilder<TargetFolder> Builder(IVI->getIterator(), TargetFolder(DL));
   if (!IsIdentity)
     Vec = Builder.CreateShuffleVector(Vec, OrderMask);
   Value *Packed = Builder.CreateBitCast(Vec, PacksTy);

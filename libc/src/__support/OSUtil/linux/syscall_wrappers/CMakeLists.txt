@@ -1821,3 +1821,15 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
 )
+
+add_header_library(
+  eventfd
+  HDRS
+    eventfd.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)

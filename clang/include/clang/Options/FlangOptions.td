@@ -278,6 +278,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
 
+defm loop_tripcount_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-trip-count",
+  PosFlag<SetTrue, [], [], "Create constant-trip-count versions of array section loops">,
+   NegFlag<SetFalse, [], [], "Do not create constant-trip-count loops (default)">>;
+
 defm stack_repack_arrays
     : BoolOptionWithoutMarshalling<
           "f", "stack-repack-arrays",

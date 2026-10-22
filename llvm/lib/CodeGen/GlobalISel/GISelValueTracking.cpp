@@ -1488,6 +1488,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if ((InterestedClasses & fcNegative) == fcNone)
       break;
 
+    const bool IsFMA = Opcode == TargetOpcode::G_FMA;
+
     Register A = MI.getOperand(1).getReg();
     Register B = MI.getOperand(2).getReg();
     Register C = MI.getOperand(3).getReg();
@@ -1506,7 +1508,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         KnownSrc.knownNot(KnownNotFromFlags);
         KnownAddend.knownNot(KnownNotFromFlags);
       }
-      Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+      Known = IsFMA ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
     } else {
       KnownFPClass KnownSrc[3];
       computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc[0],
@@ -1526,7 +1529,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         KnownSrc[1].knownNot(KnownNotFromFlags);
         KnownSrc[2].knownNot(KnownNotFromFlags);
       }
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
     }
     break;
   }

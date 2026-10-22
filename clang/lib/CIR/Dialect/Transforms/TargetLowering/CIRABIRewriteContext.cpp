@@ -484,14 +484,39 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
                           dstTy == slotTy ? 0 : offset);
 }
 
+/// Cast \p src to \p dstTy when both are pointers to the same pointee, so only
+/// the address space changes.  Returns null when a real coercion is needed.
+static mlir::Value
+emitAddrSpaceCoercion(mlir::OpBuilder &builder, mlir::Location loc,
+                      mlir::Type dstTy, mlir::Value src,
+                      SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                      unsigned offset) {
+  auto srcPtrTy = dyn_cast<cir::PointerType>(src.getType());
+  auto dstPtrTy = dyn_cast<cir::PointerType>(dstTy);
+  if (offset || !srcPtrTy || !dstPtrTy ||
+      srcPtrTy.getPointee() != dstPtrTy.getPointee())
+    return {};
+  assert(srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace() &&
+         "pointers to the same pointee must differ in address space");
+  auto cast = cir::CastOp::create(builder, loc, dstTy,
+                                  cir::CastKind::address_space, src);
+  createdOps.insert(cast);
+  return cast;
+}
+
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
 /// coerced value back out.  Builds on emitCoercionToMemory, adding the final
-/// load of the destination-typed view.
+/// load of the destination-typed view.  A pointer that only changes address
+/// space is cast instead.
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
                          SmallPtrSetImpl<mlir::Operation *> &createdOps,
                          unsigned offset) {
+  if (mlir::Value cast =
+          emitAddrSpaceCoercion(builder, loc, dstTy, src, createdOps, offset))
+    return cast;
+
   mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
                                              slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);
@@ -794,14 +819,20 @@ replaceUsesFromSlot(mlir::OpBuilder &builder, mlir::Location loc,
 /// \p origTy through a coercion slot at the start of \p slotBlock, and point
 /// the uses of \p val outside \p createdOps at the result with
 /// replaceUsesFromSlot.  A direct \p offset lands on the coerced side, so the
-/// view of \p origTy starts at the slot.  The coercion's operations are added
-/// to \p createdOps.
+/// view of \p origTy starts at the slot.  A pointer that only changes address
+/// space is cast instead.  The coercion's operations are added to
+/// \p createdOps.
 static mlir::LogicalResult
 emitCoercionAndReplaceUses(mlir::OpBuilder &builder, mlir::Location loc,
                            mlir::Type origTy, mlir::Value src, mlir::Value val,
                            mlir::Block *slotBlock, const mlir::DataLayout &dl,
                            SmallPtrSetImpl<mlir::Operation *> &createdOps,
                            unsigned offset) {
+  if (mlir::Value cast = emitAddrSpaceCoercion(builder, loc, origTy, src,
+                                               createdOps, offset)) {
+    val.replaceAllUsesExcept(cast, createdOps);
+    return mlir::success();
+  }
   mlir::Value view = emitCoercionToMemory(builder, loc, origTy, src, slotBlock,
                                           dl, createdOps, offset);
   return replaceUsesFromSlot(builder, loc, val, view, dl, createdOps);

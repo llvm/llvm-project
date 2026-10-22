@@ -8307,6 +8307,13 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "             3};\n"
                "}",
                Style);
+  verifyFormat("int main() {\n"
+               "  MyFunc(&a,\n"
+               "         &b,\n"
+               "         (uint8_t *)c,\n"
+               "         d);\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
@@ -12322,6 +12329,36 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "{\n"
                "  p->delete ();\n"
                "}");
+
+  verifyFormat("x = new a *[]{nullptr};");
+  verifyFormat("x = new (a) a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a::a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a) a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a)(a<a> *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
