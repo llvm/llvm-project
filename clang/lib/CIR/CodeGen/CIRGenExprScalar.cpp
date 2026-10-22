@@ -26,6 +26,7 @@
 #include "mlir/IR/Value.h"
 
 #include <cassert>
+#include <numeric>
 #include <utility>
 
 using namespace clang;
@@ -320,15 +321,16 @@ public:
     mlir::Value columnIdx = cgf.emitScalarExpr(e->getColumnIdx());
     mlir::Value matrix = Visit(e->getBase());
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
-      assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
     return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
   mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: matrix singel subscript");
-    return {};
+    mlir::Value rowIdx = cgf.emitScalarExpr(e->getRowIdx());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    mlir::Value matrix = Visit(e->getBase());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    return builder.createMatrixExtractRow(loc, matrix, rowIdx);
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -416,6 +418,9 @@ public:
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+  mlir::Value emitVectorInitWithSubvectors(mlir::Location loc,
+                                           cir::VectorType vectorType,
+                                           ArrayRef<mlir::Value> inits);
 
   mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
     assert(cgf.getArrayInitIndex() &&
@@ -1620,10 +1625,10 @@ public:
     mlir::Type dstTy = cgf.convertType(e->getType());
 
     unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
-                                  ? cast<cir::VectorType>(srcTy).getSize()
+                                  ? cast<cir::VectorType>(srcTy).getFixedSize()
                                   : 0;
     unsigned numElementsDst = isa<cir::VectorType>(dstTy)
-                                  ? cast<cir::VectorType>(dstTy).getSize()
+                                  ? cast<cir::VectorType>(dstTy).getFixedSize()
                                   : 0;
 
     // Use bit vector expansion for ext_vector_type boolean vectors.
@@ -1648,7 +1653,7 @@ public:
     if (numElementsSrc != 3 && numElementsDst == 3) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
-      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      auto dstVec4Ty = cir::VectorType::getFixed(dstElemTy, 4);
       src = createCastsForTypeOfSameSize(src, dstVec4Ty);
       src = convertVec3AndVec4(builder, loc, src, 3);
       return src;
@@ -2653,7 +2658,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::Value src = Visit(const_cast<Expr *>(subExpr));
     mlir::Type dstTy = cgf.convertType(destTy);
 
-    assert(!cir::MissingFeatures::addressSpace());
+    // Function and object pointers may differ in address space.
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(src.getType());
+    auto dstPtrTy = mlir::dyn_cast<cir::PointerType>(dstTy);
+    if (srcPtrTy && dstPtrTy &&
+        srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace())
+      src = cgf.performAddrSpaceCast(
+          src,
+          builder.getPointerTo(srcPtrTy.getPointee(), dstPtrTy.getAddrSpace()));
 
     if (cgf.sanOpts.has(SanitizerKind::CFIUnrelatedCast))
       cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -2922,10 +2934,12 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
   case CK_VectorSplat: {
     // Create a vector object and fill all elements with the same scalar value.
-    assert(destTy->isVectorType() && "CK_VectorSplat to non-vector type");
+    mlir::Type destCIRTy = cgf.convertType(destTy);
+    assert(mlir::isa<cir::VectorType>(destCIRTy) &&
+           "CK_VectorSplat to non-vector type");
     return cir::VecSplatOp::create(builder,
                                    cgf.getLoc(subExpr->getSourceRange()),
-                                   cgf.convertType(destTy), Visit(subExpr));
+                                   destCIRTy, Visit(subExpr));
   }
   case CK_FunctionToPointerDecay:
     return cgf.emitLValue(subExpr).getPointer();
@@ -2971,6 +2985,47 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
   return emitLoadOfLValue(e);
 }
 
+mlir::Value
+ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
+                                                cir::VectorType vectorType,
+                                                ArrayRef<mlir::Value> inits) {
+  const unsigned resElts = vectorType.getFixedSize();
+  mlir::Value result =
+      builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
+  unsigned curIdx = 0;
+  for (mlir::Value init : inits) {
+    auto initType = mlir::dyn_cast<cir::VectorType>(init.getType());
+    if (!initType) {
+      result = builder.createInsertElement(loc, result, init, curIdx++);
+      continue;
+    }
+
+    const unsigned initElts = initType.getFixedSize();
+    assert(curIdx + initElts <= resElts &&
+           "Sema should reject excess elements");
+    SmallVector<int64_t, 16> mask(resElts, -1);
+    std::iota(mask.begin(), mask.begin() + initElts, 0);
+    mlir::Value ext = builder.createVecShuffle(loc, init, mask);
+
+    // Poison stays on the RHS of the first shuffle, matching classic codegen.
+    const unsigned offset = curIdx == 0 ? 0 : resElts;
+    std::iota(mask.begin(), mask.begin() + curIdx, 0);
+    std::iota(mask.begin() + curIdx, mask.begin() + curIdx + initElts, offset);
+    if (curIdx == 0)
+      std::swap(result, ext);
+    result = builder.createVecShuffle(loc, result, ext, mask);
+    curIdx += initElts;
+  }
+
+  if (curIdx < resElts) {
+    const mlir::Value zeroValue =
+        builder.getNullValue(vectorType.getElementType(), loc);
+    for (; curIdx < resElts; ++curIdx)
+      result = builder.createInsertElement(loc, result, zeroValue, curIdx);
+  }
+  return result;
+}
+
 mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
   const unsigned numInitElements = e->getNumInits();
 
@@ -2989,22 +3044,31 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
 
     SmallVector<mlir::Value, 16> elements;
+    bool hasVectorInit = false;
     for (Expr *init : e->inits()) {
       elements.push_back(Visit(init));
+      hasVectorInit |= mlir::isa<cir::VectorType>(elements.back().getType());
     }
 
+    if (hasVectorInit)
+      return emitVectorInitWithSubvectors(cgf.getLoc(e->getSourceRange()),
+                                          vectorType, elements);
+
     // Zero-initialize any remaining values.
-    if (numInitElements < vectorType.getSize()) {
+    const uint64_t vectorSize = vectorType.getFixedSize();
+    if (numInitElements < vectorSize) {
       const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
-      std::fill_n(std::back_inserter(elements),
-                  vectorType.getSize() - numInitElements, zeroValue);
+      std::fill_n(std::back_inserter(elements), vectorSize - numInitElements,
+                  zeroValue);
     }
 
     return cir::VecCreateOp::create(cgf.getBuilder(),
                                     cgf.getLoc(e->getSourceRange()), vectorType,
                                     elements);
   }
+
+  assert(!cir::MissingFeatures::scalableVectors());
 
   if (e->getType()->isVoidType())
     return {};
@@ -3211,7 +3275,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
-    if (vecTy.getIsScalable()) {
+    if (vecTy.isScalable()) {
       cgf.getCIRGenModule().errorNYI(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
@@ -3221,7 +3285,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getFixedSize()));
   }
 
   // The result type is size_t (target-dependent width); use it so the IntAttr
