@@ -313,10 +313,21 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
+bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+  return relaxCodeAlign(F, F.getAlignment(), Size);
+}
+
+// Preferred alignment needs the same protection against linker relaxation as
+// ordinary alignment. Use the alignment computed from the body size.
+bool RISCVAsmBackend::relaxPrefAlign(MCFragment &F, unsigned &Size) {
+  return relaxCodeAlign(F, F.getPrefAlignComputed(), Size);
+}
+
 // Check if an R_RISCV_ALIGN relocation is needed for an alignment directive.
 // If conditions are met, compute the padding size and create a fixup encoding
 // the padding size in the addend.
-bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+bool RISCVAsmBackend::relaxCodeAlign(MCFragment &F, Align Alignment,
+                                     unsigned &Size) {
   // Alignments before the first linker-relaxable instruction have fixed sizes
   // and do not require relocations. Alignments after a linker-relaxable
   // instruction require a relocation, even if the STI specifies norelax.
@@ -332,10 +343,10 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   const MCSubtargetInfo *STI = F.getSubtargetInfo();
   unsigned MinNopLen =
       CLOpts.align_rvc || STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
-  if (F.getAlignment() <= MinNopLen)
+  if (Alignment <= MinNopLen)
     return false;
 
-  Size = F.getAlignment().value() - MinNopLen;
+  Size = Alignment.value() - MinNopLen;
   auto *Expr = MCConstantExpr::create(Size, getContext());
   MCFixup Fixup =
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_RISCV_ALIGN);
