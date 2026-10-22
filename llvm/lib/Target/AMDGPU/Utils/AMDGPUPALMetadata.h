@@ -47,6 +47,12 @@ public:
   // per-function modification.
   void readFromIR(Module &M);
 
+  // Set PAL metadata from a binary blob from the applicable .note record.
+  // Returns false if bad format.  Blob must remain valid for the lifetime of
+  // the Metadata.
+  // Not used in-tree, but used by the out-of-tree amdgpu-dis disassembler.
+  bool setFromBlob(unsigned Type, StringRef Blob);
+
   // Set the rsrc1 register in the metadata for a particular shader stage.
   // In fact this ORs the value into any previous setting of the register.
   void setRsrc1(unsigned CC, unsigned Val);

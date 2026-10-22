@@ -117,6 +117,7 @@ if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
+    llvm-strings
     )
   add_subdirectory(CIR/lib)
 endif()
@@ -264,6 +265,7 @@ if(CLANG_ENABLE_CIR)
       llvm-dis
       llvm-objdump
       llvm-readelf
+      llvm-strings
       not
       opt
       split-file

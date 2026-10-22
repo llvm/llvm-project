@@ -92,7 +92,7 @@ ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,
     return ABIArgInfo::getIgnore();
 
   if (!Ty->isUnionType())
-    if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   uint64_t Size = getContext().getTypeSize(Ty);

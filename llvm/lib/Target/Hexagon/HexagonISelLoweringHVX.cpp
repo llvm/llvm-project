@@ -4494,12 +4494,12 @@ SDValue HexagonTargetLowering::LowerHvxVecReduceFMinMax(
 
 SDValue HexagonTargetLowering::LowerHvxVecReduceFMin(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  return LowerHvxVecReduceFMinMax(Op, ISD::FMINNUM, /*IgnoreNaN=*/true, DAG);
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMINIMUM, /*IgnoreNaN=*/true, DAG);
 }
 
 SDValue HexagonTargetLowering::LowerHvxVecReduceFMax(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXNUM, /*IgnoreNaN=*/true, DAG);
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXIMUM, /*IgnoreNaN=*/true, DAG);
 }
 
 SDValue

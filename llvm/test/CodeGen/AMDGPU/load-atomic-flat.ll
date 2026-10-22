@@ -247,7 +247,7 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_min(ptr addrspac
 ;
 ; GFX10-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfffff000
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -255,16 +255,27 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_min(ptr addrspac
 ; GFX10-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-NEXT:    flat_load_b64 v[0:1], v[0:1] glc
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_b64 v[0:1], v[0:1] glc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_endpgm
+;
+; GFX11-GISEL-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfffff000
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-GISEL-NEXT:    flat_load_b64 v[0:1], v[0:1] glc
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
 ; GFX12:       ; %bb.0:
@@ -293,7 +304,7 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-LABEL: atomic_load_f32x2_monotonic_agent_offset_max:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -338,7 +349,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_min(ptr addrspac
 ;
 ; GFX10-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfffff000
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -346,16 +357,27 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_min(ptr addrspac
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-NEXT:    flat_load_b32 v0, v[0:1] glc
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
-; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-SDAG-NEXT:    flat_load_b32 v0, v[0:1] glc
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_endpgm
+;
+; GFX11-GISEL-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfffff000
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-GISEL-NEXT:    flat_load_b32 v0, v[0:1] glc
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
 ; GFX12:       ; %bb.0:
@@ -384,7 +406,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-LABEL: atomic_load_i16x2_monotonic_agent_offset_max:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -525,8 +547,6 @@ define amdgpu_cs void @atomic_load_bf16x4_monotonic_agent(ptr addrspace(0) %p, p
 ; GCN: {{.*}}
 ; GFX10-GISEL: {{.*}}
 ; GFX10-SDAG: {{.*}}
-; GFX11-GISEL: {{.*}}
-; GFX11-SDAG: {{.*}}
 ; GFX12-GISEL: {{.*}}
 ; GFX12-SDAG: {{.*}}
 ; GFX9-GISEL: {{.*}}

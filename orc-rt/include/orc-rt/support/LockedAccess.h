@@ -29,7 +29,7 @@ namespace orc_rt {
 /// to return locked access to an internal value. For more complex locking
 /// patterns (e.g. lock/unlock/relock, condition variables, multiple locks)
 /// use std::unique_lock or std::scoped_lock directly.
-template <typename T, typename LockT,
+template <typename T, typename LockT = std::scoped_lock<std::mutex>,
           typename MutexT = typename LockT::mutex_type>
 class LockedAccess {
 public:

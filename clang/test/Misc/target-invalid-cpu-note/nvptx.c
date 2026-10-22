@@ -2,6 +2,10 @@
 // previous check finished matching (specifically, caret is not treated as
 // matching a start of line when used like this in FileCheck).
 
+// An AMDGPU name is an offload architecture but never an NVPTX GPU name.
+// RUN: not %clang_cc1 -triple nvptx64-nvidia-cuda -target-cpu gfx906 -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=AMD
+// AMD: error: unknown target CPU 'gfx906'
+
 // RUN: not %clang_cc1 -triple nvptx--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --implicit-check-not={{[a-zA-Z0-9]}}
 // CHECK: error: unknown target CPU 'not-a-cpu'
 // CHECK-NEXT: note: valid target CPU values are:
@@ -48,84 +52,4 @@
 // CHECK-SAME: {{^}}, sm_121
 // CHECK-SAME: {{^}}, sm_121a
 // CHECK-SAME: {{^}}, sm_121f
-// CHECK-SAME: {{^}}, gfx600
-// CHECK-SAME: {{^}}, gfx601
-// CHECK-SAME: {{^}}, gfx602
-// CHECK-SAME: {{^}}, gfx700
-// CHECK-SAME: {{^}}, gfx701
-// CHECK-SAME: {{^}}, gfx702
-// CHECK-SAME: {{^}}, gfx703
-// CHECK-SAME: {{^}}, gfx704
-// CHECK-SAME: {{^}}, gfx705
-// CHECK-SAME: {{^}}, gfx801
-// CHECK-SAME: {{^}}, gfx802
-// CHECK-SAME: {{^}}, gfx803
-// CHECK-SAME: {{^}}, gfx805
-// CHECK-SAME: {{^}}, gfx810
-// CHECK-SAME: {{^}}, gfx900
-// CHECK-SAME: {{^}}, gfx902
-// CHECK-SAME: {{^}}, gfx904
-// CHECK-SAME: {{^}}, gfx906
-// CHECK-SAME: {{^}}, gfx908
-// CHECK-SAME: {{^}}, gfx909
-// CHECK-SAME: {{^}}, gfx90a
-// CHECK-SAME: {{^}}, gfx90c
-// CHECK-SAME: {{^}}, gfx942
-// CHECK-SAME: {{^}}, gfx950
-// CHECK-SAME: {{^}}, gfx1010
-// CHECK-SAME: {{^}}, gfx1011
-// CHECK-SAME: {{^}}, gfx1012
-// CHECK-SAME: {{^}}, gfx1013
-// CHECK-SAME: {{^}}, gfx1030
-// CHECK-SAME: {{^}}, gfx1031
-// CHECK-SAME: {{^}}, gfx1032
-// CHECK-SAME: {{^}}, gfx1033
-// CHECK-SAME: {{^}}, gfx1034
-// CHECK-SAME: {{^}}, gfx1035
-// CHECK-SAME: {{^}}, gfx1036
-// CHECK-SAME: {{^}}, gfx1100
-// CHECK-SAME: {{^}}, gfx1101
-// CHECK-SAME: {{^}}, gfx1102
-// CHECK-SAME: {{^}}, gfx1103
-// CHECK-SAME: {{^}}, gfx1150
-// CHECK-SAME: {{^}}, gfx1151
-// CHECK-SAME: {{^}}, gfx1152
-// CHECK-SAME: {{^}}, gfx1153
-// CHECK-SAME: {{^}}, gfx1154
-// CHECK-SAME: {{^}}, gfx1170
-// CHECK-SAME: {{^}}, gfx1171
-// CHECK-SAME: {{^}}, gfx1172
-// CHECK-SAME: {{^}}, gfx1200
-// CHECK-SAME: {{^}}, gfx1201
-// CHECK-SAME: {{^}}, gfx1250-strict
-// CHECK-SAME: {{^}}, gfx1250
-// CHECK-SAME: {{^}}, gfx1251
-// CHECK-SAME: {{^}}, gfx1310
-// CHECK-SAME: {{^}}, gfx9-generic
-// CHECK-SAME: {{^}}, gfx9-4-generic
-// CHECK-SAME: {{^}}, gfx10-1-generic
-// CHECK-SAME: {{^}}, gfx10-3-generic
-// CHECK-SAME: {{^}}, gfx11-generic
-// CHECK-SAME: {{^}}, gfx11-7-generic
-// CHECK-SAME: {{^}}, gfx12-generic
-// CHECK-SAME: {{^}}, gfx12-5-generic
-// CHECK-SAME: {{^}}, gfx13-generic
-// CHECK-SAME: {{^}}, tahiti
-// CHECK-SAME: {{^}}, pitcairn
-// CHECK-SAME: {{^}}, verde
-// CHECK-SAME: {{^}}, hainan
-// CHECK-SAME: {{^}}, oland
-// CHECK-SAME: {{^}}, kaveri
-// CHECK-SAME: {{^}}, hawaii
-// CHECK-SAME: {{^}}, kabini
-// CHECK-SAME: {{^}}, mullins
-// CHECK-SAME: {{^}}, bonaire
-// CHECK-SAME: {{^}}, carrizo
-// CHECK-SAME: {{^}}, iceland
-// CHECK-SAME: {{^}}, tonga
-// CHECK-SAME: {{^}}, fiji
-// CHECK-SAME: {{^}}, polaris10
-// CHECK-SAME: {{^}}, polaris11
-// CHECK-SAME: {{^}}, tongapro
-// CHECK-SAME: {{^}}, stoney
 // CHECK-SAME: {{$}}

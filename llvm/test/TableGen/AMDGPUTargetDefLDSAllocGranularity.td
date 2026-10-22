@@ -7,9 +7,8 @@
 // RUN:   | FileCheck %t/missing-encoding.td -DFILE=%t/missing-encoding.td --implicit-check-not="error:"
 
 //--- common.td
-include "llvm/Target/Target.td"
+include "llvm/Target/TargetSubtarget.td"
 include "AMDGPUFeatures.td"
-def MyTarget : Target;
 
 def AMDGPUFrontendVisibleFeatures {
   list<SubtargetFeature> Features = [FeatureLDSAllocGranularity512,

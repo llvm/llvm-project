@@ -204,6 +204,23 @@ getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
   llvm_unreachable("Unknown kind?");
 }
 
+std::optional<cir::FramePointerKind>
+CIRGenModule::getFramePointerKind(CodeGenOptions::FramePointerKind kind) {
+  switch (kind) {
+  case CodeGenOptions::FramePointerKind::None:
+    return std::nullopt;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    return cir::FramePointerKind::Reserved;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    return cir::FramePointerKind::NonLeafNoReserve;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    return cir::FramePointerKind::NonLeaf;
+  case CodeGenOptions::FramePointerKind::All:
+    return cir::FramePointerKind::All;
+  }
+  llvm_unreachable("Unknown frame pointer kind");
+}
+
 /// Add default attributes to a function, which have merge semantics under
 /// -mlink-builtin-bitcode and should not simply overwrite any existing
 /// attributes in the linked library.
@@ -235,7 +252,11 @@ static void addTrivialDefaultFunctionAttributes(
       attrs.set(cir::CIRDialect::getTrapFuncNameAttrName(),
                 mlir::StringAttr::get(mlirCtx, codeGenOpts.TrapFuncName));
   } else {
-    // TODO(cir): Set frame pointer attribute here.
+    if (std::optional<cir::FramePointerKind> kind =
+            CIRGenModule::getFramePointerKind(codeGenOpts.getFramePointer()))
+      attrs.set(cir::CIRDialect::getFramePointerAttrName(),
+                cir::FramePointerKindAttr::get(mlirCtx, *kind));
+
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
     // no-trapping-math
@@ -422,8 +443,12 @@ void CIRGenModule::constructAttributeList(
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
     }
 
-    // TODO(cir): Add noalias to returns for malloc-like functions
-    // (__attribute__((malloc)) / __declspec(restrict)).
+    // Both __attribute__((malloc)) and __declspec(restrict) are represented by
+    // RestrictAttr. Only forms without a deallocator imply a noalias return.
+    if (const auto *restrictAttr = targetDecl->getAttr<RestrictAttr>();
+        restrictAttr && restrictAttr->getDeallocator() == nullptr)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
 
     if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !codeGenOpts.NullPointerIsValid)
@@ -606,10 +631,19 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
     // bits from the perspective of LLVM IR.
     return false;
 
+  // Classic CodeGen stores a packed bool vector as an integer with one bit per
+  // element, at least a byte wide, so the check above drops noundef when that
+  // integer is not a whole number of bytes.  The CIR vector type is sized to a
+  // power of two of at least a byte, which always passes that check, so test
+  // the storage integer's width directly.
+  if (clangTy->isPackedVectorBoolType(types.getASTContext()) &&
+      mlir::cast<cir::VectorType>(ty).getBoolStorageWidth() % 8)
+    return false;
+
   assert(!cir::MissingFeatures::opCallCallConv());
-  // TODO(cir): The calling convention code needs to figure if the
-  // coerced-to-type is larger than the actual type, and remove the noundef
-  // attribute. Classic compiler did it here.
+  // The coerced type is not known until CallConvLowering, which drops noundef
+  // when it is wider than the value's memory type, the check classic
+  // DetermineNoUndef makes at this point.
   if (clangTy->isBitIntType())
     return true;
   if (clangTy->isReferenceType())
@@ -1652,7 +1686,7 @@ RValue CIRGenFunction::emitAnyExprToTemp(const Expr *e) {
 void CIRGenFunction::emitCallArgs(
     CallArgList &args, PrototypeWrapper prototype,
     llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
-    AbstractCallee callee, unsigned paramsToSkip) {
+    AbstractCallee callee, unsigned paramsToSkip, EvaluationOrder order) {
   llvm::SmallVector<QualType, 16> argTypes;
 
   assert(!cir::MissingFeatures::opCallCallConv());
@@ -1676,11 +1710,11 @@ void CIRGenFunction::emitCallArgs(
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because
   // arguments are destroyed left to right in the callee. As a special case,
-  // there are certain language constructs taht require left-to-right
+  // there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  auto leftToRight = true;
-  assert(!cir::MissingFeatures::msabi());
+  bool leftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      order, getTarget().getCXXABI());
 
   auto maybeEmitImplicitObjectSize = [&](size_t i, const Expr *arg,
                                          RValue emittedArg) {
@@ -1725,9 +1759,13 @@ void CIRGenFunction::emitCallArgs(
       assert(!cir::MissingFeatures::sanitizers());
       maybeEmitImplicitObjectSize(idx, *currentArg, rvArg);
     }
+  }
 
-    if (!leftToRight)
-      std::reverse(args.begin() + callArgsStart, args.end());
+  if (!leftToRight) {
+    // Un-reverse the arguments we just evaluated so they match up with the
+    // callee's parameter order.
+    std::reverse(args.begin() + callArgsStart, args.end());
+    assert(!cir::MissingFeatures::writebacks());
   }
 }
 
