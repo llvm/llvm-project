@@ -87,6 +87,47 @@ TEST(ASTExpr, IgnoreExprCallbackForwarded) {
   }
 }
 
+TEST(ASTExpr, RebuildParens) {
+  auto AST = buildASTFromCodeWithArgs(R"c(
+    void f(void) {
+      const char *p = (__extension__ _Generic(
+          0, int: __builtin_choose_expr(1, (__FUNCTION__), "")));
+    }
+  )c",
+                                      {"-xc", "-std=c11", "-fms-extensions"});
+  ASTContext &Ctx = AST->getASTContext();
+  Expr *Orig = const_cast<Expr *>(getVariableNode(AST.get(), "p")->getInit())
+                   ->IgnoreImpCasts();
+  QualType OrigTy = Orig->getType();
+  QualType NewTy = Ctx.getConstantArrayType(
+      Ctx.CharTy, llvm::APInt(32, 16), nullptr, ArraySizeModifier::Normal, 0);
+
+  Expr *Rebuilt = RebuildParens(Ctx, Orig, [&](Expr *Leaf) {
+    auto *SL = cast<StringLiteral>(Leaf);
+    auto *NewSL = StringLiteral::Create(
+        Ctx, SL->getBytes(), SL->getKind(), SL->isPascal(), NewTy,
+        llvm::ArrayRef(SL->tokloc_begin(), SL->tokloc_end()));
+    NewSL->setValueKind(VK_PRValue);
+    return NewSL;
+  });
+
+  unsigned Steps = 0;
+  for (Expr *O = Orig, *R = Rebuilt;;
+       O = IgnoreParensSingleStep(O), R = IgnoreParensSingleStep(R), ++Steps) {
+    EXPECT_NE(R, O);
+    EXPECT_EQ(R->getStmtClass(), O->getStmtClass());
+    EXPECT_EQ(R->getType(), NewTy);
+    EXPECT_EQ(R->getValueKind(), VK_PRValue);
+    EXPECT_EQ(O->getType(), OrigTy);
+    EXPECT_EQ(O->getValueKind(), VK_LValue);
+    if (IgnoreParensSingleStep(O) == O) {
+      EXPECT_EQ(IgnoreParensSingleStep(R), R);
+      break;
+    }
+  }
+  EXPECT_EQ(Steps, 6u);
+}
+
 TEST(ASTExpr, InitListIsConstantInitialized) {
   auto AST = buildASTFromCode(R"cpp(
     struct Empty {};

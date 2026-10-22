@@ -170,16 +170,26 @@ bool Sema::IsStringInit(Expr *Init, const ArrayType *AT) {
   return ::IsStringInit(Init, AT, Context) == SIF_None;
 }
 
-/// Update the type of a string literal, including any surrounding parentheses,
-/// to match the type of the object which it is initializing.
-static void updateStringLiteralType(Expr *E, QualType Ty) {
-  while (true) {
-    E->setType(Ty);
-    E->setValueKind(VK_PRValue);
-    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
-      break;
-    E = IgnoreParensSingleStep(E);
-  }
+/// Rebuild a string literal, including any surrounding parentheses or wrapper
+/// expressions, to match the type of the object which it is initializing
+/// without mutating existing AST nodes in place.
+static Expr *updateStringLiteralType(Expr *E, QualType Ty,
+                                     ASTContext &Context) {
+  return RebuildParens(Context, E, [&](Expr *Leaf) -> Expr * {
+    if (auto *SL = dyn_cast<StringLiteral>(Leaf)) {
+      auto *Result = StringLiteral::Create(
+          Context, SL->getBytes(), SL->getKind(), SL->isPascal(), Ty,
+          llvm::ArrayRef(SL->tokloc_begin(), SL->tokloc_end()));
+      Result->setValueKind(VK_PRValue);
+      return Result;
+    }
+    auto *OEE = cast<ObjCEncodeExpr>(Leaf);
+    auto *Result =
+        new (Context) ObjCEncodeExpr(Ty, OEE->getEncodedTypeSourceInfo(),
+                                     OEE->getAtLoc(), OEE->getRParenLoc());
+    Result->setValueKind(VK_PRValue);
+    return Result;
+  });
 }
 
 /// Fix a compound literal initializing an array so it's correctly marked
@@ -211,7 +221,7 @@ static bool initializingConstexprVariable(const InitializedEntity &Entity) {
 static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
                                                Sema &SemaRef, QualType &TT);
 
-static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
+static void CheckStringInit(Expr *&Str, QualType &DeclT, const ArrayType *AT,
                             Sema &S, const InitializedEntity &Entity,
                             bool CheckC23ConstexprInit = false) {
   // Get the length of the string as parsed.
@@ -230,7 +240,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     // Return a new array type (C99 6.7.8p22).
     DeclT = S.Context.getConstantArrayType(
         IAT->getElementType(), ConstVal, nullptr, ArraySizeModifier::Normal, 0);
-    updateStringLiteralType(Str, DeclT);
+    Str = updateStringLiteralType(Str, DeclT, S.Context);
     return;
   }
 
@@ -304,7 +314,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   // something like:
   //   char x[1] = "foo";
   // then this will set the string literal's type to char[1].
-  updateStringLiteralType(Str, DeclT);
+  Str = updateStringLiteralType(Str, DeclT, S.Context);
 }
 
 void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
@@ -2158,8 +2168,8 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
 
   // Check for the special-case of initializing an array with a string.
   if (Index < IList->getNumInits()) {
-    if (IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
-        SIF_None) {
+    Expr *Str = IList->getInit(Index);
+    if (IsStringInit(Str, arrayType, SemaRef.Context) == SIF_None) {
       // We place the string literal directly into the resulting
       // initializer list. This is the only place where the structure
       // of the structured initializer list doesn't match exactly,
@@ -2167,12 +2177,11 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // constant for each string.
       // FIXME: Should we do these checks in verify-only mode too?
       if (!VerifyOnly)
-        CheckStringInit(
-            IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
-            SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
+        CheckStringInit(Str, DeclType, arrayType, SemaRef, Entity,
+                        SemaRef.getLangOpts().C23 &&
+                            initializingConstexprVariable(Entity));
       if (StructuredList) {
-        UpdateStructuredListElement(StructuredList, StructuredIndex,
-                                    IList->getInit(Index));
+        UpdateStructuredListElement(StructuredList, StructuredIndex, Str);
         StructuredList->resizeInits(SemaRef.Context, StructuredIndex);
       }
       ++Index;
@@ -8622,10 +8631,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_StringInit: {
       QualType Ty = Step->Type;
       bool UpdateType = ResultType && Entity.getType()->isIncompleteArrayType();
-      CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
-                      S.Context.getAsArrayType(Ty), S, Entity,
-                      S.getLangOpts().C23 &&
-                          initializingConstexprVariable(Entity));
+      Expr *Str = CurInit.get();
+      CheckStringInit(
+          Str, UpdateType ? *ResultType : Ty, S.Context.getAsArrayType(Ty), S,
+          Entity, S.getLangOpts().C23 && initializingConstexprVariable(Entity));
+      CurInit = Str;
       break;
     }
 

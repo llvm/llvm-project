@@ -154,31 +154,81 @@ inline Expr *IgnoreParensOnlySingleStep(Expr *E) {
   return E;
 }
 
-inline Expr *IgnoreParensSingleStep(Expr *E) {
-  if (auto *PE = dyn_cast<ParenExpr>(E))
-    return PE->getSubExpr();
+template <typename StepFn> Expr *MapParensSingleStep(Expr *E, StepFn &&Step) {
+  if (auto *PE = dyn_cast<ParenExpr>(E)) {
+    return Step(PE->getSubExpr(), [&](ASTContext &Ctx, Expr *Sub) {
+      return new (Ctx) ParenExpr(PE->getLParen(), PE->getRParen(), Sub);
+    });
+  }
 
   if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_Extension)
-      return UO->getSubExpr();
-  }
-
-  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
-    if (!GSE->isResultDependent())
-      return GSE->getResultExpr();
-  }
-
-  else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
-    if (!CE->isConditionDependent())
-      return CE->getChosenSubExpr();
-  }
-
-  else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
-    if (PE->isTransparent() && PE->getFunctionName())
-      return PE->getFunctionName();
+    if (UO->getOpcode() == UO_Extension) {
+      return Step(UO->getSubExpr(), [&](ASTContext &Ctx, Expr *Sub) {
+        return UnaryOperator::Create(Ctx, Sub, UO->getOpcode(), Sub->getType(),
+                                     Sub->getValueKind(), Sub->getObjectKind(),
+                                     UO->getOperatorLoc(), UO->canOverflow(),
+                                     UO->getFPOptionsOverride());
+      });
+    }
+  } else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+    if (!GSE->isResultDependent()) {
+      return Step(GSE->getResultExpr(), [&](ASTContext &Ctx, Expr *Sub) {
+        SmallVector<Expr *, 4> AssocExprs(GSE->getAssocExprs());
+        unsigned ResultIdx = GSE->getResultIndex();
+        AssocExprs[ResultIdx] = Sub;
+        if (GSE->isExprPredicate())
+          return GenericSelectionExpr::Create(
+              Ctx, GSE->getGenericLoc(), GSE->getControllingExpr(),
+              GSE->getAssocTypeSourceInfos(), AssocExprs, GSE->getDefaultLoc(),
+              GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
+              ResultIdx);
+        return GenericSelectionExpr::Create(
+            Ctx, GSE->getGenericLoc(), GSE->getControllingType(),
+            GSE->getAssocTypeSourceInfos(), AssocExprs, GSE->getDefaultLoc(),
+            GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
+            ResultIdx);
+      });
+    }
+  } else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
+    if (!CE->isConditionDependent()) {
+      return Step(CE->getChosenSubExpr(), [&](ASTContext &Ctx, Expr *Sub) {
+        Expr *LHS = CE->isConditionTrue() ? Sub : CE->getLHS();
+        Expr *RHS = CE->isConditionTrue() ? CE->getRHS() : Sub;
+        return new (Ctx) ChooseExpr(CE->getBuiltinLoc(), CE->getCond(), LHS,
+                                    RHS, Sub->getType(), Sub->getValueKind(),
+                                    Sub->getObjectKind(), CE->getRParenLoc(),
+                                    CE->isConditionTrue());
+      });
+    }
+  } else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
+    if (PE->isTransparent() && PE->getFunctionName()) {
+      return Step(PE->getFunctionName(), [&](ASTContext &Ctx, Expr *Sub) {
+        auto *Result = PredefinedExpr::Create(
+            Ctx, PE->getLocation(), Sub->getType(), PE->getIdentKind(),
+            PE->isTransparent(), cast<StringLiteral>(Sub));
+        Result->setValueKind(Sub->getValueKind());
+        Result->setObjectKind(Sub->getObjectKind());
+        return Result;
+      });
+    }
   }
 
   return E;
+}
+
+inline Expr *IgnoreParensSingleStep(Expr *E) {
+  return MapParensSingleStep(E, [](Expr *Sub, auto &&) { return Sub; });
+}
+
+template <typename LeafFn>
+Expr *RebuildParens(ASTContext &Ctx, Expr *E, LeafFn &&RebuildLeaf) {
+  bool IsParen = false;
+  Expr *Rebuilt =
+      MapParensSingleStep(E, [&](Expr *Sub, auto &&RebuildWrapper) -> Expr * {
+        IsParen = true;
+        return RebuildWrapper(Ctx, RebuildParens(Ctx, Sub, RebuildLeaf));
+      });
+  return IsParen ? Rebuilt : RebuildLeaf(E);
 }
 
 } // namespace clang

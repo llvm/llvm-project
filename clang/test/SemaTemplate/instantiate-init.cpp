@@ -178,3 +178,28 @@ namespace RebuildStdInitList {
   template<typename U> void f() { PES({1, 2, 3}); }
   void g() { f<int>(); }
 }
+
+namespace StringLiteralDefaultInit {
+  template <unsigned L> struct V {
+    char rest[L] = "at least 18 bytes";
+    char paren[L] = ("foo");
+    char ext[L] = __extension__("foo");
+    char gen[L] = _Generic(0, int: "foo");
+    char choose[L] = __builtin_choose_expr(1, "foo", "bar");
+    struct Inner { char s[L]; } inner = {"foo"};
+  };
+
+  template <unsigned L> void braced() { char buf[L]{"foo"}; }
+
+  const char *G;
+  template <typename T> void f() { T v = "foo"; G = v; }
+  template void f<char[]>();
+  template void f<const char *>();
+
+  void test() {
+    V<100> v1;
+    V<18> v2;
+    braced<5>();
+    braced<4>();
+  }
+}

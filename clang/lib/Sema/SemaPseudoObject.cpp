@@ -32,6 +32,7 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
@@ -104,80 +105,17 @@ namespace {
     }
 
     Expr *rebuild(Expr *e) {
-      // Fast path: nothing to look through.
-      if (auto *PRE = dyn_cast<ObjCPropertyRefExpr>(e))
-        return rebuildObjCPropertyRefExpr(PRE);
-      if (auto *SRE = dyn_cast<ObjCSubscriptRefExpr>(e))
-        return rebuildObjCSubscriptRefExpr(SRE);
-      if (auto *MSPRE = dyn_cast<MSPropertyRefExpr>(e))
-        return rebuildMSPropertyRefExpr(MSPRE);
-      if (auto *MSPSE = dyn_cast<MSPropertySubscriptExpr>(e))
-        return rebuildMSPropertySubscriptExpr(MSPSE);
-
-      // Otherwise, we should look through and rebuild anything that
-      // IgnoreParens would.
-
-      if (ParenExpr *parens = dyn_cast<ParenExpr>(e)) {
-        e = rebuild(parens->getSubExpr());
-        return new (S.Context) ParenExpr(parens->getLParen(),
-                                         parens->getRParen(),
-                                         e);
-      }
-
-      if (UnaryOperator *uop = dyn_cast<UnaryOperator>(e)) {
-        assert(uop->getOpcode() == UO_Extension);
-        e = rebuild(uop->getSubExpr());
-        return UnaryOperator::Create(
-            S.Context, e, uop->getOpcode(), uop->getType(), uop->getValueKind(),
-            uop->getObjectKind(), uop->getOperatorLoc(), uop->canOverflow(),
-            S.CurFPFeatureOverrides());
-      }
-
-      if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
-        assert(!gse->isResultDependent());
-        unsigned resultIndex = gse->getResultIndex();
-        unsigned numAssocs = gse->getNumAssocs();
-
-        SmallVector<Expr *, 8> assocExprs;
-        SmallVector<TypeSourceInfo *, 8> assocTypes;
-        assocExprs.reserve(numAssocs);
-        assocTypes.reserve(numAssocs);
-
-        for (const GenericSelectionExpr::Association assoc :
-             gse->associations()) {
-          Expr *assocExpr = assoc.getAssociationExpr();
-          if (assoc.isSelected())
-            assocExpr = rebuild(assocExpr);
-          assocExprs.push_back(assocExpr);
-          assocTypes.push_back(assoc.getTypeSourceInfo());
-        }
-
-        if (gse->isExprPredicate())
-          return GenericSelectionExpr::Create(
-              S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
-              assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
-              gse->containsUnexpandedParameterPack(), resultIndex);
-        return GenericSelectionExpr::Create(
-            S.Context, gse->getGenericLoc(), gse->getControllingType(),
-            assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
-            gse->containsUnexpandedParameterPack(), resultIndex);
-      }
-
-      if (ChooseExpr *ce = dyn_cast<ChooseExpr>(e)) {
-        assert(!ce->isConditionDependent());
-
-        Expr *LHS = ce->getLHS(), *RHS = ce->getRHS();
-        Expr *&rebuiltExpr = ce->isConditionTrue() ? LHS : RHS;
-        rebuiltExpr = rebuild(rebuiltExpr);
-
-        return new (S.Context)
-            ChooseExpr(ce->getBuiltinLoc(), ce->getCond(), LHS, RHS,
-                       rebuiltExpr->getType(), rebuiltExpr->getValueKind(),
-                       rebuiltExpr->getObjectKind(), ce->getRParenLoc(),
-                       ce->isConditionTrue());
-      }
-
-      llvm_unreachable("bad expression to rebuild!");
+      return RebuildParens(S.Context, e, [&](Expr *e) {
+        if (auto *PRE = dyn_cast<ObjCPropertyRefExpr>(e))
+          return rebuildObjCPropertyRefExpr(PRE);
+        if (auto *SRE = dyn_cast<ObjCSubscriptRefExpr>(e))
+          return rebuildObjCSubscriptRefExpr(SRE);
+        if (auto *MSPRE = dyn_cast<MSPropertyRefExpr>(e))
+          return rebuildMSPropertyRefExpr(MSPRE);
+        if (auto *MSPSE = dyn_cast<MSPropertySubscriptExpr>(e))
+          return rebuildMSPropertySubscriptExpr(MSPSE);
+        llvm_unreachable("bad expression to rebuild!");
+      });
     }
   };
 
