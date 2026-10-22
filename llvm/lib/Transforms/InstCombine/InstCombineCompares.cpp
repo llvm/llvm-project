@@ -148,6 +148,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (!Stride.uge(EltSize.getFixedValue()))
     return nullptr;
 
+  // With nusw (implied by inbounds), Idx * Stride does not wrap as a signed
+  // quantity, and the following enumeration over ArrayElementCount is valid so
+  // long as the stride is positive. Conversely, without nusw, Idx * Stride is
+  // computed modulo 2^N (see MaskIdx below), and the masking in MaskIdx below
+  // is only exact when the stride is a power of two.
+  bool StrideIsValid = Expr.Flags.hasNoUnsignedSignedWrap()
+                           ? !Stride.isNegative()
+                           : Stride.isPowerOf2();
+  if (!StrideIsValid)
+    return nullptr;
+
   // Don't blow up on huge arrays.
   uint64_t ArrayElementCount =
       divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
@@ -7069,7 +7080,7 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());

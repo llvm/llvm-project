@@ -101,7 +101,6 @@ public:
 
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
-  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
 
@@ -148,27 +147,10 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
     }
 
     Local.EnabledByDefault = this->LocalsAlwaysEnabled;
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
-  }
-
-  /// Force-initialize this scope. Usually, scopes are lazily initialized when
-  /// the first local variable is created, but in scenarios with conditonal
-  /// operators, we need to ensure scope is initialized just in case one of the
-  /// arms will create a local and the other won't. In such a case, the
-  /// InitScope() op would be part of the arm that created the local.
-  void forceInit() override {
-    if (!Idx) {
-      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
-      this->Ctx->Descriptors.emplace_back();
-      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
-        this->Ctx->emitInitScope(*Idx, {});
-    }
   }
 
   bool emitDestructors(const Expr *E = nullptr) override {
@@ -2813,11 +2795,8 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   return this->visit(*It);
 }
 
-static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+static CharUnits alignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
-  bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
-
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -2827,6 +2806,8 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
 
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
@@ -2909,7 +2890,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     if (E->isArgumentType()) {
       QualType ArgType = E->getTypeOfArgument();
 
-      Size = AlignOfType(ArgType, ASTCtx, Kind);
+      Size = alignOfType(ArgType, ASTCtx, Kind);
     } else {
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
@@ -2925,12 +2906,12 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // default to 1 in those cases.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
         Size = ASTCtx.getDeclAlign(DRE->getDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
         Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else
-        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
+        Size = alignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     if (DiscardResult)
@@ -3184,9 +3165,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return false;
   }
 
-  // Force-init the scope, which creates a InitScope op. This is necessary so
-  // the scope is not only initialized in one arm of the conditional operator.
-  this->VarScope->forceInit();
   // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
   // scope, which means the local variables created within them unconditionally
   // always exist. However, we need to later differentiate which branch was

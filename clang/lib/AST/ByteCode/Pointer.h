@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_POINTER_H
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
+#include "Block.h"
 #include "Descriptor.h"
 #include "Function.h"
 #include "InitMap.h"
-#include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -730,7 +730,7 @@ public:
     case Storage::Block:
       return view().getType();
     case Storage::Fn:
-      return Fn.Func->getDecl()->getType();
+      return Fn.Func->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
     case Storage::String:

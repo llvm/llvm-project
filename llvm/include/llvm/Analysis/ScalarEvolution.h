@@ -27,9 +27,9 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -149,6 +149,11 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
+
+  /// Return a SCEVUse that can replace both \p A and \p B. Both must be
+  /// operands of the same poison-propagating expression, so the use flags of
+  /// both hold for either.
+  static SCEVUseT getCommon(SCEVUseT A, SCEVUseT B);
 
   /// Return the flags for this SCEVUse, which is the union of the use-specific
   /// flags and the underlying SCEV's flags, masked by \p Mask.
@@ -599,7 +604,7 @@ public:
   /// and the given predicate \p N.
   SCEVUnionPredicate getUnionWith(const SCEVPredicate *N,
                                   ScalarEvolution &SE) const {
-    SCEVUnionPredicate Result(Preds, SE);
+    SCEVUnionPredicate Result = *this;
     Result.add(N, SE);
     return Result;
   }
@@ -1728,8 +1733,7 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueSetVector = SmallSetVector<Value *, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
+  using ExprValueMapType = DenseMap<const SCEV *, TinyPtrVector<Value *>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -2804,6 +2808,17 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 
 template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
   return getPointer()->getCanonical();
+}
+
+template <>
+inline SCEVUse SCEVUseT<const SCEV *>::getCommon(SCEVUse A, SCEVUse B) {
+  if (A.getPointer() == B.getPointer()) {
+    A.setInt(A.getInt() | B.getInt());
+    return A;
+  }
+  if (A.getCanonical() == B.getCanonical())
+    return A.getCanonical();
+  return SCEVUse();
 }
 
 template <typename SCEVPtrT>

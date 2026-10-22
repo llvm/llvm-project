@@ -1829,6 +1829,17 @@ TEST(APFloatTest, toString) {
     UnnormalZero.toString(Str);
     ASSERT_EQ("NaN", Str);
   }
+
+  {
+    // The first double determines the category, so a signaling NaN second
+    // double is ignored.
+    SmallString<64> Str;
+    APFloat F(APFloat::PPCDoubleDouble(),
+              APInt(128, {0x3ff0000000000000ULL, 0x7ff0000000000001ULL}));
+    F.toString(Str, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
+               /*TruncateZero=*/false);
+    EXPECT_EQ("1.000000e+00", Str);
+  }
 }
 
 TEST(APFloatTest, toInteger) {
