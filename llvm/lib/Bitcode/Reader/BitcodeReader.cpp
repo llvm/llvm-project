@@ -4323,8 +4323,14 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   inferDSOLocal(NewGV);
 
   // Check whether we have enough values to read a partition name.
-  if (Record.size() > 15)
+  if (Record.size() > 15) {
+    // Both values are read from the file. Compare without adding them: the
+    // sum wraps for a large offset and would yield a StringRef pointing
+    // outside the string table.
+    if (Record[14] > Strtab.size() || Record[15] > Strtab.size() - Record[14])
+      return error("Malformed partition, too large.");
     NewGV->setPartition(StringRef(Strtab.data() + Record[14], Record[15]));
+  }
 
   if (Record.size() > 16 && Record[16]) {
     llvm::GlobalValue::SanitizerMetadata Meta =
@@ -4506,8 +4512,8 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
 
   // Check whether we have enough values to read a partition name. Also make
   // sure Strtab has enough values.
-  if (Record.size() > 18 && Strtab.data() &&
-      Record[17] + Record[18] <= Strtab.size()) {
+  if (Record.size() > 18 && Strtab.data() && Record[17] <= Strtab.size() &&
+      Record[18] <= Strtab.size() - Record[17]) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
   }
 
@@ -4609,7 +4615,8 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   // Check whether we have enough values to read a partition name.
   if (OpNum + 1 < Record.size()) {
     // Check Strtab has enough values for the partition.
-    if (Record[OpNum] + Record[OpNum + 1] > Strtab.size())
+    if (Record[OpNum] > Strtab.size() ||
+        Record[OpNum + 1] > Strtab.size() - Record[OpNum])
       return error("Malformed partition, too large.");
     NewGA->setPartition(
         StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
