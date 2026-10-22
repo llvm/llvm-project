@@ -23,3 +23,106 @@ entry:
   %old = atomicrmw elementwise add ptr %ptr, <2 x i32> %value monotonic
   ret <2 x i32> %old
 }
+
+define <1 x i32> @add_v1i32(ptr %p, <1 x i32> %v) {
+; CHECK-LABEL: define <1 x i32> @add_v1i32(
+; CHECK-SAME: ptr [[P:%.*]], <1 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x i32> [[V]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 [[LANE_VAL]] monotonic, align 4
+; CHECK-NEXT:    [[OLD:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    ret <1 x i32> [[OLD]]
+;
+  %old = atomicrmw elementwise add ptr %p, <1 x i32> %v monotonic, align 4
+  ret <1 x i32> %old
+}
+
+define <1 x i32> @add_v1i32_non_elementwise(ptr %p, <1 x i32> %v) {
+; CHECK-LABEL: define <1 x i32> @add_v1i32_non_elementwise(
+; CHECK-SAME: ptr [[P:%.*]], <1 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <1 x i32>, ptr [[P]] monotonic, align 4
+; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CHECK:       [[ATOMICRMW_START]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <1 x i32> [ [[TMP1]], [[TMP0:%.*]] ], [ [[OLD:%.*]], %[[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add <1 x i32> [[LOADED]], [[V]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[NEW]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[P]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; CHECK-NEXT:    [[OLD]] = bitcast i32 [[NEWLOADED]] to <1 x i32>
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    ret <1 x i32> [[OLD]]
+;
+  %old = atomicrmw add ptr %p, <1 x i32> %v monotonic, align 4
+  ret <1 x i32> %old
+}
+
+define <2 x i32> @add_v2i32_non_elementwise(ptr %p, <2 x i32> %v) {
+; CHECK-LABEL: define <2 x i32> @add_v2i32_non_elementwise(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x i32>, ptr [[P]] monotonic, align 8
+; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CHECK:       [[ATOMICRMW_START]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x i32> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add <2 x i32> [[LOADED]], [[V]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[NEW]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[LOADED]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[P]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to <2 x i32>
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+;
+  %old = atomicrmw add ptr %p, <2 x i32> %v monotonic, align 8
+  ret <2 x i32> %old
+}
+
+define <1 x float> @fadd_v1f32(ptr %p, <1 x float> %v) {
+; CHECK-LABEL: define <1 x float> @fadd_v1f32(
+; CHECK-SAME: ptr [[P:%.*]], <1 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x float> [[V]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[P]] monotonic, align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CHECK:       [[ATOMICRMW_START]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP7]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[LANE_VAL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[P]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
+; CHECK-NEXT:    ret <1 x float> [[TMP5]]
+;
+  %old = atomicrmw elementwise fadd ptr %p, <1 x float> %v monotonic, align 4
+  ret <1 x float> %old
+}
+
+define <1 x float> @fadd_v1f32_non_elementwise(ptr %p, <1 x float> %v) {
+; CHECK-LABEL: define <1 x float> @fadd_v1f32_non_elementwise(
+; CHECK-SAME: ptr [[P:%.*]], <1 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <1 x float>, ptr [[P]] monotonic, align 4
+; CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CHECK:       [[ATOMICRMW_START]]:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <1 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = fadd <1 x float> [[LOADED]], [[V]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x float> [[NEW]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x float> [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[P]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <1 x float>
+; CHECK-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    ret <1 x float> [[TMP5]]
+;
+  %old = atomicrmw fadd ptr %p, <1 x float> %v monotonic, align 4
+  ret <1 x float> %old
+}
