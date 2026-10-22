@@ -1081,7 +1081,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
 
-      if (FPExceptions.size() + 1 >= HugeRegion) {
+      if (!EnableStoreSequencing && FPExceptions.size() + 1 >= HugeRegion) {
         LLVM_DEBUG(
             dbgs()
             << "Creating barrier chain and clearing FPExceptions map.\n");
