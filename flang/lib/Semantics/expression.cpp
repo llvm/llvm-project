@@ -3335,9 +3335,16 @@ static bool MayRunOnCUDADevice(const semantics::Scope &scope) {
     }
     if (const Symbol *symbol{s->symbol()}) {
       const auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()};
-      if (subp && subp->moduleInterface() &&
-          IsCUDADeviceCallable(*subp->moduleInterface())) {
-        return true;
+      if (subp && subp->moduleInterface()) {
+        // Kernels (GLOBAL, GRID_GLOBAL) run device code too, so any attribute
+        // other than HOST makes this a device context.
+        const auto *interface{subp->moduleInterface()
+                ->GetUltimate()
+                .detailsIf<semantics::SubprogramDetails>()};
+        auto attrs{interface ? interface->cudaSubprogramAttrs() : std::nullopt};
+        if (attrs && *attrs != common::CUDASubprogramAttrs::Host) {
+          return true;
+        }
       }
     }
   }
