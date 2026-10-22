@@ -116,7 +116,7 @@ public:
   // literals, etc.)
   template <typename A>
   ConstantBase(int kind, const A &x, Result res)
-      : kind_{kind}, result_{res}, values_{A{kind, x}} {
+      : kind_{kind}, result_{res}, values_{Element{kind, x}} {
     CHECK_KIND(kind, RESULT);
   }
   ConstantBase(int kind, ELEMENT &&x)
@@ -137,7 +137,7 @@ public:
 
   template <typename A>
   ConstantBase(int kind, const A &x)
-      : kind_{kind}, result_{Result{kind}}, values_{A{kind, x}} {
+      : kind_{kind}, result_{Result{kind}}, values_{Element{kind, x}} {
     CHECK_KIND(kind, RESULT);
   }
   ConstantBase(int kind, ELEMENT &&x, Result res)

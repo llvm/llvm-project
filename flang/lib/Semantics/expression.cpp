@@ -1035,8 +1035,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::LogicalLiteralConstant &x) {
       GetDefaultKind(TypeCategory::Logical))};
   bool value{std::get<bool>(x.t)};
   auto result{SearchTypes(
-      TypeKindVisitor<TypeCategory::Logical, Constant, value::LogicalValue>{
-          kind, value::LogicalValue{kind, value}})};
+      TypeKindVisitor<TypeCategory::Logical, Constant, bool>{kind, value})};
   if (!result) {
     Say("unsupported LOGICAL(KIND=%d)"_err_en_US, kind); // C728
   }
