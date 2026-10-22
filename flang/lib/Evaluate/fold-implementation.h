@@ -2129,16 +2129,18 @@ Expr<TO> FoldOperation(
             }
           } else if constexpr (TO::category == TypeCategory::Complex) {
             if constexpr (FromCat == TypeCategory::Complex) {
+              auto real{value->REAL()};
+              auto imag{value->AIMAG()};
               return FoldOperation(ctx,
                   ComplexConstructor{toKind,
                       Fold(ctx,
                           AsExpr(Convert<typename TO::Part>(toKind,
                               AsCategoryExpr(Constant<typename Operand::Part>{
-                                  toKind, value->REAL()})))),
+                                  real.kind(), real})))),
                       Fold(ctx,
                           AsExpr(Convert<typename TO::Part>(toKind,
                               AsCategoryExpr(Constant<typename Operand::Part>{
-                                  toKind, value->AIMAG()}))))});
+                                  imag.kind(), imag}))))});
             }
           } else if constexpr (TO::category == TypeCategory::Character &&
               FromCat == TypeCategory::Character) {
