@@ -3178,7 +3178,7 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   " | on (only fuses in the same statement unless dictated by pragmas)"
   " | off (never fuses)"
   " | fast-honor-pragmas (fuses across statements unless dictated by pragmas)."
-  " Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
+  " Default is 'fast' for CUDA and HLSL, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
   HelpText<"Form fused FP ops (e.g. FMAs)">,
   Values<"fast,on,off,fast-honor-pragmas">;
 

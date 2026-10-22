@@ -13,3 +13,14 @@ float multiply_add(float a, float b, float c) {
   float product = a * b;
   return product + c;
 }
+
+// FAST-LABEL: define {{.*}}multiply_add_contract_on{{.*}}(
+// FAST: fmul fast float
+// FAST: fadd fast float
+
+// NO_FAST-LABEL: define {{.*}}multiply_add_contract_on{{.*}}(
+// NO_FAST: call float @llvm.fmuladd.f32(
+
+float multiply_add_contract_on(float a, float b, float c) {
+  return a * b + c;
+}
