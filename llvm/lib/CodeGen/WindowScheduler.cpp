@@ -229,11 +229,13 @@ bool WindowScheduler::initialize() {
     }
     if (PLI->shouldIgnoreForPipelining(&MI)) {
       LLVM_DEBUG(dbgs() << "Special MI defined by target is not allowed in "
-                           "window scheduling!\n");
+                           "window scheduling:\n"
+                        << MI);
       return false;
     }
     for (auto &Def : MI.all_defs())
-      if (Def.isReg() && Def.getReg().isPhysical()) {
+      if (Def.isReg() && Def.getReg().isPhysical() &&
+          !PLI->allowPhysRegDefInWindowScheduler(&MI)) {
         LLVM_DEBUG(dbgs() << "Physical registers are not supported in "
                              "window scheduling!\n");
         return false;

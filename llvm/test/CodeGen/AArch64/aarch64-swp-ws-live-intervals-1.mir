@@ -22,7 +22,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0
   ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = nsw SUBSXri [[SUBREG_TO_REG]], 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64all = COPY [[SUBSXri]]
   ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   Bcc 0, %bb.15, implicit $nzcv
   ; CHECK-NEXT:   B %bb.14
@@ -30,21 +29,21 @@ body:             |
   ; CHECK-NEXT: bb.14:
   ; CHECK-NEXT:   successors: %bb.15(0x04000000), %bb.14(0x7c000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr64sp = PHI [[COPY3]], %bb.13, %73, %bb.14
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gpr64 = PHI [[SUBREG_TO_REG1]], %bb.13, %72, %bb.14
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:fpr64 = PHI [[LDRDui]], %bb.13, %70, %bb.14
-  ; CHECK-NEXT:   STRDui [[PHI2]], [[COPY]], 0
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr64 = PHI [[SUBREG_TO_REG1]], %bb.13, %72, %bb.14
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:fpr64 = PHI [[LDRDui]], %bb.13, %70, %bb.14
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gpr64 = PHI [[SUBSXri]], %bb.13, %71, %bb.14
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64sp = COPY [[PHI2]]
+  ; CHECK-NEXT:   STRDui [[PHI1]], [[COPY]], 0
   ; CHECK-NEXT:   [[LDRDui1:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0
-  ; CHECK-NEXT:   [[SUBSXri1:%[0-9]+]]:gpr64 = nsw SUBSXri [[PHI]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[SUBSXri1:%[0-9]+]]:gpr64 = nsw SUBSXri [[COPY3]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64all = COPY [[SUBSXri1]]
   ; CHECK-NEXT:   Bcc 1, %bb.14, implicit $nzcv
   ; CHECK-NEXT:   B %bb.15
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:gpr64 = PHI [[COPY2]], %bb.13, [[PHI1]], %bb.14
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:gpr64 = PHI [[COPY2]], %bb.13, [[PHI]], %bb.14
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:fpr64 = PHI [[LDRDui]], %bb.13, [[LDRDui1]], %bb.14
   ; CHECK-NEXT:   STRDui [[PHI4]], [[COPY]], 0
   ; CHECK-NEXT:   B %bb.2
@@ -67,14 +66,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:fpr64 = PHI [[FMOVD0_]], %bb.4, %62, %bb.12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr64all = COPY $xzr
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr64common = COPY [[COPY5]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64all = COPY $xzr
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr64common = COPY [[COPY4]]
   ; CHECK-NEXT:   B %bb.7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.11(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64common = ADDSXri [[COPY6]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64common = ADDSXri [[COPY5]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 3, implicit $nzcv
   ; CHECK-NEXT:   [[ADDSXri1:%[0-9]+]]:gpr64common = ADDSXri [[ADDSXri]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCXr1:%[0-9]+]]:gpr64common = CSINCXr [[CSINCXr]], [[CSINCXr]], 3, implicit $nzcv
@@ -89,35 +88,35 @@ body:             |
   ; CHECK-NEXT: bb.8:
   ; CHECK-NEXT:   successors: %bb.9(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ADDSXri4:%[0-9]+]]:gpr64 = ADDSXri [[COPY6]], 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY6]], 61, 60
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr64common = COPY [[ADDSXri4]]
+  ; CHECK-NEXT:   [[ADDSXri4:%[0-9]+]]:gpr64 = ADDSXri [[COPY5]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY5]], 61, 60
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr64common = COPY [[ADDSXri4]]
   ; CHECK-NEXT:   [[LDRDui2:%[0-9]+]]:fpr64 = LDRDui [[UBFMXri]], 1
-  ; CHECK-NEXT:   [[ADDSXri5:%[0-9]+]]:gpr64 = ADDSXri [[COPY7]], 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[UBFMXri1:%[0-9]+]]:gpr64common = UBFMXri [[COPY7]], 61, 60
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr64all = COPY [[ADDSXri5]]
+  ; CHECK-NEXT:   [[ADDSXri5:%[0-9]+]]:gpr64 = ADDSXri [[COPY6]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[UBFMXri1:%[0-9]+]]:gpr64common = UBFMXri [[COPY6]], 61, 60
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr64all = COPY [[ADDSXri5]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9:
   ; CHECK-NEXT:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:gpr64 = PHI %38, %bb.9, [[ADDSXri4]], %bb.8
   ; CHECK-NEXT:   [[PHI7:%[0-9]+]]:gpr64common = PHI %40, %bb.9, [[UBFMXri]], %bb.8
-  ; CHECK-NEXT:   [[PHI8:%[0-9]+]]:gpr64all = PHI %43, %bb.9, [[COPY7]], %bb.8
+  ; CHECK-NEXT:   [[PHI8:%[0-9]+]]:gpr64all = PHI %43, %bb.9, [[COPY6]], %bb.8
   ; CHECK-NEXT:   [[PHI9:%[0-9]+]]:fpr64 = PHI %45, %bb.9, [[LDRDui2]], %bb.8
   ; CHECK-NEXT:   [[PHI10:%[0-9]+]]:gpr64 = PHI %47, %bb.9, [[ADDSXri5]], %bb.8
   ; CHECK-NEXT:   [[PHI11:%[0-9]+]]:gpr64common = PHI %49, %bb.9, [[UBFMXri1]], %bb.8
   ; CHECK-NEXT:   [[PHI12:%[0-9]+]]:fpr64 = PHI %51, %bb.9, [[PHI5]], %bb.8
-  ; CHECK-NEXT:   [[PHI13:%[0-9]+]]:gpr64common = PHI %53, %bb.9, [[COPY8]], %bb.8
+  ; CHECK-NEXT:   [[PHI13:%[0-9]+]]:gpr64common = PHI %53, %bb.9, [[COPY7]], %bb.8
   ; CHECK-NEXT:   [[LDRDui3:%[0-9]+]]:fpr64 = LDRDui [[PHI11]], 1
   ; CHECK-NEXT:   [[ADDSXri6:%[0-9]+]]:gpr64 = ADDSXri [[PHI13]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[UBFMXri2:%[0-9]+]]:gpr64common = UBFMXri [[PHI13]], 61, 60
   ; CHECK-NEXT:   [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[PHI12]], [[PHI9]], implicit $fpcr
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gpr64common = COPY [[ADDSXri6]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr64common = COPY [[ADDSXri6]]
   ; CHECK-NEXT:   [[LDRDui4:%[0-9]+]]:fpr64 = LDRDui [[UBFMXri2]], 1
-  ; CHECK-NEXT:   [[ADDSXri7:%[0-9]+]]:gpr64common = ADDSXri [[COPY9]], 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[UBFMXri3:%[0-9]+]]:gpr64common = UBFMXri [[COPY9]], 61, 60
+  ; CHECK-NEXT:   [[ADDSXri7:%[0-9]+]]:gpr64common = ADDSXri [[COPY8]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[UBFMXri3:%[0-9]+]]:gpr64common = UBFMXri [[COPY8]], 61, 60
   ; CHECK-NEXT:   [[FADDDrr1:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[FADDDrr]], [[LDRDui3]], implicit $fpcr
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gpr64all = COPY [[ADDSXri7]]
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gpr64all = COPY [[ADDSXri7]]
   ; CHECK-NEXT:   [[CSINCXr4:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 3, implicit $nzcv
   ; CHECK-NEXT:   [[ADDSXri8:%[0-9]+]]:gpr64 = ADDSXri [[ADDSXri7]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCXr5:%[0-9]+]]:gpr64common = CSINCXr [[CSINCXr4]], [[CSINCXr4]], 3, implicit $nzcv
@@ -131,7 +130,7 @@ body:             |
   ; CHECK-NEXT:   [[LDRDui5:%[0-9]+]]:fpr64 = LDRDui [[UBFMXri3]], 1
   ; CHECK-NEXT:   [[FADDDrr2:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[FADDDrr1]], [[LDRDui4]], implicit $fpcr
   ; CHECK-NEXT:   [[FADDDrr3:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[FADDDrr2]], [[LDRDui5]], implicit $fpcr
-  ; CHECK-NEXT:   [[ADDSXri9:%[0-9]+]]:gpr64 = ADDSXri [[COPY9]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[ADDSXri9:%[0-9]+]]:gpr64 = ADDSXri [[COPY8]], 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCXr6:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 3, implicit $nzcv
   ; CHECK-NEXT:   dead $xzr = SUBSXri [[CSINCXr6]], 0, 0, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 0, %bb.11, implicit $nzcv
@@ -140,7 +139,7 @@ body:             |
   ; CHECK-NEXT: bb.11:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI14:%[0-9]+]]:gpr64common = PHI [[COPY6]], %bb.7, [[COPY10]], %bb.10
+  ; CHECK-NEXT:   [[PHI14:%[0-9]+]]:gpr64common = PHI [[COPY5]], %bb.7, [[COPY9]], %bb.10
   ; CHECK-NEXT:   [[PHI15:%[0-9]+]]:fpr64 = PHI [[PHI5]], %bb.7, [[FADDDrr3]], %bb.10
   ; CHECK-NEXT:   B %bb.6
   ; CHECK-NEXT: {{  $}}
@@ -159,7 +158,7 @@ body:             |
   ; CHECK-NEXT:   [[LDRDui6:%[0-9]+]]:fpr64 = LDRDui [[UBFMXri4]], 1
   ; CHECK-NEXT:   [[FADDDrr4:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[PHI18]], [[LDRDui6]], implicit $fpcr
   ; CHECK-NEXT:   [[ADDSXri10:%[0-9]+]]:gpr64 = ADDSXri [[PHI17]], 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gpr64all = COPY [[ADDSXri10]]
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gpr64all = COPY [[ADDSXri10]]
   ; CHECK-NEXT:   Bcc 2, %bb.12, implicit $nzcv
   ; CHECK-NEXT:   B %bb.6
   bb.0:
