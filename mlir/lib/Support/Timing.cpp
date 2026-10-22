@@ -107,107 +107,97 @@ TimingIdentifier TimingIdentifier::get(StringRef str, TimingManager &tm) {
 // Helpers for time record printing
 //===----------------------------------------------------------------------===//
 
-namespace {
+OutputTextStrategy::OutputTextStrategy(raw_ostream &os) : OutputStrategy(os) {}
 
-class OutputTextStrategy : public OutputStrategy {
-public:
-  OutputTextStrategy(raw_ostream &os) : OutputStrategy(os) {}
+void OutputTextStrategy::printHeader(const TimeRecord &total)  {
+  // Figure out how many spaces to description name.
+  unsigned padding = (80 - kTimingDescription.size()) / 2;
+  os << "===" << std::string(73, '-') << "===\n";
+  os.indent(padding) << kTimingDescription << '\n';
+  os << "===" << std::string(73, '-') << "===\n";
 
-  void printHeader(const TimeRecord &total) override {
-    // Figure out how many spaces to description name.
-    unsigned padding = (80 - kTimingDescription.size()) / 2;
-    os << "===" << std::string(73, '-') << "===\n";
-    os.indent(padding) << kTimingDescription << '\n';
-    os << "===" << std::string(73, '-') << "===\n";
+  // Print the total time followed by the section headers.
+  os << llvm::format("  Total Execution Time: %.4f seconds\n\n", total.wall);
+  if (total.user != total.wall)
+    os << "  ----User Time----";
+  os << "  ----Wall Time----  ----Name----\n";
+}
 
-    // Print the total time followed by the section headers.
-    os << llvm::format("  Total Execution Time: %.4f seconds\n\n", total.wall);
-    if (total.user != total.wall)
-      os << "  ----User Time----";
-    os << "  ----Wall Time----  ----Name----\n";
+void OutputTextStrategy::printFooter() { os.flush(); }
+
+void OutputTextStrategy::printTime(const TimeRecord &time, const TimeRecord &total) {
+  if (total.user != total.wall) {
+    os << llvm::format("  %8.4f (%5.1f%%)", time.user,
+                       100.0 * time.user / total.user);
   }
+  os << llvm::format("  %8.4f (%5.1f%%)  ", time.wall,
+                     100.0 * time.wall / total.wall);
+}
 
-  void printFooter() override { os.flush(); }
+void OutputTextStrategy::printListEntry(StringRef name, const TimeRecord &time,
+                    const TimeRecord &total, bool lastEntry) {
+  printTime(time, total);
+  os << name << "\n";
+}
 
-  void printTime(const TimeRecord &time, const TimeRecord &total) override {
-    if (total.user != total.wall) {
-      os << llvm::format("  %8.4f (%5.1f%%)", time.user,
-                         100.0 * time.user / total.user);
-    }
-    os << llvm::format("  %8.4f (%5.1f%%)  ", time.wall,
-                       100.0 * time.wall / total.wall);
-  }
+void OutputTextStrategy::printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
+                    const TimeRecord &total) {
+  printTime(time, total);
+  os.indent(indent) << name << "\n";
+}
 
-  void printListEntry(StringRef name, const TimeRecord &time,
-                      const TimeRecord &total, bool lastEntry) override {
-    printTime(time, total);
-    os << name << "\n";
-  }
+void OutputTextStrategy::printTreeEntryEnd(unsigned indent, bool lastEntry) {}
 
-  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
-                      const TimeRecord &total) override {
-    printTime(time, total);
-    os.indent(indent) << name << "\n";
-  }
+OutputJsonStrategy::OutputJsonStrategy(raw_ostream &os) : OutputStrategy(os) {}
 
-  void printTreeEntryEnd(unsigned indent, bool lastEntry) override {}
-};
+void OutputJsonStrategy::printHeader(const TimeRecord &total) { os << "[" << "\n"; }
 
-class OutputJsonStrategy : public OutputStrategy {
-public:
-  OutputJsonStrategy(raw_ostream &os) : OutputStrategy(os) {}
+void OutputJsonStrategy::printFooter() {
+  os << "]" << "\n";
+  os.flush();
+}
 
-  void printHeader(const TimeRecord &total) override { os << "[" << "\n"; }
-
-  void printFooter() override {
-    os << "]" << "\n";
-    os.flush();
-  }
-
-  void printTime(const TimeRecord &time, const TimeRecord &total) override {
-    if (total.user != total.wall) {
-      os << "\"user\": {";
-      os << "\"duration\": " << llvm::format("%8.4f", time.user) << ", ";
-      os << "\"percentage\": "
-         << llvm::format("%5.1f", 100.0 * time.user / total.user);
-      os << "}, ";
-    }
-    os << "\"wall\": {";
-    os << "\"duration\": " << llvm::format("%8.4f", time.wall) << ", ";
+void OutputJsonStrategy::printTime(const TimeRecord &time, const TimeRecord &total) {
+  if (total.user != total.wall) {
+    os << "\"user\": {";
+    os << "\"duration\": " << llvm::format("%8.4f", time.user) << ", ";
     os << "\"percentage\": "
-       << llvm::format("%5.1f", 100.0 * time.wall / total.wall);
-    os << "}";
+       << llvm::format("%5.1f", 100.0 * time.user / total.user);
+    os << "}, ";
   }
+  os << "\"wall\": {";
+  os << "\"duration\": " << llvm::format("%8.4f", time.wall) << ", ";
+  os << "\"percentage\": "
+     << llvm::format("%5.1f", 100.0 * time.wall / total.wall);
+  os << "}";
+}
 
-  void printListEntry(StringRef name, const TimeRecord &time,
-                      const TimeRecord &total, bool lastEntry) override {
-    os << "{";
-    printTime(time, total);
-    os << ", \"name\": " << "\"" << name << "\"";
-    os << "}";
-    if (!lastEntry)
-      os << ",";
-    os << "\n";
-  }
+void OutputJsonStrategy::printListEntry(StringRef name, const TimeRecord &time,
+                    const TimeRecord &total, bool lastEntry) {
+  os << "{";
+  printTime(time, total);
+  os << ", \"name\": " << "\"" << name << "\"";
+  os << "}";
+  if (!lastEntry)
+    os << ",";
+  os << "\n";
+}
 
-  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
-                      const TimeRecord &total) override {
-    os.indent(indent) << "{";
-    printTime(time, total);
-    os << ", \"name\": " << "\"" << name << "\"";
-    os << ", \"passes\": [" << "\n";
-  }
+void OutputJsonStrategy::printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
+                    const TimeRecord &total) {
+  os.indent(indent) << "{";
+  printTime(time, total);
+  os << ", \"name\": " << "\"" << name << "\"";
+  os << ", \"passes\": [" << "\n";
+}
 
-  void printTreeEntryEnd(unsigned indent, bool lastEntry) override {
-    os.indent(indent) << "{}]";
-    os << "}";
-    if (!lastEntry)
-      os << ",";
-    os << "\n";
-  }
-};
-
-} // namespace
+void OutputJsonStrategy::printTreeEntryEnd(unsigned indent, bool lastEntry) {
+  os.indent(indent) << "{}]";
+  os << "}";
+  if (!lastEntry)
+    os << ",";
+  os << "\n";
+}
 
 //===----------------------------------------------------------------------===//
 // Timer Implementation for DefaultTimingManager
@@ -523,6 +513,14 @@ DefaultTimingManager::DisplayMode DefaultTimingManager::getDisplayMode() const {
 /// Change the stream where the output will be printed to.
 void DefaultTimingManager::setOutput(std::unique_ptr<OutputStrategy> output) {
   out = std::move(output);
+}
+
+/// Change the output format.
+void DefaultTimingManager::setOutputFormat(OutputFormat outputFormat) {
+  if (outputFormat == OutputFormat::Text)
+    setOutput(std::make_unique<OutputTextStrategy>(llvm::errs()));
+  else if (outputFormat == OutputFormat::Json)
+    setOutput(std::make_unique<OutputJsonStrategy>(llvm::errs()));
 }
 
 /// Print and clear the timing results.
