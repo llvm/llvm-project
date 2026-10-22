@@ -39,3 +39,101 @@ define i8 @ctpop_aext_i3_v3i1(ptr %p) {
   %ext = zext i3 %ct to i8
   ret i8 %ext
 }
+
+; Fold zext(and(bitcast(mask), C)) --> and(anyext(bitcast(mask)), zext(C)). PR120389.
+
+define i32 @mask_and_zext_i8_i32(<8 x i64> %0) {
+; BW-LABEL: mask_and_zext_i8_i32:
+; BW:       # %bb.0:
+; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
+; BW-NEXT:    kmovd %k0, %eax
+; BW-NEXT:    andl $3, %eax
+; BW-NEXT:    vzeroupper
+; BW-NEXT:    retq
+;
+; DQ-LABEL: mask_and_zext_i8_i32:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovq2m %zmm0, %k0
+; DQ-NEXT:    kmovd %k0, %eax
+; DQ-NEXT:    andl $3, %eax
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %cmp = icmp slt <8 x i64> %0, zeroinitializer
+  %bc = bitcast <8 x i1> %cmp to i8
+  %and = and i8 %bc, 3
+  %ext = zext i8 %and to i32
+  ret i32 %ext
+}
+
+define i64 @mask_and_zext_i8_i64(<8 x i64> %0) {
+; BW-LABEL: mask_and_zext_i8_i64:
+; BW:       # %bb.0:
+; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
+; BW-NEXT:    kmovd %k0, %eax
+; BW-NEXT:    andl $5, %eax
+; BW-NEXT:    vzeroupper
+; BW-NEXT:    retq
+;
+; DQ-LABEL: mask_and_zext_i8_i64:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovq2m %zmm0, %k0
+; DQ-NEXT:    kmovd %k0, %eax
+; DQ-NEXT:    andl $5, %eax
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %cmp = icmp slt <8 x i64> %0, zeroinitializer
+  %bc = bitcast <8 x i1> %cmp to i8
+  %and = and i8 %bc, 5
+  %ext = zext nneg i8 %and to i64
+  ret i64 %ext
+}
+
+define i32 @mask_and_zext_i16_i32(<16 x i32> %0) {
+; BW-LABEL: mask_and_zext_i16_i32:
+; BW:       # %bb.0:
+; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BW-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
+; BW-NEXT:    kmovd %k0, %eax
+; BW-NEXT:    andl $7, %eax
+; BW-NEXT:    vzeroupper
+; BW-NEXT:    retq
+;
+; DQ-LABEL: mask_and_zext_i16_i32:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovd2m %zmm0, %k0
+; DQ-NEXT:    kmovd %k0, %eax
+; DQ-NEXT:    andl $7, %eax
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %cmp = icmp slt <16 x i32> %0, zeroinitializer
+  %bc = bitcast <16 x i1> %cmp to i16
+  %and = and i16 %bc, 7
+  %ext = zext i16 %and to i32
+  ret i32 %ext
+}
+
+define i64 @mask_and_zext_i16_i64(<16 x i32> %0) {
+; BW-LABEL: mask_and_zext_i16_i64:
+; BW:       # %bb.0:
+; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BW-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
+; BW-NEXT:    kmovd %k0, %eax
+; BW-NEXT:    andl $15, %eax
+; BW-NEXT:    vzeroupper
+; BW-NEXT:    retq
+;
+; DQ-LABEL: mask_and_zext_i16_i64:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovd2m %zmm0, %k0
+; DQ-NEXT:    kmovd %k0, %eax
+; DQ-NEXT:    andl $15, %eax
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %cmp = icmp slt <16 x i32> %0, zeroinitializer
+  %bc = bitcast <16 x i1> %cmp to i16
+  %and = and i16 %bc, 15
+  %ext = zext nneg i16 %and to i64
+  ret i64 %ext
+}

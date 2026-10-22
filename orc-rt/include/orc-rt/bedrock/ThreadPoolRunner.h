@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_THREADPOOLRUNNER_H
-#define ORC_RT_THREADPOOLRUNNER_H
+#ifndef ORC_RT_BEDROCK_THREADPOOLRUNNER_H
+#define ORC_RT_BEDROCK_THREADPOOLRUNNER_H
 
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <condition_variable>
 #include <cstddef>
@@ -62,4 +62,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_THREADPOOLRUNNER_H
+#endif // ORC_RT_BEDROCK_THREADPOOLRUNNER_H

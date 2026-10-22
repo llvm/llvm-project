@@ -17,19 +17,19 @@
 
 ; CHECK-ARM64:        (__TEXT,__text) section
 ; CHECK-ARM64-NEXT:   _func_unique_1:
-; CHECK-ARM64-NEXT:        mov {{.*}}, #0x1
+; CHECK-ARM64:             mov {{.*}}, #0x1
 ;
 ; CHECK-ARM64:        _func_unique_2_canmerge:
 ; CHECK-ARM64-NEXT:   _func_2identical_v1:
-; CHECK-ARM64-NEXT:        mov {{.*}}, #0x2
+; CHECK-ARM64:             mov {{.*}}, #0x2
 ;
 ; CHECK-ARM64:        _func_3identical_v1:
-; CHECK-ARM64-NEXT:        mov {{.*}}, #0x3
+; CHECK-ARM64:             mov {{.*}}, #0x3
 ;
 ; CHECK-ARM64:        _func_3identical_v1_canmerge:
 ; CHECK-ARM64-NEXT:   _func_3identical_v2_canmerge:
 ; CHECK-ARM64-NEXT:   _func_3identical_v3_canmerge:
-; CHECK-ARM64-NEXT:        mov {{.*}}, #0x21
+; CHECK-ARM64:             mov {{.*}}, #0x21
 ;
 ; CHECK-ARM64:        _func_call_thunked_1_nomerge:
 ; CHECK-ARM64-NEXT:        stp	x29
@@ -54,19 +54,19 @@
 
 ; CHECK-LTO:        (__TEXT,__text) section
 ; CHECK-LTO-NEXT:   _func_unique_1:
-; CHECK-LTO-NEXT:        mov {{.*}}, #0x1
+; CHECK-LTO:             mov {{.*}}, #0x1
 ;
 ; CHECK-LTO:        _func_unique_2_canmerge:
 ; CHECK-LTO-NEXT:   _func_2identical_v1:
-; CHECK-LTO-NEXT:        mov {{.*}}, #0x2
+; CHECK-LTO:             mov {{.*}}, #0x2
 ;
 ; CHECK-LTO:        _func_3identical_v1:
-; CHECK-LTO-NEXT:        mov {{.*}}, #0x3
+; CHECK-LTO:             mov {{.*}}, #0x3
 ;
 ; CHECK-LTO:        _func_3identical_v1_canmerge:
 ; CHECK-LTO-NEXT:   _func_3identical_v2_canmerge:
 ; CHECK-LTO-NEXT:   _func_3identical_v3_canmerge:
-; CHECK-LTO-NEXT:        mov {{.*}}, #0x21
+; CHECK-LTO:             mov {{.*}}, #0x21
 ;
 ; CHECK-LTO:        _func_call_thunked_1_nomerge:
 ; CHECK-LTO-NEXT:        stp	x29

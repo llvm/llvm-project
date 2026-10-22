@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUMachineModuleInfo.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -160,7 +159,8 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false)
+      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false,
+      bool CanDemoteWorkgroupToWavefront = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
@@ -208,6 +208,10 @@ private:
     // AGENT scope as a conservatively correct alternative.
     if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
       this->Scope = SIAtomicScope::AGENT;
+
+    if (CanDemoteWorkgroupToWavefront &&
+        this->Scope == SIAtomicScope::WORKGROUP)
+      this->Scope = SIAtomicScope::WAVEFRONT;
   }
 
 public:
@@ -281,6 +285,7 @@ class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
   const GCNSubtarget &ST;
+  const bool CanDemoteWorkgroupToWavefront;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -304,7 +309,8 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
+                const MachineFunction &MF);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -825,9 +831,15 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
+// TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
+// IR pass (and extending it to other scoped operations), so middle-end
+// optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST)
-    : MMI(&MMI_), ST(ST) {}
+                             const GCNSubtarget &ST, const MachineFunction &MF)
+    : MMI(&MMI_), ST(ST),
+      CanDemoteWorkgroupToWavefront(
+          ST.isSingleWavefrontWorkgroup(MF.getFunction()) &&
+          MF.getFunction().hasFnAttribute("amdgpu-no-lds-dma")) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -858,7 +870,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       const auto &Merged =
           MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
       if (!Merged) {
-        reportUnsupported(MI, "Unsupported atomic synchronization scope");
+        reportUnsupported(MI, "unsupported atomic synchronization scope");
         return std::nullopt;
       }
       MergedSSID = *Merged;
@@ -884,7 +896,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   if (Ordering != AtomicOrdering::NotAtomic) {
     auto ScopeOrNone = toSIAtomicScope(SSID, InstrAddrSpace);
     if (!ScopeOrNone) {
-      reportUnsupported(MI, "Unsupported atomic synchronization scope");
+      reportUnsupported(MI, "unsupported atomic synchronization scope");
       return std::nullopt;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
@@ -899,7 +911,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative,
-                     hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo>
@@ -943,7 +955,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
   auto ScopeOrNone = toSIAtomicScope(SSID, SIAtomicAddrSpace::ATOMIC);
   if (!ScopeOrNone) {
-    reportUnsupported(MI, "Unsupported atomic synchronization scope");
+    reportUnsupported(MI, "unsupported atomic synchronization scope");
     return std::nullopt;
   }
 
@@ -969,7 +981,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
                      AtomicOrdering::NotAtomic, false, false, false, false,
-                     hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -1397,7 +1409,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote VMEM data or
         // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW
         // and CC will never be stale due to the local memory probes.
@@ -1429,7 +1441,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       }
       [[fallthrough]];
     case SIAtomicScope::AGENT:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote date or local
         // MTYPE NC global data. Local MTYPE RW and CC memory will never be
         // stale due to the memory probes.
@@ -1446,7 +1458,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       break;
     case SIAtomicScope::WORKGROUP:
       if (TgSplitEnabled) {
-        if (ST.hasGFX940Insts()) {
+        if (ST.hasBufferInvInst()) {
           // In threadgroup split mode the waves of a work-group can be
           // executing on different CUs. Therefore need to invalidate the L1
           // which is per CU. Otherwise in non-threadgroup split mode all waves
@@ -2587,7 +2599,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST, MF);
   bool TgSplit = ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(F);
   CC = SICacheControl::create(ST, TgSplit);
 

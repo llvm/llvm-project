@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/SimpleSymbolTable.h
+// Contains the implementation of APIs in the orc-rt/bedrock/SimpleSymbolTable.h
 // header.
 //
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/iterator_range.h"
+#include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt/support/iterator_range.h"
 
 #include <algorithm>
 
@@ -21,15 +22,10 @@ namespace orc_rt {
 Error SimpleSymbolTable::makeIncompatibleDefsError(
     std::vector<std::string_view> IncompatibleDefs) {
   std::sort(IncompatibleDefs.begin(), IncompatibleDefs.end());
-  std::string ErrMsg = "Incompatible definitions for symbols: [ ";
-  ErrMsg += IncompatibleDefs.front();
-  for (auto &Def : iterator_range(std::next(IncompatibleDefs.begin()),
-                                  IncompatibleDefs.end())) {
-    ErrMsg += ", ";
-    ErrMsg += Def;
-  }
-  ErrMsg += " ]";
-  return make_error<StringError>(std::move(ErrMsg));
+  return make_error<StringError>((StringOutputStream()
+                                  << "incompatible definitions for symbols: [ "
+                                  << join(IncompatibleDefs, ", ") << " ]")
+                                     .str());
 }
 
 } // namespace orc_rt

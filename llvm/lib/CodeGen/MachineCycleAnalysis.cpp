@@ -16,7 +16,8 @@
 
 using namespace llvm;
 
-template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
+template class LLVM_ABI_FOR_TEST
+    llvm::GenericCycleInfo<llvm::MachineSSAContext>;
 
 char MachineCycleInfoWrapperPass::ID = 0;
 
@@ -143,7 +144,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;

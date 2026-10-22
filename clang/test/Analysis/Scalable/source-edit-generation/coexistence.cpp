@@ -6,8 +6,6 @@
 
 // REQUIRES: plugins
 
-// UNSUPPORTED: target={{.*}}
-
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -load %llvmshlibdir/SSAFTestTransformationPlugin%pluginext \
 // RUN:   --ssaf-extract-summaries=CallGraph \
@@ -17,6 +15,7 @@
 // RUN:   --ssaf-src-edit-file=%t/edits.yaml \
 // RUN:   --ssaf-transformation-report-file=%t/report.sarif \
 // RUN:   --ssaf-compilation-unit-id=cu \
+// RUN:   --ssaf-link-unit-id=lu \
 // RUN:   -emit-obj -o %t/test.o %s
 
 // All four artifacts must be present.

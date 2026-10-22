@@ -73,6 +73,8 @@ def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
 def : GINodeEquiv<G_CLMUL, clmul>;
+def : GINodeEquiv<G_CLMULH, clmulh>;
+def : GINodeEquiv<G_CLMULR, clmulr>;
 def : GINodeEquiv<G_UMULH, mulhu>;
 def : GINodeEquiv<G_SMULH, mulhs>;
 def : GINodeEquiv<G_SDIV, sdiv>;
@@ -152,6 +154,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BRCOND, brcond>;
+def : GINodeEquiv<G_BRINDIRECT, brind>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;

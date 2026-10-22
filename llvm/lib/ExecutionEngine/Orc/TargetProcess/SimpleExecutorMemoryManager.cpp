@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -199,30 +201,18 @@ Error SimpleExecutorMemoryManager::shutdown() {
 
 void SimpleExecutorMemoryManager::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
-  M[rt::SimpleExecutorMemoryManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt::SimpleExecutorMemoryManagerReserveWrapperName] =
-      ExecutorAddr::fromPtr(&reserveWrapper);
-  M[rt::SimpleExecutorMemoryManagerInitializeWrapperName] =
-      ExecutorAddr::fromPtr(&initializeWrapper);
-  M[rt::SimpleExecutorMemoryManagerDeinitializeWrapperName] =
-      ExecutorAddr::fromPtr(&deinitializeWrapper);
-  M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
-      ExecutorAddr::fromPtr(&releaseWrapper);
-
-  {
-    // Also provide SimpleNativeMemoryMap symbols for compatibility.
-    // FIXME: We should codify a "simple" memory manager interface and make
-    // SimpleExecutorMemoryManager its LLVM-based implementation, and
-    // SimpleNativeMemoryMap its ORC-runtime implementation.
-    namespace sps_ci = rt::sps_ci;
-    M[sps_ci::SimpleNativeMemoryMapInstanceName] = ExecutorAddr::fromPtr(this);
-    M[sps_ci::MemMgrReserve::Name] = ExecutorAddr::fromPtr(reserveWrapper);
-    M[sps_ci::MemMgrInitialize::Name] =
-        ExecutorAddr::fromPtr(initializeWrapper);
-    M[sps_ci::MemMgrDeinitialize::Name] =
-        ExecutorAddr::fromPtr(deinitializeWrapper);
-    M[sps_ci::MemMgrRelease::Name] = ExecutorAddr::fromPtr(releaseWrapper);
-  }
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  namespace sps_ci = rt::sps_ci;
+  M[Mangle.mangledCopy(sps_ci::SimpleNativeMemoryMapInstanceName)] =
+      ExecutorAddr::fromPtr(this);
+  M[Mangle.mangledCopy(sps_ci::MemMgrReserve::Name)] =
+      ExecutorAddr::fromPtr(reserveWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrInitialize::Name)] =
+      ExecutorAddr::fromPtr(initializeWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrDeinitialize::Name)] =
+      ExecutorAddr::fromPtr(deinitializeWrapper);
+  M[Mangle.mangledCopy(sps_ci::MemMgrRelease::Name)] =
+      ExecutorAddr::fromPtr(releaseWrapper);
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>

@@ -29,24 +29,24 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %9 = fir.coordinate_of %0, %c1_4 : (!fir.ref<!fir.array<2xi64>>, index) -> !fir.ref<i64>
     fir.store %c3_i64_3 to %9 : !fir.ref<i64>
     %10 = fir.embox %0 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
-    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
-    %11:2 = hlfir.declare %3 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %3 lcobounds %7 ucobounds %10 uniq_name("_QFEa") : (!fir.ref<i32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
+    %11:2 = hlfir.declare %3 uniq_name("_QFEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %12 = fir.alloca i32 {bindc_name = "idx", uniq_name = "_QFEidx"}
-    %13:2 = hlfir.declare %12 {uniq_name = "_QFEidx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %13:2 = hlfir.declare %12 uniq_name("_QFEidx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %14 = fir.address_of(@_QFEsub) : !fir.ref<!fir.array<3xi32>>
     %c3 = arith.constant 3 : index
     %15 = fir.shape %c3 : (index) -> !fir.shape<1>
-    %16:2 = hlfir.declare %14(%15) {uniq_name = "_QFEsub"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+    %16:2 = hlfir.declare %14(%15) uniq_name("_QFEsub") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
     %17 = fir.address_of(@_QFEsub2) : !fir.ref<!fir.array<3xi64>>
     %c3_5 = arith.constant 3 : index
     %18 = fir.shape %c3_5 : (index) -> !fir.shape<1>
-    %19:2 = hlfir.declare %17(%18) {uniq_name = "_QFEsub2"} : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
+    %19:2 = hlfir.declare %17(%18) uniq_name("_QFEsub2") : (!fir.ref<!fir.array<3xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi64>>, !fir.ref<!fir.array<3xi64>>)
     %20 = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}> {bindc_name = "team", uniq_name = "_QFEteam"}
-    %21:2 = hlfir.declare %20 {uniq_name = "_QFEteam"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>)
+    %21:2 = hlfir.declare %20 uniq_name("_QFEteam") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>)
     %22 = fir.address_of(@_QQ_QM__fortran_builtinsT__builtin_team_type.DerivedInit) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
     fir.copy %22 to %21#0 no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
     %23 = fir.alloca i32 {bindc_name = "team_number", uniq_name = "_QFEteam_number"}
-    %24:2 = hlfir.declare %23 {uniq_name = "_QFEteam_number"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %24:2 = hlfir.declare %23 uniq_name("_QFEteam_number") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %25 = fir.embox %11#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:3>
     %26 = fir.shape %c3 : (index) -> !fir.shape<1>
     %27 = fir.embox %16#0(%26) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>

@@ -9,6 +9,7 @@
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
 // CHECK-NEXT:     btie                FEAT_BTIE                                              Enable Enhanced Branch Target Identification extension
+// CHECK-NEXT:     cflt                FEAT_CFLT                                              Enable Armv9.8-A Conditional Fault instructions
 // CHECK-NEXT:     cmpbr               FEAT_CMPBR                                             Enable Armv9.6-A base compare and branch instructions
 // CHECK-NEXT:     fcma                FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
 // CHECK-NEXT:     cpa                 FEAT_CPA                                               Enable Armv9.5-A Checked Pointer Arithmetic
@@ -43,6 +44,7 @@
 // CHECK-NEXT:     ite                 FEAT_ITE                                               Enable Armv9.4-A Instrumentation Extension
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     ls64                FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
+// CHECK-NEXT:     lsc64b              FEAT_LSC64B                                            Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension
 // CHECK-NEXT:     lscp                FEAT_LSCP                                              Enable Armv9.7-A Load-acquire and store-release pair extension
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
@@ -103,6 +105,7 @@
 // CHECK-NEXT:     sve-bfscale         FEAT_SVE_BFSCALE                                       Enable Armv9.6-A SVE BFloat16 scaling instructions
 // CHECK-NEXT:     sve-bitperm         FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
 // CHECK-NEXT:     sve-f16f32mm        FEAT_SVE_F16F32MM                                      Enable Armv9.6-A FP16 to FP32 Matrix Multiply
+// CHECK-NEXT:     sve-lrcpc           FEAT_SVE_LRCPC                                         Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model
 // CHECK-NEXT:     sve-sha3            FEAT_SVE_SHA3                                          Enable SVE SHA3 instructions
 // CHECK-NEXT:     sve-sm4             FEAT_SVE_SM4                                           Enable SVE SM4 instructions
 // CHECK-NEXT:     sve2                FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions

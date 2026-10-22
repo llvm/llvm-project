@@ -592,5 +592,45 @@ define <4 x double> @ldexp_v4f64(<4 x double> %val, <4 x i32> %exp) nounwind {
   ret <4 x double> %1
 }
 
+define <1 x float> @ldexp_v1f32_v1i1(<1 x float> %x, <1 x i1> %e) nounwind {
+; X64-LABEL: ldexp_v1f32_v1i1:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    andl $1, %edi
+; X64-NEXT:    negl %edi
+; X64-NEXT:    callq ldexpf@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+;
+; WIN64-LABEL: ldexp_v1f32_v1i1:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    andb $1, %dl
+; WIN64-NEXT:    negb %dl
+; WIN64-NEXT:    cvtss2sd %xmm0, %xmm0
+; WIN64-NEXT:    callq ldexp
+; WIN64-NEXT:    cvtsd2ss %xmm0, %xmm0
+; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    retq
+;
+; WIN32-LABEL: ldexp_v1f32_v1i1:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    andb $1, %al
+; WIN32-NEXT:    negb %al
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    movsbl %al, %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    calll _ldexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    addl $16, %esp
+; WIN32-NEXT:    retl
+  %r = call <1 x float> @llvm.ldexp.v1f32.v1i1(<1 x float> %x, <1 x i1> %e)
+  ret <1 x float> %r
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }

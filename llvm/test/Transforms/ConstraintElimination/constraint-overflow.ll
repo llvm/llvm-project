@@ -88,7 +88,7 @@ define i1 @fm_overflow_recovery(i64 %n, i64 %i, i64 %lim) {
 ; CHECK-NEXT:    [[N4M4:%.*]] = add i64 [[N4]], -4
 ; CHECK-NEXT:    [[F2:%.*]] = icmp ult i64 [[N4M4]], [[LIM]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[F2]])
-; CHECK-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 2
+; CHECK-NEXT:    [[I4:%.*]] = shl nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -214,4 +214,27 @@ entry:
   call void @llvm.assume(i1 %a.nonpos)
   %r = icmp slt i64 %x, 0
   ret i1 %r
+}
+
+; The offset of %a is INT64_MIN, which cannot be represented directly, but
+; (INT64_MIN + 1) - INT64_MIN is representable.
+define i1 @constraint_offset_min_sub_negative_offset(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @constraint_offset_min_sub_negative_offset(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sle i64 [[X]], [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[A0:%.*]] = add nsw i64 [[X]], -4611686018427387904
+; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[A0]], -4611686018427387904
+; CHECK-NEXT:    [[B:%.*]] = add nsw i64 [[Y]], -9223372036854775807
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cond = icmp sle i64 %x, %y
+  call void @llvm.assume(i1 %cond)
+  %a0 = add nsw i64 %x, -4611686018427387904
+  %a = add nsw i64 %a0, -4611686018427387904
+  %b = add nsw i64 %y, -9223372036854775807
+  %check = icmp sle i64 %a, %b
+  ret i1 %check
 }

@@ -5,6 +5,7 @@ import functools
 import io
 import os
 import pathlib
+import platform
 import re
 import shlex
 import signal
@@ -404,7 +405,8 @@ def _make_out_sink(stdout: int | TextIO, is_last: bool) -> IO[bytes] | None:
         last stage or a non-pipe target, which don't need this sink.
     """
     if stdout == subprocess.PIPE and not is_last:
-        return tempfile.SpooledTemporaryFile(max_size=1 << 20)
+        _mode = "w+" if platform.system() == "OS/390" else "w+b"
+        return tempfile.SpooledTemporaryFile(max_size=1 << 20, mode=_mode)
     return None
 
 
@@ -988,21 +990,21 @@ def formatOutput(title, data, limit=None):
         msg = ""
     ndashes = 30
     # fmt: off
-    out = f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    parts = [f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"]
     curr_color = None
     for line in data.splitlines():
         if curr_color:
-            out += "\33[0m"
-        out += "# | "
+            parts.append("\33[0m")
+        parts.append("# | ")
         if curr_color:
-            out += curr_color
-        out += line + "\n"
+            parts.append(curr_color)
+        parts.append(line + "\n")
         curr_color = findColor(line, curr_color)
     if curr_color:
-        out += "\33[0m"  # prevent unterminated formatting from leaking
-    out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
+        parts.append("\33[0m")  # prevent unterminated formatting from leaking
+    parts.append(f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n")
     # fmt: on
-    return out
+    return "".join(parts)
 
 
 # Always either returns the tuple (out, err, exitCode, timeoutInfo) or raises a

@@ -195,6 +195,9 @@ add_header_library(
     utility/in_place.h
     utility/integer_sequence.h
     utility/move.h
+    utility/swap.h
+  DEPENDS
+    libc.hdr.types.size_t
 )
 
 add_header_library(
@@ -207,6 +210,19 @@ add_header_library(
   expected
   HDRS
     expected.h
+)
+
+add_header_library(
+  unique_ptr
+  HDRS
+    unique_ptr.h
+  DEPENDS
+    .new
+    .type_traits
+    .utility
+    libc.hdr.types.size_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_object_library(

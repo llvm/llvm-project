@@ -10,12 +10,13 @@
 #define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class AbstractSlotTrackerStorage;
 class Function;
 class MachineModuleInfo;
 class MachineFunction;
@@ -24,24 +25,22 @@ class Module;
 using MFGetterFnT = function_ref<MachineFunction *(const Function &)>;
 
 class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
-  const Function &TheFunction;
   const MachineFunction *TheMF;
-  unsigned MDNStartSlot = 0, MDNEndSlot = 0;
+  MachineMDNodeListType MachineMDNodes;
+  SmallPtrSet<const DILocation *, 4> InlineDebugLocations;
 
-  void processMachineFunctionMetadata(AbstractSlotTrackerStorage *AST,
-                                      const MachineFunction &MF);
-  void processMachineModule(AbstractSlotTrackerStorage *AST, const Module *M,
-                            bool ShouldInitializeAllMetadata);
-  void processMachineFunction(AbstractSlotTrackerStorage *AST,
-                              const Function *F,
-                              bool ShouldInitializeAllMetadata);
+  void collectMachineFunctionMetadata(
+      SmallVectorImpl<const MDNode *> &Metadata, const MachineFunction &MF,
+      SmallVectorImpl<const MDNode *> *DebugLocations = nullptr) const;
 
 public:
-  MachineModuleSlotTracker(MFGetterFnT Fn, const MachineFunction *MF,
-                           bool ShouldInitializeAllMetadata = true);
+  MachineModuleSlotTracker(MFGetterFnT Fn, const MachineFunction *MF);
   ~MachineModuleSlotTracker() override;
 
+  /// Renumber module and machine metadata for canonical MIR output.
+  void renumberMetadataForAssembly();
   void collectMachineMDNodes(MachineMDNodeListType &L) const;
+  bool shouldPrintDebugLocationInline(const DILocation *DL) const override;
 };
 
 } // namespace llvm

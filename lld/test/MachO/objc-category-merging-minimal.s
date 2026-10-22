@@ -57,6 +57,12 @@ MERGE_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CL
 # The unsupported base class is skipped instead of being dereferenced.
 MISSING_METADATA_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
 
+############ Test merging a category with an unconventional symbol name ############
+# RUN: sed 's/__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01/l_unconventional_category_symbol/g' merge_cat_minimal.s > merge_cat_minimal_unconventional_symbol.s
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_unconventional_symbol.o merge_cat_minimal_unconventional_symbol.s
+# RUN: %lld -arch arm64 -dylib -objc_category_merging -o merge_cat_minimal_unconventional_symbol.dylib a64_fakedylib.dylib merge_cat_minimal_unconventional_symbol.o
+# RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_unconventional_symbol.dylib | FileCheck %s --check-prefix=MERGE_CATS
+
 #### Check merge categories enabled ###
 # Check that the original categories are not there
 MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category01

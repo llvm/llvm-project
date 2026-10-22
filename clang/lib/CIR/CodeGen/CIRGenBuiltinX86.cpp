@@ -86,6 +86,99 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
+static mlir::Value emitX86Round(CIRGenFunction &cgf, unsigned builtinID,
+                                const CallExpr *expr,
+                                SmallVector<mlir::Value> &ops) {
+  bool isScalar = builtinID == X86::BI__builtin_ia32_roundss ||
+                  builtinID == X86::BI__builtin_ia32_roundsd;
+
+  unsigned roundingControl =
+      cgf.getZExtIntValueFromConstOp(isScalar ? ops[2] : ops[1]);
+
+  constexpr unsigned mxcsrMask = 0b100;
+  constexpr unsigned fRoundNoExcMask = 0b1000;
+  unsigned useMXCSR = mxcsrMask & roundingControl;
+  unsigned fRoundNoExc = fRoundNoExcMask & roundingControl;
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+
+  if (useMXCSR || !fRoundNoExc) {
+    StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_roundps:
+      intrinsicName = "x86.sse41.round.ps";
+      break;
+    case X86::BI__builtin_ia32_roundpd:
+      intrinsicName = "x86.sse41.round.pd";
+      break;
+    case X86::BI__builtin_ia32_roundps256:
+      intrinsicName = "x86.avx.round.ps.256";
+      break;
+    case X86::BI__builtin_ia32_roundpd256:
+      intrinsicName = "x86.avx.round.pd.256";
+      break;
+    case X86::BI__builtin_ia32_roundss:
+      intrinsicName = "x86.sse41.round.ss";
+      break;
+    case X86::BI__builtin_ia32_roundsd:
+      intrinsicName = "x86.sse41.round.sd";
+      break;
+    }
+
+    mlir::Type resTy = ops[0].getType();
+    return builder.emitIntrinsicCallOp(loc, intrinsicName, resTy, ops);
+  }
+
+  auto emitRoundOp = [&](mlir::Value x) -> mlir::Value {
+    constexpr unsigned roundingMask = 0b11;
+    unsigned roundingMode = roundingControl & roundingMask;
+
+    if (builder.getIsFPConstrained()) {
+      CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, expr);
+
+      builder.setDefaultConstrainedExcept(clang::LangOptions::FPE_Ignore);
+      cir::FenvAttr fenv = builder.getConstrainedFPAttr();
+
+      switch (roundingMode) {
+      default:
+        llvm_unreachable("Invalid rounding mode");
+      case 0b00:
+        return cir::RoundEvenOp::create(builder, loc, x, fenv);
+      case 0b01:
+        return cir::FloorOp::create(builder, loc, x, fenv);
+      case 0b10:
+        return cir::CeilOp::create(builder, loc, x, fenv);
+      case 0b11:
+        return cir::TruncOp::create(builder, loc, x, fenv);
+      }
+    }
+
+    switch (roundingMode) {
+    default:
+      llvm_unreachable("Invalid rounding mode");
+    case 0b00:
+      return cir::RoundEvenOp::create(builder, loc, x);
+    case 0b01:
+      return cir::FloorOp::create(builder, loc, x);
+    case 0b10:
+      return cir::CeilOp::create(builder, loc, x);
+    case 0b11:
+      return cir::TruncOp::create(builder, loc, x);
+    }
+  };
+
+  if (isScalar) {
+    mlir::Value valAt0 = builder.createExtractElement(loc, ops[1], 0);
+    mlir::Value roundedAt0 = emitRoundOp(valAt0);
+    return builder.createInsertElement(loc, ops[0], roundedAt0, 0);
+  }
+
+  return emitRoundOp(ops[0]);
+}
+
 static mlir::Value emitX86CompressStore(CIRGenBuilderTy &builder,
                                         mlir::Location loc,
                                         ArrayRef<mlir::Value> ops) {
@@ -1153,22 +1246,25 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     // Return timestamp (element 0 of the returned struct)
     return cir::ExtractMemberOp::create(builder, loc, i64Ty, result, 0);
   }
+  case X86::BI__builtin_ia32_roundps:
+  case X86::BI__builtin_ia32_roundpd:
+  case X86::BI__builtin_ia32_roundps256:
+  case X86::BI__builtin_ia32_roundpd256:
+  case X86::BI__builtin_ia32_roundss:
+  case X86::BI__builtin_ia32_roundsd:
+    return emitX86Round(*this, builtinID, expr, ops);
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
-  case X86::BI__builtin_ia32_lzcnt_u64: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value isZeroPoison = builder.getFalse(loc);
-    return builder.emitIntrinsicCallOp(loc, "ctlz", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], isZeroPoison});
-  }
+  case X86::BI__builtin_ia32_lzcnt_u64:
+    return cir::BitClzOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                 /*poisonZero=*/false)
+        .getResult();
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
-  case X86::BI__builtin_ia32_tzcnt_u64: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value isZeroPoison = builder.getFalse(loc);
-    return builder.emitIntrinsicCallOp(loc, "cttz", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], isZeroPoison});
-  }
+  case X86::BI__builtin_ia32_tzcnt_u64:
+    return cir::BitCtzOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                 /*poisonZero=*/false)
+        .getResult();
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
@@ -2367,8 +2463,18 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_sqrtpd512: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value arg = ops[0];
-    return cir::SqrtOp::create(builder, loc, arg.getType(), arg).getResult();
+    return cir::SqrtOp::create(builder, loc, arg).getResult();
   }
+  case X86::BI__builtin_ia32_pmulhw128:
+  case X86::BI__builtin_ia32_pmulhw256:
+  case X86::BI__builtin_ia32_pmulhw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "smulh",
+                                       ops[0].getType(), ops);
+  case X86::BI__builtin_ia32_pmulhuw128:
+  case X86::BI__builtin_ia32_pmulhuw256:
+  case X86::BI__builtin_ia32_pmulhuw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "umulh",
+                                       ops[0].getType(), ops);
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512: {
@@ -2429,42 +2535,52 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fadd", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFAddOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
   case X86::BI__builtin_ia32_reduce_fmul_ps512:
   case X86::BI__builtin_ia32_reduce_fmul_ph512:
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
-                                       "vector.reduce.fmul", ops[0].getType(),
-                                       mlir::ValueRange{ops[0], ops[1]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMulOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmax",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMaxOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
-    assert(!cir::MissingFeatures::fastMathFlags());
-    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return builder.emitIntrinsicCallOp(
-        getLoc(expr->getExprLoc()), "vector.reduce.fmin",
-        vecTy.getElementType(), mlir::ValueRange{ops[0]});
+    CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
+    return cir::VecReduceFMinOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
+        .getResult();
   }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
@@ -2597,6 +2713,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
     return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,

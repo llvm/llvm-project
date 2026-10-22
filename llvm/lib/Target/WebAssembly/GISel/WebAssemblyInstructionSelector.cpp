@@ -13,8 +13,6 @@
 
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WasmAddressSpaces.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
@@ -119,18 +117,18 @@ WebAssemblyInstructionSelector::selectAddrOperands64(
 
 bool WebAssemblyInstructionSelector::selectCopy(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+
   const TargetRegisterClass *DstRC =
-      TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
+      TRI.getConstrainedRegClassForReg(DstReg, MRI);
   if (!DstRC)
     return false;
 
   const TargetRegisterClass *SrcRC =
-      TRI.getConstrainedRegClassForOperand(I.getOperand(1), MRI);
+      TRI.getConstrainedRegClassForReg(SrcReg, MRI);
   if (!SrcRC)
     return false;
-
-  Register DstReg = I.getOperand(0).getReg();
-  Register SrcReg = I.getOperand(1).getReg();
 
   if (DstReg.isVirtual())
     RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
@@ -191,7 +189,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     const Register DefReg = I.getOperand(0).getReg();
 
     const TargetRegisterClass *DefRC =
-        TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
+        TRI.getConstrainedRegClassForReg(DefReg, MRI);
 
     if (!DefRC)
       return false;

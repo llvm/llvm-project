@@ -177,7 +177,9 @@ public:
   bool prefersVectorizedAddressing() const override;
 
   /// Check whether Opcode1 has less throughput according to the scheduling
-  /// model than Opcode2.
+  /// model than Opcode2. For variant scheduling classes, the lowest throughput
+  /// of Opcode1 and the highest throughput of Opcode2 are compared among all
+  /// the scheduling classes they may be resolved to.
   bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
                                                   unsigned Opcode2) const;
 
@@ -251,7 +253,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost
   getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
@@ -278,6 +280,14 @@ public:
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
 
   bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
+
+  bool isLegalSpeculativeLoad(Type *DataType,
+                              unsigned AddressSpace) const override;
+
+  bool hasMultiVectorLoadStore(
+      unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+      bool IsStore,
+      std::optional<Instruction::CastOps> CastHint) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -318,6 +328,12 @@ public:
         return false; // Fall back to scalarization of masked operations.
     }
 
+    // Type legalization cannot scalarize the data of a masked load/store.
+    // Reject types that would be legalized to a scalar (e.g. <1 x half>).
+    if (isa<FixedVectorType>(DataType) &&
+        !getTypeLegalizationCost(DataType).second.isVector())
+      return false;
+
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
@@ -334,21 +350,20 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
-           Ty->isIntegerTy(64);
+    assert(Ty->isIntegerTy() || Ty->isFloatingPointTy());
+    // 32-bit and 64-bit element types are legal if we have SVE.
+    if (is_contained({32u, 64u}, Ty->getScalarSizeInBits()))
+      return true;
+
+    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
+    if (is_contained({8u, 16u}, Ty->getScalarSizeInBits()))
+      return ST->hasSVE2p2() || ST->hasSME2p2();
+
+    return false;
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
-                                  Align Alignment) const override {
-    if (!ST->isSVEAvailable())
-      return false;
-
-    if (isa<FixedVectorType>(DataType) &&
-        DataType->getPrimitiveSizeInBits() < 128)
-      return false;
-
-    return isElementTypeLegalForCompressStore(DataType->getScalarType());
-  }
+                                  Align Alignment) const override;
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
@@ -507,7 +522,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
@@ -526,6 +543,8 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
+
+  bool LSRWithInstrQueries() const override { return true; }
 
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
@@ -556,6 +575,9 @@ public:
     return ST->enableAggressiveInterleaving();
   }
   /// @}
+
+  bool hasPossibleIncompatibleOps(const Function *F, bool ConsiderZA,
+                                  bool ConsiderZT, bool ConsiderSM) const;
 };
 
 } // end namespace llvm

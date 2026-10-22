@@ -57,3 +57,14 @@ float3 test_lerp_float3(float3 p0, float3 p1, float3 p2) { return lerp(p0, p1, p
 // CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[MUL]], %{{.*}}
 // CHECK-NEXT: ret <4 x float> [[ADD]]
 float4 test_lerp_float4(float4 p0, float4 p1, float4 p2) { return lerp(p0, p1, p2); }
+
+// CHECK-LABEL: test_lerp_float5
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <5 x float> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <5 x float> [[ADD]]
+vector<float, 5> test_lerp_float5(vector<float, 5> p0,
+							      vector<float, 5> p1,
+							      vector<float, 5> p2) {
+	return lerp(p0, p1, p2);
+}

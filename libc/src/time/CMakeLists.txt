@@ -315,6 +315,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timer_gettime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_gettime
+)
+
+add_entrypoint_object(
+  timer_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_settime
+)
+
+add_entrypoint_object(
   tz_variables
   ALIAS
   DEPENDS

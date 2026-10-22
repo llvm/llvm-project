@@ -12,8 +12,10 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
@@ -774,6 +776,14 @@ llvm::StringRef StackArraysPass::getDescription() const {
 void StackArraysPass::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
 
+  // This pass only runs under -fstack-arrays, so honor a function that opted
+  // out in its own policy (device code, where the stack is tiny). Functions
+  // without a policy of their own are left to the module setting.
+  if (std::optional<fir::AllocationPolicy> policy =
+          fir::getLocalAllocationPolicy(func))
+    if (!policy->stackArrays)
+      return;
+
   auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
   const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
       analysis.getCandidateOps(func);
@@ -782,14 +792,17 @@ void StackArraysPass::runOnOperation() {
     return;
   }
 
-  if (candidateOps->empty())
-    return;
-  runCount += candidateOps->size();
-
+  // An offload region runs on the device stack, which is far smaller than the
+  // host one, so its allocations stay on the heap like in a device procedure.
   llvm::SmallVector<mlir::Operation *> opsToConvert;
   opsToConvert.reserve(candidateOps->size());
   for (auto [op, _] : *candidateOps)
-    opsToConvert.push_back(op);
+    if (!fir::isInOffloadRegion(op))
+      opsToConvert.push_back(op);
+
+  if (opsToConvert.empty())
+    return;
+  runCount += opsToConvert.size();
 
   mlir::MLIRContext &context = getContext();
   mlir::RewritePatternSet patterns(&context);

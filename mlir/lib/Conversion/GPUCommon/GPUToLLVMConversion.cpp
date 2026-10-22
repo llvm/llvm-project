@@ -549,12 +549,10 @@ void GpuToLLVMConversionPass::runOnOperation() {
 
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
-  for (Dialect *dialect : context->getLoadedDialects()) {
-    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-    if (!iface)
-      continue;
+  std::vector<Dialect *> dialects = context->getLoadedDialects();
+  for (auto *iface :
+       llvm::make_isa_range<ConvertToLLVMPatternInterface>(dialects))
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
-  }
 
   // Preserve GPU modules and binaries. Modules are preserved as they can be
   // converted later by `gpu-module-to-binary`.
@@ -1223,14 +1221,6 @@ static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
   return LLVM::ConstantOp::create(builder, loc, llvmInt32Type,
                                   static_cast<int32_t>(tValue));
-}
-
-template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
-  Type llvmFloat32Type = builder.getF32Type();
-  return LLVM::ConstantOp::create(
-      builder, loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(

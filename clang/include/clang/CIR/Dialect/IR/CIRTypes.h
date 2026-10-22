@@ -40,40 +40,28 @@ struct UnionTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
-/// Whether a record member is a zero-width bit-field, spelled as a zero-length
-/// array of the bit-field's declared type under the bit-field mark.  The ABI
-/// counts that declared type as user data, while the zero length keeps the
-/// member out of the record's storage, so it contributes neither size nor
-/// alignment to the record's layout.
-bool isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind);
-
-/// Whether a member holds data for argument passing.  The kind alone does not
-/// answer this: a zero-width bit-field takes the bit-field mark but occupies no
-/// storage, so it holds none.
-inline bool holdsDataForABI(mlir::Type memberTy, RecordMemberKind kind) {
-  if (isZeroWidthBitField(memberTy, kind))
-    return false;
+/// Whether a member of this kind holds data for argument passing.  An `empty`
+/// member can hold data all the same, since an access unit of unnamed
+/// bit-fields takes that mark and is storage the classifier reads; use
+/// RecordType::isEmptyForABI to ask about a whole record.
+inline bool holdsDataForABI(RecordMemberKind kind) {
   return kind == RecordMemberKind::Data || kind == RecordMemberKind::BitField;
 }
 
-/// Whether any member holds data for argument passing.  The two ranges are the
-/// member types and their marks, in order.
-inline bool anyMemberHoldsDataForABI(llvm::ArrayRef<mlir::Type> memberTys,
-                                     llvm::ArrayRef<RecordMemberKind> kinds) {
-  return llvm::any_of(llvm::zip_equal(memberTys, kinds), [](const auto &pair) {
-    auto [memberTy, kind] = pair;
-    return holdsDataForABI(memberTy, kind);
-  });
+/// Whether any member holds data for argument passing on its mark alone.
+inline bool anyMemberHoldsDataForABI(llvm::ArrayRef<RecordMemberKind> kinds) {
+  return llvm::any_of(
+      kinds, [](RecordMemberKind kind) { return holdsDataForABI(kind); });
 }
 
-/// Whether a member of this kind is a bit-field access unit holding data.  The
-/// compiler chooses an access unit's width, so the member can be narrower than
-/// the declared type of the bit-fields it holds.  A true answer does not mean
-/// the member holds a bit-field: a union's base subobject takes this mark when
-/// any variant is an access unit, whatever its own storage type came from.  A
-/// unit holding only unnamed bit-fields is `empty` instead, and is told apart
-/// from the rest of `empty` by occupying bytes.
-inline bool isBitFieldAccessUnit(RecordMemberKind kind) {
+/// Whether a member of this kind is an access unit the source can read a
+/// bit-field of.  A unit can be narrower than the type a bit-field in it was
+/// declared with, so its extent does not answer what the source declared;
+/// `!cir.bitfield` carries that.  A true answer does not mean the member is an
+/// access unit: a union's base subobject takes this mark when any variant is
+/// one, whatever its own storage type came from.  A unit of nothing but
+/// unnamed bit-fields is `empty` instead.
+inline bool isNamedBitField(RecordMemberKind kind) {
   return kind == RecordMemberKind::BitField;
 }
 
@@ -130,6 +118,24 @@ namespace cir {
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
 namespace cir {
+
+/// Whether a record member occupies bytes of its record.  Every member does
+/// except a zero-width bit-field, which contributes neither size nor alignment
+/// to the record and is left out of the lowered LLVM struct body.
+inline bool memberOwnsBytes(mlir::Type memberTy) {
+  if (auto bfTy = mlir::dyn_cast<cir::BitFieldType>(memberTy))
+    return bfTy.ownsBytes();
+  return true;
+}
+
+/// The storage a member is stored as: the access unit for a bit-field member,
+/// and the member type itself for anything else.  Null for a zero-width
+/// bit-field, which has no storage.
+inline mlir::Type memberStorageType(mlir::Type memberTy) {
+  if (auto bfTy = mlir::dyn_cast<cir::BitFieldType>(memberTy))
+    return bfTy.getStorageType();
+  return memberTy;
+}
 
 /// C++ view class that accepts both !cir.struct and !cir.union types.
 ///

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 
 ; Test with a dead load in the loop, from
 ; https://github.com/llvm/llvm-project/issues/99701
-define void @dead_load(ptr %p, i16 %start) {
+define void @dead_load(ptr %p, i16 %start) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @dead_load(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -58,7 +58,7 @@ exit:
 ; Loop with a live-out %l and scalar epilogue required due to an interleave
 ; group. As the scalar epilogue is required the live-out is fed from the scalar
 ; epilogue and dead in the vector loop.
-define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
+define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i8 @dead_live_out_due_to_scalar_epilogue_required(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -128,9 +128,9 @@ exit:
 
 
 ; Test case for https://github.com/llvm/llvm-project/issues/106780.
-define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0 {
+define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define i32 @cost_of_exit_branch_and_cond_insts(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]], i16 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[UMAX3:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 111)
@@ -141,11 +141,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[UMAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP3]], i32 111)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 770, [[UMAX1]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
@@ -267,7 +263,7 @@ return:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/107473.
-define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
+define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_phi_in_latch_redundant(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -318,9 +314,9 @@ exit:
 }
 
 ; Test for https://github.com/llvm/llvm-project/issues/108098.
-define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %src, ptr noalias %dst) #0 {
+define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %src, ptr noalias %dst) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @gather_interleave_group_with_dead_insert_pos(
-; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[SMAX]], 1
@@ -377,22 +373,20 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+64bit,+v" }
-
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], !"LVerDomain"}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META5]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"LVerDomain"}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]]}

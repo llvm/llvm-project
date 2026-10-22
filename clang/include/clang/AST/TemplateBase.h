@@ -35,17 +35,6 @@ namespace llvm {
 
 class FoldingSetNodeID;
 
-// Provide PointerLikeTypeTraits for clang::Expr*, this default one requires a
-// full definition of Expr, but this file only sees a forward del because of
-// the dependency.
-template <> struct PointerLikeTypeTraits<clang::Expr *> {
-  static inline void *getAsVoidPointer(clang::Expr *P) { return P; }
-  static inline clang::Expr *getFromVoidPointer(void *P) {
-    return static_cast<clang::Expr *>(P);
-  }
-  static constexpr int NumLowBitsAvailable = 2;
-};
-
 } // namespace llvm
 
 namespace clang {
@@ -791,13 +780,6 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
                       TemplateArgumentLoc *OutArgArray);
-  // FIXME: The parameter Deps is the result populated by this method, the
-  // caller doesn't need it since it is populated by computeDependence. remove
-  // it.
-  void initializeFrom(SourceLocation TemplateKWLoc,
-                      const TemplateArgumentListInfo &List,
-                      TemplateArgumentLoc *OutArgArray,
-                      TemplateArgumentDependence &Deps);
   void initializeFrom(SourceLocation TemplateKWLoc);
 
   void copyInto(const TemplateArgumentLoc *ArgArray,

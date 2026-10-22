@@ -339,8 +339,6 @@ private:
     const SCEV *Dst;
     enum ClassificationKind { ZIV, SIV, RDIV, MIV, NonLinear } Classification;
     SmallBitVector Loops;
-    SmallBitVector GroupLoops;
-    SmallBitVector Group;
   };
 
   struct CoefficientInfo {

@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class StdSpanDataFormatterTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def findVariable(self, name):
