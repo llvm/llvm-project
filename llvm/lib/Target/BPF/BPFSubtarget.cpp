@@ -45,9 +45,9 @@ static cl::opt<bool> Disable_load_acq_store_rel(
     cl::desc("Disable load-acquire and store-release insns"));
 static cl::opt<bool> Disable_gotox("disable-gotox", cl::Hidden, cl::init(false),
                                    cl::desc("Disable gotox insn"));
-static cl::opt<bool> Disable_hmul(
-    "disable-hmul", cl::Hidden, cl::init(false),
-    cl::desc("Disable high-half multiply (UHMUL/SHMUL) insns"));
+static cl::opt<bool>
+    Disable_hmul("disable-hmul", cl::Hidden, cl::init(false),
+                 cl::desc("Disable high-half multiply (UHMUL/SHMUL) insns"));
 
 void BPFSubtarget::anchor() {}
 
