@@ -591,6 +591,8 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     switch (Element->getTag()) {
     case dwarf::DW_TAG_member:
     case dwarf::DW_TAG_inheritance: {
+      // A non-virtual base becomes an anonymous BTF member. CO-RE target
+      // matching can resolve a derived field to a same-named base field.
       const auto *DDTy = cast<DIDerivedType>(Element);
 
       BTFMember.NameOff = BDebug.addString(DDTy->getName());
