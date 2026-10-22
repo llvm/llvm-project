@@ -237,6 +237,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::HiPE:
     return CSR_NoRegs_SaveList;
   case CallingConv::AnyReg:
+    if (Subtarget.isLFI())
+      return HasAVX ? CSR_64_LFI_AllRegs_AVX_SaveList
+                    : CSR_64_LFI_AllRegs_SaveList;
     if (HasAVX)
       return CSR_64_AllRegs_AVX_SaveList;
     return CSR_64_AllRegs_SaveList;
@@ -244,31 +247,43 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (IsWin64)
       return HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
                      : CSR_Win64_RT_MostRegs_SaveList;
+    if (Subtarget.isLFI())
+      return CSR_64_LFI_RT_MostRegs_SaveList;
     return CSR_64_RT_MostRegs_SaveList;
   case CallingConv::PreserveAll:
+    if (Subtarget.isLFI())
+      return HasAVX ? CSR_64_LFI_RT_AllRegs_AVX_SaveList
+                    : CSR_64_LFI_RT_AllRegs_SaveList;
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_SaveList;
     return CSR_64_RT_AllRegs_SaveList;
   case CallingConv::PreserveNone:
     return CSR_64_NoneRegs_SaveList;
   case CallingConv::CXX_FAST_TLS:
-    if (Is64Bit)
-      return MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR() ?
-             CSR_64_CXX_TLS_Darwin_PE_SaveList : CSR_64_TLS_Darwin_SaveList;
+    if (Is64Bit) {
+      if (MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR())
+        return CSR_64_CXX_TLS_Darwin_PE_SaveList;
+      if (Subtarget.isLFI())
+        return CSR_64_LFI_TLS_Darwin_SaveList;
+      return CSR_64_TLS_Darwin_SaveList;
+    }
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
       return HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX512_SaveList
                      : CSR_Win64_Intel_OCL_BI_AVX512_SaveList;
     if (HasAVX512 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX512_SaveList;
+      return Subtarget.isLFI() ? CSR_64_LFI_Intel_OCL_BI_AVX512_SaveList
+                               : CSR_64_Intel_OCL_BI_AVX512_SaveList;
     if (HasAVX && IsWin64)
       return HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX_SaveList
                      : CSR_Win64_Intel_OCL_BI_AVX_SaveList;
     if (HasAVX && Is64Bit)
-      return CSR_64_Intel_OCL_BI_AVX_SaveList;
+      return Subtarget.isLFI() ? CSR_64_LFI_Intel_OCL_BI_AVX_SaveList
+                               : CSR_64_Intel_OCL_BI_AVX_SaveList;
     if (!HasAVX && !IsWin64 && Is64Bit)
-      return CSR_64_Intel_OCL_BI_SaveList;
+      return Subtarget.isLFI() ? CSR_64_LFI_Intel_OCL_BI_SaveList
+                               : CSR_64_Intel_OCL_BI_SaveList;
     break;
   }
   case CallingConv::X86_RegCall:
@@ -279,6 +294,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                          : CSR_Win64_RegCall_SaveList;
         return CSR_Win64_RegCall_NoSSE_SaveList;
       }
+      if (Subtarget.isLFI())
+        return HasSSE ? CSR_SysV64_LFI_RegCall_SaveList
+                      : CSR_SysV64_LFI_RegCall_NoSSE_SaveList;
       return HasSSE ? CSR_SysV64_RegCall_SaveList
                     : CSR_SysV64_RegCall_NoSSE_SaveList;
     }
@@ -289,9 +307,15 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                   : CSR_Win32_CFGuard_Check_NoSSE_SaveList;
   case CallingConv::Cold:
     if (Is64Bit)
-      return CSR_64_MostRegs_SaveList;
+      return Subtarget.isLFI() ? CSR_64_LFI_MostRegs_SaveList
+                               : CSR_64_MostRegs_SaveList;
     break;
   case CallingConv::Win64:
+    if (Subtarget.isLFI()) {
+      if (HasSSE)
+        return HasEGPR ? CSR_Win64_LFI_APX_SaveList : CSR_Win64_LFI_SaveList;
+      return CSR_Win64_LFI_NoSSE_SaveList;
+    }
     if (HasSSE)
       return HasEGPR ? CSR_Win64_APX_SaveList : CSR_Win64_SaveList;
     return CSR_Win64_NoSSE_SaveList;
@@ -301,13 +325,26 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (IsWin64)
       return HasEGPR ? CSR_Win64_APX_SwiftTail_SaveList
                      : CSR_Win64_SwiftTail_SaveList;
+    if (Subtarget.isLFI())
+      return CSR_64_LFI_SwiftTail_SaveList;
     return CSR_64_SwiftTail_SaveList;
   case CallingConv::X86_64_SysV:
+    if (Subtarget.isLFI())
+      return CallsEHReturn ? CSR_64_LFI_EHRet_SaveList : CSR_64_LFI_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     return CSR_64_SaveList;
   case CallingConv::X86_INTR:
     if (Is64Bit) {
+      if (Subtarget.isLFI()) {
+        if (HasAVX512)
+          return CSR_64_LFI_AllRegs_AVX512_SaveList;
+        if (HasAVX)
+          return CSR_64_LFI_AllRegs_AVX_SaveList;
+        if (HasSSE)
+          return CSR_64_LFI_AllRegs_SaveList;
+        return CSR_64_LFI_AllRegs_NoSSE_SaveList;
+      }
       if (HasAVX512)
         return CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
@@ -334,7 +371,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       if (IsWin64)
         return HasEGPR ? CSR_Win64_APX_SwiftError_SaveList
                        : CSR_Win64_SwiftError_SaveList;
-      return CSR_64_SwiftError_SaveList;
+      return Subtarget.isLFI() ? CSR_64_LFI_SwiftError_SaveList
+                               : CSR_64_SwiftError_SaveList;
     }
 
     if (IsWin64 || IsUEFI64) {
@@ -342,6 +380,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return HasEGPR ? CSR_Win64_APX_SaveList : CSR_Win64_SaveList;
       return CSR_Win64_NoSSE_SaveList;
     }
+    if (Subtarget.isLFI())
+      return CallsEHReturn ? CSR_64_LFI_EHRet_SaveList : CSR_64_LFI_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     return CSR_64_SaveList;
@@ -360,7 +400,9 @@ const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
   assert(MF && "Invalid MachineFunction pointer.");
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR())
-    return CSR_64_CXX_TLS_Darwin_ViaCopy_SaveList;
+    return MF->getSubtarget<X86Subtarget>().isLFI()
+               ? CSR_64_LFI_CXX_TLS_Darwin_ViaCopy_SaveList
+               : CSR_64_CXX_TLS_Darwin_ViaCopy_SaveList;
   return nullptr;
 }
 
