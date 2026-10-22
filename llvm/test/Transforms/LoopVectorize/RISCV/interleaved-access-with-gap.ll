@@ -118,15 +118,16 @@ define void @factor4_3member_i64(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i64], ptr [[A]], i64 [[INDEX]], i64 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave4.nxv8i64(<vscale x 8 x i64> [[WIDE_VEC]])
-; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP5]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i64], ptr [[A]], i64 [[INDEX]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP14]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [4 x i64], ptr [[A]], i64 [[INDEX]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP15]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <vscale x 2 x i64> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 2 x i64> [[TMP10]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
