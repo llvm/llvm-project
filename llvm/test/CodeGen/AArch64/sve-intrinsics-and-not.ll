@@ -58,6 +58,52 @@ define <vscale x 4 x i32> @and_not_commuted(<vscale x 4 x i32> %a, <vscale x 4 x
   ret <vscale x 4 x i32> %and
 }
 
+define <vscale x 16 x i8> @and_not_poison_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i1> %pg) {
+; SVE-LABEL: and_not_poison_i8:
+; SVE:       // %bb.0:
+; SVE-NEXT:    not z1.b, p0/m, z1.b
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2P2-LABEL: and_not_poison_i8:
+; SVE2P2:       // %bb.0:
+; SVE2P2-NEXT:    not z1.b, p0/z, z1.b
+; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
+; SVE2P2-NEXT:    ret
+;
+; SME-LABEL: and_not_poison_i8:
+; SME:       // %bb.0:
+; SME-NEXT:    not z1.b, p0/m, z1.b
+; SME-NEXT:    and z0.d, z0.d, z1.d
+; SME-NEXT:    ret
+  %not = call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
+  %and = and <vscale x 16 x i8> %a, %not
+  ret <vscale x 16 x i8> %and
+}
+
+define <vscale x 8 x i16> @and_not_poison_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %pg) {
+; SVE-LABEL: and_not_poison_i16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    not z1.h, p0/m, z1.h
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2P2-LABEL: and_not_poison_i16:
+; SVE2P2:       // %bb.0:
+; SVE2P2-NEXT:    not z1.h, p0/z, z1.h
+; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
+; SVE2P2-NEXT:    ret
+;
+; SME-LABEL: and_not_poison_i16:
+; SME:       // %bb.0:
+; SME-NEXT:    not z1.h, p0/m, z1.h
+; SME-NEXT:    and z0.d, z0.d, z1.d
+; SME-NEXT:    ret
+  %not = call <vscale x 8 x i16> @llvm.aarch64.sve.not.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b)
+  %and = and <vscale x 8 x i16> %a, %not
+  ret <vscale x 8 x i16> %and
+}
+
 define <vscale x 4 x i32> @and_not_poison_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %pg) {
 ; SVE-LABEL: and_not_poison_i32:
 ; SVE:       // %bb.0:
@@ -79,6 +125,29 @@ define <vscale x 4 x i32> @and_not_poison_i32(<vscale x 4 x i32> %a, <vscale x 4
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = and <vscale x 4 x i32> %a, %not
   ret <vscale x 4 x i32> %and
+}
+
+define <vscale x 2 x i64> @and_not_poison_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i1> %pg) {
+; SVE-LABEL: and_not_poison_i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    not z1.d, p0/m, z1.d
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2P2-LABEL: and_not_poison_i64:
+; SVE2P2:       // %bb.0:
+; SVE2P2-NEXT:    not z1.d, p0/z, z1.d
+; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
+; SVE2P2-NEXT:    ret
+;
+; SME-LABEL: and_not_poison_i64:
+; SME:       // %bb.0:
+; SME-NEXT:    not z1.d, p0/m, z1.d
+; SME-NEXT:    and z0.d, z0.d, z1.d
+; SME-NEXT:    ret
+  %not = call <vscale x 2 x i64> @llvm.aarch64.sve.not.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b)
+  %and = and <vscale x 2 x i64> %a, %not
+  ret <vscale x 2 x i64> %and
 }
 
 ; SVE AND_U with ordinary LLVM NOT.
