@@ -159,9 +159,7 @@ define void @ult_const_query_slt_offset(i32 %x) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[X_M5:%.*]] = add i32 [[X]], -5
-; CHECK-NEXT:    [[Q:%.*]] = icmp sge i32 [[X_M5]], 5
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
