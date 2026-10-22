@@ -5,7 +5,7 @@
 // Test  UnrollContractionPattern
 //===----------------------------------------------------------------------===//
 // CHECK-LABEL: @matmul
-func.func @matmul(%mask: vector<8x8x4xi1>, %lhs: vector<8x4xf32>, %rhs: vector<4x8xf32>, %acc: vector<8x8xf32>) -> vector<8x8xf32> {
+func.func @matmul(%lhs: vector<8x4xf32>, %rhs: vector<4x8xf32>, %acc: vector<8x8xf32>) -> vector<8x8xf32> {
 
 // CHECK-COUNT-8: vector.contract  {{.*}} : vector<1x4xf32>, vector<4x8xf32> into vector<1x8xf32>
   %res = vector.contract {
@@ -20,7 +20,7 @@ func.func @matmul(%mask: vector<8x8x4xi1>, %lhs: vector<8x4xf32>, %rhs: vector<4
 // -----
 
 // CHECK-LABEL: @negative_batched_matmul
-func.func @negative_batched_matmul(%mask: vector<1x8x8x4xi1>, %lhs: vector<1x8x4xf32>, %rhs: vector<1x4x8xf32>, %acc: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
+func.func @negative_batched_matmul(%lhs: vector<1x8x4xf32>, %rhs: vector<1x4x8xf32>, %acc: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
 
 // CHECK: vector.contract  {{.*}} : vector<1x8x4xf32>, vector<1x4x8xf32> into vector<1x8x8xf32>
   %res = vector.contract {
@@ -35,7 +35,7 @@ func.func @negative_batched_matmul(%mask: vector<1x8x8x4xi1>, %lhs: vector<1x8x4
 // -----
 
 // CHECK-LABEL: @negative_matmul_transpose_a
-func.func @negative_matmul_transpose_a(%mask: vector<8x8x4xi1>, %lhs: vector<4x8xf32>, %rhs: vector<4x8xf32>, %acc: vector<8x8xf32>) -> vector<8x8xf32> {
+func.func @negative_matmul_transpose_a(%lhs: vector<4x8xf32>, %rhs: vector<4x8xf32>, %acc: vector<8x8xf32>) -> vector<8x8xf32> {
 
 // CHECK: vector.contract  {{.*}} : vector<4x8xf32>, vector<4x8xf32> into vector<8x8xf32>
   %res = vector.contract {

@@ -570,8 +570,8 @@ namespace llvm {
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     unsigned getJumpTableEncoding() const override;
     bool isJumpTableRelative() const override;
