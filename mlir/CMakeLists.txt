@@ -143,6 +143,10 @@ endif()
 
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
+set(MLIR_ENABLE_AGX_RUNNER 0 CACHE BOOL
+  "Enable building the MLIR runtime for Apple GPUs on Asahi Linux (the CUDA wrappers against ZLUDA's libcuda)")
+set(MLIR_AGX_LIBCUDA "" CACHE FILEPATH
+  "The CUDA driver library of the AGX runner: ZLUDA's libnvcuda_agx.so (or the libcuda.so.1 it is installed as)")
 set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
 set(MLIR_ENABLE_LEVELZERO_RUNNER 0 CACHE BOOL "Enable building the MLIR LevelZero runner")
 set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the MLIR SPIR-V cpu runner")

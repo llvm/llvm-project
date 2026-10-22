@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMAGXDesc
   AGXMCAsmInfo.cpp
   AGXMCCodeEmitter.cpp
   AGXMCTargetDesc.cpp
+  AGXMesaISA.cpp
 
   LINK_COMPONENTS
   AGXInfo

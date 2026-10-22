@@ -26,6 +26,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSubtarget.h"
+#include "AGXTargetMachine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -45,10 +47,14 @@ namespace {
 class AGXExpandWideAtomics : public FunctionPass {
 public:
   static char ID;
-  AGXExpandWideAtomics() : FunctionPass(ID) {}
+  explicit AGXExpandWideAtomics(const AGXTargetMachine *TM = nullptr)
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override { return "AGX Expand Wide Atomics"; }
   bool runOnFunction(Function &F) override;
+
+private:
+  const AGXTargetMachine *TM;
 };
 
 } // namespace
@@ -58,8 +64,8 @@ char AGXExpandWideAtomics::ID = 0;
 INITIALIZE_PASS(AGXExpandWideAtomics, DEBUG_TYPE, "AGX Expand Wide Atomics",
                 false, false)
 
-FunctionPass *llvm::createAGXExpandWideAtomicsPass() {
-  return new AGXExpandWideAtomics();
+FunctionPass *llvm::createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM) {
+  return new AGXExpandWideAtomics(TM);
 }
 
 static GlobalVariable *getLocks(Module &M) {
@@ -146,7 +152,8 @@ static void expand(Instruction &I, unsigned Bits, GlobalVariable *Locks) {
   B.CreateCondBr(B.CreateExtractValue(Acq, 1), Crit, Latch);
 
   B.SetInsertPoint(Crit);
-  B.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  // Lock semantics: acquire after taking the lock, release before freeing it.
+  B.CreateFence(AtomicOrdering::Acquire);
   auto Word = [&](unsigned K) {
     return B.CreateConstGEP1_32(B.getInt8Ty(), Ptr, 4 * K);
   };
@@ -191,7 +198,7 @@ static void expand(Instruction &I, unsigned Bits, GlobalVariable *Locks) {
       B.SetInsertPoint(After);
     }
   }
-  B.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  B.CreateFence(AtomicOrdering::Release);
   B.CreateAtomicRMW(AtomicRMWInst::Xchg, Lock, B.getInt32(0), MaybeAlign(4),
                     AtomicOrdering::Monotonic);
   BasicBlock *CritEnd = B.GetInsertBlock();
@@ -221,10 +228,19 @@ bool AGXExpandWideAtomics::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   const DataLayout &DL = F.getDataLayout();
+  const AGXTargetLowering *TLI =
+      TM ? TM->getSubtargetImpl(F)->getTargetLowering() : nullptr;
   SmallVector<std::pair<Instruction *, unsigned>, 4> Wide;
-  for (Instruction &I : instructions(F))
+  for (Instruction &I : instructions(F)) {
+    // Wide operations the chip has an instruction for.
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(&I);
+        RMW && TLI &&
+        TLI->shouldExpandAtomicRMWInIR(RMW) ==
+            TargetLowering::AtomicExpansionKind::None)
+      continue;
     if (unsigned Bits = wideAtomicSize(I, DL))
       Wide.push_back({&I, Bits});
+  }
   if (Wide.empty())
     return false;
   GlobalVariable *Locks = getLocks(*F.getParent());

@@ -66,17 +66,21 @@ private:
                           SDValue &Signed, SDValue &Shift) {
     return SelectDeviceAddr(Addr, 2, Base, Index, Signed, Shift);
   }
-  bool SelectLocalAddr(SDValue Addr, SDValue &Base, SDValue &Index);
+  bool SelectLocalAddr(SDValue Addr, SDValue &Base, SDValue &Index,
+                       unsigned Unit);
   bool SelectLocalAddr8(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 4);
   }
   bool SelectLocalAddr16(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 8);
   }
   bool SelectLocalAddr32(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 16);
   }
   bool SelectStackAddr(SDValue Addr, SDValue &Offset);
+
+  void selectVectorLoad(SDNode *N, unsigned NumElts);
+  void selectVectorStore(SDNode *N, unsigned NumElts);
 };
 
 class AGXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -102,6 +106,24 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   switch (N->getOpcode()) {
+  case AGXISD::LOAD_V2:
+  case AGXISD::LOAD_V3:
+  case AGXISD::LOAD_V4:
+    return selectVectorLoad(N, N->getNumValues() - 1);
+  case AGXISD::STORE_V2:
+  case AGXISD::STORE_V3:
+  case AGXISD::STORE_V4:
+    return selectVectorStore(N, N->getNumOperands() - 2);
+  case ISD::BUILD_PAIR: {
+    SDLoc DL(N);
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(AGX::GPR64RegClassID, DL, MVT::i32),
+        N->getOperand(0), CurDAG->getTargetConstant(AGX::sub0, DL, MVT::i32),
+        N->getOperand(1), CurDAG->getTargetConstant(AGX::sub1, DL, MVT::i32)};
+    ReplaceNode(N, CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                          MVT::i64, Ops));
+    return;
+  }
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -120,6 +142,95 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
     break;
   }
   SelectCode(N);
+}
+
+// The i32 format and the masks of 2, 3 and 4 consecutive values.
+static constexpr unsigned FmtI32 = 2;
+static unsigned vectorMask(unsigned NumElts) { return (1u << NumElts) - 1; }
+
+static unsigned tupleClass(unsigned NumElts) {
+  return NumElts == 2   ? AGX::GPR32x2RegClassID
+         : NumElts == 3 ? AGX::GPR96RegClassID
+                        : AGX::GPR128RegClassID;
+}
+
+static const unsigned SubRegs[] = {AGX::sub0, AGX::sub1, AGX::sub2, AGX::sub3};
+
+/// LOAD_V2/3/4: one device_load / threadgroup_load of the register tuple, and
+/// its elements as subregisters.
+void AGXDAGToDAGISel::selectVectorLoad(SDNode *N, unsigned NumElts) {
+  SDLoc DL(N);
+  auto *M = cast<MemSDNode>(N);
+  SDValue Chain = N->getOperand(0), Addr = N->getOperand(1);
+  SDValue Mask = CurDAG->getTargetConstant(vectorMask(NumElts), DL, MVT::i32);
+  SDValue Fmt = CurDAG->getTargetConstant(FmtI32, DL, MVT::i32);
+  MachineSDNode *Load;
+  if (M->getAddressSpace() == AGX::THREADGROUP_ADDRESS) {
+    SDValue Base, Index;
+    SelectLocalAddr32(Addr, Base, Index);
+    unsigned Opc = NumElts == 2   ? AGX::LOCAL_LOAD_64
+                   : NumElts == 3 ? AGX::LOCAL_LOAD_96
+                                  : AGX::LOCAL_LOAD_128;
+    Load = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, MVT::Other,
+                                  {Fmt, Mask, Base, Index, Chain});
+  } else {
+    SDValue Base, Index, Signed, Shift;
+    SelectDeviceAddr32(Addr, Base, Index, Signed, Shift);
+    unsigned Opc = NumElts == 2   ? AGX::DEVICE_LOAD_64
+                   : NumElts == 3 ? AGX::DEVICE_LOAD_96
+                                  : AGX::DEVICE_LOAD_128;
+    SDValue G = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    Load = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, MVT::Other,
+        {G, Fmt, Mask, Base, Index, Signed, Shift, Chain});
+  }
+  CurDAG->setNodeMemRefs(Load, {M->getMemOperand()});
+  for (unsigned I = 0; I < NumElts; ++I)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   SubRegs[I], DL, MVT::i32, SDValue(Load, 0)));
+  ReplaceUses(SDValue(N, NumElts), SDValue(Load, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+/// STORE_V2/3/4: the elements as one register tuple, then one device_store /
+/// threadgroup_store.
+void AGXDAGToDAGISel::selectVectorStore(SDNode *N, unsigned NumElts) {
+  SDLoc DL(N);
+  auto *M = cast<MemSDNode>(N);
+  SDValue Chain = N->getOperand(0), Addr = N->getOperand(NumElts + 1);
+  SmallVector<SDValue, 9> Seq{
+      CurDAG->getTargetConstant(tupleClass(NumElts), DL, MVT::i32)};
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Seq.push_back(N->getOperand(1 + I));
+    Seq.push_back(CurDAG->getTargetConstant(SubRegs[I], DL, MVT::i32));
+  }
+  SDValue Val(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                     MVT::Untyped, Seq),
+              0);
+  SDValue Mask = CurDAG->getTargetConstant(vectorMask(NumElts), DL, MVT::i32);
+  SDValue Fmt = CurDAG->getTargetConstant(FmtI32, DL, MVT::i32);
+  MachineSDNode *Store;
+  if (M->getAddressSpace() == AGX::THREADGROUP_ADDRESS) {
+    SDValue Base, Index;
+    SelectLocalAddr32(Addr, Base, Index);
+    unsigned Opc = NumElts == 2   ? AGX::LOCAL_STORE_64
+                   : NumElts == 3 ? AGX::LOCAL_STORE_96
+                                  : AGX::LOCAL_STORE_128;
+    Store = CurDAG->getMachineNode(Opc, DL, MVT::Other,
+                                   {Fmt, Mask, Val, Base, Index, Chain});
+  } else {
+    SDValue Base, Index, Signed, Shift;
+    SelectDeviceAddr32(Addr, Base, Index, Signed, Shift);
+    unsigned Opc = NumElts == 2   ? AGX::DEVICE_STORE_64
+                   : NumElts == 3 ? AGX::DEVICE_STORE_96
+                                  : AGX::DEVICE_STORE_128;
+    SDValue G = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    Store = CurDAG->getMachineNode(
+        Opc, DL, MVT::Other,
+        {G, Fmt, Mask, Val, Base, Index, Signed, Shift, Chain});
+  }
+  CurDAG->setNodeMemRefs(Store, {M->getMemOperand()});
+  ReplaceNode(N, Store);
 }
 
 /// Integer immediates 0-255 are encoded in the instruction.
@@ -330,10 +441,36 @@ bool AGXDAGToDAGISel::SelectDeviceAddr(SDValue Addr, unsigned ElemLog2,
   return true;
 }
 
-/// Threadgroup addresses are 16-bit byte offsets in the base register.
+/// Threadgroup addresses are 16-bit byte offsets in the base register. The
+/// index counts four-element vectors, Unit bytes each (the address is base +
+/// 4 * element size * index), so constant offsets that are multiples of Unit
+/// go in the immediate index.
 bool AGXDAGToDAGISel::SelectLocalAddr(SDValue Addr, SDValue &Base,
-                                      SDValue &Index) {
+                                      SDValue &Index, unsigned Unit) {
   SDLoc DL(Addr);
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t Offset = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    SDValue B = Addr.getOperand(0);
+    if (Offset > 0 && Offset % Unit == 0 && isUInt<15>(Offset / Unit)) {
+      Base = isNullConstant(B)
+                 ? CurDAG->getTargetConstant(0, DL, MVT::i16)
+                 : CurDAG->getTargetExtractSubreg(AGX::lo16, DL, MVT::i16, B);
+      Index = CurDAG->getTargetConstant(Offset / Unit, DL, MVT::i16);
+      return true;
+    }
+    // base + (Offset % Unit) is already computed for another access: reuse
+    // it with the rest of the offset in the index.
+    if (Offset > int64_t(Unit) && isUInt<15>(Offset / Unit)) {
+      SDValue Rem = CurDAG->getConstant(Offset % Unit, DL, MVT::i32);
+      if (SDNode *N = CurDAG->getNodeIfExists(
+              ISD::ADD, CurDAG->getVTList(MVT::i32), {B, Rem})) {
+        Base = CurDAG->getTargetExtractSubreg(AGX::lo16, DL, MVT::i16,
+                                              SDValue(N, 0));
+        Index = CurDAG->getTargetConstant(Offset / Unit, DL, MVT::i16);
+        return true;
+      }
+    }
+  }
   if (isNullConstant(Addr))
     Base = CurDAG->getTargetConstant(0, DL, MVT::i16);
   else

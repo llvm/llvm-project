@@ -28,12 +28,16 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace llvm;
@@ -44,6 +48,13 @@ namespace {
 
 class AGXAsmPrinter : public AsmPrinter {
   bool ReportedMissingEncoding = false;
+  /// Encodes instructions printed as text in agx-strict mode, so that they are
+  /// checked against Mesa's forms as object output is.
+  std::unique_ptr<MCCodeEmitter> MesaChecker;
+  /// The .agx.kernels record of each kernel, emitted at the end of the file.
+  SmallVector<std::pair<std::string, SmallVector<uint32_t, 16>>, 4> Kernels;
+
+  void recordKernel();
 
 public:
   static char ID;
@@ -91,8 +102,11 @@ void AGXAsmPrinter::emitFunctionBodyStart() {
                               Twine(MFI->getUniformHalfCount()) +
                               " x 16-bit (threadgroups_per_grid at u" +
                               Twine(MFI->getImplicitArgHalfIndex() / 2) + ")");
-  OutStreamer->emitRawComment(" general purpose registers: " +
-                              Twine(getGPRCount(*MF)) + " x 32-bit");
+  unsigned GPRs = getGPRCount(*MF);
+  OutStreamer->emitRawComment(
+      " general purpose registers: " + Twine(GPRs) + " x 32-bit (up to " +
+      Twine(AGXSubtarget::maxThreadsForHalves(2 * GPRs)) +
+      " threads per threadgroup)");
   if (MFI->getGlobalDataVReg())
     OutStreamer->emitRawComment(
         " global data buffer at u" + Twine(MFI->getGlobalDataHalfIndex() / 2) +
@@ -114,7 +128,131 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   AsmPrinter::emitGlobalVariable(GV);
 }
 
+/// The .agx.kernels record of the current kernel. Each record is a sequence
+/// of little-endian 32-bit words:
+///
+///   size (of the record in bytes), version (1), name length, the name
+///   (padded with zeros to 4 bytes), uniform halves, first half of
+///   threadgroups_per_grid, first half of the global data buffer address
+///   (0xffffffff if none), general purpose registers, threadgroup memory
+///   bytes, stack bytes per thread, argument count, and for each argument
+///   of the source kernel: kind (0 = its bytes are in the uniforms, 1 = a
+///   64-bit pointer to its bytes is), its size in bytes, and its first half.
+///   Optional tagged extensions follow, up to the record's size; readers skip
+///   the ones they do not know:
+///     1, x, y, z: the kernel runs clusters of x * y * z CTAs as one
+///     threadgroup (function attribute agx-cluster-dims): the launch divides
+///     the grid by (x, y, z) and multiplies the threadgroup's z by x * y * z.
+///     2, 1, N, ...: checked mode (AGXUsage.rst, "Checked mode").
+///     3, table half, count half: checked mode's allocation table.
+///
+/// Argument values are packed little-endian from their first half in 32-bit
+/// words (16-bit arguments in one half).
+void AGXAsmPrinter::recordKernel() {
+  const Function &F = MF->getFunction();
+  if (F.getCallingConv() != CallingConv::AGX_KERNEL)
+    return;
+  const auto *MFI = MF->getInfo<AGXMachineFunctionInfo>();
+  const DataLayout &DL = F.getDataLayout();
+  SmallVector<uint32_t, 16> R;
+  R.push_back(MFI->getUniformHalfCount());
+  R.push_back(MFI->getImplicitArgHalfIndex());
+  R.push_back(MFI->getGlobalDataVReg() ? MFI->getGlobalDataHalfIndex()
+                                       : ~0u);
+  R.push_back(getGPRCount(*MF));
+  R.push_back(MFI->getThreadgroupSize());
+  R.push_back(AGXFrameLowering::getStackAdjustUnits(*MF) * 4);
+  auto Half = [&](unsigned Arg) {
+    return Arg < MFI->ArgHalves.size() ? MFI->ArgHalves[Arg] : ~0u;
+  };
+  SmallVector<uint32_t, 16> Args;
+  Attribute Desc = F.getFnAttribute("agx-kernel-args");
+  if (Desc.isValid()) {
+    // Written by AGXPromoteKernelArgs: <v|p><bytes>:<first argument>.
+    SmallVector<StringRef, 8> Items;
+    Desc.getValueAsString().split(Items, ',');
+    for (StringRef Item : Items) {
+      auto [Size, First] = Item.drop_front().split(':');
+      unsigned Bytes = 0, Arg = 0;
+      Size.getAsInteger(10, Bytes);
+      First.getAsInteger(10, Arg);
+      Args.append({Item.front() == 'p' ? 1u : 0u, Bytes, Half(Arg)});
+    }
+  } else {
+    for (const Argument &A : F.args()) {
+      if (F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked").isValid())
+        continue;
+      Type *T = A.getType()->isPointerTy() ? A.getParamByRefType() : nullptr;
+      Args.append({T ? 1u : 0u,
+                   uint32_t(T ? DL.getTypeAllocSize(T)
+                              : DL.getTypeStoreSize(A.getType())),
+                   Half(A.getArgNo())});
+    }
+  }
+  R.push_back(Args.size() / 3);
+  R.append(Args);
+  // Extension 3 goes last: readers stop at an extension they do not know.
+  SmallVector<uint32_t, 3> TableExt;
+  Attribute Slots = F.getFnAttribute("agx-checked-slots");
+  if (Slots.isValid()) {
+    // Checked mode: 2, version 1, N, record half, threadgroup bytes half,
+    // then per slot: argument, offset, low bound half, high bound half.
+    DenseMap<StringRef, unsigned> Hidden;
+    for (const Argument &A : F.args()) {
+      Attribute Role =
+          F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked");
+      if (Role.isValid())
+        Hidden[Role.getValueAsString()] = Half(A.getArgNo());
+    }
+    SmallVector<StringRef, 8> Items;
+    if (!Slots.getValueAsString().empty())
+      Slots.getValueAsString().split(Items, ',');
+    R.append({2, 1, uint32_t(Items.size()), Hidden.lookup("record"),
+              Hidden.lookup("threadgroup-bytes")});
+    for (auto [S, Item] : enumerate(Items)) {
+      auto [ArgStr, OffStr] = Item.split(':');
+      unsigned Arg = 0;
+      int64_t Off = -1;
+      ArgStr.getAsInteger(10, Arg);
+      OffStr.getAsInteger(10, Off);
+      R.append({Arg, uint32_t(Off), Hidden.lookup(("lo" + Twine(S)).str()),
+                Hidden.lookup(("hi" + Twine(S)).str())});
+    }
+    if (Hidden.count("table"))
+      TableExt = {3, Hidden.lookup("table"), Hidden.lookup("table-count")};
+  }
+  Attribute Cluster = F.getFnAttribute("agx-cluster-dims");
+  if (Cluster.isValid()) {
+    SmallVector<StringRef, 3> Dims;
+    Cluster.getValueAsString().split(Dims, ',');
+    R.push_back(1);
+    for (unsigned I = 0; I < 3; ++I) {
+      unsigned D = 1;
+      if (I < Dims.size() && Dims[I].trim().getAsInteger(10, D))
+        D = 1;
+      R.push_back(std::max(D, 1u));
+    }
+  }
+  R.append(TableExt);
+  Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
+}
+
 void AGXAsmPrinter::emitEndOfAsmFile(Module &M) {
+  if (!Kernels.empty()) {
+    OutStreamer->switchSection(
+        OutContext.getELFSection(".agx.kernels", ELF::SHT_PROGBITS, 0));
+    OutStreamer->emitValueToAlignment(Align(4));
+    for (const auto &[Name, R] : Kernels) {
+      uint32_t NameWords = divideCeil(Name.size(), 4);
+      OutStreamer->emitInt32(4 * (3 + NameWords + R.size()));
+      OutStreamer->emitInt32(1);
+      OutStreamer->emitInt32(Name.size());
+      OutStreamer->emitBytes(Name);
+      OutStreamer->emitZeros(4 * NameWords - Name.size());
+      for (uint32_t W : R)
+        OutStreamer->emitInt32(W);
+    }
+  }
   AGX::GlobalDataLayout Layout = AGX::computeGlobalDataLayout(M);
   if (Layout.empty())
     return;
@@ -144,6 +282,7 @@ void AGXAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void AGXAsmPrinter::emitFunctionBodyEnd() {
+  recordKernel();
   const auto &ST = MF->getSubtarget<AGXSubtarget>();
   if (ST.getEncodingFamily() != AGXSubtarget::AGX2)
     return;
@@ -170,6 +309,14 @@ void AGXAsmPrinter::emitInstruction(const MachineInstr *MI) {
       ReportedMissingEncoding = true;
     }
     return;
+  }
+  if (ST.hasMesaISA() && OutStreamer->hasRawTextSupport()) {
+    if (!MesaChecker)
+      MesaChecker.reset(
+          TM.getTarget().createMCCodeEmitter(*TM.getMCInstrInfo(), OutContext));
+    SmallVector<char, 16> Bytes;
+    SmallVector<MCFixup, 2> Fixups;
+    MesaChecker->encodeInstruction(Inst, Bytes, Fixups, ST);
   }
   EmitToStreamer(*OutStreamer, Inst);
 }

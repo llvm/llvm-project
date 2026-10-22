@@ -16,19 +16,25 @@
 
 #include "AGXTargetMachine.h"
 #include "AGX.h"
+#include "AGXAliasAnalysis.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXTargetTransformInfo.h"
 #include "TargetInfo/AGXTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 
 using namespace llvm;
 
@@ -36,14 +42,21 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
+  initializeAGXAAWrapperPassPass(PR);
+  initializeAGXExternalAAWrapperPass(PR);
+  initializeAGXPromoteKernelArgsPass(PR);
+  initializeAGXCheckedAccessesPass(PR);
   initializeAGXCodeGenPreparePass(PR);
   initializeAGXStrictFPPass(PR);
   initializeAGXLowerFPEnvPass(PR);
   initializeAGXSoftF64Pass(PR);
   initializeAGXExpandWideAtomicsPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
+  initializeAGXSinkAddressesPass(PR);
+  initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
+  initializeAGXHoistFromElseFlowPass(PR);
   initializeAGXLowerControlFlowPass(PR);
   initializeAGXInsertWaitsPass(PR);
   initializeAGXAsmPrinterPass(PR);
@@ -79,6 +92,16 @@ AGXTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  // The module flag "agx-strict" selects Mesa's instruction forms for every
+  // function of the module.
+  if (const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("agx-strict")))
+    if (!Flag->isZero())
+      FS = FS.empty() ? "+agx-strict" : FS + ",+agx-strict";
+  if (const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("agx-checked")))
+    if (!Flag->isZero())
+      FS = FS.empty() ? "+agx-checked" : FS + ",+agx-checked";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
@@ -139,22 +162,53 @@ public:
 
 } // namespace
 
+void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([] { return AGXAA(); });
+  });
+  PB.registerParseAACallback([](StringRef Name, AAManager &AAM) {
+    if (Name != "agx-aa")
+      return false;
+    AAM.registerFunctionAnalysis<AGXAA>();
+    return true;
+  });
+}
+
+void AGXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AGXAA>();
+}
+
 TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AGXPassConfig(*this, PM);
 }
 
 void AGXPassConfig::addIRPasses() {
+  // Disjoint address spaces do not alias (for every IR and machine pass that
+  // asks alias analysis, the scheduler's memory dependences among them).
+  addPass(createAGXAAWrapperPass());
+  addPass(createAGXExternalAAWrapperPass());
   // There are no function calls: inline everything into the kernels.
   addPass(createAGXAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());
 
   // 64- and 128-bit atomics take locks; the others are hardware atomics.
-  addPass(createAGXExpandWideAtomicsPass());
+  addPass(createAGXExpandWideAtomicsPass(&getAGXTargetMachine()));
   addPass(createAtomicExpandLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInferAddressSpacesPass());
     addPass(createSROAPass());
   }
+  // Checked mode: check every access, adding the hidden arguments the
+  // runtime fills (before generic pointers and kernel arguments change form).
+  addPass(createAGXCheckedAccessesPass(&getAGXTargetMachine()));
+  // Generic pointers that may name threadgroup memory become tagged integers.
+  addPass(createAGXLowerGenericAddressesPass());
+  // By-reference kernel arguments become uniform register values.
+  addPass(createAGXPromoteKernelArgsPass());
+  // Neighbouring 32-bit accesses become one vector access (after checked
+  // mode, which checks the accesses as the source wrote them).
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoadStoreVectorizerPass());
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.
   addPass(createScalarizerPass());
@@ -178,6 +232,8 @@ bool AGXPassConfig::addPreISel() {
   // regions are structurized too.
   addPass(createStructurizeCFGPass(/*SkipUniformRegions=*/false));
   addPass(createAGXAnnotateControlFlowPass());
+  // Before LCSSA, which would put phis between addresses and their uses.
+  addPass(createAGXSinkAddressesPass());
   addPass(createLCSSAPass());
   return false;
 }
@@ -190,6 +246,9 @@ bool AGXPassConfig::addInstSelector() {
 void AGXPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
   addPass(createAGXFoldOperandsPass());
+  // MachineCSE and MachineSink may have put code where only the threads of
+  // a then side run it.
+  addPass(createAGXHoistFromElseFlowPass());
 }
 
 void AGXPassConfig::addPreEmitPass() {

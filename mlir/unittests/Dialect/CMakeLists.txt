@@ -6,6 +6,7 @@ mlir_target_link_libraries(MLIRDialectTests
   MLIRIR
   MLIRDialect)
 
+add_subdirectory(AGX)
 add_subdirectory(AMDGPU)
 add_subdirectory(Arith)
 add_subdirectory(ArmSME)

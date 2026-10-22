@@ -353,6 +353,33 @@ if(LLVM_ENABLE_PIC)
     endif()
   endif()
 
+  if(MLIR_ENABLE_AGX_RUNNER)
+    # The CUDA wrappers built against a CUDA driver API implementation for
+    # Apple GPUs (ZLUDA's zluda_agx), without a CUDA toolkit: AGXCudaCompat
+    # declares the part of cuda.h they use. Kernels are AGX objects from
+    # gpu-module-to-binary with #agxir.target.
+    if(NOT MLIR_AGX_LIBCUDA)
+      message(SEND_ERROR "MLIR_ENABLE_AGX_RUNNER needs MLIR_AGX_LIBCUDA")
+    endif()
+    add_mlir_library(mlir_agx_runtime
+      SHARED
+      CudaRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+
+      STANDALONE
+    )
+    set_property(TARGET mlir_agx_runtime PROPERTY CXX_STANDARD 14)
+    target_include_directories(mlir_agx_runtime
+      PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/AGXCudaCompat
+    )
+    target_link_libraries(mlir_agx_runtime
+      PRIVATE
+      ${MLIR_AGX_LIBCUDA}
+    )
+  endif()
+
   if(MLIR_ENABLE_ROCM_RUNNER)
     # Configure ROCm support.
     if (NOT DEFINED ROCM_PATH)

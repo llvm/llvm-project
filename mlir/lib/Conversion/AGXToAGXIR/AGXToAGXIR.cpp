@@ -51,6 +51,18 @@ struct ThreadgroupBarrierOpLowering
   }
 };
 
+/// The block barrier orders memory itself (B16), so it needs no fences.
+struct BlockBarrierOpLowering : ConvertOpToLLVMPattern<BlockBarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(BlockBarrierOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::BlockBarrierOp>(op);
+    return success();
+  }
+};
+
 /// Create the AGXIR shuffle for the mode and scope.
 static Value createShuffle(ConversionPatternRewriter &rewriter, Location loc,
                            ShuffleMode mode, Scope scope, Value value,
@@ -250,9 +262,26 @@ struct MMAOpLowering : ConvertOpToLLVMPattern<MMAOp> {
   LogicalResult
   matchAndRewrite(MMAOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // agx-expand-ops turns mixed precision and the negated accumulator into
+    // a same-type product on chips whose matrix unit does not do them.
+    if (op.getA().getType() != op.getC().getType() || op.getNegateAcc())
+      return rewriter.notifyMatchFailure(
+          op, "mixed precision or negated accumulator: run agx-expand-ops");
     rewriter.replaceOpWithNewOp<AGXIR::SIMDGroupMatrixFMAOp>(
         op, adaptor.getA().getType(), adaptor.getA(), adaptor.getB(),
         adaptor.getC());
+    return success();
+  }
+};
+
+struct CoreIdOpLowering : ConvertOpToLLVMPattern<CoreIdOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(CoreIdOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AGXIR::CoreIdOp>(op, rewriter.getI32Type(),
+                                                 LLVM::ConstantRangeAttr());
     return success();
   }
 };
@@ -301,8 +330,9 @@ struct ConvertAGXToAGXIRPass
 
 void mlir::populateAGXToAGXIRConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<ThreadgroupBarrierOpLowering, MemoryBarrierOpLowering,
-               MMAOpLowering, SetFPModeOpLowering, GetFPModeOpLowering,
+  patterns.add<ThreadgroupBarrierOpLowering, BlockBarrierOpLowering,
+               MemoryBarrierOpLowering,
+               MMAOpLowering, CoreIdOpLowering, SetFPModeOpLowering, GetFPModeOpLowering,
                ShuffleOpLowering,
                ReduceOpLowering, BallotOpLowering>(converter);
 }

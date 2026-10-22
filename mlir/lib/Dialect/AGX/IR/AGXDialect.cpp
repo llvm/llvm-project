@@ -83,6 +83,105 @@ LogicalResult ReduceOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Matrix operations
+//===----------------------------------------------------------------------===//
+
+/// The accumulator may be the input type, or f32 for f16 and bf16 inputs.
+static bool isValidAccumulator(Type input, Type acc) {
+  return input == acc || (acc.isF32() && (input.isF16() || input.isBF16()));
+}
+
+LogicalResult MMAOp::verify() {
+  Type input = getElementTypeOrSelf(getA().getType());
+  Type acc = getElementTypeOrSelf(getC().getType());
+  if (!isValidAccumulator(input, acc))
+    return emitOpError() << "accumulator " << acc << " cannot accumulate "
+                         << input << " products";
+  return success();
+}
+
+static LogicalResult verifyFragmentAccess(Operation *op, MemRefType memref,
+                                          VectorType fragment) {
+  if (memref.getRank() != 2)
+    return op->emitOpError() << "requires a 2-D memref, got " << memref;
+  if (memref.getElementType() != fragment.getElementType())
+    return op->emitOpError() << "fragment " << fragment
+                             << " does not match the elements of " << memref;
+  return success();
+}
+
+LogicalResult MatrixLoadOp::verify() {
+  return verifyFragmentAccess(*this, getBase().getType(), getResult().getType());
+}
+
+LogicalResult MatrixStoreOp::verify() {
+  return verifyFragmentAccess(*this, getBase().getType(), getValue().getType());
+}
+
+LogicalResult MMATileOp::verify() {
+  auto a = getA().getType(), b = getB().getType();
+  if (a.getRank() != 2 || b.getRank() != 2)
+    return emitOpError() << "requires 2-D memrefs";
+  if (a.getElementType() != b.getElementType())
+    return emitOpError() << "requires A and B with the same element type";
+  for (int64_t dim : {getM(), getN(), getK()})
+    if (dim % 8 != 0)
+      return emitOpError() << "requires m, n and k to be multiples of 8";
+  VectorType acc = getAcc().getType();
+  if (!isValidAccumulator(a.getElementType(), acc.getElementType()))
+    return emitOpError() << "accumulator " << acc.getElementType()
+                         << " cannot accumulate " << a.getElementType()
+                         << " products";
+  if (acc.getNumElements() != getM() * getN() / 32)
+    return emitOpError() << "requires an accumulator of m * n / 32 = "
+                         << getM() * getN() / 32 << " elements per thread, got "
+                         << acc.getNumElements();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FMALaneShiftOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult FMALaneShiftOp::verify() {
+  uint32_t width = getWidth();
+  if (width != 2 && width != 4 && width != 16)
+    return emitOpError() << "requires a segment width of 2, 4 or 16, got "
+                         << width;
+  if (getShift() >= width)
+    return emitOpError() << "shift " << getShift()
+                         << " does not stay inside a segment of " << width
+                         << " lanes";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UniformRegionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UniformRegionOp::verifyRegions() {
+  auto yield = dyn_cast<YieldOp>(getBody().front().getTerminator());
+  if (!yield)
+    return emitOpError() << "requires an agx.yield terminator";
+  if (yield.getValues().getTypes() != getResultTypes())
+    return emitOpError() << "yields " << yield.getValues().getTypes()
+                         << " but returns " << getResultTypes();
+  // Thread-dependent values would make the region differ between threads.
+  WalkResult r = getBody().walk([&](Operation *op) {
+    StringRef name = op->getName().getStringRef();
+    if (name == "gpu.thread_id" || name == "gpu.block_id" ||
+        name == "gpu.global_id" || name == "gpu.lane_id" ||
+        name == "gpu.subgroup_id" || isa<CoreIdOp>(op)) {
+      op->emitOpError() << "is thread-dependent and cannot be in an "
+                           "agx.uniform_region";
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return failure(r.wasInterrupted());
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AGX/IR/AGXAttrs.cpp.inc"
 

@@ -89,7 +89,23 @@ def FeatureCanonicalNaN : SubtargetFeature<"canonical-nan", "HasCanonicalNaN",
 
 def FeatureMultiDieCoherency : SubtargetFeature<"multi-die-coherency",
   "HasMultiDieCoherency", "true",
-  "Device atomics must set the coherency bit (multi-die G13 parts)"
+  "Device atomics must set the coherency bit (multi-cluster G13 and two-die parts)"
+>;
+
+// G14C (M2 Max): the device atomic sub with bit 45 is a float32 add that
+// rounds to nearest even and flushes denormals, PTX's atom.add.f32
+// (Apple-M2-Playground novel-results 2026-10-17-atomic-variants).
+def FeatureDeviceAtomicFAdd : SubtargetFeature<"device-atomic-fadd",
+  "HasDeviceAtomicFAdd", "true",
+  "Device atomics include a float32 add"
+>;
+
+// G14C: cmpxchg with bit 45 is a u64 unsigned min (bit 46 clear) or max
+// (bit 46 set). With a result register it returns only whether memory changed,
+// so only atomics whose result is unused use it (2026-10-17-atomic-variants).
+def FeatureDeviceAtomicU64MinMax : SubtargetFeature<"device-atomic-u64-minmax",
+  "HasDeviceAtomicU64MinMax", "true",
+  "Device atomics include a 64-bit unsigned min and max without a result"
 >;
 
 def FeatureThreadgroupAtomics : SubtargetFeature<"threadgroup-atomics",
@@ -100,6 +116,17 @@ def FeatureThreadgroupAtomics : SubtargetFeature<"threadgroup-atomics",
 def FeatureDeviceAtomics : SubtargetFeature<"device-atomics",
   "HasDeviceAtomics", "true",
   "Has device memory atomics"
+>;
+
+// G14 (measured on the M2 Max, AGX Performance Simulator
+// tasks/ptx-re-blockers.md, B16): block_barrier (0x0978) waits for the
+// caller's aligned block of 4 SIMD-groups and orders their threadgroup and
+// device memory accesses, like threadgroup_barrier within the block. A block
+// cut short by the end of the threadgroup does not wait for the missing
+// groups.
+def FeatureBlockBarrier : SubtargetFeature<"block-barrier",
+  "HasBlockBarrier", "true",
+  "Has a barrier over an aligned block of 4 SIMD-groups"
 >;
 
 def FeatureStackAccess : SubtargetFeature<"stack-access",
@@ -121,6 +148,24 @@ def FeatureRayTracing : SubtargetFeature<"ray-tracing",
 def FeatureMeshShading : SubtargetFeature<"mesh-shading",
   "HasMeshShading", "true",
   "Has hardware mesh shading (not used by code generation)"
+>;
+
+// Code may contain only the instruction forms Mesa's asahi compiler emits for
+// the same GPU (llvm/utils/agx-mesa-isa). Requires a G13 or G14 processor and
+// turns off the capabilities Mesa does not use: the G14 device atomic float
+// add and u64 min/max, and the simdgroup matrix instruction. Every emitted
+// instruction is checked against Mesa's forms. In IR: the function attribute
+// "target-features"="+agx-strict", or the module flag !"agx-strict" = 1.
+def FeatureMesaISA : SubtargetFeature<"agx-strict", "HasMesaISA", "true",
+  "Emit only the instruction forms Mesa's AGX compiler emits"
+>;
+
+// Every load, store and atomic is checked before it runs, and the first bad
+// one is reported to the runtime (AGXUsage.rst, "Checked mode"). In IR: the
+// function attribute "target-features"="+agx-checked", or the module flag
+// !"agx-checked" = 1.
+def FeatureChecked : SubtargetFeature<"agx-checked", "HasChecked", "true",
+  "Check memory accesses and report the first bad one to the runtime"
 >;
 
 def FeatureSourceLifetime : SubtargetFeature<"source-lifetime",
@@ -163,7 +208,8 @@ def FeatureG14 : AGXSubtargetFeatureGeneration<"G14", "g14",
   [FeatureAGX2Encoding, FeatureFP16Arith, FeatureInt64Add, FeatureSIMDShuffle,
    FeatureSIMDReduce, FeatureSIMDBallot, FeatureSIMDMatrix,
    FeatureQuadShuffleIndexMerge, FeatureThreadgroupAtomics,
-   FeatureDeviceAtomics, FeatureStackAccess, FeatureMaxGPRs128]
+   FeatureDeviceAtomics, FeatureDeviceAtomicFAdd, FeatureDeviceAtomicU64MinMax, FeatureStackAccess,
+   FeatureMaxGPRs128, FeatureBlockBarrier]
 >;
 
 // No public instruction set documentation exists for G15. It is assumed to
@@ -206,3 +252,7 @@ def HasFP16Arith : Predicate<"Subtarget->hasFP16Arith()">;
 def HasInt64Add : Predicate<"Subtarget->hasInt64Add()">;
 def HasThreadgroupAtomics : Predicate<"Subtarget->hasThreadgroupAtomics()">;
 def HasDeviceAtomics : Predicate<"Subtarget->hasDeviceAtomics()">;
+def HasDeviceAtomicFAdd : Predicate<"Subtarget->hasDeviceAtomicFAdd()">;
+def HasDeviceAtomicU64MinMax : Predicate<"Subtarget->hasDeviceAtomicU64MinMax()">;
+def HasBlockBarrier : Predicate<"Subtarget->hasBlockBarrier()">;
+def NoBlockBarrier : Predicate<"!Subtarget->hasBlockBarrier()">;

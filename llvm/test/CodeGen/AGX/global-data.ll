@@ -12,7 +12,7 @@
 define agx_kernel void @kernel(ptr addrspace(1) %out, i32 %i) {
 ; CHECK-LABEL: kernel:
 ; CHECK:         // uniform registers: 16 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 4 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 4 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // global data buffer at u6_u7
 ; CHECK-NEXT:    // threadgroup memory: 32 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
@@ -21,9 +21,10 @@ define agx_kernel void @kernel(ptr addrspace(1) %out, i32 %i) {
 ; CHECK-NEXT:    bitop 0101, r3, u7, 0
 ; CHECK-NEXT:    iadd r2_r3, r2_r3, u2.sx, lsl 2
 ; CHECK-NEXT:    device_load 0, i32, x, r1, u6_u7, 0, signed
-; CHECK-NEXT:    device_load 0, i32, x, r2, r2_r3, 4, signed
+; CHECK-NEXT:    device_load 1, i32, x, r2, r2_r3, 4, signed
 ; CHECK-NEXT:    wait 0
 ; CHECK-NEXT:    convert s32_to_f, r3, r1, rte
+; CHECK-NEXT:    wait 1
 ; CHECK-NEXT:    fadd32 r2, r2, r3
 ; CHECK-NEXT:    bfi r3, 0, u2, 2
 ; CHECK-NEXT:    device_store 0, i32, x, r2, u0_u1, 0, signed

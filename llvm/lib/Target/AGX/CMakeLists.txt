@@ -21,17 +21,23 @@ add_llvm_target(AGXCodeGen
   AGXAsmPrinter.cpp
   AGXCodeGenPrepare.cpp
   AGXFoldOperands.cpp
+  AGXHoistFromElseFlow.cpp
   AGXFrameLowering.cpp
   AGXISelDAGToDAG.cpp
   AGXISelLowering.cpp
   AGXInsertWaits.cpp
   AGXInstrInfo.cpp
   AGXLowerControlFlow.cpp
+  AGXCheckedAccesses.cpp
+  AGXAliasAnalysis.cpp
+  AGXLowerGenericAddresses.cpp
   AGXMachineFunctionInfo.cpp
   AGXMCInstLower.cpp
+  AGXPromoteKernelArgs.cpp
   AGXRegisterInfo.cpp
   AGXSelectionDAGInfo.cpp
   AGXExpandWideAtomics.cpp
+  AGXSinkAddresses.cpp
   AGXSoftF64.cpp
   AGXStrictFP.cpp
   AGXSubtarget.cpp
@@ -48,6 +54,7 @@ add_llvm_target(AGXCodeGen
   CodeGenTypes
   Core
   IPO
+  InstCombine
   MC
   Passes
   Scalar
@@ -56,6 +63,7 @@ add_llvm_target(AGXCodeGen
   Target
   TargetParser
   TransformUtils
+  Vectorize
 
   ADD_TO_COMPONENT
   AGX

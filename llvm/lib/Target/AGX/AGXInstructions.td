@@ -65,11 +65,7 @@ def imm_to_i32 : SDNodeXForm<imm, [{
 def : Pat<(i16 imm:$imm), (MOV_IMM16 (imm_to_i32 $imm))>;
 def : Pat<(i32 imm:$imm), (MOV_IMM32 imm:$imm)>;
 
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(
-      N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
+// bitcast_fpimm_to_i32 comes from TargetSelectionDAG.td.
 def : Pat<(f32 fpimm:$imm), (MOV_IMM32 (bitcast_fpimm_to_i32 $imm))>;
 def : Pat<(f16 fpimm:$imm), (MOV_IMM16 (bitcast_fpimm_to_i32 $imm))>;
 def : Pat<(bf16 fpimm:$imm), (MOV_IMM16 (bitcast_fpimm_to_i32 $imm))>;
@@ -221,6 +217,20 @@ defm ISUB_I32 : IAddPseudos<ISUB_g13, GPR32, Src32Op, i32,
 defm ISUB_I64 : IAddPseudos<ISUB_g13, GPR64, Src64Op, i64,
                             AGXIntSrc64, sub, [WriteALU64]>;
 
+// Adding a small negative constant subtracts its magnitude, which fits the
+// 8-bit immediate source, instead of materializing the constant.
+def agx_neg_imm8 : ImmLeaf<i32, [{ return Imm < 0 && Imm >= -255; }]>;
+def agx_neg_imm8_16 : ImmLeaf<i16, [{ return Imm < 0 && Imm >= -255; }]>;
+def agx_neg_imm8_64 : ImmLeaf<i64, [{ return Imm < 0 && Imm >= -255; }]>;
+def AGXNegImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N), N->getValueType(0));
+}]>;
+let AddedComplexity = 10 in {
+def : Pat<(i32 (add i32:$a, agx_neg_imm8:$c)), (ISUB_I32 0, $a, 0, (i32 (AGXNegImm $c)), 0)>;
+def : Pat<(i16 (add i16:$a, agx_neg_imm8_16:$c)), (ISUB_I16 0, $a, 0, (i16 (AGXNegImm $c)), 0)>;
+def : Pat<(i64 (add i64:$a, agx_neg_imm8_64:$c)), (ISUB_I64 0, $a, 0, (i64 (AGXNegImm $c)), 0)>;
+}
+
 // Saturating add and subtract. Signedness comes from the sign extension
 // flags of the sources.
 def IADD_SAT_I32 : AGXALUPseudo<IADD_SAT_g13, (outs GPR32:$dst),
@@ -294,6 +304,7 @@ def : Pat<(i64 (sext_inreg i64:$a, i32)),
 
 def : Pat<(i16 (trunc i32:$a)), (EXTRACT_SUBREG $a, lo16)>;
 def : Pat<(i32 (trunc i64:$a)), (EXTRACT_SUBREG $a, sub0)>;
+def : Pat<(i32 (AGXhi32 i64:$a)), (EXTRACT_SUBREG $a, sub1)>;
 def : Pat<(i16 (trunc i64:$a)),
           (i16 (EXTRACT_SUBREG (i32 (EXTRACT_SUBREG $a, sub0)), lo16))>;
 
@@ -325,6 +336,10 @@ def IMADD_I64_FROM32 : AGXALUPseudo<IMADD_g13, (outs GPR64:$dst),
 def : Pat<(i64 (mul (zext i32:$a), (zext i32:$b))),
           (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0)>;
 def : Pat<(i64 (mul (sext i32:$a), (sext i32:$b))),
+          (IMADD_I64_FROM32 MOD_SX, $a, MOD_SX, $b, 0, (i64 0), 0)>;
+def : Pat<(i64 (AGXmul_wide_u i32:$a, i32:$b)),
+          (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0)>;
+def : Pat<(i64 (AGXmul_wide_s i32:$a, i32:$b)),
           (IMADD_I64_FROM32 MOD_SX, $a, MOD_SX, $b, 0, (i64 0), 0)>;
 def : Pat<(i32 (mulhu i32:$a, i32:$b)),
           (EXTRACT_SUBREG (IMADD_I64_FROM32 0, $a, 0, $b, 0, (i64 0), 0), sub1)>;
@@ -367,6 +382,12 @@ def : Pat<(i32 (srl AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (BFEIL_I32 0, (i32 0), 0, $a, 0, $s, 0)>;
 def : Pat<(i32 (sra AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (ASR_I32 0, $a, 0, $s)>;
+def : Pat<(i32 (AGXbfi7 AGXIntSrc32:$a, AGXIntSrc32:$b, AGXIntSrc32:$s)),
+          (BFI_I32 0, $a, 0, $b, 0, $s, 0)>;
+def : Pat<(i32 (AGXextr7 AGXIntSrc32:$lo, AGXIntSrc32:$hi, AGXIntSrc32:$s)),
+          (EXTR_I32 0, $lo, 0, $hi, 0, $s, 0)>;
+def : Pat<(i32 (AGXsra7 AGXIntSrc32:$a, AGXIntSrc32:$s)),
+          (ASR_I32 0, $a, 0, $s)>;
 def : Pat<(i16 (shl AGXIntSrc16:$a, AGXIntSrc16:$s)),
           (BFI_I16 0, (i16 0), 0, $a, 0, $s, 0)>;
 def : Pat<(i16 (srl AGXIntSrc16:$a, AGXIntSrc16:$s)),
@@ -374,11 +395,21 @@ def : Pat<(i16 (srl AGXIntSrc16:$a, AGXIntSrc16:$s)),
 def : Pat<(i16 (sra AGXIntSrc16:$a, AGXIntSrc16:$s)),
           (ASR_I16 0, $a, 0, $s)>;
 
-// Rotates: extr reads the register pair (B:A).
+def AGXImm31 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 31, SDLoc(N), MVT::i32);
+}]>;
+
+// Rotates: extr reads the register pair (B:A). Its shift amount has 7 bits
+// (a shift by 32..63 moves B into the result), while rotr / fshr take the
+// amount modulo 32.
+def : Pat<(i32 (rotr i32:$a, (i32 imm:$s))),
+          (EXTR_I32 0, $a, 0, $a, 0, (i32 (AGXImm31 $s)), 0)>;
 def : Pat<(i32 (rotr i32:$a, AGXIntSrc32:$s)),
-          (EXTR_I32 0, $a, 0, $a, 0, $s, 0)>;
+          (EXTR_I32 0, $a, 0, $a, 0, (BITOP_I32 TT_AND, 0, $s, 0, (i32 31)), 0)>;
+def : Pat<(i32 (fshr i32:$hi, i32:$lo, (i32 imm:$s))),
+          (EXTR_I32 0, $lo, 0, $hi, 0, (i32 (AGXImm31 $s)), 0)>;
 def : Pat<(i32 (fshr i32:$hi, i32:$lo, AGXIntSrc32:$s)),
-          (EXTR_I32 0, $lo, 0, $hi, 0, $s, 0)>;
+          (EXTR_I32 0, $lo, 0, $hi, 0, (BITOP_I32 TT_AND, 0, $s, 0, (i32 31)), 0)>;
 
 def : Pat<(i32 (sext_inreg i32:$a, i8)),
           (ASR_I32 0, (BFI_I32 0, (i32 0), 0, $a, 0, (i32 24), 0), 0, (i32 24))>;
@@ -568,21 +599,21 @@ def : Pat<(i64 (select i32:$c, i64:$x, i64:$y)),
                          0, (EXTRACT_SUBREG $x, sub1)), sub1)>;
 
 // Integer min/max.
-def : Pat<(i32 (smin i32:$a, i32:$b)),
+def : Pat<(i32 (smin i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_SLT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (smax i32:$a, i32:$b)),
+def : Pat<(i32 (smax i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_SGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (umin i32:$a, i32:$b)),
+def : Pat<(i32 (umin i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_ULT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (umax i32:$a, i32:$b)),
+def : Pat<(i32 (umax i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_UGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (smin i16:$a, i16:$b)),
+def : Pat<(i16 (smin i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_SLT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (smax i16:$a, i16:$b)),
+def : Pat<(i16 (smax i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_SGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (umin i16:$a, i16:$b)),
+def : Pat<(i16 (umin i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_ULT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (umax i16:$a, i16:$b)),
+def : Pat<(i16 (umax i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_UGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
 
 // Float min/max: the "n" conditions return the other operand for a NaN.
@@ -675,6 +706,81 @@ def : Pat<(f16 (fma (AGXFPSrc16 f16:$a, i32:$am), (AGXFPSrc16 f16:$b, i32:$bm),
                     (AGXFPSrc16 f16:$c, i32:$cm))),
           (FMADD16_F16 $am, $a, $bm, $b, $cm, $c)>;
 
+// Single precision operations convert half precision sources exactly, so an
+// extension from half precision is folded into its uses (as Mesa's
+// agx_optimizer_fmov folds f2f32): FADD32_M<a><b> and FMADD32_M<a><b><c>
+// read 16-bit registers where a size is 16.
+class FPSrcOp<int size> {
+  RegisterOperand op = !if(!eq(size, 16), Src16Op, Src32Op);
+}
+foreach s0 = [16, 32] in
+foreach s1 = [16, 32] in {
+  if !or(!eq(s0, 16), !eq(s1, 16)) then {
+    def FADD32_M#s0#s1 : AGXALUPseudo<FADD32_g13, (outs GPR32:$dst),
+                                      (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                           SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1),
+                                      [], [WriteFP]>;
+    def FMUL32_M#s0#s1 : AGXALUPseudo<FMUL32_g13, (outs GPR32:$dst),
+                                      (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                           SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1),
+                                      [], [WriteFP]>;
+  }
+  foreach s2 = [16, 32] in
+  if !or(!eq(s0, 16), !eq(s1, 16), !eq(s2, 16)) then
+  def FMADD32_M#s0#s1#s2 : AGXALUPseudo<FMADD32_g13, (outs GPR32:$dst),
+                                        (ins SrcMods:$src0_mods, FPSrcOp<s0>.op:$src0,
+                                             SrcMods:$src1_mods, FPSrcOp<s1>.op:$src1,
+                                             SrcMods:$src2_mods, FPSrcOp<s2>.op:$src2),
+                                        [], [WriteFP]>;
+}
+
+def : Pat<(f32 (fadd (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FADD32_M1616 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fadd (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (AGXFPSrc32 f32:$b, i32:$bm))),
+          (FADD32_M1632 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fadd (AGXFPSrc32 f32:$a, i32:$am),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FADD32_M3216 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FMUL32_M1616 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                  (AGXFPSrc32 f32:$b, i32:$bm))),
+          (FMUL32_M1632 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fmul (AGXFPSrc32 f32:$a, i32:$am),
+                  (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))))),
+          (FMUL32_M3216 $am, $a, $bm, $b)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M161616 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M161632 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M163216 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M163232 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M321616 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (f32 (fpextend (AGXFPSrc16 f16:$b, i32:$bm))),
+                 (AGXFPSrc32 f32:$c, i32:$cm))),
+          (FMADD32_M321632 $am, $a, $bm, $b, $cm, $c)>;
+def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am),
+                 (AGXFPSrc32 f32:$b, i32:$bm),
+                 (f32 (fpextend (AGXFPSrc16 f16:$c, i32:$cm))))),
+          (FMADD32_M323216 $am, $a, $bm, $b, $cm, $c)>;
+
 multiclass FUnaryPseudo<Instruction real, SDPatternOperator node,
                         list<SchedReadWrite> sched = [WriteFRound]> {
   def _F32 : AGXALUPseudo<real, (outs GPR32:$dst),
@@ -755,6 +861,15 @@ def : Pat<(i16 (fp_to_sint f32:$a)), (CONVERT_16_32 CVT_F_TO_S16, 0, $a, ROUND_R
 def : Pat<(i16 (fp_to_uint f32:$a)), (CONVERT_16_32 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
 def : Pat<(i16 (fp_to_sint f16:$a)), (CONVERT_16_16 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
 def : Pat<(i16 (fp_to_uint f16:$a)), (CONVERT_16_16 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
+// convert saturates, and NaN converts to 0 (B27).
+def : Pat<(i32 (fp_to_sint_sat f32:$a, i32)), (CONVERT_32_32 CVT_F_TO_S32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_uint_sat f32:$a, i32)), (CONVERT_32_32 CVT_F_TO_U32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_sint_sat f16:$a, i32)), (CONVERT_32_16 CVT_F_TO_S32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i32 (fp_to_uint_sat f16:$a, i32)), (CONVERT_32_16 CVT_F_TO_U32, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_sint_sat f32:$a, i16)), (CONVERT_16_32 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_uint_sat f32:$a, i16)), (CONVERT_16_32 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_sint_sat f16:$a, i16)), (CONVERT_16_16 CVT_F_TO_S16, 0, $a, ROUND_RTZ)>;
+def : Pat<(i16 (fp_to_uint_sat f16:$a, i16)), (CONVERT_16_16 CVT_F_TO_U16, 0, $a, ROUND_RTZ)>;
 def : Pat<(f32 (sint_to_fp i32:$a)), (CONVERT_32_32 CVT_S32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (uint_to_fp i32:$a)), (CONVERT_32_32 CVT_U32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (sint_to_fp i16:$a)), (CONVERT_32_16 CVT_S16_TO_F, 0, $a, ROUND_RTE)>;
@@ -847,6 +962,14 @@ defm : DeviceStorePat<device_truncstorei8, i16, DEVICE_STORE_16, AGXDeviceAddr8,
 defm : DeviceStorePat<device_truncstorei8, i32, DEVICE_STORE_32, AGXDeviceAddr8, FMT_I8, 1>;
 defm : DeviceStorePat<device_truncstorei16, i32, DEVICE_STORE_32, AGXDeviceAddr16, FMT_I16, 1>;
 
+// System-scope atomic loads and stores of device memory (ld.acquire.sys,
+// st.release.sys) are coherent loads and stores, not atomics: device atomics
+// do not see host writes during a dispatch (ptx-re-blockers B7). Their
+// ordering fences come from AtomicExpand; the f59d / f533 and the coherency
+// bit from AGXCodeGenPrepare and AGXMCInstLower (isHostCoherentAccess).
+defm : DeviceLoadPat<atomic_load_nonext_32, i32, DEVICE_LOAD_32, AGXDeviceAddr32, FMT_I32, 1>;
+defm : DeviceStorePat<atomic_store_32, i32, DEVICE_STORE_32, AGXDeviceAddr32, FMT_I32, 1>;
+
 //===----------------------------------------------------------------------===//
 // Threadgroup memory
 //===----------------------------------------------------------------------===//
@@ -874,9 +997,13 @@ class LocalStorePseudo<RegisterClass rc>
 def LOCAL_LOAD_16 : LocalLoadPseudo<GPR16>;
 def LOCAL_LOAD_32 : LocalLoadPseudo<GPR32>;
 def LOCAL_LOAD_64 : LocalLoadPseudo<GPR32x2>;
+def LOCAL_LOAD_96 : LocalLoadPseudo<GPR96>;
+def LOCAL_LOAD_128 : LocalLoadPseudo<GPR128>;
 def LOCAL_STORE_16 : LocalStorePseudo<GPR16>;
 def LOCAL_STORE_32 : LocalStorePseudo<GPR32>;
 def LOCAL_STORE_64 : LocalStorePseudo<GPR32x2>;
+def LOCAL_STORE_96 : LocalStorePseudo<GPR96>;
+def LOCAL_STORE_128 : LocalStorePseudo<GPR128>;
 
 multiclass LocalLoadPat<PatFrag frag, ValueType vt, Instruction inst,
                         ComplexPattern addr, int fmt, int mask> {
@@ -1043,6 +1170,28 @@ def DEVICE_ATOMIC_CMPXCHG : AGXPseudo<(outs GPR32:$R),
   let SchedRW = [WriteAtomic];
 }
 
+// A 32-bit atomic whose old value is unused: no result register, and so no
+// wait (Mesa drops unused atomic results the same way, agx_dce).
+def DEVICE_ATOMIC_NORET : AGXPseudo<(outs),
+                                    (ins i32imm:$op, i32imm:$g, Base64Op:$A,
+                                         IndexOp:$O, i32imm:$sgn, GPR32:$S,
+                                         i32imm:$coherent)> {
+  let G13Real = ATOMIC_g13;
+  let IsAsync = 1;
+  let SchedRW = [WriteAtomic];
+}
+
+// A 64-bit atomic without a result (the hardware returns only a "changed"
+// flag).
+def DEVICE_ATOMIC64_NORET : AGXPseudo<(outs),
+                                      (ins i32imm:$op, i32imm:$g, Base64Op:$A,
+                                           IndexOp:$O, i32imm:$sgn, GPR64:$S,
+                                           i32imm:$coherent)> {
+  let G13Real = ATOMIC_g13;
+  let IsAsync = 1;
+  let SchedRW = [WriteAtomic];
+}
+
 def LOCAL_ATOMIC : AGXPseudo<(outs GPR32:$R),
                              (ins i32imm:$op, LocalBaseOp:$A, LocalIndexOp:$O,
                                   GPR32:$S)> {
@@ -1073,9 +1222,23 @@ class AtomicCmpSwapFrag<list<int> as>
   let AddressSpaces = as;
 }
 
+class AtomicNoRetFrag<SDPatternOperator op, ValueType vt>
+    : PatFrag<(ops node:$ptr, node:$val), (op node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty();
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = vt;
+  let AddressSpaces = DeviceAS;
+}
+
 multiclass AGXAtomicPats<SDPatternOperator node, int op> {
   def _device : AtomicFrag<node, DeviceAS>;
   def _local : AtomicFrag<node, LocalAS>;
+  def _device_noret : AtomicNoRetFrag<node, i32>;
+
+  let AddedComplexity = 10 in
+  def : Pat<(i32 (!cast<PatFrag>(NAME#"_device_noret") i64:$ptr, i32:$val)),
+            (DEVICE_ATOMIC_NORET op, 0, $ptr, (i32 0), 0, $val, 0)>;
 
   // Atomics take the full address in the base register; the element index
   // is always zero.
@@ -1086,7 +1249,9 @@ multiclass AGXAtomicPats<SDPatternOperator node, int op> {
 }
 
 defm agx_atomic_add : AGXAtomicPats<atomic_load_add, AOP_ADD>;
-defm agx_atomic_sub : AGXAtomicPats<atomic_load_sub, AOP_SUB>;
+// Atomic sub is lowered as an add of the negated value (lowerATOMIC_LOAD_SUB):
+// with the coherency bit of multi-die parts set, the sub opcode is a float add
+// on G14.
 defm agx_atomic_xchg : AGXAtomicPats<atomic_swap, AOP_XCHG>;
 defm agx_atomic_umin : AGXAtomicPats<atomic_load_umin, AOP_UMIN>;
 defm agx_atomic_imin : AGXAtomicPats<atomic_load_min, AOP_IMIN>;
@@ -1095,6 +1260,56 @@ defm agx_atomic_imax : AGXAtomicPats<atomic_load_max, AOP_IMAX>;
 defm agx_atomic_and : AGXAtomicPats<atomic_load_and, AOP_AND>;
 defm agx_atomic_or : AGXAtomicPats<atomic_load_or, AOP_OR>;
 defm agx_atomic_xor : AGXAtomicPats<atomic_load_xor, AOP_XOR>;
+
+def agx_atomic_fadd_device
+    : PatFrag<(ops node:$ptr, node:$val), (atomic_load_fadd node:$ptr, node:$val)> {
+  let IsAtomic = 1;
+  let MemoryVT = f32;
+  let AddressSpaces = DeviceAS;
+}
+
+def agx_atomic_fadd_device_noret
+    : PatFrag<(ops node:$ptr, node:$val), (atomic_load_fadd node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty();
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = f32;
+  let AddressSpaces = DeviceAS;
+}
+
+// The float32 add is the sub opcode with bit 45 (the coherent operand) set.
+// Without a used result it writes no register (red.add.f32), which behaves
+// as the returning form on the M2 Max (ptx-re-blockers B24).
+let Predicates = [HasDeviceAtomicFAdd] in {
+let AddedComplexity = 10 in
+def : Pat<(f32 (agx_atomic_fadd_device_noret i64:$ptr, f32:$val)),
+          (DEVICE_ATOMIC_NORET AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
+def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
+          (DEVICE_ATOMIC AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
+}
+
+// u64 min / max whose old value is unused: cmpxchg with bit 45 set, bit 46
+// clear for min (mode 3) and set for max (mode 1).
+// The native form is a silent no-op at an address 4 mod 8 (ptx-re-blockers
+// B24), so it needs a known 8-byte alignment.
+class AtomicNoRet64Frag<SDPatternOperator op>
+    : PatFrag<(ops node:$ptr, node:$val), (op node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty() &&
+         cast<MemSDNode>(N)->getAlign() >= Align(8);
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+  let AddressSpaces = DeviceAS;
+}
+def agx_atomic_umin64_noret : AtomicNoRet64Frag<atomic_load_umin>;
+def agx_atomic_umax64_noret : AtomicNoRet64Frag<atomic_load_umax>;
+
+let Predicates = [HasDeviceAtomicU64MinMax] in {
+def : Pat<(i64 (agx_atomic_umin64_noret i64:$ptr, i64:$val)),
+          (DEVICE_ATOMIC64_NORET AOP_CMPXCHG, 0, $ptr, (i32 0), 0, $val, 3)>;
+def : Pat<(i64 (agx_atomic_umax64_noret i64:$ptr, i64:$val)),
+          (DEVICE_ATOMIC64_NORET AOP_CMPXCHG, 0, $ptr, (i32 0), 0, $val, 1)>;
+}
 
 def agx_cmpxchg_device : AtomicCmpSwapFrag<DeviceAS>;
 def agx_cmpxchg_local : AtomicCmpSwapFrag<LocalAS>;
@@ -1116,7 +1331,15 @@ def THREADGROUP_BARRIER : AGXPseudo<(outs), (ins),
   let G13Real = THREADGROUP_BARRIER_g13;
   let SchedRW = [WriteBarrier];
 }
+let Predicates = [HasBlockBarrier], mayLoad = 1, mayStore = 1 in
+def BLOCK_BARRIER : AGXPseudo<(outs), (ins), [(int_agx_block_barrier)]> {
+  let G13Real = BLOCK_BARRIER_g13;
+  let SchedRW = [WriteBarrier];
 }
+}
+// Without one, a barrier over the whole threadgroup also orders the block.
+let Predicates = [NoBlockBarrier] in
+def : Pat<(int_agx_block_barrier), (THREADGROUP_BARRIER)>;
 
 let hasSideEffects = 1 in
 def MEMORY_BARRIER : AGXPseudo<(outs), (ins i32imm:$a, i32imm:$b, i32imm:$c),
@@ -1126,8 +1349,8 @@ def MEMORY_BARRIER : AGXPseudo<(outs), (ins i32imm:$a, i32imm:$b, i32imm:$c),
   let SchedRW = [WriteBarrier];
 }
 
-// Device scope barrier, as emitted for fences.
-def : Pat<(atomic_fence (i64 timm), (i64 timm)), (MEMORY_BARRIER 1, 2, 9)>;
+// Fences are custom lowered to the barrier sequence of their scope and
+// ordering (AGXTargetLowering::lowerATOMIC_FENCE).
 
 let hasSideEffects = 1 in
 def WAIT : AGXPseudo<(outs), (ins i32imm:$slot), [(int_agx_wait timm:$slot)]> {
@@ -1269,6 +1492,12 @@ def ELSE_FCMP : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$cc,
                                        i32imm:$n)> {
   let G13Real = ELSE_FCMP_g13;
 }
+def WHILE_FCMP : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$cc,
+                                        SrcMods:$src0_mods, Src32Op:$src0,
+                                        SrcMods:$src1_mods, Src32Op:$src1,
+                                        i32imm:$n)> {
+  let G13Real = WHILE_FCMP_g13;
+}
 def POP_EXEC : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$n)> {
   let G13Real = POP_EXEC_g13;
 }
@@ -1303,6 +1532,17 @@ def AGX_ELSE : AGXCodeGenPseudo<(outs), (ins AGXBrTarget:$target),
 // loop header) if any thread remains active.
 def AGX_LOOP : AGXCodeGenPseudo<(outs), (ins GPR32:$brk, AGXBrTarget:$target),
                                 [(AGXloop i32:$brk, bb:$target)]>;
+// AGX_IF / AGX_LOOP whose condition is the comparison ($cc, $src0, $src1)
+// itself (cc bit 3 inverts it), formed by AGXFoldOperands from a single-use
+// icmpsel / fcmpsel that only produces the truth value.
+foreach Kind = ["ICMP", "FCMP"] in {
+def AGX_IF_#Kind : AGXCodeGenPseudo<(outs),
+    (ins i32imm:$cc, SrcMods:$src0_mods, Src32Op:$src0,
+         SrcMods:$src1_mods, Src32Op:$src1, AGXBrTarget:$target), []>;
+def AGX_LOOP_#Kind : AGXCodeGenPseudo<(outs),
+    (ins i32imm:$cc, SrcMods:$src0_mods, Src32Op:$src0,
+         SrcMods:$src1_mods, Src32Op:$src1, AGXBrTarget:$target), []>;
+}
 }
 
 let hasSideEffects = 1, Uses = [R0L], Defs = [R0L] in {

@@ -24,13 +24,14 @@ define agx_kernel void @arith(ptr addrspace(1) %out, double %a, float %b) {
   ret void
 }
 
-; The square root is a loop producing a bit of the root per iteration, on
-; 64-bit values.
+; The square root has no loop: an agx_rsqrt estimate refined by Newton steps
+; on fixed-point values, then corrected with the exact remainder.
 ; CHECK-LABEL: @root(
-; CHECK: soft.loop:
-; CHECK: phi i64
-; CHECK-NOT: i128
-; CHECK: br i1 {{.*}}, label %soft.loop.end, label %soft.loop
+; CHECK-NOT: br
+; CHECK: call float @llvm.agx.rsqrt.f32
+; CHECK: mul i128
+; CHECK-NOT: br
+; CHECK: ret void
 define agx_kernel void @root(ptr addrspace(1) %out, double %a) {
   %r = call double @llvm.sqrt.f64(double %a)
   store double %r, ptr addrspace(1) %out

@@ -27,6 +27,8 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSETCC64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift64(SDValue Op, SelectionDAG &DAG) const;
@@ -53,9 +55,27 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT VT) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  SDValue lowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
+                                      MachineMemOperand::Flags Flags,
+                                      unsigned *Fast) const override;
+
+  // Ordered atomics are monotonic accesses between fences, so that fences
+  // carry the measured barrier sequences (see lowerATOMIC_FENCE).
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+    return true;
+  }
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
@@ -97,6 +117,15 @@ public:
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  /// The first load of a compare-and-swap loop only seeds the loop, which the
+  /// compare-and-swap checks, so it is a plain (single-copy atomic) load, as
+  /// on AMDGPU: an atomic one would be a coherent, fenced load at system scope.
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
+  /// A system-scope (or volatile) 32-bit load or store of device memory,
+  /// which is a coherent access rather than an atomic.
+  static bool isSystemScopeDeviceAccess(const Instruction *I);
 };
 
 } // namespace llvm

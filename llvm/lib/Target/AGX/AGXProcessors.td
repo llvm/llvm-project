@@ -32,13 +32,17 @@ def : AGXProc<"agx-g13d", AGXG13Model,                // M1 Ultra
 def : AGXProc<"agx-g14g", AGXG14Model, [FeatureG14]>; // M2
 def : AGXProc<"agx-g14s", AGXG14Model, [FeatureG14]>; // M2 Pro
 def : AGXProc<"agx-g14c", AGXG14Model, [FeatureG14]>; // M2 Max
-def : AGXProc<"agx-g14d", AGXG14Model, [FeatureG14]>; // M2 Ultra
+// Two-die parts need the coherency bit on device atomics too (Mesa:
+// "G13 with more than one cluster, or more than one die").
+def : AGXProc<"agx-g14d", AGXG14Model,                // M2 Ultra
+              [FeatureG14, FeatureMultiDieCoherency]>;
 
 // G15: Apple M3 family.
 def : AGXProc<"agx-g15g", AGXG14Model, [FeatureG15]>; // M3
 def : AGXProc<"agx-g15s", AGXG14Model, [FeatureG15]>; // M3 Pro
 def : AGXProc<"agx-g15c", AGXG14Model, [FeatureG15]>; // M3 Max
-def : AGXProc<"agx-g15d", AGXG14Model, [FeatureG15]>; // M3 Ultra
+def : AGXProc<"agx-g15d", AGXG14Model,                // M3 Ultra
+              [FeatureG15, FeatureMultiDieCoherency]>;
 
 // G16: Apple M4 family.
 def : AGXProc<"agx-g16g", AGXApple9Model, [FeatureG16]>; // M4

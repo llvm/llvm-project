@@ -157,6 +157,22 @@ def AGXIR_ThreadgroupBarrierOp : AGXIR_IntrOp<"threadgroup.barrier", [], [],
   let assemblyFormat = "attr-dict";
 }
 
+def AGXIR_BlockBarrierOp : AGXIR_IntrOp<"block.barrier", [], [], [], 0> {
+  let summary = "Wait for the threads of the caller's block of 4 SIMD-groups";
+  let description = [{
+    Execution barrier for the caller's aligned block of 4 SIMD-groups (128
+    threads), which orders the block's memory accesses. Every SIMD-group of
+    the block must reach one; a block cut short by the end of the threadgroup
+    does not wait for the missing groups. The backend lowers it to a
+    threadgroup barrier on chips without one.
+
+    ```mlir
+    agxir.block.barrier
+    ```
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def AGXIR_MemoryBarrierOp : AGXIR_IntrOp<"memory.barrier", [], [], [], 0,
                                          [0, 1, 2], ["a", "b", "c"]>,
     Arguments<(ins I32Attr:$a, I32Attr:$b, I32Attr:$c)> {

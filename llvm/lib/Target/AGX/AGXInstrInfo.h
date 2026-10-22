@@ -54,6 +54,15 @@ public:
       unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
+  /// Code runs under the execution mask of its block. A block with several
+  /// predecessors in the structurized CFG (a Flow block, or the join of an
+  /// if) starts with only the lanes of one of them active, so an instruction
+  /// sunk into it would not run for the others.
+  bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
+                    MachineCycleInfo *CI) const override {
+    return SuccToSinkTo->pred_size() <= 1;
+  }
+
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,

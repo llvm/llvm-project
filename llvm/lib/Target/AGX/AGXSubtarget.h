@@ -18,6 +18,7 @@
 #include "AGXInstrInfo.h"
 #include "AGXSelectionDAGInfo.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -66,6 +67,19 @@ public:
   /// The number of addressable 32-bit general purpose registers.
   unsigned getMaxGPRs() const { return MaxGPRs ? MaxGPRs : 128; }
 
+  /// The threads of one threadgroup that fit on a core when each thread uses
+  /// \p Halves 16-bit registers. G13 and G14 run 2 * floor(3328 / (2 * H))
+  /// SIMD-groups of 32 threads, at most 1024 threads, with H the halves
+  /// rounded up to the allocation granule of 8 (Mesa's agx_occupancy table);
+  /// later generations are assumed to be the same.
+  static unsigned maxThreadsForHalves(unsigned Halves);
+
+  /// The 32-bit GPRs \p F may use: getMaxGPRs(), fewer with the function
+  /// attributes "agx-max-gprs"="N" (PTX .maxnreg) or
+  /// "agx-max-threads-per-threadgroup"="N" (PTX .maxntid / .reqntid), which
+  /// keeps the register use low enough for N threads to fit on a core.
+  unsigned getMaxGPRs(const Function &F) const;
+
   const AGXInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const AGXFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
@@ -81,7 +95,30 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
+  // Alias analysis (AGXAliasAnalysis: disjoint address spaces) orders memory
+  // accesses in the DAG combiner and the machine scheduler.
+  bool useAA() const override { return true; }
   bool enablePostRAScheduler() const override { return false; }
+  // In large regions, scheduling from both ends keeps fewer values live
+  // across the long shuffle and multiply-add sequences of tiled matrix
+  // products than the default bottom-up order (sgemm 64x64 tile: 153 spill
+  // instructions to 68). Small regions keep bottom-up, which issues their
+  // loads earlier.
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           const SchedRegion &Region) const override {
+    if (Region.NumRegionInstrs > 200) {
+      Policy.OnlyTopDown = false;
+      Policy.OnlyBottomUp = false;
+    }
+  }
+  // Local reassignment makes the greedy allocator try every other register
+  // for each interfering live range. With the AGX register file (overlapping
+  // 16-bit to 128-bit classes over 256 halves) that dominates the compile time
+  // of kernels under register pressure (mma emulation: 3-5x slower) for a code
+  // size difference under 0.3% either way.
+  bool enableRALocalReassignment(CodeGenOptLevel) const override {
+    return false;
+  }
 };
 
 } // namespace llvm

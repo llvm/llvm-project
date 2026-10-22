@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // AGX objects are ELF64 files whose .text holds raw instructions. Branches
-// are resolved by the assembler; there are no AGX relocation types.
+// are resolved by the assembler. Global data that holds addresses of global
+// data (.agx.globals) has absolute relocations, which the loader applies once
+// it has placed the global buffer:
+//
+//   R_AGX_ABS64 = 1   S + A, 64 bits
+//   R_AGX_ABS32 = 2   S + A, 32 bits
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +22,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -28,9 +34,20 @@ public:
                                 /*HasRelocationAddend=*/true) {}
 
 protected:
-  unsigned getRelocType(const MCFixup &Fixup, const MCValue &,
-                        bool) const override {
-    reportError(Fixup.getLoc(), "AGX does not support relocations");
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                        bool IsPCRel) const override {
+    if (!IsPCRel && !Target.getSubSym()) {
+      switch (Fixup.getKind()) {
+      case FK_Data_8:
+        return 1;
+      case FK_Data_4:
+        return 2;
+      default:
+        break;
+      }
+    }
+    reportError(Fixup.getLoc(), "AGX supports only absolute 32- and 64-bit "
+                                "relocations in data");
     return 0;
   }
 };

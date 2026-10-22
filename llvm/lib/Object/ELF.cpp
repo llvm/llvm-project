@@ -162,6 +162,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_AGX:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/AGX.def"
+    default:
+      break;
+    }
+    break;
   case ELF::EM_CSKY:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/CSKY.def"

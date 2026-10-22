@@ -218,24 +218,201 @@ def AGX_MemoryBarrierOp : AGX_Op<"memory_barrier"> {
 
 def AGX_MatrixFragment : VectorOfLengthAndType<[2], [F16, BF16, F32]>;
 
-def AGX_MMAOp : AGX_Op<"mma", [AllTypesMatch<["a", "b", "c", "result"]>]> {
+def AGX_MMAOp : AGX_Op<"mma", [Pure, AllTypesMatch<["a", "b"]>,
+                                AllTypesMatch<["c", "result"]>]> {
   let summary = "8x8 matrix multiply-accumulate over the SIMD-group";
   let description = [{
-    Computes D = A * B + C on 8x8 matrices whose elements are spread over
-    the threads of the SIMD-group, like the MFMA operations of `amdgpu`.
-    Thread t holds the elements (r, c) and (r, c + 1) of each matrix, with
-    r = 4 * (t / 16) + (t / 2) % 4 and c = 4 * ((t / 8) % 2) + 2 * (t % 2).
-    The products are accumulated in order of k with fused multiply-adds,
-    starting from C.
+    Computes D = A * B + C (or A * B - C with `negate_acc`) on 8x8 matrices
+    whose elements are spread over the threads of the SIMD-group, like the
+    MFMA operations of `amdgpu`. Thread t holds the elements (r, c) and
+    (r, c + 1) of each matrix, with r = 4 * (t / 16) + (t / 2) % 4 and
+    c = 4 * ((t / 8) % 2) + 2 * (t % 2). The products are accumulated in
+    order of k with fused multiply-adds, starting from C.
+
+    A and B have the same element type; the accumulator has the same type, or
+    f32 for f16 and bf16 inputs (mixed precision). The layout and the
+    arithmetic do not depend on the chip: chips with a matrix unit run it
+    natively (the Apple9 unit also has the negated form), others with
+    shuffles and FMAs.
 
     ```mlir
-    %d = agx.mma %a * %b + %c : vector<2xf32>
+    %d = agx.mma %a * %b + %c : vector<2xf32>, vector<2xf32>
+    %e = agx.mma %h * %h + %c negated : vector<2xf16>, vector<2xf32>
     ```
   }];
   let arguments = (ins AGX_MatrixFragment:$a, AGX_MatrixFragment:$b,
-                       AGX_MatrixFragment:$c);
+                       AGX_MatrixFragment:$c, UnitAttr:$negate_acc);
   let results = (outs AGX_MatrixFragment:$result);
-  let assemblyFormat = "$a `*` $b `+` $c attr-dict `:` type($result)";
+  let assemblyFormat = [{
+    $a `*` $b `+` $c (`negated` $negate_acc^)? attr-dict `:` type($a) `,`
+    type($c)
+  }];
+  let hasVerifier = 1;
+}
+
+def AGX_MatrixLoadOp : AGX_Op<"matrix_load"> {
+  let summary = "Load an 8x8 matrix fragment";
+  let description = [{
+    Loads the 8x8 block of the 2-D `base` whose top-left element is
+    (`row`, `col`) into the fragment layout of `agx.mma`; with `transpose`
+    the block is read transposed (element (r, c) of the fragment is
+    base[row + c][col + r]). Every thread of the SIMD-group must execute it.
+
+    ```mlir
+    %f = agx.matrix_load %A[%i, %k] : memref<?x?xf16, 1> -> vector<2xf16>
+    ```
+  }];
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$base, Index:$row,
+                       Index:$col, UnitAttr:$transpose);
+  let results = (outs AGX_MatrixFragment:$result);
+  let assemblyFormat = [{
+    $base `[` $row `,` $col `]` (`transpose` $transpose^)? attr-dict `:`
+    type($base) `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def AGX_MatrixStoreOp : AGX_Op<"matrix_store"> {
+  let summary = "Store an 8x8 matrix fragment";
+  let description = [{
+    Stores a fragment to the 8x8 block of the 2-D `base` whose top-left
+    element is (`row`, `col`), the inverse of `agx.matrix_load`.
+
+    ```mlir
+    agx.matrix_store %f, %C[%i, %j] : vector<2xf32> -> memref<?x?xf32, 1>
+    ```
+  }];
+  let arguments = (ins AGX_MatrixFragment:$value,
+                       Arg<AnyMemRef, "", [MemWrite]>:$base, Index:$row,
+                       Index:$col, UnitAttr:$transpose);
+  let assemblyFormat = [{
+    $value `,` $base `[` $row `,` $col `]` (`transpose` $transpose^)?
+    attr-dict `:` type($value) `->` type($base)
+  }];
+  let hasVerifier = 1;
+}
+
+def AGX_MMATileOp : AGX_Op<"mma_tile", [AllTypesMatch<["acc", "result"]>]> {
+  let summary = "SIMD-group tile matrix multiply-accumulate";
+  let description = [{
+    Accumulates the m x n tile product of the m x k block of `a` at
+    (`aRow`, `aCol`) and the k x n block of `b` at (`bRow`, `bCol`) into
+    `acc`, the SIMD-group's cooperative accumulator: the (m / 8) * (n / 8)
+    fragments of the tile in row-major order, two elements per thread each,
+    so `acc` is a vector of m * n / 32 elements. m, n and k are multiples of
+    8. The operands are read straight from memory (device or threadgroup).
+
+    This is the inner product of library GEMM, convolution and attention
+    kernels. It lowers to fragment loads and `agx.mma` everywhere, and to a
+    hardware tile path on chips that have one.
+
+    ```mlir
+    %acc1 = agx.mma_tile %A[%i, %k] * %B[%k, %j] + %acc0 tile(32, 32, 8)
+        : memref<?x?xf16, 1>, memref<?x?xf16, 1>, vector<32xf32>
+    ```
+  }];
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$a, Index:$aRow,
+                       Index:$aCol, Arg<AnyMemRef, "", [MemRead]>:$b,
+                       Index:$bRow, Index:$bCol,
+                       VectorOfRankAndType<[1], [F16, BF16, F32]>:$acc,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$m,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$n,
+                       ConfinedAttr<I64Attr, [IntPositive]>:$k);
+  let results = (outs VectorOfRankAndType<[1], [F16, BF16, F32]>:$result);
+  let assemblyFormat = [{
+    $a `[` $aRow `,` $aCol `]` `*` $b `[` $bRow `,` $bCol `]` `+` $acc
+    `tile` `(` $m `,` $n `,` $k `)` attr-dict `:` type($a) `,` type($b) `,`
+    type($acc)
+  }];
+  let hasVerifier = 1;
+}
+
+def AGX_FMALaneShiftOp : AGX_Op<"fma_lane_shift",
+    [Pure, AllTypesMatch<["a", "b", "c", "result"]>]> {
+  let summary = "Multiply-add with the first operand read from a lower lane";
+  let description = [{
+    Computes `shuffle_up(a, shift) * b + c` (fused) within segments of
+    `width` lanes of the SIMD-group (2, 4 or 16): a thread whose position in
+    its segment is below `shift` reads 0 instead, as does a thread whose
+    source lane is inactive. Used by scans, stencils, 1-D convolutions and
+    FFT butterflies. Native on chips with a lane-offset fmadd, a shuffle and
+    an FMA elsewhere.
+
+    ```mlir
+    %d = agx.fma_lane_shift %a, %b, %c shift 1 width 16 : f32
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[F16, F32]>:$a, AnyTypeOf<[F16, F32]>:$b,
+                       AnyTypeOf<[F16, F32]>:$c,
+                       ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<15>]>:$shift,
+                       DefaultValuedAttr<I32Attr, "16">:$width);
+  let results = (outs AnyTypeOf<[F16, F32]>:$result);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `shift` $shift (`width` $width^)? attr-dict `:`
+    type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def AGX_BlockBarrierOp : AGX_Op<"block_barrier"> {
+  let summary = "Barrier over an aligned block of 4 SIMD-groups";
+  let description = [{
+    Waits for the threads of the caller's aligned block of 4 SIMD-groups
+    (128 threads) and orders their threadgroup memory accesses. It must be
+    reached by every thread of the threadgroup in uniform control flow, like
+    `agx.threadgroup_barrier`, which is its portable lowering; chips with a
+    block barrier run it natively, about 3x cheaper on G14.
+
+    ```mlir
+    agx.block_barrier
+    ```
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def AGX_UniformRegionOp : AGX_Op<"uniform_region",
+    [SingleBlock, RecursiveMemoryEffects]> {
+  let summary = "Values computed once for the whole dispatch";
+  let description = [{
+    The region computes values that are the same for every thread of the
+    dispatch (from kernel arguments, grid sizes and constants) and yields
+    them. Chips and runtimes with a preamble compute them once per core
+    instead of once per thread; otherwise the region is inlined. The region
+    must not read thread-dependent values.
+
+    ```mlir
+    %off = agx.uniform_region -> (index) {
+      %n = gpu.grid_dim x
+      %o = arith.muli %n, %c64 : index
+      agx.yield %o : index
+    }
+    ```
+  }];
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "(`->` `(` type($results)^ `)`)? $body attr-dict";
+  let hasRegionVerifier = 1;
+}
+
+def AGX_YieldOp : AGX_Op<"yield", [Pure, Terminator,
+                                   HasParent<"UniformRegionOp">]> {
+  let summary = "Yield the values of an agx.uniform_region";
+  let arguments = (ins Variadic<AnyType>:$values);
+  let assemblyFormat = "($values^ `:` type($values))? attr-dict";
+}
+
+def AGX_CoreIdOp : AGX_Op<"core_id", [Pure]> {
+  let summary = "The GPU core the thread runs on";
+  let description = [{
+    Returns the core the thread runs on (cluster << 4 | core on G14), for
+    per-core work distribution; 0 on chips without the register.
+
+    ```mlir
+    %core = agx.core_id : i32
+    ```
+  }];
+  let results = (outs I32:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def AGX_SetFPModeOp : AGX_Op<"set_fpmode"> {

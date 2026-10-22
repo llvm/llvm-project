@@ -6,6 +6,7 @@ add_mlir_conversion_library(MLIRGPUToAGXIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRAGXDialect
+  MLIRAGXTransforms
   MLIRAGXIRDialect
   MLIRAGXToAGXIR
   MLIRArithToLLVM
@@ -15,6 +16,11 @@ add_mlir_conversion_library(MLIRGPUToAGXIRTransforms
   MLIRGPUTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMathDialect
   MLIRMemRefToLLVM
   MLIRPass
+  MLIRSCFDialect
+  MLIRSCFToControlFlow
+  MLIRVectorDialect
+  MLIRVectorTransforms
   )

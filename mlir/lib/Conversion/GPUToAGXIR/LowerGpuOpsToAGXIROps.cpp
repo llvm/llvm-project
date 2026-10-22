@@ -35,14 +35,20 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/AGX/IR/AGXDialect.h"
+#include "mlir/Dialect/AGX/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/AGXIRDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -286,10 +292,27 @@ struct LowerGpuOpsToAGXIROpsPass final
       options.overrideIndexBitwidth(indexBitwidth);
     options.useBarePtrCallConv = useBarePtrCallConv;
 
-    // In-dialect lowering of gpu.all_reduce and friends first.
+    // In-dialect lowering of gpu.all_reduce and friends first, and the
+    // portable forms of the agx operations the module's chip does not run
+    // natively.
     {
+      // The backend's default processor when the module names no chip.
+      FailureOr<agx::ChipInfo> chip = agx::ChipInfo::get("agx-g14g");
+      if (ArrayAttr targets = m.getTargetsAttr())
+        for (Attribute t : targets)
+          if (auto target = dyn_cast<AGXIR::AGXIRTargetAttr>(t))
+            chip = agx::ChipInfo::get(target.getChip(), target.getFeatures());
+      if (failed(chip)) {
+        m.emitError() << "unknown AGX chip in the module's #agxir.target (or "
+                         "+agx-strict on a chip other than G13 and G14)";
+        return signalPassFailure();
+      }
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
+      agx::populateAGXExpandOpsPatterns(patterns, *chip);
+      // The vector to LLVM lowering has no strided slices; the portable
+      // forms of the matrix ops make them.
+      vector::populateVectorInsertExtractStridedSliceTransforms(patterns);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
@@ -315,6 +338,9 @@ struct LowerGpuOpsToAGXIROpsPass final
       if (auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect))
         iface->populateConvertToLLVMConversionPatterns(target, converter,
                                                        llvmPatterns);
+    // Structured control flow (loops in kernels) becomes branches.
+    populateSCFToControlFlowConversionPatterns(llvmPatterns);
+    target.addIllegalDialect<scf::SCFDialect>();
     populateAGXToAGXIRConversionPatterns(converter, llvmPatterns);
     populateGpuToAGXIRConversionPatterns(converter, llvmPatterns);
     configureGpuToAGXIRConversionLegality(target);

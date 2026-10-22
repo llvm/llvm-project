@@ -49,8 +49,47 @@ define void @unknown_mode(ptr addrspace(1) %out, i32 %rm, float %a, float %b) #0
   ret void
 }
 
+; A mode computed from the one read back is known too: here round to
+; nearest with flushed denormals, so the division is an ordinary one whose
+; operands and result are flushed.
+; CHECK-LABEL: @modified_mode(
+; CHECK-NOT: lshr i32
+; CHECK: fdiv float
+; CHECK-NOT: lshr i32
+; CHECK: ret void
+define void @modified_mode(ptr addrspace(1) %out, float %a, float %b) #0 {
+  %m = call i32 @llvm.agx.get.fpmode()
+  %f = or i32 %m, 48
+  call void @llvm.agx.set.fpmode(i32 %f)
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store float %r, ptr addrspace(1) %out
+  ret void
+}
+
+; Directed additions and multiplications use the hardware operation and its
+; exact error (TwoSum, fma), with the computation on the bits as a slow path.
+; CHECK-LABEL: @upward_fast(
+; CHECK: %[[S:[0-9]+]] = fadd float %a, %b
+; CHECK: fsub float %[[S]], %a
+; CHECK: br i1
+; CHECK: phi float
+; CHECK: %[[P:[0-9]+]] = fmul float %a, %b
+; CHECK: fneg float %[[P]]
+; CHECK: call float @llvm.fma.f32(float %a, float %b,
+; CHECK: br i1
+define void @upward_fast(ptr addrspace(1) %out, float %a, float %b) #0 {
+  call void @llvm.agx.set.fpmode(i32 2)
+  %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store float %s, ptr addrspace(1) %out
+  %p = call float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.upward", metadata !"fpexcept.ignore") #0
+  %o = getelementptr float, ptr addrspace(1) %out, i32 1
+  store float %p, ptr addrspace(1) %o
+  ret void
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 declare void @llvm.agx.set.fpmode(i32)
 declare i32 @llvm.agx.get.fpmode()
 

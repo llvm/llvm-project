@@ -10,6 +10,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAGX.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
 
@@ -81,4 +82,26 @@ ValueUniformity AGXTTIImpl::getValueUniformity(const Value *V) const {
   if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V) || isa<CallInst>(V))
     return ValueUniformity::NeverUniform;
   return ValueUniformity::Default;
+}
+
+// A shuffle of a constant reads the same value in every lane. (Reading an
+// inactive lane is undefined, so the constant is a valid result there too.)
+std::optional<Instruction *>
+AGXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::agx_simd_shuffle:
+  case Intrinsic::agx_simd_shuffle_xor:
+  case Intrinsic::agx_simd_shuffle_up:
+  case Intrinsic::agx_simd_shuffle_down:
+  case Intrinsic::agx_quad_shuffle:
+  case Intrinsic::agx_quad_shuffle_xor:
+  case Intrinsic::agx_quad_shuffle_up:
+  case Intrinsic::agx_quad_shuffle_down:
+    if (isa<Constant>(II.getArgOperand(0)))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(0));
+    break;
+  default:
+    break;
+  }
+  return std::nullopt;
 }

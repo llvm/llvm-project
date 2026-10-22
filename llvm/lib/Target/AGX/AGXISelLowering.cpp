@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXISelLowering.h"
+#include "AGX.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXRegisterInfo.h"
 #include "AGXSubtarget.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -59,7 +61,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
   setJumpIsExpensive(true);
-  setMaxAtomicSizeInBitsSupported(32);
+  // Wider atomics are expanded with locks by AGXExpandWideAtomics, except
+  // the 64-bit operations the chip has (shouldExpandAtomicRMWInIR).
+  setMaxAtomicSizeInBitsSupported(ST.hasDeviceAtomicU64MinMax() ? 64 : 32);
   setMinCmpXchgSizeInBits(32);
 
   // There are no calls and no scalar branches: all control flow is
@@ -77,9 +81,17 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_VOID},
                      MVT::Other, Custom);
+  // Fences become the barrier sequences measured for their scope and ordering.
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
-  setTargetDAGCombine(ISD::BRCOND);
+  setTargetDAGCombine({ISD::BRCOND, ISD::TRUNCATE, ISD::BUILD_PAIR});
+  // Vectors are not legal types; 4-byte aligned loads and stores of 2 to 4
+  // 32-bit elements still become one access (lowerVectorLoad/Store).
+  for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
+                 MVT::v4f32})
+    setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -108,6 +120,11 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA, ISD::MUL}, MVT::i64,
                      Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
+  // 64-bit logic and selects are done on the halves (BUILD_PAIR joins them),
+  // so that constant or known halves fold.
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SELECT}, MVT::i64,
+                     Custom);
+  setOperationAction(ISD::BUILD_PAIR, MVT::i64, Legal);
   setOperationAction({ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT,
                       ISD::SSUBSAT},
                      MVT::i32, Legal);
@@ -143,6 +160,17 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                      {MVT::i16, MVT::f16, MVT::f32}, Expand);
   // The generic expansion truncates; round to nearest even instead.
   setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32}, Custom);
+  // Constrained bfloat16 arithmetic (promoted to f32) narrows with the strict
+  // form. Directed rounding is done in software, so the dynamic rounding
+  // mode is round to nearest even and it is lowered the same way.
+  setOperationAction(ISD::STRICT_FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32},
+                     Custom);
+
+  // Float-to-integer convert saturates and gives 0 for NaN (measured on G14C,
+  // AGX Performance Simulator tasks/ptx-re-blockers.md, B27), so saturating
+  // conversions to the convert's own width are legal; the others expand.
+  setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+                     {MVT::i16, MVT::i32}, Custom);
 
   // 64-bit conversions are expanded with 32-bit conversions.
   setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
@@ -220,20 +248,50 @@ AGXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
       break;
     }
   }
+  // A native float add on device memory where the chip has one; the
+  // threadgroup atomic has none.
+  if (RMW->getOperation() == AtomicRMWInst::FAdd && RMW->getType()->isFloatTy() &&
+      ST.hasDeviceAtomicFAdd() &&
+      RMW->getPointerAddressSpace() != AGX::THREADGROUP_ADDRESS)
+    return AtomicExpansionKind::None;
+  // A native u64 min / max on device memory when the old value is unused.
+  if ((RMW->getOperation() == AtomicRMWInst::UMin ||
+       RMW->getOperation() == AtomicRMWInst::UMax) &&
+      RMW->getType()->isIntegerTy(64) && RMW->use_empty() &&
+      ST.hasDeviceAtomicU64MinMax() &&
+      RMW->getPointerAddressSpace() != AGX::THREADGROUP_ADDRESS)
+    return AtomicExpansionKind::None;
   return AtomicExpansionKind::CmpXChg;
 }
 
 TargetLowering::AtomicExpansionKind
 AGXTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  // There are no atomic loads: use a compare and swap that never succeeds in
-  // changing memory.
+  // System-scope 32-bit loads of device memory stay loads, encoded coherent
+  // after an f59d: the only form that sees host writes during a dispatch
+  // (ptx-re-blockers B7).
+  if (isSystemScopeDeviceAccess(LI))
+    return AtomicExpansionKind::None;
+  // Other atomic loads: a compare and swap that never succeeds in changing
+  // memory.
   return AtomicExpansionKind::CmpXChg;
 }
 
 TargetLowering::AtomicExpansionKind
 AGXTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  // System-scope 32-bit stores of device memory: a coherent store and an
+  // f533, the only form the host sees during a dispatch.
+  if (isSystemScopeDeviceAccess(SI))
+    return AtomicExpansionKind::None;
   // Atomic stores become atomic exchanges.
   return AtomicExpansionKind::Expand;
+}
+
+bool AGXTargetLowering::isSystemScopeDeviceAccess(const Instruction *I) {
+  Type *Ty = isa<LoadInst>(I) ? I->getType()
+                              : cast<StoreInst>(I)->getValueOperand()->getType();
+  const DataLayout &DL = I->getDataLayout();
+  return DL.getTypeSizeInBits(Ty) == 32 && AGX::isHostCoherentAccess(*I) &&
+         getLoadStoreAddressSpace(I) == AGX::DEVICE_ADDRESS;
 }
 
 //===----------------------------------------------------------------------===//
@@ -278,6 +336,13 @@ SDValue AGXTargetLowering::LowerFormalArguments(
       continue;
     }
     MCRegister PReg = Allocate(VT);
+    if (In.isOrigArg()) {
+      unsigned Arg = In.getOrigArgIndex();
+      if (MFI->ArgHalves.size() <= Arg)
+        MFI->ArgHalves.resize(Arg + 1, ~0u);
+      if (MFI->ArgHalves[Arg] == ~0u)
+        MFI->ArgHalves[Arg] = Half - VT.getSizeInBits() / 16;
+    }
     if (!PReg) {
       InVals.push_back(DAG.getUNDEF(VT));
       continue;
@@ -295,8 +360,9 @@ SDValue AGXTargetLowering::LowerFormalArguments(
       MFI->setImplicitArgVReg(Dim,
                               MF.addLiveIn(PReg, &AGX::GPR32RegClass));
   }
-  // The global data buffer address, if the module has device globals.
-  if (!AGX::computeGlobalDataLayout(*MF.getFunction().getParent()).empty()) {
+  // The global data buffer address, if the kernel uses device globals (a
+  // module's other globals, such as checked mode's site table, need none).
+  if (AGX::usesGlobalData(MF.getFunction())) {
     unsigned GlobalHalf = alignTo(Half, 2);
     MCRegister PReg = Allocate(MVT::i64);
     if (PReg)
@@ -338,36 +404,84 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
 // Custom lowering
 //===----------------------------------------------------------------------===//
 
-/// Low and high halves of a 64-bit value.
+/// The high half of a 64-bit value.
+static SDValue hi32(SelectionDAG &DAG, const SDLoc &DL, SDValue V) {
+  if (auto *C = dyn_cast<ConstantSDNode>(V))
+    return DAG.getConstant(C->getZExtValue() >> 32, DL, MVT::i32);
+  switch (V.getOpcode()) {
+  case ISD::BUILD_PAIR:
+    return V.getOperand(1);
+  case ISD::ZERO_EXTEND:
+    return DAG.getConstant(0, DL, MVT::i32);
+  case ISD::SIGN_EXTEND:
+    if (V.getOperand(0).getValueType() == MVT::i32)
+      return DAG.getNode(ISD::SRA, DL, MVT::i32, V.getOperand(0),
+                         DAG.getConstant(31, DL, MVT::i32));
+    break;
+  case ISD::ANY_EXTEND:
+    return DAG.getUNDEF(MVT::i32);
+  default:
+    break;
+  }
+  return DAG.getNode(AGXISD::HI32, DL, MVT::i32, V);
+}
+
+/// Low and high halves of a 64-bit value, as nodes the combiner folds.
 static std::pair<SDValue, SDValue> split64(SelectionDAG &DAG, const SDLoc &DL,
                                            SDValue V) {
-  return {DAG.getTargetExtractSubreg(AGX::sub0, DL, MVT::i32, V),
-          DAG.getTargetExtractSubreg(AGX::sub1, DL, MVT::i32, V)};
+  if (V.getOpcode() == ISD::BUILD_PAIR)
+    return {V.getOperand(0), V.getOperand(1)};
+  return {DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, V), hi32(DAG, DL, V)};
 }
 
 static SDValue join64(SelectionDAG &DAG, const SDLoc &DL, SDValue Lo,
                       SDValue Hi) {
-  SDValue Ops[] = {
-      DAG.getTargetConstant(AGX::GPR64RegClassID, DL, MVT::i32), Lo,
-      DAG.getTargetConstant(AGX::sub0, DL, MVT::i32), Hi,
-      DAG.getTargetConstant(AGX::sub1, DL, MVT::i32)};
-  return SDValue(
-      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::i64, Ops), 0);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+}
+
+static SDValue lowerLogicSelect64(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  unsigned Opc = Op.getOpcode();
+  if (Opc == ISD::SELECT) {
+    auto [XLo, XHi] = split64(DAG, DL, Op.getOperand(1));
+    auto [YLo, YHi] = split64(DAG, DL, Op.getOperand(2));
+    SDValue C = Op.getOperand(0);
+    return join64(DAG, DL, DAG.getSelect(DL, MVT::i32, C, XLo, YLo),
+                  DAG.getSelect(DL, MVT::i32, C, XHi, YHi));
+  }
+  auto [ALo, AHi] = split64(DAG, DL, Op.getOperand(0));
+  auto [BLo, BHi] = split64(DAG, DL, Op.getOperand(1));
+  return join64(DAG, DL, DAG.getNode(Opc, DL, MVT::i32, ALo, BLo),
+                DAG.getNode(Opc, DL, MVT::i32, AHi, BHi));
 }
 
 SDValue AGXTargetLowering::LowerOperation(SDValue Op,
                                           SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::STORE:
+    return lowerVectorStore(Op, DAG);
+  case ISD::LOAD:
+    // reached only for loads ReplaceNodeResults leaves as they are
+    return SDValue();
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return lowerINTRINSIC_VOID(Op, DAG);
+  case ISD::ATOMIC_FENCE:
+    return lowerATOMIC_FENCE(Op, DAG);
+  case ISD::ATOMIC_LOAD_SUB:
+    return lowerATOMIC_LOAD_SUB(Op, DAG);
   case ISD::BRCOND:
     return lowerBRCOND(Op, DAG);
   case ISD::SETCC:
     return lowerSETCC64(Op, DAG);
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SELECT:
+    return lowerLogicSelect64(Op, DAG);
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
@@ -379,6 +493,9 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerCTLZ_CTTZ64(Op, DAG);
   case ISD::FP_TO_BF16:
     return lowerFP_TO_BF16(Op, DAG);
+  case ISD::STRICT_FP_TO_BF16:
+    return DAG.getMergeValues({lowerFP_TO_BF16(Op, DAG), Op.getOperand(0)},
+                              SDLoc(Op));
   case ISD::FDIV:
     return lowerFDIV(Op, DAG);
   case ISD::FREM:
@@ -400,15 +517,92 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return lowerFP_TO_INT64(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: {
+    EVT Src = Op.getOperand(0).getValueType();
+    EVT Sat = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    if (Sat == Op.getValueType() && (Src == MVT::f32 || Src == MVT::f16))
+      return Op;
+    return SDValue();
+  }
   default:
     llvm_unreachable("unexpected custom lowering");
   }
 }
 
+/// Whether a load or store of VT is one xy / xyz / xyzw access: 2 to 4
+/// elements of 32 bits, 4-byte aligned, in device or threadgroup memory, and
+/// neither volatile nor atomic (those keep the scalar path).
+static bool isVectorAccess(EVT VT, const MemSDNode *M) {
+  unsigned AS = M->getAddressSpace();
+  return VT.isVector() && VT.getScalarSizeInBits() == 32 &&
+         VT.getVectorNumElements() >= 2 && VT.getVectorNumElements() <= 4 &&
+         M->isSimple() && M->getAlign() >= Align(4) &&
+         (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
+}
+
+static unsigned vectorNode(bool Load, unsigned N) {
+  static const unsigned Loads[] = {AGXISD::LOAD_V2, AGXISD::LOAD_V3,
+                                   AGXISD::LOAD_V4};
+  static const unsigned Stores[] = {AGXISD::STORE_V2, AGXISD::STORE_V3,
+                                    AGXISD::STORE_V4};
+  return (Load ? Loads : Stores)[N - 2];
+}
+
 void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
                                            SmallVectorImpl<SDValue> &Results,
                                            SelectionDAG &DAG) const {
-  // The custom operations do not have illegal result types.
+  // Vector loads: one access with a 32-bit result per element.
+  auto *L = dyn_cast<LoadSDNode>(N);
+  if (!L || L->getExtensionType() != ISD::NON_EXTLOAD || L->isIndexed() ||
+      !isVectorAccess(L->getValueType(0), L))
+    return;
+  SDLoc DL(N);
+  EVT VT = L->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<EVT, 5> VTs(NumElts, MVT::i32);
+  VTs.push_back(MVT::Other);
+  SDValue Load = DAG.getMemIntrinsicNode(
+      vectorNode(true, NumElts), DL, DAG.getVTList(VTs),
+      {L->getChain(), L->getBasePtr()}, L->getMemoryVT(), L->getMemOperand());
+  SmallVector<SDValue, 4> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(DAG.getBitcast(VT.getScalarType(), Load.getValue(I)));
+  Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+  Results.push_back(Load.getValue(NumElts));
+}
+
+/// Device and threadgroup accesses of up to 128 bits need only 4-byte
+/// alignment: xy / xyzw accesses at every byte offset 0, 4, 8, 12 mod 16, also
+/// across 64-byte lines and 4 KiB pages, match the byte-address model on the
+/// M2 Max (ptx-re-blockers B33).
+bool AGXTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AS, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  bool OK = (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS) &&
+            Alignment >= Align(4) && VT.getStoreSize() <= 16;
+  if (Fast)
+    *Fast = OK;
+  return OK;
+}
+
+SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  auto *S = cast<StoreSDNode>(Op);
+  SDValue Val = S->getValue();
+  EVT VT = Val.getValueType();
+  if (S->isTruncatingStore() || S->isIndexed() || !isVectorAccess(VT, S))
+    return SDValue();
+  SDLoc DL(Op);
+  SmallVector<SDValue, 6> Ops{S->getChain()};
+  for (unsigned I = 0; I < VT.getVectorNumElements(); ++I)
+    Ops.push_back(DAG.getBitcast(
+        MVT::i32, DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getScalarType(),
+                              Val, DAG.getVectorIdxConstant(I, DL))));
+  Ops.push_back(S->getBasePtr());
+  return DAG.getMemIntrinsicNode(vectorNode(false, VT.getVectorNumElements()),
+                                 DL, DAG.getVTList(MVT::Other), Ops,
+                                 S->getMemoryVT(), S->getMemOperand());
 }
 
 SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,
@@ -448,7 +642,7 @@ SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,
   // Threadgroup variables are allocated statically per kernel; their
   // address is a constant offset into threadgroup memory.
   unsigned Offset =
-      MFI->allocateThreadgroupVariable(DAG.getDataLayout(), *GV);
+      MFI->allocateThreadgroupVariable(DAG.getMachineFunction().getFunction(), *GV);
   return DAG.getConstant(Offset + GA->getOffset(), DL, Op.getValueType());
 }
 
@@ -491,6 +685,102 @@ SDValue AGXTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   default:
     return SDValue();
   }
+}
+
+// The memory barriers of G13/G14, by their 16-bit encodings (memory_barrier
+// a, b, c is 0xf5 | b << 8 | a << 10 | c << 12). Their effect was measured
+// with cross-core litmus tests on G14C (M2 Max) under Asahi Linux
+// (Apple-M2-Playground novel-results 2026-10-11-memory-ordering,
+// 2026-10-18-sb-lb, 2026-10-18-atomic-release, 2026-10-18-fence-cost):
+//   f596 (Mesa's memory_barrier) does not order stores between cores;
+//   f533 is the store release (also needed before an atomic flag);
+//   wait 0 then f59d is the acquire;
+//   store buffering needs the whole sequence Mesa uses at queue-family scope.
+// Threads of one threadgroup run on one core, where no reordering was seen.
+enum AGXBarrier : unsigned { F596, F533, F59D, F59A, F59E, F503, F599 };
+
+static SDValue emitBarrier(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                           AGXBarrier B) {
+  static const unsigned Ops[][3] = {
+      {1, 2, 9}, {0, 3, 3}, {3, 1, 9}, {2, 2, 9}, {3, 2, 9}, {0, 3, 0},
+      {2, 1, 9}};
+  SDValue Args[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::agx_memory_barrier, DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][0], DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][1], DL, MVT::i32),
+      DAG.getTargetConstant(Ops[B][2], DL, MVT::i32)};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Args);
+}
+
+static SDValue emitWait(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain) {
+  SDValue Args[] = {Chain,
+                    DAG.getTargetConstant(Intrinsic::agx_wait, DL, MVT::i32),
+                    DAG.getTargetConstant(0, DL, MVT::i32)};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Args);
+}
+
+SDValue AGXTargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  auto Ordering = static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
+  auto Scope = static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+  if (Scope == SyncScope::SingleThread)
+    return Chain;
+  LLVMContext &Ctx = *DAG.getContext();
+  if (Scope == Ctx.getOrInsertSyncScopeID("workgroup") ||
+      Scope == Ctx.getOrInsertSyncScopeID("workgroup-one-as"))
+    return emitBarrier(DAG, DL, Chain, F596);
+  // Device and system scope.
+  switch (Ordering) {
+  case AtomicOrdering::Acquire:
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  case AtomicOrdering::Release:
+    return emitBarrier(DAG, DL, Chain, F533);
+  case AtomicOrdering::AcquireRelease:
+    Chain = emitBarrier(DAG, DL, Chain, F533);
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  default:
+    for (AGXBarrier B : {F596, F533, F59A, F59E, F503, F599})
+      Chain = emitBarrier(DAG, DL, Chain, B);
+    return emitBarrier(DAG, DL, emitWait(DAG, DL, Chain), F59D);
+  }
+}
+
+Instruction *AGXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                 Instruction *Inst,
+                                                 AtomicOrdering Ord) const {
+  if (isReleaseOrStronger(Ord) && Inst->hasAtomicStore())
+    return Builder.CreateFence(isAcquireOrStronger(Ord) ? AtomicOrdering::Release
+                                                        : Ord,
+                               getAtomicSyncScopeID(Inst).value_or(
+                                   SyncScope::System));
+  return nullptr;
+}
+
+Instruction *AGXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                  Instruction *Inst,
+                                                  AtomicOrdering Ord) const {
+  if (isAcquireOrStronger(Ord))
+    return Builder.CreateFence(
+        Ord == AtomicOrdering::SequentiallyConsistent
+            ? AtomicOrdering::SequentiallyConsistent
+            : AtomicOrdering::Acquire,
+        getAtomicSyncScopeID(Inst).value_or(SyncScope::System));
+  return nullptr;
+}
+
+SDValue AGXTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // x - v is x + (-v). The add keeps the meaning of the opcode with the
+  // coherency bit set, which turns the sub opcode into a float add on G14.
+  auto *N = cast<AtomicSDNode>(Op.getNode());
+  SDLoc DL(Op);
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), N->getVal());
+  return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, N->getMemoryVT(),
+                       N->getChain(), N->getBasePtr(), Neg,
+                       N->getMemOperand());
 }
 
 SDValue AGXTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -589,8 +879,62 @@ SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::BRCOND:
     return performBRCONDCombine(N, DCI);
+  case ISD::TRUNCATE:
+    // The low half of a pair.
+    if (N->getOperand(0).getOpcode() == ISD::BUILD_PAIR) {
+      SDValue Lo = N->getOperand(0).getOperand(0);
+      return DCI.DAG.getZExtOrTrunc(Lo, SDLoc(N), N->getValueType(0));
+    }
+    return SDValue();
+  case ISD::BUILD_PAIR: {
+    // A value split and joined again.
+    SDValue Lo = N->getOperand(0), Hi = N->getOperand(1);
+    if (Lo.getOpcode() == ISD::TRUNCATE && Hi.getOpcode() == AGXISD::HI32 &&
+        Lo.getOperand(0) == Hi.getOperand(0))
+      return Lo.getOperand(0);
+    return SDValue();
+  }
+  case AGXISD::BFI7:
+  case AGXISD::EXTR7:
+  case AGXISD::SRA7:
+    // Shifts of zero.
+    if (all_of(drop_end(N->ops()), [](const SDUse &U) { return isNullConstant(U.get()); }))
+      return DCI.DAG.getConstant(0, SDLoc(N), MVT::i32);
+    return SDValue();
+  case AGXISD::HI32: {
+    SDValue V = N->getOperand(0);
+    SDLoc DL(N);
+    SDValue H = hi32(DCI.DAG, DL, V);
+    if (H.getOpcode() != AGXISD::HI32)
+      return H;
+    KnownBits Known = DCI.DAG.computeKnownBits(SDValue(N, 0));
+    if (Known.isConstant())
+      return DCI.DAG.getConstant(Known.getConstant(), DL, MVT::i32);
+    return SDValue();
+  }
   default:
     return SDValue();
+  }
+}
+
+void AGXTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  Known.resetAll();
+  switch (Op.getOpcode()) {
+  case AGXISD::HI32:
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1).extractBits(32, 32);
+    break;
+  case AGXISD::MUL_WIDE_U:
+  case AGXISD::MUL_WIDE_S: {
+    bool S = Op.getOpcode() == AGXISD::MUL_WIDE_S;
+    KnownBits A = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits B = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = KnownBits::mul(S ? A.sext(64) : A.zext(64), S ? B.sext(64) : B.zext(64));
+    break;
+  }
+  default:
+    break;
   }
 }
 
@@ -638,38 +982,62 @@ SDValue AGXTargetLowering::lowerShift64(SDValue Op, SelectionDAG &DAG) const {
   SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   auto C32 = [&](uint64_t V) { return DAG.getConstant(V, DL, MVT::i32); };
 
-  // Shifts by a constant stay legal for address mode matching; they are
-  // expanded during instruction selection.
-  if (isa<ConstantSDNode>(Op.getOperand(1)))
-    return Op;
+  if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    uint64_t S = C->getZExtValue();
+    // Small left shifts stay for address mode matching (iadd with a shift);
+    // instruction selection expands what is left.
+    SDValue X = Op.getOperand(0);
+    bool Address =
+        X.getOpcode() == ISD::ZERO_EXTEND || X.getOpcode() == ISD::SIGN_EXTEND ||
+        all_of(Op->users(), [](SDNode *U) { return U->getOpcode() == ISD::ADD; });
+    if (S >= 64 || (Opc == ISD::SHL && S <= 4 && Address))
+      return Op;
+    if (S == 0)
+      return X;
+    SDValue NewLo, NewHi;
+    if (S >= 32) {
+      if (Opc == ISD::SHL) {
+        NewLo = Zero;
+        NewHi = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, C32(S - 32));
+      } else {
+        NewLo = DAG.getNode(Opc, DL, MVT::i32, Hi, C32(S - 32));
+        NewHi = Opc == ISD::SRA ? DAG.getNode(ISD::SRA, DL, MVT::i32, Hi, C32(31))
+                                : Zero;
+      }
+    } else if (Opc == ISD::SHL) {
+      NewLo = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, C32(S));
+      NewHi = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, C32(32 - S));
+    } else {
+      NewLo = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, C32(S));
+      NewHi = DAG.getNode(Opc, DL, MVT::i32, Hi, C32(S));
+    }
+    return join64(DAG, DL, NewLo, NewHi);
+  }
 
-  // Variable shifts: shift each half by the amount modulo 32, then select
-  // on bit 5 of the amount.
-  SDValue A5 = DAG.getNode(ISD::AND, DL, MVT::i32, Amt, C32(31));
-  SDValue Big = DAG.getSetCC(
-      DL, MVT::i32, DAG.getNode(ISD::AND, DL, MVT::i32, Amt, C32(32)), Zero,
-      ISD::SETNE);
+  // Variable shifts (by 0 to 63) with the 7-bit shift amounts of bfi, extr
+  // and asr, which shift a register's bits out completely from 32 on:
+  //   srl: lo = extr lo, hi, s            hi = extr hi, 0, s
+  //   shl: lo = bfi 0, lo, s              hi = bfi (extr 0, lo, 64 - s), hi, s
+  //   sra: lo = s < 32 ? extr lo, hi, s : asr hi, s - 32      hi = asr hi, s
+  // In shl, extr 0, lo, 64 - s is the part of lo that moves into hi, for s
+  // below and above 32 (and 0 for s = 0).
   SDValue NewLo, NewHi;
-  if (Opc == ISD::SHL) {
-    // hi = (hi << s) | ((lo >> 1) >> (31 - s)), avoiding a shift by 32.
-    SDValue LoS = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, A5);
-    SDValue Carry = DAG.getNode(
-        ISD::SRL, DL, MVT::i32,
-        DAG.getNode(ISD::SRL, DL, MVT::i32, Lo, C32(1)),
-        DAG.getNode(ISD::XOR, DL, MVT::i32, A5, C32(31)));
-    SDValue HiS = DAG.getNode(ISD::OR, DL, MVT::i32,
-                              DAG.getNode(ISD::SHL, DL, MVT::i32, Hi, A5),
-                              Carry);
-    NewLo = DAG.getSelect(DL, MVT::i32, Big, Zero, LoS);
-    NewHi = DAG.getSelect(DL, MVT::i32, Big, LoS, HiS);
+  if (Opc == ISD::SRL) {
+    NewLo = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Lo, Hi, Amt);
+    NewHi = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Hi, Zero, Amt);
+  } else if (Opc == ISD::SHL) {
+    NewLo = DAG.getNode(AGXISD::BFI7, DL, MVT::i32, Zero, Lo, Amt);
+    SDValue Up = DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Zero, Lo,
+                             DAG.getNode(ISD::SUB, DL, MVT::i32, C32(64), Amt));
+    NewHi = DAG.getNode(AGXISD::BFI7, DL, MVT::i32, Up, Hi, Amt);
   } else {
-    SDValue HiS = DAG.getNode(Opc, DL, MVT::i32, Hi, A5);
-    SDValue LoS = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, A5);
-    SDValue Fill = Opc == ISD::SRA
-                       ? DAG.getNode(ISD::SRA, DL, MVT::i32, Hi, C32(31))
-                       : Zero;
-    NewLo = DAG.getSelect(DL, MVT::i32, Big, HiS, LoS);
-    NewHi = DAG.getSelect(DL, MVT::i32, Big, Fill, HiS);
+    NewHi = DAG.getNode(AGXISD::SRA7, DL, MVT::i32, Hi, Amt);
+    SDValue Big = DAG.getSetCC(DL, MVT::i32, Amt, C32(31), ISD::SETUGT);
+    NewLo = DAG.getSelect(
+        DL, MVT::i32, Big,
+        DAG.getNode(AGXISD::SRA7, DL, MVT::i32, Hi,
+                    DAG.getNode(ISD::SUB, DL, MVT::i32, Amt, C32(32))),
+        DAG.getNode(AGXISD::EXTR7, DL, MVT::i32, Lo, Hi, Amt));
   }
   return join64(DAG, DL, NewLo, NewHi);
 }
@@ -678,21 +1046,18 @@ SDValue AGXTargetLowering::lowerMUL64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
-  auto IsExt32 = [](SDValue V, unsigned Opc) {
-    return V.getOpcode() == Opc && V.getOperand(0).getValueType() == MVT::i32;
-  };
+  auto [ALo, AHi] = split64(DAG, DL, A);
+  auto [BLo, BHi] = split64(DAG, DL, B);
   // 32 x 32 -> 64-bit products are a single imadd.
-  if ((IsExt32(A, ISD::ZERO_EXTEND) && IsExt32(B, ISD::ZERO_EXTEND)) ||
-      (IsExt32(A, ISD::SIGN_EXTEND) && IsExt32(B, ISD::SIGN_EXTEND)))
-    return Op;
+  if (DAG.computeKnownBits(A).countMinLeadingZeros() >= 32 &&
+      DAG.computeKnownBits(B).countMinLeadingZeros() >= 32)
+    return DAG.getNode(AGXISD::MUL_WIDE_U, DL, MVT::i64, ALo, BLo);
+  if (DAG.ComputeNumSignBits(A) > 32 && DAG.ComputeNumSignBits(B) > 32)
+    return DAG.getNode(AGXISD::MUL_WIDE_S, DL, MVT::i64, ALo, BLo);
 
   // lo(a) * lo(b) as a 64-bit product, plus the cross products in the high
   // half.
-  auto [ALo, AHi] = split64(DAG, DL, A);
-  auto [BLo, BHi] = split64(DAG, DL, B);
-  SDValue P = DAG.getNode(ISD::MUL, DL, MVT::i64,
-                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, ALo),
-                          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, BLo));
+  SDValue P = DAG.getNode(AGXISD::MUL_WIDE_U, DL, MVT::i64, ALo, BLo);
   auto [PLo, PHi] = split64(DAG, DL, P);
   SDValue Cross = DAG.getNode(ISD::ADD, DL, MVT::i32,
                               DAG.getNode(ISD::MUL, DL, MVT::i32, ALo, BHi),
@@ -788,7 +1153,7 @@ SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
 SDValue AGXTargetLowering::lowerFP_TO_BF16(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0);
   if (Src.getValueType() != MVT::f32)
     Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
   SDValue X = DAG.getBitcast(MVT::i32, Src);

@@ -1047,6 +1047,11 @@ enum {
 #include "ELFRelocs/VE.def"
 };
 
+// ELF Relocation types for AGX.
+enum {
+#include "ELFRelocs/AGX.def"
+};
+
 // CSKY Specific e_flags
 enum : unsigned {
   EF_CSKY_801 = 0xa,

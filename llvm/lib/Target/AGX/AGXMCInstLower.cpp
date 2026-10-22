@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXMCInstLower.h"
+#include "AGX.h"
 #include "AGXInstrInfo.h"
 #include "AGXSubtarget.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
@@ -64,8 +65,17 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   const MCInstrDesc &PseudoDesc = MI->getDesc();
   const MCInstrDesc &RealDesc = TII->get(Opcode);
+  // Device loads and stores have a trailing coherency operand (added below).
+  bool HasCoherency =
+      Opcode == AGX::DEVICE_LOAD_g13 || Opcode == AGX::DEVICE_STORE_g13;
   bool InsertCache = PseudoDesc.getNumDefs() > 0 &&
-                     RealDesc.getNumOperands() == PseudoDesc.getNumOperands() + 1;
+                     RealDesc.getNumOperands() ==
+                         PseudoDesc.getNumOperands() + 1 + HasCoherency;
+
+  // Atomics whose result is unused write no register.
+  if (MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET ||
+      MI->getOpcode() == AGX::DEVICE_ATOMIC_NORET)
+    OutMI.addOperand(MCOperand::createReg(MCRegister()));
 
   unsigned Idx = 0;
   for (const MachineOperand &MO : MI->operands()) {
@@ -76,13 +86,20 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (Idx++ == 0 && InsertCache)
       OutMI.addOperand(MCOperand::createImm(0));
   }
+  // The trailing coherency operand of device loads and stores: coherent for
+  // volatile and system-scope accesses (with the f59d / f533 that
+  // AGXCodeGenPrepare puts around them).
+  if (HasCoherency)
+    OutMI.addOperand(MCOperand::createImm(AGX::isHostCoherentAccess(*MI) ? 3 : 0));
   // Device atomics on parts with several dies must bypass the per-die
   // caches.
   if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||
-       MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG) &&
+       MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG ||
+       MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET ||
+       MI->getOpcode() == AGX::DEVICE_ATOMIC_NORET) &&
       ST.hasMultiDieCoherency()) {
     int Idx = AGX::getNamedOperandIdx(Opcode, AGX::OpName::coherent);
-    OutMI.getOperand(Idx).setImm(1);
+    OutMI.getOperand(Idx).setImm(OutMI.getOperand(Idx).getImm() | 1);
   }
 
   assert(OutMI.getNumOperands() == RealDesc.getNumOperands() &&

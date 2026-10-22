@@ -44,7 +44,7 @@ BitVector AGXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   ReserveWithAliases(AGX::R0);
 
   // Registers beyond the subtarget's register file.
-  for (unsigned I = ST.getMaxGPRs(); I < 128; ++I)
+  for (unsigned I = ST.getMaxGPRs(MF.getFunction()); I < 128; ++I)
     ReserveWithAliases(AGX::GPR32RegClass.getRegister(I));
 
   // Uniform registers are never allocated.

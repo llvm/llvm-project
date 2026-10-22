@@ -5,7 +5,7 @@
 define agx_kernel void @arith(ptr addrspace(1) %out, float %a, float %b, float %c) {
 ; CHECK-LABEL: arith:
 ; CHECK:         // uniform registers: 16 x 16-bit (threadgroups_per_grid at u5)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -38,7 +38,7 @@ define agx_kernel void @arith(ptr addrspace(1) %out, float %a, float %b, float %
 define agx_kernel void @div(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: div:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 6 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 6 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -73,7 +73,7 @@ define agx_kernel void @div(ptr addrspace(1) %out, float %a, float %b) {
 define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: transcendental:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 4 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 4 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -123,7 +123,7 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 define agx_kernel void @rounding(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: rounding:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -156,7 +156,7 @@ define agx_kernel void @rounding(ptr addrspace(1) %out, float %a, float %b) {
 define agx_kernel void @compare(ptr addrspace(1) %out, float %a, float %b) {
 ; CHECK-LABEL: compare:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -184,7 +184,7 @@ define agx_kernel void @compare(ptr addrspace(1) %out, float %a, float %b) {
 define agx_kernel void @half(ptr addrspace(1) %out, half %a, half %b) {
 ; CHECK-LABEL: half:
 ; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -216,55 +216,48 @@ define agx_kernel void @half(ptr addrspace(1) %out, half %a, half %b) {
 define agx_kernel void @convert(ptr addrspace(1) %out, float %a, i32 %i, i64 %l) {
 ; CHECK-LABEL: convert:
 ; CHECK:         // uniform registers: 18 x 16-bit (threadgroups_per_grid at u6)
-; CHECK-NEXT:    // general purpose registers: 13 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 10 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    asr r2, u5, 31
-; CHECK-NEXT:    bitop 0101, r3, r2, 0
 ; CHECK-NEXT:    xor r5, u5, r2
 ; CHECK-NEXT:    xor r4, u4, r2
+; CHECK-NEXT:    bitop 0101, r3, r2, 0
 ; CHECK-NEXT:    isub r4_r5, r4_r5, r2_r3
-; CHECK-NEXT:    convert f_to_s32, r1, u2, rtz
-; CHECK-NEXT:    convert u32_to_f, r6, u3, rte
-; CHECK-NEXT:    ffs r7, r4
-; CHECK-NEXT:    ffs r8, r5
-; CHECK-NEXT:    trunc r6, r6
-; CHECK-NEXT:    isub r7, 31, r7
-; CHECK-NEXT:    isub r8, 31, r8
-; CHECK-NEXT:    iadd r7, r7, 32
-; CHECK-NEXT:    mov_imm r9, 796917760
-; CHECK-NEXT:    icmpsel ueq, r7, r5, 0, r7, r8
-; CHECK-NEXT:    fmul32 r8, r6, r9
-; CHECK-NEXT:    and r9, r7, 31
-; CHECK-NEXT:    bfeil r10, 0, r4, 1
-; CHECK-NEXT:    xor r11, r9, 31
-; CHECK-NEXT:    bfi r12, 0, r5, r9
-; CHECK-NEXT:    bfeil r10, 0, r10, r11
-; CHECK-NEXT:    and r11, r7, 32
-; CHECK-NEXT:    bfi r4, 0, r4, r9
-; CHECK-NEXT:    bfeil r5, 0, r11, 5
+; CHECK-NEXT:    ffs r1, r4
+; CHECK-NEXT:    ffs r6, r5
+; CHECK-NEXT:    isub r1, 31, r1
+; CHECK-NEXT:    isub r6, 31, r6
+; CHECK-NEXT:    iadd r1, r1, 32
+; CHECK-NEXT:    convert u32_to_f, r7, u3, rte
+; CHECK-NEXT:    icmpsel ueq, r1, r5, 0, r1, r6
+; CHECK-NEXT:    isub r6, 64, r1
+; CHECK-NEXT:    trunc r7, r7
+; CHECK-NEXT:    extr r6, 0, r4, r6
+; CHECK-NEXT:    mov_imm r8, 796917760
+; CHECK-NEXT:    fmul32 r8, r7, r8
+; CHECK-NEXT:    bfi r6, r6, r5, r1
+; CHECK-NEXT:    bfi r4, 0, r4, r1
+; CHECK-NEXT:    convert f_to_s32, r5, u2, rtz
 ; CHECK-NEXT:    floor r8, r8
-; CHECK-NEXT:    or r9, r12, r10
-; CHECK-NEXT:    icmpsel ueq, r10, r5, 0, r4, 0
-; CHECK-NEXT:    icmpsel ueq, r4, r5, 0, r9, r4
-; CHECK-NEXT:    icmpsel ueq, r5, r10, 0, 0, 1
-; CHECK-NEXT:    convert f_to_u32, r11, r8, rtz
-; CHECK-NEXT:    or r4, r4, r5
-; CHECK-NEXT:    isub r5, 159, r7
+; CHECK-NEXT:    icmpsel ueq, r4, r4, 0, 0, 1
+; CHECK-NEXT:    mov_imm r9, -813694976
+; CHECK-NEXT:    or r4, r6, r4
+; CHECK-NEXT:    isub r1, 159, r1
 ; CHECK-NEXT:    convert u32_to_f, r4, r4, rte
-; CHECK-NEXT:    bfi r5, 0, r5, 23
-; CHECK-NEXT:    mov_imm r7, -813694976
-; CHECK-NEXT:    fmadd32 r6, r8, r7, r6
-; CHECK-NEXT:    fmul32 r4, r4, r5
-; CHECK-NEXT:    mov_imm r5, -2147483648
-; CHECK-NEXT:    and r2, r2, r5
-; CHECK-NEXT:    convert s32_to_f, r1, r1, rte
-; CHECK-NEXT:    or r2, r4, r2
-; CHECK-NEXT:    convert f_to_u32, r10, r6, rtz
-; CHECK-NEXT:    fadd32 r1, r1, r2
+; CHECK-NEXT:    bfi r1, 0, r1, 23
+; CHECK-NEXT:    fmadd32 r6, r8, r9, r7
+; CHECK-NEXT:    convert f_to_u32, r9, r8, rtz
+; CHECK-NEXT:    fmul32 r1, r4, r1
+; CHECK-NEXT:    mov_imm r4, -2147483648
+; CHECK-NEXT:    and r2, r2, r4
+; CHECK-NEXT:    convert s32_to_f, r3, r5, rte
+; CHECK-NEXT:    or r1, r1, r2
+; CHECK-NEXT:    convert f_to_u32, r8, r6, rtz
+; CHECK-NEXT:    fadd32 r1, r3, r1
 ; CHECK-NEXT:    device_store 0, i32, x, r1, u0_u1, 0, signed
-; CHECK-NEXT:    device_store 0, i32, xy, r10_r11, u0_u1, 2, signed
+; CHECK-NEXT:    device_store 0, i32, xy, r8_r9, u0_u1, 2, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap

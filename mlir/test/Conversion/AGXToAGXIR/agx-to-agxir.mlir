@@ -9,6 +9,17 @@ func.func @barrier() {
   return
 }
 
+// The block barrier orders memory itself: no fences.
+// CHECK-LABEL: @block_barrier
+func.func @block_barrier() {
+  // CHECK-NOT: llvm.fence
+  // CHECK: agxir.block.barrier
+  // CHECK-NOT: llvm.fence
+  agx.block_barrier
+  // CHECK: return
+  return
+}
+
 // CHECK-LABEL: @shuffle_scalar
 func.func @shuffle_scalar(%f: f32, %h: f16, %i: i32) -> (f32, f16) {
   // CHECK: agxir.simd.shuffle.xor %{{.*}}, %{{.*}} : f32
@@ -67,7 +78,7 @@ func.func @memory_barriers() {
 // CHECK-LABEL: @mma
 func.func @mma(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -> vector<2xf32> {
   // CHECK: agxir.simdgroup.matrix.fma %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf32>
-  %0 = agx.mma %a * %b + %c : vector<2xf32>
+  %0 = agx.mma %a * %b + %c : vector<2xf32>, vector<2xf32>
   return %0 : vector<2xf32>
 }
 

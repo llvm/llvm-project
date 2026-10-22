@@ -61,11 +61,11 @@ Use ``-mcpu`` (or the ``target-cpu`` function attribute) to select the GPU.
    ``agx-g14g``    G14        AGX2              M2
    ``agx-g14s``    G14        AGX2              M2 Pro
    ``agx-g14c``    G14        AGX2              M2 Max
-   ``agx-g14d``    G14        AGX2              M2 Ultra
+   ``agx-g14d``    G14        AGX2              M2 Ultra (``multi-die-coherency``)
    ``agx-g15g``    G15        AGX2              M3
    ``agx-g15s``    G15        AGX2              M3 Pro
    ``agx-g15c``    G15        AGX2              M3 Max
-   ``agx-g15d``    G15        AGX2              M3 Ultra
+   ``agx-g15d``    G15        AGX2              M3 Ultra (``multi-die-coherency``)
    ``agx-g16g``    G16        Apple9            M4
    ``agx-g16s``    G16        Apple9            M4 Pro
    ``agx-g16c``    G16        Apple9            M4 Max
@@ -74,6 +74,49 @@ Use ``-mcpu`` (or the ``target-cpu`` function attribute) to select the GPU.
    =============== ========== ================= =====================================
 
 G15 support assumes the G14 encoding; it has not been validated on hardware.
+
+M2 Max (``agx-g14c``)
+---------------------
+
+The M2 Max is the reference G14 target. The values below were measured on an
+M2 Max (driver-reported G14C B1) under Asahi Linux by the AGX Performance
+Simulator project, and are the ones its cost and dispatch models use. A
+runtime should query the core count and the clock rather than assume them:
+binned parts have fewer cores.
+
+.. table:: M2 Max (G14C) execution resources
+   :name: agx-g14c-table
+
+   ============================== ==============================================
+   Resource                       Value
+   ============================== ==============================================
+   GPU cores                      38 on the full part, in 4 clusters of
+                                  10, 9, 9 and 10 cores
+   SIMD-group width               32 threads
+   Resident SIMD-groups per core  ``min(96, 2 * floor(3328 / (2 * H)))``, where
+                                  ``H`` is the number of 16-bit register halves
+                                  the kernel declares (minimum 8); whole
+                                  workgroups only
+   Threadgroup memory per core    64 KiB; ``floor(65536 / bytes)`` workgroups
+                                  fit, by threadgroup memory alone
+   Threadgroup memory banks       32 banks of 4 bytes
+   Threads per workgroup          1 to 1024
+   Cache line                     64 bytes (L1 and L2)
+   L1 data cache                  8 KiB per core
+   L2 cache                       256 KiB per core
+   DRAM bandwidth                 about 410 GB/s peak, 360 GB/s for a whole
+                                  dispatch
+   Top GPU clock                  1398 MHz (the clock ramps up over about
+                                  15 ms after the GPU wakes)
+   Concurrent compute commands    at most 4 GPU-wide
+   Kernel launch                  about 55 us warm, 0.4-0.7 ms after wake-up
+   ============================== ==============================================
+
+Occupancy is limited by whichever of the register and threadgroup memory
+limits is lower, in whole workgroups: for example, with 32-thread workgroups
+the limit is near 55 SIMD-groups per core, and with 64-thread workgroups near
+84. The ``max-gprs-128`` and ``max-gprs-64`` features trade registers for
+occupancy along this curve.
 
 Target features
 ===============
@@ -101,11 +144,25 @@ another.
                                   quad. Divergent shuffle indices are expanded
                                   into four shuffles (see `SIMD-group
                                   shuffles`_).
-   ``multi-die-coherency``        Device atomics set the coherency bit (multi-die
-                                  G13 parts).
+   ``multi-die-coherency``        Device atomics set the coherency bit
+                                  (multi-cluster G13 parts and two-die parts).
    ``threadgroup-atomics``        Threadgroup memory atomics.
    ``device-atomics``             Device memory atomics.
+   ``device-atomic-fadd``         A float32 device atomic add (G14; rounds to
+                                  nearest even and flushes denormals, like
+                                  PTX ``atom.add.f32``).
+   ``device-atomic-u64-minmax``   A 64-bit unsigned device atomic min and max
+                                  without a result (G14), used for
+                                  ``atomicrmw umin/umax i64`` whose old value
+                                  is unused.
    ``stack-access``               Per-thread stack loads and stores.
+   ``block-barrier``              ``block_barrier`` (``78 09``), a barrier over
+                                  the caller's aligned block of 4 SIMD-groups
+                                  that orders their memory accesses (G14,
+                                  measured on G14C; AGX Performance Simulator
+                                  ``tasks/ptx-re-blockers.md``, B16).
+                                  ``llvm.agx.block.barrier`` is a
+                                  ``threadgroup_barrier`` without it.
    ``dynamic-caching``            Registers and threadgroup memory are
                                   allocated dynamically (G15 and later).
    ``ray-tracing``                Hardware ray tracing (not used by code
@@ -120,7 +177,216 @@ another.
                                   see `Strict floating point`_).
    ``canonical-nan``              NaN results are the canonical NaN of PTX
                                   (off by default).
+   ``agx-strict``                 Only the instruction forms Mesa's AGX
+                                  compiler emits (G13 and G14; off by default,
+                                  see `Strict mode`_).
    ============================== ==============================================
+
+Strict mode
+-----------
+
+The ``agx-strict`` feature restricts code generation for G13 (M1) and G14 (M2)
+processors to the instructions Mesa's asahi compiler emits for the same GPU,
+so that the code relies only on encodings that Mesa's driver uses in
+production. It is selected in IR by either
+
+* the function attribute ``"target-features"="+agx-strict"`` (or ``-mattr=+agx-strict``), or
+* the module flag ``!{i32 1, !"agx-strict", i32 1}``, which applies to every
+  function of the module.
+
+On a processor other than G13 and G14 the feature is a fatal error. It turns
+off the capabilities Mesa does not use: ``device-atomic-fadd`` (float atomics
+become compare-and-swap loops), ``device-atomic-u64-minmax`` (64-bit min and
+max take the lock table), ``simd-matrix`` and ``block-barrier``. Device and threadgroup loads,
+stores and atomics are encoded in their long form, as Mesa packs them.
+
+Every instruction is then checked against Mesa's instruction forms after
+encoding, for assembly output as well as for objects and for ``llvm-mc``: an
+instruction Mesa would not emit is an error that names the closest Mesa form
+and the field that differs, for example::
+
+  error: ATOMIC_g13 is not an instruction Mesa emits (agx-strict): atomic: field value
+
+The forms are generated by ``llvm/utils/agx-mesa-isa/mesa_isa.py`` from Mesa's
+packer (``src/asahi/compiler/agx_pack.c``) and the operand values its compiler
+creates: operand sizes per opcode, contiguous load and store masks, the
+memory formats, the atomic operations (``translate_atomic_opcode``), the
+special registers, the conversion modes and the long-form choices. The only
+difference between G13 and G14 in Mesa's output is bit 45 of device atomics,
+which Mesa sets for multi-cluster G13 parts and two-die parts
+(``needs_g13x_coherency``); the ``multi-die-coherency`` feature follows the
+same rule. ``tools/fuzz.sh`` checks the forms against Mesa's own packer: every
+instruction Mesa packs from randomly built instructions is accepted.
+
+The AGX Performance Simulator's ``--agx-strict GPU`` option applies the same
+check to the code it runs.
+
+What the mode costs (``llvm/utils/agx-bench/agx-bench.py --agx-strict``, the 8
+benchmark kernels on ``agx-g13g`` and ``agx-g14c``): 6.0% more code (3142 to
+3332 bytes, the long memory forms) and 0.4% more estimated cycles (16655 to
+16719). All of the cycle difference is the ``reduce`` kernel on G14, whose
+float atomic add becomes a compare-and-swap loop (1449.7 to 1514.4 cycles);
+on G13, which has no native float atomic, the cycles are the same.
+
+Debug information
+-----------------
+
+With debug locations, objects carry DWARF (``.debug_line`` and, for full
+debug info, ``.debug_info``); addresses are offsets in ``.text``. Debug
+sections use the two data relocations ``R_AGX_ABS32`` and ``R_AGX_ABS64``,
+which ``llvm-dwarfdump``, ``llvm-objdump -l``, ``llvm-addr2line`` and
+``llvm-symbolizer`` resolve, so these map an AGX PC to its source line. The
+ZLUDA runtime ignores the debug sections when loading; the AGX Performance
+Simulator's ``agx_run --lines`` names the source line of a faulting
+instruction.
+
+Checked mode
+------------
+
+The ``agx-checked`` feature (``-mattr=+agx-checked``, or the module flag
+``!{i32 1, !"agx-checked", i32 1}``) checks memory accesses as the kernel
+runs and reports the first bad one to the runtime, which turns it into an
+error such as ``CUDA_ERROR_ILLEGAL_ADDRESS``. It is meant for debugging: the
+hardware reports nothing about a bad access (shader faults on Asahi are soft:
+loads from unmapped memory read 0 and stores are dropped), and the checks are
+ordinary instructions, so the mode can be combined with ``agx-strict``.
+
+Each check runs before its access:
+
+============================  ================================================
+Access                        Check
+============================  ================================================
+device load, store, atomic    the address is at least 4096 (null); it is a
+                              multiple of the access size, up to 16 bytes
+                              (alignment); and, when the pointer is based on a
+                              kernel argument or a module global, the whole
+                              access lies in the allocation that pointer was
+                              in at launch (bounds)
+threadgroup                   the access lies in its threadgroup array, or for
+                              dynamic shared memory in the threadgroup memory
+                              of the launch
+stack (``alloca``)            a variable offset stays within the object
+============================  ================================================
+
+A pointer whose base cannot be traced to an argument or a global (one loaded
+from memory, for example, or beyond the 16 bounds slots) is checked against
+the runtime's *allocation table*: a binary search finds the allocation it
+points into, which must hold the whole access. With no table (a runtime of
+version 1, or ``-agx-checked-table=false``) it gets the null and alignment
+checks only. The search costs about 80 instructions plus 20 per doubling of
+the number of allocations, per check. Bases are
+traced through address arithmetic, including the integer form front ends
+like ZLUDA use (``inttoptr`` of a 64-bit parameter plus an offset).
+
+Accesses in one basic block at constant offsets from the same base are
+checked together, once, before the first of them, and an access whose bytes
+an earlier check of its block covers is not checked again. A failure of such
+a merged check is reported with the address and size of the whole range, and
+before the earlier accesses of the range have run.
+
+Accesses that cannot fail are not checked: constant offsets inside a device
+global or a static threadgroup array of known size, aligned as the global is,
+and stack accesses at constant offsets. A kernel with no other access is left
+unchanged: no hidden arguments and no ``.agx.kernels`` extension 2, so the
+runtime launches it as an unchecked kernel. MLIR memref descriptors are seen
+through: a pointer read back from an ``insertvalue`` chain has the bounds of
+the argument stored in it.
+
+On the agx-bench kernels the mode costs about 1.5 times the cycles (from 1.1
+times for compute-bound kernels to 5 times for very short ones) and 5 times
+the code, mostly a fixed part per kernel.
+
+A thread whose check fails writes the error record if no other thread has
+(see below) and returns from the kernel; the rest of the launch continues.
+The threadgroup barrier does not wait for threads that have returned
+(measured on G14C). Every checked kernel first reads the error record and
+returns at once if an error is already recorded, so that later launches do
+not run on bad data.
+
+**Runtime interface (version 1).** The backend adds hidden arguments to each
+checked kernel, after the source arguments, passed in uniform registers like
+the others: the 64-bit device address of the error record, the threadgroup
+memory bytes of the launch (static and dynamic, 32-bit), and for each *bounds
+slot* of the kernel two 64-bit addresses, the first and one past the last
+byte of the allocation that the slot's pointer was in at launch. A pointer
+that is not in any allocation gets its own value twice, so that any access
+through it fails. At most 16 slots are used; a kernel with more pointer bases
+checks the others for null and alignment only.
+
+The kernel's ``.agx.kernels`` record gets the extension ``2, version, N,
+record half, threadgroup bytes half``, then for each of the N slots ``argument,
+offset, first half, last half``: the source argument the slot's pointer comes
+from, the byte offset of the 64-bit pointer in that argument's bytes (or
+``0xffffffff`` when the argument itself is the pointer), and the uniform halves
+of its two bounds. The hidden arguments are not in the record's argument
+table.
+
+**Allocation table (version 2).** A kernel with checks against the table has
+two more hidden arguments after the bounds: the 64-bit address of the table
+and its 32-bit entry count. The table is ``count`` pairs of 64-bit addresses
+``(first byte, one past the last byte)`` of every live allocation (device
+memory and global data buffers), sorted by first byte, not overlapping, and
+8-byte aligned. The record gets a last extension, ``3, table half, count
+half``; a runtime of version 1, which stops at an extension it does not know,
+leaves the count 0. The table must not change while a launch that uses it
+runs (ZLUDA copies it into the launch's staging memory).
+
+The *error record* is 64 bytes of device memory, 8-byte aligned, zeroed by
+the runtime:
+
+==========  =====  ===========================================================
+Offset      Size   Field
+==========  =====  ===========================================================
+0           4      claimed: 0 while there is no error; the first failing
+                   thread sets it to 1 with a compare-and-swap
+4           4      kind (bits 0-7): 1 out of bounds, 2 null, 3 misaligned,
+                   4 threadgroup out of bounds, 5 stack out of bounds; bit 8
+                   set for a store, bit 9 for an atomic
+8           8      the address (for threadgroup and stack accesses, the offset)
+16          4      access size in bytes
+20          4      check site (0 if unknown)
+24          12     the thread's position in its threadgroup (x, y, z)
+36          12     the threadgroup's position in the grid (x, y, z)
+48          16     zero
+==========  =====  ===========================================================
+
+The fields are written after ``claimed``, so the runtime reads the record
+after the launch has finished. It keeps the error until the context is reset
+(and must then zero ``claimed``).
+
+*Check sites* are described by the constant global ``__agx_checked_sites``
+(in the module's global data), a text with one line per site:
+``<site>\t<access> <size>\t<frame>[\t<frame>...]\n``, where the access is
+``load``, ``store`` or ``atomic`` and each frame is ``<function>
+<file>:<line>:<column>``, the innermost (inlined) one first, from the debug
+locations. Without debug information the frame is the kernel's name.
+
+ZLUDA's ``zluda_agx`` implements the runtime side (``zoc --agx-checked``,
+``ZLUDA_AGX_CHECKED=1``; its ``docs/src/agx.md``, "Checked mode").
+``llvm/utils/agx-checked/run_checked.py`` does the same for the AGX
+Performance Simulator's ``agx_run``; ``checked_tests.py`` (IR kernels) and
+``zluda_tests.py`` (PTX through ``zoc``) check on it that each bug is reported
+with the right fields and that correct kernels are unchanged.
+
+Occupancy attributes
+--------------------
+
+A core of G13 and G14 runs 2 * floor(3328 / (2 * H)) SIMD-groups of 32
+threads, at most 1024 threads, when each thread uses H 16-bit registers,
+rounded up to a multiple of 8 (registers are allocated in groups of 8 halves;
+this is the occupancy table of Mesa's AGX compiler). All the threads of a threadgroup run
+on one core, so the registers a kernel uses limit its threadgroup size: 52
+32-bit registers allow 1024 threads, 128 allow 384. The resource comments
+print the limit (``up to N threads per threadgroup``). Two function
+attributes lower the register use, spilling the rest to the stack:
+
+* ``"agx-max-threads-per-threadgroup"="N"`` (PTX ``.maxntid`` and
+  ``.reqntid``): at most as many registers as let N threads fit.
+* ``"agx-max-gprs"="N"`` (PTX ``.maxnreg``): at most N 32-bit registers, and
+  no fewer than 16.
+
+Later generations are assumed to have the same register budget; this is not
+measured.
 
 Address spaces
 ==============
@@ -140,6 +406,14 @@ Address spaces
 
 Generic, device and constant pointers are interchangeable: casts between them
 are no-ops. There is no generic addressing of threadgroup or private memory.
+
+The backend's alias analysis (``agx-aa``, ahead of BasicAA in both pass
+managers, and used by the DAG combiner and the machine scheduler) takes two
+accesses in different non-generic address spaces never to alias, and the
+constant address space never to be written: kernels do not store to kernel
+arguments or to constant data (PTX ``.const``), as for NVPTX. It lets the
+scheduler issue device loads ahead of threadgroup stores, so their latencies
+overlap.
 
 Kernel ABI
 ==========
@@ -165,6 +439,35 @@ the driver must provide::
   // threadgroup memory: 0 bytes
   // stack size: 0 bytes
 
+Arguments passed by reference (``ptr addrspace(4) byref(T)``, as ZLUDA emits
+PTX ``.param`` arguments) whose every use is a load at a constant offset are
+passed by value: their bytes occupy consecutive uniform registers (in 64-bit
+parts and a last 32-bit one) and the loads read the registers. Other
+by-reference arguments, and those that do not fit in what is left of the 1 KiB
+uniform file (256 32-bit registers, all preloaded at no measured cost), stay a 64-bit
+pointer to the bytes, which the driver places in memory.
+
+The object also describes each kernel in the ``.agx.kernels`` section, for
+drivers, as a sequence of records of little-endian 32-bit words:
+
+==========================  ==============================================
+Word                        Meaning
+==========================  ==============================================
+0                           size of the record in bytes
+1                           version (1)
+2                           length of the kernel's name
+3 ...                       the name, padded with zeros to 4 bytes
+then                        uniform halves; first half of
+                            ``threadgroups_per_grid``; first half of the
+                            global data buffer address (0xffffffff if
+                            none); general purpose registers; threadgroup
+                            memory bytes; stack bytes per thread
+then                        the number of arguments of the source kernel,
+                            and for each: kind (0 = its bytes are in the
+                            uniforms, 1 = a pointer to them is), size in
+                            bytes, first half (0xffffffff if unused)
+==========================  ==============================================
+
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
 
@@ -179,8 +482,19 @@ the 64-bit address of that buffer in the uniform registers following
 data buffer at uN_uN+1``). The variables are laid out in module order, each
 aligned to its alignment, and the initial contents of the buffer, with that
 layout, are the ``.agx.globals`` section of the object. Initializers that
-refer to the addresses of other globals would need relocations and are not
-supported.
+refer to the addresses of other globals have relocations in
+``.rela.agx.globals``, against symbols defined in ``.agx.globals``; the loader
+computes S + A with S the variable's address in the placed buffer:
+
+=================  =====  ================================
+Type               Value  Field
+=================  =====  ================================
+``R_AGX_ABS64``    1      64-bit word, S + A
+``R_AGX_ABS32``    2      32-bit word, S + A (truncated)
+=================  =====  ================================
+
+There are no relocations in ``.text``, and references to globals of other
+objects are not supported.
 
 Execution model
 ===============
@@ -193,7 +507,12 @@ every function, uniform branches included, and annotates it with:
 
 * ``llvm.agx.if``: ``if_icmp r0l, nueq, cond, 0, 1`` deactivates the threads
   where the condition is false, followed by ``jmp_exec_none`` to skip the
-  region when no thread remains.
+  region when no thread remains. The jump (here and after ``else``) is left
+  out when the region is a straight run of at most 4 ALU instructions
+  (``-agx-max-unskipped-instrs``): on G14C an ALU instruction issued with no
+  active thread costs about as little as the taken jump over it, while
+  masked loads, stores and their waits still cost much of their latency
+  (B31).
 * ``llvm.agx.else``: ``else_fcmp r0l, eq, 0.0, 0.0, 1`` swaps the threads of
   the innermost level.
 * ``llvm.agx.end.cf``: ``pop_exec r0l, 1`` reactivates the threads of the
@@ -207,6 +526,14 @@ every function, uniform branches included, and annotates it with:
 The nesting counter is zeroed at the start of each kernel that uses control
 flow. Blocks are laid out in the reverse post-order of the structured graph,
 so constructs fall through into each other as in Mesa's output.
+
+Loads and stores of 2 to 4 consecutive 32-bit values (vectors, and
+neighbouring scalar accesses the load/store vectorizer merges) in device or
+threadgroup memory are one ``xy`` / ``xyz`` / ``xyzw`` access at any 4-byte
+alignment, which the M2 Max handles exactly at every offset, across 64-byte
+lines and pages (ptx-re-blockers B33). The vectorizer runs after checked mode,
+so the checks see the accesses the source wrote. Vector arithmetic is still
+scalar.
 
 Memory loads, stack loads and atomics complete asynchronously. A ``wait`` is
 inserted before the first instruction that reads or overwrites a pending
@@ -229,7 +556,13 @@ Supported:
 
 * 16, 32 and 64-bit integer arithmetic, including 64-bit multiplication,
   shifts, comparisons and bit counting. Division is expanded in IR, except
-  by constants.
+  by constants. 64-bit additions are single instructions; 64-bit logic,
+  selects, shifts, comparisons and products are lowered on the 32-bit halves
+  (split with ``truncate`` and ``AGXISD::HI32``, joined with ``BUILD_PAIR``),
+  so known or constant halves fold. Shifts by a variable amount use the 7-bit
+  shift amounts of ``bfi``, ``extr`` and ``asr`` (a logical right shift is
+  two ``extr``), as documented by dougallj's applegpu for G13; G14 is to be
+  confirmed (ptx-re-blockers B47).
 * Half and single precision arithmetic, with source modifiers and 8-bit
   floating point immediates folded. Division uses ``rcp`` and a multiply
   with a Newton-Raphson step (omitted with ``arcp``/``afn`` and for
@@ -259,12 +592,46 @@ in functions whose ``denormal_fpenv`` flushes ``half`` denormals, the
 operands and results of ``half`` arithmetic, comparisons and conversions are
 flushed explicitly.
 
+Fences and ordered atomics follow the barriers measured with cross-core
+litmus tests on G14C (M2 Max). ``memory_barrier`` with operands ``a, b, c``
+is the 16-bit word ``0xf5 | b << 8 | a << 10 | c << 12``:
+
+.. table:: AGX fences
+   :name: agx-fences-table
+
+   ===================================== ====================================
+   Fence                                 Barriers
+   ===================================== ====================================
+   ``singlethread``                      none
+   ``workgroup``, any ordering           ``f596`` (threads of a threadgroup
+                                         share a core; no reordering was
+                                         observed there)
+   device or system, ``release``         ``f533`` (the store release)
+   device or system, ``acquire``         ``wait 0``, ``f59d``
+   device or system, ``acq_rel``         ``f533``, ``wait 0``, ``f59d``
+   device or system, ``seq_cst``         Mesa's sequence ``f596 f533 f59a
+                                         f59e f503 f599``, ``wait 0``,
+                                         ``f59d`` (the only one that orders
+                                         store buffering in every case)
+   ===================================== ====================================
+
+``f596`` alone, which Mesa uses below queue-family scope, does not order
+stores between cores, and a device atomic is no release by itself. Ordered
+atomic operations are monotonic accesses between the fences of their scope
+(a release fence before, an acquire fence after). The release costs about
+25 ns before a store and 250 ns after a load; the sequentially consistent
+sequence costs 0.4 to 0.65 us.
+
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
-precision`_; diagnosed as unsupported), vector memory
-operations (vectors are scalarized), textures and graphics shaders, calls
+precision`_; diagnosed as unsupported), textures and graphics shaders, calls
 to functions that are not defined in the module, and recursion.
 
-The hardware has no calls: all functions are inlined into the kernels. An
+The backend does not use the hardware call and return instructions: all
+functions are inlined into the kernels. (G14C does have direct and
+register-indirect calls with buffer-relative return targets, but only
+calls by a whole, fully active SIMD-group have been measured so far; the
+divergent cases that code generation would need are still open, see the
+AGX Performance Simulator's ``tasks/unsafe-01-call-ret.md``.) An
 indirect call becomes a test of the callee against each address-taken
 function of the module with the same type, with a direct call (inlined) for
 each, and a trap if none matches. The address of such a function, as a
@@ -285,7 +652,11 @@ real instruction of that family, to be filled in as encodings are confirmed.
 Intrinsics
 ==========
 
-See ``llvm/include/llvm/IR/IntrinsicsAGX.td``. The special register
+See ``llvm/include/llvm/IR/IntrinsicsAGX.td``. The ``float`` and ``half``
+to 32- and 16-bit integer ``convert`` saturates and converts NaN to 0
+(measured on G14C, B27), so ``llvm.fptosi.sat`` and ``llvm.fptoui.sat`` to
+``i32`` and ``i16`` are a single ``convert``; narrower saturation widths are
+clamped first. The special register
 intrinsics (``llvm.agx.thread.position.in.grid.x`` and so on) read
 ``get_sr`` registers, ``llvm.agx.read.sr`` reads any special register by
 number, and ``llvm.agx.simd.reduce``/``prefix`` and
@@ -376,19 +747,22 @@ bit for the bits dropped) is computed with integer operations, and a single
 rounding gives the result, so all operations are correctly rounded IEEE 754
 operations with denormals, in the four rounding directions (see `Rounding
 modes`_; the ``double`` rounding mode is the ``half`` field). Significands are 64-bit, with 128-bit
-products in multiplications and fused multiply-adds; division is a restoring
-division and the square root a digit by digit root, each a loop of 55
-iterations of 64-bit operations. NaN results are ``0x7fffffffffffffff`` with
+products in multiplications and fused multiply-adds. Division and the square
+root have no loop: a ``llvm.agx.rcp`` or ``llvm.agx.rsqrt`` estimate, lowered
+by 2^-19 and taken as a fixed-point value, is refined by two Newton steps on
+64-bit and 128-bit integers to a quotient or root within 2 units of the
+exact 55-bit one, which the exact remainder then corrects. The estimate may
+be off by up to about 2^-19.7 (some 10 units in the last place of ``float``)
+without changing a result. NaN results are ``0x7fffffffffffffff`` with
 ``canonical-nan``, and the first NaN operand, quieted, otherwise. Conversions
 to integers saturate, and NaN converts to 0.
 
 Values that are only moved (loads, stores, ``phi``, ``select``, arguments)
 stay ``double`` and become ``i64`` in type legalization. ``frem`` and vector
 arithmetic on ``double`` are diagnosed as unsupported. The code is large: in
-instructions per operation, about 290 for an addition, 335 for a
-multiplication, 670 for a fused multiply-add, 280 for a division and 230 for
-a square root (plus their 55 loop iterations of about 10 instructions), 140
-for a conversion and 20 for a comparison.
+instructions per operation, about 215 for an addition or a multiplication,
+430 for a fused multiply-add, 290 for a division or a square root, 100 for a
+conversion and 30 for a comparison.
 
 Vector floating point arithmetic is scalarized before the floating point
 lowerings (the Scalarizer pass), and constrained vector operations are rounded
@@ -484,3 +858,17 @@ MLIR targets AGX the way it targets AMDGPU:
 .. code-block:: console
 
   $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(agxir-attach-target{chip=agx-g14g},gpu.module(convert-gpu-to-agxir),gpu-module-to-binary{format=isa})'
+
+Host code from ``gpu-to-llvm`` calls MLIR's GPU runtime wrappers (``mgpu*``).
+With ``-DMLIR_ENABLE_AGX_RUNNER=ON -DMLIR_AGX_LIBCUDA=<ZLUDA's
+libnvcuda_agx.so>``, ``mlir_agx_runtime`` is ``CudaRuntimeWrappers.cpp`` built
+without a CUDA toolkit (``lib/ExecutionEngine/AGXCudaCompat/cuda.h`` declares
+the part of the driver API it uses) against ZLUDA's CUDA driver for Asahi
+Linux, so ``mlir-runner --shared-libs=libmlir_agx_runtime.so`` runs
+``gpu.launch_func`` on the GPU with ZLUDA's tracing: launch records and fault
+dumps, and with ``#agxir.target<..., features = "+agx-checked">`` checked
+mode, whose reports name the ``.mlir`` lines when the kernels have debug
+locations (``-ensure-debug-info-scope-on-llvm-func`` and
+``-mlir-print-debuginfo`` between pipelines). ``test/Integration/GPU/AGX``
+needs the hardware; ``test/Integration/Dialect/AGX/checked.mlir`` runs the
+same checked kernel shape on the AGX Performance Simulator.
