@@ -495,7 +495,7 @@ optMain(int argc, char **argv,
   // construct the PassBuilder before parsing IR so we can reuse the same
   // PassBuilder for print passes.
   if (PrintPasses) {
-    printPasses(Context, outs());
+    printPasses(outs());
     return 0;
   }
 

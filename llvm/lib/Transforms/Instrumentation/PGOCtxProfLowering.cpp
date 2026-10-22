@@ -31,8 +31,8 @@ using namespace llvm;
 #define DEBUG_TYPE "ctx-instr-lower"
 
 bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
-    const cl::LibraryOptionsContext &LibraryOptions) {
-  return !LibraryOptions.get<InstrumentationOptions>()
+    const cl::LibraryOptionsContext *LibraryOptions) {
+  return !cl::LibraryOptionsContext::get<InstrumentationOptions>(LibraryOptions)
               .profile_context_root.empty();
 }
 

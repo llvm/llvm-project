@@ -33,8 +33,7 @@ void llvm::runIRPassesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   PassInstrumentationCallbacks PIC;
   PIC.registerShouldRunOptionalPassCallback(
       [&](StringRef, IRUnitRef) { return !O.shouldKeep(); });
-  PassBuilder PB(Program.getContext(), nullptr, std::nullopt, std::nullopt,
-                 &PIC);
+  PassBuilder PB(nullptr, PipelineTuningOptions(), std::nullopt, &PIC);
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

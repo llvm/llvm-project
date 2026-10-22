@@ -799,7 +799,7 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
   const bool ShouldPreserveUseListOrder = true;
 
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
-    PassBuilder PB(M->getContext());
+    PassBuilder PB;
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
     CGSCCAnalysisManager CGAM;

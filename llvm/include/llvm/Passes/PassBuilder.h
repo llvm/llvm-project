@@ -34,7 +34,6 @@
 namespace llvm {
 class StringRef;
 class AAManager;
-class LLVMContext;
 class TargetMachine;
 class ModuleSummaryIndex;
 struct PassesOptions;
@@ -54,6 +53,8 @@ public:
   /// null.
   LLVM_ABI explicit PipelineTuningOptions(
       const cl::LibraryOptionsContext *LibraryOptions);
+
+  const cl::LibraryOptionsContext *LibraryOptions;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
@@ -128,7 +129,7 @@ enum class PrintPipelinePassesFormat {
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
-  LLVMContext &Context;
+  const cl::LibraryOptionsContext *LibraryOptions;
   const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
@@ -150,12 +151,9 @@ public:
     std::vector<PipelineElement> InnerPipeline;
   };
 
-  /// The pipelines read the library options of \p Context, which must outlive
-  /// the PassBuilder. If \p PTO is not given, it reads its defaults from
-  /// \p Context.
   LLVM_ABI explicit PassBuilder(
-      LLVMContext &Context, TargetMachine *TM = nullptr,
-      std::optional<PipelineTuningOptions> PTO = std::nullopt,
+      TargetMachine *TM = nullptr,
+      PipelineTuningOptions PTO = PipelineTuningOptions(),
       std::optional<PGOOptions> PGOOpt = std::nullopt,
       PassInstrumentationCallbacks *PIC = nullptr,
       IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
@@ -682,12 +680,17 @@ public:
                                        std::string ProfileFile,
                                        std::string ProfileRemappingFile);
 
-  LLVMContext &getContext() const { return Context; }
-
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the library options the pipelines read: the
+  /// PipelineTuningOptions', else the TargetMachine's, else null for the global
+  /// values.
+  const cl::LibraryOptionsContext *getLibraryOptions() const {
+    return LibraryOptions;
   }
 
   /// Returns the virtual file system.

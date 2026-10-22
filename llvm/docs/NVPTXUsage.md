@@ -4922,7 +4922,7 @@ pass manager:
 
 ```c++
 std::unique_ptr<TargetMachine> TM = ...;
-PassBuilder PB(Context, TM.get());
+PassBuilder PB(TM);
 ModulePassManager MPM;
 PB.parsePassPipeline(MPM, ...);
 ```

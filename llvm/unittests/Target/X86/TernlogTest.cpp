@@ -170,7 +170,7 @@ TEST(TernlogTest, TestConstantFolding) {
   LLVMContext Ctx;
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
-  PassBuilder PB(Ctx);
+  PassBuilder PB;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;

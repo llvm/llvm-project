@@ -50,7 +50,7 @@ struct CompilerInstance {
     Plugin->registerPassBuilderCallbacks(PB);
   }
 
-  CompilerInstance() : PB(Ctx) {
+  CompilerInstance() {
     IP = getInlineParamsFromOptLevel(3);
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);

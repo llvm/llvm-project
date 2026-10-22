@@ -94,7 +94,7 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB(M.getContext());
+  PassBuilder PB;
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
