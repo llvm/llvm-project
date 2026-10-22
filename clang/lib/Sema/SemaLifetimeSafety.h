@@ -261,33 +261,37 @@ public:
   reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
                              const Expr *InvalidationExpr,
                              llvm::ArrayRef<const Expr *> ExprChain) override {
-    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                        ? diag::warn_lifetime_safety_use_after_free
-                        : diag::warn_lifetime_safety_invalidation;
-    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
-    S.Diag(IssueExpr->getExprLoc(), WarnDiag)
-        << InvalidatedSubject << IssueExpr->getSourceRange();
-    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
-    reportAliasingChain(ExprChain);
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
+    reportUseAfterInvalidationImpl(
+        IssueExpr->getExprLoc(), IssueExpr->getSourceRange(),
+        getDiagSubjectDescription(IssueExpr), InvalidationExpr, ExprChain,
+        UseExpr->getExprLoc(), UseExpr->getSourceRange());
   }
   void
   reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
                              const Expr *InvalidationExpr,
                              llvm::ArrayRef<const Expr *> ExprChain) override {
-
-    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                        ? diag::warn_lifetime_safety_use_after_free
-                        : diag::warn_lifetime_safety_invalidation;
-    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
-
-    S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
-        << InvalidatedSubject << PVD->getSourceRange();
-    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
-    reportAliasingChain(ExprChain);
-    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
-        << UseExpr->getSourceRange();
+    reportUseAfterInvalidationImpl(
+        PVD->getSourceRange().getBegin(), PVD->getSourceRange(),
+        getDiagSubjectDescription(PVD), InvalidationExpr, ExprChain,
+        UseExpr->getExprLoc(), UseExpr->getSourceRange());
+  }
+  void
+  reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
+    reportUseAfterInvalidationImpl(
+        IssueExpr->getExprLoc(), IssueExpr->getSourceRange(),
+        getDiagSubjectDescription(IssueExpr), InvalidationExpr, ExprChain,
+        UseLoc, SourceRange());
+  }
+  void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
+    reportUseAfterInvalidationImpl(
+        PVD->getSourceRange().getBegin(), PVD->getSourceRange(),
+        getDiagSubjectDescription(PVD), InvalidationExpr, ExprChain, UseLoc,
+        SourceRange());
   }
 
   void reportInvalidatedField(const Expr *IssueExpr,
@@ -621,6 +625,22 @@ private:
                     : diag::note_lifetime_safety_invalidated_here;
     S.Diag(InvalidationExpr->getExprLoc(), Diag)
         << InvalidatedSubject << InvalidationExpr->getSourceRange();
+  }
+
+  void reportUseAfterInvalidationImpl(SourceLocation IssueLoc,
+                                      SourceRange IssueRange,
+                                      StringRef InvalidatedSubject,
+                                      const Expr *InvalidationExpr,
+                                      llvm::ArrayRef<const Expr *> ExprChain,
+                                      SourceLocation UseLoc,
+                                      SourceRange UseRange) {
+    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                        ? diag::warn_lifetime_safety_use_after_free
+                        : diag::warn_lifetime_safety_invalidation;
+    S.Diag(IssueLoc, WarnDiag) << InvalidatedSubject << IssueRange;
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    reportAliasingChain(ExprChain);
+    S.Diag(UseLoc, diag::note_lifetime_safety_used_here) << UseRange;
   }
 
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,

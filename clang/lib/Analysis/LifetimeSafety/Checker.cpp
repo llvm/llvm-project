@@ -351,8 +351,19 @@ public:
                                                   Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
-          } else if (isa<ThisEscapeFact>(OEF)) {
-            // FIXME: Diagnose a `this`-held loan invalidated through `this`.
+          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
+            // A loan still held by the object at the method's exit was
+            // invalidated.
+            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
+                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
+                  ExprChain);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(
+                  InvalidatedPVD, ThisEscape->getLoc(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {

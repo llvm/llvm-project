@@ -4908,4 +4908,9 @@ struct CaptureByThis {
   void captures_member() {
     store(member);
   }
+  // Negative: the object is being destroyed, so nothing outlives the local.
+  ~CaptureByThis() {
+    int local = 0;
+    store(local);
+  }
 };
