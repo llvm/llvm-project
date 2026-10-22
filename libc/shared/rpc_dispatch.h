@@ -12,12 +12,20 @@
 #include "rpc.h"
 #include "rpc_util.h"
 
+#ifndef RPC_TARGET_IS_GPU
+#include <cstdlib>
+#endif
+
 namespace rpc {
 namespace {
 
-// Forward declarations needed for the server, we assume these are present.
+// On non-GPU targets, malloc/free are already declared (with dllimport on
+// Windows) via the system headers included by rpc_util.h. Re-declaring them
+// without dllimport triggers -Winconsistent-dllimport on Windows.
+#ifdef RPC_TARGET_IS_GPU
 extern "C" void *malloc(__SIZE_TYPE__);
 extern "C" void free(void *);
+#endif
 
 // Traits to convert between a tuple and binary representation of an argument
 // list.
