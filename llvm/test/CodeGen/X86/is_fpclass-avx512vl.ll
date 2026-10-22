@@ -75,7 +75,26 @@ define <2 x i1> @isinf_v2f64(<2 x double> %x) {
   ret <2 x i1> %r
 }
 
+;; Tests for narrow vectors (v2f32)
+
+define <2 x i1> @isinf_v2f32(<2 x float> %x) {
+; AVX512VL-LABEL: isinf_v2f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX512VL-NEXT:    vpmovm2q %k0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v2f32:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 516)
+  ret <2 x i1> %r
+}
+
 declare <8 x i1> @llvm.is.fpclass.v8f32(<8 x float>, i32)
 declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
 declare <4 x i1> @llvm.is.fpclass.v4f64(<4 x double>, i32)
 declare <2 x i1> @llvm.is.fpclass.v2f64(<2 x double>, i32)
+declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32)

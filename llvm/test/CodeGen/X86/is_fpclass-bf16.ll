@@ -44,6 +44,19 @@ define <8 x i1> @isinf_v8bf16(<8 x bfloat> %x) {
   ret <8 x i1> %r
 }
 
+;; Tests for narrow v2bf16 vectors
+
+define <2 x i1> @isinf_v2bf16(<2 x bfloat> %x) {
+; AVX10_2-LABEL: isinf_v2bf16:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassbf16 $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <2 x i1> @llvm.is.fpclass.v2bf16(<2 x bfloat> %x, i32 516)
+  ret <2 x i1> %r
+}
+
 declare <32 x i1> @llvm.is.fpclass.v32bf16(<32 x bfloat>, i32)
 declare <16 x i1> @llvm.is.fpclass.v16bf16(<16 x bfloat>, i32)
 declare <8 x i1> @llvm.is.fpclass.v8bf16(<8 x bfloat>, i32)
+declare <2 x i1> @llvm.is.fpclass.v2bf16(<2 x bfloat>, i32)

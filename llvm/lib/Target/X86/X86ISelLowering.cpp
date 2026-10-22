@@ -2227,7 +2227,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // targets handle VPMULLQ by implicit widening.
       setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
 
-      for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v8f32, MVT::v4f64})
+      for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v8f32, MVT::v4f64, MVT::v2f32})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
 
@@ -2502,7 +2502,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LRINT, MVT::v8f16, Legal);
       setOperationAction(ISD::LRINT, MVT::v16f16, Legal);
 
-      for (auto VT : {MVT::v8f16, MVT::v16f16})
+      for (auto VT : {MVT::v8f16, MVT::v16f16, MVT::v4f16})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
   }
@@ -2614,7 +2614,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.useAVX512Regs())
       setOperationAction(ISD::IS_FPCLASS, MVT::v32bf16, Custom);
-    for (auto VT : {MVT::v8bf16, MVT::v16bf16})
+    for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v2bf16})
       setOperationAction(ISD::IS_FPCLASS, VT, Custom);
   }
 
@@ -23188,12 +23188,34 @@ static SDValue LowerIS_FPCLASS(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc DL(Op);
   MVT ResultVT = Op.getSimpleValueType();
   SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
   unsigned Check = Op.getConstantOperandVal(1);
 
-  // Check for fcFinite - can be handled by inverting ~(nan | inf).
+  // Handle narrow vectors (v2f32, v4f16, v2bf16) by widening to 128-bit.
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  MVT EltVT = SrcVT.getVectorElementType();
+  unsigned MinElts = 128 / EltVT.getSizeInBits();
+  if (NumElts < MinElts) {
+    MVT WideVT = MVT::getVectorVT(EltVT, MinElts);
+    MVT WideResultVT = MVT::getVectorVT(MVT::i1, MinElts);
+    SDValue Undef = DAG.getUNDEF(WideVT);
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, Undef, Src,
+                      DAG.getVectorIdxConstant(0, DL));
+    SDValue WideOp = DAG.getNode(ISD::IS_FPCLASS, DL, WideResultVT, Src,
+                                 Op.getOperand(1));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, WideOp,
+                       DAG.getVectorIdxConstant(0, DL));
+  }
+
+  // Check for fcFinite/fcNormal - can be handled by inverting.
+  // fcFinite = ~(nan | inf)
+  // fcNormal = ~(nan | inf | subnormal | zero)
   bool Invert = false;
   if (Check == fcFinite) {
     Check = fcNan | fcInf;
+    Invert = true;
+  } else if (Check == fcNormal) {
+    Check = fcNan | fcInf | fcSubnormal | fcZero;
     Invert = true;
   }
 
