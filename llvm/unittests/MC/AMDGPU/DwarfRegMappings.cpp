@@ -81,3 +81,18 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave32DwarfRegMapping) {
     }
   }
 }
+
+TEST(AMDGPUDwarfRegMappingTests, TestDefaultDwarfRegMapping) {
+  InitializeAMDGPUTarget();
+  std::string Error;
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget("amdgcn-amd-amdhsa", Error);
+  ASSERT_TRUE(Error.empty()) << Error;
+  std::unique_ptr<MCRegisterInfo> MRI{
+      TheTarget->createMCRegInfo("amdgcn-amd-amdhsa")};
+  // Verify that we use the wave32 encodings by default.
+  EXPECT_TRUE(MRI->getLLVMRegNum(1536, false));
+  EXPECT_TRUE(MRI->getLLVMRegNum(2048, false));
+  EXPECT_FALSE(MRI->getLLVMRegNum(2560, false));
+  EXPECT_FALSE(MRI->getLLVMRegNum(3072, false));
+}
