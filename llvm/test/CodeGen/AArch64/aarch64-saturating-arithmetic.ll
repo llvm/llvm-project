@@ -106,9 +106,8 @@ define i64 @test_ssub_nonneg_rhs_nonconst(i64 %x) {
 define i64 @test_ssub_neg_rhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_rhs_nonconst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x0, #1
+; CHECK-NEXT:    orn x9, x0, x0, asr #63
 ; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-NEXT:    csinv x9, x0, xzr, lt
 ; CHECK-NEXT:    subs x9, x0, x9
 ; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
@@ -162,9 +161,8 @@ define i64 @test_ssub_nonneg_lhs_nonconst(i64 %x) {
 define i64 @test_ssub_neg_lhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_lhs_nonconst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x0, #1
+; CHECK-NEXT:    orn x9, x0, x0, asr #63
 ; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    csinv x9, x0, xzr, lt
 ; CHECK-NEXT:    subs x9, x9, x0
 ; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
