@@ -1,0 +1,55 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// AMDGPU byref (IndirectAliased) arguments under target=amdgpu. A multi-field
+// kernel struct is passed byref in addrspace(4). A device-function struct past
+// the 16-register budget is passed byref in addrspace(5).
+
+!s32i = !cir.int<s, 32>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+!rec_Big = !cir.struct<"Big" {data !cir.array<!s32i x 17>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  // The CIRGen slot for a kernel argument is filled by a copy from addrspace(4).
+  cir.func @kern_pair(%arg0: !rec_Pair) -> !s32i cc(amdgpu_kernel) {
+    %0 = cir.alloca "p" align(4) init : !cir.ptr<!rec_Pair, target_address_space(5)>
+    cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair, target_address_space(5)>
+    %1 = cir.get_member %0[1] {name = "b"}
+        : !cir.ptr<!rec_Pair, target_address_space(5)>
+        -> !cir.ptr<!s32i, target_address_space(5)>
+    %2 = cir.load %1 : !cir.ptr<!s32i, target_address_space(5)>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @kern_pair(%[[PTR:.*]]: !cir.ptr<!rec_Pair, target_address_space(4)> {llvm.align = 4 : i64, llvm.byref = !rec_Pair, llvm.noundef}) -> !s32i cc(amdgpu_kernel) {
+  // CHECK-NEXT: %[[SLOT:.*]] = cir.alloca "p" align(4) init : !cir.ptr<!rec_Pair, target_address_space(5)>
+  // CHECK-NEXT: cir.copy %[[PTR]] align(4) to %[[SLOT]] align(4) : !cir.ptr<!rec_Pair, target_address_space(4)>, !cir.ptr<!rec_Pair, target_address_space(5)>
+  // CHECK-NEXT: %[[B_PTR:.*]] = cir.get_member %[[SLOT]][1] {name = "b"} : !cir.ptr<!rec_Pair, target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT: %[[B:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i, target_address_space(5)>, !s32i
+  // CHECK-NEXT: cir.return %[[B]] : !s32i
+
+  // A device-function argument past the register budget.
+  cir.func @take_big(%arg0: !rec_Big) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big(%{{.*}}: !cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.byref = !rec_Big, llvm.noundef}) {
+
+  // The caller hands its own addrspace(5) storage to the callee.
+  cir.func @call_big() {
+    %0 = cir.alloca "b" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @take_big(%1) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_big() {
+  // CHECK-NEXT: %[[B_SLOT:.*]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT: cir.call @take_big(%[[B_SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.byref = !rec_Big, llvm.noundef}) -> ()
+  // CHECK-NEXT: cir.return
+}
