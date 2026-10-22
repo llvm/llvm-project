@@ -12,7 +12,8 @@ declare i1 @cond()
 define void @test_monotonic_ptr_iv_inc_1_eq_to_uge(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_eq_to_uge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -32,7 +33,8 @@ define void @test_monotonic_ptr_iv_inc_1_eq_to_uge(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -62,7 +64,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_incoming_values_reordered(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_eq_to_uge_incoming_values_reordered(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -82,7 +85,8 @@ define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_incoming_values_reordered(ptr
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -112,7 +116,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_preheader(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_preheader(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
@@ -130,7 +135,8 @@ define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_preheader(ptr %start, i16 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.header
 
@@ -157,7 +163,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_different_element_types(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_different_element_types(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -177,7 +184,8 @@ define void @test_monotonic_ptr_iv_inc_1_different_element_types(ptr %start, i16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -207,7 +215,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_different_element_types_2(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_different_element_types_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i8, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -228,7 +237,8 @@ define void @test_monotonic_ptr_iv_inc_1_different_element_types_2(ptr %start, i
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i8, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i8, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -355,7 +365,8 @@ exit:
 define void @test_ptr_iv_upper_may_be_less_than_start(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_ptr_iv_upper_may_be_less_than_start(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -373,7 +384,8 @@ define void @test_ptr_iv_upper_may_be_less_than_start(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   br label %loop.header
 
 loop.header:
@@ -399,7 +411,8 @@ exit:
 define void @test_no_ptr_iv_step_inst_doesnt_use_phi(ptr %start, ptr %p, i16 %len) {
 ; CHECK-LABEL: @test_no_ptr_iv_step_inst_doesnt_use_phi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -421,7 +434,8 @@ define void @test_no_ptr_iv_step_inst_doesnt_use_phi(ptr %start, ptr %p, i16 %le
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -451,7 +465,8 @@ exit:
 define void @test_no_ptr_iv_step_inst_doesnt_use_phi_2(ptr %start, ptr %end, i16 %len) {
 ; CHECK-LABEL: @test_no_ptr_iv_step_inst_doesnt_use_phi_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -474,7 +489,8 @@ define void @test_no_ptr_iv_step_inst_doesnt_use_phi_2(ptr %start, ptr %end, i16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds float, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds float, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -505,7 +521,8 @@ exit:
 define void @test_no_ptr_iv_different_start(ptr %start, ptr %p, i16 %len) {
 ; CHECK-LABEL: @test_no_ptr_iv_different_start(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -527,7 +544,8 @@ define void @test_no_ptr_iv_different_start(ptr %start, ptr %p, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -557,7 +575,8 @@ exit:
 define void @test_ptr_iv_not_inbounds(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_ptr_iv_not_inbounds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -577,7 +596,8 @@ define void @test_ptr_iv_not_inbounds(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -607,7 +627,8 @@ exit:
 define void @test_var_step_not_monotonic(ptr %start, i16 %len, i16 %step) {
 ; CHECK-LABEL: @test_var_step_not_monotonic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -623,13 +644,15 @@ define void @test_var_step_not_monotonic(ptr %start, i16 %len, i16 %step) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 [[STEP:%.*]]
+; CHECK-NEXT:    [[PTR_IV_NEXT_IDX:%.*]] = sext i16 [[STEP:%.*]] to i64
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i64 [[PTR_IV_NEXT_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -649,7 +672,8 @@ for.body:
 
 loop.latch:
   call void @use(ptr %ptr.iv)
-  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 %step
+  %ptr.iv.next.idx = sext i16 %step to i64
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i64 %ptr.iv.next.idx
   br label %loop.header
 
 exit:
@@ -659,7 +683,8 @@ exit:
 define void @test_monotonic_ptr_iv_step_neg_1(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_step_neg_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -681,7 +706,8 @@ define void @test_monotonic_ptr_iv_step_neg_1(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -711,7 +737,8 @@ exit:
 define void @test_monotonic_ptr_iv_step_sign_unknown(ptr %start, i16 %len, i16 %step) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_step_sign_unknown(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -727,13 +754,15 @@ define void @test_monotonic_ptr_iv_step_sign_unknown(ptr %start, i16 %len, i16 %
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 [[STEP:%.*]]
+; CHECK-NEXT:    [[PTR_IV_NEXT_IDX:%.*]] = sext i16 [[STEP:%.*]] to i64
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i64 [[PTR_IV_NEXT_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -753,7 +782,8 @@ for.body:
 
 loop.latch:
   call void @use(ptr %ptr.iv)
-  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 %step
+  %ptr.iv.next.idx = sext i16 %step to i64
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i64 %ptr.iv.next.idx
   br label %loop.header
 
 exit:
@@ -765,7 +795,8 @@ define void @test_monotonic_ptr_iv_step_sign_positive_through_assume(ptr %start,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp sge i16 [[STEP:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[STEP_POS]])
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -781,7 +812,8 @@ define void @test_monotonic_ptr_iv_step_sign_positive_through_assume(ptr %start,
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 [[STEP]]
+; CHECK-NEXT:    [[PTR_IV_NEXT_IDX:%.*]] = sext i16 [[STEP]] to i64
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i64 [[PTR_IV_NEXT_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -789,7 +821,8 @@ define void @test_monotonic_ptr_iv_step_sign_positive_through_assume(ptr %start,
 entry:
   %step.pos = icmp sge i16 %step, 0
   call void @llvm.assume(i1 %step.pos)
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -809,7 +842,8 @@ for.body:
 
 loop.latch:
   call void @use(ptr %ptr.iv)
-  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 %step
+  %ptr.iv.next.idx = sext i16 %step to i64
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i64 %ptr.iv.next.idx
   br label %loop.header
 
 exit:
@@ -821,7 +855,8 @@ define void @test_monotonic_ptr_iv_step_sign_negative_through_assume(ptr %start,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp sle i16 [[STEP:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[STEP_POS]])
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -837,7 +872,8 @@ define void @test_monotonic_ptr_iv_step_sign_negative_through_assume(ptr %start,
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 [[STEP]]
+; CHECK-NEXT:    [[PTR_IV_NEXT_IDX:%.*]] = sext i16 [[STEP]] to i64
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i64 [[PTR_IV_NEXT_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -845,7 +881,8 @@ define void @test_monotonic_ptr_iv_step_sign_negative_through_assume(ptr %start,
 entry:
   %step.pos = icmp sle i16 %step, 0
   call void @llvm.assume(i1 %step.pos)
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -865,7 +902,8 @@ for.body:
 
 loop.latch:
   call void @use(ptr %ptr.iv)
-  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 %step
+  %ptr.iv.next.idx = sext i16 %step to i64
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i64 %ptr.iv.next.idx
   br label %loop.header
 
 exit:
@@ -875,7 +913,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -896,7 +935,8 @@ define void @test_monotonic_ptr_iv_inc_2(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -926,7 +966,8 @@ exit:
 define void @test_monotonic_ptr_iv_step_2_cond_controls_single_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_step_2_cond_controls_single_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -948,7 +989,8 @@ define void @test_monotonic_ptr_iv_step_2_cond_controls_single_exit(ptr %start, 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -979,7 +1021,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp sge i16 [[LEN]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LEN_NEG]])
 ; CHECK-NEXT:    br label [[LOOP_PH:%.*]]
@@ -996,14 +1039,14 @@ define void @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(ptr %start, i16 %len) 
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp sge i16 %len, 0
   call void @llvm.assume(i1 %len.neg)
   br label %loop.ph
@@ -1035,7 +1078,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_inbounds(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_inbounds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -1057,7 +1101,8 @@ define void @test_monotonic_ptr_iv_inc_1_eq_to_uge_no_inbounds(ptr %start, i16 %
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/signal/raise.h"
 #include "src/signal/signal.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"

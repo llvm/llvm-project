@@ -1,4 +1,4 @@
-!RUN: %flang -fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
+!RUN: %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
 !CHECK-NOT: warning: Value of uninitialized local variable 'b' is used but never defined [-Wused-undefined-variable]
 real :: a, b
 pointer(p,a)

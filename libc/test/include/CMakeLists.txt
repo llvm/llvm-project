@@ -1,5 +1,14 @@
-add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests-build)
+add_libc_testsuite(libc_include_tests)
+
+add_libc_test(
+  alloca_test
+  SUITE
+    libc_include_tests
+  SRCS
+    alloca_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.alloca_macros
+)
 
 add_libc_test(
   assert_test
@@ -21,6 +30,15 @@ add_libc_test(
     libc.include.llvm-libc-macros.complex_macros
 )
 
+add_libc_test(
+  unistd_macros_test
+  SUITE
+    libc_include_tests
+  SRCS
+    unistd_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.unistd_macros
+)
 add_libc_test(
   sys_queue_test
   SUITE
@@ -48,15 +66,14 @@ add_libc_test(
     libc.include.llvm-libc-macros.stdbit_macros
     libc.include.llvm_libc_common_h
     libc.include.stdbit
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 add_libc_test(
   stdbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   HDRS
@@ -71,10 +88,10 @@ add_libc_test(
     libc.include.llvm_libc_common_h
     libc.include.stdbit
     libc.src.assert.__assert_fail
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 
 add_libc_test(
@@ -89,13 +106,13 @@ add_libc_test(
 
 add_libc_test(
   sched_test
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
     sched_test.cpp
   DEPENDS
     libc.include.sched
+    libc.src.sched.sched_getscheduler
 )
 
 add_libc_test(
@@ -228,6 +245,8 @@ add_libc_test(
     libc.include.llvm-libc-macros.netinet_in_macros
 )
 
+add_subdirectory(net)
+
 add_libc_test(
   signbit_test
   SUITE
@@ -351,7 +370,6 @@ add_libc_test(
 add_libc_test(
   signbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -366,7 +384,6 @@ add_libc_test(
 add_libc_test(
   isnan_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -381,7 +398,6 @@ add_libc_test(
 add_libc_test(
   isnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -397,7 +413,6 @@ add_libc_test(
 # add_libc_test(
 #   issignaling_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -415,7 +430,6 @@ add_libc_test(
 # add_libc_test(
 #   iscanonical_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -428,12 +442,13 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(
   isinf_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -448,7 +463,6 @@ add_libc_test(
 add_libc_test(
   isfinite_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -463,7 +477,6 @@ add_libc_test(
 add_libc_test(
   issubnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -478,7 +491,6 @@ add_libc_test(
 add_libc_test(
   fpclassify_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -493,7 +505,6 @@ add_libc_test(
 add_libc_test(
   iszero_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -508,7 +519,6 @@ add_libc_test(
 add_libc_test(
   math_constants_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -531,19 +541,19 @@ function(add_header_test target_name source_file deps std_mode)
     add_libc_test(
       ${target_name}
       C_TEST
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
-	libc_include_tests
+        libc_include_tests
       SRCS
-	${source_file}
+        ${source_file}
       COMPILE_OPTIONS
-	-Werror
-	-Wsystem-headers
-	-Wall
-	-Wextra
-	-std=${std_mode}
+        -Werror
+        -Wsystem-headers
+        -Wall
+        -Wextra
+        -std=${std_mode}
       DEPENDS
-	${deps}
+        ${deps}
     )
   endif()
 endfunction()

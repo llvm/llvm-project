@@ -12,12 +12,10 @@ define void @pluto() #0 {
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 48 to ptr), align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> zeroinitializer, <vscale x 4 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv16f32(<vscale x 16 x float> undef, i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[TMP3]]
 ; CHECK-NEXT:    br label %[[SNORK_EXIT:.*]]
 ; CHECK:       [[SNORK_EXIT]]:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi <vscale x 16 x float> [ undef, [[TMP0:%.*]] ], [ [[SPEC_SELECT:%.*]], %[[SNORK_EXIT]] ]
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP2]], <vscale x 16 x float> [[TMP3]], <vscale x 16 x float> [[DOT0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv16f32(<vscale x 16 x float> [[SPEC_SELECT]], i64 0)
 ; CHECK-NEXT:    tail call void @llvm.aarch64.sme.mopa.nxv4f32(i32 0, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[TMP4]])
 ; CHECK-NEXT:    br label %[[SNORK_EXIT]]
 ;
@@ -55,7 +53,7 @@ declare <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 
 ; Function Attrs: alwaysinline mustprogress nounwind optsize ssp uwtable(sync)
 define i64 @snork(i64 noundef %0, ptr noundef nonnull align 16 %1) #3 {
 ; CHECK-LABEL: define noundef i64 @snork(
-; CHECK-SAME: i64 noundef [[TMP0:%.*]], ptr noundef nonnull writeonly align 16 captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: i64 noundef [[TMP0:%.*]], ptr nofree noundef nonnull writeonly align 16 captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB6:.*]]
 ; CHECK:       [[BB4]]:

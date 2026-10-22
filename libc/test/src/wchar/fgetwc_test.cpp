@@ -22,8 +22,7 @@
 using LlvmLibcFgetwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFgetwcTest, ReadASCII) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetwc_ascii.test"));
+  auto FILENAME = libc_make_test_file_path("fgetwc_ascii.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -45,8 +44,7 @@ TEST_F(LlvmLibcFgetwcTest, ReadASCII) {
 }
 
 TEST_F(LlvmLibcFgetwcTest, ReadUtf8) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetwc_utf8.test"));
+  auto FILENAME = libc_make_test_file_path("fgetwc_utf8.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -77,7 +75,7 @@ TEST_F(LlvmLibcFgetwcTest, ReadUtf8) {
 }
 
 TEST_F(LlvmLibcFgetwcTest, EOFAndInvalidStream) {
-  auto FILENAME = libc_make_test_file_path(APPEND_LIBC_TEST("fgetwc_eof.test"));
+  auto FILENAME = libc_make_test_file_path("fgetwc_eof.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -107,8 +105,7 @@ TEST_F(LlvmLibcFgetwcTest, EOFAndInvalidStream) {
 }
 
 TEST_F(LlvmLibcFgetwcTest, EncodingErrorEILSEQ) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetwc_eilseq.test"));
+  auto FILENAME = libc_make_test_file_path("fgetwc_eilseq.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -132,8 +129,7 @@ TEST_F(LlvmLibcFgetwcTest, EncodingErrorEILSEQ) {
 }
 
 TEST_F(LlvmLibcFgetwcTest, ByteModeFailure) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetwc_bytemode.test"));
+  auto FILENAME = libc_make_test_file_path("fgetwc_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 

@@ -89,20 +89,26 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
       numSrcElemsPerDest;
 
   Operation *maskOp = mask.getDefiningOp();
-  SmallVector<vector::ExtractOp, 2> extractOps;
+  // Chain of `vector.extract` ops that lead to the op that created the mask.
   // TODO: add support to `vector.broadcast`.
-  // Finding the mask creation operation.
+  SmallVector<vector::ExtractOp, 2> extractOps;
+
+  // Trace the mask back to its creation op, looking through `vector.extract`
+  // ops. Any other defining op is unsupported.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
              maskOp)) {
-    if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
-      maskOp = extractOp.getSource().getDefiningOp();
-      extractOps.push_back(extractOp);
-    }
+    auto extractOp = dyn_cast<vector::ExtractOp>(maskOp);
+    if (!extractOp)
+      return failure();
+    maskOp = extractOp.getSource().getDefiningOp();
+    extractOps.push_back(extractOp);
   }
 
-  if (!isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
-          maskOp))
+  // `maskOp` is null when the mask is a block argument, which has no defining
+  // op.
+  if (!isa_and_present<arith::ConstantOp, vector::CreateMaskOp,
+                       vector::ConstantMaskOp>(maskOp))
     return failure();
 
   // Computing the "compressed" mask. All the emulation logic (i.e. computing
@@ -635,19 +641,9 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return success();
     }
 
-    // Do the trailing dim for source and destination match? If yes, then the
-    // corresponding index must be 0.
-    // FIXME: There's no way to tell for dynamic shapes, so we should bail out.
-    // However, that makes some tests fail, so we need to audit first.
-    auto trailingDim = op.getBase().getType().getShape().back();
-    bool trailingDimsMatch =
-        ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
-
     auto stridedMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
 
-    // FIXME: ATM, we do not test cases where offsets, sizes, or strides are
-    // non-zero. As such, this is not needed.
     OpFoldResult linearizedIndices;
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
@@ -658,10 +654,12 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
+    // Use the exact intraDataOffset when it can be folded. Dynamic values are
+    // rejected in this path because a dynamic offset is not necessarily aligned
+    // to a container element boundary. Callers that can guarantee alignment
+    // should use assumeAligned.
     std::optional<int64_t> foldedNumFrontPadElems =
-        (isDivisibleInSize && trailingDimsMatch)
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(

@@ -35,7 +35,7 @@
    `(,(regexp-opt
        '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "immarg" "inaccessiblememonly"
          "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull" "nocapture"
-         "nocallback" "nocf_check" "noduplicate" "noext" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
+         "nocallback" "nocf_check" "noduplicate" "noext" "nofree" "noimplicitfloat" "noinline" "noipa" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
          "norecurse" "nosync" "noundef" "nounwind" "nosanitize_bounds" "nosanitize_coverage" "null_pointer_is_valid" "optdebug" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
          "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_alloc_token" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "zeroext") 'symbols) . font-lock-constant-face)
@@ -74,7 +74,7 @@
    `(,(regexp-opt
        '(;; Toplevel entities
          "declare" "define" "module" "target" "source_filename" "global" "constant" "const" "alias" "ifunc" "comdat"
-         "attributes" "uselistorder" "uselistorder_bb"
+         "attributes" "uselistorder"
          ;; Linkage types
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
@@ -120,7 +120,7 @@
    ;; Fast-math flags
    `(,(regexp-opt '("nnan" "ninf" "nsz" "arcp" "contract" "afn" "reassoc" "fast") 'symbols) . font-lock-keyword-face)
    ;; Use-list order directives
-   `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
+   `(,(regexp-opt '("uselistorder") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
 (defun llvm-current-defun-name ()

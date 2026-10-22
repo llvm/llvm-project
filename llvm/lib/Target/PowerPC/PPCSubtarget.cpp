@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -53,8 +52,10 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 PPCSubtarget::PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                           StringRef FS, const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TM(TM),
+                           StringRef FS, StringRef ABIName,
+                           const PPCTargetMachine &TM)
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      TargetABI(PPCTargetMachine::computeABI(TT, ABIName)), TM(TM),
       FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<PPCSelectionDAGInfo>();
@@ -248,7 +249,7 @@ CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
   return ModuleModel;
 }
 
-bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
+bool PPCSubtarget::isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
 
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&

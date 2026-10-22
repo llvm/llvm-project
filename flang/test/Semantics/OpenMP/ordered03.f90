@@ -52,7 +52,7 @@ subroutine sub1()
   end do
   !$omp end target parallel do
 
-  !ERROR: ORDERED clause is not allowed on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: ORDERED clause is not allowed on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do ordered(1)
   do i = 1, N
     !ERROR: An ORDERED construct with the DEPEND clause must be closely nested in a worksharing-loop (or parallel worksharing-loop) construct with ORDERED clause with a parameter
@@ -122,4 +122,13 @@ subroutine sub1()
   !ERROR: An ORDERED construct with the DEPEND clause must be closely nested in a worksharing-loop (or parallel worksharing-loop) construct with ORDERED clause with a parameter
   !ERROR: The iteration vector element 'i' is not an induction variable within the ORDERED loop nest
   !$omp ordered depend(sink: i - 1)
+
+  !$omp do ordered(1)
+  do i = 1, N
+    !ERROR: THREADS clause is not allowed on ORDERED (standalone) directive
+    !ERROR: THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region
+    !$omp ordered depend(source) threads
+    arrayA(i) = i
+  end do
+  !$omp end do
 end

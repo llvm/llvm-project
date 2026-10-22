@@ -12,11 +12,11 @@
 
 // void swap(map& c)
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
-//              __is_nothrow_swappable<allocator_type>::value);
+//              __is_nothrow_swappable<allocator_type>::value); // constexpr since C++26
 //
 //  In C++17, the standard says that swap shall have:
 //     noexcept(allocator_traits<Allocator>::is_always_equal::value &&
-//              noexcept(swap(declval<Compare&>(), declval<Compare&>())));
+//              noexcept(swap(declval<Compare&>(), declval<Compare&>()))); // constexpr since C++26
 
 // This tests a conforming extension
 
@@ -86,7 +86,7 @@ struct some_alloc3 {
   typedef std::false_type is_always_equal;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::pair<const MoveOnly, MoveOnly> V;
   {
     typedef std::map<MoveOnly, MoveOnly> C;
@@ -131,6 +131,13 @@ int main(int, char**) {
   }
 #  endif // _LIBCPP_VERSION
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

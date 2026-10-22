@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class CPPAcceleratorTableTestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(debug_info=no_match(["dwarf"]))
     @skipIf(dwarf_version=[">=", "5"])
     def test(self):

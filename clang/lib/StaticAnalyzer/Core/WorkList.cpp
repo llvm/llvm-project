@@ -155,9 +155,8 @@ public:
       // correct.
       StackUnexplored.push_back(U);
     } else {
-      LocIdentifier LocId = std::make_pair(
-          BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+      LocIdentifier LocId =
+          std::make_pair(BE->getBlock()->getBlockID(), N->getStackFrame());
       auto InsertInfo = Reachable.insert(LocId);
 
       if (InsertInfo.second) {
@@ -225,9 +224,8 @@ public:
     const ExplodedNode *N = U.getNode();
     unsigned NumVisited = 0;
     if (auto BE = N->getLocation().getAs<BlockEntrance>()) {
-      LocIdentifier LocId = std::make_pair(
-          BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+      LocIdentifier LocId =
+          std::make_pair(BE->getBlock()->getBlockID(), N->getStackFrame());
       NumVisited = NumReached[LocId]++;
     }
 

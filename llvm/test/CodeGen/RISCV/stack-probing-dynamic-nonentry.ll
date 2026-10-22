@@ -18,11 +18,11 @@ define void @f(i64 %n) #0 {
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
+; RV64-NEXT:    lui a1, 1
 ; RV64-NEXT:    slli a0, a0, 2
 ; RV64-NEXT:    addi a0, a0, 15
 ; RV64-NEXT:    andi a0, a0, -16
 ; RV64-NEXT:    sub a0, sp, a0
-; RV64-NEXT:    lui a1, 1
 ; RV64-NEXT:  .LBB0_1: # %entry
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    sub sp, sp, a1
@@ -67,11 +67,11 @@ define void @f(i64 %n) #0 {
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
+; RV32-NEXT:    lui a1, 1
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    addi a0, a0, 15
 ; RV32-NEXT:    andi a0, a0, -16
 ; RV32-NEXT:    sub a0, sp, a0
-; RV32-NEXT:    lui a1, 1
 ; RV32-NEXT:  .LBB0_1: # %entry
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    sub sp, sp, a1

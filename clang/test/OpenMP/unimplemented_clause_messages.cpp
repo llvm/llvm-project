@@ -16,8 +16,7 @@ void test_induction_basic() {
 }
 
 void test_apply() {
-  // omp60-warning@+4{{extra tokens at the end of '#pragma omp tile' are ignored}}
-  // omp60-error@+3{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
+  // omp60-warning@+3{{extra tokens at the end of '#pragma omp tile' are ignored}}
   // omp51-error@+2{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
   // omp51-warning@+1{{extra tokens at the end of '#pragma omp tile' are ignored}}
 #pragma omp tile sizes(10) apply(intratile: unroll)
@@ -26,8 +25,7 @@ void test_apply() {
 }
 
 void test_empty_apply() {
- // omp60-warning@+4{{extra tokens at the end of '#pragma omp tile' are ignored}}
-  // omp60-error@+3{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
+ // omp60-warning@+3{{extra tokens at the end of '#pragma omp tile' are ignored}}
   // omp51-error@+2{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
   // omp51-warning@+1{{extra tokens at the end of '#pragma omp tile' are ignored}}
 #pragma omp tile sizes(10) apply()
@@ -37,7 +35,6 @@ void test_empty_apply() {
 
 void test_nested_apply()
 {
-  // omp60-error@+5{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
   // omp60-warning@+4{{extra tokens at the end of '#pragma omp tile' are ignored}}
   //omp51-error@+3{{unexpected OpenMP clause 'apply' in directive '#pragma omp tile'}}
   // omp51-warning@+2{{extra tokens at the end of '#pragma omp tile' are ignored}}

@@ -476,6 +476,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  ModuleSpecList GetSeparateDebugInfoFiles();
+
   void PreloadSymbols();
 
   void SetSymbolFileFileSpec(const FileSpec &file);
@@ -1000,7 +1002,7 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, ConstString lookup_name,
+    LookupInfo(ConstString name, ConstString lookup_name_override,
                lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
@@ -1038,14 +1040,18 @@ public:
   /// Get the global index file cache.
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
-  /// used to stored data that previously was manually created each time you debug.
-  /// Examples include debug information indexes, symbol tables, symbol table
-  /// indexes, and more.
+  /// used to stored data that previously was manually created each time you
+  /// debug. Examples include debug information indexes, symbol tables, symbol
+  /// table indexes, and more.
+  ///
+  /// \param[in] memory_module
+  ///     True if this binary exists only in memory.
   ///
   /// \returns
   ///   If caching is enabled in the lldb settings, return a pointer to the data
   ///   file cache. If caching is not enabled, return NULL.
-  static DataFileCache *GetIndexCache();
+  static DataFileCache *GetIndexCache(bool memory_module);
+
 protected:
   // Member Variables
   mutable std::recursive_mutex m_mutex; ///< A mutex to keep this object happy
@@ -1114,9 +1120,13 @@ protected:
                                      /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
+  /// Guards the lazy construction of m_sections_up.
+  mutable std::recursive_mutex m_sections_mutex;
+
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symfile{false};
   std::atomic<bool> m_did_set_uuid{false};
+  std::atomic<bool> m_did_preload_symbols{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.

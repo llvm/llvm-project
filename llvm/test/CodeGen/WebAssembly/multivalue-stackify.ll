@@ -47,9 +47,12 @@ define void @f3() {
 define void @f12() {
 ; CHECK-LABEL: f12:
 ; CHECK:         .functype f12 () -> ()
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -82,7 +85,8 @@ define void @f14() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
@@ -96,8 +100,13 @@ define void @f14() {
 define void @f15() {
 ; CHECK-LABEL: f15:
 ; CHECK:         .functype f15 () -> ()
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -148,10 +157,13 @@ define void @f17() {
 define void @f25() {
 ; CHECK-LABEL: f25:
 ; CHECK:         .functype f25 () -> ()
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -204,7 +216,8 @@ define void @f28() {
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
@@ -218,9 +231,14 @@ define void @f28() {
 define void @f29() {
 ; CHECK-LABEL: f29:
 ; CHECK:         .functype f29 () -> ()
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -233,12 +251,14 @@ define void @f29() {
 define void @f30() {
 ; CHECK-LABEL: f30:
 ; CHECK:         .functype f30 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -371,12 +391,14 @@ define void @f36() {
 define void @f129() {
 ; CHECK-LABEL: f129:
 ; CHECK:         .functype f129 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -393,11 +415,12 @@ define void @f131() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -415,11 +438,12 @@ define void @f132() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -434,13 +458,15 @@ define void @f132() {
 define void @f133() {
 ; CHECK-LABEL: f133:
 ; CHECK:         .functype f133 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -548,11 +574,12 @@ define void @f155() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -570,12 +597,13 @@ define void @f159() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -594,11 +622,12 @@ define void @f167() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -613,13 +642,15 @@ define void @f167() {
 define void @f168() {
 ; CHECK-LABEL: f168:
 ; CHECK:         .functype f168 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -637,12 +668,13 @@ define void @f171() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32} @op_0_to_2()
@@ -777,13 +809,15 @@ define void @f195() {
 define void @f291() {
 ; CHECK-LABEL: f291:
 ; CHECK:         .functype f291 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -797,13 +831,15 @@ define void @f291() {
 define void @f292() {
 ; CHECK-LABEL: f292:
 ; CHECK:         .functype f292 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -821,11 +857,12 @@ define void @f294() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -843,12 +880,13 @@ define void @f295() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -867,11 +905,12 @@ define void @f296() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -886,14 +925,16 @@ define void @f296() {
 define void @f297() {
 ; CHECK-LABEL: f297:
 ; CHECK:         .functype f297 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -908,14 +949,16 @@ define void @f297() {
 define void @f298() {
 ; CHECK-LABEL: f298:
 ; CHECK:         .functype f298 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -933,12 +976,13 @@ define void @f299() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -953,14 +997,16 @@ define void @f299() {
 define void @f300() {
 ; CHECK-LABEL: f300:
 ; CHECK:         .functype f300 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_1_to_0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -975,14 +1021,16 @@ define void @f300() {
 define void @f301() {
 ; CHECK-LABEL: f301:
 ; CHECK:         .functype f301 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1473,11 +1521,12 @@ define void @f327() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1495,12 +1544,13 @@ define void @f328() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1519,12 +1569,13 @@ define void @f333() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1543,13 +1594,14 @@ define void @f334() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1568,13 +1620,14 @@ define void @f336() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1593,13 +1646,14 @@ define void @f337() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1619,11 +1673,12 @@ define void @f338() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1638,14 +1693,16 @@ define void @f338() {
 define void @f339() {
 ; CHECK-LABEL: f339:
 ; CHECK:         .functype f339 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1660,12 +1717,16 @@ define void @f339() {
 define void @f340() {
 ; CHECK-LABEL: f340:
 ; CHECK:         .functype f340 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1683,13 +1744,14 @@ define void @f343() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1709,12 +1771,13 @@ define void @f344() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1730,15 +1793,17 @@ define void @f344() {
 define void @f346() {
 ; CHECK-LABEL: f346:
 ; CHECK:         .functype f346 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1757,13 +1822,14 @@ define void @f347() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1779,15 +1845,17 @@ define void @f347() {
 define void @f348() {
 ; CHECK-LABEL: f348:
 ; CHECK:         .functype f348 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1803,13 +1871,17 @@ define void @f348() {
 define void @f349() {
 ; CHECK-LABEL: f349:
 ; CHECK:         .functype f349 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1828,12 +1900,13 @@ define void @f350() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1848,14 +1921,16 @@ define void @f350() {
 define void @f351() {
 ; CHECK-LABEL: f351:
 ; CHECK:         .functype f351 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1870,14 +1945,16 @@ define void @f351() {
 define void @f352() {
 ; CHECK-LABEL: f352:
 ; CHECK:         .functype f352 () -> ()
-; CHECK-NEXT:    .local i32
+; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_1_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1895,13 +1972,14 @@ define void @f354() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1920,13 +1998,14 @@ define void @f356() {
 ; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.tee 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1942,15 +2021,17 @@ define void @f356() {
 define void @f357() {
 ; CHECK-LABEL: f357:
 ; CHECK:         .functype f357 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1966,15 +2047,17 @@ define void @f357() {
 define void @f358() {
 ; CHECK-LABEL: f358:
 ; CHECK:         .functype f358 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -1993,13 +2076,14 @@ define void @f359() {
 ; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
-; CHECK-NEXT:    local.set 0
+; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()
@@ -2015,15 +2099,17 @@ define void @f359() {
 define void @f360() {
 ; CHECK-LABEL: f360:
 ; CHECK:         .functype f360 () -> ()
-; CHECK-NEXT:    .local i32, i32
+; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call op_0_to_3
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.set 1
 ; CHECK-NEXT:    local.set 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    call op_2_to_0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    call op_2_to_0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call op_2_to_0
 ; CHECK-NEXT:    # fallthrough-return
   %t0 = call {i32, i32, i32} @op_0_to_3()

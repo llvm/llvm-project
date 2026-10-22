@@ -21,15 +21,25 @@ namespace llvm {
 
 class Function;
 
-enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
+struct SROAOptions {
+  enum CFGOption { ModifyCFG, PreserveCFG };
+
+  CFGOption CFG;
+  bool AggregateToVector;
+
+  SROAOptions(CFGOption CFG = PreserveCFG, bool AggregateToVector = false)
+      : CFG(CFG), AggregateToVector(AggregateToVector) {}
+};
 
 class SROAPass : public OptionalPassInfoMixin<SROAPass> {
-  const SROAOptions PreserveCFG;
+  const SROAOptions Options;
 
 public:
   /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
   /// in any way, even if it would update CFG analyses.
-  LLVM_ABI SROAPass(SROAOptions PreserveCFG);
+  /// If \p AggregateToVector is set, then the pass will try to convert
+  /// allocas of homogeneous structs into vector allocas.
+  LLVM_ABI SROAPass(SROAOptions Options);
 
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

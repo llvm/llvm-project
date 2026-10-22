@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class MCAsmInfoCOFF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoCOFF : public MCAsmInfo {
   virtual void anchor();
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
@@ -23,14 +23,14 @@ protected:
   explicit MCAsmInfoCOFF(const MCTargetOptions &Options);
 };
 
-class MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
+class LLVM_ABI MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:
   explicit MCAsmInfoMicrosoft(const MCTargetOptions &Options);
 };
 
-class MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
+class LLVM_ABI MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
   void anchor() override;
 
 protected:

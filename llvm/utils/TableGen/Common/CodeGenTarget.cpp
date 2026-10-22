@@ -17,8 +17,8 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,12 +43,13 @@ static cl::opt<unsigned>
 /// Returns the MVT that the specified TableGen
 /// record corresponds to.
 MVT llvm::getValueType(const Record *Rec) {
-  return StringSwitch<MVT>(Rec->getValueAsString("LLVMName"))
+  static const DenseMap<StringRef, MVT> ValueTypes = {
 #define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
-  .Case(#Ty, MVT::Ty)
+  {#Ty, MVT::Ty},
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
-      .Case("INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE);
+      {"INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE}};
+  return ValueTypes.lookup(Rec->getValueAsString("LLVMName"));
 }
 
 StringRef llvm::getEnumName(MVT T) {
@@ -89,6 +90,19 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
 CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
+
+ArrayRef<const Record *> CodeGenTarget::getAllRegClassByHwMode() const {
+  if (!RegClassByHwModeList) {
+    RegClassByHwModeList.emplace();
+    for (const Record *R :
+         Records.getAllDerivedDefinitions("RegClassByHwMode")) {
+      if (!R->getValueAsListOfDefs("Objects").empty())
+        RegClassByHwModeList->push_back(R);
+    }
+  }
+
+  return *RegClassByHwModeList;
+}
 
 /// getInstNamespace - Find and return the target machine's instruction
 /// namespace. The namespace is cached because it is requested multiple times.

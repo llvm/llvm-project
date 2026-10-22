@@ -293,6 +293,7 @@ class MxCall<MxOperand LOCOp, MxEncMemOp DST_ENC>
 
 def CALLk : MxCall<MxPCI32, MxEncAddrMode_k<"dst">>;
 def CALLq : MxCall<MxPCD32, MxEncAddrMode_q<"dst">>;
+def CALLl : MxCall<MxPCIBD32, MxEncAddrMode_l<"dst">>;
 def CALLf : MxCall<MxARII32, MxEncAddrMode_f<"dst">>;
 def CALLp : MxCall<MxARID32, MxEncAddrMode_p<"dst">>;
 def CALLb : MxCall<MxAL32,  MxEncAddrMode_abs<"dst", true>>;

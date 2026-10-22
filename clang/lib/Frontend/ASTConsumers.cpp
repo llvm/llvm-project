@@ -13,10 +13,14 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceManager.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -33,22 +37,24 @@ namespace {
     enum Kind { DumpFull, Dump, Print, None };
     ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K,
                ASTDumpOutputFormat Format, StringRef FilterString,
-               bool DumpLookups = false, bool DumpDeclTypes = false)
+               StringRef FilterPath, bool DumpLookups = false,
+               bool DumpDeclTypes = false)
         : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)),
           OutputKind(K), OutputFormat(Format), FilterString(FilterString),
-          DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
+          FilterPath(FilterPath), DumpLookups(DumpLookups),
+          DumpDeclTypes(DumpDeclTypes) {}
 
     ASTPrinter(raw_ostream &Out, Kind K, ASTDumpOutputFormat Format,
-               StringRef FilterString, bool DumpLookups = false,
-               bool DumpDeclTypes = false)
+               StringRef FilterString, StringRef FilterPath,
+               bool DumpLookups = false, bool DumpDeclTypes = false)
         : Out(Out), OwnedOut(nullptr), OutputKind(K), OutputFormat(Format),
-          FilterString(FilterString), DumpLookups(DumpLookups),
-          DumpDeclTypes(DumpDeclTypes) {}
+          FilterString(FilterString), FilterPath(FilterPath),
+          DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
 
-      if (FilterString.empty())
+      if (FilterString.empty() && FilterPath.empty())
         return print(D);
 
       TraverseDecl(D);
@@ -83,7 +89,33 @@ namespace {
       return "";
     }
     bool filterMatches(Decl *D) {
-      return getName(D).find(FilterString) != std::string::npos;
+      if (!FilterString.empty() &&
+          getName(D).find(FilterString) == std::string::npos)
+        return false;
+
+      if (!FilterPath.empty()) {
+        const SourceManager &SM = D->getASTContext().getSourceManager();
+
+        SourceLocation Loc = D->getLocation();
+        if (Loc.isInvalid())
+          return false;
+
+        PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+        if (PLoc.isInvalid())
+          return false;
+
+        llvm::Expected<llvm::GlobPattern> Pattern =
+            llvm::GlobPattern::create(FilterPath);
+        if (!Pattern) {
+          llvm::consumeError(Pattern.takeError());
+          return false;
+        }
+
+        if (!Pattern->match(PLoc.getFilename()))
+          return false;
+      }
+
+      return true;
     }
     void print(Decl *D) {
       if (DumpLookups) {
@@ -98,6 +130,7 @@ namespace {
       } else if (OutputKind == Print) {
         PrintingPolicy Policy(D->getASTContext().getLangOpts());
         Policy.IncludeTagDefinition = true;
+        Policy.PrettyEnums = false;
         D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
       } else if (OutputKind != None) {
         D->dump(Out, OutputKind == DumpFull, OutputFormat);
@@ -132,6 +165,9 @@ namespace {
     /// Which declarations or DeclContexts to display.
     std::string FilterString;
 
+    /// Which source file paths to display.
+    std::string FilterPath;
+
     /// Whether the primary output is lookup results or declarations. Individual
     /// results will be output with a format determined by OutputKind. This is
     /// incompatible with OutputKind == Print.
@@ -142,18 +178,18 @@ namespace {
   };
 
   class ASTDeclNodeLister : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTDeclNodeLister> {
+                            public DynamicRecursiveASTVisitor {
   public:
     ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
+        : Out(Out ? *Out : llvm::outs()) {
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TraverseDecl(Context.getTranslationUnitDecl());
     }
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitNamedDecl(NamedDecl *D) {
+    bool VisitNamedDecl(NamedDecl *D) override {
       D->printQualifiedName(Out);
       Out << '\n';
       return true;
@@ -168,32 +204,35 @@ std::unique_ptr<ASTConsumer>
 clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
                         StringRef FilterString) {
   return std::make_unique<ASTPrinter>(std::move(Out), ASTPrinter::Print,
-                                       ADOF_Default, FilterString);
+                                      ADOF_Default, FilterString, "");
 }
 
 std::unique_ptr<ASTConsumer>
 clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
-                       bool DumpDecls, bool Deserialize, bool DumpLookups,
-                       bool DumpDeclTypes, ASTDumpOutputFormat Format) {
+                       StringRef FilterPath, bool DumpDecls, bool Deserialize,
+                       bool DumpLookups, bool DumpDeclTypes,
+                       ASTDumpOutputFormat Format) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
-  return std::make_unique<ASTPrinter>(
-      std::move(Out),
-      Deserialize ? ASTPrinter::DumpFull
-                  : DumpDecls ? ASTPrinter::Dump : ASTPrinter::None,
-      Format, FilterString, DumpLookups, DumpDeclTypes);
+  return std::make_unique<ASTPrinter>(std::move(Out),
+                                      Deserialize ? ASTPrinter::DumpFull
+                                      : DumpDecls ? ASTPrinter::Dump
+                                                  : ASTPrinter::None,
+                                      Format, FilterString, FilterPath,
+                                      DumpLookups, DumpDeclTypes);
 }
 
 std::unique_ptr<ASTConsumer>
-clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString, bool DumpDecls,
-                       bool Deserialize, bool DumpLookups, bool DumpDeclTypes,
+clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString,
+                       StringRef FilterPath, bool DumpDecls, bool Deserialize,
+                       bool DumpLookups, bool DumpDeclTypes,
                        ASTDumpOutputFormat Format) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
   return std::make_unique<ASTPrinter>(Out,
                                       Deserialize ? ASTPrinter::DumpFull
                                       : DumpDecls ? ASTPrinter::Dump
                                                   : ASTPrinter::None,
-                                      Format, FilterString, DumpLookups,
-                                      DumpDeclTypes);
+                                      Format, FilterString, FilterPath,
+                                      DumpLookups, DumpDeclTypes);
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDeclNodeLister() {

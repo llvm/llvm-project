@@ -42,22 +42,30 @@ def ol_kernel_launch_prop_t : Struct {
 }
 
 def olLaunchKernel : Function {
-    let desc = "Enqueue a kernel launch with the specified size and parameters.";
+    let desc = "Enqueue a kernel launch with arguments specified as an array of pointers and sizes.";
     let details = [
         "If a queue is not specified, kernel execution happens synchronously",
-        "ArgumentsData may be set to NULL (to indicate no parameters)"
+        "Each element of ArgPtrs points to the value of the corresponding kernel argument",
+        "Each element of ArgSizes specifies the size in bytes of the corresponding argument",
+        "NumArgs must match the number of arguments expected by the kernel",
+        "ArgPtrs and ArgSizes must both be NULL (when NumArgs == 0) or both be non-NULL"
     ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
         Param<"ol_device_handle_t", "Device", "handle of the device to execute on", PARAM_IN>,
         Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
-        Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
-        Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
-        Param<"const ol_kernel_launch_prop_t *", "Properties", "Array of optional properties, last element must be OL_KERNEL_LAUNCH_PROP_END", PARAM_IN_OPTIONAL>
+        Param<"const ol_kernel_launch_prop_t *", "Properties", "Array of optional properties, last element must be OL_KERNEL_LAUNCH_PROP_END", PARAM_IN_OPTIONAL>,
+        Param<"size_t", "NumArgs", "number of kernel arguments", PARAM_IN>,
+        Param<"void**", "ArgPtrs", "array of pointers, each pointing to a kernel argument value", PARAM_IN_OPTIONAL>,
+        Param<"const size_t*", "ArgSizes", "array of kernel argument sizes", PARAM_IN_OPTIONAL>,
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_ARGUMENT", ["`ArgumentsSize > 0 && ArgumentsData == NULL`"]>,
+        Return<"OL_ERRC_INVALID_ARGUMENT", [
+            "`(ArgPtrs == NULL) != (ArgSizes == NULL)`",
+            "`NumArgs > 0 && (ArgPtrs == NULL || ArgSizes == NULL)`",
+            "NumArgs does not match the number of arguments expected by the kernel",
+        ]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
         Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
     ];

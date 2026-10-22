@@ -23,7 +23,7 @@ namespace llvm {
 namespace mca {
 
 /// A stage that simulates a queue of instruction opcodes.
-class MicroOpQueueStage : public Stage {
+class LLVM_ABI MicroOpQueueStage : public Stage {
   SmallVector<InstRef, 8> Buffer;
   unsigned NextAvailableSlotIdx;
   unsigned CurrentInstructionSlotIdx;

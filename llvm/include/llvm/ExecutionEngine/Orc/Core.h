@@ -24,7 +24,9 @@
 #include "llvm/ExecutionEngine/Orc/MaterializationUnit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/SymbolLookupSet.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/ExecutionEngine/Orc/WaitingOnGraph.h"
 #include "llvm/Support/Compiler.h"
@@ -55,26 +57,6 @@ using WaitingOnGraph =
 
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
-
-/// A definition of a Symbol within a JITDylib.
-class SymbolInstance {
-public:
-  using LookupAsyncOnCompleteFn =
-      unique_function<void(Expected<ExecutorSymbolDef>)>;
-
-  SymbolInstance(JITDylibSP JD, SymbolStringPtr Name)
-      : JD(std::move(JD)), Name(std::move(Name)) {}
-
-  const JITDylib &getJITDylib() const { return *JD; }
-  const SymbolStringPtr &getName() const { return Name; }
-
-  Expected<ExecutorSymbolDef> lookup() const;
-  LLVM_ABI void lookupAsync(LookupAsyncOnCompleteFn OnComplete) const;
-
-private:
-  JITDylibSP JD;
-  SymbolStringPtr Name;
-};
 
 using ResourceKey = uintptr_t;
 
@@ -150,16 +132,6 @@ public:
 /// as well.
 enum class JITDylibLookupFlags { MatchExportedSymbolsOnly, MatchAllSymbols };
 
-/// Lookup flags that apply to each symbol in a lookup.
-///
-/// If RequiredSymbol is used (the default) for a given symbol then that symbol
-/// must be found during the lookup or the lookup will fail returning a
-/// SymbolNotFound error. If WeaklyReferencedSymbol is used and the given
-/// symbol is not found then the query will continue, and no result for the
-/// missing symbol will be present in the result (assuming the rest of the
-/// lookup succeeds).
-enum class SymbolLookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
-
 /// Describes the kind of lookup being performed. The lookup kind is passed to
 /// symbol generators (if they're invoked) to help them determine what
 /// definitions to generate.
@@ -188,221 +160,6 @@ inline JITDylibSearchOrder makeJITDylibSearchOrder(
     O.push_back(std::make_pair(JD, Flags));
   return O;
 }
-
-/// A set of symbols to look up, each associated with a SymbolLookupFlags
-/// value.
-///
-/// This class is backed by a vector and optimized for fast insertion,
-/// deletion and iteration. It does not guarantee a stable order between
-/// operations, and will not automatically detect duplicate elements (they
-/// can be manually checked by calling the validate method).
-class SymbolLookupSet {
-public:
-  using value_type = std::pair<SymbolStringPtr, SymbolLookupFlags>;
-  using UnderlyingVector = std::vector<value_type>;
-  using iterator = UnderlyingVector::iterator;
-  using const_iterator = UnderlyingVector::const_iterator;
-
-  SymbolLookupSet() = default;
-
-  SymbolLookupSet(std::initializer_list<value_type> Elems) {
-    for (auto &E : Elems)
-      Symbols.push_back(std::move(E));
-  }
-
-  explicit SymbolLookupSet(
-      SymbolStringPtr Name,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    add(std::move(Name), Flags);
-  }
-
-  /// Construct a SymbolLookupSet from an initializer list of SymbolStringPtrs.
-  explicit SymbolLookupSet(
-      std::initializer_list<SymbolStringPtr> Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(std::move(Name), Flags);
-  }
-
-  /// Construct a SymbolLookupSet from a SymbolNameSet with the given
-  /// Flags used for each value.
-  explicit SymbolLookupSet(
-      const SymbolNameSet &Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(Name, Flags);
-  }
-
-  /// Construct a SymbolLookupSet from a vector of symbols with the given Flags
-  /// used for each value.
-  /// If the ArrayRef contains duplicates it is up to the client to remove these
-  /// before using this instance for lookup.
-  explicit SymbolLookupSet(
-      ArrayRef<SymbolStringPtr> Names,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.reserve(Names.size());
-    for (const auto &Name : Names)
-      add(Name, Flags);
-  }
-
-  /// Construct a SymbolLookupSet from DenseMap keys.
-  template <typename ValT>
-  static SymbolLookupSet
-  fromMapKeys(const DenseMap<SymbolStringPtr, ValT> &M,
-              SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    SymbolLookupSet Result;
-    Result.Symbols.reserve(M.size());
-    for (const auto &[Name, Val] : M)
-      Result.add(Name, Flags);
-    return Result;
-  }
-
-  /// Add an element to the set. The client is responsible for checking that
-  /// duplicates are not added.
-  SymbolLookupSet &
-  add(SymbolStringPtr Name,
-      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
-    Symbols.push_back(std::make_pair(std::move(Name), Flags));
-    return *this;
-  }
-
-  /// Quickly append one lookup set to another.
-  SymbolLookupSet &append(SymbolLookupSet Other) {
-    Symbols.reserve(Symbols.size() + Other.size());
-    for (auto &KV : Other)
-      Symbols.push_back(std::move(KV));
-    return *this;
-  }
-
-  bool empty() const { return Symbols.empty(); }
-  UnderlyingVector::size_type size() const { return Symbols.size(); }
-  iterator begin() { return Symbols.begin(); }
-  iterator end() { return Symbols.end(); }
-  const_iterator begin() const { return Symbols.begin(); }
-  const_iterator end() const { return Symbols.end(); }
-
-  /// Removes the Ith element of the vector, replacing it with the last element.
-  void remove(UnderlyingVector::size_type I) {
-    std::swap(Symbols[I], Symbols.back());
-    Symbols.pop_back();
-  }
-
-  /// Removes the element pointed to by the given iterator. This iterator and
-  /// all subsequent ones (including end()) are invalidated.
-  void remove(iterator I) { remove(I - begin()); }
-
-  /// Removes all elements matching the given predicate, which must be callable
-  /// as bool(const SymbolStringPtr &, SymbolLookupFlags Flags).
-  template <typename PredFn> void remove_if(PredFn &&Pred) {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      if (Pred(Name, Flags))
-        remove(I);
-      else
-        ++I;
-    }
-  }
-
-  /// Loop over the elements of this SymbolLookupSet, applying the Body function
-  /// to each one. Body must be callable as
-  /// bool(const SymbolStringPtr &, SymbolLookupFlags).
-  /// If Body returns true then the element just passed in is removed from the
-  /// set. If Body returns false then the element is retained.
-  template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   bool>::value> {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      if (Body(Name, Flags))
-        remove(I);
-      else
-        ++I;
-    }
-  }
-
-  /// Loop over the elements of this SymbolLookupSet, applying the Body function
-  /// to each one. Body must be callable as
-  /// Expected<bool>(const SymbolStringPtr &, SymbolLookupFlags).
-  /// If Body returns a failure value, the loop exits immediately. If Body
-  /// returns true then the element just passed in is removed from the set. If
-  /// Body returns false then the element is retained.
-  template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   Expected<bool>>::value,
-      Error> {
-    UnderlyingVector::size_type I = 0;
-    while (I != Symbols.size()) {
-      const auto &Name = Symbols[I].first;
-      auto Flags = Symbols[I].second;
-      auto Remove = Body(Name, Flags);
-      if (!Remove)
-        return Remove.takeError();
-      if (*Remove)
-        remove(I);
-      else
-        ++I;
-    }
-    return Error::success();
-  }
-
-  /// Construct a SymbolNameVector from this instance by dropping the Flags
-  /// values.
-  SymbolNameVector getSymbolNames() const {
-    SymbolNameVector Names;
-    Names.reserve(Symbols.size());
-    for (const auto &KV : Symbols)
-      Names.push_back(KV.first);
-    return Names;
-  }
-
-  /// Sort the lookup set by pointer value. This sort is fast but sensitive to
-  /// allocation order and so should not be used where a consistent order is
-  /// required.
-  void sortByAddress() { llvm::sort(Symbols, llvm::less_first()); }
-
-  /// Sort the lookup set lexicographically. This sort is slow but the order
-  /// is unaffected by allocation order.
-  void sortByName() {
-    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
-      return *LHS.first < *RHS.first;
-    });
-  }
-
-  /// Remove any duplicate elements. If a SymbolLookupSet is not duplicate-free
-  /// by construction, this method can be used to turn it into a proper set.
-  void removeDuplicates() {
-    sortByAddress();
-    auto LastI = llvm::unique(Symbols);
-    Symbols.erase(LastI, Symbols.end());
-  }
-
-#ifndef NDEBUG
-  /// Returns true if this set contains any duplicates. This should only be used
-  /// in assertions.
-  bool containsDuplicates() {
-    if (Symbols.size() < 2)
-      return false;
-    sortByAddress();
-    for (UnderlyingVector::size_type I = 1; I != Symbols.size(); ++I)
-      if (Symbols[I].first == Symbols[I - 1].first)
-        return true;
-    return false;
-  }
-#endif
-
-private:
-  UnderlyingVector Symbols;
-};
 
 struct SymbolAliasMapEntry {
   SymbolAliasMapEntry() = default;
@@ -1364,23 +1121,50 @@ public:
   /// For reporting errors.
   using ErrorReporter = unique_function<void(Error)>;
 
-  /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
+  /// Function type for returning results from a call-controller handler.
+  using CallControllerReturnFn =
+      unique_function<void(shared::WrapperFunctionBuffer)>;
 
-  /// An asynchronous wrapper-function callable from the executor via
-  /// jit-dispatch.
-  using JITDispatchHandlerFunction = unique_function<void(
-      SendResultFunction SendResult,
-      const char *ArgData, size_t ArgSize)>;
+  /// A call-controller handler: handles calls from the executor made via the
+  /// ORC runtime's call-controller mechanism.
+  using CallControllerHandlerFn = unique_function<void(
+      CallControllerReturnFn, shared::WrapperFunctionBuffer)>;
 
-  /// A map associating tag names with asynchronous wrapper function
-  /// implementations in the JIT.
-  using JITDispatchHandlerAssociationMap =
-      DenseMap<SymbolStringPtr, JITDispatchHandlerFunction>;
+  /// Associates a call-controller handler with the name of the tag symbol that
+  /// the executor will use to call it, and the SymbolLookupFlags to use when
+  /// looking that tag up.
+  ///
+  /// The name is not copied (see SymbolNameSpec): the referenced string must
+  /// outlive the registerCallControllerHandlers call that the binding is
+  /// passed to. Ordinary string literals have static storage duration, so
+  /// they are always safe.
+  class CallControllerHandlerBinding {
+  public:
+    CallControllerHandlerBinding(
+        SymbolNameSpec Name, CallControllerHandlerFn Handler,
+        SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol)
+        : Name(Name), Handler(std::move(Handler)), LF(LF) {}
+
+    SymbolNameSpec getName() const { return Name; }
+
+    CallControllerHandlerFn takeHandler() { return std::move(Handler); }
+
+    SymbolLookupFlags getLookupFlags() const { return LF; }
+
+  private:
+    SymbolNameSpec Name;
+    CallControllerHandlerFn Handler;
+    SymbolLookupFlags LF;
+  };
 
   /// Construct an ExecutionSession with the given ExecutorProcessControl
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
+
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
 
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
@@ -1639,89 +1423,41 @@ public:
                           ArgBuffer);
   }
 
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
+  /// For each binding, look up its tag symbol in JD and register the binding's
+  /// call-controller handler for the tag's address. The handler becomes
+  /// callable from the executor via the ORC runtime's call-controller
+  /// mechanism, using the tag's address as the handler tag.
   ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
-                                            ArrayRef<char> ArgBuffer) {
-    return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
+  /// Tag names are mangled for the session's target triple, then looked up
+  /// in JD using LookupKind::Static and JITDylibLookupFlags::MatchAllSymbols
+  /// (hidden tags will be found), with each binding's SymbolLookupFlags. If a
+  /// weakly referenced tag is not found then its handler is dropped.
+  ///
+  /// On failure no handlers are registered.
+  LLVM_ABI Error registerCallControllerHandlers(
+      JITDylib &JD, std::vector<CallControllerHandlerBinding> Hs);
+
+  /// Convenience overload of registerCallControllerHandlers that takes the
+  /// bindings as arguments, so that they can be constructed inline at the
+  /// call site.
+  template <typename... BindingTs>
+  std::enable_if_t<
+      (std::is_same_v<BindingTs, CallControllerHandlerBinding> && ...), Error>
+  registerCallControllerHandlers(JITDylib &JD, BindingTs &&...Hs) {
+    std::vector<CallControllerHandlerBinding> Bs;
+    Bs.reserve(sizeof...(Hs));
+    (Bs.push_back(std::move(Hs)), ...);
+    return registerCallControllerHandlers(JD, std::move(Bs));
   }
 
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
-                           const ArgTs &...Args) {
-    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
-                       WrapperCallArgTs &&...WrapperCallArgs) {
-    return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
-        WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
-  }
-
-  /// Wrap a handler that takes concrete argument types (and a sender for a
-  /// concrete return type) to produce an AsyncHandlerWrapperFunction. Uses SPS
-  /// to unpack the arguments and pack the result.
-  ///
-  /// This function is intended to support easy construction of
-  /// AsyncHandlerWrapperFunctions that can be associated with a tag
-  /// (using registerJITDispatchHandler) and called from the executor.
-  template <typename SPSSignature, typename HandlerT>
-  static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
-                                           const char *ArgData,
-                                           size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(
-          ArgData, ArgSize, std::move(SendResult), H);
-    };
-  }
-
-  /// Wrap a class method that takes concrete argument types (and a sender for
-  /// a concrete return type) to produce an AsyncHandlerWrapperFunction. Uses
-  /// SPS to unpack the arguments and pack the result.
-  ///
-  /// This function is intended to support easy construction of
-  /// AsyncHandlerWrapperFunctions that can be associated with a tag
-  /// (using registerJITDispatchHandler) and called from the executor.
-  template <typename SPSSignature, typename ClassT, typename... MethodArgTs>
-  static JITDispatchHandlerFunction
-  wrapAsyncWithSPS(ClassT *Instance, void (ClassT::*Method)(MethodArgTs...)) {
-    return wrapAsyncWithSPS<SPSSignature>(
-        [Instance, Method](MethodArgTs &&...MethodArgs) {
-          (Instance->*Method)(std::forward<MethodArgTs>(MethodArgs)...);
-        });
-  }
-
-  /// For each tag symbol name, associate the corresponding
-  /// AsyncHandlerWrapperFunction with the address of that symbol. The
-  /// handler becomes callable from the executor using the ORC runtime
-  /// __orc_rt_jit_dispatch function and the given tag.
-  ///
-  /// Tag symbols will be looked up in JD using LookupKind::Static,
-  /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
-  /// LookupFlags::WeaklyReferencedSymbol. Missing tag definitions will not
-  /// cause an error, the handler will simply be dropped.
-  LLVM_ABI Error registerJITDispatchHandlers(
-      JITDylib &JD, JITDispatchHandlerAssociationMap WFs);
-
-  /// Run a registered jit-side wrapper function.
+  /// Run the call-controller handler registered for the given tag address.
   /// This should be called by the ExecutorProcessControl instance in response
-  /// to incoming jit-dispatch requests from the executor.
-  LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
-                                      ExecutorAddr HandlerFnTagAddr,
-                                      shared::WrapperFunctionBuffer ArgBytes);
+  /// to calls from the executor made via the ORC runtime's call-controller
+  /// mechanism.
+  LLVM_ABI void
+  runCallControllerHandler(CallControllerReturnFn Return,
+                           ExecutorAddr HandlerFnTagAddr,
+                           shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1853,14 +1589,10 @@ private:
                         std::unique_ptr<MaterializationResponsibility>>>
       OutstandingMUs;
 
-  mutable std::mutex JITDispatchHandlersMutex;
-  DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
-      JITDispatchHandlers;
+  mutable std::mutex CallControllerHandlersMutex;
+  DenseMap<ExecutorAddr, std::unique_ptr<CallControllerHandlerFn>>
+      CallControllerHandlers;
 };
-
-inline Expected<ExecutorSymbolDef> SymbolInstance::lookup() const {
-  return JD->getExecutionSession().lookup({JD.get()}, Name);
-}
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
   return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {

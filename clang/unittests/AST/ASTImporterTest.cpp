@@ -696,6 +696,95 @@ TEST_P(ImportType, ImportUsingType) {
                  cxxNewExpr(hasType(pointerType(pointee(usingType())))))));
 }
 
+struct ImportReflection : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    return {"-Xclang", "-freflection"};
+  }
+};
+
+TEST_P(ImportReflection, ImportMetaInfoBuiltinType) {
+  Decl *FromTU = getTuDecl("using declToImport = decltype(^^int);", Lang_CXX26,
+                           "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  const auto *FromBT =
+      FromTA->getUnderlyingType().getCanonicalType()->getAs<BuiltinType>();
+  ASSERT_TRUE(FromBT);
+  ASSERT_EQ(BuiltinType::MetaInfo, FromBT->getKind());
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+  const auto *ToBT =
+      ToTA->getUnderlyingType().getCanonicalType()->getAs<BuiltinType>();
+  ASSERT_TRUE(ToBT);
+  EXPECT_EQ(BuiltinType::MetaInfo, ToBT->getKind());
+}
+
+TEST_P(ImportReflection, ImportReflectionAPValueAsType) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <auto R> struct S {};
+      using declToImport = S<^^int>;
+      )",
+      Lang_CXX26, "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+
+  const auto *ToSpec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+      ToTA->getUnderlyingType()->getAsCXXRecordDecl());
+  ASSERT_TRUE(ToSpec);
+  const TemplateArgumentList &ToArgs = ToSpec->getTemplateArgs();
+  ASSERT_EQ(ToArgs.size(), 1u);
+  const TemplateArgument &ToArg = ToArgs.get(0);
+  ASSERT_EQ(TemplateArgument::StructuralValue, ToArg.getKind());
+
+  const APValue &ToVal = ToArg.getAsStructuralValue();
+  ASSERT_TRUE(ToVal.isReflection());
+  EXPECT_EQ(ReflectionKind::Type, ToVal.getReflectionOperandKind());
+
+  const auto *ToTSI =
+      static_cast<const TypeSourceInfo *>(ToVal.getReflectionOpaqueOperand());
+  ASSERT_TRUE(ToTSI);
+  EXPECT_EQ(ToTA->getASTContext().IntTy.getAsOpaquePtr(),
+            ToTSI->getType().getCanonicalType().getAsOpaquePtr());
+}
+
+TEST_P(ImportReflection, ImportReflectionAPValueAsNullReflection) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      using info = decltype(^^int);
+      template <auto R> struct S {};
+      using declToImport = S<info{}>;
+      )",
+      Lang_CXX26, "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+
+  const auto *ToSpec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+      ToTA->getUnderlyingType()->getAsCXXRecordDecl());
+  ASSERT_TRUE(ToSpec);
+  const TemplateArgumentList &ToArgs = ToSpec->getTemplateArgs();
+  ASSERT_EQ(ToArgs.size(), 1u);
+  const TemplateArgument &ToArg = ToArgs.get(0);
+  ASSERT_EQ(TemplateArgument::StructuralValue, ToArg.getKind());
+
+  const APValue &ToVal = ToArg.getAsStructuralValue();
+  ASSERT_TRUE(ToVal.isReflection());
+  EXPECT_EQ(ReflectionKind::Null, ToVal.getReflectionOperandKind());
+
+  EXPECT_EQ(ToVal.getReflectionOpaqueOperand(), nullptr);
+}
+
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> void declToImport() { };", Lang_CXX03, "",
@@ -1131,6 +1220,16 @@ TEST_P(ImportExpr, DependentSizedExtVectorType) {
              Lang_CXX03, "", Lang_CXX03, Verifier,
              classTemplateDecl(has(cxxRecordDecl(
                  has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFileScopeAsmDecl) {
+  Decl *FromTU = getTuDecl("__asm(\"nop\");", Lang_CXX03);
+  auto From =
+      FirstDeclMatcher<FileScopeAsmDecl>().match(FromTU, fileScopeAsmDecl());
+  ASSERT_TRUE(From);
+  FileScopeAsmDecl *To = Import(From, Lang_CXX03);
+  EXPECT_TRUE(To);
+  EXPECT_EQ(To->getAsmString(), "nop");
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
@@ -6598,6 +6697,42 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   EXPECT_FALSE(ImportedOK);
 }
 
+// Check that the imported types, and not only the decls, are invalidated
+// (removed from ImportedTypes) upon an import failure. It can happen, for
+// instance with a member whose signature refers back to the enclosing class,
+// that the type is successfully imported and pointing to the decl being
+// imported, but that the decl import then fails further on.
+// The decl mapping is correctly invalidated, but if the connected type is not
+// invalidated as well, the half-built decl (which unavoidably remains
+// in the 'To' AST) could be accessed through the type during later operations,
+// like structural equivalence checks.
+TEST_P(ErrorHandlingTest, ImportedTypeMappingIsInvalidatedOnFailure) {
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+      class X {
+        void ok(const X &) {} // Succeeds; imports X's own type
+                              // as a side effect, before X's
+                              // own import is known to fail.
+        void bad() { )") + ErroneousStmt + R"(} // Fails to import.
+      };
+      )",
+                                          Lang_CXX03);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+
+  CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX03);
+  // Class X fails to import
+  EXPECT_FALSE(ImportedX);
+
+  ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+  const Type *FromXTy =
+      FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
+  ASSERT_TRUE(FromXTy);
+  Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
+  // And its type should fail to import as well
+  EXPECT_TRUE(ToTyOrErr.errorIsA<clang::ASTImportError>());
+  llvm::consumeError(ToTyOrErr.takeError());
+}
+
 // Check that an error propagates to the dependent AST nodes.
 // In the below code it means that an error in X should propagate to A.
 // And even to F since the containing A is erroneous.
@@ -10861,6 +10996,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportInjectedClassNameType,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
+                         DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportReflection,
                          DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,

@@ -23,6 +23,8 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   liblldb
   lldb-argdumper
   lldb-dap
+  lldb-mcp
   darwin-debug
   debugserver
+  lldbPluginScriptInterpreterPython
   CACHE STRING "")

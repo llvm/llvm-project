@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wctype/wctype.h"
+#include "src/wctype/wctype_impl.h"
 
 #include "test/UnitTest/Test.h"
 

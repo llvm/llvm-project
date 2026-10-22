@@ -1,4 +1,5 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu cuda-descriptor-alloc-function=custom_alloc_desc" %s | FileCheck %s --check-prefix=CUSTOM
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @_QQmain() attributes {fir.bindc_name = "cufkernel_global"} {
@@ -11,14 +12,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
     %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c4_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %5 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-    %6 = fircg.ext_embox %5(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+    %6 = fircg.ext_embox %5(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.store %6 to %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %8 = fir.load %3 : !fir.ref<!fir.box<none>>
     return
   }
 
   // CHECK-LABEL: llvm.func @_QQmain()
-  // CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor 
+  // CHECK-COUNT-1: llvm.call @_FortranACUFAllocDescriptor
 
   fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
     %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
@@ -76,7 +77,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %5 = fir.call @_FortranACUFAllocDescriptor(%3, %4, %c14_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %6 = fir.convert %5 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %7 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %8 = fircg.ext_embox %7(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %8 = fircg.ext_embox %7(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.store %8 to %6 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %9 = fir.address_of(@_QQclX64756D6D792E6D6C697200) : !fir.ref<!fir.char<1,11>>
     %c20_i32 = arith.constant 20 : i32
@@ -86,7 +87,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %12 = fir.call @_FortranACUFAllocDescriptor(%10, %11, %c20_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %13 = fir.convert %12 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %14 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-    %15 = fircg.ext_embox %14(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    %15 = fircg.ext_embox %14(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
     fir.store %15 to %13 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %16 = fir.convert %6 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
     %17 = fir.convert %c1 : (index) -> i64
@@ -125,7 +126,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-4: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -144,7 +145,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c11_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %5 = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
-    %6 = fircg.ext_embox %5(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    %6 = fircg.ext_embox %5(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
     fir.store %6 to %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %7 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %8 = fir.box_addr %7 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
@@ -169,7 +170,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -187,6 +188,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
 // CHECK-LABEL: llvm.func @_QPouter
 // CHECK: _FortranACUFAllocDescriptor
+// CUSTOM-LABEL: llvm.func @_QPouter
+// CUSTOM: custom_alloc_desc
 
 // -----
 
@@ -198,6 +201,8 @@ func.func @_QMm1Psub1(%arg0: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.c
 
 // CHECK-LABEL: llvm.func @_QMm1Psub1
 // CHECK-COUNT-2: _FortranACUFAllocDescriptor
+// CUSTOM-LABEL: llvm.func @_QMm1Psub1
+// CUSTOM-COUNT-2: custom_alloc_desc
 
 // -----
 
@@ -228,7 +233,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   }
   func.func @_QQmain() attributes {fir.bindc_name = "P", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+mmx", "+sse", "+sse2", "+cx8", "+x87", "+fxsr"]>} {
@@ -245,7 +250,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
     fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     }
     gpu.func @_QMm1Psub2(%arg0: !fir.box<!fir.array<?x?xf32>>) kernel {
@@ -263,14 +268,14 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   }
   gpu.module @cuda_device_mod {
     fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     }
     func.func @_QQxxx() {
@@ -427,3 +432,109 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK: llvm.call @_FortranACUFAllocDescriptor(
 // CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel
+
+// -----
+
+// Test that an embox whose converted result is passed to gpu.launch_func gets a
+// managed descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  func.func @_QQmain() {
+    %c0_i32 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : index
+    %c10 = arith.constant 10 : index
+    %c20 = arith.constant 20 : index
+    %base = fir.alloca !fir.array<10x20xi32>
+    %box = fircg.ext_embox %base(%c10, %c20) : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.box<!fir.array<10x20xi32>>
+    %arg = fir.convert %box : (!fir.box<!fir.array<10x20xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@kernel blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%arg : !fir.box<!fir.array<?x?xi32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @kernel(%arg0: !fir.box<!fir.array<?x?xi32>>) kernel {
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: %[[DESC:.*]] = llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: %[[BOX:.*]] = builtin.unrealized_conversion_cast %[[DESC]] : !llvm.ptr to !fir.box<!fir.array<?x?xi32>>
+// CHECK: llvm.store %{{.*}}, %[[DESC]]
+// CHECK: gpu.launch_func {{.*}} args(%[[BOX]] : !fir.box<!fir.array<?x?xi32>>)
+
+// -----
+
+// A rebox of a device-resident global (isDeviceAllocation == true) whose result
+// is consumed by an OpenACC data-clause op (here acc.present) must NOT be placed
+// in managed memory. The box is host-side descriptor metadata for the data
+// clause; a managed descriptor created here is never freed and leaves a stale
+// descriptor behind when its address is reused. The descriptor storage should
+// therefore be a plain stack alloca and no _FortranACUFAllocDescriptor call
+// should be emitted for it.
+
+module attributes {gpu.container_module} {
+  fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  }
+  func.func @_QQmain() {
+    %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
+    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) name("uf") -> !fir.box<!fir.array<?x?xf32>>
+    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) dataClause(acc_present) name("uf")
+    return
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.alloca {{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+// fircg.ext_declare, which survives until codegen when debug info is requested,
+// must not hide the device-resident memory it declares. The descriptor for an
+// embox of a managed allocation goes to managed memory whether or not the
+// allocation is reached through a declare.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QPtesti4() {
+    %c1_i32 = arith.constant 1 : i32
+    %c6 = arith.constant 6 : index
+    %c24 = arith.constant 24 : index
+    %c29_i32 = arith.constant 29 : i32
+    %0 = fir.address_of(@_QQclX3C737464696E3E00) : !fir.ref<!fir.char<1,8>>
+    %1 = fir.convert %c24 : (index) -> i64
+    %2 = fir.convert %0 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
+    %3 = fir.call @_FortranACUFMemAlloc(%1, %c1_i32, %2, %c29_i32) {cuf.data_attr = #cuf.cuda<managed>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+    %4 = fir.convert %3 : (!fir.llvm_ptr<i8>) -> !fir.ref<!fir.array<6x!fir.logical<4>>>
+    %5 = fircg.ext_declare %4(%c6) uniq_name("_QFtesti4Elma") : (!fir.ref<!fir.array<6x!fir.logical<4>>>, index) -> !fir.ref<!fir.array<6x!fir.logical<4>>>
+    %6 = fircg.ext_embox %5(%c6) : (!fir.ref<!fir.array<6x!fir.logical<4>>>, index) -> !fir.box<!fir.array<6x!fir.logical<4>>>
+    fir.call @_QPcallee(%6) : (!fir.box<!fir.array<6x!fir.logical<4>>>) -> ()
+    return
+  }
+  func.func private @_QPcallee(!fir.box<!fir.array<6x!fir.logical<4>>>)
+  func.func private @_FortranACUFMemAlloc(i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8> attributes {fir.runtime}
+  fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
+    %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
+    fir.has_value %0 : !fir.char<1,8>
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QPtesti4()
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+
+// CUSTOM-LABEL: llvm.func @_QPtesti4()
+// CUSTOM: llvm.call @custom_alloc_desc(

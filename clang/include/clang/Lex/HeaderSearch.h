@@ -21,6 +21,8 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -286,9 +288,8 @@ class HeaderSearch {
   /// SpecificModuleCachePath.
   size_t NormalizedModuleCachePathLen = 0;
 
-  /// All of the preprocessor-specific data about files that are
-  /// included, indexed by the FileEntry's UID.
-  mutable std::vector<HeaderFileInfo> FileInfo;
+  /// All the preprocessor-specific data about files that are included.
+  mutable llvm::MapVector<FileEntryRef, HeaderFileInfo> FileInfo;
 
   /// Keeps track of each lookup performed by LookupFile.
   struct LookupFileCacheInfo {
@@ -318,6 +319,12 @@ class HeaderSearch {
     }
   };
   llvm::StringMap<LookupFileCacheInfo, llvm::BumpPtrAllocator> LookupFileCache;
+
+  /// The files that were already considered for the \c -Wshadow-header
+  /// diagnostic, keyed by the spelling of the include that resolved to them.
+  /// Since the set of shadowing candidates depends on the spelling, the same
+  /// file has to be considered once per spelling it was found under.
+  llvm::StringMap<llvm::SmallPtrSet<const FileEntry *, 1>> ShadowCheckedHeaders;
 
   /// Collection mapping a framework or subframework
   /// name like "Carbon" to the Carbon.framework directory.
@@ -515,8 +522,8 @@ public:
   }
 
   void diagnoseHeaderShadowing(
-      StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
-      SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+      StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+      ConstSearchDirIterator FromDir,
       ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
       bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt);
 
@@ -899,8 +906,6 @@ public:
   /// Retrieve the module map.
   const ModuleMap &getModuleMap() const { return ModMap; }
 
-  unsigned header_file_size() const { return FileInfo.size(); }
-
   /// Return the HeaderFileInfo structure for the specified FileEntry, in
   /// preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(FileEntryRef FE);
@@ -909,9 +914,10 @@ public:
   /// ever been filled in (either locally or externally).
   const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE) const;
 
-  /// Return the headerFileInfo structure for the specified FileEntry, if it has
-  /// ever been filled in locally.
-  const HeaderFileInfo *getExistingLocalFileInfo(FileEntryRef FE) const;
+  /// Iterate HeaderFileInfo structures and their corresponding FileEntryRef, if
+  /// they have ever been filled in locally.
+  void forEachExistingLocalFileInfo(
+      llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }

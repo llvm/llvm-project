@@ -37,7 +37,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -53,20 +52,6 @@
 #define DEBUG_TYPE "lanai-lower"
 
 using namespace llvm;
-
-// Limit on number of instructions the lowered multiplication may have before a
-// call to the library function should be generated instead. The threshold is
-// currently set to 14 as this was the smallest threshold that resulted in all
-// constant multiplications being lowered. A threshold of 5 covered all cases
-// except for one multiplication which required 14. mulsi3 requires 16
-// instructions (including the prologue and epilogue but excluding instructions
-// at call site). Until we can inline mulsi3, generating at most 14 instructions
-// will be faster than invoking mulsi3.
-static cl::opt<int> LanaiLowerConstantMulThreshold(
-    "lanai-constant-mul-threshold", cl::Hidden,
-    cl::desc("Maximum number of instruction to generate when lowering constant "
-             "multiplication instead of calling library function [default=14]"),
-    cl::init(14));
 
 LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
                                          const LanaiSubtarget &STI)
@@ -351,6 +336,7 @@ void LanaiTargetLowering::LowerAsmOperandForConstraint(
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "LanaiGenCallingConv.inc"
 
 static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
@@ -629,7 +615,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, MVT::i32);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false,
                           /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
@@ -913,7 +899,8 @@ SDValue LanaiTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   if (std::abs(MulAmt) % 2 == 1)
     --InstrRequired;
   // Return if the form generated would exceed the instruction threshold.
-  if (InstrRequired > LanaiLowerConstantMulThreshold)
+  if (InstrRequired >
+      DAG.getSubtarget<LanaiSubtarget>().getCLOpts().constant_mul_threshold)
     return SDValue();
 
   SDValue Res;

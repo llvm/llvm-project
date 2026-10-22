@@ -112,7 +112,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
   if (IsSPMD) {
     initializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
                       KernelLaunchEnvironment);
-    synchronize::threadsAligned(atomic::relaxed);
+    synchronize::threadsAligned(atomic::acq_rel);
   } else {
     initializeRuntime(/*IsSPMD=*/false, KernelEnvironment,
                       KernelLaunchEnvironment);
@@ -173,4 +173,9 @@ void __kmpc_target_deinit() {
 }
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
+
+/// Whether the calling thread is its team's main thread.
+int32_t __kmpc_is_team_main_thread() {
+  return mapping::isInitialThreadInLevel0(mapping::isSPMDMode());
+}
 }

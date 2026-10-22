@@ -11,18 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/PerThreadBumpPtrAllocator.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <atomic>
 
 namespace llvm {
 
 namespace detail {
 
-void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
-                                size_t TotalMemory) {
+void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory) {
   errs() << "\nNumber of memory regions: " << NumSlabs << '\n'
-         << "Bytes used: " << BytesAllocated << '\n'
          << "Bytes allocated: " << TotalMemory << '\n'
-         << "Bytes wasted: " << (TotalMemory - BytesAllocated)
          << " (includes alignment, etc)\n";
 }
 
@@ -35,5 +35,12 @@ void PrintRecyclerStats(size_t Size,
          << "Recycler element alignment: " << Align << '\n'
          << "Number of elements free for recycling: " << FreeListSize << '\n';
 }
+
+namespace parallel::detail {
+unsigned claimPerThreadAllocatorId() {
+  static std::atomic<unsigned> Counter;
+  return Counter.fetch_add(1, std::memory_order_relaxed);
+}
+} // namespace parallel::detail
 
 } // namespace llvm

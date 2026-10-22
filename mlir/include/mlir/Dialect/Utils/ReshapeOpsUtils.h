@@ -19,6 +19,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -83,9 +84,20 @@ getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
+/// Verify that none of the reassociation groups is empty.
+template <typename ReshapeOpTy>
+LogicalResult verifyReassociationIndicesNotEmpty(ReshapeOpTy op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
+
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
-static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
-                                  ArrayRef<Attribute> operands) {
+OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
+                           ArrayRef<Attribute> operands) {
   // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
@@ -140,8 +152,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
-                                            T collapsedType, bool isExpansion) {
+LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
+                                     bool isExpansion) {
 
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();

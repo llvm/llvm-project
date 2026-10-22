@@ -15,12 +15,24 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
 using namespace llvm;
 using namespace dxil;
+
+cl::OptionCategory DXContainerCategory("DXContainer Options");
+static cl::opt<dxbc::SourceInfo::Contents::CompressionType> CompressSRCI(
+    "compress-srci", cl::ValueOptional,
+    cl::desc("Choose SCRI part compression:"),
+    cl::values(clEnumValN(dxbc::SourceInfo::Contents::CompressionType::None,
+                          "none", "No compression"),
+               clEnumValN(dxbc::SourceInfo::Contents::CompressionType::Zlib,
+                          "zlib", "Use zlib")),
+    cl::cat(DXContainerCategory));
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
@@ -35,6 +47,29 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+  }
+
+  NamedMDNode *ContentsNode = M.getNamedMetadata("dx.source.contents");
+  NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
+  if (ContentsNode && ArgsNode) {
+    MMDAI.SourceInfo.emplace();
+    if (CompressSRCI.getNumOccurrences() > 0) {
+      MMDAI.SourceInfo->setCompressionType(CompressSRCI);
+    } else {
+      // If the option is not specified, pick zlib if available.
+      MMDAI.SourceInfo->setCompressionType(
+          compression::zlib::isAvailable()
+              ? dxbc::SourceInfo::Contents::CompressionType::Zlib
+              : dxbc::SourceInfo::Contents::CompressionType::None);
+    }
+    for (Metadata *FileInfoNode : ContentsNode->operands()) {
+      auto *FileInfo = cast<MDTuple>(FileInfoNode);
+      MMDAI.SourceInfo->addFile(
+          cast<MDString>(FileInfo->getOperand(0))->getString(),
+          cast<MDString>(FileInfo->getOperand(1))->getString());
+    }
+    for (Metadata *ArgNode : ArgsNode->getOperand(0)->operands())
+      MMDAI.SourceInfo->addArg(cast<MDString>(ArgNode)->getString(), "");
   }
 
   // For all HLSL Shader functions

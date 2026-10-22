@@ -7,7 +7,8 @@
 namespace benchmark {
 namespace internal {
 
-BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
+BenchmarkInstance::BenchmarkInstance(benchmark::Benchmark* benchmark,
+                                     int family_idx,
                                      int per_family_instance_idx,
                                      const std::vector<int64_t>& args,
                                      int thread_count)
@@ -27,7 +28,9 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
       min_time_(benchmark_.min_time_),
       min_warmup_time_(benchmark_.min_warmup_time_),
       iterations_(benchmark_.iterations_),
-      threads_(thread_count) {
+      threads_(thread_count),
+      setup_(benchmark_.setup_),
+      teardown_(benchmark_.teardown_) {
   name_.function_name = benchmark_.name_;
 
   size_t arg_i = 0;
@@ -84,33 +87,31 @@ BenchmarkInstance::BenchmarkInstance(Benchmark* benchmark, int family_idx,
   if (!benchmark_.thread_counts_.empty()) {
     name_.threads = StrFormat("threads:%d", threads_);
   }
-
-  setup_ = benchmark_.setup_;
-  teardown_ = benchmark_.teardown_;
 }
 
 State BenchmarkInstance::Run(
     IterationCount iters, int thread_id, internal::ThreadTimer* timer,
     internal::ThreadManager* manager,
-    internal::PerfCountersMeasurement* perf_counters_measurement) const {
+    internal::PerfCountersMeasurement* perf_counters_measurement,
+    ProfilerManager* profiler_manager) const {
   State st(name_.function_name, iters, args_, thread_id, threads_, timer,
-           manager, perf_counters_measurement);
+           manager, perf_counters_measurement, profiler_manager);
   benchmark_.Run(st);
   return st;
 }
 
 void BenchmarkInstance::Setup() const {
-  if (setup_) {
+  if (setup_ != nullptr) {
     State st(name_.function_name, /*iters*/ 1, args_, /*thread_id*/ 0, threads_,
-             nullptr, nullptr, nullptr);
+             nullptr, nullptr, nullptr, nullptr);
     setup_(st);
   }
 }
 
 void BenchmarkInstance::Teardown() const {
-  if (teardown_) {
+  if (teardown_ != nullptr) {
     State st(name_.function_name, /*iters*/ 1, args_, /*thread_id*/ 0, threads_,
-             nullptr, nullptr, nullptr);
+             nullptr, nullptr, nullptr, nullptr);
     teardown_(st);
   }
 }

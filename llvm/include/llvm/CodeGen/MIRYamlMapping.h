@@ -203,12 +203,20 @@ struct VirtualRegisterDefinition {
   StringValue Class;
   StringValue PreferredRegister;
   std::vector<FlowStringValue> RegisterFlags;
+  std::vector<FlowStringValue> AntiHints;
+  // VirtRegMap state.
+  // SplitFrom: id-form virtual register only (e.g. '%0'); physregs and named
+  //            vregs are rejected by the parser.
+  // AssignedPhys: physical register only (e.g. '$r5'); virtregs are rejected.
+  StringValue SplitFrom;
+  StringValue AssignedPhys;
 
   // TODO: Serialize the target specific register hints.
 
   bool operator==(const VirtualRegisterDefinition &Other) const {
     return ID == Other.ID && Class == Other.Class &&
-           PreferredRegister == Other.PreferredRegister;
+           PreferredRegister == Other.PreferredRegister &&
+           SplitFrom == Other.SplitFrom && AssignedPhys == Other.AssignedPhys;
   }
 };
 
@@ -220,6 +228,18 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
+    // MIRPrinter sets WriteDefaultValues=true unless -simplify-mir is passed,
+    // so a plain mapOptional with an empty default would still emit the keys
+    // and change every existing test's output.
+    // Skip the call on output when empty to keep them off entirely.
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty()) {
+      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
+                         std::vector<FlowStringValue>());
+    }
+    if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
+      YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
+    if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())
+      YamlIO.mapOptional("assigned-phys", Reg.AssignedPhys, StringValue());
   }
 
   static const bool flow = true;
@@ -392,6 +412,7 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
     IO.enumCase(ID, "scalable-predicate-vector",
                 TargetStackID::ScalablePredicateVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
+    IO.enumCase(ID, "avr-align", TargetStackID::AvrAlign);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
 };
@@ -472,11 +493,11 @@ template <> struct ScalarTraits<FrameIndex> {
 
 /// Identifies call instruction location in machine function.
 struct MachineInstrLoc {
-  unsigned BlockNum;
+  StringValue Block;
   unsigned Offset;
 
   bool operator==(const MachineInstrLoc &Other) const {
-    return BlockNum == Other.BlockNum && Offset == Other.Offset;
+    return Block == Other.Block && Offset == Other.Offset;
   }
 };
 
@@ -499,7 +520,7 @@ struct CallSiteInfo {
   std::vector<uint64_t> CalleeTypeIds;
 
   bool operator==(const CallSiteInfo &Other) const {
-    return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
+    return CallLocation.Block == Other.CallLocation.Block &&
            CallLocation.Offset == Other.CallLocation.Offset;
   }
 };
@@ -522,7 +543,7 @@ namespace yaml {
 
 template <> struct MappingTraits<CallSiteInfo> {
   static void mapping(IO &YamlIO, CallSiteInfo &CSInfo) {
-    YamlIO.mapRequired("bb", CSInfo.CallLocation.BlockNum);
+    YamlIO.mapRequired("bb", CSInfo.CallLocation.Block);
     YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
@@ -624,7 +645,7 @@ struct CalledGlobal {
 
 template <> struct MappingTraits<CalledGlobal> {
   static void mapping(IO &YamlIO, CalledGlobal &CG) {
-    YamlIO.mapRequired("bb", CG.CallSite.BlockNum);
+    YamlIO.mapRequired("bb", CG.CallSite.Block);
     YamlIO.mapRequired("offset", CG.CallSite.Offset);
     YamlIO.mapRequired("callee", CG.Callee);
     YamlIO.mapRequired("flags", CG.Flags);
@@ -810,7 +831,7 @@ struct MachineFunction {
   bool Selected = false;
   bool FailedISel = false;
   // Register information
-  bool TracksRegLiveness = false;
+  bool TracksRegLiveness = true;
   bool HasWinCFI = false;
 
   // Computed properties that should be overridable

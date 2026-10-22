@@ -67,23 +67,23 @@ wlstp.8     lr, r10, #4086
 wlstp.8     lr, r11, #1442
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: loop end is out of range or not a positive multiple of 2
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 wlstp.8     lr, r10, #1443
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: loop end is out of range or not a positive multiple of 2
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 wlstp.8     lr, r10, #4096
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [r0, r12] or r14
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 wlstp.8     lr, sp, #1442
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [r0, r12] or r14
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 wlstp.16     lr, sp, #1442
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 wlstp.32     r10, r11, #1442
 
 # CHECK: wlstp.8     lr, r1, .Lendloop  @ encoding: [0x01'A',0xf0'A',0x01'A',0xc0'A']
@@ -123,15 +123,15 @@ dlstp.32     lr, r7
 dlstp.64     lr, r2
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [r0, r12] or r14
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 dlstp.64     lr, sp
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 dlstp.64     r10, r0
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be a register in range [r0, r12] or r14
-# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:6: error: invalid operand for instruction
 dlstp.64     lr, pc
 
 # CHECK: letp lr, #-2 @ encoding: [0x1f,0xf0,0x01,0xc8]

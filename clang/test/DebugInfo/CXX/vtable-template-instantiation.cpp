@@ -67,7 +67,7 @@ int main() {
 // RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - -DEXTERN    | FileCheck %s -check-prefixes EXTERN,EXTERN-O1-NODBG,EXTERN-NODBG
 
 // IMPLICIT: $_ZTV9CTemplateIvE = comdat any
-// IMPLICIT: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
+// IMPLICIT: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
 // IMPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
 // IMPLICIT-DAG: !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // IMPLICIT-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
@@ -75,7 +75,7 @@ int main() {
 // IMPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXPLICIT: $_ZTV9CTemplateIvE = comdat any
-// EXPLICIT: @_ZTV9CTemplateIvE = weak_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
+// EXPLICIT: @_ZTV9CTemplateIvE = weak_odr {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
 // EXPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
 // EXPLICIT-DAG: [[VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // EXPLICIT-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
@@ -83,9 +83,9 @@ int main() {
 // EXPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXTERN-NOT: $_ZTV9CTemplateIvE
-// EXTERN-O0:       @_ZTV9CTemplateIvE = external {{.*}}unnamed_addr constant {{{ \[[^]]*\] }}}, align 8{{$}}
-// EXTERN-O1:       @_ZTV9CTemplateIvE = available_externally {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
-// EXTERN-O1-NODBG: @_ZTV9CTemplateIvE = available_externally {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8{{$}}
+// EXTERN-O0:       @_ZTV9CTemplateIvE = external {{.*}}constant {{{ \[[^]]*\] }}}, align 8{{$}}
+// EXTERN-O1:       @_ZTV9CTemplateIvE = available_externally {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
+// EXTERN-O1-NODBG: @_ZTV9CTemplateIvE = available_externally {{.*}}constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8{{$}}
 // EXTERN-NODBG-DAG: [[TYPE:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
 // EXTERN-NODBG-DAG: !DICompileUnit
 // EXTERN-NODBG-NOT: !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"

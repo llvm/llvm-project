@@ -13,9 +13,7 @@
 //
 
 #include "AMDGPUMCInstLower.h"
-#include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
-#include "AMDGPUMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -31,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -103,7 +102,16 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol: {
     MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(MO.getSymbolName()));
-    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+    const MCExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    MCOp = MCOperand::createExpr(Expr);
+    return true;
+  }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = AP.GetBlockAddressSymbol(MO.getBlockAddress());
+    const MCSymbolRefExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    assert(MO.getOffset() == 0);
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
@@ -277,7 +285,8 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
+                *GV, AMDGPUAS::LOCAL_ADDRESS)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
       return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
                                        BaseCV, Offset);

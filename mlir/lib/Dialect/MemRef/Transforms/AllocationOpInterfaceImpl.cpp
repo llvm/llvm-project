@@ -34,11 +34,12 @@ struct DefaultAllocationInterface
   }
   static ::std::optional<::mlir::Operation *>
   buildPromotedAlloc(OpBuilder &builder, Value alloc) {
-    Operation *definingOp = alloc.getDefiningOp();
-    return memref::AllocaOp::create(
-        builder, definingOp->getLoc(),
-        cast<MemRefType>(definingOp->getResultTypes()[0]),
-        definingOp->getOperands(), definingOp->getAttrs());
+    auto allocOp = cast<memref::AllocOp>(alloc.getDefiningOp());
+    memref::AllocaOp allocaOp = memref::AllocaOp::create(
+        builder, allocOp.getLoc(), allocOp.getType(), allocOp.getDynamicSizes(),
+        allocOp.getSymbolOperands(), allocOp.getAlignmentAttr());
+    allocaOp->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
+    return allocaOp.getOperation();
   }
 };
 
@@ -50,7 +51,7 @@ struct DefaultAutomaticAllocationHoistingInterface
 
 struct DefaultReallocationInterface
     : public bufferization::AllocationOpInterface::ExternalModel<
-          DefaultAllocationInterface, memref::ReallocOp> {
+          DefaultReallocationInterface, memref::ReallocOp> {
   static std::optional<Operation *> buildDealloc(OpBuilder &builder,
                                                  Value realloc) {
     return memref::DeallocOp::create(builder, realloc.getLoc(), realloc)

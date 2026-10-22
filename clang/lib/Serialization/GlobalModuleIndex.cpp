@@ -318,9 +318,8 @@ bool GlobalModuleIndex::lookupIdentifier(StringRef Name, HitSet &Hits) {
     return false;
   }
 
-  SmallVector<unsigned, 2> ModuleIDs = *Known;
-  for (unsigned I = 0, N = ModuleIDs.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[ModuleIDs[I]].File)
+  for (unsigned ModuleID : *Known) {
+    if (ModuleFile *MF = Modules[ModuleID].File)
       Hits.insert(MF);
   }
 

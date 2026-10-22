@@ -5,6 +5,7 @@
 ; RUN: cat a.ll nopic.ll > b.ll
 ; RUN: cat a.ll pic.ll > c.ll
 ; RUN: llc < b.ll | FileCheck %s
+; RUN: llc -code-model=large < b.ll | FileCheck -check-prefix=LARGE %s
 ; RUN: llc < c.ll -relocation-model=pic | FileCheck %s -check-prefix=PIC
 
 ;--- a.ll
@@ -15,6 +16,12 @@ define dso_local void @f(ptr noundef %g) #0 {
 ; CHECK: ldr w9, [x9, :lo12:__stack_chk_guard]
 ; CHECK: adrp x8, __stack_chk_guard
 ; CHECK: ldr w8, [x8, :lo12:__stack_chk_guard]
+
+; LARGE: movz x9, #:abs_g0_nc:__stack_chk_guard
+; LARGE: movk x9, #:abs_g1_nc:__stack_chk_guard
+; LARGE: movk x9, #:abs_g2_nc:__stack_chk_guard
+; LARGE: movk x9, #:abs_g3:__stack_chk_guard
+; LARGE: ldr w9, [x9]
 
 ; PIC: adrp x9, :got:__stack_chk_guard
 ; PIC: ldr x9, [x9, :got_lo12:__stack_chk_guard]

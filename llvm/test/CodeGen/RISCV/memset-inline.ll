@@ -76,8 +76,8 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_4:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
 ; RV32-FAST-NEXT:    sw a1, 0(a0)
@@ -85,9 +85,9 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_4:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    slli a1, a1, 56
 ; RV64-FAST-NEXT:    lui a2, 65793
 ; RV64-FAST-NEXT:    slli a2, a2, 4
+; RV64-FAST-NEXT:    slli a1, a1, 56
 ; RV64-FAST-NEXT:    addi a2, a2, 256
 ; RV64-FAST-NEXT:    mulhu a1, a1, a2
 ; RV64-FAST-NEXT:    sw a1, 0(a0)
@@ -123,8 +123,8 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_8:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
 ; RV32-FAST-NEXT:    sw a1, 0(a0)
@@ -133,10 +133,10 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_8:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
 ; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
+; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
 ; RV64-FAST-NEXT:    sd a1, 0(a0)
@@ -188,8 +188,8 @@ define void @memset_16(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_16:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
 ; RV32-FAST-NEXT:    sw a1, 0(a0)
@@ -200,10 +200,10 @@ define void @memset_16(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_16:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
 ; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
+; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
 ; RV64-FAST-NEXT:    sd a1, 0(a0)
@@ -288,8 +288,8 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_32:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
 ; RV32-FAST-NEXT:    sw a1, 16(a0)
@@ -304,10 +304,10 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_32:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
 ; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
+; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
 ; RV64-FAST-NEXT:    sd a1, 0(a0)
@@ -458,8 +458,8 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_64:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
 ; RV32-FAST-NEXT:    sw a1, 48(a0)
@@ -482,10 +482,10 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_64:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
 ; RV64-FAST-NEXT:    addi a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
+; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    add a2, a2, a3
 ; RV64-FAST-NEXT:    mul a1, a1, a2
 ; RV64-FAST-NEXT:    sd a1, 32(a0)
@@ -526,8 +526,8 @@ define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 define void @aligned_memset_4(ptr align 4 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_4:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
 ; RV32-BOTH-NEXT:    sw a1, 0(a0)
@@ -535,9 +535,9 @@ define void @aligned_memset_4(ptr align 4 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_4:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    slli a1, a1, 56
 ; RV64-BOTH-NEXT:    lui a2, 65793
 ; RV64-BOTH-NEXT:    slli a2, a2, 4
+; RV64-BOTH-NEXT:    slli a1, a1, 56
 ; RV64-BOTH-NEXT:    addi a2, a2, 256
 ; RV64-BOTH-NEXT:    mulhu a1, a1, a2
 ; RV64-BOTH-NEXT:    sw a1, 0(a0)
@@ -549,8 +549,8 @@ define void @aligned_memset_4(ptr align 4 %a, i8 %value) nounwind {
 define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_8:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
 ; RV32-BOTH-NEXT:    sw a1, 0(a0)
@@ -559,10 +559,10 @@ define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_8:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
 ; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
+; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
@@ -574,8 +574,8 @@ define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 define void @aligned_memset_16(ptr align 16 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_16:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
 ; RV32-BOTH-NEXT:    sw a1, 0(a0)
@@ -586,10 +586,10 @@ define void @aligned_memset_16(ptr align 16 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_16:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
 ; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
+; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
@@ -602,8 +602,8 @@ define void @aligned_memset_16(ptr align 16 %a, i8 %value) nounwind {
 define void @aligned_memset_32(ptr align 32 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_32:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
 ; RV32-BOTH-NEXT:    sw a1, 16(a0)
@@ -618,10 +618,10 @@ define void @aligned_memset_32(ptr align 32 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_32:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
 ; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
+; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
@@ -636,8 +636,8 @@ define void @aligned_memset_32(ptr align 32 %a, i8 %value) nounwind {
 define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_64:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
 ; RV32-BOTH-NEXT:    sw a1, 48(a0)
@@ -660,10 +660,10 @@ define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_64:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
 ; RV64-BOTH-NEXT:    addi a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32
+; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    add a2, a2, a3
 ; RV64-BOTH-NEXT:    mul a1, a1, a2
 ; RV64-BOTH-NEXT:    sd a1, 32(a0)

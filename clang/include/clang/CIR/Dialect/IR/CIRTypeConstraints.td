@@ -82,6 +82,10 @@ class CIR_UIntOfWidths<list<int> widths>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_IntOfWidthsPred<widths>],
         "unsigned integer type of widths " # !interleave(widths, "/")>;
 
+def CIR_UIntMultipleOf16
+    : CIR_ConfinedType<CIR_AnyUIntType, [CPred<"$_self.getWidth() % 16 == 0">],
+        "unsigned integer type with a width that is a multiple of 16 bits">;
+
 class CIR_UInt<int width>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_HasWidthPred<width>],
         width # "-bit unsigned integer">,
@@ -119,6 +123,14 @@ def CIR_AnyFundamentalIntType
         [CIR_HasFundamentalIntWidthPred, CIR_IsNotBitIntPred],
         "fundamental integer type"> {
     let cppFunctionName = "isFundamentalIntType";
+}
+
+// An 8 bit character type of either signedness, since the signedness of plain
+// char follows the target. _BitInt types are excluded even at width 8.
+def CIR_AnyChar8Type
+    : CIR_ConfinedType<CIR_AnyIntType,
+        [CIR_HasWidthPred<8>, CIR_IsNotBitIntPred], "8-bit character type"> {
+    let cppFunctionName = "isChar8Type";
 }
 
 def CIR_AnyFundamentalUIntType
@@ -189,6 +201,19 @@ def CIR_AnyIntOrBoolOrFloatType
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
+
+class CIR_ComplexElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::ComplexType>($_self).getElementType()", pred>;
+
+class CIR_ComplexTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyComplexType,
+        [Or<!foreach(type, types, CIR_ComplexElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "complex of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_ComplexOfIntType : CIR_ComplexTypeOf<[CIR_AnyIntType]>;
+def CIR_ComplexOfFloatType : CIR_ComplexTypeOf<[CIR_AnyFloatType]>;
 
 def CIR_AnyComplexOrIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
@@ -263,6 +288,10 @@ def CIR_PtrToVoidPtrType : CIR_PtrToPtrTo<CIR_AnyVoidType, "void type">;
 
 class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 
+def CIR_PtrToChar8Type : CIR_PtrToType<CIR_AnyChar8Type> {
+    let cppFunctionName = "isPtrToChar8Type";
+}
+
 // Pointer to type constraints
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
@@ -281,8 +310,8 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
 def CIR_VectorElementType
-    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-                "any cir boolean, integer, floating point or pointer type"> {
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 
@@ -312,16 +341,24 @@ def IntegerVector : Type<
 }
 
 // Vector of type constraints
+def CIR_VectorOfBoolType : CIR_VectorTypeOf<[CIR_AnyBoolType]>;
 def CIR_VectorOfIntType : CIR_VectorTypeOf<[CIR_AnyIntType]>;
 def CIR_VectorOfUIntType : CIR_VectorTypeOf<[CIR_AnyUIntType]>;
 def CIR_VectorOfSIntType : CIR_VectorTypeOf<[CIR_AnySIntType]>;
 def CIR_VectorOfFloatType : CIR_VectorTypeOf<[CIR_AnyFloatType]>;
+def CIR_VectorOfIntOrBoolType : CIR_VectorTypeOf<[CIR_AnyBoolType, CIR_AnyIntType]>;
 
 // Vector or Scalar type constraints
 def CIR_AnyIntOrVecOfIntType
     : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntType],
         "integer or vector of integer type"> {
     let cppFunctionName = "isIntOrVectorOfIntType";
+}
+
+def CIR_AnyIntOrVecOfIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntOrBoolType],
+        "integer or vector of bool or integer type"> {
+    let cppFunctionName = "isIntOrVecOfIntOrBoolType";
 }
 
 def CIR_AnySIntOrVecOfSIntType
@@ -342,18 +379,49 @@ def CIR_AnyFloatOrVecOfFloatType
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
 
-// Types valid for arithmetic ops (add/sub/mul/div/rem):
-// scalar or vector of integer or floating-point. 
-def CIR_AnyArithType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
-                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
-                "integer, floating-point, or vector of integer/float">;
-
 // Types valid for bitwise ops (and/or/xor):
-// integer, boolean, or vector of integer (no floating-point).
+// integer, boolean, or vector of bool or integer (no floating-point).
 def CIR_AnyBitwiseType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntType],
-                "integer, boolean, or vector of integer">;
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntOrBoolType],
+                "integer, boolean, or vector of bool or integer">;
+
+//===----------------------------------------------------------------------===//
+// Matrix Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point type"> {
+  let cppFunctionName = "isValidMatrixTypeElementType";
+}
+
+def CIR_AnyMatrixType : CIR_TypeBase<"::cir::MatrixType", "matrix type">;
+
+class CIR_MatrixElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::MatrixType>($_self).getElementType()", pred>;
+
+class CIR_MatrixTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyMatrixType,
+        [Or<!foreach(type, types, CIR_MatrixElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "matrix of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_MatrixOfIntType : CIR_MatrixTypeOf<[CIR_AnyIntType]>;
+def CIR_MatrixOfFloatType : CIR_MatrixTypeOf<[CIR_AnyFloatType]>;
+
+def CIR_AnyIntOrVecOrMatrixOfIntType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntType, CIR_MatrixOfIntType],
+        "integer or vector/matrix of integer type"> {
+    let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
+}
+
+def CIR_AnyFloatOrVecOrMatrixOfFloatType
+    : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
+                 CIR_MatrixOfFloatType],
+        "floating point or vector/matrix of floating point type"> {
+    let cppFunctionName = "isFPOrVectorOrMatrixOfFPType";
+}
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates
@@ -393,8 +461,8 @@ def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
 def CIR_AnyMethodType : CIR_TypeBase<"::cir::MethodType", "method type">;
 
 def CIR_ComparableType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
-                 CIR_AnyComplexType, CIR_AnyVPtrType,
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_AnyFloatType,
+                 CIR_AnyPtrType, CIR_AnyComplexType, CIR_AnyVPtrType,
                  CIR_AnyDataMemberType, CIR_AnyMethodType],
                 "comparable type"> {
   let cppFunctionName = "isComparableType";

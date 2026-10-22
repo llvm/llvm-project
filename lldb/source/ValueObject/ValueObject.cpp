@@ -765,6 +765,19 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         size_t bytes_read =
             target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
                                error, /*force_live_memory=*/true);
+        if (!error.Success()) {
+          // The live read failed. Fall back to the object file's read-only
+          // sections, but keep the live-memory error to report if the fallback
+          // fails too.
+          Status file_error;
+          size_t file_bytes_read =
+              target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                                 file_error, /*force_live_memory=*/false);
+          if (file_error.Success() || file_bytes_read > 0) {
+            bytes_read = file_bytes_read;
+            error = std::move(file_error);
+          }
+        }
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -811,6 +824,10 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -949,14 +966,20 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        const char *cstr = GetDataExtractor().PeekCStr(0);
+        // The array is not required to be null-terminated, so ask for the
+        // bytes rather than for a C string. Its data can also be shorter than
+        // the array type, as for a DW_AT_const_value string, so clamp the
+        // length to what is really there.
+        DataExtractor &data = GetDataExtractor();
+        const uint8_t *cstr = data.PeekData(0, 1);
         if (cstr == nullptr) {
           s << "<invalid address>";
           error = Status::FromErrorString("invalid address");
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        s << llvm::StringRef(cstr, cstr_len);
+        cstr_len = std::min<uint64_t>(cstr_len, data.GetByteSize());
+        s << llvm::StringRef(reinterpret_cast<const char *>(cstr), cstr_len);
         CopyStringDataToBufferSP(s, buffer_sp);
         return {cstr_len, was_capped};
       } else {
@@ -979,7 +1002,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       if ((bytes_read = data.GetByteSize()) > 0) {
         total_bytes_read = bytes_read;
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
         if (capped_data)
           was_capped = true;
       }
@@ -997,8 +1020,12 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       // takes care of this
       while ((bytes_read = GetPointeeData(data, offset, k_max_buf_size)) > 0) {
         total_bytes_read += bytes_read;
-        const char *cstr = data.PeekCStr(0);
-        size_t len = strnlen(cstr, k_max_buf_size);
+        // The chunk holds the middle of a string as often as its end, so scan
+        // for a terminator instead of requiring one.
+        const uint8_t *bytes = data.PeekData(0, bytes_read);
+        if (bytes == nullptr)
+          break;
+        size_t len = strnlen(reinterpret_cast<const char *>(bytes), bytes_read);
         if (cstr_len_displayed < 0)
           cstr_len_displayed = len;
 
@@ -1011,7 +1038,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
 
         if (len < k_max_buf_size)
           break;
@@ -1224,91 +1251,97 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::createStringError("type cannot be converted to bool");
 }
 
-void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
-                                      bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError(
+        "Not allowed to change the value of a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
-        "Not allowed to update program variables in this case.");
-    return;
-  }
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
+        "Not allowed to update program variables in this case");
+
+  // Make sure we're not trying to assign to a constant.
+  if (GetIsConstant())
+    return llvm::createStringError(
+        "Not allowed to change the value of a constant");
 
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp =
-          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
-    byte_size = temp.value();
-  if (value.getBitWidth() != byte_size * CHAR_BIT) {
-    error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
-    return;
+  // Exclude size check when assigning an integer 1 or 0 to a boolean.
+  if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
+    byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
+    // Check that the value is representable in the destination type.
+    unsigned dest_bits = byte_size * CHAR_BIT;
+    unsigned needed_bits = val_type.IsSigned() ? value.getSignificantBits()
+                                               : value.getActiveBits();
+    if (needed_bits > dest_bits)
+      return llvm::createStringError("Illegal argument: new value is too big");
   }
 
+  // The DataExtractor below reads exactly byte_size bytes from the APInt's raw
+  // storage.  If the incoming value has fewer bits than the destination type,
+  // reading byte_size bytes could run past the APInt's backing store and pull
+  // in garbage (an out-of-bounds read). Extend the value so its storage always
+  // covers the full read, preserving the sign so that negative values keep
+  // their value in the wider destination.
+  llvm::APInt sized_value = value;
+  if (sized_value.getBitWidth() < byte_size * CHAR_BIT)
+    sized_value = sized_value.sext(byte_size * CHAR_BIT);
+
+  Status error;
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
-      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      reinterpret_cast<const void *>(sized_value.getRawData()), byte_size,
       target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
+  return error.takeError();
 }
 
-void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error, bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError("Not allowed to update a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
-        "Not allowed to update program variables in this case.");
-    return;
-  }
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
+        "Not allowed to update program variables in this case");
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
-  if (!new_val_type.IsInteger() && !HasFloatingRepresentation(new_val_type) &&
-      !new_val_type.IsPointerType()) {
-    error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
-    return;
-  }
+  if (!new_val_type.IsInteger() && !new_val_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(new_val_type) && !new_val_type.IsPointerType())
+    return llvm::createStringError(
+        "Illegal argument: new value is not a scalar object");
 
-  if (new_val_type.IsInteger()) {
+  if (new_val_type.IsInteger() || new_val_type.IsUnscopedEnumerationType()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error, can_update_var);
-    else
-      error = Status::FromError(value_or_err.takeError());
+      return SetValueFromInteger(*value_or_err, can_update_var);
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
-                          can_update_var);
-    else
-      error = Status::FromError(value_or_err.takeError());
+      return SetValueFromInteger(value_or_err->bitcastToAPInt(),
+                                 can_update_var);
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1318,11 +1351,12 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error,
-                          can_update_var);
+      return SetValueFromInteger(llvm::APInt(num_bits, int_val),
+                                 can_update_var);
     } else
-      error = Status::FromErrorString("error converting new_val_sp to integer");
+      return llvm::createStringError("Error converting new_val_sp to integer");
   }
+  llvm_unreachable("Unrecognized type for RHS of assignment");
 }
 
 // if any more "special cases" are added to
@@ -1706,6 +1740,10 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -1860,6 +1898,14 @@ bool ValueObject::IsUninitializedReference() {
 
 ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
                                                    bool can_create) {
+  // Register values use exact-size host buffers. Do not create array children
+  // that would read beyond the bytes supplied by the register context.
+  uint64_t array_size = 0;
+  if (GetValueType() == eValueTypeRegister &&
+      GetCompilerType().IsArrayType(nullptr, &array_size) &&
+      index >= array_size)
+    return {};
+
   ValueObjectSP synthetic_child_sp;
   if (IsPointerType() || IsArrayType()) {
     std::string index_str = llvm::formatv("[{0}]", index);
@@ -1887,6 +1933,16 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
 
 ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                      bool can_create) {
+  if (from > to)
+    return {};
+  // Register children must stay within the exact bytes supplied by the
+  // register context.
+  if (GetValueType() == eValueTypeRegister) {
+    std::optional<uint64_t> byte_size = llvm::expectedToOptional(GetByteSize());
+    if (!byte_size || to / 8 >= *byte_size)
+      return {};
+  }
+
   ValueObjectSP synthetic_child_sp;
   if (IsScalarType()) {
     std::string index_str = llvm::formatv("[{0}-{1}]", from, to);
@@ -2004,18 +2060,17 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
 // "looks like" an array, in which case it has a leading [ symbol). while the [
 // is meaningful and should be shown to the user, . and -> are just parser
 // design, but by no means added information for the user.. strip them off
-static const char *SkipLeadingExpressionPathSeparators(const char *expression) {
-  if (!expression || !expression[0])
-    return expression;
-  if (expression[0] == '.')
-    return expression + 1;
-  if (expression[0] == '-' && expression[1] == '>')
-    return expression + 2;
+static llvm::StringRef
+SkipLeadingExpressionPathSeparators(llvm::StringRef expression) {
+  if (expression.starts_with('.'))
+    return expression.drop_front();
+  if (expression.starts_with("->"))
+    return expression.drop_front(2);
   return expression;
 }
 
 ValueObjectSP
-ValueObject::GetSyntheticExpressionPathChild(const char *expression,
+ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
                                              bool can_create) {
   ValueObjectSP synthetic_child_sp;
   ConstString name_const_string(expression);
@@ -2050,18 +2105,20 @@ void ValueObject::CalculateSyntheticValue() {
     return;
   }
 
-  lldb::SyntheticChildrenSP current_synth_sp(m_synthetic_children_sp);
+  lldb::SyntheticChildrenSP prev_synth_sp(GetSyntheticChildren());
 
   if (!UpdateFormatsIfNeeded() && m_synthetic_value)
     return;
 
-  if (m_synthetic_children_sp.get() == nullptr)
+  lldb::SyntheticChildrenSP curr_synth_sp(GetSyntheticChildren());
+
+  if (curr_synth_sp.get() == nullptr)
     return;
 
-  if (current_synth_sp == m_synthetic_children_sp && m_synthetic_value)
+  if (curr_synth_sp == prev_synth_sp && m_synthetic_value)
     return;
 
-  m_synthetic_value = new ValueObjectSynthetic(*this, m_synthetic_children_sp);
+  m_synthetic_value = new ValueObjectSynthetic(*this, curr_synth_sp);
 }
 
 void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
@@ -2211,7 +2268,8 @@ void ValueObject::GetExpressionPath(Stream &s,
             if (non_base_class_parent_type_info & eTypeIsPointer) {
               s.PutCString("->");
             } else if ((non_base_class_parent_type_info & eTypeHasChildren) &&
-                       !(non_base_class_parent_type_info & eTypeIsArray)) {
+                       !(non_base_class_parent_type_info &
+                         (eTypeIsArray | eTypeIsVector))) {
               s.PutChar('.');
             }
           }
@@ -2484,6 +2542,13 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
           return ValueObjectSP();
         }
       }
+      if (temp_expression.size() == 1) {
+        *reason_to_stop =
+            ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
+        *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+        return nullptr;
+      }
+
       if (temp_expression[1] ==
           ']') // if this is an unbounded range it only works for arrays
       {
@@ -2528,6 +2593,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         if (bracket_expr.getAsInteger(0, index)) {
           *reason_to_stop =
               ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
+          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+          return nullptr;
+        }
+        if (root->GetValueType() == eValueTypeRegister &&
+            !root_compiler_type_info.Test(eTypeIsPointer) &&
+            index > UINT32_MAX) {
+          *reason_to_stop =
+              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
           *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
           return nullptr;
         }
@@ -2691,6 +2764,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 
         if (low_index > high_index) // swap indices if required
           std::swap(low_index, high_index);
+
+        if (root->GetValueType() == eValueTypeRegister &&
+            high_index > UINT32_MAX) {
+          *reason_to_stop =
+              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+          return nullptr;
+        }
 
         if (root_compiler_type_info.Test(
                 eTypeIsScalar)) // expansion only works for scalars
@@ -2898,9 +2979,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
 }
 
 ValueObjectSP ValueObject::AddressOf(Status &error) {
-  if (m_addr_of_valobj_sp)
-    return m_addr_of_valobj_sp;
-
   auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
@@ -2914,6 +2992,10 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
     case eAddressTypeFile:
     case eAddressTypeLoad: {
+      if (m_addr_of_valobj_sp &&
+          m_addr_of_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) == addr)
+        return m_addr_of_valobj_sp;
+      m_addr_of_valobj_sp.reset();
       CompilerType compiler_type = GetCompilerType();
       if (compiler_type) {
         std::string name(1, '&');
@@ -3250,10 +3332,15 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObjectConstResult::Create(
               exe_ctx.GetBestExecutionContextScope(),
               Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+                  "invalid cast from float to integer"));
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
       }
     }
   }
@@ -3835,9 +3922,10 @@ bool ValueImpl::IsValid() {
   return target_sp && target_sp->IsValid();
 }
 
-lldb::ValueObjectSP
-ValueImpl::GetSP(Process::StopLocker &stop_locker,
-                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                                     TargetAPIMutex &api_mutex,
+                                     std::unique_lock<TargetAPIMutex> &lock,
+                                     Status &error) {
   if (!m_valobj_sp) {
     error = Status::FromErrorString("invalid value object");
     return m_valobj_sp;
@@ -3853,7 +3941,8 @@ ValueImpl::GetSP(Process::StopLocker &stop_locker,
   if (!target)
     return ValueObjectSP();
 
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+  api_mutex = target->GetAPIMutex();
+  lock = std::unique_lock<TargetAPIMutex>(api_mutex);
 
   ProcessSP process_sp(value_sp->GetProcessSP());
   if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {

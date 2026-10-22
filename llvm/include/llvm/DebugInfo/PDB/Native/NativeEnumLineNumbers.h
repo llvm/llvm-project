@@ -17,9 +17,12 @@
 namespace llvm {
 namespace pdb {
 
-class NativeEnumLineNumbers : public IPDBEnumChildren<IPDBLineNumber> {
+class LLVM_ABI NativeEnumLineNumbers : public IPDBEnumChildren<IPDBLineNumber> {
 public:
   explicit NativeEnumLineNumbers(std::vector<NativeLineNumber> LineNums);
+
+  NativeEnumLineNumbers(const NativeEnumLineNumbers &) = delete;
+  NativeEnumLineNumbers &operator=(const NativeEnumLineNumbers &) = delete;
 
   uint32_t getChildCount() const override;
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;

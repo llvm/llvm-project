@@ -5153,6 +5153,16 @@ define <8 x i64> @test_mask_valign_q(<8 x i64> %a, <8 x i64> %b, <8 x i64> %src,
 
 declare <8 x i64> @llvm.x86.avx512.mask.valign.q.512(<8 x i64>, <8 x i64>, i32, <8 x i64>, i8)
 
+define <16 x i32> @test_valign_d(<16 x i32> %a, <16 x i32> %b) {
+; CHECK-LABEL: test_valign_d:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    valignd $3, %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0x7d,0x48,0x03,0xc1,0x03]
+; CHECK-NEXT:    ## zmm0 = zmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx512.mask.valign.d.512(<16 x i32> %a, <16 x i32> %b, i32 3, <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %res
+}
+
 define <16 x i32> @test_maskz_valign_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; X86-LABEL: test_maskz_valign_d:
 ; X86:       ## %bb.0:

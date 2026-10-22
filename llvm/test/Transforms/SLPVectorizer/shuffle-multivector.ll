@@ -5,12 +5,12 @@
 define void @test1(i128 %p0, i128 %p1, i128 %p2, i128 %p3, <4 x i128> %vec) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i128> poison, i128 [[P0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i128> [[TMP0]], i128 [[P1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i128> poison, i128 [[P0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i128> [[TMP0]], i128 [[P1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i128> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i128> poison, i128 [[P2:%.*]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i128> [[TMP4]], i128 [[P3:%.*]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i128> poison, i128 [[P2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i128> [[TMP4]], i128 [[P3:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <2 x i128> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[T5:%.*]] = trunc i128 [[P1]] to i32

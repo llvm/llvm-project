@@ -124,9 +124,10 @@ static bool containsDeclInScope(const Stmt *Node) {
   return false;
 }
 
-static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
-                                  const Stmt *Else, SourceLocation ElseLoc) {
-  auto Remap = [&](SourceLocation Loc) {
+static void removeElseAndBrackets(const DiagnosticBuilder &Diag,
+                                  ASTContext &Context, const Stmt *Else,
+                                  SourceLocation ElseLoc) {
+  const auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
 
@@ -189,7 +190,7 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
   assert(ExpandedStartLoc < ExpandedEndLoc);
 
-  auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
+  const auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
 
   if (Iter == ConditionalBranchMap.end() || Iter->getSecond().empty())
     return false;
@@ -257,9 +258,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     if (IsLastInScope) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
-      DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterrupter
-                               << SourceRange(ElseLoc);
+      const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                     << ControlFlowInterrupter
+                                     << SourceRange(ElseLoc);
       if (checkInitDeclUsageInElse(If) != nullptr) {
         Diag << tooling::fixit::createReplacement(
                     SourceRange(If->getIfLoc()),
@@ -293,9 +294,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     if (IsLastInScope) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
-      DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterrupter
-                               << SourceRange(ElseLoc);
+      const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                     << ControlFlowInterrupter
+                                     << SourceRange(ElseLoc);
       Diag << tooling::fixit::createReplacement(
                   SourceRange(If->getIfLoc()),
                   (tooling::fixit::getText(*If->getInit(), *Result.Context) +
@@ -311,8 +312,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                           << ControlFlowInterrupter << SourceRange(ElseLoc);
+  const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                 << ControlFlowInterrupter
+                                 << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 

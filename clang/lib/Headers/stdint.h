@@ -805,25 +805,16 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #endif
 
 /* C99 7.18.3 Limits of other integer types. */
-#define SIG_ATOMIC_MIN __INTN_MIN(__SIG_ATOMIC_WIDTH__)
-#define SIG_ATOMIC_MAX __INTN_MAX(__SIG_ATOMIC_WIDTH__)
-#ifdef __WINT_UNSIGNED__
-# define WINT_MIN       __UINTN_C(__WINT_WIDTH__, 0)
-# define WINT_MAX       __UINTN_MAX(__WINT_WIDTH__)
-#else
-# define WINT_MIN       __INTN_MIN(__WINT_WIDTH__)
-# define WINT_MAX       __INTN_MAX(__WINT_WIDTH__)
-#endif
+#define SIG_ATOMIC_MIN __SIG_ATOMIC_MIN__
+#define SIG_ATOMIC_MAX __SIG_ATOMIC_MAX__
+#define WINT_MIN __WINT_MIN__
+#define WINT_MAX __WINT_MAX__
 
 #ifndef WCHAR_MAX
 # define WCHAR_MAX __WCHAR_MAX__
 #endif
 #ifndef WCHAR_MIN
-# if __WCHAR_MAX__ == __INTN_MAX(__WCHAR_WIDTH__)
-#  define WCHAR_MIN __INTN_MIN(__WCHAR_WIDTH__)
-# else
-#  define WCHAR_MIN __UINTN_C(__WCHAR_WIDTH__, 0)
-# endif
+#define WCHAR_MIN __WCHAR_MIN__
 #endif
 
 /* 7.18.4.2 Macros for greatest-width integer constants. */

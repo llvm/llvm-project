@@ -20,9 +20,7 @@ module;
 #include <algorithm>
 #include <any>
 #include <array>
-#if _LIBCPP_HAS_ATOMIC_HEADER
-#  include <atomic>
-#endif
+#include <atomic>
 #include <barrier>
 #include <bit>
 #include <bitset>
@@ -55,6 +53,7 @@ module;
 #include <cuchar>
 #include <cwchar>
 #include <cwctype>
+#include <debugging>
 #include <deque>
 #include <exception>
 #include <execution>
@@ -110,6 +109,7 @@ module;
 #include <strstream>
 #include <syncstream>
 #include <system_error>
+#include <text_encoding>
 #include <thread>
 #include <tuple>
 #include <type_traits>
@@ -132,9 +132,6 @@ module;
 // into thinking that libc++ provides the header.
 //
 #ifndef _WIN32
-#  if __has_include(<debugging>)
-#    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<debugging>)
 #  if __has_include(<generator>)
 #    error "please update the header information for <generator> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<generator>)
@@ -159,9 +156,6 @@ module;
 #  if __has_include(<stdfloat>)
 #    error "please update the header information for <stdfloat> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<stdfloat>)
-#  if __has_include(<text_encoding>)
-#    error "please update the header information for <text_encoding> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<text_encoding>)
 #endif // _WIN32
 
 export module std;

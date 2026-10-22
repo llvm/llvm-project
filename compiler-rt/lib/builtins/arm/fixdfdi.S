@@ -208,4 +208,8 @@ LOCAL_LABEL(nan):
 
 END_COMPILERRT_FUNCTION(__aeabi_d2lz)
 
+#if defined(__MINGW32__)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__dtoi64, __fixdfdi)
+#endif
+
 NO_EXEC_STACK_DIRECTIVE

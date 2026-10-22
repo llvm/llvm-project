@@ -661,3 +661,40 @@ TEST(VirtualDataExtractorTest, SubsetExtractorGetU32) {
   // Entry(0x0, 4*sizeof(uint32_t), 12*sizeof(uint32_t))
   EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xccccccccU);
 }
+
+TEST(VirtualDataExtractorTest, SubsetExtractorUnmappedRangeReturnsEmpty) {
+  // Two mapped regions with a gap in the virtual address space between them.
+  uint8_t buffer[] = {0x01, 0x02, 0x03, 0x04, 0x11, 0x12, 0x13, 0x14};
+  DataBufferSP buffer_sp =
+      std::make_shared<DataBufferUnowned>(buffer, sizeof(buffer));
+  lldb::DataExtractorSP extractor = std::make_shared<VirtualDataExtractor>(
+      buffer_sp, eByteOrderLittle, 8,
+      Table{Entry(0x1000, 4, 0), Entry(0x2000, 4, 4)});
+
+  // An offset in the gap between entries must not produce a null shared_ptr --
+  // callers dereference the result -- so it returns a valid empty extractor.
+  lldb::DataExtractorSP gap_subset = extractor->GetSubsetExtractorSP(0x1800, 4);
+  ASSERT_NE(gap_subset, nullptr);
+  EXPECT_EQ(gap_subset->GetByteSize(), 0U);
+
+  // A range starting inside an entry but running past its end (into the
+  // unmapped gap) is likewise unsatisfiable and returns an empty extractor.
+  lldb::DataExtractorSP overrun_subset =
+      extractor->GetSubsetExtractorSP(0x1002, 8);
+  ASSERT_NE(overrun_subset, nullptr);
+  EXPECT_EQ(overrun_subset->GetByteSize(), 0U);
+
+  // The single-argument overload behaves the same for an unmapped offset.
+  lldb::DataExtractorSP gap_subset_single =
+      extractor->GetSubsetExtractorSP(0x1800);
+  ASSERT_NE(gap_subset_single, nullptr);
+  EXPECT_EQ(gap_subset_single->GetByteSize(), 0U);
+
+  // A fully-contained range still produces a real subset with the right bytes.
+  lldb::DataExtractorSP valid_subset =
+      extractor->GetSubsetExtractorSP(0x2000, 4);
+  ASSERT_NE(valid_subset, nullptr);
+  EXPECT_EQ(valid_subset->GetByteSize(), 4U);
+  offset_t physical_offset = 0;
+  EXPECT_EQ(valid_subset->GetU32(&physical_offset), 0x14131211U);
+}

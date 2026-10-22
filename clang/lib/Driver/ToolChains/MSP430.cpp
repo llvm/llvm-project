@@ -157,6 +157,7 @@ void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSP430ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args,
+                                            BoundArch BA,
                                             Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 

@@ -1,8 +1,8 @@
 ; RUN: rm -rf %t 
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/System/Library/Frameworks 
-; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
-; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
 

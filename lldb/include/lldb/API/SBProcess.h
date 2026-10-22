@@ -199,6 +199,13 @@ public:
 
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
+  /// Read memory that may be in a non-default address space.
+  size_t ReadMemory(SBProcessAddress process_addr, void *buf, size_t size,
+                    lldb::SBError &error);
+
+  /// Resolve an address space name to its id, or LLDB_INVALID_ADDRESS_SPACE_ID.
+  lldb::addr_space_t GetAddressSpaceID(const char *name, lldb::SBError &error);
+
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 
@@ -423,6 +430,15 @@ public:
   ///     The path to the core file for this target or an invalid file spec if
   ///     the process isn't loaded from a core file.
   lldb::SBFileSpec GetCoreFile();
+
+  /// Check whether this process is a live debug session, as opposed to a
+  /// post-mortem session such as a core file or minidump.
+  ///
+  /// \return
+  ///     \b true if the process represents a live debug session, \b false if it
+  ///     is a post-mortem session (e.g. a core file) or there is no underlying
+  ///     process.
+  bool IsLiveDebugSession() const;
 
   /// \{
   /// \group Mask Address Methods

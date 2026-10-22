@@ -29,8 +29,8 @@ define void @constant_forward_stride(ptr %s, ptr %d) {
 define void @constant_forward_stride2(ptr %s, ptr %d) {
 ; CHECK-LABEL: constant_forward_stride2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -48
 ; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    addi a0, a0, -48
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a0), a2
 ; CHECK-NEXT:    vse16.v v8, (a1)
@@ -99,8 +99,8 @@ define void @constant_back_stride(ptr %s, ptr %d) {
 define void @constant_back_stride2(ptr %s, ptr %d) {
 ; CHECK-LABEL: constant_back_stride2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 48
 ; CHECK-NEXT:    li a2, -16
+; CHECK-NEXT:    addi a0, a0, 48
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a0), a2
 ; CHECK-NEXT:    vse16.v v8, (a1)

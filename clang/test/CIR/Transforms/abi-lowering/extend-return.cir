@@ -1,0 +1,38 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+
+#extend_signed_return = {
+  return = { kind = "extend",
+             coerced_type = !cir.int<s, 32>,
+             sign_extend = true },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @returns_s8() -> !s8i
+      attributes { test_classify = #extend_signed_return } {
+    %0 = cir.const #cir.int<7> : !s8i
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @returns_s8() -> (!s8i {llvm.signext})
+  // CHECK:   cir.return %{{.*}} : !s8i
+
+  cir.func @caller() -> !s8i
+      attributes { test_classify = #extend_signed_return } {
+    %0 = cir.call @returns_s8() : () -> !s8i
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @caller() -> (!s8i {llvm.signext})
+  // CHECK:   %[[R:.*]] = cir.call @returns_s8() : () -> (!s8i {llvm.signext})
+  // CHECK:   cir.return %[[R]] : !s8i
+
+}

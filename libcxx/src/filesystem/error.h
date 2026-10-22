@@ -23,7 +23,7 @@
 
 #include "format_string.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h> // ERROR_* macros
@@ -42,7 +42,7 @@ inline error_code capture_errno() {
 }
 
 inline error_code get_last_error() {
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   return std::error_code(GetLastError(), std::system_category());
 #else
   return capture_errno();

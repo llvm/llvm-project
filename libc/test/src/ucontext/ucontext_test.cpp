@@ -21,8 +21,7 @@ namespace LIBC_NAMESPACE {
 
 static bool is_signal_set(const sigset_t *set, int signum) {
   // TODO: Replace this with sigismember once it is implemented.
-  // NSIG is 64, sigset_t is an array of unsigned long.
-  // Signum is 1-indexed.
+  // sigset_t is an array of unsigned long, signum is 1-indexed.
   int word = (signum - 1) / (sizeof(unsigned long) * 8);
   int bit = (signum - 1) % (sizeof(unsigned long) * 8);
   return (set->__signals[word] & (1UL << bit)) != 0;

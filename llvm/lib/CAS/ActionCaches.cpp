@@ -18,7 +18,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/Errc.h"
+#include "llvm/Support/Compiler.h"
 
 #define DEBUG_TYPE "cas-action-caches"
 

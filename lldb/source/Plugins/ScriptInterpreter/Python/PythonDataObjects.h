@@ -615,6 +615,15 @@ public:
 
   llvm::Expected<ArgInfo> GetArgInfo() const;
 
+  // Always derives ArgInfo via a Python-level inspect.signature() call,
+  // regardless of whether the callable's argument count/varargs bit could
+  // have been read directly off its data attributes. GetArgInfo() prefers
+  // the cheaper attribute-based path and only falls back to this for
+  // callables it can't introspect that way (e.g. builtins); exposed
+  // separately so that fallback behavior can be tested directly.
+  static llvm::Expected<ArgInfo>
+  GetArgInfoFromInspectSignature(const PythonCallable &callable);
+
   PythonObject operator()();
 
   PythonObject operator()(std::initializer_list<PyObject *> args);
@@ -634,6 +643,9 @@ public:
   PythonFile() : TypedPythonObject() {} // MSVC requires this for some reason
 
   static bool Check(PyObject *py_obj);
+
+  static int TranslateFdToPython(int our_fd);
+  static int TranslateFdFromPython(int their_fd);
 
   static llvm::Expected<PythonFile> FromFile(File &file,
                                              const char *mode = nullptr);

@@ -30,6 +30,19 @@ add_libc_test(
 )
 
 add_fp_unittest(
+  fp_bitwise_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    fp_bitwise_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
   rounding_mode_test
   SUITE
     libc-fputil-tests
@@ -37,6 +50,32 @@ add_fp_unittest(
     rounding_mode_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.rounding_mode
+)
+
+add_fp_unittest(
+  float128_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float128_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
+  float80_test
+  NEED_MPFR_F80
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float80_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float80
 )
 
 # TODO: Temporally disable bfloat16 test until MPCommon target is updated

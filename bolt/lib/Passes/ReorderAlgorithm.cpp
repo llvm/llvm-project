@@ -37,7 +37,7 @@ static cl::opt<unsigned> ColdThreshold(
              "threshold when evaluating whether a basic block is cold "
              "(0 means it is only considered cold if the block has zero "
              "samples). Default: 0 "),
-    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> PrintClusters("print-clusters", cl::desc("print clusters"),
                                    cl::Hidden, cl::cat(BoltOptCategory));
@@ -523,6 +523,10 @@ void ExtTSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
   std::vector<uint64_t> BlockCounts;
   BasicBlockOrder OrigOrder;
   BF.getLayout().updateLayoutIndices();
+  size_t BFBlockSize = BF.getLayout().block_size();
+  BlockSizes.reserve(BFBlockSize);
+  BlockCounts.reserve(BFBlockSize);
+  OrigOrder.reserve(BFBlockSize);
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     uint64_t Size = std::max<uint64_t>(BB->estimateSize(Emitter.MCE.get()), 1);
     BlockSizes.push_back(Size);

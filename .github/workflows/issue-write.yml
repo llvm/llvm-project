@@ -10,6 +10,8 @@ on:
       - "CI Checks"
       - "Test Issue Write"
       - "Check LLVM ABI annotations"
+      - "Diff test-suite codegen"
+      - "Flang integration test check"
     types:
       - completed
 
@@ -18,7 +20,7 @@ permissions:
 
 jobs:
   pr-comment:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       pull-requests: write
     if: >
@@ -27,10 +29,11 @@ jobs:
       (
         github.event.workflow_run.conclusion == 'success' ||
         github.event.workflow_run.conclusion == 'failure'
-      )
+      ) &&
+      github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -46,6 +49,8 @@ jobs:
       - name: 'Comment on PR'
         if: steps.download-artifact.outputs.artifact-ids != ''
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          EVENT_TYPE: ${{ github.event.workflow_run.event }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -56,7 +61,10 @@ jobs:
               if (local_file.startsWith("comments")) {
                 comments.push(...JSON.parse(fs.readFileSync(local_file)))
               }
-              if (local_file.startsWith("pr_number")) {
+              // We can't trust a pr_number that comes from a pull_request event,
+              // because the pull_request author has full control over the
+              // triggering workflow and could put any number here.
+              if (process.env.EVENT_TYPE === "issue_comment" && local_file.startsWith("pr_number")) {
                 pr_number = parseInt(fs.readFileSync(local_file), 10)
               }
             }

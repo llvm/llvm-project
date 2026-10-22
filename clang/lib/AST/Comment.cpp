@@ -350,6 +350,12 @@ void DeclInfo::fill() {
   case Decl::Enum:
     Kind = EnumKind;
     break;
+  case Decl::Concept:
+    const ConceptDecl *Concept = cast<ConceptDecl>(CommentDecl);
+    Kind = ConceptKind;
+    TemplateKind = Template;
+    TemplateParameters = Concept->getTemplateParameters();
+    break;
   }
 
   // If the type is a typedef / using to something we consider a function,

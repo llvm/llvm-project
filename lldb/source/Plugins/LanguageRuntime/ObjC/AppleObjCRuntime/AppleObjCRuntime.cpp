@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
-#include "AppleObjCRuntimeV1.h"
 #include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
 #include "Plugins/Language/ObjC/NSString.h"
@@ -41,6 +40,8 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "llvm/Support/Error.h"
+
 #include <vector>
 
 using namespace lldb;
@@ -58,15 +59,9 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-void AppleObjCRuntime::Initialize() {
-  AppleObjCRuntimeV2::Initialize();
-  AppleObjCRuntimeV1::Initialize();
-}
+void AppleObjCRuntime::Initialize() { AppleObjCRuntimeV2::Initialize(); }
 
-void AppleObjCRuntime::Terminate() {
-  AppleObjCRuntimeV2::Terminate();
-  AppleObjCRuntimeV1::Terminate();
-}
+void AppleObjCRuntime::Terminate() { AppleObjCRuntimeV2::Terminate(); }
 
 llvm::Error AppleObjCRuntime::GetObjectDescription(Stream &str,
                                                    ValueObject &valobj) {
@@ -332,8 +327,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
-      if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
-                 "Foundation") == 0) {
+      if (module_sp->GetFileSpec().GetFilename() == "Foundation") {
         m_Foundation_major = module_sp->GetVersion().getMajor();
         return *m_Foundation_major;
       }
@@ -402,9 +396,11 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       SectionList *sections = module_sp->GetSectionList();
       if (!sections)
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
-      SectionSP v1_telltale_section_sp =
-          sections->FindSectionByName(ConstString("__OBJC"));
+      SectionSP v1_telltale_section_sp = sections->FindSectionByName("__OBJC");
       if (v1_telltale_section_sp) {
+        LLDB_LOG(GetLog(LLDBLog::Language),
+                 "GetObjCVersion returning eAppleObjC_V1, which is no longer "
+                 "supported");
         return ObjCRuntimeVersions::eAppleObjC_V1;
       }
       return ObjCRuntimeVersions::eAppleObjC_V2;
@@ -590,10 +586,12 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   size_t ptr_size = m_process->GetAddressByteSize();
   std::vector<lldb::addr_t> pcs;
   for (size_t idx = 0; idx < count; idx++) {
-    Status error;
-    addr_t pc = m_process->ReadPointerFromMemory(
-        frames_addr + (ignore + idx) * ptr_size, error);
-    pcs.push_back(pc);
+    // Record unreadable frames as invalid rather than dropping them, so the
+    // history thread keeps one entry per frame in the exception.
+    pcs.push_back(
+        llvm::expectedToOptional(m_process->ReadPointerFromMemory(
+                                     frames_addr + (ignore + idx) * ptr_size))
+            .value_or(LLDB_INVALID_ADDRESS));
   }
 
   if (pcs.empty())

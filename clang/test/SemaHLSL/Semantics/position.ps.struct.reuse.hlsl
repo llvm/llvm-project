@@ -16,14 +16,13 @@ struct Top {
 };
 
 
-// FIXME(Keenuts): add mandatory output semantic once those are implemented.
-float4 main(Top s : D) : F4 {
+float4 main(Top s : D) : SV_Target {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (Top)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:17 used s 'Top'
 // CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:21> "D" 0
 // CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:21> "D" 0
 // CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:21> "D" 1
 
-// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:26> "F" 4
+// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:26> "SV_Target" 0
   return s.f0.x;
 }

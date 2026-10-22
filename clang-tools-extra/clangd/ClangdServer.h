@@ -535,6 +535,7 @@ private:
   DraftStore DraftMgr;
 
   std::unique_ptr<ThreadsafeFS> DirtyFS;
+  std::function<Context(PathRef)> ContextProvider;
 };
 
 } // namespace clangd

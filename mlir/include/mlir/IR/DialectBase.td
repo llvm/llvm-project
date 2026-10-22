@@ -55,6 +55,13 @@ class Dialect {
   // dialect declaration.
   code extraClassDeclaration = "";
 
+  // Require declarative parsers for property-backed operations to bind every
+  // inherent attribute and property directly in the custom assembly format,
+  // or otherwise cover them with `prop-dict`.
+  // Deprecated: setting this to 0 temporarily opts into legacy behavior that
+  // mixes inherent and discardable attributes in `attr-dict`.
+  bit useStrictPropertiesInAssemblyFormat = 1;
+
   // If this dialect overrides the hook for materializing constants.
   bit hasConstantMaterializer = 0;
 

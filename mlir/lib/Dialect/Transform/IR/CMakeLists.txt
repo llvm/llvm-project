@@ -5,7 +5,15 @@ add_mlir_dialect_library(MLIRTransformDialect
   TransformTypes.cpp
   Utils.cpp
 
+  DEPENDS
+  MLIRTransformDialectIncGen
+  MLIRTransformTypesIncGen
+  MLIRTransformDialectEnumIncGen
+  MLIRTransformDialectAttributesIncGen
+  MLIRTransformOpsIncGen
+
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRCastInterfaces
   MLIRFunctionInterfaces
   MLIRIR

@@ -11,6 +11,7 @@
 // RUN: rm -rf %t.o %t.json
 // RUN: %{codegen} \
 // RUN:   --ssaf-extract-summaries=CallGraph \
+// RUN:   --ssaf-compilation-unit-id=test-cu \
 // RUN:   --ssaf-tu-summary-file=%t.json \
 // RUN: | not grep "Clearing AST"
 

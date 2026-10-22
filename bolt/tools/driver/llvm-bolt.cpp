@@ -54,7 +54,6 @@ static cl::opt<std::string> InputFilename(cl::Positional,
 static cl::opt<std::string>
 InputDataFilename("data",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::alias
@@ -71,7 +70,6 @@ static cl::opt<std::string>
 static cl::opt<std::string>
 InputDataFilename2("data2",
   cl::desc("<data file>"),
-  cl::Optional,
   cl::cat(BoltCategory));
 
 static cl::opt<std::string>
@@ -234,8 +232,9 @@ int main(int argc, char **argv) {
       }
 
       if (!opts::PerfData.empty()) {
-        if (Error E = RI.setProfile(opts::PerfData))
-          report_error(opts::PerfData, std::move(E));
+        for (StringRef Filename : opts::PerfData)
+          if (Error E = RI.setProfile(Filename))
+            report_error(Filename, std::move(E));
       } else if (opts::AggregateOnly) {
         errs() << ToolName << ": missing required -perfdata option.\n";
         exit(1);
