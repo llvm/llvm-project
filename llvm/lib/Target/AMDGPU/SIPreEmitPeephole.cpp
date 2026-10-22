@@ -469,9 +469,7 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
         return true;
 
       // Retain the branch unless the instruction is a harmless no-op when
-      // EXEC == 0. Scalar instructions are not masked by EXEC, and non-ALU
-      // instructions still cost latency, so both force the branch to stay;
-      // region length is left to the cost model below.
+      // EXEC == 0.
       if (SIInstrInfo::isSALU(MI) ||
           !SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
         return true;
