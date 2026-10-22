@@ -54,6 +54,26 @@ in a future version of Clang.
   mode, as it was removed from the standard by
   [P3475R2](https://wg21.link/P3475R2).
 
+- Because specializations of templated functions can now be instantiated during
+  constant evaluation, certain expressions that could not previously be
+  evaluated as constant expressions can now be evaluated as such. This can
+  affect overload resolution, which can in some cases change the semantics of a
+  program. For example:
+
+  ```cpp
+  // Construct a function `g` for which `g()` is only a constant expression if
+  // `f<int>` can be instantiated during constant evaluation.
+  template <typename T> constexpr T f();
+  constexpr int g() { return f<int>(); }
+  template <typename T> constexpr T f() { return T{1}; }
+
+  // Construct a family of overloads named `h` such that the result of `h()` is
+  // 1 if `g()` is a constant expression; otherwise 2.
+  template <auto = g()>     consteval int h()      { return 1; }
+  template <typename... Ts> consteval int h(Ts...) { return 2; }
+
+  int main() { return h(); }  // Previously returned 2; now returns 1.
+  ```
 
 ### Objective-C Specific Potentially Breaking Changes
 
@@ -68,6 +88,12 @@ in a future version of Clang.
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.
   (#GH231953)
+
+- Clang now mangles a template template parameter that was substituted through
+  an alias template and is used as the base of an unresolved name, such as
+  `TT<T>::value` in a non-type template parameter's type, as the substituted
+  template. Previous versions emitted an ill-formed symbol with no name in that
+  position. `-fclang-abi-compat=23` restores the previous behavior. (#GH88592)
 
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
@@ -141,6 +167,11 @@ features cannot lower the translation-unit ABI level;
   target triples (except 32b arm targets). Can be disabled via
   `-fno-stack-clash-protection`.
 
+- Clang no longer searches all subdirectories of header search paths
+  for module maps by default when resolving a module import. The previous
+  behavior can be restored with `-fmodulemap-allow-subdirectory-search`,
+  which will be removed in a future release.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -170,6 +201,14 @@ features cannot lower the translation-unit ABI level;
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
+
+- The experimental ClangIR code generator is now built into Clang by default, so
+`-fclangir` can be used without any additional CMake options. While ClangIR will
+work for many workloads in some narrow configurations (ie, Itanium only), it
+should prove useful for MLIR experimentation in Clang. This does however have a
+measureable and significant impact on the build-time of clang itself. It can be
+disabled with the CMake option `-DCLANG_ENABLE_CIR=OFF`. See [the CIR
+documentation](CIR/index.md) for more information regarding ClangIR's status and design.
 
 ### C++ Language Changes
 - Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
@@ -835,6 +874,7 @@ features cannot lower the translation-unit ABI level;
   out-of-line definition. (#GH204762)
 
 #### Bug Fixes to C++ Support
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
@@ -1112,6 +1152,10 @@ features cannot lower the translation-unit ABI level;
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
 - Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
+- Fixed an assertion failure in the Itanium mangler when a template template
+  parameter substituted through an alias template is used as the base of an
+  unresolved name, such as `TT<T>::value` in a non-type template parameter's
+  type. (#GH88592)
 
 ### OpenACC Specific Changes
 
@@ -1422,6 +1466,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### SYCL Support
 
 #### Improvements
+
+### Clang IR Improvements
+
+- Clang builds now build ClangIR support by default. Clang IR is expected to work with most Linux/X86-64 workloads. Normal builds are unchanged, however those who wish to test out the experimental `-fclangir` flag can now do so with a Clang build.
+
 
 ## Additional Information
 
