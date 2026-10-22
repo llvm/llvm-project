@@ -44,7 +44,7 @@ NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {
   setUseInlineStrings(true);
   setUseRangesSection(false);
   setUseSectionsAsReferences(true);
-  Asm->OutStreamer->getContext().setDwarfVersion(2);
+  applyDwarfVersion(2);
   setTheAccelTableKind(AccelTableKind::None);
 }
 
