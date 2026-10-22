@@ -1267,6 +1267,19 @@ add_header_library(
 )
 
 add_header_library(
+  epoll_ctl
+  HDRS
+    epoll_ctl.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   access
   HDRS
     access.h
@@ -1820,4 +1833,16 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  eventfd
+  HDRS
+    eventfd.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )

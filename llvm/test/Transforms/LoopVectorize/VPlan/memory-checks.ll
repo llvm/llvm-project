@@ -142,8 +142,8 @@ define void @diff_check(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP9]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:

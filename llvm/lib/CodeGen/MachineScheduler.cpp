@@ -4444,7 +4444,48 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
                DAG->dumpNode(*Dep.getSUnit()));
+    // Moving a copy past subregister defs can leave stale read-undef flags,
+    // dropping true dependencies in a later DAG build. Recompute them from
+    // LiveIntervals after the move. Only vreg copies need this, and only when
+    // lane masks are tracked.
+    LiveIntervals *LIS = DAG->getLIS();
+    SmallVector<Register, 8> CopyVRegs;
+    if (LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks())
+      for (const MachineOperand &MO : Copy->operands())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          CopyVRegs.push_back(MO.getReg());
+    bool FixUndef = !CopyVRegs.empty();
+
+    // Remember the old location to limit the fixup below to the range moved.
+    SlotIndex OldIdx;
+    MachineBasicBlock::iterator OldNext;
+    if (FixUndef) {
+      OldIdx = LIS->getInstructionIndex(*Copy);
+      OldNext = std::next(Copy->getIterator());
+    }
+
     DAG->moveInstruction(Copy, InsertPos);
+    if (!FixUndef)
+      continue;
+
+    // Fix up the copy itself and everything it moved past.
+    RegisterOperands::restoreLivenessFlags(*Copy, *TRI, DAG->MRI, *LIS,
+                                           /*TrackLaneMasks=*/true, CopyVRegs);
+    MachineBasicBlock::iterator NewIt = Copy->getIterator();
+    SlotIndex NewIdx = LIS->getInstructionIndex(*Copy);
+    MachineBasicBlock::iterator FixBegin = NewIt, FixEnd = NewIt;
+    if (NewIdx < OldIdx) {
+      FixBegin = std::next(NewIt);
+      FixEnd = OldNext;
+    } else if (OldIdx < NewIdx) {
+      FixBegin = OldNext;
+      FixEnd = NewIt;
+    }
+    for (auto I = FixBegin; I != FixEnd; ++I)
+      if (!I->isDebugInstr())
+        RegisterOperands::restoreLivenessFlags(*I, *TRI, DAG->MRI, *LIS,
+                                               /*TrackLaneMasks=*/true,
+                                               CopyVRegs);
   }
 }
 
