@@ -5279,8 +5279,8 @@ public:
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ub::populateUBToLLVMConversionPatterns(typeConverter, pattern);
-    mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter,
-                                                         pattern);
+    mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, pattern,
+                                                         &symbolTables);
 
     // Flang specific overloads for OpenMP operations, to allow for special
     // handling of things like Box types.
