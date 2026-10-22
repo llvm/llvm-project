@@ -3319,6 +3319,31 @@ static bool IsCUDADeviceOnly(const Symbol &symbol) {
   return attrs && *attrs == common::CUDASubprogramAttrs::Device;
 }
 
+// True when code in this scope may run on the device. FindCUDADeviceContext
+// reads the scope symbol's own CUDA attributes, which a separate module
+// procedure implementation does not carry: its interface does.
+static bool MayRunOnCUDADevice(const semantics::Scope &scope) {
+  if (semantics::FindCUDADeviceContext(&scope) ||
+      semantics::HasOpenACCRoutineDirective(&scope)) {
+    return true;
+  }
+  for (const semantics::Scope *s{&scope}; !s->IsGlobal(); s = &s->parent()) {
+    // CUF kernel and OpenACC regions share Scope::Kind::OpenACCConstruct and
+    // may hold device code in a host subprogram.
+    if (s->kind() == semantics::Scope::Kind::OpenACCConstruct) {
+      return true;
+    }
+    if (const Symbol *symbol{s->symbol()}) {
+      const auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()};
+      if (subp && subp->moduleInterface() &&
+          IsCUDADeviceCallable(*subp->moduleInterface())) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
@@ -3357,22 +3382,10 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
-    // CUF kernel and OpenACC regions share Scope::Kind::OpenACCConstruct and
-    // may hold device code in a host subprogram; leave those unfiltered.
     bool inHostCode{
         context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-        !GetContextualMessages().at().empty()};
-    if (inHostCode) {
-      const semantics::Scope &scope{
-          context_.FindScope(GetContextualMessages().at())};
-      // An OpenACC routine body may run on the device.
-      inHostCode = !semantics::FindCUDADeviceContext(&scope) &&
-          !semantics::HasOpenACCRoutineDirective(&scope);
-      for (const semantics::Scope *s{&scope}; inHostCode && !s->IsGlobal();
-          s = &s->parent()) {
-        inHostCode = s->kind() != semantics::Scope::Kind::OpenACCConstruct;
-      }
-    }
+        !GetContextualMessages().at().empty() &&
+        !MayRunOnCUDADevice(context_.FindScope(GetContextualMessages().at()))};
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
       if (isSubroutine != !IsFunction(specific1)) {
