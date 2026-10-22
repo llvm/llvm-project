@@ -60,9 +60,10 @@ define float @call_alias_of_ifunc(i64 %arg) {
   ret float %call
 }
 
-; CHECK-FINAL-BOTH: define internal void [[CONSTRUCTOR]]() {
+; CHECK-FINAL-BOTH: define internal void [[CONSTRUCTOR]]() #[[#CONSTRUCTOR_ATTR:]] {
 ; CHECK-FINAL-BOTH-NEXT: %1 = call ptr @resolver()
 ; CHECK-FINAL-BOTH-NEXT: store ptr %1, ptr [[TABLE]], align 8
 ; CHECK-FINAL-BOTH-NEXT: %2 = call ptr @resolver()
 ; CHECK-FINAL-BOTH-NEXT: store ptr %2, ptr getelementptr inbounds (i8, ptr [[TABLE]], i64 8), align 8
 ; CHECK-FINAL-BOTH-NEXT: ret void
+; CHECK-FINAL-DAG: attributes #[[#CONSTRUCTOR_ATTR]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
