@@ -1455,7 +1455,10 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
         } else if (Bounds->getName() == "IB_LaneIndex") {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = 0;
-          IA.i2 = 128 / Param->sizeInBits() - 1;
+          unsigned sizeInBits = Param->sizeInBits();
+          if (sizeInBits == 0)
+            PrintFatalError("Division by zero: Param->sizeInBits() is zero.");
+          IA.i2 = 128 / sizeInBits() - 1;
         } else if (Bounds->isSubClassOf("IB_EltBit")) {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = Bounds->getValueAsInt("base");
