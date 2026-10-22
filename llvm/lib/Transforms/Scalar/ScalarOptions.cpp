@@ -7,9 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScalarOptions.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Option/LibraryOptions.h"
 
 #define OPTIONS_STRUCT_DEFS
 #include "ScalarOptions.inc"
 
 static llvm::opt::RegisterLibraryOptions<llvm::ScalarOptions> Registration;
+
+namespace llvm {
+
+const ScalarOptions &getScalarOptions(const Loop &L) {
+  return getScalarOptions(L.getHeader()->getContext());
+}
+
+} // namespace llvm

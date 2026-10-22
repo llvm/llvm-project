@@ -11,7 +11,6 @@
 
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -22,10 +21,6 @@ namespace llvm {
 
 inline const PassesOptions &getPassesOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<PassesOptions>();
-}
-
-inline const PassesOptions &getPassesOptions(const Module &M) {
-  return getPassesOptions(M.getContext());
 }
 
 } // namespace llvm

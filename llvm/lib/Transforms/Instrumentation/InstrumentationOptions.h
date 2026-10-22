@@ -10,10 +10,6 @@
 #define LLVM_LIB_TRANSFORMS_INSTRUMENTATION_INSTRUMENTATIONOPTIONS_H
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Value.h"
 #include "llvm/ProfileData/ProfCorrelatorKind.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <optional>
@@ -39,24 +35,13 @@ enum class RecordStackHistoryMode {
 
 namespace llvm {
 
-inline const InstrumentationOptions &
-getInstrumentationOptions(const LLVMContext &C) {
-  return C.getLibraryOptions().get<InstrumentationOptions>();
-}
+class LLVMContext;
+class Module;
+class Value;
 
-inline const InstrumentationOptions &
-getInstrumentationOptions(const Function &F) {
-  return getInstrumentationOptions(F.getContext());
-}
-
-inline const InstrumentationOptions &
-getInstrumentationOptions(const Module &M) {
-  return getInstrumentationOptions(M.getContext());
-}
-
-inline const InstrumentationOptions &getInstrumentationOptions(const Value &V) {
-  return getInstrumentationOptions(V.getContext());
-}
+const InstrumentationOptions &getInstrumentationOptions(const LLVMContext &C);
+const InstrumentationOptions &getInstrumentationOptions(const Module &M);
+const InstrumentationOptions &getInstrumentationOptions(const Value &V);
 
 } // namespace llvm
 
