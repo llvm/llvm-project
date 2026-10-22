@@ -5,7 +5,7 @@
 ! reloaded from their maps in the kernel, not cached by value.
 
 ! CHECK-LABEL: func @_QPsaxpy_allocatable
-! CHECK:         %[[Y_MAP:.*]] = omp.map.info {{.*}}map_clauses(storage) capture(ByRef) members({{.*}}) name("y")
+! CHECK:         %[[Y_MAP:.*]] = omp.map.info {{.*}}map_clauses(storage) capture(ByRef) {{.*}}members({{.*}}){{.*}} name("y")
 
 ! Scalars and temp array pointers may be cached, but no descriptor is.
 ! CHECK:         omp.target_data

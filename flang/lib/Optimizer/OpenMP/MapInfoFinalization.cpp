@@ -35,6 +35,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -356,6 +357,41 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  bool isDeclareTargetOperation(mlir::Operation *op) {
+    auto declareTarget =
+        mlir::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+    return declareTarget && static_cast<bool>(declareTarget.getDeclareTarget());
+  }
+
+  bool isDeclareTargetMappedValue(mlir::Value value) {
+    while (mlir::Operation *defOp = value.getDefiningOp()) {
+      if (isDeclareTargetOperation(defOp))
+        return true;
+
+      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(defOp)) {
+        value = declareOp.getMemref();
+        continue;
+      }
+
+      if (auto boxAddr = mlir::dyn_cast<fir::BoxAddrOp>(defOp)) {
+        value = boxAddr.getVal();
+        continue;
+      }
+
+      if (auto addrOf = mlir::dyn_cast<fir::AddrOfOp>(defOp)) {
+        if (auto module = addrOf->getParentOfType<mlir::ModuleOp>())
+          if (mlir::Operation *symbolOp =
+                  module.lookupSymbol(addrOf.getSymbol()))
+            return isDeclareTargetOperation(symbolOp);
+        return false;
+      }
+
+      return false;
+    }
+
+    return false;
+  }
+
   /// getMemberUserList gathers all users of a particular MapInfoOp that are
   /// other MapInfoOp's and places them into the mapMemberUsers list, which
   /// records the map that the current argument MapInfoOp "op" is part of
@@ -468,8 +504,7 @@ class MapInfoFinalizationPass
   /// base address can be utilised.
   mlir::Value getDescriptorFromBoxMap(mlir::omp::MapInfoOp boxMap,
                                       fir::FirOpBuilder &builder,
-                                      bool &canDescBeDeferred,
-                                      bool &canOptimizeDescViaPrivatization) {
+                                      bool &canDescBeDeferred) {
     mlir::Value descriptor = boxMap.getVarPtr();
     if (!fir::isTypeWithDescriptor(boxMap.getVarPtrType()))
       if (auto addrOp = mlir::dyn_cast_if_present<fir::BoxAddrOp>(
@@ -483,8 +518,6 @@ class MapInfoFinalizationPass
     // privatization to allocatables pointers and other descriptor types as
     // needed in the future.
     canDescBeDeferred = canDeferDescriptorMapping(descriptor);
-    canOptimizeDescViaPrivatization = isDummyArgument(descriptor) &&
-                                      fir::isAssumedShape(descriptor.getType());
 
     if (!mlir::isa<fir::BaseBoxType>(descriptor.getType()) &&
         !fir::factory::isOptionalArgument(descriptor.getDefiningOp()))
@@ -1223,7 +1256,7 @@ class MapInfoFinalizationPass
         baseAddrInsert ? mlir::TypeAttr::get(underlyingVarType)
                        : mlir::TypeAttr{},
         newMembers, newMembersAttr,
-        /*bounds=*/mlir::SmallVector<mlir::Value>{},
+        optDescMap ? op.getBounds() : mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
 
@@ -1357,13 +1390,14 @@ class MapInfoFinalizationPass
                                          mlir::Operation *target,
                                          bool &canOptimizeUseDeviceAddr) {
     bool descCanBeDeferred = false;
-    bool canOptimizeDescViaPrivatization = false;
+    bool canOptimizeDescViaPrivatization = true;
     llvm::SmallVector<ParentAndPlacement> mapMemberUsers;
     getMemberUserList(op, mapMemberUsers);
 
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
     bool mapOnlyDescriptor = false;
+    bool isDeclareTargetMap = isDeclareTargetMappedValue(op.getVarPtr());
     bool isHasDeviceAddrFlag = isHasDeviceAddr(op, *target);
     bool isAttachNever = bitEnumContainsAll(
         op.getMapType(), mlir::omp::ClauseMapFlags::attach_never);
@@ -1378,17 +1412,44 @@ class MapInfoFinalizationPass
                      !bitEnumContainsAll(op.getMapType(),
                                          mlir::omp::ClauseMapFlags::ref_ptr);
 
-    mlir::Value descriptor = getDescriptorFromBoxMap(
-        op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
+    mlir::Value descriptor =
+        getDescriptorFromBoxMap(op, builder, descCanBeDeferred);
+
     updateUseDeviceDescriptorArgs(op, descriptor, target, builder);
     canOptimizeUseDeviceAddr =
         canOptimizeUseDeviceAddrMapping(builder, descriptor, op, target);
     mapOnlyDescriptor = isHasDeviceAddrFlag | canOptimizeUseDeviceAddr;
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     // Exclude irregular maps from optimization via privatization; at least for
-    // the moment.
+    // the moment, and do not privatize children of records or declare target
+    // variables. The former is part of a larger object that can be privatized,
+    // the latter is something that isn't privatize-able as by making it declare
+    // target it's been made a host or device resident global with some specific
+    // semantics around it (in theory maybe certain host only cases can be
+    // privatized).
+    //
+    // We also avoid applying this to pointer maps as it is possible to
+    // re-target these between enter maps and the privatization will effectively
+    // rebind the new re-targetted data to the unattached private descriptor. In
+    // theory this is only an issue in certain ref semantic cases or when the
+    // runtimes LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is set to false,
+    // behaving as it should in later specification iterations. So, perhaps a
+    // compiler flag can be provided for users that know the impact of the
+    // privatization won't affect there application, but at least for the moment
+    // we do not privatize the pointer descriptors for target regions.
+    //
+    // We also need to avoid privatizing anything with reference or attach
+    // semantics present, the act of creating a private descriptor will
+    // supersede any of these semantics a user has utilised prior or on the
+    // target region. NOTE: There may still be some edge cases this causes
+    // issues in, but we can fix them as we come across them, a runtime fix to
+    // handle this type of semantics in conjunction with privatization may be a
+    // choice.
+    bool isImplicitPointerMap = fir::isPointerType(descriptor.getType());
     if (isHasDeviceAddrFlag || getUseDeviceAddrBlockArg(op, *target) ||
-        isUseDevicePtr(op, *target))
+        isUseDevicePtr(op, *target) || !mapMemberUsers.empty() ||
+        isDeclareTargetMap || isAttachAlways || isAttachNever ||
+        isImplicitPointerMap)
       canOptimizeDescViaPrivatization = false;
 
     // If we're a derived type descriptor, that's been flagged as ref_ptr,
