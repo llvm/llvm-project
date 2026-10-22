@@ -344,6 +344,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  if (args.hasFlag(clang::options::OPT_floop_tripcount_versioning,
+                   clang::options::OPT_fno_loop_tripcount_versioning, false))
+    opts.LoopTripCountVersioning = 1;
+
   opts.UnrollLoops = args.hasFlag(clang::options::OPT_funroll_loops,
                                   clang::options::OPT_fno_unroll_loops,
                                   (opts.OptimizationLevel > 1));
@@ -938,12 +942,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
       args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
                    clang::options::OPT_fno_out_of_bounds_subscripts, true));
-
-  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
-  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
-                       args.hasFlag(clang::options::OPT_fenumeration_type,
-                                    clang::options::OPT_fno_enumeration_type,
-                                    false));
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {

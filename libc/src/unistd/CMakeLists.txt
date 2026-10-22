@@ -162,6 +162,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execlp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execlp
+)
+
+add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
@@ -180,6 +187,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.execvp
+)
+
+add_entrypoint_object(
+  execvpe
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvpe
 )
 
 add_entrypoint_object(
@@ -404,6 +418,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.rmdir
+)
+
+add_entrypoint_object(
+  setegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setegid
+)
+
+add_entrypoint_object(
+  seteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.seteuid
 )
 
 add_entrypoint_object(
