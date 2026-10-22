@@ -770,6 +770,26 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIOpenACC",
+    srcs = [
+        "lib/CAPI/Dialect/OpenACC.cpp",
+        "lib/CAPI/Dialect/OpenACCPasses.cpp",
+    ],
+    hdrs = ["include/mlir-c/Dialect/OpenACC.h"],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":OpenACCPassIncGen"],
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":OpenACCAllExtensions",
+        ":OpenACCDialect",
+        ":OpenACCTransforms",
+        ":Pass",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIShape",
     srcs = ["lib/CAPI/Dialect/Shape.cpp"],
     hdrs = ["include/mlir-c/Dialect/Shape.h"],
@@ -10922,10 +10942,20 @@ cc_library(
 
 gentbl_cc_library(
     name = "OpenACCPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/OpenACC/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=OpenACC",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/OpenACC/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=OpenACC",
+        ],
+        "include/mlir/Dialect/OpenACC/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "--prefix=OpenACC",
+        ],
+        "include/mlir/Dialect/OpenACC/Transforms/Passes.capi.cpp.inc": [
+            "-gen-pass-capi-impl",
+            "--prefix=OpenACC",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/OpenACC/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],

@@ -4501,7 +4501,7 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return {};
-  return SI->second.getArrayRef();
+  return SI->second;
 }
 
 /// Erase Value from ValueExprMap and ExprValueMap. ValueExprMap.erase(V)
@@ -4511,9 +4511,8 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     auto EVIt = ExprValueMap.find(I->second);
-    bool Removed = EVIt->second.remove(V);
-    (void) Removed;
-    assert(Removed && "Value not in ExprValueMap?");
+    assert(is_contained(EVIt->second, V) && "Value not in ExprValueMap?");
+    llvm::erase(EVIt->second, V);
     ValueExprMap.erase(I);
   }
 }
@@ -4522,11 +4521,8 @@ void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
   // A recursive query may have already computed the SCEV. It should be
   // equivalent, but may not necessarily be exactly the same, e.g. due to lazily
   // inferred nowrap flags.
-  auto It = ValueExprMap.find_as(V);
-  if (It == ValueExprMap.end()) {
-    ValueExprMap.insert({SCEVCallbackVH(V, this), S});
-    ExprValueMap[S].insert(V);
-  }
+  if (ValueExprMap.insert({SCEVCallbackVH(V, this), S}).second)
+    ExprValueMap[S].push_back(V);
 }
 
 /// Return an existing SCEV if it exists, otherwise analyze the expression and
@@ -7501,6 +7497,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       // Non-volatile memset / memcpy do not count as side-effect for forward
       // progress.
       if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
+
+      // Droppable intrinsics only model a memory write; they are not progress.
+      if (I->isDroppable())
         return false;
 
       return I->mayWriteToMemory();
@@ -14868,7 +14868,7 @@ void ScalarEvolution::verify() const {
 
     // Check that the value is also part of the reverse map.
     auto It = ExprValueMap.find(KV.second);
-    if (It == ExprValueMap.end() || !It->second.contains(KV.first)) {
+    if (It == ExprValueMap.end() || !is_contained(It->second, KV.first)) {
       dbgs() << "Value " << *KV.first
              << " is in ValueExprMap but not in ExprValueMap\n";
       std::abort();

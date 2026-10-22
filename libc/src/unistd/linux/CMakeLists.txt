@@ -236,6 +236,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execlp
+  SRCS
+    execlp.cpp
+  HDRS
+    ../execlp.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+    libc.src.unistd.environ
+    libc.src.unistd.linux.exec_utils
+)
+
+add_entrypoint_object(
   execv
   SRCS
     execv.cpp
@@ -264,6 +281,23 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_header_library(
+  exec_utils
+  HDRS
+    exec_utils.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
+    libc.src.stdlib.environ_internal
+    libc.src.string.memory_utils.inline_memcpy
+)
+
 add_entrypoint_object(
   execvp
   SRCS
@@ -271,19 +305,28 @@ add_entrypoint_object(
   HDRS
     ../execvp.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.limits_macros
-    libc.hdr.types.size_t
+    libc.src.unistd.linux.exec_utils
     libc.src.__support.common
-    libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
-    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
-    libc.src.stdlib.environ_internal
-    libc.src.string.memory_utils.inline_memcpy
     libc.src.unistd.environ
+)
+
+add_entrypoint_object(
+  execvpe
+  SRCS
+    execvpe.cpp
+  HDRS
+    ../execvpe.h
+  DEPENDS
+    libc.src.unistd.linux.exec_utils
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
