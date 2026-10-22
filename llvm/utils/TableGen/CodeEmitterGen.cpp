@@ -22,6 +22,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Common/BytecodeProgram.h"
 #include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
@@ -75,13 +76,15 @@ public:
 
 private:
   int getVariableBit(const std::string &VarName, const BitsInit *BI, int Bit);
-  std::pair<std::string, std::string> getInstructionCases(const Record *R);
+  std::pair<SmallVector<std::string>, std::string>
+  getInstructionCases(const Record *R);
   void addInstructionCasesForEncoding(const Record *R,
                                       const Record *EncodingDef,
-                                      std::string &Case,
+                                      SmallVectorImpl<std::string> &Case,
                                       std::string &BitOffsetCase);
   bool addCodeToMergeInOperand(const Record *R, const BitsInit *BI,
-                               const std::string &VarName, std::string &Case,
+                               const std::string &VarName,
+                               SmallVectorImpl<std::string> &Case,
                                std::string &BitOffsetCase);
 
   APInt getInstructionBaseValue(const CodeGenInstruction *CGI, unsigned HwMode);
@@ -95,6 +98,9 @@ private:
   BaseEncodingPool BaseEncodings;
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
+  // Encode through a table of statements and an interpreter loop instead of a
+  // switch over every opcode. Set by InstrInfo.UseBytecodeEncoder.
+  bool UseBytecode = false;
 };
 
 } // end anonymous namespace
@@ -119,7 +125,7 @@ int CodeEmitterGen::getVariableBit(const std::string &VarName,
 bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
                                              const BitsInit *BI,
                                              const std::string &VarName,
-                                             std::string &Case,
+                                             SmallVectorImpl<std::string> &Case,
                                              std::string &BitOffsetCase) {
   const CodeGenInstruction &CGI = Target.getInstruction(R);
 
@@ -158,10 +164,12 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
-  raw_string_ostream OS(Case);
+  raw_string_ostream OS(Case.emplace_back());
   indent Indent(6);
 
-  OS << Indent << "// op: " << VarName << '\n';
+  // The name would keep otherwise identical statements from being shared.
+  if (!UseBytecode)
+    OS << Indent << "// op: " << VarName << '\n';
 
   if (UseAPInt)
     OS << Indent << "op.clearAllBits();\n";
@@ -252,17 +260,18 @@ static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap,
   }
 }
 
-std::pair<std::string, std::string>
+// Returns the statements encoding R, and the getOperandBitOffset case.
+std::pair<SmallVector<std::string>, std::string>
 CodeEmitterGen::getInstructionCases(const Record *R) {
-  std::string Case, BitOffsetCase;
-
-  auto Append = [&](const std::string &S) {
-    Case += S;
-    BitOffsetCase += S;
-  };
+  std::string BitOffsetCase;
 
   if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
     EncodingInfoByHwMode EBM(RV, CGH);
+    std::string Case;
+    auto Append = [&](const std::string &S) {
+      Case += S;
+      BitOffsetCase += S;
+    };
 
     // Invoke the interface to obtain the HwMode ID controlling the
     // EncodingInfo for the current subtarget. This interface will
@@ -312,15 +321,16 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
     // reduce the code size if 2 or more hw-modes share the same encoding for
     // the fields of the instruction.
     CaseMapT CaseMap, BitOffsetCaseMap;
-    std::string ModeCase, ModeBitOffsetCase;
+    SmallVector<std::string> ModeStmts;
+    std::string ModeBitOffsetCase;
 
     auto PrintHWMode = [](raw_ostream &O, unsigned Mode) { O << Mode; };
 
     for (auto &[ModeId, Encoding] : EBM) {
-      ModeCase.clear();
+      ModeStmts.clear();
       ModeBitOffsetCase.clear();
-      addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
-      CaseMap[ModeCase].push_back(ModeId);
+      addInstructionCasesForEncoding(R, Encoding, ModeStmts, ModeBitOffsetCase);
+      CaseMap[join(ModeStmts, "")].push_back(ModeId);
       BitOffsetCaseMap[ModeBitOffsetCase].push_back(ModeId);
     }
 
@@ -330,15 +340,20 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
     emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap, PrintHWMode);
 
     Append("      }\n");
-    return {std::move(Case), std::move(BitOffsetCase)};
+    // The HwMode locals must not leak into the other statements of the
+    // interpreter's switch.
+    if (UseBytecode)
+      Case = "{\n" + Case + "      }\n";
+    return {{std::move(Case)}, std::move(BitOffsetCase)};
   }
-  addInstructionCasesForEncoding(R, R, Case, BitOffsetCase);
-  return {std::move(Case), std::move(BitOffsetCase)};
+  SmallVector<std::string> Stmts;
+  addInstructionCasesForEncoding(R, R, Stmts, BitOffsetCase);
+  return {std::move(Stmts), std::move(BitOffsetCase)};
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
-    const Record *R, const Record *EncodingDef, std::string &Case,
-    std::string &BitOffsetCase) {
+    const Record *R, const Record *EncodingDef,
+    SmallVectorImpl<std::string> &Case, std::string &BitOffsetCase) {
   const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
 
   // Loop over all of the fields in the instruction, determining which are the
@@ -373,11 +388,8 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
 
   StringRef PostEmitter = R->getValueAsString("PostEncoderMethod");
   if (!PostEmitter.empty()) {
-    Case += "      Value = ";
-    Case += PostEmitter;
-    Case += "(MI, Value";
-    Case += ", STI";
-    Case += ");\n";
+    Case.push_back(
+        ("      Value = " + PostEmitter + "(MI, Value, STI);\n").str());
   }
 }
 
@@ -505,6 +517,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
     emitVarLenCodeEmitter(RK, O);
     return;
   }
+  UseBytecode = Target.getInstructionSet()->getValueAsBit("UseBytecodeEncoder");
   // The set of HwModes used by instruction encodings.
   std::set<unsigned> HwModes;
   BitWidth = 0;
@@ -564,13 +577,20 @@ void CodeEmitterGen::run(raw_ostream &O) {
 
   // Map to accumulate all the cases.
   CaseMapT CaseMap, BitOffsetCaseMap;
+  // The terminator ends the interpreter loop.
+  const StringRef Terminator = UseAPInt ? "return;" : "return Value;";
+  BytecodeProgram Program(EncodedInstructions.size(),
+                          "reportUnsupportedInst(MI);", Terminator);
 
   // Construct all cases statement for each opcode
   for (auto [Index, CGI] : enumerate(EncodedInstructions)) {
     const Record *R = CGI->TheDef;
     auto [Case, BitOffsetCase] = getInstructionCases(R);
 
-    CaseMap[Case].push_back(Index);
+    if (UseBytecode)
+      Program.addSequence(Index, Case);
+    else
+      CaseMap[join(Case, "")].push_back(Index);
     BitOffsetCaseMap[BitOffsetCase].push_back(Index);
   }
 
@@ -589,6 +609,10 @@ void CodeEmitterGen::run(raw_ostream &O) {
     reportUnsupportedInst(MI);
   unsigned TableIndex = opcode - FirstSupportedOpcode;
 )";
+  // OpcodeToOffset has no default case to reject opcodes past the end.
+  if (UseBytecode)
+    O << "  if (TableIndex >= " << EncodedInstructions.size() << ")\n"
+      << "    reportUnsupportedInst(MI);\n";
 
   // Emit initial function code
   if (UseAPInt) {
@@ -605,26 +629,31 @@ void CodeEmitterGen::run(raw_ostream &O) {
         << ", ArrayRef(InstBits[InstBitsIndex]));\n";
     }
     O << "  APInt &Value = Inst;\n"
-      << "  APInt &op = Scratch;\n"
-      << "  switch (opcode) {\n";
+      << "  APInt &op = Scratch;\n";
   } else {
     O << "  uint64_t Value = InstBits[TableIndex];\n"
       << "  uint64_t op = 0;\n"
-      << "  (void)op;  // suppress warning\n"
-      << "  switch (opcode) {\n";
+      << "  (void)op;  // suppress warning\n";
   }
 
-  // Emit each case statement
-  emitCaseMap(O, CaseMap, PrintInstName);
+  if (UseBytecode) {
+    Program.emit(O, "OpcodeToOffset", "EncodeProgram", "TableIndex",
+                 PrintInstName);
+  } else {
+    O << "  switch (opcode) {\n";
 
-  // Default case: unhandled opcode.
-  O << "  default:\n"
-    << "    reportUnsupportedInst(MI);\n"
-    << "  }\n";
-  if (UseAPInt)
-    O << "  Inst = Value;\n";
-  else
-    O << "  return Value;\n";
+    // Emit each case statement
+    emitCaseMap(O, CaseMap, PrintInstName);
+
+    // Default case: unhandled opcode.
+    O << "  default:\n"
+      << "    reportUnsupportedInst(MI);\n"
+      << "  }\n";
+    if (UseAPInt)
+      O << "  Inst = Value;\n";
+    else
+      O << "  return Value;\n";
+  }
   O << "}\n\n";
 
   IfDefEmitter IfDef(O, "GET_OPERAND_BIT_OFFSET");
