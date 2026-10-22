@@ -39,10 +39,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef _WIN32
-// Exported by ntdll.lib and can most efficiently query whether a HANDLE references a console.
-// Since the user mode header isn't provided, all needed declarations are declared manually.
-extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
-    HANDLE handle, PIO_STATUS_BLOCK ioStatus, PVOID information, ULONG length, ULONG informationClass);
+
+using NtQueryVolumeInformationFileType = NTSTATUS
+    NTAPI(HANDLE handle, PIO_STATUS_BLOCK ioStatus, PVOID information, ULONG length, ULONG informationClass);
 
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_fs_device_information
 struct FILE_FS_DEVICE_INFORMATION {
@@ -53,12 +52,22 @@ struct FILE_FS_DEVICE_INFORMATION {
 // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_fsinfoclass
 #  define FileFsDeviceInformation 4
 
+static NtQueryVolumeInformationFileType* __get_NtQVIF_win8_or_greater() {
+  // Windows 7 does not support querying the device type of a console handle, so returning nullptr indicates that this
+  // approach is not supported.
+  if (!IsWindows8OrGreater())
+    return nullptr;
+  return (NtQueryVolumeInformationFileType*)GetProcAddress(
+      GetModuleHandleW(L"ntdll.dll"), "NtQueryVolumeInformationFile");
+}
+
 // https://learn.microsoft.com/en-us/windows/console/console-handles
-static bool __is_handle_terminal_win8_or_greater(intptr_t __handle) {
+// Exported by ntdll and can most efficiently query whether a HANDLE references a console.
+static bool __is_handle_terminal_win8_or_greater(NtQueryVolumeInformationFileType* __fp, intptr_t __handle) {
   IO_STATUS_BLOCK __iosb;
   FILE_FS_DEVICE_INFORMATION __info;
-  const auto __status = NtQueryVolumeInformationFile(
-      reinterpret_cast<void*>(__handle), &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
+  const auto __status =
+      __fp(reinterpret_cast<void*>(__handle), &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
   return (__status >= 0) && (__info.DeviceType == FILE_DEVICE_CONSOLE);
 }
 
@@ -75,8 +84,8 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
   intptr_t __handle = _get_osfhandle(fileno(__stream));
   if (__handle == -1)
     return false;
-  static bool __win8_or_greater = IsWindows8OrGreater();
-  return __win8_or_greater ? __is_handle_terminal_win8_or_greater(__handle) : __is_handle_terminal(__handle);
+  static auto __fp = __get_NtQVIF_win8_or_greater();
+  return __fp ? __is_handle_terminal_win8_or_greater(__fp, __handle) : __is_handle_terminal(__handle);
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
