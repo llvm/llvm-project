@@ -1,86 +1,68 @@
-.. _libc_uefi_support:
+(libc_uefi_support)=
 
-===================
-Supported Functions
-===================
+# Supported Functions
 
 The follow functions and headers are supported at least partially in
 UEFI. Some functions are implemented fully for UEFI.
 
-.. note::
-   LLVM-libc support for UEFI is currently in the early bring-up phase. The
-   tables below are placeholders; for the current source of truth on
-   implemented functions, please refer to ``libc/config/uefi/entrypoints.txt``
-   in the source tree.
+:::{note}
+LLVM-libc support for UEFI is currently in the early bring-up phase. The
+tables below are placeholders; for the current source of truth on
+implemented functions, please refer to `libc/config/uefi/entrypoints.txt`
+in the source tree.
+:::
 
-ctype.h
--------
+## ctype.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-string.h
---------
+## string.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-strings.h
----------
+## strings.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-stdbit.h
---------
+## stdbit.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-stdlib.h
---------
+## stdlib.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-inttypes.h
-----------
+## inttypes.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-stdio.h
---------
+## stdio.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-time.h
-------
+## time.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
 
-assert.h
---------
+## assert.h
 
-=============  =========
-Function Name  Available
-=============  =========
-=============  =========
+| Function Name | Available |
+| ------------- | --------- |
+|               |           |
+
