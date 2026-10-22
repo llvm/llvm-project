@@ -42,4 +42,3 @@ func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa
   %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
-
