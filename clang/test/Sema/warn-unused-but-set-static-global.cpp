@@ -215,7 +215,7 @@ int f10() {
   return TmplCounted<0>::live + TmplExplicit<0>::x + TmplExplicit<1>::x;
 }
 
-// FIXME: These are truly unused but do not warn.
+// FIXME: These are truly unused but we do not warn.
 namespace {
   template <class T> struct TmplDepType {
     static T x;
