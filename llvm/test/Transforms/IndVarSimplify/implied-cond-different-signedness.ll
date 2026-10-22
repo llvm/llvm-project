@@ -3,8 +3,6 @@
 
 ; Check that an exit condition is proven from a guard with a predicate of
 ; different signedness.
-;
-; FIXME: SCEV cannot prove these yet, fold the exits to false.
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
@@ -22,10 +20,7 @@ define void @same_sign(ptr %px, ptr %py, i32 %w) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Y_1:%.*]] = add nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[Y_1]], [[M]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -69,10 +64,7 @@ define void @ult_nonneg(i32 %x, ptr %py, i32 %w) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Y_1:%.*]] = add nuw nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[Y_1]], [[M]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -115,10 +107,7 @@ define void @slt_neg(i32 %x, ptr %py, i32 %w) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Y_1:%.*]] = add nsw i32 [[Y]], 1
-; CHECK-NEXT:    [[Q:%.*]] = icmp ule i32 [[Y_1]], [[M]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
