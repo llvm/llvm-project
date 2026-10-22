@@ -801,6 +801,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1112,12 +1113,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
-
-- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
-  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
-  host toolchain. Macro definitions using `#` as the value separator and
-  `/permissive` options are also translated consistently for host and device
-  compilation.
 
 #### Miscellaneous Clang Crashes Fixed
 
