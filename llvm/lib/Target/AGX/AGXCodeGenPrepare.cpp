@@ -138,6 +138,7 @@ static bool lowerIndirectCalls(Module &M) {
 
 bool AGXAlwaysInline::runOnModule(Module &M) {
   bool Changed = lowerIndirectCalls(M);
+  Changed |= lowerAGXRecursion(M);
   // Modules without any agx_kernel function (for example tests of single
   // functions) compile every external function as an entry point.
   bool HasKernels = any_of(M, [](const Function &F) {

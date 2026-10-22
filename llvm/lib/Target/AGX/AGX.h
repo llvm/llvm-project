@@ -19,6 +19,7 @@ namespace llvm {
 
 class AGXTargetMachine;
 class FunctionPass;
+class Module;
 class ModulePass;
 class PassRegistry;
 
@@ -34,6 +35,10 @@ FunctionPass *createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM = nullpt
 FunctionPass *createAGXAnnotateControlFlowPass();
 FunctionPass *createAGXSinkAddressesPass();
 FunctionPass *createAGXLowerGenericAddressesPass();
+
+// Replaces recursive functions by state machines over an explicit stack
+// (AGXLowerRecursion.cpp).
+bool lowerAGXRecursion(Module &M);
 
 // Instruction selection.
 FunctionPass *createAGXISelDag(AGXTargetMachine &TM);

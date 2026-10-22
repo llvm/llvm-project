@@ -419,8 +419,9 @@ Kernel ABI
 ==========
 
 Kernels use the ``agx_kernel`` calling convention and return ``void``. There
-are no calls: every other function is inlined, and the backend reports an
-error for calls that remain. A module without ``agx_kernel`` functions
+are no calls: every other function is inlined (recursive ones after the
+lowering in `Recursion`_), and the backend reports an error for calls that
+remain. A module without ``agx_kernel`` functions
 compiles each external function as an entry point with the kernel ABI.
 
 Kernel arguments are passed in uniform registers. They are packed in order in
@@ -624,7 +625,8 @@ sequence costs 0.4 to 0.65 us.
 
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
 precision`_; diagnosed as unsupported), textures and graphics shaders, calls
-to functions that are not defined in the module, and recursion.
+to functions that are not defined in the module, recursion through variadic
+functions or ``musttail`` calls, and dynamic ``alloca`` in recursive functions.
 
 The backend does not use the hardware call and return instructions: all
 functions are inlined into the kernels. (G14C does have direct and
@@ -636,6 +638,33 @@ indirect call becomes a test of the callee against each address-taken
 function of the module with the same type, with a direct call (inlined) for
 each, and a trap if none matches. The address of such a function, as a
 value (stored, compared or passed), is its number in the module (1, 2, ...).
+
+Recursion
+---------
+
+Each cycle of the call graph (after indirect calls became direct ones)
+becomes, for each of its functions called from outside the cycle, one
+function that runs the whole cycle over an explicit stack of frames in
+private memory, and is then inlined like any other:
+
+* A function's arguments, its ``alloca``\ s and the values it uses outside
+  their basic block (its blocks are split after each call into the cycle)
+  are fields of its frame, after a header of two 32-bit words: the number of
+  the call site to return to, and the caller's stack pointer. Frames are
+  16-byte aligned.
+* A call stores the arguments in the callee's frame, which follows the
+  caller's, and branches to the callee's entry; a return stores the return
+  value in a slot of the function, pops its frame and branches on the call
+  site number to the code after the call (or out, for 0).
+
+The control flow passes make the result structured, so the threads of a
+SIMD-group may recurse to different depths. The stack is
+``-agx-recursion-stack-size`` bytes per thread (by default four times the
+module flag ``!{i32 2, !"agx-stack-size", i32 N}``, else 4096), part of the
+kernel's private memory. A thread whose call would pass its end stores 1 to
+``__agx_stack_overflow``, a 32-bit global of device memory that is 0 at load,
+and ends; the runtime reports the launch as failed (ZLUDA's ``zluda_agx``
+gives ``CUDA_ERROR_LAUNCH_FAILED``) and clears the word.
 
 .. _agx-apple9:
 
