@@ -453,6 +453,8 @@ defm : BoolField<"strip-global-constants", "false",
 // WholeProgramDevirt.cpp
 defm : BoolField<"devirtualize-speculatively", "false",
   "Enable speculative devirtualization optimization">;
+defm : ValueField<"wholeprogramdevirt-max-speculative-targets", "unsigned", "2",
+  "Maximum number of targets allowed for a call to be speculatively devirtualized">;
 defm : ValueField<"wholeprogramdevirt-branch-funnel-threshold", "unsigned", "10",
   "Maximum number of call targets per call site to enable branch funnels">;
 defm : EnumField<"wholeprogramdevirt-check", "WPDCheckMode", "",

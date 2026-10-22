@@ -69,6 +69,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -408,15 +409,25 @@ struct VirtualCallSite {
   void
   emitRemark(const StringRef OptName, const StringRef TargetName,
              function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter) {
+    emitRemark(OptName, ArrayRef{TargetName}, OREGetter);
+  }
+
+  void
+  emitRemark(const StringRef OptName, ArrayRef<StringRef> TargetNames,
+             function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter) {
     Function *F = CB.getCaller();
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
     using namespace ore;
-    OREGetter(*F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
-                       << NV("Optimization", OptName)
-                       << ": devirtualized a call to "
-                       << NV("FunctionName", TargetName));
+    OptimizationRemark Remark(DEBUG_TYPE, OptName, DLoc, Block);
+    ListSeparator LS;
+
+    Remark << NV("Optimization", OptName) << ": devirtualized a call to ";
+    for (StringRef TargetName : TargetNames)
+      Remark << LS << NV("FunctionName", TargetName);
+
+    OREGetter(*F).emit(Remark);
   }
 
   void replaceAndErase(
@@ -610,7 +621,8 @@ struct DevirtModule {
 
   void applySingleImplDevirt(VTableSlotInfo &SlotInfo, Constant *TheFn,
                              bool &IsExported);
-  void applySpeculativeDevirt(VTableSlotInfo &SlotInfo, Constant *TheFn,
+  void applySpeculativeDevirt(VTableSlotInfo &SlotInfo,
+                              const SetVector<GlobalValue *> &Targets,
                               bool &IsExported);
 
   bool trySingleImplDevirt(ModuleSummaryIndex *ExportSummary,
@@ -1131,8 +1143,13 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!Fn)
       return false;
 
-    if (FunctionsToSkip.match(Fn->getName()))
-      return false;
+    // Speculative devirt can handle skipping just one target, but the other
+    // cases can't, so we treat skipped functions as public to prevent anything
+    // other than speculative devirtualization for this slot.
+    if (FunctionsToSkip.match(Fn->getName())) {
+      HasPublicTarget = true;
+      continue;
+    }
 
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
@@ -1355,12 +1372,17 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
     Apply(P.second);
 }
 
-void DevirtModule::applySpeculativeDevirt(VTableSlotInfo &SlotInfo,
-                                          Constant *TheFn, bool &IsExported) {
-  // Don't devirtualize function if we're told to skip it
-  // in -wholeprogramdevirt-skip.
-  const StringRef FnName = TheFn->stripPointerCasts()->getName();
-  if (FunctionsToSkip.match(FnName))
+void DevirtModule::applySpeculativeDevirt(
+    VTableSlotInfo &SlotInfo, const SetVector<GlobalValue *> &TargetFns,
+    bool &IsExported) {
+  // Skip target functions that are specified in -wholeprogramdevirt-skip.
+  const auto FilteredTargetFns =
+      make_filter_range(TargetFns, [this](const GlobalValue *Fn) {
+        const StringRef FnName = Fn->stripPointerCasts()->getName();
+        return !FunctionsToSkip.match(FnName);
+      });
+
+  if (FilteredTargetFns.empty())
     return;
 
   const auto ApplyDevirt = [&](CallSiteInfo &CSInfo) {
@@ -1379,22 +1401,43 @@ void DevirtModule::applySpeculativeDevirt(VTableSlotInfo &SlotInfo,
         continue;
 
       NumSpeculative++;
-      if (RemarksEnabled)
-        VCallSite.emitRemark("speculative", FnName, OREGetter);
+      if (RemarksEnabled) {
+        const auto TargetNames =
+            map_to_vector<2>(FilteredTargetFns, [](const GlobalValue *GV) {
+              return GV->stripPointerCasts()->getName();
+            });
+        VCallSite.emitRemark("speculative", TargetNames, OREGetter);
+      }
 
       CallBase &OrigCall = VCallSite.CB;
       assert(!OrigCall.getCalledFunction() && "devirtualizing direct call?");
 
       IRBuilder Builder(&OrigCall);
       Type *CalleeTy = OrigCall.getCalledOperand()->getType();
-      Value *SpeculatedCallee = Builder.CreateBitCast(TheFn, CalleeTy);
 
-      // Version the indirect call site. If the called value is equal to the
-      // given callee, 'NewInst' will be executed, otherwise the original call
-      // site will be executed.
-      MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
-      CallBase &NewCall = versionCallSite(OrigCall, SpeculatedCallee, Weights);
-      NewCall.setCalledOperand(SpeculatedCallee);
+      // We want to assign the unlikely branch weight to the indirect call,
+      // and the likely branch weight over all the devirtualized direct calls.
+      // For now, we assume that each of the devirt targets is equally likely
+      // and assign the same probability to each of them.
+      uint32_t RemainingWeight =
+          MDBuilder::kLikelyBranchWeight + MDBuilder::kUnlikelyBranchWeight;
+      uint32_t SingleTargetWeight =
+          MDBuilder::kLikelyBranchWeight / TargetFns.size();
+
+      for (GlobalValue *TargetFn : FilteredTargetFns) {
+        Value *SpeculatedCallee = Builder.CreateBitCast(TargetFn, CalleeTy);
+
+        // Version the indirect call site. If the called value is equal to the
+        // given callee, 'NewInst' will be executed, otherwise the original call
+        // site will be executed.
+        RemainingWeight -= SingleTargetWeight;
+        MDNode *Weights =
+            MDBuilder(M.getContext())
+                .createBranchWeights(SingleTargetWeight, RemainingWeight);
+        CallBase &NewCall =
+            versionCallSite(OrigCall, SpeculatedCallee, Weights);
+        NewCall.setCalledOperand(SpeculatedCallee);
+      }
     }
 
     if (CSInfo.isExported())
@@ -1543,35 +1586,36 @@ bool DevirtModule::trySpeculativeDevirt(
   if (!DevirtSpeculatively)
     return false;
 
-  // See if the program contains a single implementation of this virtual
-  // function.
-  auto *TheFn = TargetsForSlot[0].Fn;
-  for (auto &&Target : TargetsForSlot)
-    if (TheFn != Target.Fn)
-      return false;
+  SetVector<GlobalValue *> TargetFns;
+  for (VirtualCallTarget &Target : TargetsForSlot)
+    TargetFns.insert(Target.Fn);
 
-  // If so, update each call site to call that implementation directly.
-  if (RemarksEnabled || AreStatisticsEnabled())
-    TargetsForSlot[0].WasDevirt = true;
+  if (TargetFns.size() > Opts.wholeprogramdevirt_max_speculative_targets)
+    return false;
 
   bool IsExported = false;
-  applySpeculativeDevirt(SlotInfo, TheFn, IsExported);
+  applySpeculativeDevirt(SlotInfo, TargetFns, IsExported);
+
+  if (RemarksEnabled || AreStatisticsEnabled())
+    for (auto &Target : TargetsForSlot)
+      Target.WasDevirt = true;
+
   if (!IsExported)
     return false;
 
   // If the only implementation has local linkage, we must promote to external
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage())
-    promoteToExternal(M, *TheFn);
+  if (TargetFns[0]->hasLocalLinkage())
+    promoteToExternal(M, *TargetFns[0]);
 
-  if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFn->getGUID()))
+  if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TargetFns[0]->getGUID()))
     // Any needed promotion of 'TheFn' has already been done during
     // LTO unit split, so we can ignore return value of AddCalls.
     addCalls(SlotInfo, TheFnVI);
 
   Res->TheKind = WholeProgramDevirtResolution::Speculative;
-  Res->SingleImplName = std::string(TheFn->getName());
+  Res->SingleImplName = std::string(TargetFns[0]->getName());
 
   return true;
 }
@@ -2547,7 +2591,7 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     if (auto *A = dyn_cast<GlobalAlias>(SingleImplVal->stripPointerCasts()))
       if (!A->isInterposable() && !A->getAliaseeObject()->isInterposable())
         SingleImplVal = A->getAliaseeObject();
-    Constant *SingleImpl = cast<Constant>(SingleImplVal);
+    GlobalValue *SingleImpl = cast<GlobalValue>(SingleImplVal);
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;
@@ -2555,7 +2599,9 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
       applySingleImplDevirt(SlotInfo, SingleImpl, IsExported);
     else {
       assert(Res.TheKind == WholeProgramDevirtResolution::Speculative);
-      applySpeculativeDevirt(SlotInfo, SingleImpl, IsExported);
+      SetVector<GlobalValue *> TargetFns;
+      TargetFns.insert(SingleImpl);
+      applySpeculativeDevirt(SlotInfo, TargetFns, IsExported);
     }
     assert(!IsExported);
   }
