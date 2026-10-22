@@ -14,6 +14,11 @@
 // RUN: FileCheck -check-prefix=NONE < %t %s
 // RUN: %clang -S -emit-llvm --coverage -fprofile-filter-files=".*\.c$" -fprofile-exclude-files=".*\.h$" %s -o %t
 // RUN: FileCheck -check-prefix=JUST-C < %t %s
+// RUN: ln -sf %s %s.symlink.c
+// RUN: %clang -S -emit-llvm --coverage %s.symlink.c -o %t
+// RUN: FileCheck -check-prefix=ALL < %t %s
+// RUN: %clang -S -emit-llvm --coverage -fprofile-filter-files=".*\.symlink.c$" %s.symlink.c -o %t
+// RUN: FileCheck -check-prefix=NO-HEADER < %t %s
 
 #include "Inputs/code-coverage-filter1.h"
 #include "Inputs/code-coverage-filter2.h"
