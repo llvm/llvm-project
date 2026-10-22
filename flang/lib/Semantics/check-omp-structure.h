@@ -443,9 +443,11 @@ private:
   void CheckTypeParamInquiry(const parser::CharBlock &source,
       const parser::OmpObject &object, llvm::omp::Clause clauseId);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObject &object, llvm::StringRef clause = "");
+      const parser::OmpObject &object, llvm::StringRef clause = "",
+      bool checkSubstrings = true);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "",
+      bool checkSubstrings = true);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
@@ -488,6 +490,8 @@ private:
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
   void CheckReductionObjects(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  void CheckSubstring(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
       parser::CharBlock source, llvm::omp::Clause clauseId);
