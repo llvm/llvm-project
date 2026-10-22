@@ -1222,12 +1222,16 @@ SectionList *Module::GetSectionList() {
   // Guard the lazy build with m_sections_mutex rather than m_mutex:
   // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
   // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
-  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
-  if (!m_sections_up) {
-    if (ObjectFile *obj_file = GetObjectFile())
-      obj_file->CreateSections(*GetUnifiedSectionList());
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+    if (m_sections_up)
+      return m_sections_up.get();
   }
-  return m_sections_up.get();
+  ObjectFile *obj_file = GetObjectFile();
+  if (obj_file)
+    obj_file->GetSectionList();
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  return obj_file ? GetUnifiedSectionList() : m_sections_up.get();
 }
 
 LockedPtr<ObjectFile> Module::GetObjectFileLocked() {

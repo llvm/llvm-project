@@ -73,7 +73,7 @@ EXTERN int omp_get_device_num(void) {
 }
 
 static inline bool is_initial_device_uid(const char *DeviceUid) {
-  return strcmp(DeviceUid, GenericPluginTy::getHostDeviceUid()) == 0;
+  return strcmp(DeviceUid, PM->getHostDeviceUid()) == 0;
 }
 
 EXTERN int omp_get_device_from_uid(const char *DeviceUid) {
@@ -117,7 +117,7 @@ EXTERN const char *omp_get_uid_from_device(int DeviceNum) {
   if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Call to " << __func__
                         << " returning initial device UID";
-    return GenericPluginTy::getHostDeviceUid();
+    return PM->getHostDeviceUid();
   }
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);

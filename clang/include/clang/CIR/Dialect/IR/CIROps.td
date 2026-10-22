@@ -3578,7 +3578,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    void setupRegionInitializedLLVMGlobalOp(
+    mlir::LogicalResult setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
@@ -6694,6 +6694,47 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
   let assemblyFormat = [{
     $matrix
     `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixExtractRowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixExtractRowOp : CIR_Op<"matrix.extract_row", [
+  Pure,
+  TypesMatchWith<
+    "type of 'result' matches vector type with same element type of 'matrix' "
+    "and size equals to num columns",
+    "matrix", "result",
+    "cir::VectorType::get("
+      "mlir::cast<cir::MatrixType>($_self).getElementType(),"
+      "mlir::cast<cir::MatrixType>($_self).getNumColumns()"
+    ")">
+]> {
+  let summary = "Extract a row from a matrix object";
+  let description = [{
+    The `cir.matrix.extract_row` operation extracts a row from from a matrix
+    object using a row index.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %row = cir.matrix.extract_row %matrix[%rowIdx : !u64i]
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins 
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx
+  );
+
+  let results = (outs CIR_AnyVectorType:$result);
+
+  let assemblyFormat = [{
+    $matrix
+    `[` $rowIdx `:` type($rowIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];
 }

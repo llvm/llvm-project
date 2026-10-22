@@ -1,5 +1,5 @@
 // RUN: rm -rf %t 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/ModuleMapLocations/Module_ModuleMap -I %S/Inputs/ModuleMapLocations/Both -F %S/Inputs/ModuleMapLocations -I %S/Inputs/ModuleMapLocations -F %S/Inputs -x objective-c -fsyntax-only %s -verify -Wno-private-module
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/ModuleMapLocations/Module_ModuleMap -I %S/Inputs/ModuleMapLocations/Both -I %S/Inputs/ModuleMapLocations/Module_Map -F %S/Inputs/ModuleMapLocations -I %S/Inputs/ModuleMapLocations -F %S/Inputs -x objective-c -fsyntax-only %s -verify -Wno-private-module
 
 // regular
 @import module_map; // expected-warning@*{{as a module map name is deprecated, rename it to module.modulemap}}
