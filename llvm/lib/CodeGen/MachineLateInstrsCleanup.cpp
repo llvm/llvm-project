@@ -182,16 +182,16 @@ static bool isNonFixedSpillSlotReload(const MachineInstr &MI,
   if (MI.mayStore() || !MI.hasOneMemOperand())
     return false;
   int FI;
-  return TII.isLoadFromStackSlotPostFE(MI, FI) &&
-         !MFI.isFixedObjectIndex(FI) && MFI.isSpillSlotObjectIndex(FI);
+  return TII.isLoadFromStackSlotPostFE(MI, FI) && !MFI.isFixedObjectIndex(FI) &&
+         MFI.isSpillSlotObjectIndex(FI);
 }
 
 // Return true if MI may write the spill slot that Reload reads. A call that
 // does not store cannot write the caller's spill slots.
 static bool mayClobberReload(const MachineInstr &MI,
                              const MachineInstr &Reload) {
-  return MI.mayStore() && MI.mayAlias(static_cast<AAResults *>(nullptr),
-                                      Reload, /*UseTBAA=*/false);
+  return MI.mayStore() && MI.mayAlias(static_cast<AAResults *>(nullptr), Reload,
+                                      /*UseTBAA=*/false);
 }
 
 // Return true if MI is a potential candidate for reuse/removal and if so
