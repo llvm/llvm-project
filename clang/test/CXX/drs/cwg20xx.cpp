@@ -125,7 +125,9 @@ static_assert(__is_same(decltype(a), decltype(b)));
 namespace cwg2061 { // cwg2061: 2.7
 #if __cplusplus >= 201103L
   namespace A {
+    constexpr int value = 0;
     inline namespace b {
+      constexpr int value = 1;
       namespace C {
         // 'f' is the example from the DR.  'S' is an example where if we didn't
         // properly handle the two being the same, we would get an incomplete
@@ -138,6 +140,9 @@ namespace cwg2061 { // cwg2061: 2.7
 
   namespace A {
     namespace C {
+      // GH95154: reopening C must retain b as its semantic parent, so lookup
+      // finds b::value before considering A::value.
+      static_assert(value == 1, "lookup in the original inline namespace");
       template<> void f<int>() { }
       template<> struct S<int> { };
     }
