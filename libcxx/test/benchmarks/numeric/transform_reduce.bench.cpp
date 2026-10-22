@@ -21,13 +21,13 @@
 #include "../GenerateInput.h"
 #include "test_macros.h"
 
-// Keep values small so that signed integer arithmetic does not overflow even for the largest inputs
+// Keep values small so that signed integer multiplication doesn't overflow
 template <class T>
 T random_value() {
   if constexpr (std::is_integral_v<T>)
-    return getRandomInteger<T>(-100, 100);
+    return getRandomInteger<T>(1, 1000);
   else
-    return getRandomFloat<T>(-100, 100);
+    return getRandomFloat<T>(1, 1000);
 }
 
 int main(int argc, char** argv) {
@@ -42,10 +42,19 @@ int main(int argc, char** argv) {
 
             Container c;
             std::generate_n(std::back_inserter(c), size, [] { return random_value<ValueType>(); });
-            ValueType init = random_value<ValueType>();
+            ValueType init = static_cast<ValueType>(1);
 
             auto transform = [](auto x) { return x * 3; };
-            auto reduce    = [](auto x, auto y) { return x + y; };
+            auto reduce    = [](auto x, auto y) {
+              if constexpr (std::is_floating_point_v<decltype(x)>) {
+                // Compilers aren't allowed to optimize away the FP divisions and multiplications without fast-math.
+                return x / 3. * 3. / 5. * 5. + y / 7. * 7. / 9. * 9.;
+              } else {
+                // p=46337 is the largest prime with '(p-1)^2 <= INT_MAX', so the chain of reductions never overflows.
+                constexpr decltype(x) p = 46337;
+                return x * y % p;
+              }
+            };
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::ClobberMemory();
@@ -78,10 +87,19 @@ int main(int argc, char** argv) {
             Container c1, c2;
             std::generate_n(std::back_inserter(c1), size, [] { return random_value<ValueType>(); });
             std::generate_n(std::back_inserter(c2), size, [] { return random_value<ValueType>(); });
-            ValueType init = random_value<ValueType>();
+            ValueType init = static_cast<ValueType>(1);
 
             auto transform = [](auto x, auto y) { return x - y; };
-            auto reduce    = [](auto x, auto y) { return x + y; };
+            auto reduce    = [](auto x, auto y) {
+              if constexpr (std::is_floating_point_v<decltype(x)>) {
+                // Compilers aren't allowed to optimize away the FP divisions and multiplications without fast-math.
+                return x / 3. * 3. / 5. * 5. + y / 7. * 7. / 9. * 9.;
+              } else {
+                // p=46337 is the largest prime with '(p-1)^2 <= INT_MAX', so the chain of reductions never overflows.
+                constexpr decltype(x) p = 46337;
+                return x * y % p;
+              }
+            };
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::ClobberMemory();
