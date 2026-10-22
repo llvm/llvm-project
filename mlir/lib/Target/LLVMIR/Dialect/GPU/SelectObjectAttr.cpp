@@ -387,7 +387,7 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
   // Allocate in the entry block, so that a launch in a loop does not grow the
   // stack on every iteration.
   BasicBlock &entry = builder.GetInsertBlock()->getParent()->getEntryBlock();
-  IRBuilder<> allocaBuilder(&entry, entry.getFirstInsertionPt());
+  IRBuilder<> allocaBuilder(entry.getFirstInsertionPt());
   Value *argStruct = allocaBuilder.CreateAlloca(structTy, 0u);
   Value *argArray = allocaBuilder.CreateAlloca(
       ptrTy, ConstantInt::get(intPtrTy, structTypes.size()));
