@@ -2590,11 +2590,15 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
   EStatus.ExtendedDiag = &MSWarning;
-  bool Result = (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
-                    ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx,
-                                                                  *SProxy, this)
-                    : Init->EvaluateAsInitializer(Ctx, this, EStatus,
-                                                  IsConstantInitialization);
+
+  // VarDecl::evaluateValue is used in a great many places, but we only want to
+  // allow AST mutation during the initial check for constant initialization.
+  bool Result =
+      (SProxy && IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+          ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SProxy,
+                                                        this)
+          : Init->EvaluateAsInitializer(Ctx, this, EStatus,
+                                        IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't

@@ -2817,8 +2817,9 @@ int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   return RISCVLoadFPImm::getLoadFPImm(Imm);
 }
 
-bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   bool IsLegalVT = false;
   if (VT == MVT::f16)
     IsLegalVT = Subtarget.hasStdExtZfhminOrZhinxmin();
@@ -2830,25 +2831,25 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     IsLegalVT = Subtarget.hasStdExtZfbfmin();
 
   if (!IsLegalVT)
-    return false;
+    return FPImmAction::ConstantPool;
 
   if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Some constants can be produced by fli+fneg.
   if (Imm.isNegative() && getLegalZfaFPImm(-Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
     // td can handle +0.0 or -0.0 already.
     // -0.0 can be created by fmv + fneg.
-    return Imm.isZero();
+    return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
 
   // Special case: fmv + fneg
   if (Imm.isNegZero())
-    return true;
+    return FPImmAction::Legal;
 
   // Building an integer and then converting requires a fmv at the end of
   // the integer sequence. The fmv is not required for Zfinx.
@@ -2856,7 +2857,9 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   const int Cost =
       FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
                                            Subtarget.getXLen(), Subtarget);
-  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost;
+  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
 }
 
 // TODO: This is very conservative.

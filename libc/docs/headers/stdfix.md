@@ -1,63 +1,46 @@
-========
-stdfix.h
-========
+# stdfix.h
 
-Standards and Goals
--------------------
+## Standards and Goals
 
--   stdfix.h is specified in the `ISO/IEC TR 18037:2008 <https://www.iso.org/standard/51126.html>`_,
-    C extensions to support embedded processors .
+- stdfix.h is specified in the [ISO/IEC TR 18037:2008](https://www.iso.org/standard/51126.html),
+  C extensions to support embedded processors .
+- Its [specifications](https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip).
+- Our goal is to implement a complete set of math functions for fixed point
+  types, most of them are currently not included in the ISO/IEC TR
+  18037:2008 standard. Our math functions for fixed point types are modeled
+  after the C99/C23 math functions for floating point types.
 
--   Its `specifications <https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip>`_.
+### Source location
 
--   Our goal is to implement a complete set of math functions for fixed point
-    types, most of them are currently not included in the ISO/IEC TR
-    18037:2008 standard.  Our math functions for fixed point types are modeled
-    after the C99/C23 math functions for floating point types.
+- The main source for fixed-point functions is located at:
+  `libc/src/stdfix` with subdirectories for internal implementations.
 
----------------
-Source location
----------------
+### Implementation Status
 
--   The main source for fixed-point functions is located at:
-    ``libc/src/stdfix`` with subdirectories for internal implementations.
+#### Requirements
 
----------------------
-Implementation Status
----------------------
+- In order to build LLVM libc to support fixed-point arithmetics, we need the
+  compiler to support the basic fixed-point types `_Fract` and `_Accum` in
+  C++.
+- For the users to be able to use the generated headers, their compiler needs
+  to support `_Fract` and `_Accum` types in C or C++.
+- This compiler support is checked at the beginning of
+  [libc/include/llvm-libc-macros/stdfix-macros.h](https://github.com/llvm/llvm-project/tree/main/libc/include/llvm-libc-macros/stdfix-macros.h).
 
-Requirements
-============
+#### Predefined Macros
 
--   In order to build LLVM libc to support fixed-point arithmetics, we need the
-    compiler to support the basic fixed-point types `_Fract` and `_Accum` in
-    C++.
+- We use the macro `LIBC_COMPILER_HAS_FIXED_POINT` to specify whether the
+  compiler support the fixed-point types.
+- Other predefined precision macros specified in section 7.18a.3 are defined
+  in [libc/include/llvm-libc-macros/stdfix-macros.h](https://github.com/llvm/llvm-project/tree/main/libc/include/llvm-libc-macros/stdfix-macros.h)
+  using the default configuration of `typical desktop processor` in section
+  A.3.
 
--   For the users to be able to use the generated headers, their compiler needs
-    to support `_Fract` and `_Accum` types in C or C++.
-
--   This compiler support is checked at the beginning of
-    `libc/include/llvm-libc-macros/stdfix-macros.h <https://github.com/llvm/llvm-project/tree/main/libc/include/llvm-libc-macros/stdfix-macros.h>`_.
-
-
-
-Predefined Macros
-=================
-
--   We use the macro `LIBC_COMPILER_HAS_FIXED_POINT` to specify whether the
-    compiler support the fixed-point types.
-
--   Other predefined precision macros specified in section 7.18a.3 are defined
-    in `libc/include/llvm-libc-macros/stdfix-macros.h <https://github.com/llvm/llvm-project/tree/main/libc/include/llvm-libc-macros/stdfix-macros.h>`_
-    using the default configuration of `typical desktop processor` in section
-    A.3.
-
-
-Fixed-point Arithmetics
-=======================
+#### Fixed-point Arithmetics
 
 The following functions are included in the ISO/IEC TR 18037:2008 standard.
 
+```{eval-rst}
 +---------------+------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------+
 | Function Name | _Fract (r)                                                                               | _Accum (k)                                                                               |
 |               +------------------------------+----------------------------+------------------------------+------------------------------+----------------------------+------------------------------+
@@ -65,40 +48,38 @@ The following functions are included in the ISO/IEC TR 18037:2008 standard.
 |               +----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 |               | unsigned (uhr) | signed (hr) | unsigned (ur) | signed (r) | unsigned (ulr) | signed (lr) | unsigned (uhk) | signed (hk) | unsigned (uk) | signed (k) | unsigned (ulk) | signed (lk) |
 +===============+================+=============+===============+============+================+=============+================+=============+===============+============+================+=============+
-| abs           |                | |check|     |               | |check|    |                | |check|     |                | |check|     |               | |check|    |                | |check|     |
+| abs           |                | ✅          |               | ✅         |                | ✅          |                | ✅          |               | ✅         |                | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| bits\*        | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     |
+| bits\*        | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| \*bits        | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     |
+| \*bits        | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| countls       | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     |
+| countls       | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| divi\*        |                |             | |check|       | |check|    | |check|        | |check|     |                |             | |check|       | |check|    | |check|        | |check|     |
+| divi\*        |                |             | ✅            | ✅         | ✅             | ✅          |                |             | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| idiv\*        |                |             | |check|       | |check|    | |check|        | |check|     |                |             | |check|       | |check|    | |check|        | |check|     |
+| idiv\*        |                |             | ✅            | ✅         | ✅             | ✅          |                |             | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 | muli          |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| \*divi        |                |             | |check|       | |check|    | |check|        | |check|     |                |             | |check|       | |check|    | |check|        | |check|     |
+| \*divi        |                |             | ✅            | ✅         | ✅             | ✅          |                |             | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| round         | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     | |check|        | |check|     | |check|       | |check|    | |check|        | |check|     |
+| round         | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          | ✅             | ✅          | ✅            | ✅         | ✅             | ✅          |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
+```
 
-================== =========
-Type Generic Macro Available
-================== =========
-absfx              |check|
-countlsfx          |check|
-roundfx            |check|
-================== =========
+| Type Generic Macro | Available   |
+| ------------------ | ----------- |
+| absfx              | {{ check }} |
+| countlsfx          | {{ check }} |
+| roundfx            | {{ check }} |
 
-
-Higher math functions
-=====================
+#### Higher math functions
 
 The following math functions are modeled after C99/C23 math functions for
 floating point types, but are not part of the ISO/IEC TR 18037:2008 spec.
 
+```{eval-rst}
 +---------------+------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------+
 | Function Name | _Fract (r)                                                                               | _Accum (k)                                                                               |
 |               +------------------------------+----------------------------+------------------------------+------------------------------+----------------------------+------------------------------+
@@ -108,24 +89,24 @@ floating point types, but are not part of the ISO/IEC TR 18037:2008 spec.
 +===============+================+=============+===============+============+================+=============+================+=============+===============+============+================+=============+
 | cos           |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| exp           |                |             |               |            |                |             |                | |check|     |               | |check|    |                |             |
+| exp           |                |             |               |            |                |             |                | ✅          |               | ✅         |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 | log           |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 | sin           |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
-| sqrt          | |check|        |             | |check|       |            | |check|        |             | |check|        |             | |check|       |            |                |             |
+| sqrt          | ✅             |             | ✅            |            | ✅             |             | ✅             |             | ✅            |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 | tan           |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
+```
 
-
-Conversion Functions
-====================
+#### Conversion Functions
 
 The following conversion functions are included in the ISO/IEC TR 18037:2008
 standard.
 
+```{eval-rst}
 +---------------+------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------+
 | Function Name | _Fract (r)                                                                               | _Accum (k)                                                                               |
 |               +------------------------------+----------------------------+------------------------------+------------------------------+----------------------------+------------------------------+
@@ -139,9 +120,9 @@ standard.
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
 | strtofx       |                |             |               |            |                |             |                |             |               |            |                |             |
 +---------------+----------------+-------------+---------------+------------+----------------+-------------+----------------+-------------+---------------+------------+----------------+-------------+
+```
 
-
-Warnings
-========
+#### Warnings
 
 This is currently a work-in-progress, its headers, macros, and ABI are still unstable, and might be modified.
+
