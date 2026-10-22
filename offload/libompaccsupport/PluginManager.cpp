@@ -80,9 +80,10 @@ void PluginManager::deinit() {
   }
 
   Plugins.clear();
-  if (LibOffloadInitialized)
+  if (LibOffloadInitialized) {
     if (auto Err = olShutDown())
       REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  }
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
@@ -275,13 +276,11 @@ bool PluginManager::registerImageOnDevice(
 }
 
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
-  RTLsMtx.lock();
-
   // There are no devices to register with if liboffload was not initialized.
-  if (!LibOffloadInitialized) {
-    RTLsMtx.unlock();
+  if (!LibOffloadInitialized)
     return;
-  }
+
+  RTLsMtx.lock();
 
   // Upgrade the entries from the legacy implementation if necessary.
   Desc = upgradeLegacyEntries(Desc);
