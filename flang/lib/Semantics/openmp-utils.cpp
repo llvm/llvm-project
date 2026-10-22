@@ -32,6 +32,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
