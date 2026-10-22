@@ -1360,6 +1360,8 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+  
+  let hasCanonicalizer = 1;
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
