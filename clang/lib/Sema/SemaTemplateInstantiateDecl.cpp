@@ -966,29 +966,34 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
                                                 *ReqdWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
           *this, TemplateArgs, *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUMaxNumWorkGroups =
             dyn_cast<AMDGPUMaxNumWorkGroupsAttr>(TmplAttr)) {
       instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
           *this, TemplateArgs, *AMDGPUMaxNumWorkGroups, New);
+      continue;
     }
 
     if (const auto *CUDAClusterDims = dyn_cast<CUDAClusterDimsAttr>(TmplAttr)) {
       instantiateDependentCUDAClusterDimsAttr(*this, TemplateArgs,
                                               *CUDAClusterDims, New);
+      continue;
     }
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
@@ -3151,18 +3156,16 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         FunctionTemplate,
         TemplateArgumentList::CreateCopy(SemaRef.Context, Innermost),
         /*InsertToken=*/{});
-  } else if (FunctionRewriteKind == RewriteKind::None) {
-    if (isFriend && D->isThisDeclarationADefinition()) {
-      // Do not connect the friend to the template unless it's actually a
-      // definition. We don't want non-template functions to be marked as being
-      // template instantiations.
-      Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
-    } else if (!isFriend) {
-      // If this is not a function template, and this is not a friend (that is,
-      // this is a locally declared function), save the instantiation
-      // relationship for the purposes of constraint instantiation.
-      Function->setInstantiatedFromDecl(D);
-    }
+  } else if (isFriend && D->isThisDeclarationADefinition()) {
+    // Do not connect the friend to the template unless it's actually a
+    // definition. We don't want non-template functions to be marked as being
+    // template instantiations.
+    Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
+  } else if (!isFriend) {
+    // If this is not a function template, and this is not a friend (that is,
+    // this is a locally declared function), save the instantiation
+    // relationship for the purposes of constraint instantiation.
+    Function->setInstantiatedFromDecl(D);
   }
 
   if (isFriend) {
@@ -3561,7 +3564,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         FunctionTemplate,
         TemplateArgumentList::CreateCopy(SemaRef.Context, Innermost),
         /*InsertToken=*/{});
-  } else if (!isFriend && FunctionRewriteKind == RewriteKind::None) {
+  } else if (!isFriend) {
     // Record that this is an instantiation of a member function.
     Method->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
   }
@@ -6350,6 +6353,10 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (Inst.isInvalid())
     return nullptr;
 
+  // A variable template specialization is never a local declaration, so it
+  // must not see the locals of whatever instantiation we are currently in.
+  LocalInstantiationScope Local(*this);
+
   // Instantiate the first declaration of the variable template: for a partial
   // specialization of a static data member template, the first declaration may
   // or may not be the declaration in the class; if it's in the class, we want
@@ -6821,7 +6828,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                          VarTemplatePartialSpecializationDecl *> PatternPtr =
           VarSpec->getSpecializedTemplateOrPartial();
       if (VarTemplatePartialSpecializationDecl *Partial =
-          PatternPtr.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(PatternPtr))
         cast<VarTemplateSpecializationDecl>(Var)->setInstantiationOf(
             Partial, &VarSpec->getTemplateInstantiationArgs());
 
@@ -7259,7 +7266,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // declarations to their instantiations.
     if (CurrentInstantiationScope) {
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
-        if (Decl *FD = Found->dyn_cast<Decl *>()) {
+        if (Decl *FD = dyn_cast<Decl *>(*Found)) {
           if (auto *BD = dyn_cast<BindingDecl>(FD);
               BD && BD->isParameterPack() && ArgPackSubstIndex) {
             return BD->getBindingPackDecls()[*ArgPackSubstIndex];

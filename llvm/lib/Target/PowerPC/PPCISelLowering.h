@@ -332,7 +332,9 @@ namespace llvm {
                                        const SelectionDAG &DAG,
                                        unsigned Depth = 0) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
@@ -745,6 +747,7 @@ namespace llvm {
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABDU(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,

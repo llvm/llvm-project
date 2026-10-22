@@ -10,4 +10,5 @@
 
 #include "src/math/fminimum_mag_numf.h"
 
-LIST_FMINIMUM_MAG_NUM_TESTS(float, LIBC_NAMESPACE::fminimum_mag_numf)
+LIST_FMINIMUM_MAG_NUM_TESTS(FminimumMagNumf, float,
+                            LIBC_NAMESPACE::fminimum_mag_numf)

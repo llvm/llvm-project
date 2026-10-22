@@ -9,11 +9,6 @@
 // HIP: -cc1{{.*}} "-triple" "amdgpu9.0a-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgpu9.0a-amd-amdhsa-gfx90a.json"
 // HIP: -cc1{{.*}} "-triple" "x86_64{{.*}}"{{.*}} "-ftime-trace=e{{/|\\\\}}a.json"
 
-/// Test HIP offloading with new driver: same output as above.
-// RUN: %clang -### -ftime-trace -ftime-trace-granularity=0 -x hip d/a.cpp --offload-arch=gfx906 --offload-arch=gfx90a \
-// RUN:   -nogpulib -nogpuinc -c -o e/a.o --target=x86_64-linux-gnu --offload-new-driver 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=HIP
-
 /// Test HIP offloading with -ftime-trace=<dir>: traces go to specified directory.
 // RUN: %clang -### -ftime-trace=f -ftime-trace-granularity=0 -x hip d/a.cpp --offload-arch=gfx906 \
 // RUN:   -nogpulib -nogpuinc -c -o e/a.o --target=x86_64-linux-gnu 2>&1 \

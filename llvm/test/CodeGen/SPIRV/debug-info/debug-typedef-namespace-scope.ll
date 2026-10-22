@@ -7,7 +7,7 @@
 ; CHECK-DAG: [[CU:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit
 ; CHECK-DAG: [[LB:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLexicalBlock {{.*}} [[CU]] [[NS]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypeComposite {{.*}} [[LB]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypedef {{.*}} [[CU]]
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypedef {{.*}} [[LB]]
 
 target triple = "spirv64-unknown-unknown"
 

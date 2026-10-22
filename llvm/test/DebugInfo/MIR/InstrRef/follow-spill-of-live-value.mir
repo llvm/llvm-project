@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
-# RUN:     -run-pass=livedebugvalues  | \
+# RUN:     -run-pass=live-debug-values  | \
 # RUN: FileCheck %s --implicit-check-not=DBG_VALUE
 #
 # Test that spills of live values to the stack are tracked by LiveDebugValues.

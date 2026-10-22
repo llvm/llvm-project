@@ -40,6 +40,11 @@ protected:
   /// relocation so linker scheduling does not affect symbolization.
   uint64_t getGOTValue(const Relocation &Rel) const;
 
+  /// Try to symbolize an RV64 AUIPC/JALR call or tail-call pair whose target
+  /// was resolved by the linker and therefore has no relocation.
+  bool trySymbolizeLinkerResolvedControlTransfer(MCInst &Inst, int64_t Value,
+                                                 uint64_t InstAddress);
+
 public:
   RISCVMCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true);
 

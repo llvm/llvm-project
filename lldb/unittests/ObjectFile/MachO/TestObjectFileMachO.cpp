@@ -91,6 +91,18 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   check_symbol("OBJC_IVAR_$_NSObject.isa");
 }
 
+TEST_F(ObjectFileMachOTest, SharedCacheImageExtractorIsShared) {
+  auto get_extractor = [] {
+    return HostInfo::GetSharedCacheImageInfo(
+               "/usr/lib/libobjc.A.dylib",
+               lldb::eSymbolSharedCacheUseHostSharedCache)
+        .GetExtractor();
+  };
+  lldb::DataExtractorSP extractor_sp = get_extractor();
+  ASSERT_TRUE(extractor_sp);
+  EXPECT_EQ(extractor_sp, get_extractor());
+}
+
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
       "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
@@ -188,6 +200,51 @@ LoadCommands:
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
 
   // Simply no crashing is the regression check.
+  Symtab symtab(OF);
+  OF->ParseSymtab(symtab);
+}
+
+// An LC_SYMTAB whose nsyms claims far more symbols than the file could
+// possibly hold.
+TEST_F(ObjectFileMachOTest, ParseSymtabHugeSymbolCountIsBounded) {
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      96
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0x80000000
+    stroff:          0
+    strsize:         16
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  lldb::ModuleSP module = std::make_shared<Module>(file->moduleSpec());
+  ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
+
   Symtab symtab(OF);
   OF->ParseSymtab(symtab);
 }

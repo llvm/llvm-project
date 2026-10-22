@@ -1,5 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fimplicit-module-maps -fmodules-cache-path=%t \
+// RUN:    -fmodulemap-allow-subdirectory-search \
 // RUN:    -working-directory %S/Inputs \
 // RUN:    -I subdirectory-module-maps-working-dir \
 // RUN:    %s -Werror=implicit-function-declaration -verify

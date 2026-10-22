@@ -16,17 +16,21 @@
 #include "Context.h"
 #include "DynamicAllocator.h"
 #include "Floating.h"
+#include "FrameAllocator.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
+#include <limits>
 
 namespace clang {
 namespace interp {
 class Context;
 class SourceMapper;
+struct EvalSettings;
 
 struct StdAllocatorCaller {
+
   const Expr *Call = nullptr;
   QualType AllocType;
   explicit operator bool() { return Call; }
@@ -42,10 +46,15 @@ enum class EvaluationKind : uint8_t {
 /// Interpreter context.
 class InterpState final : public State {
 public:
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
-              const Function *Func);
+
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              FrameAllocator &FA, Context &Ctx, const Function *Func);
+
+  InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+              FrameAllocator &FA, Context &Ctx, SourceMapper *M);
 
   ~InterpState();
 
@@ -58,9 +67,7 @@ public:
 
   // Stack frame accessors.
   const Frame *getCurrentFrame() override;
-  unsigned getCallStackDepth() override {
-    return Current ? (Current->getDepth() + 1) : 1;
-  }
+  unsigned getCallStackDepth() override { return FrameDepth + 1; }
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
@@ -76,7 +83,9 @@ public:
 
   DynamicAllocator &getAllocator() {
     if (!Alloc) {
-      Alloc = std::make_unique<DynamicAllocator>();
+      if (!Allocator)
+        Allocator.emplace();
+      Alloc = std::make_unique<DynamicAllocator>(*Allocator);
     }
 
     return *Alloc;
@@ -120,6 +129,27 @@ public:
   const CXXRecordDecl **allocMemberPointerPath(unsigned Length) {
     return reinterpret_cast<const CXXRecordDecl **>(
         this->allocate(Length * sizeof(CXXRecordDecl *)));
+  }
+  PointerPathEntry *allocPointerPath(unsigned Length,
+                                     const PointerPathEntry *OldPP) {
+    assert(Length != 0);
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(Length * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * Length);
+    return PP;
+  }
+  /// Allocate a new pointer path of Length \c NewLength.
+  /// NewLength - 1 elements are copied form \c OldPP.
+  PointerPathEntry *extendPointerPath(unsigned NewLength,
+                                      const PointerPathEntry *OldPP,
+                                      PointerPathEntry NewEntry) {
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(NewLength * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * (NewLength - 1));
+    PP[NewLength - 1] = NewEntry;
+    return PP;
   }
 
   /// Note that a step has been executed. If there are no more steps remaining,
@@ -169,6 +199,36 @@ public:
 
   unsigned newStringID() { return StringID++; }
 
+  /// Allocate memory and create a new InterpFrame for the given function.
+  template <typename... Ts>
+  InterpFrame *allocFrame(const Function *F, Ts &&...Args) {
+    size_t FrameSize = InterpFrame::allocSize(F);
+    assert(FrameSize < std::numeric_limits<unsigned>::max());
+    InterpFrame *NewFrame = new (FrameAlloc.reserve(FrameSize))
+        InterpFrame(*this, F, std::forward<Ts>(Args)...);
+    assert(NewFrame);
+    return NewFrame;
+  }
+
+  /// Set the given frame as the current one.
+  void enterFrame(InterpFrame *F) {
+    Current = F;
+    ++FrameDepth;
+  }
+
+  /// Free resources associated with the current frame and set the caller to be
+  /// the new current frame.
+  void exitFrame() {
+    assert(Current);
+    assert(FrameDepth > 0);
+    unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
+    InterpFrame *Caller = Current->Caller;
+    Current->~InterpFrame();
+    FrameAlloc.pop(CurrentSize);
+    Current = Caller;
+    --FrameDepth;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -176,12 +236,14 @@ private:
   DeadBlock *DeadBlocks = nullptr;
   /// Reference to the offset-source mapping.
   SourceMapper *M;
-  /// Allocator used for dynamic allocations performed via the program.
-  std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Allocator used for dynamic allocations performed via the program.
+  std::unique_ptr<DynamicAllocator> Alloc;
   /// Diagnose that we've reached the constexpr step limit.
   bool diagnoseStepLimitExceeded(CodePtr OpPC);
+
+  FrameAllocator &FrameAlloc;
 
 public:
   CodePtr PC;
@@ -206,6 +268,7 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+  unsigned FrameDepth = 0;
 
   unsigned StringID = 0;
 

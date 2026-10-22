@@ -38,17 +38,17 @@ A C::a = A();
 
 
 // Static inside of C.
-// CIR-BEFORE-LPP: cir.global external @_ZN1C1aE = ctor : !rec_A {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
-// CIR-BEFORE-LPP: cir.global external @c = ctor : !rec_C {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
+// CIR-BEFORE-LPP: cir.global external @_ZN1C1aE = #cir.zero : !rec_A ctor {
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast)
+// CIR-BEFORE-LPP: cir.global external @c = #cir.zero : !rec_C ctor {
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast)
 
-// CIR-BEFORE-LPP: cir.global external @a1 = ctor : !rec_A1 {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 300 : i32}
-// CIR-BEFORE-LPP: cir.global external @a = ctor : !rec_A {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 300 : i32}
-// CIR-BEFORE-LPP: cir.global external @b = ctor : !rec_B {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 200 : i32}
+// CIR-BEFORE-LPP: cir.global external @a1 = #cir.zero : !rec_A1 ctor {
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(300)
+// CIR-BEFORE-LPP: cir.global external @a = #cir.zero : !rec_A ctor {
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(300)
+// CIR-BEFORE-LPP: cir.global external @b = #cir.zero : !rec_B ctor {
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(200)
 
 // CIR: cir.global_ctors = [#cir.global_ctor<"_GLOBAL__I_000200", 200>, #cir.global_ctor<"_GLOBAL__I_000300", 300>, #cir.global_ctor<"_GLOBAL__sub_I_[[FILENAME:.*]]", 65535>]
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init() {
@@ -62,12 +62,12 @@ A C::a = A();
 // CIR-NEXT:    cir.return
 
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
-// CIR-NEXT:    cir.get_global @a1 : !cir.ptr<!rec_A1> loc(#loc36)
+// CIR-NEXT:    cir.get_global @a1 : !cir.ptr<!rec_A1>
 // CIR-NEXT:    cir.call @_ZN2A1C1Ev(
 // CIR-NEXT:    cir.return
 
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init.4() {
-// CIR-NEXT:    cir.get_global @b : !cir.ptr<!rec_B> loc(#loc38)
+// CIR-NEXT:    cir.get_global @b : !cir.ptr<!rec_B>
 // CIR-NEXT:    cir.call @_ZN1BC1Ev(
 // CIR-NEXT:    cir.return
 

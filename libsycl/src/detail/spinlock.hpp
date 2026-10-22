@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_SPINLOCK
-#define _LIBSYCL_SPINLOCK
+#ifndef _LIBSYCL_SRC_DETAIL_SPINLOCK_HPP
+#define _LIBSYCL_SRC_DETAIL_SPINLOCK_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -44,4 +44,4 @@ private:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_SPINLOCK
+#endif // _LIBSYCL_SRC_DETAIL_SPINLOCK_HPP

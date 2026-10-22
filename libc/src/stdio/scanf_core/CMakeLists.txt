@@ -49,6 +49,7 @@ add_header_library(
     libc.src.__support.arg_list
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.string_view

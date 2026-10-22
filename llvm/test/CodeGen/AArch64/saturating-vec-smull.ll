@@ -35,16 +35,10 @@ define <2 x i16> @saturating_2xi16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i16> @saturating_4xi16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-SD-LABEL: saturating_4xi16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: saturating_4xi16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    sqshrn v0.4h, v0.4s, #15
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: saturating_4xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    ret
   %as = sext <4 x i16> %a to <4 x i32>
   %bs = sext <4 x i16> %b to <4 x i32>
   %m = mul nsw <4 x i32> %bs, %as
@@ -55,18 +49,10 @@ define <4 x i16> @saturating_4xi16(<4 x i16> %a, <4 x i16> %b) {
 }
 
 define <8 x i16> @saturating_8xi16(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: saturating_8xi16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmulh v0.8h, v1.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: saturating_8xi16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v2.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    smull2 v1.4s, v1.8h, v0.8h
-; CHECK-GI-NEXT:    sqshrn v0.4h, v2.4s, #15
-; CHECK-GI-NEXT:    sqshrn2 v0.8h, v1.4s, #15
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: saturating_8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmulh v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    ret
   %as = sext <8 x i16> %a to <8 x i32>
   %bs = sext <8 x i16> %b to <8 x i32>
   %m = mul nsw <8 x i32> %bs, %as
@@ -77,16 +63,10 @@ define <8 x i16> @saturating_8xi16(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <2 x i32> @saturating_2xi32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-SD-LABEL: saturating_2xi32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmulh v0.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: saturating_2xi32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v0.2d, v1.2s, v0.2s
-; CHECK-GI-NEXT:    sqshrn v0.2s, v0.2d, #31
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: saturating_2xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmulh v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
   %as = sext <2 x i32> %a to <2 x i64>
   %bs = sext <2 x i32> %b to <2 x i64>
   %m = mul nsw <2 x i64> %bs, %as
@@ -97,18 +77,10 @@ define <2 x i32> @saturating_2xi32(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <4 x i32> @saturating_4xi32(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: saturating_4xi32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sqdmulh v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: saturating_4xi32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v2.2d, v1.2s, v0.2s
-; CHECK-GI-NEXT:    smull2 v1.2d, v1.4s, v0.4s
-; CHECK-GI-NEXT:    sqshrn v0.2s, v2.2d, #31
-; CHECK-GI-NEXT:    sqshrn2 v0.4s, v1.2d, #31
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: saturating_4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmulh v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
   %as = sext <4 x i32> %a to <4 x i64>
   %bs = sext <4 x i32> %b to <4 x i64>
   %m = mul nsw <4 x i64> %bs, %as
@@ -127,14 +99,8 @@ define <8 x i32> @saturating_8xi32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: saturating_8xi32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v4.2d, v2.2s, v0.2s
-; CHECK-GI-NEXT:    smull v5.2d, v3.2s, v1.2s
-; CHECK-GI-NEXT:    smull2 v2.2d, v2.4s, v0.4s
-; CHECK-GI-NEXT:    smull2 v3.2d, v3.4s, v1.4s
-; CHECK-GI-NEXT:    sqshrn v0.2s, v4.2d, #31
-; CHECK-GI-NEXT:    sqshrn v1.2s, v5.2d, #31
-; CHECK-GI-NEXT:    sqshrn2 v0.4s, v2.2d, #31
-; CHECK-GI-NEXT:    sqshrn2 v1.4s, v3.2d, #31
+; CHECK-GI-NEXT:    sqdmulh v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    sqdmulh v1.4s, v3.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %as = sext <8 x i32> %a to <8 x i64>
   %bs = sext <8 x i32> %b to <8 x i64>

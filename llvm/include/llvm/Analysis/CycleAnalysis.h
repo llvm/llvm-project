@@ -45,7 +45,7 @@ public:
 /// Analysis pass which computes a \ref CycleInfo.
 class CycleAnalysis : public AnalysisInfoMixin<CycleAnalysis> {
   friend AnalysisInfoMixin<CycleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result typedef for this analysis pass.
@@ -55,9 +55,6 @@ public:
 
   /// Run the analysis pass over a function and produce a dominator tree.
   LLVM_ABI CycleInfo run(Function &F, FunctionAnalysisManager &);
-
-  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                           FunctionAnalysisManager::Invalidator &);
 
   // TODO: verify analysis?
 };

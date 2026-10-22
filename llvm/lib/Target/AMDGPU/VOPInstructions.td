@@ -28,10 +28,14 @@ class LetDummies {
   list<Predicate> OtherPredicates;
   Predicate AssemblerPredicate;
   string DecoderNamespace;
+  bits<8> GFX1250BlockingCycles;
+  bit HasGFX1250BlockingCycles;
 }
 
 class VOP <string opName> {
   string OpName = opName;
+  bits<8> GFX1250BlockingCycles = 0;
+  bit HasGFX1250BlockingCycles = false;
 }
 
 // First 13 insts from VOPDY are also VOPDX.
@@ -162,6 +166,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   VOP3_Pseudo<opName, P, pattern, 1> {
   let VOP3P = 1;
   let IsDOT = P.IsDOT;
+  let HasNoOpSelHi = P.HasNoOpSelHi;
 }
 
 class VOP_Real<VOP_Pseudo ps> {
@@ -198,6 +203,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let HasNoOpSelHi         = ps.HasNoOpSelHi;
 
   VOPProfile Pfl = ps.Pfl;
 
@@ -1029,11 +1035,13 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   string AsmOperands = asmOps;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let AssemblerPredicate = !if(P.HasExt64BitDPP, HasDPALU_DPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, HasGCN3DPALU_DPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DecoderNamespace = "GFX8";
+  let GFX1250BlockingCycles = 2;
+  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
@@ -1251,6 +1259,8 @@ class VOP_DPP8_Pseudo<string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AssemblerPredicate = HasDPP8;
   let AsmVariantName = AMDGPUAsmVariants.Disable;
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
+  let GFX1250BlockingCycles = 2;
+  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP8_Base<string OpName, VOPProfile P> :
@@ -2111,23 +2121,30 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op =
     VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
 }
 
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
-                                                       string pseudo_mnemonic = "", bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
-
-multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName,
-                                                          string opName = NAME, string pseudo_mnemonic = ""> {
-  defm _t16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic, 1>;
-  defm _fake16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic, 1>;
+multiclass VOP3Only_ScaleSel_Real_gfx13<bits<10> op> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx13 :
+    VOP3_Real_Gen<ps, GFX13Gen>,
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
 }
 
-multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string opName,
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
+                                                         string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName,
+                                                                    string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic, 1>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic, 1>;
+}
+
+multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx13<bits<10> preGFX13Op, bits<10> op, string opName,
                                                            string asmName, string pseudo_mnemonic = "",
                                                            bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 //===----------------------------------------------------------------------===//
@@ -2407,6 +2424,11 @@ class ClassPat<Instruction inst, ValueType vt> : GCNPat <
 
 class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
   (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
+  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (vgpr32_lo16 (V_MOV_B32_e32 timm:$mask)))
+>;
+
+class ClassPat_fake16<Instruction inst, ValueType vt> : GCNPat <
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
 >;
 
@@ -2419,7 +2441,7 @@ def : ClassPat_t16<V_CMP_CLASS_F16_t16_e64, f16> {
   let True16Predicate = UseRealTrue16Insts;
 }
 
-def : ClassPat_t16<V_CMP_CLASS_F16_fake16_e64, f16> {
+def : ClassPat_fake16<V_CMP_CLASS_F16_fake16_e64, f16> {
   let True16Predicate = UseFakeTrue16Insts;
 }
 
@@ -2428,11 +2450,12 @@ def : ClassPat<V_CMP_CLASS_F64_e64, f64>;
 
 class VOPInfoTable <string Format> : GenericTable {
   let FilterClass = Format # "_Real";
+  let FilterClassField = "IsSingle";
   let CppTypeName = "VOPInfo";
-  let Fields = ["Opcode", "IsSingle"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "get" # Format # "OpcodeHelper";
+  let PrimaryKeyName = "is" # Format # "SingleOpcodeHelper";
 }
 
 def VOP1InfoTable : VOPInfoTable<"VOP1">;
@@ -2465,18 +2488,41 @@ def VOPCAsmOnlyInfoTable : AsmOnlyInfoTable <"VOPC", "VOPC_DPPe_Common">;
 
 def VOPTrue16Table : GenericTable {
   let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "IsTrue16";
   let CppTypeName = "VOPTrue16Info";
-  let Fields = ["Opcode", "IsTrue16"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getTrue16OpcodeHelper";
+  let PrimaryKeyName = "isTrue16Opcode";
 }
 
 def DPMACCInstructionTable : GenericTable {
   let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "IsDPMACCInstruction";
   let CppTypeName = "DPMACCInstructionInfo";
-  let Fields = ["Opcode", "IsDPMACCInstruction"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getDPMACCInstructionHelper";
+  let PrimaryKeyName = "isDPMACCInstructionHelper";
+}
+
+def VOP3PHasNoOpSelHiTable : GenericTable {
+  let FilterClass = "VOP3P_Real";
+  let FilterClassField = "HasNoOpSelHi";
+  let CppTypeName = "VOP3PHasNoOpSelHiInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOP3PHasNoOpSelHiHelper";
+}
+
+// BlockingCycles indicates how many cycles until a new instruction can acquire
+// a resource, allowing modeling of multi-cycle blocking.
+def GFX1250BlockingCyclesTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "HasGFX1250BlockingCycles";
+  let CppTypeName = "AMDGPUBlockingCyclesInfo";
+  let Fields = ["Opcode", "GFX1250BlockingCycles"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getGFX1250BlockingCyclesInfo";
 }

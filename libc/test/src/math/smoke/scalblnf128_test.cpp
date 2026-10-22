@@ -20,4 +20,4 @@
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LIST_SCALBN_TESTS(float128, long, LIBC_NAMESPACE::scalblnf128)
+LIST_SCALBN_TESTS(Scalblnf128, float128, long, LIBC_NAMESPACE::scalblnf128)

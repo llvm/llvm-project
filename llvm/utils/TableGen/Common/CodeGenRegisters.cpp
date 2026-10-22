@@ -1338,6 +1338,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   for (const Record *R : RCs) {
     RegClasses.emplace_back(*this, R);
     CodeGenRegisterClass &RC = RegClasses.back();
+    RegClassNames.insert(RC.getName());
     if (!RC.Artificial)
       addToMaps(&RC);
   }
@@ -1415,6 +1416,7 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
 
   // Sub-class doesn't exist, create a new one.
   RegClasses.emplace_back(*this, Name, K);
+  RegClassNames.insert(Name);
   addToMaps(&RegClasses.back());
   return {&RegClasses.back(), true};
 }
@@ -2376,28 +2378,44 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     // Iterate through SubRegisters.
     using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
+
+    auto UnitMaskIdx = [&](unsigned SUI) {
+      unsigned U = 0;
+      for (unsigned RU : RegUnits) {
+        if (SUI == RU)
+          return U;
+        ++U;
+      }
+      llvm_unreachable("unit is not part of the register");
+    };
+
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       // Ignore non-leaf subregisters, their lane masks are fully covered by
-      // the leaf subregisters anyway.
+      // the leaf subregisters, unless the subregister is not CoveredBySubRegs -
+      // this is dealt with by the loop below.
       if (!SubReg->getSubRegs().empty())
         continue;
       LaneBitmask LaneMask = SubRegIndex->LaneMask;
       // Distribute LaneMask to Register Units touched.
-      for (unsigned SUI : SubReg->getRegUnits()) {
-        bool Found = false;
-        unsigned u = 0;
-        for (unsigned RU : RegUnits) {
-          if (SUI == RU) {
-            RegUnitLaneMasks[u] &= LaneMask;
-            assert(!Found);
-            Found = true;
-          }
-          ++u;
-        }
-        (void)Found;
-        assert(Found);
-      }
+      for (unsigned SUI : SubReg->getRegUnits())
+        RegUnitLaneMasks[UnitMaskIdx(SUI)] &= LaneMask;
     }
+
+    // A sub-register that is not CoveredBySubRegs may be missing lanes that
+    // none of its leaves account for. If left unclaimed, those lanes would
+    // not appear in any register unit's mask, making them invisible to
+    // interference and liveness queries. Backfill the missing lanes onto the
+    // sub-register's own native units.
+    for (auto [SubRegIndex, SubReg] : SubRegs) {
+      if (SubReg->CoveredBySubRegs || SubReg->getSubRegs().empty())
+        continue;
+      LaneBitmask Unclaimed = SubRegIndex->LaneMask;
+      for (unsigned SUI : SubReg->getNativeRegUnits())
+        Unclaimed &= ~RegUnitLaneMasks[UnitMaskIdx(SUI)];
+      for (unsigned SUI : SubReg->getNativeRegUnits())
+        RegUnitLaneMasks[UnitMaskIdx(SUI)] |= Unclaimed;
+    }
+
     Register.setRegUnitLaneMasks(RegUnitLaneMasks);
   }
 }
@@ -2664,12 +2682,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
                          "_in_" + CompositeSubRC->getName();
 
-      const bool HasRegClassNamed =
-          llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
-            return RC.getName() == Name;
-          });
-
-      if (HasRegClassNamed)
+      if (RegClassNames.contains(Name))
         Name = RC->getName() + "_with_" + SubIdx->getName() + "_in_" +
                SubRC.getName();
 

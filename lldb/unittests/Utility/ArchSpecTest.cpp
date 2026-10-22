@@ -482,6 +482,46 @@ TEST(ArchSpecTest, Compatibility) {
   }
 }
 
+TEST(ArchSpecTest, UnrelatedCoresCompatibleMatchTerminates) {
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7em-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, AsymmetricCoreRulesAreCheckedBothWays) {
+  // Some cores' compatibility rules only work one way: core A accepts B,
+  // but B's own rule says nothing about A. A compatible match must check
+  // both directions to find these cases.
+  {
+    // A 32-bit MIPS core has no rule about 64-bit MIPS, but 64-bit MIPS
+    // accepts the 32-bit family with the same endianness.
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("mips64el-unknown-linux");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+  {
+    // The two Cortex-M cores explicitly accept each other.
+    ArchSpec A("armv7em-apple-none");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+}
+
 TEST(ArchSpecTest, WasmCompatibility) {
   // A Wasm module encodes no vendor or OS: those are properties of the runtime
   // executing it. A bare wasm32 or wasm64 architecture therefore has to stay
@@ -583,5 +623,56 @@ TEST(ArchSpecTest, TripleComponentsWereSpecified) {
     ASSERT_TRUE(D.TripleVendorWasSpecified());
     ASSERT_TRUE(D.TripleOSWasSpecified());
     ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
+  }
+}
+
+TEST(ArchSpecTest, ARM64EX1Variants) {
+  // Test arm64e.x1 architecture.
+  {
+    ArchSpec AS("arm64e.x1");
+    ASSERT_TRUE(AS.IsValid());
+    EXPECT_EQ(ArchSpec::eCore_arm_arm64ex1, AS.GetCore());
+    EXPECT_EQ(llvm::Triple::aarch64, AS.GetTriple().getArch());
+    EXPECT_STREQ("arm64e.x1", AS.GetArchitectureName());
+    EXPECT_EQ(8u, AS.GetAddressByteSize());
+    EXPECT_EQ(4u, AS.GetMinimumOpcodeByteSize());
+    EXPECT_EQ(4u, AS.GetMaximumOpcodeByteSize());
+  }
+
+  // Test MachO CPU types for x1 variants.
+  {
+    ArchSpec AS;
+    EXPECT_TRUE(AS.SetTriple("arm64e.x1-apple-macosx"));
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_ARM64), AS.GetMachOCPUType());
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_SUBTYPE_ARM64E_X1),
+              AS.GetMachOCPUSubType());
+  }
+}
+
+TEST(ArchSpecTest, ARM64EX1Compatibility) {
+  // Test compatibility between arm64e.x1 and other arm64e variants.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("arm64e");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
+  }
+
+  // Test compatibility with aarch64.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("aarch64");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
   }
 }

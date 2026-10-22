@@ -26,4 +26,4 @@ float128 scalblnf128_wrapper(float128 x, int n) {
 }
 } // namespace
 
-LIST_SCALBN_TESTS(float128, scalblnf128_wrapper)
+LIST_SCALBN_TESTS(Scalblnf128, float128, scalblnf128_wrapper)

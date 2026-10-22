@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "OffloadAPI.h"
+
 #include "Shared/APITypes.h"
 #include "Shared/Environment.h"
 #include "Shared/SourceInfo.h"
@@ -130,20 +132,29 @@ private:
   using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
-  __tgt_async_info AsyncInfo;
+  ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
 
 public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
-  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
-      : Device(Device), SyncType(SyncType) {}
-  ~AsyncInfoTy() { synchronize(); }
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING);
+  ~AsyncInfoTy();
+
+  // If we ever need to enable one of this methods we need to ensure
+  // that the underlying queue is not freed more than once.
+  AsyncInfoTy(const AsyncInfoTy &) = delete;
+  AsyncInfoTy &operator=(const AsyncInfoTy &) = delete;
+  AsyncInfoTy(AsyncInfoTy &&) = delete;
+  AsyncInfoTy &operator=(AsyncInfoTy &&) = delete;
 
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
-  operator __tgt_async_info *() { return &AsyncInfo; }
+  operator __tgt_async_info *();
+
+  /// Get the underlying queue handle.
+  ol_queue_handle_t getQueue() const { return Queue; }
 
   /// Synchronize all pending actions.
   ///
@@ -291,6 +302,7 @@ const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 size_t omp_get_gprivate_limit(int DeviceNum,
                               omp_access_t AccessGroup = omp_access_cgroup);
+void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
@@ -442,6 +454,9 @@ int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
                                  bool EmitReport, const char *OutputDirPath);
 
+// Gets mapped device pointer. If device pointer is not found, returns
+// host pointer
+void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
 // code for details.

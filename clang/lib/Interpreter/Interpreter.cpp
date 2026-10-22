@@ -45,12 +45,14 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -75,6 +77,19 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed. "
                                    "Unable to create a driver job");
+
+  // The driver creates one device compile job per architecture (for example if
+  // --offload-arch=native finds several GPUs). Only one can be used.
+  unsigned NumDeviceJobs = llvm::count_if(Jobs, [](const driver::Command &C) {
+    return llvm::StringRef(C.getCreator().getName()) == "clang" &&
+           llvm::is_contained(C.getArguments(),
+                              llvm::StringRef("-fcuda-is-device"));
+  });
+  if (NumDeviceJobs > 1)
+    return llvm::createStringError(
+        llvm::errc::not_supported,
+        "Multiple device architectures are not supported. Pass a single "
+        "--offload-arch");
 
   // The one job we find should be to invoke clang again.
   const driver::Command *Cmd = &*Jobs.begin();
@@ -288,34 +303,37 @@ IncrementalCompilerBuilder::create(std::string TT,
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
-  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back(TT.c_str());
   Argv.push_back("-fvisibility=default");
 #endif
   llvm::append_range(Argv, UserArgs);
 
-  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createCuda(bool device) {
+IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
+  const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
+  Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  Argv.push_back("-xcuda");
-  if (device)
-    Argv.push_back("--cuda-device-only");
-  else
-    Argv.push_back("--cuda-host-only");
-
-  std::string SDKPathArg = "--cuda-path=";
-  if (!CudaSDKPath.empty()) {
-    SDKPathArg += CudaSDKPath;
+  std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
+  if (!DeviceSDKPath.empty()) {
+    SDKPathArg += DeviceSDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -325,6 +343,12 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
+  if (OffloadCUID.empty())
+    OffloadCUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
+                                  /*LowerCase=*/true);
+  std::string CUIDArg = "-cuid=" + OffloadCUID;
+  Argv.push_back(CUIDArg.c_str());
+
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
@@ -332,13 +356,13 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaDevice() {
-  return IncrementalCompilerBuilder::createCuda(true);
+IncrementalCompilerBuilder::CreateDevice(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(/*device=*/true, Type);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaHost() {
-  return IncrementalCompilerBuilder::createCuda(false);
+IncrementalCompilerBuilder::CreateHost(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(/*device=*/false, Type);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -350,6 +374,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
+
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -473,8 +500,14 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
-                            std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI,
+                              OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -506,11 +539,20 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
     return std::move(E);
 
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
+
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  if (Type == OffloadType::HIP)
+    DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  else
+    DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);
@@ -562,11 +604,7 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     DeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
-    if (!PTX)
-      return PTX.takeError();
-
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)
       return std::move(Err);
   }
@@ -603,6 +641,10 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

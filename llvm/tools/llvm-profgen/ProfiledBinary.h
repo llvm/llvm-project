@@ -11,6 +11,7 @@
 
 #include "CallContext.h"
 #include "ErrorHandling.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -45,6 +46,10 @@
 #include <vector>
 
 namespace llvm {
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 namespace sampleprof {
 
 class ProfiledBinary;
@@ -202,6 +207,7 @@ struct MMapEvent {
 };
 
 class ProfiledBinary {
+  const cl::LibraryOptionsContext &LibraryOptions;
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
   // Absolute path of the executable binary.
@@ -314,6 +320,9 @@ class ProfiledBinary {
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
 
+  // Deduplicated address ranges mapped for the profiled binary.
+  llvm::AddressRanges MMapRanges;
+
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
     uint64_t FileOffset;
@@ -423,7 +432,8 @@ class ProfiledBinary {
                                      bool UseProbeDiscriminator = false);
 
 public:
-  ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
+  ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
+                 const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
 
   /// Decode the interesting parts of the binary and build internal data
@@ -728,6 +738,22 @@ public:
     }
     NonTextMMapEvents[Event.Address] = Event;
     return Error::success();
+  }
+
+  // Record a half-open MMAP range while coalescing duplicate and overlapping
+  // events.
+  void addMMapRange(uint64_t Address, uint64_t Size) {
+    uint64_t End = Address + Size;
+    // Ignore malformed events whose range cannot be represented.
+    if (End < Address)
+      return;
+    MMapRanges.insert(llvm::AddressRange(Address, End));
+  }
+
+  // Check if a given virtual address is covered by any of the mmap ranges for
+  // the profiled binary.
+  bool isVaddrMMapped(uint64_t VAddr) const {
+    return MMapRanges.contains(VAddr);
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in

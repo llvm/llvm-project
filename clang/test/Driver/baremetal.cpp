@@ -1,11 +1,11 @@
 // UNSUPPORTED: system-windows
 
-// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib  \
+// RUN: %clang --sysroot= -### %s --target=armv6-none-eabi --emit-static-lib  \
 // RUN:     -Xstatic-lib-tool -U -Xstatic-lib-tool --format=gnu -o %t.out 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD" "-U" "--format=gnu" "{{.*}}.out"
 
-// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib \
+// RUN: %clang --sysroot= -### %s --target=armv6-none-eabi --emit-static-lib \
 // RUN:     --static-lib-target-arch-only 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LIBTOOL-ARG %s
 // CHECK-LIBTOOL-ARG: warning: argument unused during compilation: '--static-lib-target-arch-only'
@@ -54,7 +54,7 @@
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBINC %s
 // CHECK-V6M-LIBINC-NOT: "-internal-isystem"
 
-// RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
+// RUN: %clang %s --sysroot= -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -ccc-install-dir %S/Inputs/basic_baremetal_tree/bin \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-TREE %s
 // CHECK-V6M-TREE:      InstalledDir: [[INSTALLED_DIR:.+]]
@@ -177,37 +177,37 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
 // CHECK-THREAD-MODEL-POSIX: Thread model: posix
 
-// RUN: %clangxx -### --target=arm-none-eabi -nostartfiles -v %s 2>&1 \
+// RUN: %clangxx --sysroot= -### --target=arm-none-eabi -nostartfiles -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOSTARTFILES
 // CHECK-NOSTARTFILES-NOT: "crt0.o"
 
-// RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc --unwindlib=libgcc -v %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -rtlib=libgcc --unwindlib=libgcc -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
-// RUN: %clang -### --target=arm-none-eabi -rtlib=compiler-rt \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -rtlib=compiler-rt \
 // RUN:   -fprofile-instr-generate %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE
 // CHECK-PROFILE: "{{[^"]*}}libclang_rt.profile.a"
 
-// RUN: %clang -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt \
 // RUN:   -fprofile-instr-generate %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE-NOSTDLIB
 // CHECK-PROFILE-NOSTDLIB: "{{[^"]*}}libclang_rt.profile.a"
 // CHECK-PROFILE-NOSTDLIB-NOT: "-lc"
 // CHECK-PROFILE-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
-// RUN: %clang -### --target=arm-none-eabi -nolibc -rtlib=compiler-rt %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -nolibc -rtlib=compiler-rt %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOLIBC
 // CHECK-NOLIBC-NOT: "-lc"
 // CHECK-NOLIBC: "{{[^"]*}}libclang_rt.builtins.a"
 
-// RUN: %clang -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOSTDLIB
 // CHECK-NOSTDLIB-NOT: "-lc"
 // CHECK-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
-// RUN: %clang -### --target=arm-none-eabi -v %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=arm-none-eabi -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SYSROOT-INC
 // CHECK-SYSROOT-INC-NOT: "-internal-isystem" "include"
 
@@ -259,7 +259,7 @@
 // RUN: %clang -### %s --target=aarch64_be-none-elf -mlittle-endian --sysroot=%S/Inputs/baremetal_arm 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64LE %s
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=aarch64-none-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=aarch64-none-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64-NO-HOST-INC %s
 // Verify that the bare metal driver does not include any host system paths:
 // CHECK-AARCH64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
@@ -268,7 +268,7 @@
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=riscv32-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=riscv32-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RISCV32-NO-HOST-INC %s
 // CHECK-RISCV32-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-RISCV32-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -276,7 +276,7 @@
 // CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=riscv64-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RISCV64-NO-HOST-INC %s
 // CHECK-RISCV64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-RISCV64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -284,7 +284,7 @@
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=i386-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PCX86-NO-HOST-INC %s
 // CHECK-PCX86-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PCX86-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -292,7 +292,7 @@
 // CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=x86_64-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PCX86_64-NO-HOST-INC %s
 // CHECK-PCX86_64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PCX86_64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -556,7 +556,7 @@
 // CHECK-RV32IMAFC-SAME: "-Bstatic" "-m" "elf32lriscv" "-X"
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=powerpc-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCEABI %s
 // CHECK-PPCEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCEABI: "-nostdsysteminc"
@@ -571,7 +571,7 @@
 // CHECK-PPCEABI-SAME: "-lc"
 // CHECK-PPCEABI-SAME: "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=powerpc64-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64EABI %s
 // CHECK-PPC64EABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64EABI: "-nostdsysteminc"
@@ -586,7 +586,7 @@
 // CHECK-PPC64EABI-SAME: "-lc"
 // CHECK-PPC64EABI-SAME: "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpcle-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=powerpcle-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCLEEABI %s
 // CHECK-PPCLEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCLEEABI: "-nostdsysteminc"
@@ -601,7 +601,7 @@
 // CHECK-PPCLEEABI-SAME: "-lc"
 // CHECK-PPCLEEABI-SAME: "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64le-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=powerpc64le-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LEEABI %s
 // CHECK-PPC64LEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64LEEABI: "-nostdsysteminc"
@@ -616,7 +616,7 @@
 // CHECK-PPC64LEEABI-SAME: "-lc"
 // CHECK-PPC64LEEABI-SAME: "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=i386-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PCX86ELF %s
 // CHECK-PCX86ELF: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PCX86ELF: "-nostdsysteminc"
@@ -631,7 +631,7 @@
 // CHECK-PCX86ELF-SAME: "-lc"
 // CHECK-PCX86ELF-SAME: "-o" "a.out"
 
-// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=x86_64-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PCX86_64ELF %s
 // CHECK-PCX86_64ELF: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PCX86_64ELF: "-nostdsysteminc"
@@ -645,6 +645,36 @@
 // CHECK-PCX86_64ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-PCX86_64ELF-SAME: "-lc"
 // CHECK-PCX86_64ELF-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=loongarch32-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA32ELF %s
+// CHECK-LA32ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-LA32ELF: "-nostdsysteminc"
+// CHECK-LA32ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-LA32ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-LA32ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf32loongarch" "-X"
+// CHECK-LA32ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-LA32ELF-SAME:"{{.*}}.o"
+// CHECK-LA32ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-LA32ELF-SAME: "-lc"
+// CHECK-LA32ELF-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s --sysroot= -### --target=loongarch64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64ELF %s
+// CHECK-LA64ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-LA64ELF: "-nostdsysteminc"
+// CHECK-LA64ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-LA64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-LA64ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf64loongarch" "-X"
+// CHECK-LA64ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-LA64ELF-SAME:"{{.*}}.o"
+// CHECK-LA64ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-LA64ELF-SAME: "-lc"
+// CHECK-LA64ELF-SAME: "-o" "a.out"
 
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.

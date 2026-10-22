@@ -74,6 +74,22 @@ add_libc_test(
 )
 
 add_libc_test(
+  chroot_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    chroot_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.src.errno.errno
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.chroot
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   dup_test
   SUITE
     libc_unistd_unittests
@@ -140,6 +156,7 @@ add_libc_test(
   SRCS
     faccessat_test.cpp
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
@@ -184,6 +201,73 @@ add_libc_test(
     libc.src.fcntl.open
     libc.src.unistd.getuid
     libc.src.unistd.getgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fchownat_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fchownat_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.unistd.fchownat
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.fcntl.open
+    libc.src.unistd.getuid
+    libc.src.unistd.getgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fdatasync_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fdatasync_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.fdatasync
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  execlp_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    execlp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.execlp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fexecve_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fexecve_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.fexecve
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -248,6 +332,29 @@ add_libc_test(
 )
 
 add_libc_test(
+  lchown_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    lchown_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.getgid
+    libc.src.unistd.getuid
+    libc.src.unistd.lchown
+    libc.src.unistd.symlink
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   link_test
   SUITE
     libc_unistd_unittests
@@ -298,6 +405,17 @@ add_libc_test(
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  nice_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    nice_test.cpp
+  DEPENDS
+    libc.src.unistd.nice
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -389,6 +507,36 @@ add_libc_test(
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  setegid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setegid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getegid
+    libc.src.unistd.getgid
+    libc.src.unistd.setegid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  seteuid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    seteuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.geteuid
+    libc.src.unistd.getuid
+    libc.src.unistd.seteuid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -519,6 +667,36 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.unistd.symlinkat
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  sync_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    sync_test.cpp
+  DEPENDS
+    libc.src.unistd.sync
+)
+
+add_libc_test(
+  syncfs_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    syncfs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.syncfs
+    libc.src.unistd.unlink
+    libc.src.unistd.write
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -805,8 +983,12 @@ add_libc_test(
   SRCS
     sysconf_test.cpp
   DEPENDS
-    libc.include.unistd
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.unistd_macros
     libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -844,6 +1026,27 @@ add_libc_test(
 )
 
 add_libc_test(
+  pause_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pause_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_time_macros
+    libc.hdr.types.struct_itimerval
+    libc.hdr.types.struct_sigaction
+    libc.src.__support.CPP.scope
+    libc.src.signal.sigaction
+    libc.src.signal.sigemptyset
+    libc.src.sys.time.setitimer
+    libc.src.unistd.pause
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   getopt_test
   SUITE
     libc_unistd_unittests
@@ -865,6 +1068,26 @@ add_libc_test(
   DEPENDS
     libc.src.unistd.getentropy
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  lockf_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    lockf_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.lockf
+    libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

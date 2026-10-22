@@ -669,20 +669,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   bool ShouldAllowWarningInSystemHeader =
       InstantiationLoc != Loc &&
       !S.getSourceManager().isInSystemHeader(InstantiationLoc);
-  struct AllowWarningInSystemHeaders {
-    AllowWarningInSystemHeaders(DiagnosticsEngine &E,
-                                bool AllowWarningInSystemHeaders)
-        : Engine(E), Prev(E.getForceSystemWarnings()) {
-      if (AllowWarningInSystemHeaders)
-        Engine.setForceSystemWarnings(true);
-    }
-    ~AllowWarningInSystemHeaders() { Engine.setForceSystemWarnings(Prev); }
-
-  private:
-    DiagnosticsEngine &Engine;
-    bool Prev;
-  } SystemWarningOverrideRAII(S.getDiagnostics(),
-                              ShouldAllowWarningInSystemHeader);
+  ForceSystemWarningsRAII SystemWarningOverrideRAII(
+      S.getDiagnostics(), ShouldAllowWarningInSystemHeader);
 
   if (!Message.empty()) {
     S.Diag(Loc, diag_message) << ReferringDecl << Message << FixIts;
@@ -1065,7 +1053,11 @@ ExtractedAvailabilityExpr extractAvailabilityExpr(const Expr *IfCond) {
 }
 
 bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
-  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
+  Expr *Cond = If->getCond();
+  if (!Cond)
+    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
+
+  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(Cond);
   if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
     return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
