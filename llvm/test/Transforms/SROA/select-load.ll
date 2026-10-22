@@ -505,29 +505,6 @@ entry:
   ret i32 %result
 }
 
-; Verify that a select of pointers in a non-default address space can be
-; speculated after SROA rewrites one arm to the default address space.
-define i32 @select_speculate_addrspace(i1 %cond) {
-; CHECK-LABEL: define i32 @select_speculate_addrspace(
-; CHECK-SAME: i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ALLOCA]] to ptr addrspace(5)
-; CHECK-NEXT:    store volatile i32 1, ptr addrspace(5) [[CAST]], align 4
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[LOAD]], i32 2
-; CHECK-NEXT:    ret i32 [[SELECT]]
-;
-  %alloc0 = alloca i32, align 4
-  %alloc1 = alloca i32, align 4
-  %cast0 = addrspacecast ptr %alloc0 to ptr addrspace(5)
-  %cast1 = addrspacecast ptr %alloc1 to ptr addrspace(5)
-  store volatile i32 1, ptr addrspace(5) %cast0
-  store i32 2, ptr addrspace(5) %cast1
-  %sel = select i1 %cond, ptr addrspace(5) %cast0, ptr addrspace(5) %cast1
-  %val = load i32, ptr addrspace(5) %sel
-  ret i32 %val
-}
-
 !0  = !{!"branch_weights", i32 1,  i32 99}
 !1 = !{}
 

@@ -4465,15 +4465,19 @@ private:
   }
 
   // Return true if any instruction reachable from V through pointer-forwarding
-  // uses (GEPs, casts, selects) is volatile.
+  // uses (GEPs, casts, selects, PHIs) is volatile.
   static bool hasVolatileUser(const Value &V) {
+    SmallPtrSet<const Value *, 8> Visited;
     SmallVector<const Value *, 4> Worklist(V.users());
     while (!Worklist.empty()) {
-      if (const auto *I = dyn_cast<Instruction>(Worklist.pop_back_val())) {
+      const Value *U = Worklist.pop_back_val();
+      if (!Visited.insert(U).second)
+        continue;
+      if (const auto *I = dyn_cast<Instruction>(U)) {
         if (I->isVolatile())
           return true;
-        if (isa<GetElementPtrInst, BitCastInst, AddrSpaceCastInst, SelectInst>(
-                I))
+        if (isa<GetElementPtrInst, BitCastInst, AddrSpaceCastInst, SelectInst,
+                PHINode>(I))
           append_range(Worklist, I->users());
       }
     }

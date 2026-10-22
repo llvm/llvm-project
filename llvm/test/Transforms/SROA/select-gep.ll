@@ -549,6 +549,79 @@ define i32 @test_select_fold_split_volatile_thru_gep(i1 %cond) {
   ret i32 %val
 }
 
+; A volatile load behind a PHI should also block the address-space-crossing
+; unfold.
+define i32 @test_select_fold_split_volatile_thru_phi(i1 %cond, i1 %c2) {
+; CHECK-LABEL: @test_select_fold_split_volatile_thru_phi(
+; CHECK-NEXT:    [[ALLOC0_SROA_0:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    [[ALLOC1_SROA_0:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    store i32 0, ptr [[ALLOC0_SROA_0]], align 8
+; CHECK-NEXT:    store i32 2, ptr [[ALLOC1_SROA_0]], align 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0_SROA_0]], ptr [[ALLOC1_SROA_0]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [[STRUCT_T:%.*]], ptr addrspace(5) [[CAST]], i32 0, i32 0
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr addrspace(5) [ [[GEP0]], [[A]] ], [ [[GEP0]], [[B]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(5) [[PHI]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca %struct.T, align 8
+  %alloc1 = alloca %struct.T, align 8
+  store %struct.T { i32 0, i32 1 }, ptr %alloc0
+  store %struct.T { i32 2, i32 3 }, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %gep0 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 0
+  br i1 %c2, label %a, label %b
+a:
+  br label %join
+b:
+  br label %join
+join:
+  %phi = phi ptr addrspace(5) [ %gep0, %a ], [ %gep0, %b ]
+  %val = load volatile i32, ptr addrspace(5) %phi
+  ret i32 %val
+}
+
+; Two GEPs of the same select reaching the same volatile user.
+define i32 @test_select_fold_split_volatile_shared_user(i1 %cond) {
+; CHECK-LABEL: @test_select_fold_split_volatile_shared_user(
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[STRUCT_T:%.*]], align 8
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[STRUCT_T]], align 8
+; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[ALLOC0]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[ALLOC0]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0]], ptr [[ALLOC1]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr addrspace(5) [[CAST]], i32 0, i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr addrspace(5) [[CAST]], i32 0, i32 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[COND]], ptr addrspace(5) [[GEP0]], ptr addrspace(5) [[GEP1]]
+; CHECK-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca %struct.T, align 8
+  %alloc1 = alloca %struct.T, align 8
+  store %struct.T { i32 0, i32 1 }, ptr %alloc0
+  store %struct.T { i32 2, i32 3 }, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %gep0 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 0
+  %gep1 = getelementptr inbounds %struct.T, ptr addrspace(5) %cast, i32 0, i32 1
+  %p = select i1 %cond, ptr addrspace(5) %gep0, ptr addrspace(5) %gep1
+  %val = load volatile i32, ptr addrspace(5) %p
+  ret i32 %val
+}
+
 !0 = !{!"function_entry_count", i32 10}
 ;.
 ; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
