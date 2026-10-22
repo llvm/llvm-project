@@ -4345,20 +4345,20 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       // The min/max constant is not a NaN, so the result is either on the
       // known side of C, or a NaN that minnum/maxnum may return for a
       // signaling NaN operand.
-      std::optional<bool> Folded;
+      std::optional<bool> Res;
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_UEQ: {
         // minnum(X, LesserC)  == C --> false
         // maxnum(X, GreaterC) == C --> false
-        Folded = false;
+        Res = false;
         break;
       }
       case FCmpInst::FCMP_ONE:
       case FCmpInst::FCMP_UNE: {
         // minnum(X, LesserC)  != C --> true
         // maxnum(X, GreaterC) != C --> true
-        Folded = true;
+        Res = true;
         break;
       }
       case FCmpInst::FCMP_OGE:
@@ -4369,7 +4369,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  >  C --> false
         // maxnum(X, GreaterC) >= C --> true
         // maxnum(X, GreaterC) >  C --> true
-        Folded = IsMax;
+        Res = IsMax;
         break;
       }
       case FCmpInst::FCMP_OLE:
@@ -4380,22 +4380,28 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  <  C --> true
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
-        Folded = !IsMax;
+        Res = !IsMax;
+        break;
+      }
+      case FCmpInst::FCMP_ORD:
+      case FCmpInst::FCMP_UNO: {
+        // Reachable because minnum/maxnum may return a NaN for an sNaN
+        // operand. Nothing to fold since ord/uno do not depend on the
+        // ordering of the LHS and RHS.
         break;
       }
       default: {
-        // TRUE/FALSE are handled before this. ORD/UNO only fold if the
-        // result is known to not be a NaN, which is handled above.
-        break;
+        // TRUE/FALSE are handled before this.
+        llvm_unreachable("Unexpected fcmp predicate");
       }
       }
 
-      // A NaN result compares false for every ordered predicate and true for
-      // every unordered one, so a fold that agrees with it holds even if the
-      // result may be a NaN.
-      if (Folded && (*Folded == CmpInst::isUnordered(Pred) ||
-                     computeLHSClass(fcNan).isKnownNeverNaN()))
-        return ConstantInt::get(RetTy, *Folded);
+      // If we are folding to false for an ordered predicate, or true for an
+      // unordered one, then a NaN result gives the same answer. Only
+      // minnum/maxnum with a possibly sNaN operand can be a NaN.
+      if (Res && (*Res == CmpInst::isUnordered(Pred) ||
+                  computeLHSClass(fcNan).isKnownNeverNaN()))
+        return ConstantInt::get(RetTy, *Res);
     }
   }
 
