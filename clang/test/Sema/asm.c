@@ -427,3 +427,17 @@ void test21(long double x, int y) {
   asm ("fabs" : "=t" (st) : "0" (x));
   asm ("nop" : : : "17", "flags", "fpsr", "dirflag");
 }
+
+void test20()
+{
+  double f00 = 0.0; 
+  double f01 = 0.0; 
+  double f10 = 0.0; 
+  double f11 = 0.0;
+  int mem;
+  asm volatile ("" : "+f" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+r" (f11), "+m" (mem) :: "memory"); // no-error
+}
