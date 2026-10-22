@@ -12255,14 +12255,20 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     return false;
   }
 
+  // Try the query as is and with its operands swapped. E.g. "x >s -1" is
+  // tried as "-1 <s x" too, to match the found condition "x <u y".
   auto IsSignFlippedPredicate = [](CmpInst::Predicate P1,
                                    CmpInst::Predicate P2) {
-    assert(P1 != P2 && "Handled earlier!");
     return CmpInst::isRelational(P2) &&
            P1 == ICmpInst::getFlippedSignednessPredicate(P2);
   };
   if (IsSignFlippedPredicate(Pred, FoundPred) &&
       isImpliedCondViaSignFlippedPred(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    return true;
+  CmpPredicate SwappedPred = ICmpInst::getSwappedCmpPredicate(Pred);
+  if (IsSignFlippedPredicate(SwappedPred, FoundPred) &&
+      isImpliedCondViaSignFlippedPred(SwappedPred, RHS, LHS, FoundLHS, FoundRHS,
+                                      CtxI))
     return true;
 
   // Check if we can make progress by sharpening ranges.
