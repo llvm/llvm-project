@@ -4588,8 +4588,8 @@ uint64_t test_pm2waddau_u64(uint64_t rd, uint16x2_t rs1, uint16x2_t rs2) {
 
 // CHECK-LABEL: test_pm2wsuba_i64:
 // RV32:        pm2wsuba.h
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pm2sub.h
-// RV64:        zext.w
 // RV64:        predsum.ws
 int64_t test_pm2wsuba_i64(int64_t rd, int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pm2wsuba_i64(rd, rs1, rs2);
@@ -4597,8 +4597,8 @@ int64_t test_pm2wsuba_i64(int64_t rd, int16x2_t rs1, int16x2_t rs2) {
 
 // CHECK-LABEL: test_pm2wsuba_x_i64:
 // RV32:        pm2wsuba.hx
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pm2sub.hx
-// RV64:        zext.w
 // RV64:        predsum.ws
 int64_t test_pm2wsuba_x_i64(int64_t rd, int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pm2wsuba_x_i64(rd, rs1, rs2);

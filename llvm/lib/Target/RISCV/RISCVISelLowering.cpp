@@ -13739,28 +13739,25 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
 
+    auto WidenAnyAcc = [&](SDValue V) {
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
+                         DAG.getUNDEF(MVT::v2i16));
+    };
+    SDValue A = WidenAnyAcc(Rs1);
+
     if (IntNo == Intrinsic::riscv_pm2wsuba ||
         IntNo == Intrinsic::riscv_pm2wsuba_x) {
 
-      unsigned SubIntNo = IntNo == Intrinsic::riscv_pm2wsuba
-                              ? Intrinsic::riscv_pm2sub
-                              : Intrinsic::riscv_pm2sub_x;
-      SDValue SubId = DAG.getTargetConstant(SubIntNo, DL, MVT::i64);
-      SDValue Diff =
-          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, SubId, Rs1, Rs2);
-      SDValue DiffWide = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Diff);
-      SDValue Packed = DAG.getBitcast(MVT::v2i32, DiffWide);
+      SDValue B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      unsigned SubOpc = IntNo == Intrinsic::riscv_pm2wsuba ? RISCVISD::PM2SUB
+                                                           : RISCVISD::PM2SUB_X;
+      SDValue Packed = DAG.getNode(SubOpc, DL, MVT::v2i32, A, B);
       SDValue SumId =
           DAG.getTargetConstant(Intrinsic::riscv_predsum, DL, MVT::i64);
       return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64, SumId, Packed,
                          Rd);
     }
 
-    auto WidenAnyAcc = [&](SDValue V) {
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
-                         DAG.getUNDEF(MVT::v2i16));
-    };
-    SDValue A = WidenAnyAcc(Rs1);
     SDValue B;
     if (IntNo == Intrinsic::riscv_pm2wadda_x) {
       SDValue Rs2Wide = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);

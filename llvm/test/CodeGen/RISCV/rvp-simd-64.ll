@@ -8144,8 +8144,8 @@ define i64 @test_pm2wsuba_v2i16_i64(i64 %rd, <2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pm2wsuba_v2i16_i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    pack a2, a2, zero
 ; RV64-NEXT:    pm2sub.h a1, a1, a2
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    predsum.ws a0, a1, a0
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.riscv.pm2wsuba.i64.v2i16(i64 %rd, <2 x i16> %a, <2 x i16> %b)
@@ -8160,8 +8160,8 @@ define i64 @test_pm2wsuba_x_v2i16_i64(i64 %rd, <2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pm2wsuba_x_v2i16_i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    pack a2, a2, zero
 ; RV64-NEXT:    pm2sub.hx a1, a1, a2
-; RV64-NEXT:    zext.w a1, a1
 ; RV64-NEXT:    predsum.ws a0, a1, a0
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.riscv.pm2wsuba.x.i64.v2i16(i64 %rd, <2 x i16> %a, <2 x i16> %b)
