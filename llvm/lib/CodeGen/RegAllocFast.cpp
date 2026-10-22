@@ -32,6 +32,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
@@ -2044,6 +2045,11 @@ bool RegAllocFastImpl::tiedUseNeedsOwnReg(const MachineInstr &MI,
 /// toward folding more than necessary rather than running out of registers.
 void RegAllocFastImpl::selectInlineAsmRegsToFold(
     const MachineInstr &MI, SmallVectorImpl<Register> &ToFold) const {
+  // Most inline asm has no foldable operand, so skip the analysis below.
+  if (none_of(seq<unsigned>(InlineAsm::MIOp_FirstOperand, MI.getNumOperands()),
+              [&](unsigned I) { return MI.mayFoldInlineAsmRegOp(I); }))
+    return;
+
   // The virtual registers of MI's register operands.
   struct AsmReg {
     Register Reg;
@@ -2105,6 +2111,11 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
         continue;
 
       if (DefReg.isVirtual()) {
+        // Folding the def stores the whole tied input into the def's slot, so
+        // an input read through a subregister rules that out.
+        if (MO.getSubReg())
+          getAsmReg(DefReg).Foldable = false;
+
         bool NeedsOwnReg = tiedUseNeedsOwnReg(MI, I);
         AsmReg &R = getAsmReg(Reg);
         R.TiedDefs.push_back(DefReg);
@@ -2118,8 +2129,10 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
       continue;
     }
 
+    // The slot holds the whole register, so a subregister operand isn't
+    // folded.
     AsmReg &R = getAsmReg(Reg);
-    R.Foldable &= MI.mayFoldInlineAsmRegOp(I);
+    R.Foldable &= MI.mayFoldInlineAsmRegOp(I) && !MO.getSubReg();
     if (MO.isUse()) {
       R.InUses = true;
       R.HasUntiedUse = true;
@@ -2134,9 +2147,12 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
   // the asm either reads or writes.
   // Folding a register only folds its untied operands, so a register the asm
   // only reads through tied uses frees nothing.
+  // A tied input the asm also writes isn't modeled; give it a register, and
+  // don't fold it: its slot would need both its old value, for the def it's
+  // tied to, and the tied input of its own def.
   for (AsmReg &R : Regs) {
     R.Foldable &= !(R.InDefs && R.HasUntiedUse) && (R.InDefs || R.HasUntiedUse);
-    // A tied input the asm also writes isn't modeled; give it a register.
+    R.Foldable &= !(R.InDefs && !R.TiedDefs.empty());
     R.TiedNeedsOwnReg |= R.InDefs;
   }
 
