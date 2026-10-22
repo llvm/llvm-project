@@ -725,16 +725,26 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   // Every operand in Ops holds the same register (e.g. one value passed to two
   // "rm" operands), so they all fold to the same stack slot. The asm reads
   // the slot through a use, and through a def tied to a use, which need not
-  // be the same virtual register when the allocator lowers ties itself.
+  // be the same virtual register when the allocator lowers ties itself. In
+  // that case the caller must store the tied use's value into the slot before
+  // the asm, as RegAllocFast does.
   bool Reads = false;
   bool Writes = false;
   for (unsigned Op : Ops) {
     assert(Op && "should never be first operand");
     const MachineOperand &MO = MI.getOperand(Op);
     assert(MO.isReg() && "shouldn't be folding non-reg operands");
+    assert(MO.getReg() == MI.getOperand(Ops[0]).getReg() &&
+           "folded operands must hold the same register");
 
     // A tied use is only ever folded along with its def.
     if (MI.isRegTiedToDefOperand(Op) || !MI.mayFoldInlineAsmRegOp(Op))
+      return nullptr;
+
+    // A memory operand replaces exactly one register, so one register of a
+    // multi-register operand (e.g. an i128 in two GR64s) can't be folded.
+    if (InlineAsm::Flag(MI.getOperand(Op - 1).getImm())
+            .getNumOperandRegisters() != 1)
       return nullptr;
 
     Reads |= MO.readsReg();
