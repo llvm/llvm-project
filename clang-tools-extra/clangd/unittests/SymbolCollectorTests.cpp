@@ -2213,6 +2213,28 @@ TEST_F(SymbolCollectorTest, Concepts) {
                   qName("A"), hasKind(clang::index::SymbolKind::Concept))));
 }
 
+TEST_F(SymbolCollectorTest, ExportedDeclarations) {
+  const char *Main = R"cpp(
+    export module m;
+    export void f();
+    export int v;
+    export {
+      void g();
+      struct S { void m(); };
+    }
+    namespace ns {
+    export void h();
+    void not_exported();
+    }
+  )cpp";
+
+  runSymbolCollector("", Main, {"-std=c++20", "-xc++-module"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(qName("f"), qName("v"), qName("g"),
+                                   qName("S"), qName("S::m"), qName("ns"),
+                                   qName("ns::h"), qName("ns::not_exported")));
+}
+
 TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {
   CollectorOpts.CollectIncludePath = true;
   const std::string Header = R"cpp(#pragma once 

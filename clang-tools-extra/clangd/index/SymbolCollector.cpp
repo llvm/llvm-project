@@ -524,13 +524,13 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
 
   // We want most things but not "local" symbols such as symbols inside
   // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
-  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
-  // within an export.
   const auto *DeclCtx = ND.getDeclContext();
   switch (DeclCtx->getDeclKind()) {
   case Decl::TranslationUnit:
   case Decl::Namespace:
   case Decl::LinkageSpec:
+  // An export-declaration can only appear at namespace scope.
+  case Decl::Export:
   case Decl::Enum:
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
