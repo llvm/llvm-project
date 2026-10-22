@@ -988,10 +988,6 @@ private:
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
 
-  void transferEmittedNodeDependencies(MaterializingInfo &DependantMI,
-                                       const SymbolStringPtr &DependantName,
-                                       MaterializingInfo &EmittedMI);
-
   Expected<SymbolFlagsMap>
   defineMaterializing(MaterializationResponsibility &FromMR,
                       SymbolFlagsMap SymbolFlags);
@@ -1004,9 +1000,6 @@ private:
            SymbolStringPtr InitSymbol);
 
   SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const;
-
-  void addDependencies(const SymbolStringPtr &Name,
-                       const SymbolDependenceMap &Dependants);
 
   Error resolve(MaterializationResponsibility &MR, const SymbolMap &Resolved);
 
