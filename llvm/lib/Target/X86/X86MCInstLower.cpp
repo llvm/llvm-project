@@ -951,7 +951,8 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   uint64_t ShadowBase;
   int MappingScale;
   bool OrShadowOffset;
-  getAddressSanitizerParams(TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
+  getAddressSanitizerParams(MF->getFunction().getContext(),
+                            TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
                             &ShadowBase, &MappingScale, &OrShadowOffset);
 
   StringRef Name = AccessInfo.IsWrite ? "store" : "load";
@@ -2646,8 +2647,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // jump instruction with higher probability than threshold.
     if (getSubtarget().hasBranchHint() &&
         getSubtarget().getCLOpts().enable_branch_hint) {
-      const MachineBranchProbabilityInfo *MBPI =
-          &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+      const MachineBranchProbabilityInfo *MBPI = GetMBPI(*MF);
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);

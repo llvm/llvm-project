@@ -13,18 +13,18 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32R2-LABEL: name: bswap_i32
-    ; MIPS32R2: liveins: $a0
-    ; MIPS32R2: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; MIPS32R2: liveins: $r4
+    ; MIPS32R2: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
     ; MIPS32R2: [[WSBH:%[0-9]+]]:gpr32 = WSBH [[COPY]]
     ; MIPS32R2: [[ROTR:%[0-9]+]]:gpr32 = ROTR [[WSBH]], 16
-    ; MIPS32R2: $v0 = COPY [[ROTR]]
-    ; MIPS32R2: RetRA implicit $v0
-    %0:gprb(s32) = COPY $a0
+    ; MIPS32R2: $r2 = COPY [[ROTR]]
+    ; MIPS32R2: RetRA implicit $r2
+    %0:gprb(s32) = COPY $r4
     %1:gprb(s32) = G_BSWAP %0
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...

@@ -10,8 +10,8 @@ set(LLVM_LINK_COMPONENTS
    )
 
 if (EMSCRIPTEN)
-  if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Building clangInterpreter for Emscripten requires lld")
+  if (NOT TARGET lldWasm)
+    find_package(LLD REQUIRED CONFIG)
   endif()
   set(EXECUTOR_SOURCES Wasm.cpp)
   set(EXECUTOR_LIBS lldWasm lldCommon)
@@ -22,7 +22,10 @@ else()
     OrcShared
     OrcTargetProcess
     )
-  set(EXECUTOR_SOURCES IncrementalExecutor.cpp OrcIncrementalExecutor.cpp)
+  set(EXECUTOR_SOURCES
+    IncrementalExecutor.cpp
+    OrcIncrementalExecutor.cpp
+    )
 endif()
 
 add_clang_library(clangInterpreter

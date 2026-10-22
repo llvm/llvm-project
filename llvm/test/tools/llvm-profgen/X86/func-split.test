@@ -30,7 +30,7 @@
 
 
 ; clang -g -O3 -fdebug-info-for-profiling func-split.c -mllvm -mfs-count-threshold=0
-; -fprofile-sample-use=profile.txt -fno-inline -mllvm --enable-split-machine-functions=1
+; -fprofile-sample-use=profile.txt -fno-inline -fsplit-machine-functions
 
 #include <stdio.h>
 

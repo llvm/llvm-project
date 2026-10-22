@@ -596,7 +596,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
                    Query.Types[0].getSizeInBits() > 32;
           },
-          changeTo(0, s32))
+          changeTo(0, i32))
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
@@ -1308,6 +1308,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
 
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor({{v8s8, s8},
+                 {v8s8, s32},
+                 {v16s8, s8},
+                 {v16s8, s32},
+                 {v4s16, s16},
+                 {v4s16, s32},
+                 {v8s16, s16},
+                 {v8s16, s32},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64},
+                 {v2p0, p0}});
+
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &DstTy = Query.Types[0];
@@ -1839,13 +1853,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
-    unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
-
     MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MF.getDataLayout();
+    unsigned PtrSize = DL.getPointerSize();
+    unsigned VaListSize = ST->getTargetLowering()->getVaListSizeInBits(DL) / 8;
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
