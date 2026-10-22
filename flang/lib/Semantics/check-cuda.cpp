@@ -670,6 +670,7 @@ public:
       const auto *subp{
           name.symbol->GetUltimate().detailsIf<SubprogramDetails>()};
       const auto *implementation{subp};
+      const bool isOpenACCRoutine{subp && !subp->openACCRoutineInfos().empty()};
       if (subp && subp->moduleInterface()) {
         subp = subp->moduleInterface()
                    ->GetUltimate()
@@ -681,8 +682,9 @@ public:
       if (subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) ==
           common::CUDASubprogramAttrs::Host) {
-        // OpenACC routine bodies may also execute on the device.
-        if (subp->openACCRoutineInfos().empty()) {
+        // OpenACC routine bodies may also execute on the device. The directive
+        // can appear on either the implementation or its module interface.
+        if (!isOpenACCRoutine && subp->openACCRoutineInfos().empty()) {
           HostCallVisitor visitor{context_};
           parser::Walk(header, visitor);
           parser::Walk(spec, visitor);
@@ -723,7 +725,7 @@ private:
   template <typename A>
   void CheckInheritedExpr(const std::optional<A> &expr, SourceName at) {
     if (expr) {
-      if (auto msg{DeviceExprChecker{context_, callContext_}(*expr)}) {
+      if (auto msg{CUDACallChecker{context_, callContext_}(*expr)}) {
         context_.Say(at, std::move(*msg));
       }
     }
