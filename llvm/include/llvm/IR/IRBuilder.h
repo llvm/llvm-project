@@ -199,8 +199,6 @@ public:
   /// the specified instruction.
   void SetInsertPoint(Instruction *I) {
     InsertPt = I->getIterator();
-    assert(InsertPt != I->getParent()->end() &&
-           "Can't read debug loc from end()");
     SetCurrentDebugLocation(I->getDebugLoc());
   }
 
