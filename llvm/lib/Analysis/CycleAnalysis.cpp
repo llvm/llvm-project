@@ -22,8 +22,8 @@ CycleInfo CycleAnalysis::run(Function &F, FunctionAnalysisManager &) {
   return CI;
 }
 
-bool CycleAnalysis::invalidate(Function &F, const PreservedAnalyses &PA,
-                               FunctionAnalysisManager::Invalidator &) {
+bool CycleInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
   // CFG have been preserved.
   auto PAC = PA.getChecker<CycleAnalysis>();
