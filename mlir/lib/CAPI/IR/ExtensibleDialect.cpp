@@ -9,14 +9,142 @@
 #include "mlir-c/ExtensibleDialect.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
+#include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 
 using namespace mlir;
 
+DEFINE_C_API_PTR_METHODS(MlirDynamicDialect, DynamicDialect)
+DEFINE_C_API_PTR_METHODS(MlirDynamicOpDefinition, DynamicOpDefinition)
 DEFINE_C_API_PTR_METHODS(MlirDynamicOpTrait, DynamicOpTrait)
 DEFINE_C_API_PTR_METHODS(MlirDynamicTypeDefinition, DynamicTypeDefinition)
 DEFINE_C_API_PTR_METHODS(MlirDynamicAttrDefinition, DynamicAttrDefinition)
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect creation
+//===----------------------------------------------------------------------===//
+
+MlirDynamicDialect mlirDynamicDialectCreate(MlirContext ctx,
+                                            MlirStringRef name) {
+  DynamicDialect *dialect = unwrap(ctx)->getOrLoadDynamicDialect(
+      unwrap(name), [](DynamicDialect *) {});
+  return wrap(dialect);
+}
+
+MlirDialect mlirDynamicDialectAsDialect(MlirDynamicDialect dialect) {
+  return wrap(static_cast<Dialect *>(unwrap(dialect)));
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic op definition creation
+//===----------------------------------------------------------------------===//
+
+MlirDynamicOpDefinition
+mlirDynamicOpDefinitionCreate(MlirDynamicDialect dialect, MlirStringRef name,
+                              MlirDynamicOpDefinitionCallbacks callbacks,
+                              void *userData) {
+  auto cppVerifyFn = [callbacks, userData](Operation *op) -> LogicalResult {
+    if (!callbacks.verify)
+      return success();
+    return unwrap(callbacks.verify(wrap(op), userData));
+  };
+  auto cppVerifyRegionFn = [callbacks,
+                            userData](Operation *op) -> LogicalResult {
+    if (!callbacks.verifyRegion)
+      return success();
+    return unwrap(callbacks.verifyRegion(wrap(op), userData));
+  };
+  std::unique_ptr<DynamicOpDefinition> opDef = DynamicOpDefinition::get(
+      unwrap(name), unwrap(dialect), std::move(cppVerifyFn),
+      std::move(cppVerifyRegionFn));
+  return wrap(opDef.release());
+}
+
+void mlirDynamicOpDefinitionDestroy(MlirDynamicOpDefinition opDef) {
+  delete unwrap(opDef);
+}
+
+void mlirDynamicDialectRegisterOp(MlirDynamicDialect dialect,
+                                  MlirDynamicOpDefinition opDef) {
+  unwrap(dialect)->registerDynamicOp(
+      std::unique_ptr<DynamicOpDefinition>(unwrap(opDef)));
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic type definition creation
+//===----------------------------------------------------------------------===//
+
+MlirDynamicTypeDefinition
+mlirDynamicTypeDefinitionCreate(MlirDynamicDialect dialect, MlirStringRef name,
+                                MlirDynamicTypeDefinitionCallbacks callbacks,
+                                void *userData) {
+  auto cppVerifyFn = [callbacks,
+                      userData](function_ref<InFlightDiagnostic()> emitError,
+                                ArrayRef<Attribute> params) -> LogicalResult {
+    if (!callbacks.verify)
+      return success();
+    SmallVector<MlirAttribute> cParams;
+    cParams.reserve(params.size());
+    for (Attribute p : params)
+      cParams.push_back(wrap(p));
+    return unwrap(callbacks.verify(static_cast<intptr_t>(cParams.size()),
+                                   cParams.data(), userData));
+  };
+  std::unique_ptr<DynamicTypeDefinition> typeDef = DynamicTypeDefinition::get(
+      unwrap(name), unwrap(dialect), std::move(cppVerifyFn));
+  return wrap(typeDef.release());
+}
+
+void mlirDynamicTypeDefinitionDestroy(MlirDynamicTypeDefinition typeDef) {
+  delete unwrap(typeDef);
+}
+
+void mlirDynamicDialectRegisterType(MlirDynamicDialect dialect,
+                                    MlirDynamicTypeDefinition typeDef) {
+  unwrap(dialect)->registerDynamicType(
+      std::unique_ptr<DynamicTypeDefinition>(unwrap(typeDef)));
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic attribute definition creation
+//===----------------------------------------------------------------------===//
+
+MlirDynamicAttrDefinition
+mlirDynamicAttrDefinitionCreate(MlirDynamicDialect dialect, MlirStringRef name,
+                                MlirDynamicAttrDefinitionCallbacks callbacks,
+                                void *userData) {
+  auto cppVerifyFn = [callbacks,
+                      userData](function_ref<InFlightDiagnostic()> emitError,
+                                ArrayRef<Attribute> params) -> LogicalResult {
+    if (!callbacks.verify)
+      return success();
+    SmallVector<MlirAttribute> cParams;
+    cParams.reserve(params.size());
+    for (Attribute p : params)
+      cParams.push_back(wrap(p));
+    return unwrap(callbacks.verify(static_cast<intptr_t>(cParams.size()),
+                                   cParams.data(), userData));
+  };
+  std::unique_ptr<DynamicAttrDefinition> attrDef = DynamicAttrDefinition::get(
+      unwrap(name), unwrap(dialect), std::move(cppVerifyFn));
+  return wrap(attrDef.release());
+}
+
+void mlirDynamicAttrDefinitionDestroy(MlirDynamicAttrDefinition attrDef) {
+  delete unwrap(attrDef);
+}
+
+void mlirDynamicDialectRegisterAttr(MlirDynamicDialect dialect,
+                                    MlirDynamicAttrDefinition attrDef) {
+  unwrap(dialect)->registerDynamicAttr(
+      std::unique_ptr<DynamicAttrDefinition>(unwrap(attrDef)));
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic op trait APIs
+//===----------------------------------------------------------------------===//
 
 bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                               MlirStringRef opName, MlirContext context) {
