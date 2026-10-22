@@ -2192,10 +2192,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind, OpInfo, I);
 
-  unsigned EltBits = DL.getTypeSizeInBits(EltTy);
-  if (EltBits < 8 || !isPowerOf2_32(EltBits))
-    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind, OpInfo, I);
+  unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
 
   if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
       AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -2205,6 +2202,15 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                         getLoadStoreVecRegBitWidth(AddressSpace));
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind, OpInfo, I);
+  }
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Src);
+  if (VecTy && EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
+      !TLI->shouldCombineMemoryType(TLI->getValueType(DL, Src))) {
+    Align EltAlign = commonAlignment(Alignment, EltBits / 8);
+    return VecTy->getNumElements() * getMemoryOpCost(Opcode, EltTy, EltAlign,
+                                                     AddressSpace, CostKind,
+                                                     OpInfo);
   }
 
   unsigned Bytes = DL.getTypeStoreSize(Src);
@@ -2222,7 +2228,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                         !ST->hasFlatSegmentOffsetBug()));
 
   if (Opcode == Instruction::Load) {
-    if (Alignment >= PowerOf2Ceil(Bytes))
+    if (VecTy && Alignment >= PowerOf2Ceil(Bytes))
       return divideCeil(Bytes, MaxBytes);
     if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {
       unsigned Piece = std::min(EltBits == 8 ? 8u : 16u, MaxBytes);
