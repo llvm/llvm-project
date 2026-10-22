@@ -235,39 +235,50 @@
 ! and device phases of the offload compilation when the negative flag is used and ignored
 ! in the positive case as it is the default.
 
-! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: %flang -### %s 2>&1 \
 ! RUN: -fopenmp -fimplicit-default-mapper-allocatable-members --offload-arch=gfx90a \
 ! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
 ! RUN:   | FileCheck %s --check-prefix=ENABLE-IMP-MAPPER
 
-! ENABLE-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! ENABLE-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
 ! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
 ! ENABLE-IMP-MAPPER-SAME: "--offload-targets=amdgpu-amd-amdhsa"
 ! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
-! ENABLE-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! ENABLE-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
 ! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
 
-! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: %flang -### %s 2>&1 \
 ! RUN: -fopenmp -fno-implicit-default-mapper-allocatable-members --offload-arch=gfx90a \
 ! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
 ! RUN:   | FileCheck %s --check-prefix=DISABLE-IMP-MAPPER
 
-! DISABLE-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
-! DISABLE-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
-! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
-
 ! Verify when multiple flags passed the final flag wins out
 
-! RUN: %flang -S -### %s -o %t 2>&1 \
-! RUN: -fopenmp -fimplicit-default-mapper-allocatable-members \
-! RUN:  -fimplicit-default-mapper-allocatable-members \
-! RUN: --offload-arch=gfx90a -fno-implicit-default-mapper-allocatable-members \
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a \
+! RUN: -fimplicit-default-mapper-allocatable-members \
+! RUN: -fimplicit-default-mapper-allocatable-members \
+! RUN: -fno-implicit-default-mapper-allocatable-members \
 ! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
-! RUN:   | FileCheck %s --check-prefix=MULTI-IMP-MAPPER
+! RUN:   | FileCheck %s --check-prefix=DISABLE-IMP-MAPPER
 
-! MULTI-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! MULTI-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
-! MULTI-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
-! MULTI-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+! DISABLE-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+! DISABLE-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+
+! Verify when no implicit-default-mapper flags passed we do not inadvertently add the flag
+
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
+! RUN:   | FileCheck %s --check-prefix=NO-IMP-MAPPER
+
+! NO-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! NO-IMP-MAPPER-SAME: "-fopenmp"
+! NO-IMP-MAPPER-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+! NO-IMP-MAPPER-NOT: "-fno-implicit-default-mapper-allocatable-members"
+! NO-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! NO-IMP-MAPPER-SAME: "-fopenmp"
+! NO-IMP-MAPPER-NOT: "-fno-implicit-default-mapper-allocatable-members"
