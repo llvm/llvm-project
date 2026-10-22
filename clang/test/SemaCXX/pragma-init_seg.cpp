@@ -17,6 +17,9 @@
 #pragma init_seg("a" L"b") // expected-warning {{expected non-wide string literal in '#pragma init_seg'}}
 
 #pragma init_seg(compiler)
+// Test optional func-name parsing: declare an identifier and use it.
+int myexit();
+#pragma init_seg(compiler, myexit)
 #else
 #pragma init_seg(compiler) // expected-warning {{'#pragma init_seg' is only supported when targeting a Microsoft environment}}
 #endif
