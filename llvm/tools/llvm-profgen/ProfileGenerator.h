@@ -345,20 +345,24 @@ private:
   void generateProbeBasedProfile();
 
   // Fill in function body samples from probes
-  void populateBodySamplesWithProbes(const RangeSample &RangeCounter,
-                                     const AddrBasedCtxKey *CtxKey);
+  void populateBodySamplesWithProbes(
+      const RangeSample &RangeCounter, const AddrBasedCtxKey *CtxKey,
+      SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts);
   // Fill in boundary samples for a call probe
-  void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
-                                         const AddrBasedCtxKey *CtxKey);
+  void populateBoundarySamplesWithProbes(
+      const BranchSample &BranchCounter, const AddrBasedCtxKey *CtxKey,
+      SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts);
 
-  ContextTrieNode *
-  getContextNodeForLeafProbe(const AddrBasedCtxKey *CtxKey,
-                             const MCDecodedPseudoProbe *LeafProbe);
+  // CallerWalkStarts holds the start nodes of the walks over the caller frames
+  // done so far for CtxKey, which mark their inline frames WasInlined.
+  ContextTrieNode *getContextNodeForLeafProbe(
+      const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe,
+      SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts);
 
   // Helper function to get FunctionSamples for the leaf probe
-  FunctionSamples &
-  getFunctionProfileForLeafProbe(const AddrBasedCtxKey *CtxKey,
-                                 const MCDecodedPseudoProbe *LeafProbe);
+  FunctionSamples &getFunctionProfileForLeafProbe(
+      const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe,
+      SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts);
 
   // For context trie nodes, infer callsite body samples from callee entry
   // (head) samples. Creates FunctionSamples for nodes without samples and
