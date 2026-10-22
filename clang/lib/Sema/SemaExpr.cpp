@@ -13658,11 +13658,10 @@ QualType Sema::GetSignedVectorType(QualType V) {
     if (TypeSize == Context.getTypeSize(Context.LongLongTy))
       return Context.getExtVectorType(Context.LongLongTy,
                                       VTy->getNumElements());
-    if (const auto *BIT = VTy->getElementType()->getAs<BitIntType>())
-      return Context.getExtVectorType(
-          Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
-          VTy->getNumElements());
-    llvm_unreachable("Unhandled vector element size in vector compare");
+    const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+    return Context.getExtVectorType(
+        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+        VTy->getNumElements());
   }
 
   if (TypeSize == Context.getTypeSize(Context.Int128Ty))
@@ -13683,11 +13682,10 @@ QualType Sema::GetSignedVectorType(QualType V) {
   if (TypeSize == Context.getTypeSize(Context.CharTy))
     return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
                                  VectorKind::Generic);
-  if (const auto *BIT = VTy->getElementType()->getAs<BitIntType>())
-    return Context.getVectorType(
-        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
-        VTy->getNumElements(), VectorKind::Generic);
-  llvm_unreachable("Unhandled vector element size in vector compare");
+  const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+  return Context.getVectorType(
+      Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+      VTy->getNumElements(), VectorKind::Generic);
 }
 
 QualType Sema::GetSignedSizelessVectorType(QualType V) {
