@@ -4,8 +4,8 @@
 ; At -O0 the branch is folded during ISel, leaving %bb1 unreachable. Unreachable
 ; blocks are not removed before register allocation, so the EFLAGS copies in it
 ; must still be lowered.
-define i128 @PR233749(i128 %arg) {
-; CHECK-LABEL: PR233749:
+define i128 @sadd_sat_i128_unreachable(i128 %arg) {
+; CHECK-LABEL: sadd_sat_i128_unreachable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
