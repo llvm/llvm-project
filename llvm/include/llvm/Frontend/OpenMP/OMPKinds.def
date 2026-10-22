@@ -269,6 +269,9 @@ __OMP_RTL(kmp_set_schedule_8, false, Void, Int32, Int64)
 __OMP_RTL(omp_set_max_active_levels, false, Void, Int32)
 __OMP_RTL(kmp_set_max_active_levels_8, false, Void, Int64)
 
+__OMP_RTL(omp_alloc, false, VoidPtr, SizeTy, SizeTy)
+__OMP_RTL(omp_free, false, Void, VoidPtr, SizeTy)
+
 __OMP_RTL(__kmpc_master, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_master, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_masked, false, Int32, IdentPtr, Int32, Int32)
