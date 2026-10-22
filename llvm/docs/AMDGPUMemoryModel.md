@@ -325,7 +325,8 @@ and one of the following holds:
 - There exists an *availability* operation `X` on write `W` such that:
 
   - `X` happens-before `Y`, and,
-  - `X` and `Y` have inclusive scopes.
+  - `X` and `Y` have inclusive scopes, and,
+  - Their common scope instance includes `W`.
 
   Then `Y` makes `W` visible in the common scope instance `S` of `X` and
   `Y`, and every subscope instance of `S` that includes `Y`.
@@ -379,8 +380,9 @@ The value returned by `R` is then defined as follows:
 - If no write is *location-ordered* before a read `R`, then `R` returns
   `undef`.
 - Otherwise if the set consisting of `R` and all writes that `R` may see
-  contains only atomic operations with inclusive scopes, then `R` returns the
-  value written by one of those writes.
+  contains only atomic operations with inclusive scopes that all access the
+  exact same set of bytes, then `R` returns the value written by one of those
+  writes.
 - Otherwise, if `R` may see some write that is not *location-ordered* before
   `R`, then `R` returns `undef`.
 - Otherwise, if `R` may see exactly one write `W`, then `R` returns the
@@ -402,26 +404,24 @@ The following properties follow from the definitions above:
    the chain.
 2. **A write cannot be made available in a scope that does not contain it.** The
    definition of an availability operation `X` requires that `X`'s scope
-   instance includes `W` as a precondition. Since every scope instance that
-   includes `X` also includes `W`, availability cannot reach a scope
-   instance that excludes `W`. In other words, availability can only "expand
-   outwards" into progressively larger scopes.
+   instance includes `W` as a precondition. The operation makes `W` available
+   in that scope instance and only those subscope instances that also contain
+   `W`. Availability therefore cannot reach a scope instance that excludes `W`.
 3. **Visibility is bounded by availability.** When a write is available in a
    scope instance, it can be made visible in that scope instance by a visibility
    operation with the corresponding scope. Subsequent *make-visible* operations
    make that write visible into narrower scope instances towards the observer.
 4. **A write can be made visible in a scope instance that does not contain it.**
    The definition of a *visibility operation* anchors scope instances to the
-   observer (`Y`), not to the original write. The only precondition is that the
-   write must already be visible or available in the scope instance of the
-   visibility operation.
+   observer (`Y`), not to the original write. The only precondition is that for
+   `Y`'s scope `S`, the write must already be visible or available in an instance
+   of `S` or a subscope of `S` that contains `Y`.
 5. **Availability and visibility chains.** For a write `W` to be visible to a
    read `R` anywhere in the system, the sufficient condition is a chain of
    happens-before edges that include availability and visibility operations with
    inclusive scopes. It is not necessary that `W` and `R` themselves have
-   inclusive scopes. Each link in the availability and visibility definitions
-   only checks the immediate predecessor, so intermediate operations can bridge
-   scope gaps that the endpoints cannot satisfy directly. Such a chain passes
+   inclusive scopes. Intermediate operations can bridge scope gaps that the
+   endpoints cannot satisfy directly. Such a chain passes
    through at least one availability operation and at least one visibility
    operation with inclusive scopes, such that their common scope includes both
    `W` and `R`.
