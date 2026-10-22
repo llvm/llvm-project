@@ -3475,6 +3475,10 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
   return LLVMCreateBuilderInContext(getGlobalContextForCAPI());
 }
 
+LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M) {
+  return wrap(new IRBuilder<>(*unwrap(M)));
+}
+
 static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,
                                     Instruction *Instr, bool BeforeDbgRecords) {
   BasicBlock::iterator I = Instr ? Instr->getIterator() : Block->end();

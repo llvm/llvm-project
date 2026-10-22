@@ -321,15 +321,16 @@ public:
     mlir::Value columnIdx = cgf.emitScalarExpr(e->getColumnIdx());
     mlir::Value matrix = Visit(e->getBase());
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
-      assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
     return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
   mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: matrix singel subscript");
-    return {};
+    mlir::Value rowIdx = cgf.emitScalarExpr(e->getRowIdx());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    mlir::Value matrix = Visit(e->getBase());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    return builder.createMatrixExtractRow(loc, matrix, rowIdx);
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
