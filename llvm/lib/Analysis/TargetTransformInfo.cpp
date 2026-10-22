@@ -242,10 +242,6 @@ unsigned TargetTransformInfo::getCallerAllocaCost(const CallBase *CB,
   return TTIImpl->getCallerAllocaCost(CB, AI);
 }
 
-bool TargetTransformInfo::shouldForwardMemSetValuesInSROA() const {
-  return TTIImpl->shouldForwardMemSetValuesInSROA();
-}
-
 int TargetTransformInfo::getInlinerVectorBonusPercent() const {
   return TTIImpl->getInlinerVectorBonusPercent();
 }

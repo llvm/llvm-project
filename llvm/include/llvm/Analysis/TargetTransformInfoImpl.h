@@ -108,8 +108,6 @@ public:
     return 0;
   };
 
-  virtual bool shouldForwardMemSetValuesInSROA() const { return false; }
-
   virtual int getInlinerVectorBonusPercent() const { return 150; }
 
   virtual InstructionCost getMemcpyCost(const Instruction *I) const {

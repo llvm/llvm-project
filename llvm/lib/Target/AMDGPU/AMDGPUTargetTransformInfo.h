@@ -133,7 +133,6 @@ public:
   unsigned getMinVectorRegisterBitWidth() const override;
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
   bool preferSLPInstCountCheck() const override;
-  bool shouldForwardMemSetValuesInSROA() const override { return true; }
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const override;

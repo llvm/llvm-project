@@ -467,11 +467,6 @@ public:
   LLVM_ABI unsigned getCallerAllocaCost(const CallBase *CB,
                                         const AllocaInst *AI) const;
 
-  /// \returns True if SROA may treat a constant memset as a store of its value
-  /// when forwarding stored values to loads from an alloca that escapes only
-  /// into read-only uses.
-  LLVM_ABI bool shouldForwardMemSetValuesInSROA() const;
-
   /// \returns Vector bonus in percent.
   ///
   /// Vector bonuses: We want to more aggressively inline vector-dense kernels
