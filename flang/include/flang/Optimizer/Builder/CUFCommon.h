@@ -117,7 +117,10 @@ void remapProcedureSymbols(
 /// smaller than the host one.
 void setDeviceAllocationPolicy(mlir::Operation *func);
 
-void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
+/// Emit a cuf.sync_descriptor at \p loc when \p box is the descriptor of a
+/// registered CUDA device global.
+void genPointerSync(mlir::Location loc, const mlir::Value box,
+                    fir::FirOpBuilder &builder);
 
 int computeElementByteSize(mlir::Location loc, mlir::Type type,
                            fir::KindMapping &kindMap,
