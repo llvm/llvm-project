@@ -19,6 +19,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -1049,6 +1050,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
     return false;
   }
   unsigned ElementCount = AT ? ASTContext::getConstantArrayElementCount(AT) : 1;
+
+  // Each matrix row (or column for column_major) also occupies a separate
+  // semantic index.
+  QualType BaseTy = getASTContext().getBaseElementType(T.getNonReferenceType());
+  if (const auto *MT = BaseTy->getAs<ConstantMatrixType>())
+    ElementCount *= isMatrixRowMajor(getLangOpts(), BaseTy)
+                        ? MT->getNumRows()
+                        : MT->getNumColumns();
 
   checkSemanticAnnotation(FD, D, A, SC, ElementCount);
   OutputDecl->addAttr(A);
