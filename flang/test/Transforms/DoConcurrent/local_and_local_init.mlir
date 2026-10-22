@@ -19,24 +19,24 @@ func.func @_QPlocal_and_local_init() {
   %c10 = arith.constant 10 : index
 
   %0 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEa") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %2 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEb") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %cst = arith.constant 5.000000e+00 : f32
   fir.store %cst to %3#0 : !fir.ref<f32>
 
   fir.do_concurrent {
     %4 = fir.alloca i32 {bindc_name = "i"}
-    %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %5:2 = hlfir.declare %4 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c10) step (%c1)
       local(@_QFtestEa_private_f32 %1#0 -> %arg1, @_QFtestEb_firstprivate_f32 %3#0 -> %arg2 : !fir.ref<f32>, !fir.ref<f32>) {
       %6 = fir.convert %arg0 : (index) -> i32
       fir.store %6 to %5#0 : !fir.ref<i32>
-      %7:2 = hlfir.declare %arg1 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-      %8:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %7:2 = hlfir.declare %arg1 uniq_name("_QFtestEa") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %8:2 = hlfir.declare %arg2 uniq_name("_QFtestEb") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %9 = fir.load %8#0 : !fir.ref<f32>
       hlfir.assign %9 to %7#0 : f32, !fir.ref<f32>
     }
@@ -49,9 +49,9 @@ func.func @_QPlocal_and_local_init() {
 // CHECK-DAG: omp.private {type = private} @[[PRIV_B:.*_QFtestEb.*\.omp]] : f32
 
 // CHECK-LABEL: func.func @_QPlocal_and_local_init
-// CHECK:         %[[A:.*]] = fir.alloca f32 {bindc_name = "a", {{.*}}}
+// CHECK:         %[[A:.*]] = fir.alloca f32 <{bindc_name = "a", {{.*}>}}
 // CHECK:         %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
-// CHECK:         %[[B:.*]] = fir.alloca f32 {bindc_name = "b", {{.*}}}
+// CHECK:         %[[B:.*]] = fir.alloca f32 <{bindc_name = "b", {{.*}>}}
 // CHECK:         %[[B_DECL:.*]]:2 = hlfir.declare %[[B]]
 
 // Verify: omp.wsloop has both privatizers

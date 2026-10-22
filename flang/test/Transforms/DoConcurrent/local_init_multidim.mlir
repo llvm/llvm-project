@@ -18,16 +18,16 @@ func.func @_QPlocal_init_multidim() {
   %c20 = arith.constant 20 : index
 
   %0 = fir.alloca f32 {bindc_name = "tmp", uniq_name = "_QFtestEtmp"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %cst = arith.constant 3.140000e+00 : f32
   fir.store %cst to %1#0 : !fir.ref<f32>
 
   fir.do_concurrent {
     %2 = fir.alloca i32 {bindc_name = "i"}
-    %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %3:2 = hlfir.declare %2 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %4 = fir.alloca i32 {bindc_name = "j"}
-    %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %5:2 = hlfir.declare %4 uniq_name("_QFtestEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0, %arg1) = (%c1, %c1) to (%c10, %c20) step (%c1, %c1)
       local(@_QFtestEtmp_firstprivate_f32 %1#0 -> %arg2 : !fir.ref<f32>) {
@@ -35,7 +35,7 @@ func.func @_QPlocal_init_multidim() {
       fir.store %6 to %3#0 : !fir.ref<i32>
       %7 = fir.convert %arg1 : (index) -> i32
       fir.store %7 to %5#0 : !fir.ref<i32>
-      %8:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %8:2 = hlfir.declare %arg2 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %9 = fir.load %8#0 : !fir.ref<f32>
       %10 = fir.load %3#0 : !fir.ref<i32>
       %11 = fir.convert %10 : (i32) -> f32
@@ -50,7 +50,7 @@ func.func @_QPlocal_init_multidim() {
 // CHECK:      omp.private {type = private} @[[PRIVATIZER:.*_QFtestEtmp.*\.omp]] : f32
 
 // CHECK-LABEL: func.func @_QPlocal_init_multidim
-// CHECK:         %[[TMP:.*]] = fir.alloca f32 {bindc_name = "tmp", {{.*}}}
+// CHECK:         %[[TMP:.*]] = fir.alloca f32 <{bindc_name = "tmp", {{.*}>}}
 // CHECK:         %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP]]
 
 // Verify: omp.parallel + omp.wsloop + omp.loop_nest structure

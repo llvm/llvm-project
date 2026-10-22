@@ -28,25 +28,25 @@ func.func @_QPlocal_init_reduce() {
   %c10 = arith.constant 10 : index
 
   %0 = fir.alloca f32 {bindc_name = "tmp", uniq_name = "_QFtestEtmp"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %2 = fir.alloca f32 {bindc_name = "sum", uniq_name = "_QFtestEsum"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEsum"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEsum") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %cst = arith.constant 1.000000e+00 : f32
   fir.store %cst to %1#0 : !fir.ref<f32>
 
   fir.do_concurrent {
     %4 = fir.alloca i32 {bindc_name = "i"}
-    %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %5:2 = hlfir.declare %4 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c10) step (%c1)
       local(@_QFtestEtmp_firstprivate_f32 %1#0 -> %arg1 : !fir.ref<f32>)
       reduce(@add_reduction_f32 #fir.reduce_attr<add> %3#0 -> %arg2 : !fir.ref<f32>) {
       %6 = fir.convert %arg0 : (index) -> i32
       fir.store %6 to %5#0 : !fir.ref<i32>
-      %7:2 = hlfir.declare %arg1 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-      %8:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEsum"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %7:2 = hlfir.declare %arg1 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %8:2 = hlfir.declare %arg2 uniq_name("_QFtestEsum") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %9 = fir.load %7#0 : !fir.ref<f32>
       %10 = fir.load %8#0 : !fir.ref<f32>
       %11 = arith.addf %10, %9 fastmath<contract> : f32
@@ -69,9 +69,9 @@ func.func @_QPlocal_init_reduce() {
 // CHECK:       }
 
 // CHECK-LABEL: func.func @_QPlocal_init_reduce
-// CHECK:         %[[TMP:.*]] = fir.alloca f32 {bindc_name = "tmp", {{.*}}}
+// CHECK:         %[[TMP:.*]] = fir.alloca f32 <{bindc_name = "tmp", {{.*}>}}
 // CHECK:         %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP]]
-// CHECK:         %[[SUM:.*]] = fir.alloca f32 {bindc_name = "sum", {{.*}}}
+// CHECK:         %[[SUM:.*]] = fir.alloca f32 <{bindc_name = "sum", {{.*}>}}
 // CHECK:         %[[SUM_DECL:.*]]:2 = hlfir.declare %[[SUM]]
 
 // Verify: omp.wsloop has both private and reduction clauses

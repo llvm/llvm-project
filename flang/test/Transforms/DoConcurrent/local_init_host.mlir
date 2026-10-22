@@ -25,16 +25,16 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
   %cst = arith.constant 3.140000e+00 : f32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.alloca f32 {bindc_name = "tmp", uniq_name = "_QFtestEtmp"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %4 = fir.load %1#0 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> i64
   %6 = fir.convert %5 : (i64) -> index
   %7 = arith.cmpi sgt, %6, %c0 : index
   %8 = arith.select %7, %6, %c0 : index
   %9 = fir.shape %8 : (index) -> !fir.shape<1>
-  %10:2 = hlfir.declare %arg0(%9) dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %10:2 = hlfir.declare %arg0(%9) dummy_scope %0 uniq_name("_QFtestEa") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   fir.store %cst to %3#0 : !fir.ref<f32>
   %11 = fir.convert %c1_i32 : (i32) -> index
   %12 = fir.load %1#0 : !fir.ref<i32>
@@ -42,13 +42,13 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
 
   fir.do_concurrent {
     %14 = fir.alloca i32 {bindc_name = "i"}
-    %15:2 = hlfir.declare %14 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %15:2 = hlfir.declare %14 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg2) = (%11) to (%13) step (%c1)
       local(@_QFtestEtmp_firstprivate_f32 %3#0 -> %arg3 : !fir.ref<f32>) {
       %16 = fir.convert %arg2 : (index) -> i32
       fir.store %16 to %15#0 : !fir.ref<i32>
-      %17:2 = hlfir.declare %arg3 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %17:2 = hlfir.declare %arg3 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %18 = fir.load %17#0 : !fir.ref<f32>
       %19 = fir.load %15#0 : !fir.ref<i32>
       %20 = fir.convert %19 : (i32) -> f32

@@ -31,29 +31,29 @@ func.func @_QPlocal_local_init_reduce() {
   %c10 = arith.constant 10 : index
 
   %0 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEa") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %2 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEb") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %4 = fir.alloca f32 {bindc_name = "sum", uniq_name = "_QFtestEsum"}
-  %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEsum"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QFtestEsum") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %cst = arith.constant 5.000000e+00 : f32
   fir.store %cst to %3#0 : !fir.ref<f32>
 
   fir.do_concurrent {
     %6 = fir.alloca i32 {bindc_name = "i"}
-    %7:2 = hlfir.declare %6 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %7:2 = hlfir.declare %6 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c10) step (%c1)
       local(@_QFtestEa_private_f32 %1#0 -> %arg1, @_QFtestEb_firstprivate_f32 %3#0 -> %arg2 : !fir.ref<f32>, !fir.ref<f32>)
       reduce(@add_reduction_f32 #fir.reduce_attr<add> %5#0 -> %arg3 : !fir.ref<f32>) {
       %8 = fir.convert %arg0 : (index) -> i32
       fir.store %8 to %7#0 : !fir.ref<i32>
-      %9:2 = hlfir.declare %arg1 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-      %10:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-      %11:2 = hlfir.declare %arg3 {uniq_name = "_QFtestEsum"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %9:2 = hlfir.declare %arg1 uniq_name("_QFtestEa") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %10:2 = hlfir.declare %arg2 uniq_name("_QFtestEb") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %11:2 = hlfir.declare %arg3 uniq_name("_QFtestEsum") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %12 = fir.load %10#0 : !fir.ref<f32>
       hlfir.assign %12 to %9#0 : f32, !fir.ref<f32>
       %13 = fir.load %9#0 : !fir.ref<f32>
@@ -79,11 +79,11 @@ func.func @_QPlocal_local_init_reduce() {
 // CHECK:       }
 
 // CHECK-LABEL: func.func @_QPlocal_local_init_reduce
-// CHECK:         %[[A:.*]] = fir.alloca f32 {bindc_name = "a", {{.*}}}
+// CHECK:         %[[A:.*]] = fir.alloca f32 <{bindc_name = "a", {{.*}>}}
 // CHECK:         %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
-// CHECK:         %[[B:.*]] = fir.alloca f32 {bindc_name = "b", {{.*}}}
+// CHECK:         %[[B:.*]] = fir.alloca f32 <{bindc_name = "b", {{.*}>}}
 // CHECK:         %[[B_DECL:.*]]:2 = hlfir.declare %[[B]]
-// CHECK:         %[[SUM:.*]] = fir.alloca f32 {bindc_name = "sum", {{.*}}}
+// CHECK:         %[[SUM:.*]] = fir.alloca f32 <{bindc_name = "sum", {{.*}>}}
 // CHECK:         %[[SUM_DECL:.*]]:2 = hlfir.declare %[[SUM]]
 
 // Verify: omp.wsloop has private (LOCAL + LOCAL_INIT) and reduction clauses

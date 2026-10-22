@@ -27,22 +27,22 @@ func.func @_QPtest() {
   %cst = arith.constant 3.140000e+00 : f32
 
   %0 = fir.alloca f32 {bindc_name = "tmp", uniq_name = "_QFtestEtmp"}
-  %1 = fir.declare %0 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %1 = fir.declare %0 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.store %cst to %1 : !fir.ref<f32>
 
   %2 = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xf32>>
   %3 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %2(%3) {uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %4:2 = hlfir.declare %2(%3) uniq_name("_QFtestEa") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 
   fir.do_concurrent {
     %5 = fir.alloca i32 {bindc_name = "i"}
-    %6:2 = hlfir.declare %5 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %6:2 = hlfir.declare %5 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c10) step (%c1)
       local(@_QFtestEtmp_firstprivate_f32 %1 -> %arg1 : !fir.ref<f32>) {
       %7 = fir.convert %arg0 : (index) -> i32
       fir.store %7 to %6#0 : !fir.ref<i32>
-      %8 = fir.declare %arg1 {uniq_name = "_QFtestEtmp"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      %8 = fir.declare %arg1 uniq_name("_QFtestEtmp") : (!fir.ref<f32>) -> !fir.ref<f32>
       %9 = fir.load %8 : !fir.ref<f32>
       %10 = fir.load %6#0 : !fir.ref<i32>
       %11 = fir.convert %10 : (i32) -> f32

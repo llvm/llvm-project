@@ -24,10 +24,10 @@ func.func @_QPmulti_local_init() {
   %c10 = arith.constant 10 : index
 
   %0 = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFtestEx"}
-  %1:2 = hlfir.declare %0 {uniq_name = "_QFtestEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %2 = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFtestEy"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %cst1 = arith.constant 1.000000e+00 : f32
   fir.store %cst1 to %1#0 : !fir.ref<f32>
@@ -36,14 +36,14 @@ func.func @_QPmulti_local_init() {
 
   fir.do_concurrent {
     %4 = fir.alloca i32 {bindc_name = "i"}
-    %5:2 = hlfir.declare %4 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %5:2 = hlfir.declare %4 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c10) step (%c1)
       local(@_QFtestEx_firstprivate_f32 %1#0 -> %arg1, @_QFtestEy_firstprivate_f32 %3#0 -> %arg2 : !fir.ref<f32>, !fir.ref<f32>) {
       %6 = fir.convert %arg0 : (index) -> i32
       fir.store %6 to %5#0 : !fir.ref<i32>
-      %7:2 = hlfir.declare %arg1 {uniq_name = "_QFtestEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-      %8:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %7:2 = hlfir.declare %arg1 uniq_name("_QFtestEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %8:2 = hlfir.declare %arg2 uniq_name("_QFtestEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %9 = fir.load %7#0 : !fir.ref<f32>
       %10 = fir.load %8#0 : !fir.ref<f32>
       %11 = arith.addf %9, %10 fastmath<contract> : f32
@@ -58,9 +58,9 @@ func.func @_QPmulti_local_init() {
 // CHECK-DAG: omp.private {type = private} @[[PRIV_Y:.*_QFtestEy.*\.omp]] : f32
 
 // CHECK-LABEL: func.func @_QPmulti_local_init
-// CHECK:         %[[X:.*]] = fir.alloca f32 {bindc_name = "x", {{.*}}}
+// CHECK:         %[[X:.*]] = fir.alloca f32 <{bindc_name = "x", {{.*}>}}
 // CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]]
-// CHECK:         %[[Y:.*]] = fir.alloca f32 {bindc_name = "y", {{.*}}}
+// CHECK:         %[[Y:.*]] = fir.alloca f32 <{bindc_name = "y", {{.*}>}}
 // CHECK:         %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]]
 
 // Verify: omp.wsloop with both privatizers
