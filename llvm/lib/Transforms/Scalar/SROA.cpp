@@ -1880,11 +1880,11 @@ std::optional<RewriteableMemOps>
 SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
-  SmallVector<User *> Worklist(SI.users());
-  while (!Worklist.empty()) {
-    User *U = Worklist.pop_back_val();
+  SmallVector<User *> Users(SI.users());
+  for (unsigned Idx = 0; Idx != Users.size(); ++Idx) {
+    User *U = Users[Idx];
     if (isa<AddrSpaceCastInst>(U)) {
-      append_range(Worklist, U->users());
+      append_range(Users, U->users());
       continue;
     }
 
