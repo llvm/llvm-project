@@ -1917,13 +1917,54 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
     SetVector<BasicBlock *> WorkList;
     // If CommonPred is null, there are multiple exits from the function.
     // They all have to be added to the worklist.
-    if (CommonPred)
+    if (CommonPred) {
       WorkList.insert(CommonPred);
-    else
-      for (BasicBlock *R : PDT.roots()) {
-        if (!isa<UnreachableInst>(R->getTerminator()))
-          WorkList.insert(R);
+    } else {
+      // Use a pre-traversal to compute a conservative set of roots for the CFG
+      // walk. We try to avoid searching portions of the CFG which can be shown
+      // to be safe to ignore--i.e., those blocks that are guaranteed to trigger
+      // UB if reached.
+
+      // For the pre-traversal, we proceed depth first and revisit blocks as
+      // additional successors have been analysed.
+      SmallVector<BasicBlock *> Stack(llvm::to_vector(PDT.roots()));
+      // The set of blocks proven to trigger UB if reached.
+      SmallPtrSet<BasicBlock *, 4> AssumedUnreachable;
+
+      while (!Stack.empty()) {
+        BasicBlock *Current = Stack.pop_back_val();
+
+        // Skip blocks we've already established are roots or may be assumed
+        // unreachable.
+        if (WorkList.contains(Current) || AssumedUnreachable.contains(Current))
+          continue;
+
+        if (!isa<UnreachableInst>(Current->getTerminator()) &&
+            is_contained(PDT.roots(), Current)) {
+          // All PDT roots with non-unreachable terminators are roots for the
+          // walk.
+          WorkList.insert(Current);
+        } else if (isa<UnreachableInst>(Current->getTerminator()) ||
+                   all_of(successors(Current), [&](const BasicBlock *Succ) {
+                     return AssumedUnreachable.contains(Succ);
+                   })) {
+          if (!isGuaranteedToTransferExecutionToSuccessor(
+                  Current->begin(), std::prev(Current->end()))) {
+            // A block with either an unreachable terminator or for which all
+            // successors are unreachable should still be considered a root for
+            // the walk if it contains an instruction which may refuse to return
+            // control flow.
+            WorkList.insert(Current);
+          } else {
+            // Otherwise, this block triggers UB if we reach it. However, we
+            // must still process the predecessors as they are not guaranteed to
+            // transfer execution to the block.
+            AssumedUnreachable.insert(Current);
+            Stack.append(pred_begin(Current), pred_end(Current));
+          }
+        }
       }
+    }
 
     NumCFGTries++;
     // Check if all paths starting from an exit node go through one of the

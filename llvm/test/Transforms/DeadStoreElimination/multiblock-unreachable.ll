@@ -86,12 +86,13 @@ if.end:
 define void @unreachable_exit_with_nounwind_call_pr53800(ptr noalias %ptr, i1 %c.1) {
 ; CHECK-LABEL: @unreachable_exit_with_nounwind_call_pr53800(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i64 1, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @exit() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -199,11 +200,12 @@ declare void @noret() nounwind noreturn
 define void @unreachable_exit_with_reachable_instrs(ptr noalias %ptr, i8 %a, i1 %c) {
 ; CHECK-LABEL: @unreachable_exit_with_reachable_instrs(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[SUCCESS:%.*]], label [[FAILURE:%.*]]
 ; CHECK:       success:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       failure:
-; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @noret()
@@ -228,12 +230,13 @@ exit:
 define void @unreachable_exit_post_dominates_reachable_paths(ptr noalias %ptr, i8 %a, i1 %c) {
 ; CHECK-LABEL: @unreachable_exit_post_dominates_reachable_paths(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[SUCCESS:%.*]], label [[FAILURE:%.*]]
 ; CHECK:       success:
 ; CHECK-NEXT:    call void @noret()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       failure:
-; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR]], align 1
 ; CHECK-NEXT:    call void @noret()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
