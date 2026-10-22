@@ -1752,19 +1752,6 @@ bool BinaryFunction::scanExternalRefs() {
         continue;
       }
 
-      // If ADR was emitted by the compiler/assembler to reference a nearby
-      // local function, we cannot move away that function due to ADR address
-      // span limitation. Hence, we skip the optimization.
-      if (BC.MIB->isADR(Instruction) &&
-          Rel->Type == ELF::R_AARCH64_ADR_PREL_LO21) {
-        BC.errs() << "BOLT-WARNING: unable to convert ADR that references "
-                  << Rel->Symbol->getName()
-                  << ". Will not optimize the target\n";
-        if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
-          TargetBF->setIgnored();
-        continue;
-      }
-
       // In the case of GOT load, ADRP+LDR can also be converted into ADRP+ADD.
       // When this happens, it's not always possible to properly symbolize ADRP
       // operand and we might have to adjust the operand based on the next
