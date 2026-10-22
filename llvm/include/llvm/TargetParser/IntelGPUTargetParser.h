@@ -51,16 +51,22 @@ enum class IGCAFeatureSet : uint8_t {
 /// Wrapper around an IGCA target's uint32_t representation, packed using the
 /// following format:
 ///
-///    31              16 15           3 2           1 0         0
-///   +------------------+--------------+-------------+-----------+
-///   |      Target      |   Reserved   | Feature set | Is Exact? |
-///   +------------------+--------------+-------------+-----------+
-///          16 bits         13 bits        2 bits        1 bit
+///    31              16 15                     3 2             0
+///   +------------------+------------------------+---------------+
+///   |      Target      |        Reserved        |  Feature set  |
+///   +------------------+------------------------+---------------+
+///          16 bits              13 bits              3 bits
 ///
-/// Target == 0 denotes an invalid IGCA Target.
+/// Note that bit 0 is a flag that represents if the feature set is "exact",
+/// and Target == 0 denotes an invalid IGCA Target.
 class IGCATarget {
   uint32_t V = 0;
-  constexpr explicit IGCATarget(uint32_t V) : V(V) {}
+  constexpr explicit IGCATarget(uint32_t Packed) {
+    // Target == 0 is invalid, so V remains 0, and any feature set bits are
+    // ignored. This keeps V == 0 as the only canonical invalid representation.
+    if (uint16_t Target = Packed >> TargetShift; Target != 0)
+      V = Packed;
+  }
 
 public:
   static constexpr uint32_t TargetShift = 16;
@@ -68,8 +74,8 @@ public:
   static constexpr uint32_t IsExactMask = 0x1;
 
   constexpr IGCATarget(uint16_t Target, IGCAFeatureSet FeatureSet)
-      : V(uint32_t(Target) << TargetShift |
-          (llvm::to_underlying(FeatureSet) & FeatureSetMask)) {}
+      : IGCATarget(uint32_t(Target) << TargetShift |
+                   (llvm::to_underlying(FeatureSet) & FeatureSetMask)) {}
 
   /// \return an invalid IGCATarget (whose packed representation is 0).
   static constexpr IGCATarget invalid() { return IGCATarget(0); }
@@ -115,7 +121,7 @@ public:
   }
 
   friend bool operator==(IGCATarget A, IGCATarget B) { return A.V == B.V; }
-  friend bool operator!=(IGCATarget A, IGCATarget B) { return A.V != B.V; }
+  friend bool operator!=(IGCATarget A, IGCATarget B) { return !(A == B); }
 };
 
 /// \return the device name that \p GPUIPVersion identifies, as reported by the

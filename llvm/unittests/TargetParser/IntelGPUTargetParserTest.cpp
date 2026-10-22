@@ -110,6 +110,12 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   // Invalid behavior:
   EXPECT_FALSE(IGCATarget::invalid());
   EXPECT_EQ(IGCATarget::invalid().pack(), 0u);
+  EXPECT_EQ(IGCATarget(0, IGCAFeatureSet::Compute), IGCATarget::invalid());
+  // unpack(2) is invalid since it results in Target = 0. It should thus equate
+  // to IGCATarget::invalid().
+  EXPECT_EQ(IGCATarget::unpack(2), IGCATarget::invalid());
+  EXPECT_FALSE(IGCATarget::unpack(2).isValid());
+  EXPECT_EQ(IGCATarget(0, IGCAFeatureSet::RenderExact), IGCATarget::invalid());
 }
 
 TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
