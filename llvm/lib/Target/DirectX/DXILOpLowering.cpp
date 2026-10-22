@@ -115,14 +115,6 @@ public:
     return Error::success();
   }
 
-  bool isFast(FastMathFlags Flags) {
-    // HLSL Fast Math doesn't enable AllowContract flag; This can be
-    // removed when we enable it in the future.
-    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
-           Flags.noSignedZeros() && Flags.allowReciprocal() &&
-           Flags.approxFunc();
-  }
-
   void setDxPrecise(CallInst *CI) {
     const StringRef Key = "dx.precise";
     Module *M = CI->getModule();
@@ -164,8 +156,7 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      if (isa<FPMathOperator>(CI) &&
-          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+      if (isa<FPMathOperator>(CI) && !cast<FPMathOperator>(CI)->isFast())
         setDxPrecise(*OpCall);
 
       if (isa<StructType>(CI->getType())) {
