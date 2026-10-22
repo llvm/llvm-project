@@ -864,7 +864,8 @@ static constexpr uint32_t LargeTeamsReductionBytes = 32;
 /// For a "large" reduction (see \p LargeTeamsReductionBytes), this cost
 /// dominates -> one block / compute unit. A small/scalar reduction prefers more
 /// blocks -> as many as needed given the device's number of waves per compute
-/// unit, but at least one / compute unit.
+/// unit, but at least one / compute unit. A loop too short to give every
+/// compute unit a block is handled like a non-reduction kernel.
 static uint64_t
 getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
                            uint32_t NumThreads, uint64_t LoopTripCount,
@@ -899,11 +900,14 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
   uint64_t BlocksPerCU =
       IsLarge ? 1 : std::max(1u, ScalarWavesPerCU / WavesPerBlock);
   uint64_t NumBlocks = NumCUs * BlocksPerCU;
-  // No more blocks than there is work for.
-  if (LoopTripCount > 0)
-    NumBlocks =
-        std::min(NumBlocks, IsSPMD ? llvm::divideCeil(LoopTripCount, NumThreads)
-                                   : LoopTripCount);
+  if (LoopTripCount > 0) {
+    // No more blocks than there is work for.
+    uint64_t TripCountNumBlocks =
+        IsSPMD ? llvm::divideCeil(LoopTripCount, NumThreads) : LoopTripCount;
+    if (TripCountNumBlocks < NumCUs)
+      return 0;
+    NumBlocks = std::min(NumBlocks, TripCountNumBlocks);
+  }
   return NumBlocks;
 }
 
