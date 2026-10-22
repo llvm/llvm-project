@@ -12,8 +12,8 @@ define ptr addrspace(1) @test(ptr addrspace(1) %base_obj, i1 %runtime_condition)
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[MERGED_VALUE:%.*]] = phi ptr addrspace(1) [ [[BASE_OBJ]], [[ENTRY:%.*]] ], [ [[DERIVED_OBJ]], [[THERE]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[MERGED_VALUE]], ptr addrspace(1) [[BASE_OBJ]]) ]
-; CHECK-NEXT:    [[MERGED_VALUE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[BASE_OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[MERGED_VALUE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[BASE_OBJ_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[MERGED_VALUE_RELOCATED]]
 ;
 entry:

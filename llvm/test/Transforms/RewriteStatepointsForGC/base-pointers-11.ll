@@ -15,8 +15,8 @@ define void @test(ptr addrspace(1) %base_obj) gc "statepoint-example" {
 ; CHECK-NEXT:    [[CURRENT:%.*]] = phi ptr addrspace(1) [ [[OBJ]], [[ENTRY]] ], [ [[NEXT_RELOCATED_CASTED:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr i64, ptr addrspace(1) [[CURRENT]], i32 1
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[NEXT]], ptr addrspace(1) [[DOT0]]) ]
-; CHECK-NEXT:    [[NEXT_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[BASE_OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[NEXT_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[BASE_OBJ_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

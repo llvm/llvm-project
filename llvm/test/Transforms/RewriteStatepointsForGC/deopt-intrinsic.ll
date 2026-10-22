@@ -11,7 +11,7 @@ define i32 @caller_0(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, ptr addrspace(1) [[PTR:%.*]]), "gc-live"(ptr addrspace(1) [[PTR]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -24,7 +24,7 @@ define i32 @caller_1(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (i32, ptr addrspace(1))) @__llvm_deoptimize, i32 2, i32 0, i32 50, ptr addrspace(1) [[PTR:%.*]], i32 0, i32 0) [ "deopt"(i32 0), "gc-live"(ptr addrspace(1) [[PTR]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -36,7 +36,7 @@ define void @caller_2(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, ptr addrspace(1) [[PTR:%.*]]), "gc-live"(ptr addrspace(1) [[PTR]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    unreachable
 ;
 entry:

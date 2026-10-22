@@ -8,7 +8,7 @@ declare void @f(ptr addrspace(1) %obj)
 define void @test1(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1))) @f, i32 1, i32 0, ptr addrspace(1) [[ARG:%.*]], i32 0, i32 0) #[[ATTR1:[0-9]+]] [ "gc-live"(ptr addrspace(1) [[ARG]]) ]
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
 

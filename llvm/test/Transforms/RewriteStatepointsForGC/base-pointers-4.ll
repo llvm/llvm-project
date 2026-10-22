@@ -28,7 +28,7 @@ define void @test(i32 %condition) gc "statepoint-example" {
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[OBJ_TO_CONSUME:%.*]] = phi ptr addrspace(1) [ [[TMP0]], [[DEST_A]] ], [ null, [[DEST_B]] ], [ null, [[DEST_C]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1))) @consume_obj, i32 1, i32 0, ptr addrspace(1) [[OBJ_TO_CONSUME]], i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[OBJ_TO_CONSUME]]) ]
-; CHECK-NEXT:    [[OBJ_TO_CONSUME_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
+; CHECK-NEXT:    [[OBJ_TO_CONSUME_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
 ; CHECK-NEXT:    br label [[MERGE_SPLIT:%.*]]
 ; CHECK:       merge.split:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN2:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]

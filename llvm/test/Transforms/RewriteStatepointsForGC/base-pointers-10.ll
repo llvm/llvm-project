@@ -27,12 +27,12 @@ define void @select_of_phi(ptr addrspace(1) %base_obj_x, ptr addrspace(1) %base_
 ; CHECK-NEXT:    [[NEXT_BASE:%.*]] = phi ptr addrspace(1) [ [[DOT01]], [[TRUE]] ], [ [[DOT0]], [[FALSE]] ], !is_base_value !0
 ; CHECK-NEXT:    [[NEXT:%.*]] = phi ptr addrspace(1) [ [[NEXT_X]], [[TRUE]] ], [ [[NEXT_Y]], [[FALSE]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[NEXT_X]], ptr addrspace(1) [[NEXT_Y]], ptr addrspace(1) [[NEXT]], ptr addrspace(1) [[DOT01]], ptr addrspace(1) [[DOT0]], ptr addrspace(1) [[NEXT_BASE]]) ]
-; CHECK-NEXT:    [[NEXT_X_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 3, i32 0)
-; CHECK-NEXT:    [[NEXT_Y_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 4, i32 1)
-; CHECK-NEXT:    [[NEXT_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 5, i32 2)
-; CHECK-NEXT:    [[BASE_OBJ_X_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 3, i32 3)
-; CHECK-NEXT:    [[BASE_OBJ_Y_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 4, i32 4)
-; CHECK-NEXT:    [[NEXT_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 5, i32 5)
+; CHECK-NEXT:    [[NEXT_X_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 3, i32 0)
+; CHECK-NEXT:    [[NEXT_Y_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 4, i32 1)
+; CHECK-NEXT:    [[NEXT_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 5, i32 2)
+; CHECK-NEXT:    [[BASE_OBJ_X_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 3, i32 3)
+; CHECK-NEXT:    [[BASE_OBJ_Y_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 4, i32 4)
+; CHECK-NEXT:    [[NEXT_BASE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 5, i32 5)
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

@@ -16,7 +16,7 @@ define void @test1(ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) [[OBJ:%.*]]) ]
-; CHECK-NEXT:    [[OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[OBJ_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    call void (...) @use(ptr addrspace(1) [[OBJ_RELOCATED]])
 ; CHECK-NEXT:    ret void
 ;

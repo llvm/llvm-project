@@ -25,8 +25,8 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %b1, ptr addrspace(1) %b2) gc "s
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr addrspace(1) [ [[B5]], [[LOOP]] ], [ [[B6]], [[INNER_LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) [[MERGE]], ptr addrspace(1) [[B1]]) ]
-; CHECK-NEXT:    [[MERGE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[B1_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[MERGE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[B1_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[MERGE_RELOCATED]]
 ;
 entry:
@@ -63,8 +63,8 @@ define ptr addrspace(1) @swap(ptr addrspace(1) %b1, ptr addrspace(1) %b2) gc "st
 ; CHECK-NEXT:    br i1 [[C1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) [[B6]], ptr addrspace(1) [[B1]]) ]
-; CHECK-NEXT:    [[B6_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[B1_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[B6_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[B1_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[B6_RELOCATED]]
 ;
 entry:

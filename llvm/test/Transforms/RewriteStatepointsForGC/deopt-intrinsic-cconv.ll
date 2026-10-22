@@ -4,16 +4,16 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-declare cc42 double @llvm.experimental.deoptimize.f64(...)
+declare double @llvm.experimental.deoptimize.f64(...)
 
 define double @caller_3() gc "statepoint-example" {
 ; CHECK-LABEL: @caller_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call cc42 token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"() ]
+; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @__llvm_deoptimize, i32 0, i32 0, i32 0, i32 0) [ "deopt"() ]
 ; CHECK-NEXT:    unreachable
 ;
 
 entry:
-  %val = call cc42 double(...) @llvm.experimental.deoptimize.f64() [ "deopt"() ]
+  %val = call double(...) @llvm.experimental.deoptimize.f64() [ "deopt"() ]
   ret double %val
 }
