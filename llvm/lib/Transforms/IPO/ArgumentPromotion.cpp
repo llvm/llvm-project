@@ -818,7 +818,8 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 
 /// Return true if every value passed for Arg is private caller stack storage
 /// whose address does not escape except through the corresponding call.
-static bool isIsolatedCallerStorage(Argument &Arg) {
+static bool isIsolatedCallerStorage(Argument &Arg,
+                                    FunctionAnalysisManager &FAM) {
   Function &F = *Arg.getParent();
   for (User *U : F.users()) {
     auto *Call = cast<CallBase>(U);
@@ -865,6 +866,7 @@ static bool isIsolatedCallerStorage(Argument &Arg) {
     // Also reject calls where another pointer argument may refer to the same
     // object. The callee could otherwise modify the supposedly constant
     // aggregate through that argument.
+    AAResults &AAR = FAM.getResult<AAManager>(*Call->getCaller());
     for (unsigned I = 0; I != Call->arg_size(); ++I) {
       if (I == Arg.getArgNo())
         continue;
@@ -873,7 +875,7 @@ static bool isIsolatedCallerStorage(Argument &Arg) {
           isa<ConstantPointerNull>(Other))
         continue;
       const Value *OtherRoot = getUnderlyingObject(Other);
-      if (OtherRoot == Root || !isIdentifiedObject(OtherRoot))
+      if (OtherRoot == Root || AAR.alias(Root, Other) != AliasResult::NoAlias)
         return false;
     }
   }
@@ -1224,7 +1226,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   constexpr unsigned MaxConstantPropagationFields = 20;
   if (!F->use_empty() && !F->hasNUsesOrMore(MaxConstantPropagationCalls + 1)) {
     for (Argument *PtrArg : PointerArgs) {
-      if (PtrArg->getParamByValType() || !isIsolatedCallerStorage(*PtrArg))
+      if (PtrArg->getParamByValType() || !isIsolatedCallerStorage(*PtrArg, FAM))
         continue;
 
       SmallVector<OffsetAndArgPart, 4> Parts;

@@ -5,6 +5,8 @@
 
 @constant_pointer_global = internal global i8 0
 
+declare i32 @read_other(ptr readonly)
+
 define internal i32 @constant_fields(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @constant_fields() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -910,6 +912,45 @@ entry:
   store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
   store i32 %value, ptr %other, align 4
   %result = call i32 @unrelated_store(ptr %descriptor)
+  ret i32 %result
+}
+
+; Caller alias analysis proves that an incoming pointer cannot refer to a
+; caller-local alloca, allowing constants to propagate despite the additional
+; pointer argument.
+define internal i32 @aa_noalias_other_arg(ptr readonly %descriptor,
+                                          ptr readonly %other) {
+; COMMON-LABEL: define internal i32 @aa_noalias_other_arg(
+; COMMON-SAME: ptr readonly [[OTHER:%.*]]) {
+; COMMON:       [[OTHER_VALUE:%.*]] = call i32 @read_other(ptr [[OTHER]])
+; COMMON:       ret i32
+;
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %other.value = call i32 @read_other(ptr %other)
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  %result = add i32 %sum, %other.value
+  ret i32 %result
+}
+
+define i32 @aa_noalias_other_arg_caller(ptr %other) {
+; COMMON-LABEL: define i32 @aa_noalias_other_arg_caller(
+; COMMON-SAME: ptr [[OTHER:%.*]]) {
+; COMMON:       [[RESULT:%.*]] = call i32 @aa_noalias_other_arg(ptr [[OTHER]])
+; COMMON:       ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  %result = call i32 @aa_noalias_other_arg(ptr %descriptor, ptr %other)
   ret i32 %result
 }
 
