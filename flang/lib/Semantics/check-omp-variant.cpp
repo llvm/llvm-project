@@ -771,7 +771,6 @@ void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
 }
 
-
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
   // Perform semantic checks on declarative variants on this METADIRECTIVE.
   if (!partStack_.empty() && partStack_.back() == PartKind::SpecificationPart) {
