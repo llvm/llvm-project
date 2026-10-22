@@ -1,5 +1,4 @@
 # REQUIRES: loongarch
-
 ## Test for `TLS IE` with extreme code model.
 
 # RUN: rm -rf %t && split-file %s %t

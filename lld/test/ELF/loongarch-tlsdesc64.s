@@ -1,5 +1,4 @@
 # REQUIRES: loongarch
-
 ## Test for `TLS DESC` with extreme code model.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
