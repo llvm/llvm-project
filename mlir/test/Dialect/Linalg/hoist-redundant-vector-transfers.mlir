@@ -1753,7 +1753,7 @@ module attributes {transform.with_named_sequence} {
 // Only the read is masked, so hoisting is not safe. The second element must
 // be read as zero on every iteration, leaving 1 in memory after the loop.
 
-// CHECK-LABEL: func.func @masked_read_unmasked_write()
+// CHECK-LABEL: func.func @negative_masked_read_unmasked_write()
 // CHECK:         %[[MASK:.*]] = arith.constant dense<[true, false]>
 // CHECK:         scf.for {{.*}} {
 // CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read {{.*}}, %[[MASK]]
@@ -1761,7 +1761,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:      vector.transfer_write %[[NEXT]],
 // CHECK-NEXT:    }{{$}}
 // CHECK:         memref.load
-func.func @masked_read_unmasked_write() -> i32 {
+func.func @negative_masked_read_unmasked_write() -> i32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1798,7 +1798,7 @@ module attributes {transform.with_named_sequence} {
 // Only the write is masked, so hoisting is not safe. The next read must see
 // the elements that the masked write leaves unchanged in memory.
 
-// CHECK-LABEL: func.func @unmasked_read_masked_write(
+// CHECK-LABEL: func.func @negative_unmasked_read_masked_write(
 // CHECK-SAME:    %[[MEM:.*]]: memref<2xi32>, %[[MASK:.*]]: vector<2xi1>
 // CHECK:         scf.for {{.*}} {
 // CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read %[[MEM]]
@@ -1806,7 +1806,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[SWAP]],
 // CHECK-NEXT:      vector.transfer_write %[[NEXT]], %[[MEM]]{{.*}}, %[[MASK]]
 // CHECK-NEXT:    }{{$}}
-func.func @unmasked_read_masked_write(%mem: memref<2xi32>, %mask: vector<2xi1>) {
+func.func @negative_unmasked_read_masked_write(
+    %mem: memref<2xi32>, %mask: vector<2xi1>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1838,7 +1839,7 @@ module attributes {transform.with_named_sequence} {
 // The read and write use separate mask arguments. Hoisting is not safe
 // because the masks may select different elements.
 
-// CHECK-LABEL: func.func @distinct_transfer_masks(
+// CHECK-LABEL: func.func @negative_distinct_transfer_masks(
 // CHECK-SAME:    %[[MEM:.*]]: memref<2xi32>,
 // CHECK-SAME:    %[[MASK:.*]]: vector<2xi1>,
 // CHECK-SAME:    %[[READ_MASK:.*]]: vector<2xi1>
@@ -1848,7 +1849,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[SWAP]],
 // CHECK-NEXT:      vector.transfer_write %[[NEXT]], %[[MEM]]{{.*}}, %[[MASK]]
 // CHECK-NEXT:    }{{$}}
-func.func @distinct_transfer_masks(
+func.func @negative_distinct_transfer_masks(
     %mem: memref<2xi32>, %mask: vector<2xi1>, %read_mask: vector<2xi1>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -1917,17 +1918,17 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// The write mask changes on every iteration, so the write must stay
-// inside the loop.
+// The read is unmasked and the write uses a loop-variant mask.
+// Their masks differ, so the transfers must remain inside the loop.
 
-// CHECK-LABEL: func.func @loop_variant_write_mask(
+// CHECK-LABEL: func.func @negative_loop_variant_write_mask(
 // CHECK:         scf.for %[[IV:.*]] = {{.*}} {
 // CHECK-NEXT:      %[[MASK:.*]] = vector.create_mask %[[IV]]
 // CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read
 // CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[READ]],
 // CHECK-NEXT:      vector.transfer_write %[[NEXT]], {{.*}}, %[[MASK]]
 // CHECK-NEXT:    }{{$}}
-func.func @loop_variant_write_mask(%mem: memref<2xi32>) {
+func.func @negative_loop_variant_write_mask(%mem: memref<2xi32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
