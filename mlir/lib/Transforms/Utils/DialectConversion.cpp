@@ -3922,7 +3922,7 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
 
 struct AnyFunctionOpInterfaceSignatureConversion
     : public OpInterfaceConversionPattern<FunctionOpInterface> {
-  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FunctionOpInterface funcOp, ArrayRef<Value> /*operands*/,

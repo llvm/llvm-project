@@ -222,6 +222,12 @@ static cl::opt<unsigned> MaxLoopGuardCollectionDepth(
     "scalar-evolution-max-loop-guard-collection-depth", cl::Hidden,
     cl::desc("Maximum depth for recursive loop guard collection"), cl::init(1));
 
+static cl::opt<unsigned> MaxGuardDomTreeSteps(
+    "scalar-evolution-max-guard-dom-tree-steps", cl::Hidden,
+    cl::desc("Maximum number of immediate dominator steps taken when "
+             "collecting loop guards"),
+    cl::init(8));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -4501,7 +4507,7 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return {};
-  return SI->second.getArrayRef();
+  return SI->second;
 }
 
 /// Erase Value from ValueExprMap and ExprValueMap. ValueExprMap.erase(V)
@@ -4511,9 +4517,8 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     auto EVIt = ExprValueMap.find(I->second);
-    bool Removed = EVIt->second.remove(V);
-    (void) Removed;
-    assert(Removed && "Value not in ExprValueMap?");
+    assert(is_contained(EVIt->second, V) && "Value not in ExprValueMap?");
+    llvm::erase(EVIt->second, V);
     ValueExprMap.erase(I);
   }
 }
@@ -4522,11 +4527,8 @@ void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
   // A recursive query may have already computed the SCEV. It should be
   // equivalent, but may not necessarily be exactly the same, e.g. due to lazily
   // inferred nowrap flags.
-  auto It = ValueExprMap.find_as(V);
-  if (It == ValueExprMap.end()) {
-    ValueExprMap.insert({SCEVCallbackVH(V, this), S});
-    ExprValueMap[S].insert(V);
-  }
+  if (ValueExprMap.insert({SCEVCallbackVH(V, this), S}).second)
+    ExprValueMap[S].push_back(V);
 }
 
 /// Return an existing SCEV if it exists, otherwise analyze the expression and
@@ -7501,6 +7503,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       // Non-volatile memset / memcpy do not count as side-effect for forward
       // progress.
       if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
+
+      // Droppable intrinsics only model a memory write; they are not progress.
+      if (I->isDroppable())
         return false;
 
       return I->mayWriteToMemory();
@@ -11754,16 +11760,17 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     SCEVFlags XFlagsPresent;
     SCEVFlags YFlagsPresent;
 
+    // Use nullptr for 0, to avoid creating a zero SCEV.
     if (!splitBinaryAdd(X, XConstOp, XNonConstOp, XFlagsPresent)) {
-      XConstOp = getZero(X->getType());
+      XConstOp = nullptr;
       XNonConstOp = X;
       XFlagsPresent = ExpectedFlags;
     }
-    if (!isa<SCEVConstant>(XConstOp))
+    if (XConstOp && !isa<SCEVConstant>(XConstOp))
       return false;
 
     if (!splitBinaryAdd(Y, YConstOp, YNonConstOp, YFlagsPresent)) {
-      YConstOp = getZero(Y->getType());
+      YConstOp = nullptr;
       YNonConstOp = Y;
       YFlagsPresent = ExpectedFlags;
     }
@@ -11771,7 +11778,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     if (YNonConstOp != XNonConstOp)
       return false;
 
-    if (!isa<SCEVConstant>(YConstOp))
+    if (YConstOp && !isa<SCEVConstant>(YConstOp))
       return false;
 
     // When matching ADDs with NUW flags (and unsigned predicates), only the
@@ -11783,8 +11790,10 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       return false;
     }
 
-    OutC1 = cast<SCEVConstant>(XConstOp)->getAPInt();
-    OutC2 = cast<SCEVConstant>(YConstOp)->getAPInt();
+    OutC1 = XConstOp ? cast<SCEVConstant>(XConstOp)->getAPInt()
+                     : APInt::getZero(getTypeSizeInBits(X->getType()));
+    OutC2 = YConstOp ? cast<SCEVConstant>(YConstOp)->getAPInt()
+                     : APInt::getZero(getTypeSizeInBits(Y->getType()));
 
     return true;
   };
@@ -14865,7 +14874,7 @@ void ScalarEvolution::verify() const {
 
     // Check that the value is also part of the reverse map.
     auto It = ExprValueMap.find(KV.second);
-    if (It == ExprValueMap.end() || !It->second.contains(KV.first)) {
+    if (It == ExprValueMap.end() || !is_contained(It->second, KV.first)) {
       dbgs() << "Value " << *KV.first
              << " is in ValueExprMap but not in ExprValueMap\n";
       std::abort();
@@ -15606,9 +15615,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   if (Preds->implies(&Pred, SE))
     return;
 
-  SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
-  NewPreds.push_back(&Pred);
-  Preds = std::make_unique<SCEVUnionPredicate>(NewPreds, SE);
+  Preds = std::make_unique<SCEVUnionPredicate>(Preds->getUnionWith(&Pred, SE));
   updateGeneration();
 }
 
@@ -15655,8 +15662,7 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
 PredicatedScalarEvolution::PredicatedScalarEvolution(
     const PredicatedScalarEvolution &Init)
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
-      Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
-                                                 SE)),
+      Preds(std::make_unique<SCEVUnionPredicate>(*Init.Preds)),
       Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
@@ -16105,13 +16111,28 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // Third, collect conditions from dominating branches. Starting at the loop
   // predecessor, climb up the predecessor chain, as long as there are
   // predecessors that can be found that have unique successors leading to the
-  // original header.
+  // original header. If there is no such predecessor, continue at the
+  // immediate dominator.
   // TODO: share this logic with isLoopEntryGuardedByCond.
   unsigned NumCollectedConditions = 0;
+  unsigned NumDomTreeSteps = 0;
   VisitedBlocks.insert(Block);
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
-  for (; Pair.first;
-       Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+  for (;; Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+    if (!Pair.first) {
+      // At the first block without a unique predecessor, try to build
+      // conditions for its phis by merging those of their incoming blocks.
+      if (!NumDomTreeSteps && Depth < MaxLoopGuardCollectionDepth) {
+        SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
+        for (auto &Phi : Pair.second->phis())
+          collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
+      }
+      const DomTreeNode *IDom = SE.DT.getNode(Pair.second)->getIDom();
+      if (!IDom || ++NumDomTreeSteps > MaxGuardDomTreeSteps)
+        break;
+      Pair.first = IDom->getBlock();
+      continue;
+    }
     VisitedBlocks.insert(Pair.second);
     const CondBrInst *LoopEntryPredicate =
         dyn_cast<CondBrInst>(Pair.first->getTerminator());
@@ -16126,17 +16147,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // conditions to limit compile-time impact for now.
     if (Depth > 0 && NumCollectedConditions == 2)
       break;
-  }
-  // Finally, if we stopped climbing the predecessor chain because
-  // there wasn't a unique one to continue, try to collect conditions
-  // for PHINodes by recursively following all of their incoming
-  // blocks and try to merge the found conditions to build a new one
-  // for the Phi.
-  if (Pair.second->hasNPredecessorsOrMore(2) &&
-      Depth < MaxLoopGuardCollectionDepth) {
-    SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
-    for (auto &Phi : Pair.second->phis())
-      collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
   }
 
   // Now apply the information from the collected conditions to

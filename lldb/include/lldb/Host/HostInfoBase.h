@@ -18,9 +18,11 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Threading.h"
 
 #include <cstdint>
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -31,41 +33,45 @@ class FileSpec;
 struct SharedCacheImageInfo {
   SharedCacheImageInfo()
       : m_filename(), m_uuid(), m_extractor_sp(),
-        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+        m_create_data_extractor(nullptr), m_image_baton(nullptr), m_lazy() {}
   SharedCacheImageInfo(std::string filename, UUID uuid,
                        lldb::DataExtractorSP extractor_sp)
       : m_filename(std::move(filename)), m_uuid(uuid),
         m_extractor_sp(extractor_sp), m_create_data_extractor(nullptr),
-        m_image_baton(nullptr) {}
+        m_image_baton(nullptr), m_lazy() {}
   SharedCacheImageInfo(
       std::string filename, UUID uuid,
       lldb::DataExtractorSP (*create_data_extractor)(void *image),
       void *image_baton)
       : m_filename(std::move(filename)), m_uuid(uuid), m_extractor_sp(),
         m_create_data_extractor(create_data_extractor),
-        m_image_baton(image_baton) {}
+        m_image_baton(image_baton), m_lazy(std::make_shared<LazyExtractor>()) {}
 
+  /// Copies share the extractor, which is created at most once.
   lldb::DataExtractorSP GetExtractor() {
-    if (!m_extractor_sp && m_image_baton)
-      m_extractor_sp = m_create_data_extractor(m_image_baton);
+    if (m_lazy) {
+      llvm::call_once(m_lazy->once, [&] {
+        m_lazy->extractor_sp = m_create_data_extractor(m_image_baton);
+      });
+      return m_lazy->extractor_sp;
+    }
     return m_extractor_sp;
   }
   llvm::StringRef GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
-  void *GetImageBaton();
-  void SetExtractor(lldb::DataExtractorSP extractor_sp) {
-    m_extractor_sp = extractor_sp;
-  }
-  void SetImageBaton(void *image_baton) { m_image_baton = image_baton; }
-  void SetDataExtractorCreateFunction(
-      lldb::DataExtractorSP (*create_data_extractor)(void *image));
 
 private:
+  struct LazyExtractor {
+    llvm::once_flag once;
+    lldb::DataExtractorSP extractor_sp;
+  };
+
   std::string m_filename;
   UUID m_uuid;
   lldb::DataExtractorSP m_extractor_sp;
   lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
   void *m_image_baton;
+  std::shared_ptr<LazyExtractor> m_lazy;
 };
 
 namespace {

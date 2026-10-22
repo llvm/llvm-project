@@ -160,7 +160,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
-  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->emitDirectiveAMDGCNTargetOnce();
 
   if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
