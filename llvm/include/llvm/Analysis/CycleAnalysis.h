@@ -56,9 +56,6 @@ public:
   /// Run the analysis pass over a function and produce a dominator tree.
   LLVM_ABI CycleInfo run(Function &F, FunctionAnalysisManager &);
 
-  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                           FunctionAnalysisManager::Invalidator &);
-
   // TODO: verify analysis?
 };
 

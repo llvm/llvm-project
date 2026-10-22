@@ -992,11 +992,10 @@ broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
   });
 }
 
-static LogicalResult
-emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
-                           Operation *operation, ValueRange operands,
-                           ArrayRef<OpFoldResult> targetShape,
-                           const TypeConverter &converter) {
+static LogicalResult emitElementwiseComputation(
+    ConversionPatternRewriter &rewriter, Location loc, Operation *operation,
+    ValueRange operands, ValueRange scalarOperands,
+    ArrayRef<OpFoldResult> targetShape, const TypeConverter &converter) {
   // Generate output tensor
   auto resultType = cast_or_null<RankedTensorType>(
       converter.convertType(operation->getResultTypes().front()));
@@ -1026,12 +1025,23 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
     }
     return AffineMap::get(rank, 0, affineExprs, rewriter.getContext());
   });
+  // Scalar operands are single-element tensors: every iteration reads their
+  // first element.
+  for (Value scalar : scalarOperands) {
+    auto scalarRank = cast<ShapedType>(scalar.getType()).getRank();
+    SmallVector<AffineExpr> zeros(scalarRank,
+                                  rewriter.getAffineConstantExpr(0));
+    affineMaps.push_back(AffineMap::get(rank, 0, zeros, rewriter.getContext()));
+  }
   affineMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
+
+  SmallVector<Value> inputs(operands);
+  llvm::append_range(inputs, scalarOperands);
 
   // Emit 'linalg.generic' op
   bool encounteredError = false;
   auto linalgOp = linalg::GenericOp::create(
-      rewriter, loc, outputTensor.getType(), operands, outputTensor, affineMaps,
+      rewriter, loc, outputTensor.getType(), inputs, outputTensor, affineMaps,
       getNParallelLoopsAttrs(rank),
       [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
         Value opResult = createLinalgBodyCalculationForElementwiseOp(
@@ -1054,26 +1064,34 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
   return success();
 }
 
+// The shift of tosa.mul and the zero points of tosa.negate are single-element
+// tensors, so they never take part in broadcasting.
 static ValueRange getBroadcastableOperands(Operation *operation,
                                            ValueRange operands) {
-  // Shift cannot broadcast
+  if (isa<tosa::MulOp>(operation))
+    return operands.take_front(2);
+  if (isa<tosa::NegateOp>(operation))
+    return operands.take_front(1);
+  return operands;
+}
+
+// Returns the single-element operands that the body reads as block arguments:
+// a non-constant tosa.mul shift, or both tosa.negate zero points when either of
+// them is non-constant. Constant ones are created in the body instead.
+static ValueRange getScalarOperands(Operation *operation, ValueRange operands) {
   if (isa<tosa::MulOp>(operation)) {
     DenseElementsAttr shiftElems;
-    // Shift cannot broadcast when it is constant
     if (matchPattern(operation->getOperand(2), m_Constant(&shiftElems)))
-      return operands.take_front(2);
-    else
-      return operands.take_front(3);
+      return {};
+    return operands.drop_front(2);
   }
   if (auto negate = dyn_cast<tosa::NegateOp>(operation)) {
-    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
-    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
-    if (failed(maybeOutZp) && failed(maybeInZp))
-      return operands;
-    // Input1_zp and output_zp cannot broadcast when they are constants.
-    return operands.take_front(1);
+    if (succeeded(negate.getInput1ZeroPoint()) &&
+        succeeded(negate.getOutputZeroPoint()))
+      return {};
+    return operands.drop_front(1);
   }
-  return operands;
+  return {};
 }
 
 static LogicalResult
@@ -1093,13 +1111,14 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
   IndexPool indexPool;
   auto loc = operation->getLoc();
   auto operandsToBroadcast = getBroadcastableOperands(operation, operands);
+  auto scalarOperands = getScalarOperands(operation, operands);
   auto [targetShape, masterOperands] =
       computeTargetShape(rewriter, loc, indexPool, operandsToBroadcast);
   auto broadcastOperands =
       broadcastDynamicDimensions(rewriter, loc, indexPool, operandsToBroadcast,
                                  targetShape, masterOperands);
   return emitElementwiseComputation(rewriter, loc, operation, broadcastOperands,
-                                    targetShape, converter);
+                                    scalarOperands, targetShape, converter);
 }
 
 // Returns the constant initial value for a given reduction operation. The

@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_mman_unittests)
+add_libc_testsuite(libc-sys-mman-tests)
 
 add_libc_test(
   mmap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mmap_test.cpp
   DEPENDS
@@ -21,7 +21,7 @@ add_libc_test(
 add_libc_test(
   mremap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mremap_test.cpp
   DEPENDS
@@ -39,7 +39,7 @@ if(NOT LLVM_USE_SANITIZER)
   add_libc_test(
     mprotect_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       mprotect_test.cpp
     DEPENDS
@@ -57,7 +57,7 @@ endif()
 add_libc_test(
   madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     madvise_test.cpp
   DEPENDS
@@ -78,7 +78,7 @@ if(NOT LLVM_USE_SANITIZER)
   add_libc_test(
     pkey_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       pkey_test.cpp
     DEPENDS
@@ -101,7 +101,7 @@ endif()
 add_libc_test(
   posix_madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     posix_madvise_test.cpp
   DEPENDS
@@ -118,7 +118,7 @@ add_libc_test(
 add_libc_test(
   mincore_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mincore_test.cpp
   DEPENDS
@@ -140,7 +140,7 @@ add_libc_test(
 add_libc_test(
   mlock_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mlock_test.cpp
   DEPENDS
@@ -168,7 +168,7 @@ add_libc_test(
 add_libc_test(
   msync_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     msync_test.cpp
   DEPENDS
@@ -195,7 +195,7 @@ else()
   add_libc_test(
     remap_file_pages_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       remap_file_pages_test.cpp
     DEPENDS
@@ -216,7 +216,7 @@ endif()
 add_libc_test(
   shm_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     shm_test.cpp
   DEPENDS
@@ -240,7 +240,7 @@ add_libc_test(
 add_libc_test(
   memfd_create_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     memfd_create_test.cpp
   DEPENDS
