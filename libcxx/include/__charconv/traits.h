@@ -15,9 +15,9 @@
 #include <__charconv/tables.h>
 #include <__charconv/to_chars_base_10.h>
 #include <__config>
-#include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
+#include <__utility/checked_int.h>
 #include <cstdint>
 #include <limits>
 
@@ -101,12 +101,6 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
 };
 #endif
 
-template <typename _Tp, typename _Up>
-bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
-  static_assert(is_unsigned<_Tp>::value);
-  return __builtin_mul_overflow(__a, static_cast<_Tp>(__b), std::addressof(__r));
-}
-
 template <typename _Tp>
 struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
   static _LIBCPP_CONSTEXPR const int digits = numeric_limits<_Tp>::digits10 + 1;
@@ -125,7 +119,9 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
     } while (__p != __ep && __i != 0);
 
     __a = __inner_product(__cprod + __i + 1, __cprod + __j, __pow() + 1, __cprod[__i]);
-    if (__itoa::__mul_overflowed(__cprod[__j], __pow()[__j - __i], __b))
+    auto __res = __checked_int<type>(__cprod[__j]) * __pow()[__j - __i];
+    __b        = __res.__value();
+    if (__res.__overflowed())
       --__p;
     return __p;
   }
