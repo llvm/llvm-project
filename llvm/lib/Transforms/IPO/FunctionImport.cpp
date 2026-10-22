@@ -404,9 +404,14 @@ class GlobalsImporter final {
   FunctionImporter::ImportMapTy &ImportList;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
-  bool shouldImportGlobal(const ValueInfo &VI) {
+  bool shouldImportGlobal(const ValueInfo &VI, StringRef ReferencingModule) {
     const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
     if (GVS == DefinedGVSummaries.end())
+      return true;
+    // A local definition in the destination module cannot satisfy a reference
+    // from a different module.
+    if (shouldSkipLocalInAnotherModule(GVS->second, VI.getSummaryList().size(),
+                                       ReferencingModule))
       return true;
     // We should not skip import if the module contains a non-prevailing
     // definition with interposable linkage type. This is required for
@@ -430,7 +435,7 @@ class GlobalsImporter final {
   onImportingSummaryImpl(const GlobalValueSummary &Summary,
                          SmallVectorImpl<const GlobalVarSummary *> &Worklist) {
     for (const auto &VI : Summary.refs()) {
-      if (!shouldImportGlobal(VI)) {
+      if (!shouldImportGlobal(VI, Summary.modulePath())) {
         LLVM_DEBUG(
             dbgs() << "Ref ignored! Target already in destination module.\n");
         continue;

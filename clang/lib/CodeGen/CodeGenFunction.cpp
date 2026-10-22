@@ -1501,13 +1501,14 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     std::string FDInlineName = (Fn->getName() + ".inline").str();
     llvm::Module *M = Fn->getParent();
     llvm::Function *Clone = M->getFunction(FDInlineName);
-    if (!Clone)
+    if (!Clone) {
       Clone = llvm::Function::Create(Fn->getFunctionType(),
                                      llvm::GlobalValue::InternalLinkage,
                                      Fn->getAddressSpace(), FDInlineName, M);
-    Clone->setCallingConv(Fn->getCallingConv());
-    Clone->setAttributes(Fn->getAttributes());
-    Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+      Clone->setCallingConv(Fn->getCallingConv());
+      Clone->setAttributes(Fn->getAttributes());
+      Clone->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
     Fn = Clone;
   } else {
