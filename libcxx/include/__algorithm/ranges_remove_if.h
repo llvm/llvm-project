@@ -36,8 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Iter, class _Sent, class _Proj, class _Pred>
-_LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
-__remove_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+constexpr subrange<_Iter> __remove_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   auto __new_end = std::__find_if(__first, __last, __pred, __proj);
   if (__new_end == __last)
     return {__new_end, __new_end};
@@ -57,7 +56,7 @@ struct __remove_if {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
+  [[nodiscard]] constexpr subrange<_Iter>
   operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
     return ranges::__remove_if_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
@@ -66,7 +65,7 @@ struct __remove_if {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
     requires permutable<iterator_t<_Range>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
+  [[nodiscard]] constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return ranges::__remove_if_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }

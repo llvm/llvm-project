@@ -1,0 +1,29 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! Managed references through a component are counted once per component
+! chain, like the device references they are compared with. Managed objects
+! are accessible from the host and do not count as device objects.
+
+module m
+  type :: t
+    real, managed, allocatable :: a(:,:)
+  end type
+  type(t), managed, allocatable :: s(:)
+  real, managed, allocatable :: b(:,:)
+  real, managed, allocatable :: c(:,:)
+  real, device, allocatable :: d(:,:)
+  real, device, allocatable :: e(:,:)
+contains
+  subroutine sub(i, j)
+    integer :: i, j
+    real :: x
+    x = (b(i,j) - s(1)%a(i,j)) * c(i,j) ! ok
+    x = s(1)%a(i,j) + s(2)%a(i,j) ! ok
+    x = d(i,j) + c(i,j) ! ok
+    x = d(i,j) - s(1)%a(i,j) ! ok
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    x = s(1)%a(i,j) + d(i,j) + e(i,j)
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    x = d(i,j) + e(i,j)
+  end subroutine
+end module

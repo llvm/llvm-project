@@ -51,7 +51,7 @@ public:
   }
 };
 
-#define LIST_COPYSIGN_TESTS(T, func)                                           \
-  using LlvmLibcCopySignTest = CopySignTest<T>;                                \
-  TEST_F(LlvmLibcCopySignTest, SpecialNumbers) { testSpecialNumbers(&func); }  \
-  TEST_F(LlvmLibcCopySignTest, Range) { testRange(&func); }
+#define LIST_COPYSIGN_TESTS(Name, T, func)                                     \
+  using LlvmLibc##Name##Test = CopySignTest<T>;                                \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }

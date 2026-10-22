@@ -71,3 +71,30 @@ define <2 x i1> @mycmp_vector(<2 x ptr> %p, <2 x ptr> %q) sanitize_address {
   %z = icmp ult <2 x i64> %x, %y
   ret <2 x i1> %z
 }
+
+define i32 @mysub_ptrtoint_trunc(ptr %p, ptr %q) sanitize_address {
+; ALL-LABEL: @mysub_ptrtoint_trunc
+; ALL-NOT: call void @__sanitizer_ptr_sub
+  %x = ptrtoint ptr %p to i32
+  %y = ptrtoint ptr %q to i32
+  %z = sub i32 %x, %y
+  ret i32 %z
+}
+
+define <2 x i32> @mysub_vector_ptrtoint_trunc(<2 x ptr> %p, <2 x ptr> %q) sanitize_address {
+; ALL-LABEL: @mysub_vector_ptrtoint_trunc
+; ALL-NOT: call void @__sanitizer_ptr_sub
+  %x = ptrtoint <2 x ptr> %p to <2 x i32>
+  %y = ptrtoint <2 x ptr> %q to <2 x i32>
+  %z = sub <2 x i32> %x, %y
+  ret <2 x i32> %z
+}
+
+define i128 @mysub_ptrtoint_widen(ptr %p, ptr %q) sanitize_address {
+; ALL-LABEL: @mysub_ptrtoint_widen
+; ALL-NOT: call void @__sanitizer_ptr_sub
+  %x = ptrtoint ptr %p to i128
+  %y = ptrtoint ptr %q to i128
+  %z = sub i128 %x, %y
+  ret i128 %z
+}

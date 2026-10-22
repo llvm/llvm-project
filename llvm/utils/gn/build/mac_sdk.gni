@@ -3,7 +3,7 @@ import("//llvm/utils/gn/build/sysroot.gni")
 have_ios_sdks = true
 
 declare_args() {
-  mac_deployment_target = "12"
+  mac_deployment_target = "13"
 }
 
 if (sysroot == "") {

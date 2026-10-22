@@ -28,6 +28,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace llvm {
 class BasicBlock;
@@ -38,9 +39,6 @@ class IRBuilderBase;
 class Metadata;
 class OpenMPIRBuilder;
 class Value;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
@@ -101,6 +99,11 @@ public:
   llvm::Value *lookupValue(Value value) const {
     return valueMapping.lookup(value);
   }
+
+  /// Remap old value with new value in the MLIR-to-LLVM value map so later
+  /// translations use the replacement. Existing LLVM instructions are not
+  /// rewritten.
+  void remapAllValuesWith(llvm::Value *oldValue, llvm::Value *newValue);
 
   /// Looks up remapped a list of remapped values.
   SmallVector<llvm::Value *> lookupValues(ValueRange values);

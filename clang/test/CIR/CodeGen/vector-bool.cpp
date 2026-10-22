@@ -412,3 +412,22 @@ void vec_bool_dynamic_shuffling() {
 // SHARED: %[[SHUF_INS_7:.*]] = insertelement <8 x i1> %[[SHUF_INS_6]], i1 %[[SHUF_ELT_7]], i64 7
 // SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[SHUF_INS_7]] to i8
 // SHARED: store i8 %[[RESULT_I8]], ptr %[[C_ADDR]], align 1
+
+void vec_bool_minus_op() {
+  v8b a;
+  v8b b = -a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[RESULT:.*]] = cir.minus %[[TMP_A]] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[RESULT:.*]] = sub <8 x i1> zeroinitializer, %[[TMP_A_VEC]]
+// SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[RESULT]] to i8
+// SHARED: store i8 %[[RESULT_I8]], ptr %[[B_ADDR]], align 1

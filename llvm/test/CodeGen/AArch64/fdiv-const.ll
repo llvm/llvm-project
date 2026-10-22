@@ -90,8 +90,7 @@ define half @divf16_32768(half %a) nounwind {
 ;
 ; CHECK-GI-LABEL: divf16_32768:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI5_0]
+; CHECK-GI-NEXT:    movi v1.4h, #120, lsl #8
 ; CHECK-GI-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-NEXT:    ret
   %r = fdiv half %a, 32768.0
@@ -108,8 +107,7 @@ define half @divf16_32768_arcp(half %a) nounwind {
 ;
 ; CHECK-GI-LABEL: divf16_32768_arcp:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI6_0
-; CHECK-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI6_0]
+; CHECK-GI-NEXT:    movi v1.4h, #120, lsl #8
 ; CHECK-GI-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-NEXT:    ret
   %r = fdiv arcp half %a, 32768.0

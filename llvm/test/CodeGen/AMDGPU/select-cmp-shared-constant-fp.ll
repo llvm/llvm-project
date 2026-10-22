@@ -290,8 +290,8 @@ define float @fcmp_select_no_fold_oeq_f32_nan(float %arg, float %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq float %arg, 0x7FF8000000000000
-  %sel = select i1 %cmp, float 0x7FF8000000000000, float %other
+  %cmp = fcmp oeq float %arg, +qnan
+  %sel = select i1 %cmp, float +qnan, float %other
   ret float %sel
 }
 
@@ -310,8 +310,8 @@ define float @fcmp_select_no_fold_one_f32_nan(float %arg, float %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp one float 0x7FF8000000000000, %arg
-  %sel = select i1 %cmp, float %other, float 0x7FF8000000000000
+  %cmp = fcmp one float +qnan, %arg
+  %sel = select i1 %cmp, float %other, float +qnan
   ret float %sel
 }
 
@@ -334,8 +334,8 @@ define float @fcmp_select_no_fold_posinf_oeq_f32(float %arg, float %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x7f800000, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq float %arg, 0x7FF0000000000000
-  %sel = select i1 %cmp, float 0x7FF0000000000000, float %other
+  %cmp = fcmp oeq float %arg, +inf
+  %sel = select i1 %cmp, float +inf, float %other
   ret float %sel
 }
 
@@ -358,8 +358,8 @@ define float @fcmp_select_no_fold_neginf_f32_one(float %arg, float %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xff800000, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp one float 0xFFF0000000000000, %arg
-  %sel = select i1 %cmp, float %other, float 0xFFF0000000000000
+  %cmp = fcmp one float -inf, %arg
+  %sel = select i1 %cmp, float %other, float -inf
   ret float %sel
 }
 
@@ -703,8 +703,8 @@ define double @fcmp_select_no_fold_nan_f64(double %arg, double %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double %arg, 0x7FF8000000000000
-  %sel = select i1 %cmp, double 0x7FF8000000000000, double %other
+  %cmp = fcmp oeq double %arg, +qnan
+  %sel = select i1 %cmp, double +qnan, double %other
   ret double %sel
 }
 
@@ -725,8 +725,8 @@ define double @fcmp_select_no_fold_nan_f64_comm(double %arg, double %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double 0x7FF8000000000000, %arg
-  %sel = select i1 %cmp, double 0x7FF8000000000000, double %other
+  %cmp = fcmp oeq double +qnan, %arg
+  %sel = select i1 %cmp, double +qnan, double %other
   ret double %sel
 }
 
@@ -747,8 +747,8 @@ define double @fcmp_select_no_fold_nan_f64_one(double %arg, double %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp one double %arg, 0x7FF8000000000000
-  %sel = select i1 %cmp, double %other, double 0x7FF8000000000000
+  %cmp = fcmp one double %arg, +qnan
+  %sel = select i1 %cmp, double %other, double +qnan
   ret double %sel
 }
 
@@ -769,8 +769,8 @@ define double @fcmp_select_no_fold_nan_f64_one_comm(double %arg, double %other) 
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp one double 0x7FF8000000000000, %arg
-  %sel = select i1 %cmp, double %other, double 0x7FF8000000000000
+  %cmp = fcmp one double +qnan, %arg
+  %sel = select i1 %cmp, double %other, double +qnan
   ret double %sel
 }
 
@@ -796,8 +796,8 @@ define double @fcmp_select_no_fold_posinf_f64(double %arg, double %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x7ff00000, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double %arg, 0x7FF0000000000000
-  %sel = select i1 %cmp, double 0x7FF0000000000000, double %other
+  %cmp = fcmp oeq double %arg, +inf
+  %sel = select i1 %cmp, double +inf, double %other
   ret double %sel
 }
 
@@ -823,8 +823,8 @@ define double @fcmp_select_no_fold_neginf_f64(double %arg, double %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0xfff00000, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double %arg, 0xFFF0000000000000
-  %sel = select i1 %cmp, double 0xFFF0000000000000, double %other
+  %cmp = fcmp oeq double %arg, -inf
+  %sel = select i1 %cmp, double -inf, double %other
   ret double %sel
 }
 
@@ -850,8 +850,8 @@ define double @fcmp_select_no_fold_posinf_f64_comm(double %arg, double %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x7ff00000, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double 0x7FF0000000000000, %arg
-  %sel = select i1 %cmp, double 0x7FF0000000000000, double %other
+  %cmp = fcmp oeq double +inf, %arg
+  %sel = select i1 %cmp, double +inf, double %other
   ret double %sel
 }
 
@@ -877,8 +877,8 @@ define double @fcmp_select_no_fold_neginf_f64_comm(double %arg, double %other) {
 ; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0xfff00000, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp oeq double 0xFFF0000000000000, %arg
-  %sel = select i1 %cmp, double 0xFFF0000000000000, double %other
+  %cmp = fcmp oeq double -inf, %arg
+  %sel = select i1 %cmp, double -inf, double %other
   ret double %sel
 }
 

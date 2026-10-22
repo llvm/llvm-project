@@ -7105,16 +7105,16 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
 #    ifndef __cpp_lib_debugging
 #      error "__cpp_lib_debugging should be defined in c++26"
 #    endif
-#    if __cpp_lib_debugging != 202311L
-#      error "__cpp_lib_debugging should have the value 202311L in c++26"
+#    if __cpp_lib_debugging != 202403L
+#      error "__cpp_lib_debugging should have the value 202403L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_debugging
-#      error "__cpp_lib_debugging should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_debugging should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING' is not met!"
 #    endif
 #  endif
 
@@ -7673,8 +7673,8 @@
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++26"
 #    endif
-#    if __cpp_lib_is_within_lifetime != 202306L
-#      error "__cpp_lib_is_within_lifetime should have the value 202306L in c++26"
+#    if __cpp_lib_is_within_lifetime != 202603L
+#      error "__cpp_lib_is_within_lifetime should have the value 202603L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime
@@ -8862,8 +8862,8 @@
 #  ifndef __cpp_lib_bitops
 #    error "__cpp_lib_bitops should be defined in c++29"
 #  endif
-#  if __cpp_lib_bitops != 201907L
-#    error "__cpp_lib_bitops should have the value 201907L in c++29"
+#  if __cpp_lib_bitops != 202606L
+#    error "__cpp_lib_bitops should have the value 202606L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_bitset
@@ -9191,16 +9191,16 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
 #    ifndef __cpp_lib_debugging
 #      error "__cpp_lib_debugging should be defined in c++29"
 #    endif
-#    if __cpp_lib_debugging != 202311L
-#      error "__cpp_lib_debugging should have the value 202311L in c++29"
+#    if __cpp_lib_debugging != 202403L
+#      error "__cpp_lib_debugging should have the value 202403L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_debugging
-#      error "__cpp_lib_debugging should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_debugging should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING' is not met!"
 #    endif
 #  endif
 
@@ -9759,8 +9759,8 @@
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++29"
 #    endif
-#    if __cpp_lib_is_within_lifetime != 202306L
-#      error "__cpp_lib_is_within_lifetime should have the value 202306L in c++29"
+#    if __cpp_lib_is_within_lifetime != 202603L
+#      error "__cpp_lib_is_within_lifetime should have the value 202603L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime
@@ -10787,17 +10787,11 @@
 #    error "__cpp_lib_variant should have the value 202306L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should be defined in c++29"
-#    endif
-#    if __cpp_lib_view_interface != 202606L
-#      error "__cpp_lib_view_interface should have the value 202606L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++29"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_void_t

@@ -47,6 +47,16 @@ def TestEnum
   let cppNamespace = "test";
 }
 
+def TestStructEnum
+    : I32EnumAttr<"TestStructEnum", "an enum nested in a struct parameter", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+}
+
 def TestOtherEnum
     : I32Enum<"TestOtherEnum", "another test enum", [
         I32EnumCase<"Dog", 0, "dog">,
@@ -123,6 +133,16 @@ def TestBitEnumVerticalBar
       ]> {
   let cppNamespace = "test";
   let separator = " | ";
+}
+
+def TestStructBitEnum
+    : I32BitEnum<"TestStructBitEnum", "a bit enum nested in a struct", [
+        TestBitEnumNone,
+        I32BitEnumCaseBit<"Read", 0, "read">,
+        I32BitEnumCaseBit<"Write", 1, "write">,
+      ]> {
+  let cppNamespace = "test";
+  let separator = ", ";
 }
 
 //===----------------------------------------------------------------------===//

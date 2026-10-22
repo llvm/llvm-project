@@ -314,6 +314,8 @@ static const char *primTypeToString(PrimType T) {
     return "MemberPtr";
   case PT_FixedPoint:
     return "FixedPoint";
+  case PT_Reflect:
+    return "Reflect";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -345,15 +347,12 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     // All the maps.
     Bytes += GlobalIndices.getMemorySize();
     Bytes += Records.getMemorySize();
-    Bytes += DummyVariables.getMemorySize();
 
     // All Records.
-    for (const Record *R : Records.values()) {
-      Bytes += sizeof(Record) + R->BaseMap.getMemorySize() +
-               R->VirtualBaseMap.getMemorySize();
-      Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
-               R->VirtualBases.capacity_in_bytes();
-    }
+    // They are allocated using the program allocator, so only get the size from
+    // the BaseMap.
+    for (const Record *R : Records.values())
+      Bytes += R->BaseMap.getMemorySize();
 
     // Globals are allocated via the allocator, so already counted.
 
@@ -373,8 +372,6 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
                         : TerminalColor{llvm::raw_ostream::RED, false});
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
-    if (GP.block()->isDummy())
-      OS << "dummy ";
     Desc->dump(OS);
 
     if (GP.isInitialized() && Desc->IsTemporary) {
@@ -403,7 +400,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
 
     OS << "\n";
-    if (GP.isInitialized() && Desc->isPrimitive() && !G->block()->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -544,7 +541,7 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     if (getCallee())
       describe(OS);
     else
-      OS << "Frame (Depth: " << getDepth() << ")";
+      OS << "Frame";
     OS << "\n";
   }
   OS.indent(Spaces) << "Function: " << getFunction();
@@ -560,7 +557,6 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
   else
     OS.indent(Spaces) << "RVO: -\n";
-  OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
 #ifndef NDEBUG
@@ -635,7 +631,6 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
-  OS << "  Dummy: " << isDummy() << '\n';
   OS << "  Dynamic: " << isDynamic() << "\n";
   OS << "  Metadata: " << MDSize << '\n';
 }
@@ -649,9 +644,6 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
     OS << "Invalid\n";
   } else {
     OS << "Value: ";
-#ifndef NDEBUG
-    assert(Ctx);
-    Value.dump(OS, Ctx->getASTContext());
-#endif
+    Value.dump(OS, Ctx.getASTContext());
   }
 }

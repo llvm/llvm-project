@@ -683,3 +683,6 @@ s_wait_event { dont_wait_export_ready: 1 }
 
 s_wait_event { dont_wait_export_ready: 0 }
 // GFX12-ERR: :[[@LINE-1]]:16: error: unknown field
+
+s_barrier_signal_isfirst -3
+// GFX12-ERR: :[[@LINE-1]]:26: error: s_barrier_signal_isfirst does not support user_cluster_barrier_id (-3)

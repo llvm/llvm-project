@@ -704,8 +704,7 @@ private:
   /// else to its callers. Also updates OrigNode's edges to remove any context
   /// ids moved to the newly created edge.
   void connectNewNode(ContextNode *NewNode, ContextNode *OrigNode,
-                      bool TowardsCallee,
-                      DenseSet<uint32_t> RemainingContextIds);
+                      bool TowardsCallee, const DenseSet<uint32_t> &ContextIds);
 
   /// Get the stack id corresponding to the given Id or Index (for IR this will
   /// return itself, for a summary index this will return the id recorded in the
@@ -1566,53 +1565,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
     ContextNode *NewNode, ContextNode *OrigNode, bool TowardsCallee,
-    // This must be passed by value to make a copy since it will be adjusted
-    // as ids are moved.
-    DenseSet<uint32_t> RemainingContextIds) {
+    const DenseSet<uint32_t> &ContextIds) {
   auto &OrigEdges =
       TowardsCallee ? OrigNode->CalleeEdges : OrigNode->CallerEdges;
-  DenseSet<uint32_t> RecursiveContextIds;
-  DenseSet<uint32_t> AllCallerContextIds;
-  if (AllowRecursiveCallsites) {
-    // Identify which context ids are recursive which is needed to properly
-    // update the RemainingContextIds set. The relevant recursive context ids
-    // are those that are in multiple edges.
-    for (auto &CE : OrigEdges) {
-      AllCallerContextIds.reserve(CE->getContextIds().size());
-      for (auto Id : CE->getContextIds())
-        if (!AllCallerContextIds.insert(Id).second)
-          RecursiveContextIds.insert(Id);
-    }
-  }
   // Increment iterator in loop so that we can remove edges as needed.
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
     DenseSet<uint32_t> NewEdgeContextIds;
-    DenseSet<uint32_t> NotFoundContextIds;
     // Remove any matching context ids from Edge, return set that were found and
-    // removed, these are the new edge's context ids. Also update the remaining
-    // (not found ids).
-    set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds,
-                 NotFoundContextIds);
-    // Update the remaining context ids set for the later edges. This is a
-    // compile time optimization.
-    if (RecursiveContextIds.empty()) {
-      // No recursive ids, so all of the previously remaining context ids that
-      // were not seen on this edge are the new remaining set.
-      RemainingContextIds.swap(NotFoundContextIds);
-    } else {
-      // Keep the recursive ids in the remaining set as we expect to see those
-      // on another edge. We can remove the non-recursive remaining ids that
-      // were seen on this edge, however. We already have the set of remaining
-      // ids that were on this edge (in NewEdgeContextIds). Figure out which are
-      // non-recursive and only remove those. Note that despite the higher
-      // overhead of updating the remaining context ids set when recursion
-      // handling is enabled, it was found to be at worst performance neutral
-      // and in one case a clear win.
-      DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
-          set_difference(NewEdgeContextIds, RecursiveContextIds);
-      set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
-    }
+    // removed, these are the new edge's context ids.
+    set_subtract(Edge->getContextIds(), ContextIds, NewEdgeContextIds);
     // If no matching context ids for this edge, skip it.
     if (NewEdgeContextIds.empty()) {
       ++EI;
@@ -4067,9 +4029,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
                         return true;
 
                       if (A->AllocTypes == B->AllocTypes)
-                        // Use the first context id for each edge as a
+                        // Use the caller node id as a deterministic
                         // tie-breaker.
-                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                        return A->Caller->NodeId < B->Caller->NodeId;
                       return AllocTypeCloningPriority[A->AllocTypes] <
                              AllocTypeCloningPriority[B->AllocTypes];
                     });
@@ -4582,8 +4544,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
   }
 
   // Helper for callee edge sorting below. Return true if A's callee has fewer
-  // caller edges than B, or if A is a clone and B is not, or if A's first
-  // context id is smaller than B's.
+  // caller edges than B, or if A is a clone and B is not, or if A's callee
+  // node id is smaller than B's.
   auto CalleeCallerEdgeLessThan = [](const std::shared_ptr<ContextEdge> &A,
                                      const std::shared_ptr<ContextEdge> &B) {
     if (A->Callee->CallerEdges.size() != B->Callee->CallerEdges.size())
@@ -4592,9 +4554,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       return true;
     else if (!A->Callee->CloneOf && B->Callee->CloneOf)
       return false;
-    // Use the first context id for each edge as a
-    // tie-breaker.
-    return *A->ContextIds.begin() < *B->ContextIds.begin();
+    // Use the callee node id as a deterministic tie-breaker.
+    return A->Callee->NodeId < B->Callee->NodeId;
   };
 
   // Process each set of callee clones called by Node, performing the needed
@@ -5368,14 +5329,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       DenseSet<unsigned> NodeCallClones;
       for (auto *C : Node->Clones)
         NodeCallClones.insert(C->Call.cloneNo());
-      unsigned I = 0;
       // Now check all the function clones.
       for (auto &FC : FuncCloneInfos) {
-        // Function clones should be sequential.
-        assert(FC.FuncClone.cloneNo() == I);
+        unsigned I = FC.FuncClone.cloneNo();
         // Skip the first clone which got the original call.
         // Also skip any other clones created for this Node.
-        if (++I == 1 || NodeCallClones.contains(I)) {
+        if (I == 0 || NodeCallClones.contains(I)) {
           continue;
         }
         // Record the call clones created for this callsite in this function
@@ -5718,12 +5677,12 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // when they both have the same root name with "." suffixes stripped.
   // If we pick the wrong one then this could lead to incorrect ICP and calling
   // a memprof clone that we don't actually create (resulting in linker unsats).
-  // What this means is that the GUID of the function (or its PGOFuncName
-  // metadata) *must* match that in the VP metadata to allow promotion.
-  // In practice this should not be a limitation, since local functions should
-  // have PGOFuncName metadata and global function names shouldn't need any
-  // special handling (they should not get the ".llvm.*" suffix that the
-  // canonicalization handling is attempting to strip).
+  // What this means is that the GUID of the function *must* match that in the
+  // VP metadata to allow promotion. In practice this should not be a
+  // limitation, since local functions have a GUID from before they were
+  // promoted and global function names shouldn't need any special handling
+  // (they should not get the ".llvm.*" suffix that the canonicalization
+  // handling is attempting to strip).
   if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
@@ -5742,6 +5701,17 @@ static void checkAllocContextIds(
   auto MIBIter = AllocNode.MIBs.begin();
   for (auto &MDOp : MemProfMD->operands()) {
     assert(MIBIter != AllocNode.MIBs.end());
+    // The combined index may have been written without the MIB contexts (see
+    // -combined-index-memprof-context, which defaults to false in NDEBUG
+    // builds), e.g. if the thin link was performed by a release build while
+    // this backend has assertions enabled. Since the MIB context in the summary
+    // can never be empty after trimming the allocation's callsite context, an
+    // empty list means the context was not serialized, and there is nothing to
+    // check.
+    if (MIBIter->StackIdIndices.empty()) {
+      MIBIter++;
+      continue;
+    }
     auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
     auto *MIBMD = cast<const MDNode>(MDOp);
     MDNode *StackMDNode = getMIBStackNode(MIBMD);
@@ -6173,8 +6143,14 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
 #endif
         ImportSummary->getValueInfo(Candidate.Value);
     // We might not have a ValueInfo if this is a distributed
-    // ThinLTO backend and decided not to import that function.
-    assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo);
+    // ThinLTO backend and decided not to import that function. The thin link
+    // may also have updated the callee from the original name GUID recorded in
+    // the VP metadata to the GUID of the local target function (see
+    // updateValueInfoForIndirectCalls).
+    assert(!CalleeValueInfo || SI->Callee == CalleeValueInfo ||
+           (SI->Callee &&
+            SI->Callee.getGUID() ==
+                ImportSummary->getGUIDFromOriginalID(Candidate.Value)));
     assert(SI != AllCallsites.end());
     auto &StackNode = *(SI++);
     // See if any of the clones of the indirect callsite for this
@@ -6226,6 +6202,17 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
+      // If not found, try the GUID of the callee recorded in the summary. For
+      // local targets the VP metadata may contain the GUID of the original
+      // name without the source file prefix (e.g. if it was synthesized from
+      // the MemProf profile's callee GUIDs or from a SamplePGO profile), which
+      // the thin link translates to the actual GUID of the local function
+      // (see updateValueInfoForIndirectCalls). The latter is recorded in the
+      // function's !guid metadata, which is preserved across promotion and
+      // importing, and is added to the Symtab.
+      if (!TargetFunction && StackNode.Callee &&
+          StackNode.Callee.getGUID() != Candidate.Value)
+        TargetFunction = Symtab->getFunction(StackNode.Callee.getGUID());
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a

@@ -18,8 +18,9 @@ optimization(SPGO).
 At least one of the following commands are required:
 
 :::{option} --perfscript=<string[,string,...]>
-Path of perf-script trace created by Linux perf tool with `script`
-command(the raw perf.data should be profiled with -b).
+Path of a trace created by the Linux `perf script` command. For LBR or BRBE
+input, the raw perf data must contain branch stacks, for example from recording
+with `-b`.
 :::
 
 :::{option} --etm=<string>
@@ -28,8 +29,8 @@ Requires the OpenCSD library version 1.5.4 or higher to be enabled during the bu
 :::
 
 :::{option} --perfdata=<perfdata>, --pd
-Path of raw perf data created by Linux perf tool (it should be profiled
-with -b).
+Path of raw perf data created by the Linux perf tool. For LBR or BRBE input, it
+must contain branch stacks, for example from recording with `-b`.
 :::
 
 :::{option} --unsymbolized-profile=<unsymbolized profile>, --up
@@ -66,6 +67,10 @@ descriptions of the format.
 
 :::{option} --show-mmap-events
 Print mmap events.
+:::
+
+:::{option} --warn-not-symbolized
+Warn when an address covered by a recorded mmap range cannot be symbolized.
 :::
 
 :::{option} --show-disassembly

@@ -21,8 +21,8 @@ void load(struct Big *ptr) {
   // CIR-NEXT: %[[DEST_INTPTR:.+]] = cir.cast bitcast %[[DEST_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_load(%[[SIZE]], %[[PTR_VOIDPTR]], %[[DEST_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[DEST:.+]] = alloca %struct.Big
@@ -42,8 +42,8 @@ void scoped_load(struct Big *ptr) {
   // CIR-NEXT: %[[DEST_INTPTR:.+]] = cir.cast bitcast %[[DEST_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_load(%[[SIZE]], %[[PTR_VOIDPTR]], %[[DEST_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[DEST:.+]] = alloca %struct.Big
@@ -63,8 +63,8 @@ void c11_load(_Atomic(struct Big) *ptr) {
   // CIR-NEXT: %[[TEMP_INTPTR:.+]] = cir.cast bitcast %[[TEMP_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[TEMP_VOIDPTR:.+]] = cir.cast bitcast %[[TEMP_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[TEMP_VOIDPTR:.+]] = cir.cast bitcast %[[TEMP_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_load(%[[SIZE]], %[[PTR_VOIDPTR]], %[[TEMP_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
   // CIR-NEXT: %[[TEMP_CAST:.+]] = cir.cast bitcast %[[TEMP_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!rec_Big>
   // CIR-NEXT: cir.copy %[[TEMP_CAST]] align(4) to %[[DEST_SLOT]] align(4) : !cir.ptr<!rec_Big>
@@ -87,8 +87,8 @@ void store(struct Big *dest, struct Big *val) {
   // CIR-NEXT: %[[VALUE_INTPTR:.+]] = cir.cast bitcast %[[VALUE_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_store(%[[SIZE]], %[[DEST_VOIDPTR]], %[[VALUE_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[DEST:.+]] = load ptr, ptr %{{.+}}, align 8
@@ -107,8 +107,8 @@ void scoped_store(struct Big *dest, struct Big *val) {
   // CIR-NEXT: %[[VALUE_INTPTR:.+]] = cir.cast bitcast %[[VALUE_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_store(%[[SIZE]], %[[DEST_VOIDPTR]], %[[VALUE_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[DEST:.+]] = load ptr, ptr %{{.+}}, align 8
@@ -128,8 +128,8 @@ void c11_store(_Atomic(struct Big) *dest, struct Big *val) {
   // CIR-NEXT: %[[VALUE_INTPTR:.+]] = cir.cast bitcast %[[TEMP_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[DEST_VOIDPTR:.+]] = cir.cast bitcast %[[DEST_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<0> : !s32i
+  // CIR-NEXT: %[[VALUE_VOIDPTR:.+]] = cir.cast bitcast %[[VALUE_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: cir.call @__atomic_store(%[[SIZE]], %[[DEST_VOIDPTR]], %[[VALUE_VOIDPTR]], %[[ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[DEST:.+]] = load ptr, ptr %{{.+}}, align 8
@@ -154,9 +154,9 @@ void exchange(struct Big *ptr, struct Big *val, struct Big *old) {
   // CIR-NEXT: %[[CAST_OLD:.*]] = cir.cast bitcast %[[LOAD_OLD]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.*]] = cir.const #cir.int<24> : !u64i 
   // CIR-NEXT: %[[VOID_PTR:.*]] = cir.cast bitcast %[[CAST_PTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[VOID_VAL:.*]] = cir.cast bitcast %[[CAST_VAL]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[VOID_OLD:.*]] = cir.cast bitcast %[[CAST_OLD]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: cir.call @__atomic_exchange(%[[SIZE]], %[[VOID_PTR]], %[[VOID_VAL]], %[[VOID_OLD]], %[[MEM_ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[PTR:.*]] = alloca ptr, align 8
@@ -184,9 +184,9 @@ void scoped_exchange(struct Big *ptr, struct Big *val, struct Big *old) {
   // CIR-NEXT: %[[CAST_OLD:.*]] = cir.cast bitcast %[[LOAD_OLD]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.*]] = cir.const #cir.int<24> : !u64i 
   // CIR-NEXT: %[[VOID_PTR:.*]] = cir.cast bitcast %[[CAST_PTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[VOID_VAL:.*]] = cir.cast bitcast %[[CAST_VAL]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[VOID_OLD:.*]] = cir.cast bitcast %[[CAST_OLD]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: cir.call @__atomic_exchange(%[[SIZE]], %[[VOID_PTR]], %[[VOID_VAL]], %[[VOID_OLD]], %[[MEM_ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[PTR:.*]] = alloca ptr, align 8
@@ -214,13 +214,91 @@ struct Big c11_exchange(_Atomic(struct Big) *ptr, struct Big val) {
   // CIR-NEXT: %[[CAST_TMP2:.*]] = cir.cast bitcast %[[TMP2]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.*]] = cir.const #cir.int<24> : !u64i
   // CIR-NEXT: %[[VOID_PTR:.*]] = cir.cast bitcast %[[CAST_PTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[VOID_TMP1:.*]] = cir.cast bitcast %[[CAST_TMP1]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
   // CIR-NEXT: %[[VOID_TMP2:.*]] = cir.cast bitcast %[[CAST_TMP2]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
-  // CIR-NEXT: %[[MEM_ORDER:.*]] = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: cir.call @__atomic_exchange(%[[SIZE]], %[[VOID_PTR]], %[[VOID_TMP1]], %[[VOID_TMP2]], %[[MEM_ORDER]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}) -> ()
 
   // LLVM:      %[[LOAD_PTR:.*]] = load ptr, ptr %{{.*}}, align 8
   // LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 24, i1 false)
   // LLVM-NEXT: call void @__atomic_exchange(i64 noundef 24, ptr noundef %[[LOAD_PTR]], ptr noundef %{{.*}}, ptr noundef %{{.*}}, i32 noundef 0)
   // LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 24, i1 false)
+}
+
+void cmpxchg(struct Big *ptr, struct Big *expected, struct Big *desired) {
+  // CIR-LABEL: @cmpxchg
+  // LLVM-LABEL: @cmpxchg
+
+  __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[EXPECTED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[DESIRED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[PTR_INTPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[EXPECTED_INTPTR:.+]] = cir.cast bitcast %[[EXPECTED]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[DESIRED_INTPTR:.+]] = cir.cast bitcast %[[DESIRED]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
+  // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<5> : !s32i
+  // CIR-NEXT: %[[ORDER_FAIL:.+]] = cir.const #cir.int<2> : !s32i
+  // CIR-NEXT: %[[EXPECTED_VOIDPTR:.+]] = cir.cast bitcast %[[EXPECTED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[DESIRED_VOIDPTR:.+]] = cir.cast bitcast %[[DESIRED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[CALL:.+]] = cir.call @__atomic_compare_exchange(%[[SIZE]], %[[PTR_VOIDPTR]], %[[EXPECTED_VOIDPTR]], %[[DESIRED_VOIDPTR]], %[[ORDER]], %[[ORDER_FAIL]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.bool {llvm.zeroext})
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[EXPECTED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[DESIRED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[CALL:.+]] = call {{.*}}i1 @__atomic_compare_exchange(i64 noundef 24, ptr noundef %[[PTR]], ptr noundef %[[EXPECTED]], ptr noundef %[[DESIRED]], i32 noundef 5, i32 noundef 2)
+}
+
+void c11_cmpxchg(_Atomic(struct Big) *ptr, struct Big *expected, struct Big *desired) {
+  // CIR-LABEL: @c11_cmpxchg
+  // LLVM-LABEL: @c11_cmpxchg
+
+  __c11_atomic_compare_exchange_weak(ptr, expected, *desired, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[EXPECTED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[DESIRED:.+]] = cir.load deref align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: cir.copy %[[DESIRED]] align(4) to %[[TEMP_SLOT:.+]] align(4) : !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[PTR_INTPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[EXPECTED_INTPTR:.+]] = cir.cast bitcast %[[EXPECTED]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[DESIRED_INTPTR:.+]] = cir.cast bitcast %[[TEMP_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
+  // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<5> : !s32i
+  // CIR-NEXT: %[[ORDER_FAIL:.+]] = cir.const #cir.int<2> : !s32i
+  // CIR-NEXT: %[[EXPECTED_VOIDPTR:.+]] = cir.cast bitcast %[[EXPECTED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[DESIRED_VOIDPTR:.+]] = cir.cast bitcast %[[DESIRED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[CALL:.+]] = cir.call @__atomic_compare_exchange(%[[SIZE]], %[[PTR_VOIDPTR]], %[[EXPECTED_VOIDPTR]], %[[DESIRED_VOIDPTR]], %[[ORDER]], %[[ORDER_FAIL]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.bool {llvm.zeroext})
+
+  // LLVM:      %[[TEMP_SLOT:.+]] = alloca %struct.Big
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[EXPECTED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[DESIRED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[TEMP_SLOT]], ptr {{.*}}%[[DESIRED]], i64 24, i1 false)
+  // LLVM-NEXT: %[[CALL:.+]] = call {{.*}}i1 @__atomic_compare_exchange(i64 noundef 24, ptr noundef %[[PTR]], ptr noundef %[[EXPECTED]], ptr noundef %[[TEMP_SLOT]], i32 noundef 5, i32 noundef 2)
+}
+
+void scoped_cmpxchg(struct Big *ptr, struct Big *expected, struct Big *desired) {
+  // CIR-LABEL: @scoped_cmpxchg
+  // LLVM-LABEL: @scoped_cmpxchg
+
+  __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
+  // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[EXPECTED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[DESIRED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %[[PTR_INTPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[EXPECTED_INTPTR:.+]] = cir.cast bitcast %[[EXPECTED]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[DESIRED_INTPTR:.+]] = cir.cast bitcast %[[DESIRED]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
+  // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
+  // CIR-NEXT: %[[PTR_VOIDPTR:.+]] = cir.cast bitcast %[[PTR_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[ORDER:.+]] = cir.const #cir.int<5> : !s32i
+  // CIR-NEXT: %[[ORDER_FAIL:.+]] = cir.const #cir.int<2> : !s32i
+  // CIR-NEXT: %[[EXPECTED_VOIDPTR:.+]] = cir.cast bitcast %[[EXPECTED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[DESIRED_VOIDPTR:.+]] = cir.cast bitcast %[[DESIRED_INTPTR]] : !cir.ptr<!cir.int<u, 192>> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[CALL:.+]] = cir.call @__atomic_compare_exchange(%[[SIZE]], %[[PTR_VOIDPTR]], %[[EXPECTED_VOIDPTR]], %[[DESIRED_VOIDPTR]], %[[ORDER]], %[[ORDER_FAIL]]) : (!u64i {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !cir.ptr<!void> {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.bool {llvm.zeroext})
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[EXPECTED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[DESIRED:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[CALL:.+]] = call {{.*}}i1 @__atomic_compare_exchange(i64 noundef 24, ptr noundef %[[PTR]], ptr noundef %[[EXPECTED]], ptr noundef %[[DESIRED]], i32 noundef 5, i32 noundef 2)
 }

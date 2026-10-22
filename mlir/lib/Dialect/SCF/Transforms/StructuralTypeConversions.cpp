@@ -128,7 +128,7 @@ public:
                                 /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
@@ -155,7 +155,7 @@ public:
     IfOp newOp =
         IfOp::create(rewriter, op.getLoc(), dstTypes,
                      llvm::getSingleElement(adaptor.getCondition()), true);
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty blocks created by rewriter.
     rewriter.eraseBlock(newOp.elseBlock());
@@ -225,7 +225,7 @@ namespace {
 // appropriate type conversions / materializations, we need a dummy pattern.
 class ConvertYieldOpTypes : public OpConversionPattern<scf::YieldOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(scf::YieldOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

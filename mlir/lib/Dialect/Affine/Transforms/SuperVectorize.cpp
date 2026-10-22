@@ -891,6 +891,16 @@ static void eraseLoopNest(AffineForOp forOp) {
   forOp.erase();
 }
 
+/// Recursively erases the users of the results of 'op'.
+static void eraseUsers(Operation *op) {
+  while (!op->use_empty()) {
+    Operation *user = *op->user_begin();
+    eraseUsers(user);
+    LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing user:\n" << *user << "\n");
+    user->erase();
+  }
+}
+
 /// Erases the scalar loop nest after its successful vectorization.
 void VectorizationState::finishVectorizationPattern(AffineForOp rootLoop) {
   LLVM_DEBUG(dbgs() << "\n[early-vect] Finalizing vectorization\n");
@@ -1504,9 +1514,11 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   // name that works both in scalar mode and vector mode.
   // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
-  Operation *vecOp =
-      state.builder.create(op->getLoc(), op->getName().getIdentifier(),
-                           vectorOperands, vectorTypes, op->getAttrs());
+  OperationState vecState(op->getLoc(), op->getName(), vectorOperands,
+                          vectorTypes,
+                          op->getDiscardableAttrDictionary().getValue());
+  vecState.propertiesAttr = op->getPropertiesAsAttribute();
+  Operation *vecOp = state.builder.create(vecState);
   state.registerOpVectorReplacement(op, vecOp);
   return vecOp;
 }
@@ -1668,10 +1680,13 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   if (opVecResult.wasInterrupted()) {
     LLVM_DEBUG(dbgs() << "[early-vect]+++++ failed vectorization for: "
                       << rootLoop << "\n");
-    // Erase vector loop nest if it was created.
+    // Erase vector loop nest if it was created, and all its users.
     auto vecRootLoopIt = state.opVectorReplacement.find(rootLoop);
-    if (vecRootLoopIt != state.opVectorReplacement.end())
-      eraseLoopNest(cast<AffineForOp>(vecRootLoopIt->second));
+    if (vecRootLoopIt != state.opVectorReplacement.end()) {
+      auto vecRootLoop = cast<AffineForOp>(vecRootLoopIt->second);
+      eraseUsers(vecRootLoop);
+      eraseLoopNest(vecRootLoop);
+    }
 
     return failure();
   }
