@@ -668,7 +668,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     return std::nullopt;
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
-                                          info.getIndirectByVal());
+                                          info.getIndirectByVal(),
+                                          info.getIndirectAddrSpace());
   // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
   // x86_64 classifications only.
   assert(!info.isCoerceAndExpand() &&
