@@ -732,7 +732,7 @@ define void @addrec_zero_start_mul_nowrap(ptr %dst) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<inner.preheader>:
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul ir<%i>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul nuw nsw ir<%i>, ir<3>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph

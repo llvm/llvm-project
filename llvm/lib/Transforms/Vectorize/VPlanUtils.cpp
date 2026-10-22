@@ -1155,19 +1155,19 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     const Loop *L = AR->getLoop();
     auto m_scev_CanonicalIV = // NOLINT
         m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
-    if (match(AR, m_scev_CanonicalIV)) {
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
-    }
-    if (!AR->isAffine())
+    if (!AR->isAffine() || match(AR, m_scev_CanonicalIV))
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
     const SCEV *Step = AR->getStepRecurrence(SE);
     // {0,+,F} --> {0,+,1} * F
     if (AR->getStart()->isZero()) {
-      VPValue *IV = expand(
-          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone));
-      return Builder.createOverflowingOp(Instruction::Mul, {IV, expand(Step)},
-                                         {}, DL);
+      const SCEV *CanIV =
+          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone);
+      return Builder.createOverflowingOp(
+          Instruction::Mul, {expand(CanIV), expand(Step)},
+          {SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, CanIV, Step),
+           SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, CanIV, Step)},
+          DL);
     }
 
     // {X,+,F} --> X + {0,+,F}
