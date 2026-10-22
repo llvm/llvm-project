@@ -17,7 +17,7 @@ int main() {
   // CHECK-DUMP-NEXT:x16 = {{0x[0-9a-f]+}}  x17 = {{0x[0-9a-f]+}}  x18 = {{0x[0-9a-f]+}}  x19 = {{0x[0-9a-f]+}}
   // CHECK-DUMP-NEXT:x20 = {{0x[0-9a-f]+}}  x21 = {{0x[0-9a-f]+}}  x22 = {{0x[0-9a-f]+}}  x23 = {{0x[0-9a-f]+}}
   // CHECK-DUMP-NEXT:x24 = {{0x[0-9a-f]+}}  x25 = {{0x[0-9a-f]+}}  x26 = {{0x[0-9a-f]+}}  x27 = {{0x[0-9a-f]+}}
-  // CHECK-DUMP-NEXT:x28 = {{0x[0-9a-f]+}}   fp = {{0x[0-9a-f]+}}   lr = {{0x[0-9a-f]+}}   sp = {{0x[0-9a-f]+}}
+  // CHECK-DUMP-NEXT:x28 = {{0x[0-9a-f]+}}  x29 = {{0x[0-9a-f]+}}  x30 = {{0x[0-9a-f]+}}
   // CHECK-NODUMP-NOT: Register values
   return 0;
 }
