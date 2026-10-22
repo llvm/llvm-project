@@ -35,7 +35,8 @@ RUN apt-get update && \
     gnupg \
     cmake \
     m4 \
-    linux-libc-dev && \
+    linux-libc-dev \
+    qemu-system-arm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -90,12 +91,6 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     qemu-hexagon --version && \
     rm -rf /tmp/hexagon-toolchain && \
     rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
-    fi
-
-# Baremetal Arm tests run on x86
-RUN if [ "$(uname -m)" = "x86_64" ]; then \
-    apt update && \
-    apt install -y qemu-system-arm; \
     fi
 
 RUN wget https://apt.llvm.org/llvm.sh && \
