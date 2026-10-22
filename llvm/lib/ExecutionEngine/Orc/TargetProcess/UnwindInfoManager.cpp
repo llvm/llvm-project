@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef __APPLE__
+
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -13,9 +15,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
-#ifdef __APPLE__
 #include <dlfcn.h>
-#endif // __APPLE__
 
 #define DEBUG_TYPE "orc"
 
@@ -175,3 +175,5 @@ Error UnwindInfoManager::deregisterSectionsImpl(
 }
 
 } // namespace llvm::orc
+
+#endif // __APPLE__
