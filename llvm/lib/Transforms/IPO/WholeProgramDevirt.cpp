@@ -1135,6 +1135,17 @@ bool DevirtModule::tryFindVirtualCallTargets(
     TargetsForSlot.push_back({GV, &TM});
   }
 
+  // In most cases empty functions will be overridden by the
+  // implementation of the derived class, so we can skip them
+  // for speculative devirtualization.
+  if (HasPublicTarget)
+    erase_if(TargetsForSlot, [](const VirtualCallTarget &Target) {
+      const auto *Fn = dyn_cast<Function>(Target.Fn);
+      if (!Fn)
+        Fn = cast<Function>(cast<GlobalAlias>(Target.Fn)->getAliasee());
+      return Fn->getReturnType()->isVoidTy() && Fn->getInstructionCount() <= 1;
+    });
+
   // Give up if we couldn't find any targets.
   return !TargetsForSlot.empty();
 }
