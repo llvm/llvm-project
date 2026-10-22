@@ -4329,14 +4329,10 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
 }
 
 static bool isEqualSrcOperand(const MCOperand &SrcA, const MCOperand &SrcB) {
-  if (SrcA.isReg() && SrcB.isReg())
-    return SrcA.getReg() == SrcB.getReg();
-  if (SrcA.isImm() && SrcB.isImm())
-    return SrcA.getImm() == SrcB.getImm();
-  if (SrcA.isSFPImm() && SrcB.isSFPImm())
-    return SrcA.getSFPImm() == SrcB.getSFPImm();
-  if (SrcA.isDFPImm() && SrcB.isDFPImm())
-    return SrcA.getDFPImm() == SrcB.getDFPImm();
+  if ((SrcA.isReg() && SrcB.isReg()) || (SrcA.isImm() && SrcB.isImm()) ||
+      (SrcA.isSFPImm() && SrcB.isSFPImm()) ||
+      (SrcA.isDFPImm() && SrcB.isDFPImm()))
+    return SrcA == SrcB;
   // A register can never be equal to a constant.
   if (SrcA.isReg() != SrcB.isReg())
     return false;

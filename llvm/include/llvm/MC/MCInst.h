@@ -21,6 +21,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstddef>
@@ -176,6 +177,34 @@ public:
     Op.InstVal = Val;
     return Op;
   }
+
+  /// Compares two operands for equality. Operands of different kinds are
+  /// never equal. Expression and sub-instruction operands compare by pointer,
+  /// so structurally identical but separately allocated objects are unequal;
+  /// callers that must not reject symbolic operands should test isExpr() and
+  /// isInst() explicitly.
+  bool operator==(const MCOperand &Other) const {
+    if (Kind != Other.Kind)
+      return false;
+    switch (Kind) {
+    case kInvalid:
+      return true;
+    case kRegister:
+      return RegVal == Other.RegVal;
+    case kImmediate:
+      return ImmVal == Other.ImmVal;
+    case kSFPImmediate:
+      return SFPImmVal == Other.SFPImmVal;
+    case kDFPImmediate:
+      return FPImmVal == Other.FPImmVal;
+    case kExpr:
+      return ExprVal == Other.ExprVal;
+    case kInst:
+      return InstVal == Other.InstVal;
+    }
+    llvm_unreachable("Invalid MCOperand kind");
+  }
+  bool operator!=(const MCOperand &Other) const { return !(*this == Other); }
 
   LLVM_ABI void print(raw_ostream &OS, const MCContext *Ctx = nullptr) const;
   LLVM_ABI void dump() const;
