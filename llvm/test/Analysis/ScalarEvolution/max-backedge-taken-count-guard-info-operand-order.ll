@@ -286,3 +286,190 @@ exit:
 }
 
 declare void @foo()
+
+define void @sext_ne_zero_then_sgt_zero(i16 %x) {
+; CHECK-LABEL: 'sext_ne_zero_then_sgt_zero'
+; CHECK-NEXT:  Classifying expressions for: @sext_ne_zero_then_sgt_zero
+; CHECK-NEXT:    %s = sext i16 %x to i32
+; CHECK-NEXT:    --> (sext i16 %x to i32) U: [-32768,32768) S: [-32768,32768)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483648) S: [0,2147483648) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2147483649) S: [1,2147483649) Exits: (1 + (zext i32 (sext i16 %x to i32) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %wtc = zext i32 %s to i64
+; CHECK-NEXT:    --> (zext i32 (sext i16 %x to i32) to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @sext_ne_zero_then_sgt_zero
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483647
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %s = sext i16 %x to i32
+  %c.0 = icmp eq i32 %s, 0
+  br i1 %c.0, label %exit, label %guardbb
+
+guardbb:
+  %c.1 = icmp sgt i32 %s, 0
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %iv.next = add i64 %iv, 1
+  %wtc = zext i32 %s to i64
+  %ec = icmp eq i64 %iv, %wtc
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sext_sgt_zero_then_ne_zero(i16 %x) {
+; CHECK-LABEL: 'sext_sgt_zero_then_ne_zero'
+; CHECK-NEXT:  Classifying expressions for: @sext_sgt_zero_then_ne_zero
+; CHECK-NEXT:    %s = sext i16 %x to i32
+; CHECK-NEXT:    --> (sext i16 %x to i32) U: [-32768,32768) S: [-32768,32768)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,32768) S: [0,32768) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,32769) S: [1,32769) Exits: (1 + (zext i32 (sext i16 %x to i32) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %wtc = zext i32 %s to i64
+; CHECK-NEXT:    --> (zext i32 (sext i16 %x to i32) to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @sext_sgt_zero_then_ne_zero
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 32767
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %s = sext i16 %x to i32
+  %c.0 = icmp sgt i32 %s, 0
+  br i1 %c.0, label %guardbb, label %exit
+
+guardbb:
+  %c.1 = icmp eq i32 %s, 0
+  br i1 %c.1, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %iv.next = add i64 %iv, 1
+  %wtc = zext i32 %s to i64
+  %ec = icmp eq i64 %iv, %wtc
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sext_ugt_then_sgt_larger(i16 %x) {
+; CHECK-LABEL: 'sext_ugt_then_sgt_larger'
+; CHECK-NEXT:  Classifying expressions for: @sext_ugt_then_sgt_larger
+; CHECK-NEXT:    %s = sext i16 %x to i32
+; CHECK-NEXT:    --> (sext i16 %x to i32) U: [-32768,32768) S: [-32768,32768)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483648) S: [0,2147483648) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2147483649) S: [1,2147483649) Exits: (1 + (zext i32 (sext i16 %x to i32) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %wtc = zext i32 %s to i64
+; CHECK-NEXT:    --> (zext i32 (sext i16 %x to i32) to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @sext_ugt_then_sgt_larger
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483647
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %s = sext i16 %x to i32
+  %c.0 = icmp ugt i32 %s, 3
+  br i1 %c.0, label %guardbb, label %exit
+
+guardbb:
+  %c.1 = icmp sgt i32 %s, 7
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %iv.next = add i64 %iv, 1
+  %wtc = zext i32 %s to i64
+  %ec = icmp eq i64 %iv, %wtc
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The umax bound is larger than the smax bound, so it cannot be dropped.
+define void @sext_ugt_then_sgt_smaller(i16 %x) {
+; CHECK-LABEL: 'sext_ugt_then_sgt_smaller'
+; CHECK-NEXT:  Classifying expressions for: @sext_ugt_then_sgt_smaller
+; CHECK-NEXT:    %s = sext i16 %x to i32
+; CHECK-NEXT:    --> (sext i16 %x to i32) U: [-32768,32768) S: [-32768,32768)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483648) S: [0,2147483648) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2147483649) S: [1,2147483649) Exits: (1 + (zext i32 (sext i16 %x to i32) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %wtc = zext i32 %s to i64
+; CHECK-NEXT:    --> (zext i32 (sext i16 %x to i32) to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @sext_ugt_then_sgt_smaller
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483647
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %s = sext i16 %x to i32
+  %c.0 = icmp ugt i32 %s, 9
+  br i1 %c.0, label %guardbb, label %exit
+
+guardbb:
+  %c.1 = icmp sgt i32 %s, 3
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %iv.next = add i64 %iv, 1
+  %wtc = zext i32 %s to i64
+  %ec = icmp eq i64 %iv, %wtc
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; A negative smax bound does not imply an unsigned one.
+define void @sext_ugt_then_sgt_negative(i16 %x) {
+; CHECK-LABEL: 'sext_ugt_then_sgt_negative'
+; CHECK-NEXT:  Classifying expressions for: @sext_ugt_then_sgt_negative
+; CHECK-NEXT:    %s = sext i16 %x to i32
+; CHECK-NEXT:    --> (sext i16 %x to i32) U: [-32768,32768) S: [-32768,32768)
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4294967297) S: [1,4294967297) Exits: (1 + (zext i32 (sext i16 %x to i32) to i64))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %wtc = zext i32 %s to i64
+; CHECK-NEXT:    --> (zext i32 (sext i16 %x to i32) to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (sext i16 %x to i32) to i64) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @sext_ugt_then_sgt_negative
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (sext i16 %x to i32) to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %s = sext i16 %x to i32
+  %c.0 = icmp ugt i32 %s, 3
+  br i1 %c.0, label %guardbb, label %exit
+
+guardbb:
+  %c.1 = icmp sgt i32 %s, -5
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %iv.next = add i64 %iv, 1
+  %wtc = zext i32 %s to i64
+  %ec = icmp eq i64 %iv, %wtc
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
