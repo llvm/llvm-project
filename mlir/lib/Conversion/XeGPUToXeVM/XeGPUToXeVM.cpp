@@ -1589,7 +1589,8 @@ public:
       if (isa<xegpu::LaneShuffleOp>(def))
         break;
       if (!isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
-               vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(def))
+               vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
+              def))
         return failure();
       // Only vector results are supported; scalar extraction needs separate
       // narrow-type legalization.
