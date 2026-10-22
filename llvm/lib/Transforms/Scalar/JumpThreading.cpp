@@ -809,8 +809,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
         Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
 
         // If it doesn't fold, the compare may still be known on this edge when
-        // PredBB's branch condition implies it (see isImpliedByEdgeBranch).
-        if (!Res && isa<ICmpInst>(Cmp)) {
+        // PredBB's branch condition implies it.
+        if (!Res) {
           std::optional<bool> Implied =
               isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL);
           if (Implied && shouldThreadImpliedEdge(PredBB, BB))

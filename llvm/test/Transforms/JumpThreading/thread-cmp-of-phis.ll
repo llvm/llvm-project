@@ -413,3 +413,71 @@ t:
 f:
   ret i32 0
 }
+
+define i32 @thread_fcmp_of_phis(double %a, double %b, double %x, double %y) {
+; CHECK-LABEL: define i32 @thread_fcmp_of_phis(
+; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[JOIN:.*]], label %[[IF_NE:.*]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_EQ:.*]], label %[[IF_NE]]
+; CHECK:       [[IF_EQ]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[IF_NE]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c = fcmp oeq double %a, %b
+  br i1 %c, label %grow, label %join
+
+grow:
+  br label %join
+
+join:
+  %p1 = phi double [ %a, %entry ], [ %x, %grow ]
+  %p2 = phi double [ %b, %entry ], [ %y, %grow ]
+  %cmp = fcmp oeq double %p1, %p2
+  br i1 %cmp, label %if.eq, label %if.ne
+
+if.eq:
+  ret i32 1
+
+if.ne:
+  ret i32 0
+}
+
+define i32 @thread_fcmp_unordered_of_phis(double %a, double %b, double %x, double %y) {
+; CHECK-LABEL: define i32 @thread_fcmp_unordered_of_phis(
+; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp ord double [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[JOIN:.*]], label %[[IF_UNO:.*]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno double [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_UNO]], label %[[IF_ORD:.*]]
+; CHECK:       [[IF_UNO]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[IF_ORD]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c = fcmp ord double %a, %b
+  br i1 %c, label %grow, label %join
+
+grow:
+  br label %join
+
+join:
+  %p1 = phi double [ %a, %entry ], [ %x, %grow ]
+  %p2 = phi double [ %b, %entry ], [ %y, %grow ]
+  %cmp = fcmp uno double %p1, %p2
+  br i1 %cmp, label %if.uno, label %if.ord
+
+if.uno:
+  ret i32 1
+
+if.ord:
+  ret i32 0
+}
