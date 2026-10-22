@@ -40,6 +40,11 @@ struct MaxOrMinIdentity {
   }
 };
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 #if HAS_FLOAT128
 // std::numeric_limits<> may not support __float128.
 //
@@ -78,6 +83,10 @@ struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
 };
 #endif // HAS_FLOAT128
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 // Minimum finite representable value.
 // For floating-point types, returns minimum positive normalized value.
 template <int PREC, typename T> struct MinValue {
@@ -87,6 +96,11 @@ template <typename T> struct MinValue<11, T> {
   // TINY(0._2)
   static constexpr RT_API_ATTRS T get() { return 0.00006103515625E-04; }
 };
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
 
 #if HAS_FLOAT128
 template <> struct MinValue<113, CppTypeFor<TypeCategory::Real, 16>> {
@@ -113,6 +127,10 @@ template <> struct MinValue<113, CppTypeFor<TypeCategory::Real, 16>> {
   }
 };
 #endif // HAS_FLOAT128
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 template <typename T> struct ABSTy {
   static constexpr RT_API_ATTRS T compute(T x) { return std::abs(x); }
