@@ -183,7 +183,7 @@ void f3(union U3 u) {
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U3> -> !cir.ptr<!cir.array<!s8i x 5>>
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element inbounds %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 
@@ -192,7 +192,7 @@ void f3(union U3 u) {
 // LLVM-NEXT:   store i40 %[[ARG]], ptr %[[COERCE]], align 8
 // LLVM-NEXT:   %[[U:.*]] = alloca %union.U3, align 1
 // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[U]], ptr align 8 %[[COERCE]], i64 5, i1 false)
-// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr [5 x i8], ptr %[[U]], i32 0, i64 2
+// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i32 0, i64 2
 // LLVM-NEXT:   store i8 0, ptr %[[ELEM_PTR]], align 1
 // LLVM-NEXT:   ret void
 
@@ -217,7 +217,7 @@ void f5(union U4 u) {
 // CIR-NEXT:   %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U4> -> !cir.ptr<!cir.array<!s8i x 5>>
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s64i
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element inbounds %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[CHAR_VAL]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 
@@ -226,7 +226,7 @@ void f5(union U4 u) {
 // LLVM-NEXT:   store i64 %[[ARG]], ptr %[[COERCE]], align 8
 // LLVM-NEXT:   %[[U:.*]] = alloca %union.U4, align 4
 // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[U]], ptr align 8 %[[COERCE]], i64 8, i1 false)
-// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr [5 x i8], ptr %[[U]], i32 0, i64 4
+// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i32 0, i64 4
 // LLVM-NEXT:   store i8 65, ptr %[[ELEM_PTR]], align 4
 // LLVM-NEXT:   ret void
 
