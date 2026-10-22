@@ -12384,6 +12384,27 @@ bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
   assert((ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred)) && "Must be!");
   assert((ICmpInst::isLT(FoundPred) || ICmpInst::isLE(FoundPred)) &&
          "Must be!");
+  if (ICmpInst::isSigned(Pred)) {
+    // Use implication:
+    // x <u y && y <=u 2^(n-1) --> x >=s 0,
+    // x <=u y && y <u 2^(n-1) --> x >=s 0,
+    // where n is the bit width of x and y.
+    // In both cases x <u 2^(n-1), so x >=s 0.
+    // y <=u 2^(n-1) means y >=s 0 or y == INT_MIN.
+    // If the implication's left part holds, try proving the query from x >=s
+    // 0.
+    Type *Ty = FoundLHS->getType();
+    unsigned BitWidth = getTypeSizeInBits(Ty);
+    const SCEV *SignedMin = getConstant(APInt::getSignedMinValue(BitWidth));
+    CmpPredicate BoundPred =
+        ICmpInst::isLT(FoundPred) ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+    if (isKnownViaNonRecursiveReasoning(BoundPred, FoundRHS, SignedMin)) {
+      // x >=s 0, written as 0 <=s x, or as -1 <s x to match a strict query.
+      const SCEV *Bound = ICmpInst::isLE(Pred) ? getZero(Ty) : getMinusOne(Ty);
+      if (isImpliedCondOperands(Pred, LHS, RHS, Bound, FoundLHS, CtxI))
+        return true;
+    }
+  }
   if (ICmpInst::isSigned(Pred) && isKnownNonNegative(RHS)) {
     // Use implication:
     // x <u y && y >=s 0 --> x <s y.
