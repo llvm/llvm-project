@@ -258,7 +258,7 @@ bool Strings<Encoding::Utf8>::readChar(const char *&Cur, const char *End,
 }
 
 template <> bool Strings<Encoding::Ascii>::isStringChar(UTF32 Ch) {
-  return Ch == '\t' || isPrint(Ch);
+  return Ch == U'\t' || (Ch >= U' ' && Ch <= U'~');
 }
 
 template <> bool Strings<Encoding::Locale>::isStringChar(UTF32 Ch) {
