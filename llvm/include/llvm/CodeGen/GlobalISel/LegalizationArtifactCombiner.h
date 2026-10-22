@@ -583,10 +583,12 @@ public:
                                     MachineIRBuilder &Builder,
                                     SmallVectorImpl<Register> &UpdatedDefs,
                                     GISelChangeObserver &Observer) {
+    // Copy into a new vreg rather than DstReg, so that DstReg does not get a
+    // second def either.
     if (!llvm::canReplaceReg(DstReg, SrcReg, MRI)) {
-      Builder.buildCopy(DstReg, SrcReg);
-      UpdatedDefs.push_back(DstReg);
-      return;
+      Register NewReg = MRI.cloneVirtualRegister(DstReg);
+      Builder.buildCopy(NewReg, SrcReg);
+      SrcReg = NewReg;
     }
     SmallVector<MachineInstr *, 4> UseMIs;
     // Get the users and notify the observer before replacing.
