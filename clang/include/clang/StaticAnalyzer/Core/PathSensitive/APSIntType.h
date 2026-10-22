@@ -92,9 +92,7 @@ public:
     return BitWidth == Other.BitWidth && IsUnsigned == Other.IsUnsigned;
   }
 
-  bool operator!=(const APSIntType &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const APSIntType &Other) const { return !(*this == Other); }
 
   /// Provide an ordering for finding a common conversion type.
   ///
