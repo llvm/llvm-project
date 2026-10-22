@@ -28159,11 +28159,7 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     if (Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         Op0.getOperand(1) == Op1.getOperand(1)) {
       EVT WideVT = Op0.getOperand(0).getValueType();
-      if (WideVT == Op1.getOperand(0).getValueType() &&
-          WideVT.getVectorElementType() == VT.getVectorElementType() &&
-          WideVT.isScalableVector() == VT.isScalableVector() &&
-          WideVT.getVectorMinNumElements() ==
-              2 * VT.getVectorMinNumElements() &&
+      if (WideVT == VT.getDoubleNumVectorElementsVT(*DAG.getContext()) &&
           (!LegalOperations || TLI.isVectorInterleaveLegalOrCustom(
                                    ISD::VECTOR_INTERLEAVE, Factor, WideVT))) {
         APInt Idx = Op0.getConstantOperandAPInt(1);
