@@ -392,7 +392,7 @@ bool AMDGPULowerIntrinsicsImpl::visitMcastLoad(IntrinsicInst &I) {
   }
 
   // Compute the half mask in the entry block so it is not recomputed in loops.
-  IRBuilder<> EntryB(I.getContext());
+  IRBuilder<> EntryB(M);
   EntryB.SetInsertPointPastAllocas(I.getFunction());
   Value *FlatID =
       EntryB.CreateIntrinsic(Intrinsic::amdgcn_cluster_workgroup_flat_id, {});
