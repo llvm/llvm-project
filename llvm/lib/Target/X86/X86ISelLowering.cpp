@@ -3489,15 +3489,14 @@ void X86TargetLowering::getTgtMemIntrinsic(
   }
 }
 
-/// Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                     bool ForCodeSize) const {
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+X86TargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                  bool ForCodeSize) const {
   for (const APFloat &FPImm : LegalFPImmediates)
     if (Imm.bitwiseIsEqual(FPImm))
-      return true;
-  return false;
+      return FPImmAction::Legal;
+  return FPImmAction::ConstantPool;
 }
 
 bool X86TargetLowering::shouldReduceLoadWidth(
