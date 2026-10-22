@@ -789,6 +789,13 @@ PTX behavior in software (``AGXStrictFP.cpp``):
   integer arithmetic (see `Double precision`_), since a ``float`` fma would
   round twice.
 
+``!agx.keep-denormals``
+  Independently of the features, a ``float`` operation carrying this metadata
+  (an empty node) gets the ``ieee-fp32`` lowering above in any function, also
+  one that flushes denormals: a front end's IEEE operation in flushing code,
+  such as the addition of an atomic add that keeps denormals in a
+  compare-and-swap loop.
+
 ``canonical-nan``
   NaN results of floating point arithmetic and conversions are ``0x7fffffff``
   (``0x7fff`` for ``half`` and ``bfloat``); minimum and maximum keep the bits
