@@ -1,4 +1,4 @@
-//===-- PlatformRemoteDarwinDeviceTest.cpp --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,7 @@
 #include "lldb/Host/HostInfo.h"
 
 #include <thread>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,17 +43,12 @@ TEST_F(PlatformRemoteDarwinDeviceTest, DeviceSupportDirectoryForOSVersionRace) {
   FileSpec sdk_dir("/DeviceSupport/18.0 (22A3354)");
   auto platform_sp = std::make_shared<TestPlatformRemoteiOS>(sdk_dir);
 
-  std::string results[2];
-  std::thread threads[2];
+  std::vector<std::thread> threads;
   for (int i = 0; i < 2; ++i)
-    threads[i] = std::thread([&, i] {
-      if (const char *dir =
-              platform_sp->GetDeviceSupportDirectoryForOSVersion())
-        results[i] = dir;
+    threads.emplace_back([&] {
+      EXPECT_STREQ(platform_sp->GetDeviceSupportDirectoryForOSVersion(),
+                   sdk_dir.GetPath().c_str());
     });
   for (std::thread &thread : threads)
     thread.join();
-
-  EXPECT_EQ(results[0], sdk_dir.GetPath());
-  EXPECT_EQ(results[1], sdk_dir.GetPath());
 }
