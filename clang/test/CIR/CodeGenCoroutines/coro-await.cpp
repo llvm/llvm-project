@@ -22,7 +22,7 @@ struct Task {
 struct Awaiter {
   bool await_ready() { return false; }
   void await_suspend(std::coroutine_handle<>) {}
-  int &await_resume() { return value; }
+  int &await_resume() noexcept { return value; }
   int value;
 };
 
