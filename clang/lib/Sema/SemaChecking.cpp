@@ -4343,6 +4343,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       assert(Context.getAuxTargetInfo() &&
              "Aux Target Builtin, but not an aux target?");
 
+      // Host target builtins cannot be lowered for a SYCL device. Defer the
+      // diagnostic so that they are still accepted in code that is not
+      // reachable from device code.
+      if (getLangOpts().SYCLIsDevice && !isUnevaluatedContext())
+        SYCL().DiagIfDeviceCode(TheCall->getBeginLoc(),
+                                diag::err_builtin_target_unsupported)
+            << TheCall->getSourceRange();
+
       if (CheckTSBuiltinFunctionCall(
               *Context.getAuxTargetInfo(),
               Context.BuiltinInfo.getAuxBuiltinID(BuiltinID), TheCall))
