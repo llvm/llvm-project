@@ -201,7 +201,7 @@
 // LA32: #define __PTRDIFF_FMTd__ "d"
 // LA32: #define __PTRDIFF_FMTi__ "i"
 // LA32: #define __PTRDIFF_MAX__ 2147483647
-// LA32: #define __PTRDIFF_TYPE__ int
+// LA32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // LA32: #define __PTRDIFF_WIDTH__ 32
 // LA32: #define __SCHAR_MAX__ 127
 // LA32: #define __SHRT_MAX__ 32767
@@ -226,7 +226,7 @@
 // LA32: #define __SIZE_FMTu__ "u"
 // LA32: #define __SIZE_FMTx__ "x"
 // LA32: #define __SIZE_MAX__ 4294967295U
-// LA32: #define __SIZE_TYPE__ unsigned int
+// LA32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // LA32: #define __SIZE_WIDTH__ 32
 // LA32: #define __STDC_HOSTED__ 0
 // LA32: #define __STDC_UTF_16__ 1
@@ -534,7 +534,7 @@
 // LA64: #define __PTRDIFF_FMTd__ "ld"
 // LA64: #define __PTRDIFF_FMTi__ "li"
 // LA64: #define __PTRDIFF_MAX__ 9223372036854775807L
-// LA64: #define __PTRDIFF_TYPE__ long int
+// LA64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // LA64: #define __PTRDIFF_WIDTH__ 64
 // LA64: #define __SCHAR_MAX__ 127
 // LA64: #define __SHRT_MAX__ 32767
@@ -559,7 +559,7 @@
 // LA64: #define __SIZE_FMTu__ "lu"
 // LA64: #define __SIZE_FMTx__ "lx"
 // LA64: #define __SIZE_MAX__ 18446744073709551615UL
-// LA64: #define __SIZE_TYPE__ long unsigned int
+// LA64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // LA64: #define __SIZE_WIDTH__ 64
 // LA64: #define __STDC_HOSTED__ 0
 // LA64: #define __STDC_UTF_16__ 1

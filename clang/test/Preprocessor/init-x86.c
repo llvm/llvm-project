@@ -123,7 +123,7 @@
 // I386-NOT:#define __LP64__
 // I386:#define __NO_MATH_INLINES 1
 // I386:#define __POINTER_WIDTH__ 32
-// I386:#define __PTRDIFF_TYPE__ int
+// I386:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // I386:#define __PTRDIFF_WIDTH__ 32
 // I386:#define __REGISTER_PREFIX__
 // I386:#define __SCHAR_MAX__ 127
@@ -143,7 +143,7 @@
 // I386:#define __SIZEOF_WCHAR_T__ 4
 // I386:#define __SIZEOF_WINT_T__ 4
 // I386:#define __SIZE_MAX__ 4294967295U
-// I386:#define __SIZE_TYPE__ unsigned int
+// I386:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // I386:#define __SIZE_WIDTH__ 32
 // I386:#define __UINT16_C(c) c
 // I386:#define __UINT16_C_SUFFIX__
@@ -333,7 +333,7 @@
 // I386-LINUX-NOT:#define __LP64__
 // I386-LINUX:#define __NO_MATH_INLINES 1
 // I386-LINUX:#define __POINTER_WIDTH__ 32
-// I386-LINUX:#define __PTRDIFF_TYPE__ int
+// I386-LINUX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // I386-LINUX:#define __PTRDIFF_WIDTH__ 32
 // I386-LINUX:#define __REGISTER_PREFIX__
 // I386-LINUX:#define __SCHAR_MAX__ 127
@@ -353,7 +353,7 @@
 // I386-LINUX:#define __SIZEOF_WCHAR_T__ 4
 // I386-LINUX:#define __SIZEOF_WINT_T__ 4
 // I386-LINUX:#define __SIZE_MAX__ 4294967295U
-// I386-LINUX:#define __SIZE_TYPE__ unsigned int
+// I386-LINUX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // I386-LINUX:#define __SIZE_WIDTH__ 32
 // I386-LINUX-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // I386-LINUX:#define __UINT16_C(c) c
@@ -544,7 +544,7 @@
 // I386-NETBSD-NOT:#define __LP64__
 // I386-NETBSD:#define __NO_MATH_INLINES 1
 // I386-NETBSD:#define __POINTER_WIDTH__ 32
-// I386-NETBSD:#define __PTRDIFF_TYPE__ int
+// I386-NETBSD:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // I386-NETBSD:#define __PTRDIFF_WIDTH__ 32
 // I386-NETBSD:#define __REGISTER_PREFIX__
 // I386-NETBSD:#define __SCHAR_MAX__ 127
@@ -564,7 +564,7 @@
 // I386-NETBSD:#define __SIZEOF_WCHAR_T__ 4
 // I386-NETBSD:#define __SIZEOF_WINT_T__ 4
 // I386-NETBSD:#define __SIZE_MAX__ 4294967295U
-// I386-NETBSD:#define __SIZE_TYPE__ unsigned int
+// I386-NETBSD:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // I386-NETBSD:#define __SIZE_WIDTH__ 32
 // I386-NETBSD-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
 // I386-NETBSD:#define __UINT16_C(c) c
@@ -756,7 +756,7 @@
 // X86_64:#define __MMX__ 1
 // X86_64:#define __NO_MATH_INLINES 1
 // X86_64:#define __POINTER_WIDTH__ 64
-// X86_64:#define __PTRDIFF_TYPE__ long int
+// X86_64:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // X86_64:#define __PTRDIFF_WIDTH__ 64
 // X86_64:#define __REGISTER_PREFIX__
 // X86_64:#define __SCHAR_MAX__ 127
@@ -776,7 +776,7 @@
 // X86_64:#define __SIZEOF_WCHAR_T__ 4
 // X86_64:#define __SIZEOF_WINT_T__ 4
 // X86_64:#define __SIZE_MAX__ 18446744073709551615UL
-// X86_64:#define __SIZE_TYPE__ long unsigned int
+// X86_64:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // X86_64:#define __SIZE_WIDTH__ 64
 // X86_64:#define __SSE2_MATH__ 1
 // X86_64:#define __SSE2__ 1
@@ -970,7 +970,7 @@
 // X32:#define __MMX__ 1
 // X32:#define __NO_MATH_INLINES 1
 // X32:#define __POINTER_WIDTH__ 32
-// X32:#define __PTRDIFF_TYPE__ int
+// X32:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // X32:#define __PTRDIFF_WIDTH__ 32
 // X32:#define __REGISTER_PREFIX__
 // X32:#define __SCHAR_MAX__ 127
@@ -990,7 +990,7 @@
 // X32:#define __SIZEOF_WCHAR_T__ 4
 // X32:#define __SIZEOF_WINT_T__ 4
 // X32:#define __SIZE_MAX__ 4294967295U
-// X32:#define __SIZE_TYPE__ unsigned int
+// X32:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // X32:#define __SIZE_WIDTH__ 32
 // X32:#define __SSE2_MATH__ 1
 // X32:#define __SSE2__ 1
@@ -1185,7 +1185,7 @@
 // X86_64-LINUX:#define __MMX__ 1
 // X86_64-LINUX:#define __NO_MATH_INLINES 1
 // X86_64-LINUX:#define __POINTER_WIDTH__ 64
-// X86_64-LINUX:#define __PTRDIFF_TYPE__ long int
+// X86_64-LINUX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // X86_64-LINUX:#define __PTRDIFF_WIDTH__ 64
 // X86_64-LINUX:#define __REGISTER_PREFIX__
 // X86_64-LINUX:#define __SCHAR_MAX__ 127
@@ -1205,7 +1205,7 @@
 // X86_64-LINUX:#define __SIZEOF_WCHAR_T__ 4
 // X86_64-LINUX:#define __SIZEOF_WINT_T__ 4
 // X86_64-LINUX:#define __SIZE_MAX__ 18446744073709551615UL
-// X86_64-LINUX:#define __SIZE_TYPE__ long unsigned int
+// X86_64-LINUX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // X86_64-LINUX:#define __SIZE_WIDTH__ 64
 // X86_64-LINUX:#define __SSE2_MATH__ 1
 // X86_64-LINUX:#define __SSE2__ 1
@@ -1407,7 +1407,7 @@
 // X86_64-NETBSD:#define __MMX__ 1
 // X86_64-NETBSD:#define __NO_MATH_INLINES 1
 // X86_64-NETBSD:#define __POINTER_WIDTH__ 64
-// X86_64-NETBSD:#define __PTRDIFF_TYPE__ long int
+// X86_64-NETBSD:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // X86_64-NETBSD:#define __PTRDIFF_WIDTH__ 64
 // X86_64-NETBSD:#define __REGISTER_PREFIX__
 // X86_64-NETBSD:#define __SCHAR_MAX__ 127
@@ -1427,7 +1427,7 @@
 // X86_64-NETBSD:#define __SIZEOF_WCHAR_T__ 4
 // X86_64-NETBSD:#define __SIZEOF_WINT_T__ 4
 // X86_64-NETBSD:#define __SIZE_MAX__ 18446744073709551615UL
-// X86_64-NETBSD:#define __SIZE_TYPE__ long unsigned int
+// X86_64-NETBSD:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // X86_64-NETBSD:#define __SIZE_WIDTH__ 64
 // X86_64-NETBSD:#define __SSE2_MATH__ 1
 // X86_64-NETBSD:#define __SSE2__ 1
@@ -1625,7 +1625,7 @@
 // I386-CYGWIN-NOT:#define __LP64__
 // I386-CYGWIN:#define __NO_MATH_INLINES 1
 // I386-CYGWIN:#define __POINTER_WIDTH__ 32
-// I386-CYGWIN:#define __PTRDIFF_TYPE__ int
+// I386-CYGWIN:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // I386-CYGWIN:#define __PTRDIFF_WIDTH__ 32
 // I386-CYGWIN:#define __REGISTER_PREFIX__
 // I386-CYGWIN:#define __SCHAR_MAX__ 127
@@ -1645,7 +1645,7 @@
 // I386-CYGWIN:#define __SIZEOF_WCHAR_T__ 2
 // I386-CYGWIN:#define __SIZEOF_WINT_T__ 4
 // I386-CYGWIN:#define __SIZE_MAX__ 4294967295U
-// I386-CYGWIN:#define __SIZE_TYPE__ unsigned int
+// I386-CYGWIN:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // I386-CYGWIN:#define __SIZE_WIDTH__ 32
 // I386-CYGWIN:#define __UINT16_C(c) c
 // I386-CYGWIN:#define __UINT16_C_SUFFIX__
@@ -1837,7 +1837,7 @@
 // X86_64-CYGWIN:#define __MMX__ 1
 // X86_64-CYGWIN:#define __NO_MATH_INLINES 1
 // X86_64-CYGWIN:#define __POINTER_WIDTH__ 64
-// X86_64-CYGWIN:#define __PTRDIFF_TYPE__ long int
+// X86_64-CYGWIN:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // X86_64-CYGWIN:#define __PTRDIFF_WIDTH__ 64
 // X86_64-CYGWIN:#define __REGISTER_PREFIX__
 // X86_64-CYGWIN:#define __SCHAR_MAX__ 127
@@ -1857,7 +1857,7 @@
 // X86_64-CYGWIN:#define __SIZEOF_WCHAR_T__ 2
 // X86_64-CYGWIN:#define __SIZEOF_WINT_T__ 4
 // X86_64-CYGWIN:#define __SIZE_MAX__ 18446744073709551615UL
-// X86_64-CYGWIN:#define __SIZE_TYPE__ long unsigned int
+// X86_64-CYGWIN:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // X86_64-CYGWIN:#define __SIZE_WIDTH__ 64
 // X86_64-CYGWIN:#define __SSE2_MATH__ 1
 // X86_64-CYGWIN:#define __SSE2__ 1

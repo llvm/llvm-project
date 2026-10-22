@@ -139,7 +139,7 @@
 // PPC64:#define __POWERPC__ 1
 // PPC64:#define __PPC64__ 1
 // PPC64:#define __PPC__ 1
-// PPC64:#define __PTRDIFF_TYPE__ long int
+// PPC64:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC64:#define __PTRDIFF_WIDTH__ 64
 // PPC64:#define __REGISTER_PREFIX__
 // PPC64:#define __SCHAR_MAX__ 127
@@ -159,7 +159,7 @@
 // PPC64:#define __SIZEOF_WCHAR_T__ 4
 // PPC64:#define __SIZEOF_WINT_T__ 4
 // PPC64:#define __SIZE_MAX__ 18446744073709551615UL
-// PPC64:#define __SIZE_TYPE__ long unsigned int
+// PPC64:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC64:#define __SIZE_WIDTH__ 64
 // PPC64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // PPC64:#define __UINT16_C(c) c
@@ -353,7 +353,7 @@
 // PPC64LE:#define __POWERPC__ 1
 // PPC64LE:#define __PPC64__ 1
 // PPC64LE:#define __PPC__ 1
-// PPC64LE:#define __PTRDIFF_TYPE__ long int
+// PPC64LE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC64LE:#define __PTRDIFF_WIDTH__ 64
 // PPC64LE:#define __REGISTER_PREFIX__
 // PPC64LE:#define __SCHAR_MAX__ 127
@@ -373,7 +373,7 @@
 // PPC64LE:#define __SIZEOF_WCHAR_T__ 4
 // PPC64LE:#define __SIZEOF_WINT_T__ 4
 // PPC64LE:#define __SIZE_MAX__ 18446744073709551615UL
-// PPC64LE:#define __SIZE_TYPE__ long unsigned int
+// PPC64LE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC64LE:#define __SIZE_WIDTH__ 64
 // PPC64LE:#define __STRUCT_PARM_ALIGN__ 16
 // PPC64LE:#define __UINT16_C(c) c
@@ -844,7 +844,7 @@
 // PPC64-AIX:#define __POWERPC__ 1
 // PPC64-AIX:#define __PPC64__ 1
 // PPC64-AIX:#define __PPC__ 1
-// PPC64-AIX:#define __PTRDIFF_TYPE__ long int
+// PPC64-AIX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC64-AIX:#define __PTRDIFF_WIDTH__ 64
 // PPC64-AIX:#define __REGISTER_PREFIX__
 // PPC64-AIX:#define __SCHAR_MAX__ 127
@@ -865,7 +865,7 @@
 // PPC64-AIX:#define __SIZEOF_WCHAR_T__ 4
 // PPC64-AIX:#define __SIZEOF_WINT_T__ 4
 // PPC64-AIX:#define __SIZE_MAX__ 18446744073709551615UL
-// PPC64-AIX:#define __SIZE_TYPE__ long unsigned int
+// PPC64-AIX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC64-AIX:#define __SIZE_WIDTH__ 64
 // PPC64-AIX:#define __UINT16_C(c) c
 // PPC64-AIX:#define __UINT16_C_SUFFIX__
@@ -1052,7 +1052,7 @@
 // PPC64-LINUX:#define __POWERPC__ 1
 // PPC64-LINUX:#define __PPC64__ 1
 // PPC64-LINUX:#define __PPC__ 1
-// PPC64-LINUX:#define __PTRDIFF_TYPE__ long int
+// PPC64-LINUX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC64-LINUX:#define __PTRDIFF_WIDTH__ 64
 // PPC64-LINUX:#define __REGISTER_PREFIX__
 // PPC64-LINUX:#define __SCHAR_MAX__ 127
@@ -1072,7 +1072,7 @@
 // PPC64-LINUX:#define __SIZEOF_WCHAR_T__ 4
 // PPC64-LINUX:#define __SIZEOF_WINT_T__ 4
 // PPC64-LINUX:#define __SIZE_MAX__ 18446744073709551615UL
-// PPC64-LINUX:#define __SIZE_TYPE__ long unsigned int
+// PPC64-LINUX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC64-LINUX:#define __SIZE_WIDTH__ 64
 // PPC64-LINUX:#define __UINT16_C(c) c
 // PPC64-LINUX:#define __UINT16_C_SUFFIX__
