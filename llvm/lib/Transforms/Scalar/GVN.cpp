@@ -3556,8 +3556,7 @@ bool GVNPassImpl::propagateEquality(
       if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root)) {
         if (!DT->dominates(SI->getParent(), Edge->getStart()))
           continue;
-        NumReplacements =
-            replaceDominatedUsesWith(SI, SIVal, *DT, *Edge);
+        NumReplacements = replaceDominatedUsesWith(SI, SIVal, *DT, *Edge);
       } else {
         auto *InstBB = std::get<Instruction *>(Root)->getParent();
         if (!DT->dominates(SI->getParent(), InstBB))
