@@ -158,9 +158,21 @@ page](https://llvm.org/releases/).
   Both modes fill every storage byte including struct padding.
   PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
 
+- Added `-f[no-]version-loops-for-trip-count`, enabled by default at `-O3` and
+  above. It versions innermost array-section loops whose runtime bound may
+  equal the array's declared leading extent, so that the common case has a
+  constant trip count.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
+- Standard intrinsic functions are now classified as `SIMPLE` (F2023 16.1 p2).
+  A procedure pointer or dummy procedure whose interface is an intrinsic
+  function, such as `procedure(sqrt)`, can no longer be associated with a
+  procedure that is `PURE` but not `SIMPLE` (F2023 10.2.2.4 p3,
+  F2023 15.5.2.10 p1). Declare the target `SIMPLE` if it satisfies the
+  `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
+  interface.
 
 ## Build System Changes
 

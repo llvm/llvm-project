@@ -49,18 +49,16 @@ llvm::Error SystemInitializerFull::Initialize() {
     return error;
 
 #if LLDB_ENABLE_PYTHON
-  // Map libpython into the process before any code that might reference it
-  // runs. This is required by both the static script interpreter (whose
-  // Initialize() invokes Python via the LLDB_PLUGIN_INITIALIZE loop below)
-  // and the dynamic plugin (whose dlopen needs Python's symbols visible in
-  // the process). The loader is once_flag-cached and a no-op when libpython
-  // is already in the process (e.g. `import lldb` from Python).
-  llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
-      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
-  if (!python_loader)
-    return python_loader.takeError();
-  if (llvm::Error err = python_loader->Load())
-    return err;
+  // The dynamic script interpreter plugin references Python data symbols (type
+  // and exception objects), which can't be bound lazily, so Python must be
+  // mapped before loading the plugin. Failure isn't fatal. The plugin itself
+  // is initialized by ScriptInterpreterPython::Initialize, which reports the
+  // cached load result.
+  if (llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
+          ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython))
+    llvm::consumeError(python_loader->Load());
+  else
+    llvm::consumeError(python_loader.takeError());
 #endif
 
   // Initialize LLVM and Clang
