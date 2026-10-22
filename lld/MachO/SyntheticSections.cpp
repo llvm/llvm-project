@@ -2566,8 +2566,7 @@ void ChainedFixupsSection::finalizeContents() {
   const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
-    const OutputSegment *oseg = firstLoc.isec->parent->parent;
-    fixupSegments.emplace_back(oseg);
+    fixupSegments.emplace_back(firstLoc.isec->parent->parent);
     while (i < count && sameSegment(locations[i], firstLoc)) {
       uint64_t pageIdx = locations[i].offset / pageSize;
       if (pageIdx >= UINT16_MAX) {
