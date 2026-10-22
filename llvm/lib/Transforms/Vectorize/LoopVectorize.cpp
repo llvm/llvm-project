@@ -2958,6 +2958,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             })
             .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
+            })
+            .Case([](const VPBranchOnMaskRecipe *) {
+              return Instruction::CondBr;
             });
 
     // If the next recipe is different, or if there are no other pairs,

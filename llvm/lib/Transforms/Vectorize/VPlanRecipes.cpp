@@ -4401,7 +4401,8 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
                                                   VPCostContext &Ctx) const {
   // Replicating isn't supported for scalable vectors.
-  assert(!VF.isScalable() && "cannot replicate for scalable vectors");
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
   auto *VecI1Ty = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
   return Ctx.TTI.getScalarizationOverhead(
              VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
