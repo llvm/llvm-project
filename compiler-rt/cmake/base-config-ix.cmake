@@ -238,6 +238,12 @@ macro(test_targets)
   elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
     if(COMPILER_RT_DEFAULT_TARGET_ONLY)
       add_default_target_arch(${COMPILER_RT_DEFAULT_TARGET_ARCH})
+      if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        list(APPEND TARGET_${COMPILER_RT_DEFAULT_TARGET_ARCH}_CFLAGS
+          "--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+        list(APPEND TARGET_${COMPILER_RT_DEFAULT_TARGET_ARCH}_LINK_FLAGS
+          "--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+      endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")
       if(NOT MSVC)
         test_target_arch(x86_64 "" "-m64")
