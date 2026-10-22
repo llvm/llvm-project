@@ -1056,6 +1056,22 @@ struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Fold fill with broadcast.
+struct FoldFillWithBroadcast : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = broadcastOp.getInput().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(
+          broadcastOp, broadcastOp.getResultTypes(), fillOp.getInputs(),
+          broadcastOp.getDpsInitOperand(0)->get());
+      return success();
+    }
+    return failure();
+  }
+};
+
 /// Fold a concat with all elements being fills of the same value
 /// into a fill of the concat result shape.
 struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
@@ -1111,11 +1127,13 @@ struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
-              FoldFillWithPack, FoldFillWithPad,
-              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-              FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
+  results
+      .add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
+           FoldFillWithPack, FoldFillWithPad,
+           FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+           FoldInsertPadIntoFill, FoldFillWithTranspose, FoldFillWithBroadcast>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
