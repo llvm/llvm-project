@@ -2517,6 +2517,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_ctl",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_ctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_ftruncate",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ftruncate.h"],
     target_compatible_with = select({
@@ -4801,6 +4817,7 @@ libc_support_library(
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_osutil_linux_sigmask",
         ":__support_osutil_linux_syscall_wrappers_clone",
         ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_exit",
@@ -4810,7 +4827,6 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_linux_syscall_wrappers_read",
-        ":__support_osutil_linux_syscall_wrappers_rt_sigprocmask",
         ":__support_osutil_linux_syscall_wrappers_sched_getparam",
         ":__support_osutil_linux_syscall_wrappers_sched_getscheduler",
         ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
@@ -4828,11 +4844,8 @@ libc_support_library(
         ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_sched_macros",
-        ":hdr_signal_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_mman_macros",
-        ":string_memory_utils",
-        ":types_sigset_t",
     ],
 )
 
@@ -19312,7 +19325,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_ctl",
         ":errno",
         ":hdr_sys_epoll_macros",
         ":types_struct_epoll_event",

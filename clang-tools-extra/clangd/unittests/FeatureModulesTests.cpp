@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Feature.h"
 #include "FeatureModule.h"
 #include "Selection.h"
 #include "TestTU.h"
+#include "TidyProvider.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/Error.h"
@@ -301,6 +304,36 @@ TEST(FeatureModulesTest, FinalizeDiagnostic) {
   EXPECT_THAT(TU.build().getDiagnostics(), testing::SizeIs(1));
   EXPECT_EQ(Notes, 1u);
   EXPECT_EQ(Fixes, 1u);
+}
+
+TEST(FeatureModulesTest, ClangTidyDoesNotReinitializeConsumer) {
+  if (!CLANGD_TIDY_CHECKS)
+    GTEST_SKIP() << "Requires clang-tidy checks";
+  class InitializationGuard final : public MultiplexConsumer {
+  public:
+    using MultiplexConsumer::MultiplexConsumer;
+    void Initialize(ASTContext &Ctx) override {
+      EXPECT_FALSE(Initialized);
+      Initialized = true;
+      MultiplexConsumer::Initialize(Ctx);
+    }
+
+  private:
+    bool Initialized = false;
+  };
+  auto Module = std::make_unique<TestModule>();
+  Module->BeforePPCallbacks = [](CompilerInstance &CI) {
+    if (CI.getFrontendOpts().ProgramAction == frontend::ParseSyntaxOnly)
+      CI.setASTConsumer(
+          std::make_unique<InitializationGuard>(CI.takeASTConsumer()));
+  };
+  FeatureModuleSet Modules;
+  Modules.add(std::move(Module));
+  auto TU = TestTU::withCode("int *p = 0;");
+  TU.FeatureModules = &Modules;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-nullptr");
+  // Running tidy must not reinitialize the existing AST consumer.
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::SizeIs(1));
 }
 
 } // namespace

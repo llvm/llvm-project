@@ -3626,6 +3626,10 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
 static Value *simplifyICmpWithMinMax(CmpPredicate Pred, Value *LHS, Value *RHS,
                                      const SimplifyQuery &Q,
                                      unsigned MaxRecurse) {
+  // All folds below need a min/max operand.
+  if (!isa<MinMaxIntrinsic>(LHS) && !isa<MinMaxIntrinsic>(RHS))
+    return nullptr;
+
   Type *ITy = getCompareTy(LHS); // The return type.
   Value *A, *B;
   CmpInst::Predicate P = CmpInst::BAD_ICMP_PREDICATE;

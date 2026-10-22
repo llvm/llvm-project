@@ -7811,7 +7811,9 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
-  if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
+  const bool IsFullyCoveredLookupTable =
+      !DefaultIsReachable || GeneratingCoveredLookupTable;
+  if (IsFullyCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
     if (DTU)
       Updates.push_back({DominatorTree::Insert, BB, LookupBB});
@@ -7861,6 +7863,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
     Value *LoBit = Builder.CreateTrunc(
         Shifted, Type::getInt1Ty(Mod.getContext()), "switch.lobit");
+    if (!IsFullyCoveredLookupTable)
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
     CondBranch = Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
     if (DTU) {
       Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
@@ -7924,7 +7928,14 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       ToLookupWeight += BranchWeights[I];
   }
   SI->eraseFromParent();
-  if (HasBranchWeights)
+  // In the case where we do not have a fully covered lookup table (i.e., we
+  // need a range check), and we need a mask check, we split the default case
+  // into two different cases for which we cannot infer branch weights.
+  // Otherwise we have a single branch for which we can infer branch weights.
+  if ((NeedMask && !IsFullyCoveredLookupTable) &&
+      !ProfcheckDisableMetadataFixes)
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBranch, DEBUG_TYPE);
+  else if (HasBranchWeights)
     setFittedBranchWeights(*CondBranch, {ToLookupWeight, ToDefaultWeight},
                            /*IsExpected=*/false);
   if (DTU)
