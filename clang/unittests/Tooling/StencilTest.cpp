@@ -791,4 +791,9 @@ TEST(StencilToStringTest, SequenceFromVector) {
                        R"repr(ifBound("x", "t", access("e", "f"))))repr";
   EXPECT_EQ(S->toString(), Expected);
 }
+
+TEST(StencilToStringTest, Join) {
+  auto S = join(" sep ", cat("a"), cat("b"), cat("c"));
+  EXPECT_EQ(S->toString(), R"repr(seq("a", " sep ", "b", " sep ", "c"))repr");
+}
 } // namespace
