@@ -36,10 +36,10 @@ namespace {
 //    0   7   e   d   d   5   e   5   9   a   4   e   2   8   c   2
 // 0000011111101101110101011110010110011010010011100010100011000010
 static constexpr std::uint64_t deBruijn{0x07edd5e59a4e28c2};
-static constexpr std::uint8_t mapping[64]{63, 0, 58, 1, 59, 47, 53, 2, 60, 39,
-    48, 27, 54, 33, 42, 3, 61, 51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43,
-    14, 22, 4, 62, 57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21,
-    56, 45, 25, 31, 35, 16, 9, 12, 44, 24, 15, 8, 23, 7, 6, 5};
+static constexpr std::uint8_t mapping[64]{0, 63, 5, 62, 4, 16, 10, 61, 3, 24,
+    15, 36, 9, 30, 21, 60, 2, 12, 26, 23, 14, 45, 35, 43, 8, 33, 29, 52, 20, 49,
+    41, 59, 1, 6, 17, 11, 25, 37, 31, 22, 13, 27, 46, 44, 34, 53, 50, 42, 7, 18,
+    38, 32, 28, 47, 54, 51, 19, 39, 48, 55, 40, 56, 57, 58};
 } // namespace
 
 inline constexpr int LeadingZeroBitCount(std::uint64_t x) {
@@ -59,7 +59,7 @@ inline constexpr int LeadingZeroBitCount(std::uint64_t x) {
     // base-2 logarithm.  We calculate that unknown base-2 logarithm
     // by shifting the deBruijn sequence and mapping the framed value.
     int base2Log{mapping[(x * deBruijn) >> 58]};
-    return 63 - base2Log; // convert to leading zero count
+    return base2Log;
   }
 }
 
