@@ -106,13 +106,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // Types and scopes that are not supported.
   SmallPtrSet<const DIScope *, 8> FailedScopes;
 
-  // DISubprogram nodes that are declarations only (!isDefinition()), collected
-  // in beginModule() for DebugFunctionDeclaration emission.
-  SmallVector<const DISubprogram *> SubprogramDeclarations;
-
-  // DISubprogram nodes that are definitions, collected in beginModule() for
-  // DebugFunction emission.
-  SmallVector<const DISubprogram *> SubprogramDefinitions;
+  // DISubprogram nodes collected in beginModule().
+  SmallVector<const DISubprogram *> Subprograms;
 
   // Distinct DILocations from instruction !dbg attachments and debug program
   // records (#dbg_declare, #dbg_value, #dbg_assign, #dbg_label).
@@ -607,13 +602,12 @@ private:
   /// Size, Flags. NonSemantic \c DebugTypeMember carries no Parent operand: the
   /// enclosing \c DebugTypeComposite references its members, not the reverse.
   ///
-  /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \p M's type cannot be emitted.
-  std::optional<MCRegister> emitDebugTypeMember(const DIDerivedType *M,
-                                                MCRegister VoidTypeReg,
-                                                MCRegister I32TypeReg,
-                                                MCRegister ExtInstSetReg,
-                                                SPIRV::ModuleAnalysisInfo &MAI);
+  /// \returns Emitted with the result id on success. Returns the base's status
+  /// and emits nothing if \p M's type cannot be emitted.
+  EmitResult emitDebugTypeMember(const DIDerivedType *M, MCRegister VoidTypeReg,
+                                 MCRegister I32TypeReg,
+                                 MCRegister ExtInstSetReg,
+                                 SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypeComposite for the struct, class, or union \p CT, after a
   /// \c DebugTypeMember for each data member whose type can be emitted. A

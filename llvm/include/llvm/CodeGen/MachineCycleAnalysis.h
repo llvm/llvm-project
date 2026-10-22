@@ -22,7 +22,12 @@
 
 namespace llvm {
 
-class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {};
+class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {
+public:
+  /// Handle invalidation explicitly.
+  LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
+};
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.
 class LLVM_ABI MachineCycleInfoWrapperPass : public MachineFunctionPass {
@@ -57,9 +62,6 @@ public:
 
   LLVM_ABI Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);
-
-  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                           MachineFunctionAnalysisManager::Invalidator &);
 };
 
 class MachineCycleInfoPrinterPass

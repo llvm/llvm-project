@@ -1201,6 +1201,14 @@ __packed_binary_builtin_mixed(pm2wsub_i64, int64_t, int16x2_t, int16x2_t, __buil
 __packed_binary_builtin_mixed(pm2wsub_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_x_i64)
 __packed_binary_builtin_mixed(pm2waddsu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddsu_i64)
 
+/* Packed Multiplication with Widening Horizontal Addition and Accumulate */
+__packed_ternary_builtin_mixed(pm2wadda_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadda_i64)
+__packed_ternary_builtin_mixed(pm2wadda_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadda_x_i64)
+__packed_ternary_builtin_mixed(pm2waddau_u64, uint64_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2waddau_u64)
+__packed_ternary_builtin_mixed(pm2wsuba_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsuba_i64)
+__packed_ternary_builtin_mixed(pm2wsuba_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsuba_x_i64)
+__packed_ternary_builtin_mixed(pm2waddasu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddasu_i64)
+
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
 __packed_ternary_builtin_cast(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
