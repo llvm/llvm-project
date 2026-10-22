@@ -221,6 +221,7 @@
 #    __kmpc_end_taskq                        128
 #    __kmpc_end_taskq_task                   129
     __kmpc_flush                            130
+    __kmpc_flush_explicit
     __kmpc_for_static_fini                  135
     __kmpc_for_static_init_4                136
     __kmpc_for_static_init_8                137
