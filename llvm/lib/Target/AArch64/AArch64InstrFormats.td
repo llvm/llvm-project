@@ -6159,6 +6159,7 @@ class BaseOneOperandFPComparison<bit signalAllNans,
 
   // Rm should be 0b00000 canonically, but we need to accept any value.
   let PostEncoderMethod = "fixOneOperandFPComparison";
+  let Defs = [NZCV];
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, Uses = [FPCR] in
