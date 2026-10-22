@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -50,11 +51,11 @@ static const char *BTFKindStr[] = {
 };
 
 static const DIType *tryRemoveAtomicType(const DIType *Ty) {
-  if (!Ty)
-    return Ty;
-  auto DerivedTy = dyn_cast<DIDerivedType>(Ty);
-  if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
-    return DerivedTy->getBaseType();
+  while (const auto *DerivedTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    if (DerivedTy->getTag() != dwarf::DW_TAG_atomic_type)
+      break;
+    Ty = DerivedTy->getBaseType();
+  }
   return Ty;
 }
 
@@ -1163,7 +1164,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   unsigned Tag = DTy->getTag();
 
   if (Tag == dwarf::DW_TAG_atomic_type)
-    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
+    return visitTypeEntry(tryRemoveAtomicType(DTy), TypeId, CheckPointer,
                           SeenPointer);
 
   /// Try to avoid chasing pointees, esp. structure pointees which may
@@ -1676,15 +1677,76 @@ unsigned BTFDebug::populateType(const DIType *Ty) {
   return Id;
 }
 
-/// Generate a struct member field relocation.
-void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
-                                     const GlobalVariable *GVar, bool IsAma) {
-  BTFFieldReloc FieldReloc;
-  FieldReloc.Label = ORSym;
-  FieldReloc.TypeID = RootId;
+/// Return a named CO-RE root whose C++ scope is omitted from the BTF name.
+static const DIType *getScopedCPlusPlusRoot(const DIType *Ty,
+                                            const MachineInstr &MI) {
+  // A typedef is itself the named root and must not be unwrapped.
+  Ty = tryRemoveAtomicType(Ty);
+  if (!Ty || Ty->getName().empty() ||
+      !isa_and_nonnull<DINamespace, DICompositeType, DILocalScope>(
+          Ty->getScope()))
+    return nullptr;
 
-  StringRef AccessPattern = GVar->getName();
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_typedef:
+    break;
+  default:
+    return nullptr;
+  }
+
+  const DISubprogram *SP = nullptr;
+  if (const DebugLoc &DL = MI.getDebugLoc())
+    SP = DL->getScope()->getSubprogram();
+  if (!SP || !SP->getUnit())
+    SP = MI.getMF()->getFunction().getSubprogram();
+  if (!SP || !SP->getUnit())
+    return nullptr;
+
+  DISourceLanguageName Lang = SP->getUnit()->getSourceLanguage();
+  bool IsCPlusPlus =
+      Lang.hasVersionedName()
+          ? Lang.getName() == dwarf::DW_LNAME_C_plus_plus
+          : dwarf::isCPlusPlus(
+                static_cast<dwarf::SourceLanguage>(Lang.getName()));
+  return IsCPlusPlus ? Ty : nullptr;
+}
+
+/// Generate a CO-RE relocation.
+void BTFDebug::generatePatchImmReloc(const MachineInstr &MI,
+                                     const GlobalVariable &GVar, bool IsAma) {
+  BTFFieldReloc FieldReloc;
+  StringRef AccessPattern = GVar.getName();
   size_t FirstDollar = AccessPattern.find_first_of('$');
+  if (!IsAma)
+    FieldReloc.RelocKind =
+        std::stoull(std::string(AccessPattern.substr(FirstDollar + 1)));
+
+  const auto *Root =
+      dyn_cast<DIType>(GVar.getMetadata(LLVMContext::MD_preserve_access_index));
+  if (IsAma || FieldReloc.RelocKind != BTF::BTF_TYPE_ID_LOCAL) {
+    if (const DIType *ScopedRoot = getScopedCPlusPlusRoot(Root, MI)) {
+      const Function &F = MI.getMF()->getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          Twine("CO-RE relocation for '") + ScopedRoot->getName() +
+              "' is unsupported because its BTF type name omits the "
+              "enclosing C++ scope",
+          MI.getDebugLoc()));
+      // Instruction lowering still runs after an error, but the compilation
+      // will fail. Keep its patch state well-formed without emitting a
+      // relocation.
+      PatchImms[&GVar] = {0, BTF::FIELD_BYTE_OFFSET};
+      return;
+    }
+  }
+
+  MCSymbol *ORSym = OS.getContext().createTempSymbol();
+  OS.emitLabel(ORSym);
+  FieldReloc.Label = ORSym;
+  FieldReloc.TypeID = populateType(Root);
   if (IsAma) {
     size_t FirstColon = AccessPattern.find_first_of(':');
     size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
@@ -1696,13 +1758,11 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
 
     FieldReloc.OffsetNameOff = addString(IndexPattern);
     FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
-    PatchImms[GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
-                                     FieldReloc.RelocKind);
+    PatchImms[&GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
+                                      FieldReloc.RelocKind);
   } else {
-    StringRef RelocStr = AccessPattern.substr(FirstDollar + 1);
     FieldReloc.OffsetNameOff = addString("0");
-    FieldReloc.RelocKind = std::stoull(std::string(RelocStr));
-    PatchImms[GVar] = std::make_pair(RootId, FieldReloc.RelocKind);
+    PatchImms[&GVar] = std::make_pair(FieldReloc.TypeID, FieldReloc.RelocKind);
   }
   FieldRelocTable[SecNameOff].push_back(FieldReloc);
 }
@@ -1718,17 +1778,11 @@ void BTFDebug::processGlobalValue(const MachineOperand &MO) {
       return;
     }
 
-    if (!GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
-        !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
+    bool IsAma = GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr);
+    if (!IsAma && !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
       return;
 
-    MCSymbol *ORSym = OS.getContext().createTempSymbol();
-    OS.emitLabel(ORSym);
-
-    MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
-    uint32_t RootId = populateType(dyn_cast<DIType>(MDN));
-    generatePatchImmReloc(ORSym, RootId, GVar,
-                          GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr));
+    generatePatchImmReloc(*MO.getParent(), *GVar, IsAma);
   }
 }
 

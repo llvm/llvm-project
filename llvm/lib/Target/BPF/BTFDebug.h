@@ -384,9 +384,9 @@ class BTFDebug : public DebugHandlerBase {
   /// is returned.
   int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
 
-  /// Generate one field relocation record.
-  void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
-                             const GlobalVariable *, bool IsAma);
+  /// Generate one CO-RE relocation record.
+  void generatePatchImmReloc(const MachineInstr &, const GlobalVariable &,
+                             bool IsAma);
 
   /// Populating unprocessed type on demand.
   unsigned populateType(const DIType *Ty);
