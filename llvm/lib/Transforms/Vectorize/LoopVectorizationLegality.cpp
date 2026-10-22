@@ -348,6 +348,13 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
+
+  // Check if the pointer is derived from a conditional induction PHI. If so,
+  // return a conservative stride (assuming the PHI is always updated).
+  if (std::optional<CompressedPtrInfo> PtrInfo = getCompressedPtrInfo(Ptr))
+    return getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, AccessTy, Ptr, PSE)
+        .value_or(0);
+
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
@@ -2058,17 +2065,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
-  }
-
-  if (hasConditionalInductions()) {
-    reportVectorizationFailure(
-        "We can vectorize this loop with a compressstore or expandload, but "
-        "vectorization support is not implemented yet.",
-        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   if (Result) {
