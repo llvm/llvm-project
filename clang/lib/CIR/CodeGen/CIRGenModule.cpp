@@ -4041,7 +4041,7 @@ void CIRGenModule::release() {
     else if (flt == &llvm::APFloat::IEEEsingle())
       format = cir::LongDoubleFormat::IEEEsingle;
     if (format)
-      theModule->setAttr(
+      getModule()->setAttr(
           cir::CIRDialect::getLongDoubleFormatAttrName(),
           cir::LongDoubleFormatAttr::get(&getMLIRContext(), *format));
   }
