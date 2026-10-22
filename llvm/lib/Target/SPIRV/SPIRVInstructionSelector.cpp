@@ -485,8 +485,6 @@ private:
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
                             MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
-  Register buildI32Constant(uint32_t Val, MachineInstr &I,
-                            SPIRVTypeInst ResType = nullptr) const;
   Register buildI32ConstantInEntryBlock(uint32_t Val, MachineInstr &I,
                                         SPIRVTypeInst ResType = nullptr) const;
 
@@ -4550,35 +4548,8 @@ bool SPIRVInstructionSelector::selectICmp(Register ResVReg,
   return selectCmp(ResVReg, ResType, CmpOpc, I);
 }
 
-Register
-SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
-                                           SPIRVTypeInst ResType) const {
-  Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32);
-  SPIRVTypeInst SpvI32Ty =
-      ResType ? ResType : GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Find a constant in DT or build a new one.
-  auto ConstInt = ConstantInt::get(LLVMTy, Val);
-  Register NewReg = GR.find(ConstInt, GR.CurMF);
-  if (!NewReg.isValid()) {
-    NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-    MachineBasicBlock &BB = *I.getParent();
-    MachineInstr *MI =
-        Val == 0
-            ? BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
-                  .addDef(NewReg)
-                  .addUse(GR.getSPIRVTypeID(SpvI32Ty))
-            : BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
-                  .addDef(NewReg)
-                  .addUse(GR.getSPIRVTypeID(SpvI32Ty))
-                  .addImm(APInt(32, Val).getZExtValue());
-    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-    GR.add(ConstInt, MI);
-  }
-  return NewReg;
-}
-
-// Like buildI32Constant, but always inserts the constant definition in the
-// entry block so it dominates all uses regardless of block ordering.
+// Always inserts the constant definition in the entry block so it dominates all
+// uses regardless of block ordering.
 Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
     uint32_t Val, MachineInstr &I, SPIRVTypeInst ResType) const {
   Type *LLVMTy = IntegerType::get(GR.CurMF->getFunction().getContext(), 32);
