@@ -14,10 +14,14 @@ __device__ void func() {
   __shared__ int too_large_arr[1073741824]; // expected-error {{'int[1073741824]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
 }
 
+template <long long N> __device__ void dep_func() {
+  __shared__ char max_size_arr[N];
+  __shared__ char too_large_arr[N+1]; // expected-error {{'char[4294967296]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
+}
+
 __global__ void kernel() {
   __shared__ char max_size_arr[4294967295];
   __shared__ char too_large_arr[4294967296]; // expected-error {{'char[4294967296]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
-}
 
-// TODO: The implementation of the __shared__ attribute doesn't check the
-//       instantiation of dependent variables.
+  dep_func<4294967295>(); // expected-note {{in instantiation of function template specialization 'dep_func<4294967295LL>' requested here}}
+}
