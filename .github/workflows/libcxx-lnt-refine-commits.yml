@@ -91,9 +91,21 @@ jobs:
           # Download the data and the runs as of a fixed time point. That way, the commits that we consider
           # "attempted" are exactly those used to find changepoints.
           as_of=$(date -u -d '5 minutes ago' +%FT%TZ)
-          curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/series"                           \
+
+          # TODO: Download the series in a single request once LNT can serve it before timing out.
+          # In the meantime, we download the series a few tests at a time. The tests are passed in the URL,
+          # which LNT limits to ~8KB: 50 tests per request keeps us below that.
+          curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/tests"                            \
                --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                  \
-               --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" -o series.jsonl
+               --data-urlencode limit=10000                                                               \
+            | jq -r 'if .cursor.next then error("more tests than fit in a page") else [.items[].name] end
+                     | range(0; length; 50) as $i | .[$i:$i + 50] | map("test=" + @uri) | join("&")'      \
+            > queries.txt
+          while read -r query; do
+            curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/series?${query}"                \
+                 --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                \
+                 --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}"
+          done < queries.txt > series.jsonl
 
           curl -sS --fail -G "${LNT_URL}/api/suites/libcxx/runs"                                          \
                --data-urlencode machine="${MACHINE}" --data-urlencode submitted_before="${as_of}"         \
