@@ -1140,6 +1140,61 @@ define <2 x i8> @sub_max_min_vec_multi_use(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i8> %ab
 }
 
+define i32 @fold_smax_i32(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_smax_i32
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 2147483647
+  %b = sub i32 2147483647, %a
+  ret i32 %b
+}
+
+define i32 @fold_allones_i32(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_allones_i32
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 0
+;
+  %a = or i32 %x, -1
+  %b = sub i32 -1, %a
+  ret i32 %b
+}
+
+define i16 @fold_smax_i16(i16 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_smax_i16
+; CHECK-SAME: (i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = and i16 [[X]], -32768
+; CHECK-NEXT:    ret i16 [[B]]
+;
+  %a = or i16 %x, 32767
+  %b = sub i16 32767, %a
+  ret i16 %b
+}
+
+define i32 @fold_smax_commuted(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_smax_commuted
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], -2147483648
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = or i32 2147483647, %x
+  %b = sub i32 2147483647, %a
+  ret i32 %b
+}
+
+define i32 @no_fold_arbitrary_const(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@no_fold_arbitrary_const
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X]], 1073741823
+; CHECK-NEXT:    [[B:%.*]] = sub i32 1073741823, [[A]]
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = or i32 %x, 1073741823
+  %b = sub i32 1073741823, %a
+  ret i32 %b
+}
+
 declare void @use8(i8)
 declare void @use32(i32 %u)
 
