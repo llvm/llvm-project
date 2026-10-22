@@ -2,9 +2,15 @@
 
 // A musttail call to a noreturn function must still be followed by a return.
 
+[[noreturn]] void std_noreturn(int);
 __attribute__((noreturn)) void gnu_noreturn(int);
 typedef void noreturn_fn(int) __attribute__((noreturn));
 extern noreturn_fn *noreturn_ptr;
+
+// CHECK-LABEL: define {{.*}} @test_std(
+// CHECK: musttail call void @std_noreturn(
+// CHECK-NEXT: ret void
+void test_std(int x) { [[clang::musttail]] return std_noreturn(x); }
 
 // CHECK-LABEL: define {{.*}} @test_gnu(
 // CHECK: musttail call void @gnu_noreturn(
