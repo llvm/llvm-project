@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 
+#include "L0Driver.h"
 #include "L0Memory.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
@@ -22,13 +23,17 @@ namespace llvm::omp::target::plugin {
 class L0DeviceTy;
 
 /// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
-/// scoped to the set of devices grouped by the user through olCreateContext.
+/// scoped to the set of devices grouped by the user through olCreateContext,
+/// together with per-device and host memory pools bound to that ze_context.
+/// Each driver also keeps a device-less default context, used by the
+/// libomptarget path, which borrows the driver's ze_context and only has a
+/// host pool.
 class LevelZeroPluginContextTy final : public PluginContextTy {
 public:
   LevelZeroPluginContextTy(GenericPluginTy &Plugin,
                            llvm::ArrayRef<GenericDeviceTy *> Devices,
-                           ze_driver_handle_t Driver,
-                           ze_context_handle_t ZeContext, bool OwnsZeContext)
+                           L0DriverTy &Driver, ze_context_handle_t ZeContext,
+                           bool OwnsZeContext)
       : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
         OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
 
@@ -36,8 +41,10 @@ public:
 
   Error deinit() override;
 
-  ze_driver_handle_t getZeDriver() const { return Driver; }
+  ze_driver_handle_t getZeDriver() const { return Driver.getZeDriver(); }
   ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  MemAllocatorTy &getHostAllocator() { return HostAllocator; }
 
   Error initAsyncInfoImpl(GenericDeviceTy &Device,
                           AsyncInfoWrapperTy &AsyncInfoWrapper) override;
@@ -57,13 +64,13 @@ public:
     ze_kernel_indirect_access_flags_t Flags = 0;
     for (auto &[Device, Allocator] : DeviceAllocators)
       Flags |= Allocator->getIndirectFlags();
-    if (HostAllocator)
-      Flags |= HostAllocator->getIndirectFlags();
+    Flags |= HostAllocator.getIndirectFlags();
     return Flags;
   }
 
   /// Initialize per-plugin-context memory allocators. Runs the pool
   /// probe L0 calls up-front so the first user allocation is not delayed.
+  /// A context without devices only gets a host pool.
   Error initAllocators();
 
   /// Pop an idle queue for \p Device from the cache, or create a new one.
@@ -75,7 +82,7 @@ public:
   void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
 private:
-  ze_driver_handle_t Driver;
+  L0DriverTy &Driver;
   ze_context_handle_t ZeContext;
   bool OwnsZeContext;
 
@@ -84,7 +91,7 @@ private:
   /// Per-plugin-context allocators; scoped to this context's ze_context.
   llvm::DenseMap<L0DeviceTy *, std::unique_ptr<MemAllocatorTy>>
       DeviceAllocators;
-  std::unique_ptr<MemAllocatorTy> HostAllocator;
+  MemAllocatorTy HostAllocator;
 };
 
 } // namespace llvm::omp::target::plugin

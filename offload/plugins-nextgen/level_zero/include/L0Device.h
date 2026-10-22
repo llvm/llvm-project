@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "L0CmdListManager.h"
+#include "L0Context.h"
 #include "L0Driver.h"
 #include "L0Program.h"
 #include "L0Queue.h"
@@ -498,13 +499,13 @@ public:
 
   MemAllocatorTy &getMemAllocator(int32_t Kind) {
     if (Kind == TARGET_ALLOC_HOST)
-      return L0Driver.getHostMemAllocator();
+      return L0Driver.getDefaultUserCtx().getHostAllocator();
     return getDeviceMemAllocator();
   }
 
   MemAllocatorTy &getMemAllocator(const void *Ptr) {
     if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
-      return L0Driver.getHostMemAllocator();
+      return L0Driver.getDefaultUserCtx().getHostAllocator();
     return getDeviceMemAllocator();
   }
 

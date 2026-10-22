@@ -194,6 +194,28 @@ TEST_P(olLaunchKernelByValPtrTest, Success) {
   ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
+TEST_P(olLaunchKernelByValPtrTest, SuccessHost) {
+  void *Mem;
+  ASSERT_SUCCESS(olMemAllocHost(
+      Context, Device, LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+
+  Wrapper W{(uint32_t *)Mem};
+
+  void *ArgPtrs[] = {&W};
+  size_t ArgSizes[] = {sizeof(W)};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
+    ASSERT_EQ(Data[i], i);
+
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
+}
+
 TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,

@@ -290,7 +290,7 @@ LevelZeroPluginTy::createPluginContext(
   }
 
   auto Ctx = std::make_unique<LevelZeroPluginContextTy>(
-      *this, Devices, ZeDriver, ZeContext, OwnsZeContext);
+      *this, Devices, Driver, ZeContext, OwnsZeContext);
   if (auto Err = Ctx->initAllocators())
     return std::move(Err);
   return Ctx;
