@@ -7015,6 +7015,20 @@ def warn_cpp_compat_overflow_handler_into_protected_scope : Warning<
 def err_overflow_goto_invalid_operand : Error<
   "operand of '__builtin_overflow_goto' must have integer or void type "
   "(%0 invalid)">;
+def warn_overflow_goto_no_effect : Warning<
+  "'__builtin_overflow_goto' has no effect because its operand performs no "
+  "overflow-checked operation">,
+  InGroup<OverflowBehaviorGotoNoEffect>;
+def warn_overflow_behavior_no_handler : Warning<
+  "overflow-checked operation has no overflow handler label '%0'; overflow "
+  "will trap">,
+  InGroup<OverflowBehaviorNoHandler>, DefaultIgnore;
+def warn_overflow_behavior_unreachable_handler : Warning<
+  "overflow in this %select{lambda|block}0 traps; it cannot jump to the "
+  "enclosing function's overflow handler label '%1'">,
+  InGroup<OverflowBehaviorUnreachableHandler>;
+def note_overflow_behavior_enclosing_handler : Note<
+  "enclosing function's overflow handler label is here">;
 def err_switch_into_protected_scope : Error<
   "cannot jump from switch statement to this case label">;
 def warn_cxx98_compat_switch_into_protected_scope : Warning<
