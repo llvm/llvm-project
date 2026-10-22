@@ -51,6 +51,15 @@
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
 
+#ifdef LLVM_LIBC_FUNCTION_IS_BUILTIN
+#define TO_STR(builtin) #builtin
+#define TO_TO_STR(builtin) TO_STR(builtin)
+#define LLVM_LIBC_DISABLE_BUILTIN_FUNCTION                                     \
+  __attribute__((no_builtin(TO_TO_STR(LLVM_LIBC_FUNCTION_IS_BUILTIN))))
+#else
+#define LLVM_LIBC_DISABLE_BUILTIN_FUNCTION
+#endif
+
 // Export both `func` and `LIBC_NAMESPACE::func` using an alias symbol.
 // This does not work on platfors with LIBC_TARGET_USES_LEADING_UNDERSCORE
 // so there this only exports `_func`.
@@ -61,7 +70,7 @@
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
       __##name##_impl__ asm(c_alias);                                          \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(c_alias)]];                 \
-  type __##name##_impl__ arglist
+  LLVM_LIBC_DISABLE_BUILTIN_FUNCTION type __##name##_impl__ arglist
 
 #define LLVM_LIBC_ADD_FUNCTION_C_ALIAS(name, c_alias)                          \
   extern "C" decltype(LIBC_NAMESPACE::name) c_alias [[gnu::alias(#name)]]
