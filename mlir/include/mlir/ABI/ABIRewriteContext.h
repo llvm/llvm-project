@@ -133,8 +133,8 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getIndirect(llvm::Align align, bool byVal = true,
-                                       unsigned addrSpace = 0) {
+  static ArgClassification getIndirect(llvm::Align align, bool byVal,
+                                       unsigned addrSpace) {
     ArgClassification c;
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;

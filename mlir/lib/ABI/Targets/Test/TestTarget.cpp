@@ -103,7 +103,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
   uint64_t alignBytes = dl.getTypeABIAlignment(type);
   return ArgClassification::getIndirect(llvm::Align(alignBytes),
-                                        /*byVal=*/true);
+                                        /*byVal=*/true, /*addrSpace=*/0);
 }
 
 } // namespace

@@ -56,7 +56,7 @@ TEST(ABIRewriteContextTest, ArgClassificationIgnore) {
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIndirect) {
-  auto c = ArgClassification::getIndirect(llvm::Align(8), true);
+  auto c = ArgClassification::getIndirect(llvm::Align(8), true, 0);
   EXPECT_EQ(c.kind, ArgKind::Indirect);
   EXPECT_EQ(c.indirectAlign, llvm::Align(8));
   EXPECT_TRUE(c.byVal);
@@ -64,7 +64,7 @@ TEST(ABIRewriteContextTest, ArgClassificationIndirect) {
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIndirectNoByVal) {
-  auto c = ArgClassification::getIndirect(llvm::Align(16), false);
+  auto c = ArgClassification::getIndirect(llvm::Align(16), false, 0);
   EXPECT_EQ(c.kind, ArgKind::Indirect);
   EXPECT_EQ(c.indirectAlign, llvm::Align(16));
   EXPECT_FALSE(c.byVal);
@@ -74,7 +74,7 @@ TEST(ABIRewriteContextTest, ArgClassificationIndirectAddrSpace) {
   auto c = ArgClassification::getIndirect(llvm::Align(8), true, 5);
   EXPECT_EQ(c.kind, ArgKind::Indirect);
   EXPECT_EQ(c.indirectAddrSpace, 5u);
-  EXPECT_FALSE(c == ArgClassification::getIndirect(llvm::Align(8), true));
+  EXPECT_FALSE(c == ArgClassification::getIndirect(llvm::Align(8), true, 0));
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationExtend) {
@@ -94,7 +94,8 @@ TEST(ABIRewriteContextTest, FunctionClassificationHoldsReturnAndArgs) {
   FunctionClassification fc;
   fc.returnInfo = ArgClassification::getDirect();
   fc.argInfos.push_back(ArgClassification::getDirect());
-  fc.argInfos.push_back(ArgClassification::getIndirect(llvm::Align(8), true));
+  fc.argInfos.push_back(
+      ArgClassification::getIndirect(llvm::Align(8), true, 0));
   fc.argInfos.push_back(ArgClassification::getIgnore());
 
   EXPECT_EQ(fc.returnInfo.kind, ArgKind::Direct);
