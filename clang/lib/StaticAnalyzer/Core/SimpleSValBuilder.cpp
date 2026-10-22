@@ -342,17 +342,15 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
-  // FIXME: Why can we assert these?
-  assert(APSIntType(LInt) == BV.getAPSIntType(CommonTy) &&
-         "Integers are not of the same type as symbols!");
-  assert(APSIntType(RInt) == BV.getAPSIntType(CommonTy) &&
-         "Integers are not of the same type as symbols!");
-
   if (LSym == RSym)
     return SVB
         .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .getAs<NonLoc>();
+
+  APSIntType CommonAPSIntTy = BV.getAPSIntType(CommonTy);
+  CommonAPSIntTy.apply(LInt);
+  CommonAPSIntTy.apply(RInt);
 
   auto MakeSymExprVal = [&SVB, CommonTy](SymbolRef Lhs, BinaryOperatorKind Op,
                                          SymbolRef Rhs) {
