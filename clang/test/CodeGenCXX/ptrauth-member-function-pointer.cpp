@@ -501,3 +501,17 @@ void test2() {
 }
 
 }
+
+namespace testNoreturn {
+
+// CHECK: define linkonce_odr hidden void @_ZN12testNoreturn1S16virtual_noreturnEv_vfpthunk_(
+// CHECK: musttail call void
+// CHECK-NEXT: ret void
+
+struct S {
+  __attribute__((noreturn)) virtual void virtual_noreturn();
+};
+
+void (S::*mfptr)() = &S::virtual_noreturn;
+
+}
