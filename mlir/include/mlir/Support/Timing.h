@@ -332,6 +332,7 @@ private:
   Timer timer;
 };
 
+namespace timing {
 //===----------------------------------------------------------------------===//
 // OutputStrategy
 //===----------------------------------------------------------------------===//
@@ -378,6 +379,7 @@ public:
 
   raw_ostream &os;
 };
+} // namespace timing
 
 //===----------------------------------------------------------------------===//
 // DefaultTimingManager
@@ -442,7 +444,7 @@ public:
   DisplayMode getDisplayMode() const;
 
   /// Change the stream where the output will be printed to.
-  void setOutput(std::unique_ptr<OutputStrategy> output);
+  void setOutput(std::unique_ptr<timing::OutputStrategy> output);
 
   /// Print and clear the timing results. Only call this when there are no more
   /// references to nested timers around, as printing post-processes and clears
@@ -475,7 +477,7 @@ protected:
 
 private:
   const std::unique_ptr<detail::DefaultTimingManagerImpl> impl;
-  std::unique_ptr<OutputStrategy> out;
+  std::unique_ptr<timing::OutputStrategy> out;
 };
 
 /// Register a set of useful command-line options that can be used to configure
@@ -487,10 +489,12 @@ void registerDefaultTimingManagerCLOptions();
 /// 'registerDefaultTimingManagerOptions' to a `DefaultTimingManager`.
 void applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm);
 
+namespace timing {
 /// Create an output strategy for the specified format, to be passed to
 /// DefaultTimingManager::setOutput().
 std::unique_ptr<OutputStrategy>
 createOutputStrategy(DefaultTimingManager::OutputFormat fmt, raw_ostream &os);
+} // namespace timing
 
 } // namespace mlir
 
