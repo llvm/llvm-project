@@ -12264,8 +12264,9 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
     // operands are non-negative or negative.
-    if (haveSameSign(FoundLHS, FoundRHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
+    if (haveSameSign(FoundLHS, FoundRHS) &&
+        isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+      return true;
     // Create local copies that we can freely swap and canonicalize our
     // conditions to "le/lt".
     CmpPredicate CanonicalPred = Pred, CanonicalFoundPred = FoundPred;
@@ -12282,20 +12283,22 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     assert((ICmpInst::isLT(CanonicalFoundPred) ||
             ICmpInst::isLE(CanonicalFoundPred)) &&
            "Must be!");
-    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS))
+    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS)) {
       // Use implication:
       // x <u y && y >=s 0 --> x <s y.
       // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
-    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS))
+      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
+                                CanonicalFoundLHS, CanonicalFoundRHS))
+        return true;
+    }
+    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS)) {
       // Use implication:
       // x <s y && y <s 0 --> x <u y.
       // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
+      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
+                                CanonicalFoundLHS, CanonicalFoundRHS))
+        return true;
+    }
   }
 
   // Check if we can make progress by sharpening ranges.
