@@ -10480,36 +10480,31 @@ struct SPAddSubImmEncoding {
 };
 } // namespace
 
-/// If \p MI is an ADD/SUBXri that reads SP but does not write SP (e.g.
-/// "add x0, sp, #48"), try to adjust its signed byte offset by \p Delta and
-/// re-encode the result. Returns std::nullopt if \p MI is not a matching
-/// instruction or the adjusted offset is not encodable.
-static std::optional<SPAddSubImmEncoding>
-adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta) {
-  bool IsSub;
-  switch (MI.getOpcode()) {
-  case AArch64::ADDXri:
-    IsSub = false;
-    break;
-  case AArch64::SUBXri:
-    IsSub = true;
-    break;
-  default:
-    return std::nullopt;
-  }
+/// Returns true if \p MI is an ADD/SUBXri with an immediate offset that reads
+/// SP but does not write SP (e.g. "add x0, sp, #48").
+static bool isSPAddSubImm(const MachineInstr &MI) {
+  if (MI.getOpcode() != AArch64::ADDXri && MI.getOpcode() != AArch64::SUBXri)
+    return false;
 
   assert(MI.getNumExplicitOperands() == 4 && "Wrong number of operands");
   assert(MI.getOperand(0).isReg() && MI.getOperand(1).isReg() &&
          MI.getOperand(3).isImm() && "Unexpected add/sub immediate operands");
 
   if (MI.getOperand(0).getReg() == AArch64::SP)
-    return std::nullopt;
+    return false;
   if (MI.getOperand(1).getReg() != AArch64::SP)
-    return std::nullopt;
+    return false;
 
-  // The immediate operand can also be a symbol which we cannot fix up.
-  if (!MI.getOperand(2).isImm())
-    return std::nullopt;
+  return MI.getOperand(2).isImm();
+}
+
+/// Adjust the signed byte offset of \p MI, which must satisfy isSPAddSubImm,
+/// by \p Delta and re-encode the result. Returns std::nullopt if the adjusted
+/// offset is not encodable.
+static std::optional<SPAddSubImmEncoding>
+adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta) {
+  assert(isSPAddSubImm(MI) && "Expected an SP-based add/sub immediate");
+  bool IsSub = MI.getOpcode() == AArch64::SUBXri;
 
   // ADD/SUBXri encode a 12-bit unsigned immediate with an optional left shift
   // which can only be 12.
@@ -10798,8 +10793,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       return true;
     }
 
-    if (adjustSPAddSubImm(MI, 16))
-      return true;
+    if (isSPAddSubImm(MI))
+      return adjustSPAddSubImm(MI, 16).has_value();
 
     // FIXME: Add handling for other SP-based address calculations that can be
     // adjusted after outlining.
@@ -11357,7 +11352,9 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
       continue;
     }
 
-    if (auto Enc = adjustSPAddSubImm(MI, 16)) {
+    if (isSPAddSubImm(MI)) {
+      auto Enc = adjustSPAddSubImm(MI, 16);
+      assert(Enc && "Unencodable SP add/sub should not have been outlined");
       MI.setDesc(get(Enc->Opcode));
       MI.getOperand(2).setImm(Enc->Imm);
       MI.getOperand(3).setImm(Enc->Shift);
