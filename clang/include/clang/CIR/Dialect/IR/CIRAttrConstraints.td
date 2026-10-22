@@ -21,6 +21,17 @@ class CIR_AttrConstraint<code attr, string summary = "">
     : Attr<CIR_IsAttrPred<attr>, summary>;
 
 //===----------------------------------------------------------------------===//
+// DistinctAttr constraints
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyDistinctAttr : CIR_AttrConstraint<"::mlir::DistinctAttr",
+  "distinct attribute"> {
+  let storageType = "::mlir::DistinctAttr";
+  let returnType = "::mlir::DistinctAttr";
+  let convertFromStorage = "$_self";
+}
+
+//===----------------------------------------------------------------------===//
 // IntAttr constraints
 //===----------------------------------------------------------------------===//
 
