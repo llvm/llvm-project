@@ -1398,7 +1398,7 @@ make_from_tuple(_Tuple&& __tuple) noexcept(__can_nothrow_make_from_tuple_v<_Tp, 
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
 #      endif // _LIBCPP_STD_VER >= 23
-  return std::apply([]<class... _Args>(_Args&&... __args) { return _Tp(std::forward<_Args>(__args)...); },
+  return std::apply([]<class... _Args>(_Args&&... __args) -> _Tp { return _Tp(std::forward<_Args>(__args)...); },
                     std::forward<_Tuple>(__tuple));
 }
 

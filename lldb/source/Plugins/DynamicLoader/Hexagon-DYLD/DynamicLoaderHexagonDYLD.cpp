@@ -197,7 +197,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
   if (executable.get() != target.GetExecutableModulePointer()) {
     // Don't load dependent images since we are in dyld where we will know and
     // find out about all images that are loaded
-    target.SetExecutableModule(executable, eLoadDependentsNo);
+    target.RebuildModuleListWithExecutable(executable, eLoadDependentsNo);
   }
 
   return executable;

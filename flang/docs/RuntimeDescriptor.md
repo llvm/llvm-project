@@ -8,11 +8,6 @@
 
 # Runtime Descriptors
 
-```{contents}
----
-local:
----
-```
 
 ## Concept
 The properties that characterize data values and objects in Fortran

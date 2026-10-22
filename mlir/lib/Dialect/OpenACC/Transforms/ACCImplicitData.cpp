@@ -197,6 +197,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
@@ -216,6 +217,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <type_traits>
 
 namespace mlir {
@@ -230,10 +233,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class ACCImplicitData : public acc::impl::ACCImplicitDataBase<ACCImplicitData> {
 public:
   using acc::impl::ACCImplicitDataBase<ACCImplicitData>::ACCImplicitDataBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCImplicitDataBase<ACCImplicitData>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override;
 
@@ -292,7 +300,7 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
     return false;
 
   // Device data is a candidate - it will get a deviceptr clause.
-  if (acc::isDeviceValue(val))
+  if (acc::isDeviceAccessibleValue(val))
     return true;
 
   // If it is otherwise valid, skip it.
@@ -457,10 +465,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
-  if (acc::isDeviceValue(var)) {
-    // If the variable is device data, use deviceptr clause.
+  // `deviceptr` asserts the value's storage is already in device memory; no
+  // runtime mapping or attach is performed. Storage that is device-accessible
+  // but physically shared with the host may migrate on demand, so it is not
+  // guaranteed to be in device memory and must still be mapped rather than
+  // treated as deviceptr.
+  if (acc::isInDeviceMemoryValue(var)) {
+    // If the variable is in device memory, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                               "device data\n");
+                               "in device memory\n");
     return acc::DevicePtrOp::create(builder, loc, var,
                                     /*structured=*/true, /*implicit=*/true,
                                     accSupport.getVariableName(var));
@@ -501,14 +514,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       copyinOp.setDataClause(acc::DataClause::acc_reduction);
       return copyinOp.getOperation();
     }
-    if constexpr (std::is_same_v<OpT, acc::KernelsOp> ||
-                  std::is_same_v<OpT, acc::KernelEnvironmentOp>) {
+    if constexpr (std::is_same_v<OpT, acc::KernelsOp>) {
       // Scalars are implicit copyin in kernels construct.
-      // We also do the same for acc.kernel_environment because semantics
-      // of user variable mappings should be applied while ACC construct exists
-      // and at this point we should only be dealing with unmapped variables
-      // that were made live-in by the compiler.
-      // TODO: This may be revisited.
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,
@@ -764,8 +771,7 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
     generateRecipes(module, builder, computeConstructOp, newPrivateOperands);
 
   // 6) Figure out insertion order for the new data clause operands.
@@ -778,8 +784,7 @@ void ACCImplicitData::generateImplicitDataOps(
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
                              sortedDataClauseOperands);
   // 8) Add all of the new operands to the compute construct op.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
     addNewPrivateOperands(computeConstructOp, newPrivateOperands);
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
@@ -791,18 +796,16 @@ void ACCImplicitData::runOnOperation() {
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
   module.walk([&](Operation *op) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
       assert(op->getNumRegions() == 1 && "must have 1 region");
 
       auto defaultClause = acc::getDefaultAttr(op);
       llvm::TypeSwitch<Operation *, void>(op)
-          .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
-              [&](auto op) {
-                generateImplicitDataOps(module, op, defaultClause, accSupport);
-              })
+          .Case<ACC_COMPUTE_CONSTRUCT_OPS>([&](auto op) {
+            generateImplicitDataOps(module, op, defaultClause, accSupport);
+          })
           .Default([&](Operation *) {});
     }
   });
 }
-
 } // namespace

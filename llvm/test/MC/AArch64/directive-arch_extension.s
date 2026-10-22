@@ -88,6 +88,10 @@ stilp   w24, w0, [x16, #-8]!
 ld64b x0, [x13]
 // CHECK: ld64b x0, [x13]
 
+.arch_extension lsc64b
+lda64b x0, [x13]
+// CHECK: lda64b x0, [x13]
+
 .arch_extension pauth
 paciasp
 // CHECK: paciasp
@@ -228,3 +232,7 @@ fcmla v0.4s, v1.4s, v2.4s, #0
 .arch_extension bti
 bti c
 // CHECK: bti c
+
+.arch_extension cflt
+cfltz #1, w0
+// CHECK: cflteq #1, w0, #0

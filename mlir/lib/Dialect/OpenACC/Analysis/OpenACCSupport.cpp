@@ -18,9 +18,10 @@
 namespace mlir {
 namespace acc {
 
-std::string OpenACCSupport::getVariableName(Value v) {
+std::string OpenACCSupport::getVariableName(Value v,
+                                            VariableNameConfig config) {
   if (impl)
-    return impl->getVariableName(v);
+    return impl->getVariableName(v, config);
   return acc::getVariableName(v);
 }
 

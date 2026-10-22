@@ -15,8 +15,12 @@
 #include <string.h>
 
 #include <algorithm>
+#include <atomic>
+#include <memory>
 #include <random>
 #include <set>
+#include <thread>
+#include <vector>
 
 TEST(ScudoReleaseTest, RegionPageMap) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {
@@ -639,16 +643,80 @@ TEST(ScudoReleaseTest, BufferPool) {
 
   std::vector<BufferPool::Buffer> Buffers;
   for (scudo::uptr I = 0; I < StaticBufferCount; ++I) {
-    BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+    BufferPool::Buffer Buffer;
+    EXPECT_TRUE(Pool->getBuffer(Buffer, StaticBufferNumElements));
     EXPECT_TRUE(Pool->isStaticBufferTestOnly(Buffer));
     Buffers.push_back(Buffer);
   }
 
   // The static buffer is supposed to be used up.
-  BufferPool::Buffer Buffer = Pool->getBuffer(StaticBufferNumElements);
+  BufferPool::Buffer Buffer;
+  EXPECT_TRUE(Pool->getBuffer(Buffer, StaticBufferNumElements));
   EXPECT_FALSE(Pool->isStaticBufferTestOnly(Buffer));
 
   Pool->releaseBuffer(Buffer);
-  for (auto &Buffer : Buffers)
+  EXPECT_EQ(Buffer.Data, nullptr);
+  for (auto &Buffer : Buffers) {
     Pool->releaseBuffer(Buffer);
+    EXPECT_EQ(Buffer.Data, nullptr);
+  }
+}
+
+TEST(ScudoReleaseTest, BufferPoolMultiThreaded) {
+  constexpr scudo::uptr StaticBufferCount = SCUDO_WORDSIZE - 1;
+  constexpr scudo::uptr StaticBufferNumElements = 512U;
+
+  using BufferPool =
+      scudo::BufferPool<StaticBufferCount, StaticBufferNumElements>;
+  std::unique_ptr<BufferPool> Pool(new BufferPool());
+
+  std::atomic<bool> Ready{false};
+
+  // Create a bunch of threads that will allocate from the pool all at once.
+  constexpr scudo::uptr NumThreads = 12;
+  constexpr scudo::uptr NumBuffers = 10;
+  constexpr scudo::uptr NumLoops = 5;
+  std::thread Threads[NumThreads];
+  for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); ++I) {
+    Threads[I] = std::thread([&Ready, &Pool, I]() {
+      while (!Ready)
+        ;
+
+      for (scudo::uptr Loop = 0; Loop < NumLoops; ++Loop) {
+        std::vector<BufferPool::Buffer> Buffers;
+        for (scudo::uptr J = 0; J < NumBuffers; ++J) {
+          BufferPool::Buffer Buffer;
+          EXPECT_TRUE(Pool->getBuffer(Buffer, StaticBufferNumElements));
+          EXPECT_NE(Buffer.Data, nullptr);
+          if (TEST_HAS_FAILURE)
+            break;
+
+          Buffer.Data[0] = I + 1;
+          Buffer.Data[StaticBufferNumElements - 1] = I + 1;
+          Buffers.push_back(Buffer);
+        }
+        for (auto &Buffer : Buffers) {
+          EXPECT_EQ(Buffer.Data[0], I + 1);
+          EXPECT_EQ(Buffer.Data[StaticBufferNumElements - 1], I + 1);
+          Pool->releaseBuffer(Buffer);
+          EXPECT_EQ(Buffer.Data, nullptr);
+        }
+        if (TEST_HAS_FAILURE)
+          break;
+      }
+    });
+  }
+
+  Ready = true;
+
+  for (auto &T : Threads)
+    T.join();
+
+  // Now guarantee that the Pool is completely empty and we can allocate the
+  // entire static buffer.
+  BufferPool::Buffer Buffer;
+  EXPECT_TRUE(Pool->getBuffer(Buffer, StaticBufferNumElements));
+  EXPECT_TRUE(Pool->isStaticBufferTestOnly(Buffer));
+  Pool->releaseBuffer(Buffer);
+  EXPECT_EQ(Buffer.Data, nullptr);
 }

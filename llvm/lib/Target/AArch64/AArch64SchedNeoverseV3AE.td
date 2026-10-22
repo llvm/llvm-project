@@ -430,10 +430,9 @@ def V3AEWrite_8c_2M0_2V0 : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitV0,
   let NumMicroOps = 4;
 }
 
-def V3AEWrite_8c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1]> {
+def V3AEWrite_8c_2V_1V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1]> {
   let Latency     = 8;
-  let NumMicroOps = 4;
+  let NumMicroOps = 3;
 }
 
 def V3AEWrite_4c_2M0_2M : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitM,
@@ -524,10 +523,10 @@ def V3AEWrite_9c_2L_2V_2I : SchedWriteRes<[V3AEUnitL, V3AEUnitL, V3AEUnitV,
   let NumMicroOps = 6;
 }
 
-def V3AEWrite_9c_2V_4V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1, V3AEUnitV1, V3AEUnitV1]> {
+def V3AEWrite_9c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
+                                         V3AEUnitV1]> {
   let Latency     = 9;
-  let NumMicroOps = 6;
+  let NumMicroOps = 4;
 }
 
 def V3AEWrite_2c_3SA_3V : SchedWriteRes<[V3AEUnitSA, V3AEUnitSA, V3AEUnitSA,
@@ -929,16 +928,15 @@ def V3AERd_ZBFMAL : SchedReadAdvance<3, [V3AEWr_ZBFMAL]>;
 // Define types with long resource cycles (rc)
 
 def V3AEWrite_6c_1V1_5rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  6; let ReleaseAtCycles = [5]; }
+def V3AEWrite_7c_1M0_7rc    : SchedWriteRes<[V3AEUnitM0]>  { let Latency =  7; let ReleaseAtCycles = [7]; }
 def V3AEWrite_9c_1V1_2rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [2]; }
 def V3AEWrite_9c_1V1_4rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [4]; }
 def V3AEWrite_10c_1V1_9rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 10; let ReleaseAtCycles = [9]; }
 def V3AEWrite_11c_1V1_4rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 11; let ReleaseAtCycles = [4]; }
-def V3AEWrite_12c_1M0_12rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 12; let ReleaseAtCycles = [12]; }
 def V3AEWrite_12c_1V0_11rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 12; let ReleaseAtCycles = [11]; }
 def V3AEWrite_13c_1V1_8rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 13; let ReleaseAtCycles = [8]; }
 def V3AEWrite_14c_1V1_2rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 14; let ReleaseAtCycles = [2]; }
 def V3AEWrite_20c_1V0_20rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
-def V3AEWrite_20c_1M0_20rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -1019,8 +1017,8 @@ def : SchedAlias<WriteImm, V3AEWrite_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V3AEWrite_12c_1M0_12rc>;
-def : SchedAlias<WriteID64,  V3AEWrite_20c_1M0_20rc>;
+def : SchedAlias<WriteID32,  V3AEWrite_7c_1M0_7rc>;
+def : SchedAlias<WriteID64,  V3AEWrite_7c_1M0_7rc>;
 
 def : SchedAlias<WriteIM32, V3AEWrite_2c_1M>;
 def : SchedAlias<WriteIM64, V3AEWrite_2c_1M>;
@@ -2254,13 +2252,13 @@ def : InstRW<[V3AEWrite_2c_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 def : InstRW<[V3AEWrite_4c_2V0], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
-def : InstRW<[V3AEWrite_9c_2V_4V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
+def : InstRW<[V3AEWrite_9c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
 
 // Reduction, arithmetic, H form
-def : InstRW<[V3AEWrite_8c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
+def : InstRW<[V3AEWrite_8c_2V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
 
 // Reduction, arithmetic, S form
-def : InstRW<[V3AEWrite_6c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
+def : InstRW<[V3AEWrite_6c_1V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
 
 // Reduction, arithmetic, D form
 def : InstRW<[V3AEWrite_4c_2V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_D")>;

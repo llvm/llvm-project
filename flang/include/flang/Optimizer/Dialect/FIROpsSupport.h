@@ -109,6 +109,14 @@ static constexpr llvm::StringRef getReadOnlyAttrName() {
   return "fir.read_only";
 }
 
+/// Dummy intent, attached to the corresponding `func.func` argument.
+/// A function pass reads intent from this signature attribute and does not
+/// inspect another function's body. The `fir.` prefix is required: function
+/// arguments may only carry dialect attributes.
+static constexpr llvm::StringRef getFortranAttrsAttrName() {
+  return "fir.fortran_attrs";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
@@ -128,6 +136,14 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
 /// Attribute to link an internal procedure to its host procedure symbol.
 static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
+}
+
+/// Attribute naming the submodule that defines a separate module procedure.
+/// Such a procedure is mangled with the module that declares its interface, so
+/// this is the only record of where it is really defined. It is only set when
+/// full debug information is requested.
+static constexpr llvm::StringRef getDefiningSubmoduleAttrName() {
+  return "fir.defining_submodule";
 }
 
 /// Attribute containing the original name of a function from before the
@@ -232,6 +248,33 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
 
 bool isDummyArgument(mlir::Value v);
 
+/// Intent of function argument `argIdx`.
+enum class FortranDummyIntent { In, Out, InOut };
+
+/// Intent recorded by the `fortran_attrs` attribute of argument `argIdx`.
+/// Empty when that attribute is absent or names no intent. The callee region
+/// is not inspected: a function pass may query another function only through
+/// its signature.
+inline std::optional<FortranDummyIntent>
+getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
+  if (!callee || argIdx >= callee.getNumArguments())
+    return std::nullopt;
+  auto attrs = callee.getArgAttrOfType<FortranVariableFlagsAttr>(
+      argIdx, getFortranAttrsAttrName());
+  if (!attrs)
+    return std::nullopt;
+  switch (attrs.getFlags()) {
+  case FortranVariableFlagsEnum::intent_in:
+    return FortranDummyIntent::In;
+  case FortranVariableFlagsEnum::intent_out:
+    return FortranDummyIntent::Out;
+  case FortranVariableFlagsEnum::intent_inout:
+    return FortranDummyIntent::InOut;
+  default:
+    return std::nullopt;
+  }
+}
+
 template <fir::FortranProcedureFlagsEnum Flag>
 inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
   return flags && bitEnumContainsAny(flags.getValue(), Flag);
@@ -276,6 +319,12 @@ bool reboxPreservesContinuity(fir::ReboxOp rebox,
 /// for continuity in the innermost dimension, otherwise,
 /// the checking is done for continuity of the whole result of embox
 bool isContiguousEmbox(fir::EmboxOp embox, bool checkWhole = true);
+
+/// Return true if \p op is nested in code that is offloaded to a device: an
+/// OpenACC compute construct or specialized routine, a CUDA Fortran kernel
+/// loop, a gpu.launch, a gpu.func or a gpu.module. Code there runs on the
+/// device stack, which is far smaller than the host one.
+bool isInOffloadRegion(mlir::Operation *op);
 
 } // namespace fir
 

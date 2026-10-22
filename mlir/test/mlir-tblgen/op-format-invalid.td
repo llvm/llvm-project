@@ -11,7 +11,6 @@ def TestDialect : Dialect {
 }
 def TestStrictPropertiesDialect : Dialect {
   let name = "test_strict_properties";
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {

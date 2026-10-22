@@ -15,10 +15,9 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-// Branchless select operations, matching the semantics of the instructions
-// defined in Zicond or XVentanaCondOps
-def riscv_czero_eqz : RVSDNode<"CZERO_EQZ", SDTIntBinOp>; // vt.maskc for XVentanaCondOps.
-def riscv_czero_nez : RVSDNode<"CZERO_NEZ", SDTIntBinOp>; // vt.maskcn for XVentanaCondOps.
+// Branchless select operations, matching the semantics of Zicond instructions.
+def riscv_czero_eqz : RVSDNode<"CZERO_EQZ", SDTIntBinOp>;
+def riscv_czero_nez : RVSDNode<"CZERO_NEZ", SDTIntBinOp>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -35,8 +34,7 @@ def CZERO_NEZ : ALU_rr<0b0000111, 0b111, "czero.nez">,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-// Zero (eqz) is instantiated with CZERO_EQZ or a compatible custom
-// instruction, and nez with CZERO_NEZ or a compatible custom instruction.
+// Zero (eqz) is instantiated with CZERO_EQZ and nez with CZERO_NEZ.
 multiclass CondOpsPat<Instruction eqz, Instruction nez> {
   def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
             (eqz GPR:$rs1, GPR:$rc)>;

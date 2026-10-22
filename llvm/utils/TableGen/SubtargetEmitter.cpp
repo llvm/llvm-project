@@ -144,6 +144,7 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void emitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void emitSchedModelHelpersImpl(raw_ostream &OS,
                                  bool OnlyExpandMCInstPredicates = false);
+  void emitVariantSchedClassTargets(raw_ostream &OS);
   void emitGenMCSubtargetInfo(raw_ostream &OS);
   void emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS);
 
@@ -1896,6 +1897,48 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
   emitSchedModelHelperEpilogue(OS, OnlyExpandMCInstPredicates);
 }
 
+// Emits the scheduling classes each variant scheduling class may be resolved
+// to, so the variant classes can be estimated without an instruction.
+void SubtargetEmitter::emitVariantSchedClassTargets(raw_ostream &OS) {
+  OS << "ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,\n"
+     << "    unsigned CPUID) {\n";
+  IdxVec VariantClasses;
+  collectVariantClasses(SchedModels, VariantClasses,
+                        /*OnlyExpandMCInstPredicates=*/false);
+  if (VariantClasses.empty()) {
+    OS << "  return {};\n}\n";
+    return;
+  }
+  OS << "  switch (SchedClass) {\n";
+  for (unsigned VC : VariantClasses) {
+    const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
+    IdxVec ProcIndices;
+    collectProcessorIndices(SC, ProcIndices);
+    OS << "  case " << VC << ": // " << SC.Name << '\n';
+    for (unsigned PI : ProcIndices) {
+      OS << "    ";
+      if (PI != 0)
+        OS << "if (CPUID == " << PI << ") ";
+      OS << "{ // " << SchedModels.procModels()[PI].ModelName << '\n'
+         << "      static const unsigned Targets[] = {";
+      ListSeparator LS;
+      for (const CodeGenSchedTransition &T : SC.Transitions)
+        if (PI == 0 || T.ProcIndex == PI)
+          OS << LS << T.ToClassIdx << " /* "
+             << SchedModels.getSchedClass(T.ToClassIdx).Name << " */";
+      OS << "};\n"
+         << "      return Targets;\n"
+         << "    }\n";
+      if (PI == 0)
+        break;
+    }
+    OS << "    break;\n";
+  }
+  OS << "  }\n"
+     << "  return {};\n"
+     << "}\n";
+}
+
 void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
                                              raw_ostream &OS) {
   OS << "unsigned " << ClassName
@@ -2102,6 +2145,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
        << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
     emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
     OS << "}\n";
+    emitVariantSchedClassTargets(OS);
   }
 
   OS << "struct " << Target
@@ -2233,6 +2277,8 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
        << " const MCInst *MI, const MCInstrInfo *MCII, "
        << "const MCSubtargetInfo &STI, unsigned CPUID);\n";
+    OS << "ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,"
+       << " unsigned CPUID);\n";
   }
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "

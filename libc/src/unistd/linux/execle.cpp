@@ -18,12 +18,15 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
+  LIBC_CRASH_ON_NULLPTR(arg0);
+
   va_list varargs, varargs_copy;
   va_start(varargs, arg0);
   va_copy(varargs_copy, varargs);

@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -73,7 +74,11 @@ private:
 };
 } // namespace detail
 
-template <typename Enum, size_t Size>
+template <typename Enum>
+inline constexpr size_t EnumSize =
+    llvm::to_underlying(Enum::Last_) - llvm::to_underlying(Enum::First_) + 1;
+
+template <typename Enum, size_t Size = EnumSize<Enum>>
 struct EnumSet : public llvm::Bitset<Size> {
   using value_type = Enum;
   using Base = llvm::Bitset<Size>;
@@ -150,9 +155,8 @@ constexpr auto &EnumSetIterator<Enum, Size>::operator++() {
 }
 } // namespace detail
 
-using ClauseSet = EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
-using DirectiveSet =
-    EnumSet<llvm::omp::Directive, llvm::omp::Directive_enumSize>;
+using Clauses = EnumSet<Clause>;
+using Directives = EnumSet<Directive>;
 
 LLVM_ABI ArrayRef<Directive> getLeafConstructs(Directive D);
 LLVM_ABI ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);

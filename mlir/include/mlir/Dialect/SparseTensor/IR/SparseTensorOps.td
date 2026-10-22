@@ -627,11 +627,11 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
     %c0 = arith.constant 0 : index
     %x = sparse_tensor.lvl %A, %c0 : tensor<4x?xf32, #BSR>
 
-    // Return the dynamic dimension of %A computed by %j mod 3.
+    // Return the dynamic level size of %A computed by j floordiv 3.
     %c1 = arith.constant 1 : index
     %y = sparse_tensor.lvl %A, %c1 : tensor<4x?xf32, #BSR>
 
-    // Always return 3 (since j mod 3 < 3), can be constant fold
+    // Always return 3 (since j mod 3 < 3), can be constant folded.
     %c3 = arith.constant 3 : index
     %y = sparse_tensor.lvl %A, %c3 : tensor<4x?xf32, #BSR>
     ```
