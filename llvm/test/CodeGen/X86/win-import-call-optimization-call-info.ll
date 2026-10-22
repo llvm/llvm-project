@@ -8,7 +8,7 @@
 
 ; CHECK-LABEL: name: call
 ; CHECK:       callSites:
-; CHECK-NEXT:    - { bb: 0, offset: {{[0-9]+}}, fwdArgRegs:
+; CHECK-NEXT:    - { bb: '%bb.0', offset: {{[0-9]+}}, fwdArgRegs:
 ; CHECK-NEXT:        - { arg: 0, reg: '$ecx' } }
 ; CHECK:         {{%[0-9]+}}:gr64_a = COPY
 ; CHECK-NEXT:    nomerge CALL64r_ImpCall {{.*}}, heap-alloc-marker !{{[0-9]+}}
@@ -19,7 +19,7 @@ define void @call(ptr %fp) {
 
 ; CHECK-LABEL: name: tail_call
 ; CHECK:       callSites:
-; CHECK-NEXT:    - { bb: 0, offset: {{[0-9]+}}, fwdArgRegs:
+; CHECK-NEXT:    - { bb: '%bb.0', offset: {{[0-9]+}}, fwdArgRegs:
 ; CHECK-NEXT:        - { arg: 0, reg: '$ecx' } }
 ; CHECK:         {{%[0-9]+}}:gr64_a = COPY
 ; CHECK-NEXT:    nomerge TCRETURNri64_ImpCall
@@ -30,7 +30,7 @@ define void @tail_call(ptr %fp) {
 
 ; CHECK-LABEL: name: poison_callee
 ; CHECK:       callSites:
-; CHECK-NEXT:    - { bb: 0, offset: {{[0-9]+}}, fwdArgRegs:
+; CHECK-NEXT:    - { bb: '%bb.0', offset: {{[0-9]+}}, fwdArgRegs:
 ; CHECK-NEXT:        - { arg: 0, reg: '$ecx' } }
 ; CHECK:         {{%[0-9]+}}:gr64_a = IMPLICIT_DEF
 ; CHECK-NEXT:    nomerge CALL64r_ImpCall
