@@ -136,6 +136,12 @@ void Parsing::EmitPreprocessedSource(
   bool ompConditionalLine{false};
   bool inContinuation{false};
   bool lineWasBlankBefore{true};
+  bool afterBlank{true}; // at start of line or after a blank
+  // Where the previous character came from in the original source.
+  std::optional<Provenance> previous;
+  // Set once text was removed from this line where the original source had no
+  // blank, e.g. a macro invocation that expanded to fewer characters.
+  bool afterGluedRemoval{false};
   const AllSources &allSources{allCooked().allSources()};
   // We need to know the current directive in order to provide correct
   // continuation for the directive.  The sentinel is accumulated until the
@@ -153,6 +159,9 @@ void Parsing::EmitPreprocessedSource(
       ompConditionalLine = false;
       inContinuation = false;
       lineWasBlankBefore = true;
+      afterBlank = true;
+      previous.reset();
+      afterGluedRemoval = false;
       ++sourceLine;
       directive.clear();
       inDirectiveSentinelRegion = false;
@@ -197,6 +206,32 @@ void Parsing::EmitPreprocessedSource(
       std::optional<SourcePosition> position{provenance
               ? allSources.GetSourcePosition(provenance->start())
               : std::nullopt};
+      // Was this character (or the macro invocation that produced it)
+      // preceded by a blank in the original source?
+      const auto followsOriginalBlank{[&]() {
+        if (position && position->column > 1) {
+          const SourceFile &file{*position->sourceFile};
+          std::size_t at{file.GetLineStartOffset(position->trueLineNumber) +
+              position->column - 2};
+          if (at < file.bytes()) {
+            char before{file.content()[at]};
+            return before == ' ' || before == '\t';
+          }
+        }
+        return false;
+      }};
+      // Was something between the previous character and this one removed?
+      // The bytes of a multibyte character share the same provenance.
+      bool gap{!previous || !provenance ||
+          (provenance->start() != *previous &&
+              provenance->start() != *previous + std::size_t{1})};
+      // Removing text right before a blank, as in "ID(n) + 2" with
+      // "#define ID(x) x", does not stop padding after that blank, which
+      // keeps the original spacing there as before.
+      if (gap && previous && provenance && ch != ' ' &&
+          !followsOriginalBlank()) {
+        afterGluedRemoval = true;
+      }
       if (column == 1 && position) {
         if (lineDirectives) {
           if (&*position->path != sourcePath) {
@@ -260,8 +295,18 @@ void Parsing::EmitPreprocessedSource(
             }
           }
         } else if (!inContinuation && !inDirectiveSentinel && position &&
+            ((gap && followsOriginalBlank()) ||
+                (afterBlank && !afterGluedRemoval)) &&
             position->line == sourceLine && position->column < 72) {
-          // Preserve original indentation
+          // Preserve original indentation and spacing.  Blanks are inserted
+          // where something between this character and the previous one was
+          // removed (blanks dropped by the prescanner, a macro invocation, a
+          // comment) and the original source had a blank right before this
+          // character.  Otherwise they are inserted after a blank only until
+          // text was removed from this line where the original source had no
+          // blank: the columns lost to a macro expansion such as D() in
+          // D()potrf must not be made up within a token formed by the
+          // expansion, or at a blank within a later character literal.
           for (; column < position->column; ++column) {
             out << ' ';
           }
@@ -269,6 +314,12 @@ void Parsing::EmitPreprocessedSource(
       }
       out << getOriginalChar(ch);
       lineWasBlankBefore = ch == ' ' && lineWasBlankBefore;
+      afterBlank = ch == ' ';
+      if (provenance) {
+        previous = provenance->start();
+      } else {
+        previous.reset();
+      }
       ++column;
     }
   }
