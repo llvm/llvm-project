@@ -107,14 +107,21 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
     if (Reg.isVirtual()) {
       MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
-        MachineOperand &MovSrc = Def->getOperand(1);
+        const MachineOperand &MovSrc = Def->getOperand(1);
         bool ConstantFolded = false;
 
-        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
-          if (MovSrc.isImm()) {
-            Src0.ChangeToImmediate(MovSrc.getImm());
-            ConstantFolded = true;
-          } else if (MovSrc.isFI()) {
+        if (MovSrc.isImm()) {
+          if (std::optional<int64_t> Imm = SIInstrInfo::extractSubregFromImm(
+                  MovSrc.getImm(), Src0.getSubReg())) {
+            MachineOperand ImmOp = MachineOperand::CreateImm(*Imm);
+            if (TII->isOperandLegal(MI, Src0Idx, &ImmOp)) {
+              Src0.ChangeToImmediate(*Imm);
+              ConstantFolded = true;
+            }
+          }
+        } else if (!Src0.getSubReg() &&
+                   TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
+          if (MovSrc.isFI()) {
             Src0.ChangeToFrameIndex(MovSrc.getIndex());
             ConstantFolded = true;
           } else if (MovSrc.isGlobal()) {
