@@ -4553,7 +4553,9 @@ static Constant *ConstantFoldFixedVectorCall(
     return nullptr;
   }
   case Intrinsic::mask_beforefirst: {
-    bool SeenActive = false;
+    Constant *True = ConstantInt::getTrue(Ty);
+    Constant *False = ConstantInt::getFalse(Ty);
+    Constant *Current = True;
     for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (isa_and_nonnull<PoisonValue>(Elt))
@@ -4561,8 +4563,9 @@ static Constant *ConstantFoldFixedVectorCall(
       auto *CI = dyn_cast_or_null<ConstantInt>(Elt);
       if (!CI)
         return nullptr;
-      SeenActive |= CI->isOne();
-      Result[I] = ConstantInt::getBool(Ty, !SeenActive);
+      if (CI->isOne())
+        Current = False;
+      Result[I] = Current;
     }
     return ConstantVector::get(Result);
   }
