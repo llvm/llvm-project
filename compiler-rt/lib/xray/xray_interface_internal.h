@@ -106,6 +106,12 @@ extern int32_t __xray_register_dso(const XRaySledEntry *SledsBegin,
                                    XRayTrampolines Trampolines);
 
 extern bool __xray_deregister_dso(int32_t ObjId);
+
+extern int32_t __xray_register_sleds(const XRaySledEntry *SledsBegin,
+                                     const XRaySledEntry *SledsEnd,
+                                     const XRayFunctionSledIndex *FnIndexBegin,
+                                     const XRayFunctionSledIndex *FnIndexEnd,
+                                     bool FromDSO, XRayTrampolines Trampolines);
 }
 
 namespace __xray {
@@ -148,6 +154,15 @@ bool patchFunctionTailExit(bool Enable, uint32_t FuncId,
                            const XRayTrampolines &Trampolines);
 bool patchCustomEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 bool patchTypedEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
+
+#if SANITIZER_APPLE
+bool FindXRaySledSectionInImage(const void *Addr,
+                                const XRaySledEntry **SledsBegin,
+                                const XRaySledEntry **SledsEnd,
+                                const XRayFunctionSledIndex **FnIdxBegin,
+                                const XRayFunctionSledIndex **FnIdxEnd);
+void RegisterDyldImageCallback();
+#endif
 
 } // namespace __xray
 
