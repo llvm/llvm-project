@@ -34,6 +34,8 @@ def verbose : Flag<["--"], "wrapper-verbose">,
 def embed_bitcode : Flag<["--"], "embed-bitcode">,
                     Flags<[WrapperOnlyOption]>,
                     HelpText<"Embed linked bitcode in the module">;
+def allow_multiple_definition : Flag<["--"], "allow-multiple-definition">,
+                    HelpText<"Allow multiple definitions">;
 def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print the wrapped module's IR for testing">;
