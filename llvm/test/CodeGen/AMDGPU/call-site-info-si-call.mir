@@ -5,7 +5,7 @@
 # here the register of the first argument, has to move to SI_CALL.
 
 # CHECK:      callSites:
-# CHECK-NEXT:   - { bb: 0, offset: 1, fwdArgRegs:
+# CHECK-NEXT:   - { bb: '%bb.0', offset: 1, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$vgpr0' } }
 # CHECK:      %0:sreg_64 = COPY $sgpr0_sgpr1
 # CHECK-NEXT: SI_CALL %0, 0, csr_amdgpu, implicit $vgpr0
@@ -14,7 +14,7 @@
 name: f
 tracksRegLiveness: true
 callSites:
-  - { bb: 0, offset: 1, fwdArgRegs: [ { arg: 0, reg: '$vgpr0' } ] }
+  - { bb: '%bb.0', offset: 1, fwdArgRegs: [ { arg: 0, reg: '$vgpr0' } ] }
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0

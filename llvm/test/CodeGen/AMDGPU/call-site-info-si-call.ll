@@ -10,7 +10,7 @@
 ; GlobalISel selects SI_CALL directly and records no entry for this call.
 
 ; SDAG:       callSites:
-; SDAG-NEXT:    - { bb: 0, offset: {{[0-9]+}}, fwdArgRegs: [] }
+; SDAG-NEXT:    - { bb: '%bb.0', offset: {{[0-9]+}}, fwdArgRegs: [] }
 ; GISEL:      callSites: []
 ; CHECK:      SI_CALL {{.*}}csr_amdgpu
 
