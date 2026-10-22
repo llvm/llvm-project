@@ -97,31 +97,35 @@ FailureOr<LoweredLLVMFuncAttrs> GPUFuncOpLowering::buildLoweredGPULLVMFuncAttrs(
   NamedAttrList &discardable = loweredAttrs->discardableAttrs;
   auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
 
-  auto appendIfNameAndValue = [&](StringAttr name, Attribute value) {
-    if (name && value)
-      discardable.append(name, value);
+  auto setIfValue = [&](StringAttr name, Attribute value) {
+    assert(name && "expected non-null attribute name");
+    if (value)
+      discardable.set(name, value);
+  };
+  auto setIfNameAndValue = [&](StringAttr name, Attribute value) {
+    if (name)
+      setIfValue(name, value);
   };
 
   DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
   DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
   DenseI32ArrayAttr knownClusterSize = gpuFuncOp.getKnownClusterSizeAttr();
 
-  appendIfNameAndValue(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
-                       knownBlockSize);
-  appendIfNameAndValue(gpuDialect->getKnownGridSizeAttrHelper().getName(),
-                       knownGridSize);
-  appendIfNameAndValue(gpuDialect->getKnownClusterSizeAttrHelper().getName(),
-                       knownClusterSize);
+  setIfValue(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
+             knownBlockSize);
+  setIfValue(gpuDialect->getKnownGridSizeAttrHelper().getName(), knownGridSize);
+  setIfValue(gpuDialect->getKnownClusterSizeAttrHelper().getName(),
+             knownClusterSize);
 
   if (isKernelFunc) {
-    discardable.append(gpuDialect->getKernelFuncAttrName(),
-                       rewriter.getUnitAttr());
+    discardable.set(gpuDialect->getKernelFuncAttrName(),
+                    rewriter.getUnitAttr());
     // Add a dialect specific kernel attribute in addition to GPU kernel
     // attribute. The former is necessary for further translation while the
     // latter is expected by gpu.launch_func.
-    appendIfNameAndValue(kernelAttributeName, rewriter.getUnitAttr());
-    appendIfNameAndValue(kernelBlockSizeAttributeName, knownBlockSize);
-    appendIfNameAndValue(kernelClusterSizeAttributeName, knownClusterSize);
+    setIfNameAndValue(kernelAttributeName, rewriter.getUnitAttr());
+    setIfNameAndValue(kernelBlockSizeAttributeName, knownBlockSize);
+    setIfNameAndValue(kernelClusterSizeAttributeName, knownClusterSize);
   }
 
   return loweredAttrs;
