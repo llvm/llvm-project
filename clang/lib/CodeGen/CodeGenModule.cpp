@@ -3172,9 +3172,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute("stack-probe-size",
                    std::to_string(CodeGenOpts.StackProbeSize));
 
-  if (!CodeGenOpts.InlineStringops.empty()) {
-    std::string Ops = llvm::join(CodeGenOpts.InlineStringops, ",");
-    B.addAttribute("inline-stringops", Ops);
+  for (StringRef Op : CodeGenOpts.InlineStringops) {
+    if (Op == "memset")
+      B.addAttribute("inline-memset", "true");
   }
 
   if (!CodeGenUtils::hasUnwindExceptions(LangOpts))

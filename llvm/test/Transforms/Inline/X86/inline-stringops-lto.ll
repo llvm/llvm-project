@@ -36,7 +36,7 @@ entry:
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-attributes #0 = { "inline-stringops"="memset" }
+attributes #0 = { "inline-memset"="true" }
 
 ;--- mod_b.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

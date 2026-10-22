@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -passes=pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
 
-; Small constant (32 bytes) with "inline-stringops"="memset" should convert to llvm.memset.inline
+; Small constant (32 bytes) with "inline-memset" should convert to llvm.memset.inline
 define void @optin_small_const(ptr %p) #0 {
 ; CHECK-LABEL: define void @optin_small_const(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -12,7 +12,7 @@ entry:
   ret void
 }
 
-; Large constant (512 bytes) with "inline-stringops"="memset" should expand to loop
+; Large constant (512 bytes) with "inline-memset" should expand to loop
 define void @optin_large_const(ptr %p) #0 {
 ; CHECK-LABEL: define void @optin_large_const(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -29,7 +29,7 @@ entry:
   ret void
 }
 
-; Variable length with "inline-stringops"="memset" should expand to loop
+; Variable length with "inline-memset" should expand to loop
 define void @optin_var(ptr %p, i64 %len) #0 {
 ; CHECK-LABEL: define void @optin_var(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) #[[ATTR0]] {
@@ -85,6 +85,6 @@ entry:
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-attributes #0 = { "inline-stringops"="memset" }
+attributes #0 = { "inline-memset"="true" }
 
-; CHECK: attributes #[[ATTR0]] = { "inline-stringops"="memset" }
+; CHECK: attributes #[[ATTR0]] = { "inline-memset"="true" }

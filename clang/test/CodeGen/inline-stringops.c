@@ -10,7 +10,7 @@ void foo(void) {
 
 // CHECK-DEF-ATTR: define dso_local void @foo() #[[ATTR:[0-9]+]]
 // CHECK-DEF-ATTR: declare void @bar() #[[DECL_ATTR:[0-9]+]]
-// CHECK-DEF-ATTR: attributes #[[ATTR]] = { {{.*}}"inline-stringops"="memset"{{.*}} }
-// CHECK-DEF-ATTR-NOT: attributes #[[DECL_ATTR]] = { {{.*}}"inline-stringops"
+// CHECK-DEF-ATTR: attributes #[[ATTR]] = { {{.*}}"inline-memset"="true"{{.*}} }
+// CHECK-DEF-ATTR-NOT: attributes #[[DECL_ATTR]] = { {{.*}}"inline-memset"
 
-// CHECK-NO-ATTR-NOT: "inline-stringops"
+// CHECK-NO-ATTR-NOT: "inline-memset"

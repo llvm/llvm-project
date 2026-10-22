@@ -50,4 +50,4 @@ entry:
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-attributes #0 = { "inline-stringops"="memset" }
+attributes #0 = { "inline-memset"="true" }

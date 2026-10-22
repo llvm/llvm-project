@@ -19,8 +19,7 @@ entry:
 }
 
 ; Unmarked caller with its own memset inlining an opted-in callee:
-; Caller inherits the attribute, so both the inlined memset and caller's own memset
-; become subject to the inline-stringops policy.
+; Caller inherits the attribute via setOR<InlineMemsetAttr>.
 define void @caller_with_own_memset(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define void @caller_with_own_memset(
 ; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) #[[ATTR0]] {
@@ -52,29 +51,46 @@ entry:
   ret void
 }
 
-; Inlining callee with "memcpy" into caller with "memset" should union attributes.
-define internal void @callee_memcpy(ptr %dst, ptr %src) #1 {
+; Unmarked callee inlined into unmarked caller: neither has attribute.
+define internal void @callee_unmarked(ptr %p) {
 entry:
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 64, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 64, i1 false)
   ret void
 }
 
-define void @caller_union(ptr %dst, ptr %src) #0 {
-; CHECK-LABEL: define void @caller_union(
-; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) #[[ATTR1:[0-9]+]] {
+define void @caller_unmarked_callee(ptr %p) {
+; CHECK-LABEL: define void @caller_unmarked_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[DST]], ptr align 1 [[SRC]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    ret void
 entry:
-  call void @callee_memcpy(ptr %dst, ptr %src)
+  call void @callee_unmarked(ptr %p)
+  ret void
+}
+
+; Callee with "inline-memset"="false" inlined into unmarked caller:
+; Caller must NOT inherit the attribute.
+define internal void @callee_false_memset(ptr %p) #1 {
+entry:
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 128, i1 false)
+  ret void
+}
+
+define void @caller_false_callee(ptr %p) {
+; CHECK-LABEL: define void @caller_false_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 128, i1 false)
+; CHECK-NEXT:    ret void
+entry:
+  call void @callee_false_memset(ptr %p)
   ret void
 }
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
 
-attributes #0 = { "inline-stringops"="memset" }
-attributes #1 = { "inline-stringops"="memcpy" }
+attributes #0 = { "inline-memset"="true" }
+attributes #1 = { "inline-memset"="false" }
 
-; CHECK-DAG: attributes #[[ATTR0]] = { "inline-stringops"="memset" }
-; CHECK-DAG: attributes #[[ATTR1]] = { "inline-stringops"="memset,memcpy" }
+; CHECK: attributes #[[ATTR0]] = { "inline-memset"="true" }

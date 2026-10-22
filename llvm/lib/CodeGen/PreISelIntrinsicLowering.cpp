@@ -288,15 +288,6 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
-static bool shouldInlineStringOp(const Function *F, StringRef Op) {
-  if (!F->hasFnAttribute("inline-stringops"))
-    return false;
-  StringRef Val = F->getFnAttribute("inline-stringops").getValueAsString();
-  SmallVector<StringRef, 4> Ops;
-  Val.split(Ops, ',', -1, false);
-  return llvm::is_contained(Ops, Op);
-}
-
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
@@ -415,7 +406,8 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       auto *Memset = cast<MemSetInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
-      if (shouldInlineStringOp(ParentFunc, "memset")) {
+      Attribute InlineMemsetAttr = ParentFunc->getFnAttribute("inline-memset");
+      if (InlineMemsetAttr.isValid() && InlineMemsetAttr.getValueAsBool()) {
         if (shouldExpandMemIntrinsicWithSize(Memset->getLength(), TTI)) {
           expandMemSetAsLoop(Memset, TTI);
           Changed = true;
