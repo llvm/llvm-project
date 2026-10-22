@@ -3346,15 +3346,10 @@ define i32 @test_sati_i32_w32(i32 %a) {
 }
 
 define i32 @test_usati_u32_w0(i32 %a) {
-; RV32-LABEL: test_usati_u32_w0:
-; RV32:       # %bb.0:
-; RV32-NEXT:    usati a0, a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_usati_u32_w0:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_usati_u32_w0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 0)
   ret i32 %res
 }
