@@ -406,8 +406,9 @@ bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
       // There're chances the MBB is sunk more than once. Record it to avoid
       // multi insert.
       if (VisitedOrInserted.insert(I).second) {
-        auto II = I.MI ? I.MI->getIterator() : I.MBB->instr_begin();
-        addFrameReference(BuildMI(*I.MBB, ++II, DL, TII->get(X86::PLDTILECFGV)),
+        MachineBasicBlock::iterator II =
+            I.MI ? std::next(I.MI->getIterator()) : I.MBB->getFirstNonPHI();
+        addFrameReference(BuildMI(*I.MBB, II, DL, TII->get(X86::PLDTILECFGV)),
                           SS)
             ->setImplicitPhysRegDefsDead();
       }

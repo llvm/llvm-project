@@ -29,10 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-indirect-branch-tracking"
 
-cl::opt<bool> IndirectBranchTracking(
-    "x86-indirect-branch-tracking", cl::init(false), cl::Hidden,
-    cl::desc("Enable X86 indirect branch tracking pass."));
-
 STATISTIC(NumEndBranchAdded, "Number of ENDBR instructions added");
 
 namespace {
@@ -125,7 +121,8 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
 #else
   bool isJITwithCET = false;
 #endif
-  if (!isCFProtectionSupported && !IndirectBranchTracking && !isJITwithCET)
+  if (!isCFProtectionSupported && !TM->getCLOpts().indirect_branch_tracking &&
+      !isJITwithCET)
     return false;
 
   // True if the current MF was changed and false otherwise.

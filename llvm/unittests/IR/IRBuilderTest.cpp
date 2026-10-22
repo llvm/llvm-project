@@ -1267,7 +1267,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(*M);
   Builder.SetInsertPoint(Br);
   EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
   auto Call1 = Builder.CreateCall(Callee, {});
@@ -1384,10 +1384,10 @@ TEST_F(IRBuilderTest, CTAD) {
   };
   InstSimplifyFolder Folder(M->getDataLayout());
 
-  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  IRBuilder Builder1(*M, Folder, TestInserter());
   static_assert(std::is_same_v<decltype(Builder1),
                                IRBuilder<InstSimplifyFolder, TestInserter>>);
-  IRBuilder Builder2(Ctx);
+  IRBuilder Builder2(*M);
   static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
   IRBuilder Builder3(BB, Folder);
   static_assert(

@@ -17,6 +17,7 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
@@ -490,14 +491,6 @@ struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
 
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
-    return Visit(x.value());
-  }
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Reference<Contained> &x) {
-    return Visit(x.get());
-  }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
     return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
@@ -1309,8 +1302,7 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1319,8 +1311,7 @@ WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   return WithReason<T>();
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }
@@ -2572,20 +2563,21 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         &modifiers->front().u);
   };
 
-  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
+  auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
+    // Keep NOTHING with clauses, e.g. APPLY, so they are not silently dropped.
+    return spec.DirId() == llvm::omp::Directive::OMPD_nothing &&
+            spec.Clauses().v.empty()
+        ? nullptr
+        : &spec;
+  };
+
+  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
     const auto &optionalSpec{std::get<1>(whenClause.v.t)};
     if (!optionalSpec) {
       return {nullptr, false};
     }
-    if (optionalSpec->value().DirId() == llvm::omp::Directive::OMPD_nothing) {
-      return {nullptr, true};
-    }
-    return {&optionalSpec->value(), true};
-  };
-
-  auto getFallbackVariant = [](const parser::OmpDirectiveSpecification &spec) {
-    return spec.DirId() == llvm::omp::Directive::OMPD_nothing ? nullptr : &spec;
+    return {getVariant(optionalSpec->value()), true};
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
@@ -2697,11 +2689,11 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     } else if (const auto *otherwiseClause{
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
       if (otherwiseClause->v && otherwiseClause->v->v) {
-        result.fallback = getFallbackVariant(otherwiseClause->v->v->value());
+        result.fallback = getVariant(otherwiseClause->v->v->value());
       }
     } else if (const auto *defaultVariantClause{
                    std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)}) {
-      result.fallback = getFallbackVariant(defaultVariantClause->v.v.value());
+      result.fallback = getVariant(defaultVariantClause->v.v.value());
     }
   }
   return result;
@@ -2749,6 +2741,31 @@ std::optional<unsigned> SelectBestMetadirectiveCandidate(
 }
 
 namespace {
+struct ConditionSymbols : evaluate::Traverse<ConditionSymbols, bool, false> {
+  using Base = evaluate::Traverse<ConditionSymbols, bool, false>;
+  explicit ConditionSymbols(std::vector<const Symbol *> &symbols)
+      : Base{*this}, symbols{symbols} {}
+  using Base::operator();
+  bool Default() const { return true; }
+  template <typename... A> bool Combine(A...) const { return true; }
+  bool operator()(const Symbol &symbol) const {
+    symbols.push_back(&symbol);
+    return true;
+  }
+  std::vector<const Symbol *> &symbols;
+};
+
+// Expr equality matches dummy arguments by position, so compare symbols too.
+template <typename T>
+bool AreSameMetadirectiveCondition(const T &left, const T &right) {
+  if (!(left == right))
+    return false;
+  std::vector<const Symbol *> leftSymbols, rightSymbols;
+  ConditionSymbols{leftSymbols}(left);
+  ConditionSymbols{rightSymbols}(right);
+  return leftSymbols == rightSymbols;
+}
+
 struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
   using evaluate::rewrite::Identity::operator();
 
@@ -2765,7 +2782,7 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
       const evaluate::LogicalOperation<KIND> &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
-        operation.left() == operation.right())
+        AreSameMetadirectiveCondition(operation.left(), operation.right()))
       return common::Clone(operation.left());
     return std::move(expr);
   }
@@ -2806,7 +2823,8 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
 
   MetadirectiveConditionNormalizer normalizer;
   evaluate::rewrite::Mutator normalize{normalizer};
-  return normalize(*leftExpr) == normalize(*rightExpr);
+  return AreSameMetadirectiveCondition(
+      normalize(*leftExpr), normalize(*rightExpr));
 }
 
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
@@ -3225,10 +3243,5 @@ const Symbol *FindOperatorUserReductionSymbol(
     const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
   return FindUserReductionSymbol(
       scope, MangleDefinedOperator(operatorSym.name()), type);
-}
-
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
-  return MakeNameFromOperator(op, context);
 }
 } // namespace Fortran::semantics::omp

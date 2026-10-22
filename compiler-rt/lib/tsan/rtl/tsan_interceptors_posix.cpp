@@ -166,6 +166,7 @@ namespace __tsan {
 struct SignalDesc {
   bool armed;
   __sanitizer_siginfo siginfo;
+  bool has_ctx;
   ucontext_t ctx;
 };
 
@@ -1015,6 +1016,8 @@ void PlatformCleanUpThreadState(ThreadState *thr) {
   if (sctx) {
     atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
     sctx->oldset.Reset();
+    DontNeedShadowFor((uptr)sctx,
+                      RoundUpTo(sizeof(*sctx), GetPageSizeCached()));
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
@@ -2211,24 +2214,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  bool suppressed;
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    new (rep) ScopedReport(ReportTypeErrnoInSignal);
-    rep->SetSigNum(sig);
-    suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
-    if (!suppressed)
-      rep->AddStack(stack, true);
-  }
-  if (!suppressed)
-    OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  if (IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack))
+    return;
+  ScopedReport rep(ReportTypeErrnoInSignal);
+  rep.SetSigNum(sig);
+  rep.AddStack(stack, true);
+  OutputReport(thr, rep);
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
@@ -2310,7 +2301,7 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
     if (signal->armed) {
       signal->armed = false;
       CallUserSignalHandler(thr, false, true, sig, &signal->siginfo,
-                            &signal->ctx);
+                            signal->has_ctx ? &signal->ctx : nullptr);
     }
   }
   res = REAL(pthread_sigmask)(SIG_SETMASK, oldset, 0);
@@ -2374,7 +2365,9 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
   if (signal->armed == false) {
     signal->armed = true;
     internal_memcpy(&signal->siginfo, info, sizeof(*info));
-    internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
+    signal->has_ctx = (ctx != nullptr);
+    if (ctx)
+      internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
     atomic_store(&thr->pending_signals, 1, memory_order_relaxed);
   }
 }

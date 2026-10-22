@@ -1,9 +1,10 @@
 // clang-format off
-// REQUIRES: lld, x86, target-windows
+// FIXME: This test shouldn't require native, but it seems like the linking step
+// in the build script doesn't set the correct architecture.
+// REQUIRES: lld, system-windows, native
 
 // Test that we can display tag types.
-// RUN: %clang_cl --target=x86_64-windows-msvc -MDd -Od -Z7 -c /Fo%t.obj -- %s
-// RUN: lld-link -debug:full -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
+// RUN: %build --compiler=clang-cl --output=%t.exe %s
 // RUN: lldb-test symbols %t.exe | FileCheck %s
 
 // CHECK: CompileUnit{{.*}}, language = "c++", file = '{{.*}}thread-locals.cpp'
@@ -11,6 +12,8 @@
 // CHECK-DAG: Variable{{.*}}, name = "tls1", type = {{.*}} (int), scope = thread local, location = DW_OP_const4u 0x{{[0-9a-f][0-9a-f]?}}, DW_OP_form_tls_address, external
 // CHECK-DAG: Variable{{.*}}, name = "tls2", type = {{.*}} (int), scope = thread local, location = DW_OP_const4u 0x{{[0-9a-f][0-9a-f]?}}, DW_OP_form_tls_address, external
 // CHECK-DAG: Variable{{.*}}, name = "tls3", type = {{.*}} (long long), scope = thread local, location = DW_OP_const4u 0x{{[0-9a-f][0-9a-f]?}}, DW_OP_form_tls_address
+// CHECK: Function{{.*}}, {{(de)?}}mangled = main
+// CHECK: Variable{{.*}}, name = "local_tls", type = {{.*}} (int), scope = thread local, location = DW_OP_const4u 0x{{[0-9a-f][0-9a-f]?}}, DW_OP_form_tls_address
 // CHECK: CompileUnit{{.*}}
 
 __declspec(thread) int tls1 = 1;
@@ -18,5 +21,6 @@ __declspec(thread) int tls2 = 2;
 static __declspec(thread) long long tls3 = 3;
 
 int main() {
-  return tls3;
+  static __declspec(thread) int local_tls = 4;
+  return tls3 + local_tls;
 }

@@ -371,8 +371,13 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
         !mlir::isa_and_nonnull<cir::FPAttr>(value))
       return mlir::failure();
 
-    cir::VectorType resultType = op.getResult().getType();
-    SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
+    // FIXME(CIR): We should consider making a matrix constant attribute so that
+    // we can simplify it here too.
+    assert(!MissingFeatures::matrixType());
+    auto resultType = mlir::dyn_cast<cir::VectorType>(op.getResult().getType());
+    if (!resultType || resultType.isScalable())
+      return mlir::failure();
+    SmallVector<mlir::Attribute, 16> elements(resultType.getFixedSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
         resultType, mlir::ArrayAttr::get(getContext(), elements));
 
