@@ -620,9 +620,6 @@ TEST_F(AArch64TargetInfoTest, ClassifySVETuplesDirect) {
 // indirect.
 TEST_F(AArch64TargetInfoTest, ClassifyOpaqueFloat8) {
   const ABIType *MFP8 = TB.getOpaqueFloat8Type(llvm::Align(1));
-  const ABIType *FixedMFP8 =
-      TB.getVectorType(MFP8, llvm::ElementCount::getFixed(32), llvm::Align(16),
-                       llvm::abi::VectorKind::SVEData);
 
   for (AArch64ABIKind Kind :
        {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS}) {
@@ -677,25 +674,6 @@ TEST_F(AArch64TargetInfoTest, ClassifyOpaqueFloat8) {
         FunctionInfo::create(llvm::CallingConv::C, Void, Room);
     TI->computeInfo(*RoomFI);
     EXPECT_TRUE(RoomFI->getArgInfo(7).Info.isCoerceAndExpand());
-  }
-
-  {
-    std::unique_ptr<TargetInfo> TI =
-        createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
-    std::unique_ptr<FunctionInfo> FI =
-        FunctionInfo::create(llvm::CallingConv::C, FixedMFP8, {FixedMFP8});
-    TI->computeInfo(*FI);
-    const auto *Coerced = llvm::dyn_cast<llvm::abi::VectorType>(
-        FI->getArgInfo(0).Info.getCoerceToType());
-    ASSERT_NE(Coerced, nullptr);
-    EXPECT_TRUE(Coerced->isSVEData());
-    EXPECT_TRUE(Coerced->isScalable());
-    EXPECT_EQ(Coerced->getNumElements().getKnownMinValue(), 16u);
-    const auto *Elt =
-        llvm::dyn_cast<llvm::abi::IntegerType>(Coerced->getElementType());
-    ASSERT_NE(Elt, nullptr);
-    EXPECT_EQ(Elt->getSizeInBits().getFixedValue(), 8u);
-    EXPECT_FALSE(Elt->isSigned());
   }
 }
 

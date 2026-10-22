@@ -201,8 +201,9 @@ public:
 };
 
 /// An 8-bit floating-point format with no numeric semantics. This corresponds
-/// to the AArch64 __mfp8 type. If a similar type is needed for other targets
-/// this should be generalized.
+/// to the AArch64 __mfp8 type. A vector of this format uses an 8-bit integer
+/// element, so this type is not a valid vector element. If a similar type is
+/// needed for other targets this should be generalized.
 class OpaqueFloat8Type : public Type {
 public:
   explicit OpaqueFloat8Type(Align ABIAlign)
@@ -330,7 +331,10 @@ public:
              VectorKind VecKind = VectorKind::Generic)
       : Type(TypeKind::Vector, computeSizeInBits(ElementType, NumElements),
              ABIAlign),
-        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {}
+        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {
+    assert(!ElementType->isOpaqueFloat8() &&
+           "opaque 8-bit float is not a valid vector element type");
+  }
 
   const Type *getElementType() const { return ElementType; }
   ElementCount getNumElements() const { return NumElements; }
@@ -528,9 +532,15 @@ public:
         ArrayType(ElementType, NumElements, SizeInBits, IsMatrixType);
   }
 
+  /// Returns nullptr when \p ElementType is an opaque 8-bit float. A vector
+  /// of that format uses an 8-bit integer element.
   const VectorType *getVectorType(const Type *ElementType,
                                   ElementCount NumElements, Align Align,
                                   VectorKind VecKind = VectorKind::Generic) {
+    assert(!ElementType->isOpaqueFloat8() &&
+           "opaque 8-bit float is not a valid vector element type");
+    if (ElementType->isOpaqueFloat8())
+      return nullptr;
     return new (Allocator.Allocate<VectorType>())
         VectorType(ElementType, NumElements, Align, VecKind);
   }

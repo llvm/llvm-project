@@ -392,9 +392,9 @@ const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
   assert(VT->isFixedLengthSVEData() && "expected a fixed-length SVE vector!");
 
   const Type *EltTy = VT->getElementType();
-  // An opaque 8-bit float is stored as i8. A 128-bit granule holds 16.
-  if (EltTy->isOpaqueFloat8())
-    EltTy = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false);
+  // A vector of opaque 8-bit floats should be mapped as a vector of i8.
+  assert(!EltTy->isOpaqueFloat8() &&
+         "opaque 8-bit float is not a valid vector element type");
 
   uint64_t EltBits = EltTy->getSizeInBits().getFixedValue();
   assert(EltBits >= 8 && EltBits <= 64 && isPowerOf2_64(EltBits) &&
