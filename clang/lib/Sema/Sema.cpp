@@ -1550,7 +1550,7 @@ void Sema::ActOnEndOfTranslationUnit() {
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
-    // Uncompleted tentative definitions are zero-initialized (C17 6.9.2p2) so
+    // Uninitialized tentative definitions are zero-initialized (C17 6.9.2p2) so
     // diagnose fields requiring explicit initialization.
     if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
         !VD->getAnyInitializer()) {

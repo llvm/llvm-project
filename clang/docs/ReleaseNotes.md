@@ -420,8 +420,8 @@ features cannot lower the translation-unit ABI level;
 ### Improvements to Clang's diagnostics
 
 - Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
-  tentative definitions containing fields marked `require_explicit_initialization`.
-  (#GH232483)
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
