@@ -29,7 +29,6 @@
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/CUDA/descriptor.h"
-#include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
