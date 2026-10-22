@@ -6487,7 +6487,7 @@ bool VPlanTransforms::handleCompressingPatterns(
         Mask = BlendR->getMask(I);
         break;
       }
-    assert(Mask);
+    assert(Mask && "Expected mask for conditional induction update");
 
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
@@ -6501,9 +6501,9 @@ bool VPlanTransforms::handleCompressingPatterns(
         return false;
 
       Builder.setInsertPoint(VPI);
-      auto *CompressedMemOp = RecipeBuilder.handleCompressedLoadOrStore(VPI);
+      auto *CompressedMemOp =
+          Builder.insert(RecipeBuilder.handleCompressedLoadOrStore(VPI));
 
-      Builder.insert(CompressedMemOp);
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(CompressedMemOp->getVPSingleValue());
       VPI->eraseFromParent();
