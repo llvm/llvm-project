@@ -52,6 +52,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -326,7 +327,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // the new arguments, also transferring over the names as well.
   Function::arg_iterator I2 = NF->arg_begin();
   for (Argument &Arg : F->args()) {
-    if (!ArgsToPromote.count(&Arg)) {
+    auto It = ArgsToPromote.find(&Arg);
+    if (It == ArgsToPromote.end()) {
       // If this is an unmodified argument, move the name and users over to the
       // new version.
       Arg.replaceAllUsesWith(&*I2);
@@ -335,8 +337,29 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       continue;
     }
 
-    // There potentially are metadata uses for things like llvm.dbg.value.
-    // Replace them with poison, after handling the other regular uses.
+    const auto &ArgParts = It->second;
+
+    // For single-part promoted pointer arguments, preserve debug info by
+    // prepending DW_OP_LLVM_implicit_pointer to the existing expression,
+    // referencing the promoted scalar value.
+    // Multi-part promotions and dead arguments fall back to poisoning
+    // (multi-part would need DW_OP_LLVM_fragment combined with implicit
+    // pointer, which is future work).
+    if (ArgParts.size() == 1 && !Arg.use_empty()) {
+      Argument *PromotedNewArg = &*I2;
+      SmallVector<DbgVariableRecord *> DVRs;
+      findDbgUsers(&Arg, DVRs);
+      if (!DVRs.empty()) {
+        SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_LLVM_implicit_pointer};
+        for (auto *DVR : DVRs) {
+          DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
+          DVR->setExpression(
+              DIExpression::prependOpcodes(DVR->getExpression(), Ops));
+        }
+      }
+    }
+
+    // Replace any remaining metadata uses with poison.
     llvm::scope_exit RauwPoisonMetadata(
         [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
