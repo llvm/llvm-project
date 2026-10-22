@@ -2932,35 +2932,23 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   return Bytes == MFI.getObjectSize(FI);
 }
 
-static bool
-mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
-                            Register CallerSRetReg) {
-  const auto &Outs = CLI.Outs;
-  const auto &OutVals = CLI.OutVals;
-
-  // We know the caller has a sret pointer argument (CallerSRetReg). Locate the
-  // operand index within the callee that may have a sret pointer too.
-  unsigned Pos = 0;
-  for (unsigned E = Outs.size(); Pos != E; ++Pos)
-    if (Outs[Pos].Flags.isSRet())
-      break;
-  // Bail out if the callee has not any sret argument.
-  if (Pos == Outs.size())
+/// Return true if the call forwards the caller's own sret pointer to the callee
+/// as its sret argument. We prove this in IR, since SelectionDAG is built per
+/// basic block and the caller's sret pointer is only visible as a function
+/// argument in the entry block.
+static bool isCallerSRetForwarded(const TargetLowering::CallLoweringInfo &CLI) {
+  const CallBase *CB = CLI.CB;
+  if (!CB)
     return false;
-
-  // At this point, either the caller is forwarding its sret argument to the
-  // callee, or the callee is being passed a different sret pointer. We now look
-  // for a CopyToReg, where the callee sret argument is written into a new vreg
-  // (which should later be %rax/%eax, if this is returned).
-  SDValue SRetArgVal = OutVals[Pos];
-  for (SDNode *User : SRetArgVal->users()) {
-    if (User->getOpcode() != ISD::CopyToReg)
+  for (const Argument &Arg : CB->getFunction()->args()) {
+    if (!Arg.hasStructRetAttr())
       continue;
-    Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-    if (Reg == CallerSRetReg && User->getOperand(2) == SRetArgVal)
-      return true;
+    for (unsigned I = 0, E = CB->arg_size(); I != E; ++I)
+      if (CB->paramHasAttr(I, Attribute::StructRet) &&
+          CB->getArgOperand(I)->stripPointerCasts() == &Arg)
+        return true;
+    break;
   }
-
   return false;
 }
 
@@ -3039,11 +3027,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   // Avoid sibcall optimization if we are an sret return function and the callee
   // is incompatible, unless such premises are proven wrong. See comment in
   // LowerReturn about why hasStructRetAttr is insufficient.
-  if (Register SRetReg = FuncInfo->getSRetReturnReg()) {
+  if (FuncInfo->getSRetReturnReg()) {
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
-    // sret. Condition #b is harder to determine.
-    if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
+    // sret.
+    if (!isCallerSRetForwarded(CLI))
       return false;
   } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
