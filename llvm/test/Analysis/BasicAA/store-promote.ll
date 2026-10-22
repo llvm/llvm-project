@@ -25,7 +25,6 @@ Out:            ; preds = %Loop
 ; The Loop block should be empty after the load/store are promoted.
 ; CHECK:     @test1
 ; CHECK:        load i32, ptr @A
-; CHECK:         load i32, ptr @A
 ; CHECK:         store i32 %Atmp, ptr @B
 ; CHECK:      Loop:
 ; CHECK-NEXT:   br i1 %c, label %Out, label %Loop
