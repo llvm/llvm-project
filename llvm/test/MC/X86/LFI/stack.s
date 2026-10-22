@@ -91,3 +91,25 @@ enter $16, $0
 
 enter $16, $1
 // CHECK: enter $16, $1
+
+movq %fs:0, %rsp
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: .bundle_lock
+// CHECK-NEXT: movl %r11d, %esp
+// CHECK-NEXT: leaq (%rsp,%r14), %rsp
+// CHECK-NEXT: .bundle_unlock
+
+addq %fs:0, %rsp
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: .bundle_lock
+// CHECK-NEXT: addl %r11d, %esp
+// CHECK-NEXT: leaq (%rsp,%r14), %rsp
+// CHECK-NEXT: .bundle_unlock
+
+movq %fs:(%rdi), %rsp
+// CHECK:      movq 16(%r15), %r11
+// CHECK-NEXT: movq %gs:(%r11d,%edi), %r11
+// CHECK-NEXT: .bundle_lock
+// CHECK-NEXT: movl %r11d, %esp
+// CHECK-NEXT: leaq (%rsp,%r14), %rsp
+// CHECK-NEXT: .bundle_unlock

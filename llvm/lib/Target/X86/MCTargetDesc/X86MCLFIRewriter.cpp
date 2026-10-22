@@ -41,16 +41,16 @@ static bool isPrefix(const MCInst &Inst, const MCInstrInfo &InstInfo) {
   return X86II::isPrefix(InstInfo.get(Inst.getOpcode()).TSFlags);
 }
 
-// Return true if Inst is an unsupported stand-alone prefix.
-static bool isUnsupportedPrefix(const MCInst &Inst) {
+// Return true if Inst is a supported stand-alone prefix.
+static bool isSupportedPrefix(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   case X86::FS_PREFIX:
   case X86::GS_PREFIX:
   case X86::ADDR16_PREFIX:
   case X86::ADDR32_PREFIX:
-    return true;
-  default:
     return false;
+  default:
+    return true;
   }
 }
 
@@ -78,7 +78,7 @@ static bool isSupportedIndirectBranch(const MCInst &Inst) {
   }
 }
 
-static bool writesSegmentBase(unsigned Opcode) {
+static bool isWriteSegmentBase(unsigned Opcode) {
   switch (Opcode) {
   case X86::WRFSBASE:
   case X86::WRFSBASE64:
@@ -391,7 +391,7 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
   MCRegister TPDest = LFIScratchReg;
   if (MemIdx > 0 && Inst.getOperand(0).isReg()) {
     MCRegister DestReg = Inst.getOperand(0).getReg();
-    if (Desc.getNumDefs() > 0 && DestReg != X86::RSP &&
+    if (Desc.getNumDefs() > 0 &&
         getX86MCRegisterClass(X86::GR64RegClassID).contains(DestReg) &&
         !readsRegister(Inst, Desc, DestReg, *RegInfo))
       TPDest = DestReg;
@@ -471,6 +471,38 @@ static bool hasImplicitMemPointer(unsigned Opcode) {
   case X86::ENQCMDS64:
   case X86::ENQCMDS32_EVEX:
   case X86::ENQCMDS64_EVEX:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Return true if Inst is a bit test of memory with a register bit offset. The
+// offset is added to the address of the memory operand, so the bit it accesses
+// may be beyond the address computed by the addressing mode.
+static bool isBitTestWithRegOffset(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::BT16mr:
+  case X86::BT32mr:
+  case X86::BT64mr:
+  case X86::BTC16mr:
+  case X86::BTC32mr:
+  case X86::BTC64mr:
+  case X86::BTR16mr:
+  case X86::BTR32mr:
+  case X86::BTR64mr:
+  case X86::BTS16mr:
+  case X86::BTS32mr:
+  case X86::BTS64mr:
+  case X86::LOCK_BTC_RM16rm:
+  case X86::LOCK_BTC_RM32rm:
+  case X86::LOCK_BTC_RM64rm:
+  case X86::LOCK_BTR_RM16rm:
+  case X86::LOCK_BTR_RM32rm:
+  case X86::LOCK_BTR_RM64rm:
+  case X86::LOCK_BTS_RM16rm:
+  case X86::LOCK_BTS_RM32rm:
+  case X86::LOCK_BTS_RM64rm:
     return true;
   default:
     return false;
@@ -573,6 +605,9 @@ void X86::X86MCLFIRewriter::rewriteMemAccess(const MCInst &Inst,
   if ((Desc.TSFlags & X86II::FormMask) == X86II::RawFrmMemOffs ||
       hasImplicitMemPointer(Inst.getOpcode()))
     return error(Inst, "unsupported memory access");
+
+  if (isBitTestWithRegOffset(Inst.getOpcode()))
+    return error(Inst, "unsupported bit test with a register bit offset");
 
   MCInst Sandboxed(Inst);
   sandboxMemAccess(Sandboxed);
@@ -678,8 +713,8 @@ void X86::X86MCLFIRewriter::rewriteStringOperation(const MCInst &Inst,
 }
 
 // The register form of an instruction that modifies the stack and reads its
-// source from memory, or 0 if there is none.
-static unsigned memToRegOpcode(unsigned Opcode) {
+// source from memory, if there is one.
+static std::optional<unsigned> memToRegOpcode(unsigned Opcode) {
   switch (Opcode) {
   case X86::MOV64rm:
     return X86::MOV64rr;
@@ -694,13 +729,13 @@ static unsigned memToRegOpcode(unsigned Opcode) {
   case X86::XOR64rm:
     return X86::XOR64rr;
   default:
-    return 0;
+    return std::nullopt;
   }
 }
 
-// The 32-bit form of a 64-bit instruction, or 0 if the instruction has no
-// 32-bit form that can be used to modify the stack pointer.
-static unsigned demote64BitOpcode(unsigned Opcode) {
+// The 32-bit form of a 64-bit instruction, if it has one that can be used to
+// modify the stack pointer.
+static std::optional<unsigned> demote64BitOpcode(unsigned Opcode) {
   switch (Opcode) {
   case X86::MOV64rr:
     return X86::MOV32rr;
@@ -739,7 +774,7 @@ static unsigned demote64BitOpcode(unsigned Opcode) {
   case X86::XOR64ri32:
     return X86::XOR32ri;
   default:
-    return 0;
+    return std::nullopt;
   }
 }
 
@@ -802,7 +837,7 @@ void X86::X86MCLFIRewriter::rewriteStackModification(
   // .bundle_unlock
   int MemIdx = X86II::getMemoryOperandIdx(InstInfo->get(Inst.getOpcode()));
   if (MemIdx >= 0 && !ignoresMemOperand(Inst.getOpcode())) {
-    unsigned RegOpcode = memToRegOpcode(Inst.getOpcode());
+    std::optional<unsigned> RegOpcode = memToRegOpcode(Inst.getOpcode());
     if (!RegOpcode)
       return error(Inst, "unsupported modification of the stack pointer");
 
@@ -813,7 +848,7 @@ void X86::X86MCLFIRewriter::rewriteStackModification(
     Load.setLoc(Inst.getLoc());
     doRewriteInst(Load, Out, STI);
 
-    MCInstBuilder RegForm(RegOpcode);
+    MCInstBuilder RegForm(*RegOpcode);
     for (int I = 0; I < MemIdx; ++I)
       RegForm.addOperand(Inst.getOperand(I));
     RegForm.addReg(LFIScratchReg);
@@ -821,14 +856,14 @@ void X86::X86MCLFIRewriter::rewriteStackModification(
     return doRewriteInst(RegForm, Out, STI);
   }
 
-  unsigned Opcode = demote64BitOpcode(Inst.getOpcode());
+  std::optional<unsigned> Opcode = demote64BitOpcode(Inst.getOpcode());
   if (!Opcode)
     return error(Inst, "unsupported modification of the stack pointer");
 
   MCInst Modified(Inst);
-  Modified.setOpcode(Opcode);
+  Modified.setOpcode(*Opcode);
 
-  ArrayRef<MCOperandInfo> OpInfo = InstInfo->get(Opcode).operands();
+  ArrayRef<MCOperandInfo> OpInfo = InstInfo->get(*Opcode).operands();
   for (unsigned I = 0, E = std::min<unsigned>(OpInfo.size(),
                                               Modified.getNumOperands());
        I < E; ++I) {
@@ -839,10 +874,8 @@ void X86::X86MCLFIRewriter::rewriteStackModification(
       Op.setReg(RegInfo->getSubReg(Op.getReg(), X86::sub_32bit));
   }
 
-  sandboxMemAccess(Modified);
-
   Out.emitBundleLock(/*AlignToEnd=*/false, STI);
-  emitWithPrefixes(Modified, Out, STI);
+  Out.emitInstruction(Modified, STI);
   emitStackFixup(Out, STI);
   Out.emitBundleUnlock(STI);
 }
@@ -872,7 +905,7 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   // Hold a stand-alone prefix back, so it can be applied to the rewritten
   // instruction.
   if (isPrefix(Inst, *InstInfo)) {
-    if (isUnsupportedPrefix(Inst))
+    if (!isSupportedPrefix(Inst))
       return error(Inst, "unsupported instruction prefix");
     Prefixes.push_back(Inst);
     return;
@@ -887,7 +920,7 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
       mayModifyRegister(Inst, LFITPReg) || mayModifyRegister(Inst, LFIBaseSeg))
     return error(Inst, "illegal modification of reserved LFI register");
 
-  if (writesSegmentBase(Inst.getOpcode()))
+  if (isWriteSegmentBase(Inst.getOpcode()))
     return error(Inst, "illegal modification of reserved segment base");
 
   if (isSyscall(Inst))
@@ -913,6 +946,9 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     if (Op.isReg() && Op.getReg() == LFIBaseSeg)
       return error(Inst, "invalid use of reserved segment register %gs");
 
+  if (MCRegister StackReg = getWrittenStackReg(Inst))
+    return rewriteStackModification(StackReg, Inst, Out, STI);
+
   if (isFSAccess(Inst))
     return rewriteFSAccess(Inst, Out, STI);
 
@@ -932,9 +968,6 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
       (!Inst.getOperand(1).isImm() ||
        static_cast<uint64_t>(Inst.getOperand(1).getImm()) > 1))
     return error(Inst, "unsupported nesting level for enter");
-
-  if (MCRegister StackReg = getWrittenStackReg(Inst))
-    return rewriteStackModification(StackReg, Inst, Out, STI);
 
   rewriteMemAccess(Inst, Out, STI);
 }

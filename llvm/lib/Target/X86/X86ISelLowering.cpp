@@ -32797,11 +32797,6 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
       return AtomicExpansionKind::None;
   }
 
-  // Bit test accesses scaled by a register offset are not supported by LFI, so
-  // we conservatively use the CmpXChg pattern instead.
-  if (Subtarget.isLFI())
-    return AtomicExpansionKind::CmpXChg;
-
   // If the atomicrmw's result is used by a single bit AND, we may use
   // bts/btr/btc instruction for these operations.
   // Note: InstCombinePass can cause a de-optimization here. It replaces the
@@ -32837,6 +32832,11 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
     return C1 == C2 ? AtomicExpansionKind::BitTestIntrinsic
                     : AtomicExpansionKind::CmpXChg;
   }
+
+  // Bit test accesses scaled by a register offset are not supported by LFI, so
+  // we use the CmpXChg pattern instead.
+  if (Subtarget.isLFI())
+    return AtomicExpansionKind::CmpXChg;
 
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 

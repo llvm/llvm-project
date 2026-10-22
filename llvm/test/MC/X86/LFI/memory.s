@@ -154,3 +154,9 @@ pushq (%rax)
 
 popq (%rax)
 // CHECK: popq %gs:(%eax)
+
+btq $3, (%rdi)
+// CHECK: btq $3, %gs:(%edi)
+
+lock btsq $3, (%rdi)
+// CHECK: lock btsq $3, %gs:(%edi)

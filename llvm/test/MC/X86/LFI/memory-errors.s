@@ -57,6 +57,24 @@ shll $1, %esp
 cmpxchgl %ecx, %esp
 // CHECK: error: unsupported modification of the stack pointer
 
+xchgq %rsp, %fs:0
+// CHECK: error: unsupported modification of the stack pointer
+
+movl %fs:0, %esp
+// CHECK: error: unsupported modification of the stack pointer
+
+btq %rax, (%rdi)
+// CHECK: error: unsupported bit test with a register bit offset
+
+btsq %rax, (%rdi)
+// CHECK: error: unsupported bit test with a register bit offset
+
+lock btsq %rax, (%rdi)
+// CHECK: error: unsupported bit test with a register bit offset
+
+btrl %eax, %fs:(%rdi)
+// CHECK: error: unsupported bit test with a register bit offset
+
 gs movq (%rsp), %rax
 // CHECK: error: unsupported instruction prefix
 
