@@ -2354,7 +2354,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (Def->mayWriteToMemory())
       return false;
     return !Def->mayReadFromMemory() ||
-           vputils::getOpcode(Def) == Instruction::Load;
+           (!C->first && C->second == Instruction::Load);
   }
 
   /// Hash the underlying data of \p Def.
