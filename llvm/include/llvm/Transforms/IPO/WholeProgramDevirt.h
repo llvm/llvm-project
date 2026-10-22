@@ -244,6 +244,12 @@ struct VTableSlotSummary {
   StringRef TypeID;
   uint64_t ByteOffset;
 };
+struct LocalWPDTargetSummary {
+  VTableSlotSummary SlotSummary;
+  // The index of the exported local in the SpeculatedFnNames entry of the WPD
+  // resolution.
+  std::optional<uint64_t> TargetIdx;
+};
 LLVM_ABI bool
 hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
 /// Convert llvm.public.type.test calls to llvm.type.test when whole program
@@ -281,7 +287,7 @@ LLVM_ABI void getVisibleToRegularObjVtableGUIDs(
 /// devirtualized target name will need adjustment).
 LLVM_ABI void runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> &LocalWPDTargetsMap,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
     const LLVMContext *Ctx);
 
@@ -290,7 +296,7 @@ LLVM_ABI void runWholeProgramDevirtOnIndex(
 LLVM_ABI void updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
     function_ref<bool(StringRef, ValueInfo)> isExported,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> &LocalWPDTargetsMap,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 } // end namespace llvm
