@@ -5337,9 +5337,9 @@ def CIR_CoroCleanupOp : CIR_Op<"coro.cleanup", [
     Placeholder emitted for the destroy case of a flattened `cir.await`.
     Like `cir.co_return`, it leaves every enclosing `cir.cleanup.scope`
     through its cleanup, so the destructors of locals in scope run first.
-    `cir.coroutine` flattening then rewrites it so that it reaches the
-    coroutine cleanup (the `destroy` region, which frees the frame) and then
-    the `exit` region. It must not survive flattening.
+    `cir.coroutine` flattening then rewrites it into a branch to the
+    `destroy` region, which frees the frame and continues to the `exit`
+    region. It must not survive flattening.
   }];
   let assemblyFormat = "attr-dict";
   let hasLLVMLowering = false;

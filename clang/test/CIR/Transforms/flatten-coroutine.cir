@@ -1,11 +1,11 @@
 // RUN: cir-opt %s -cir-flatten-cfg -o - | FileCheck %s \
 // RUN:   --implicit-check-not=cir.coroutine --implicit-check-not=cir.await \
 // RUN:   --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit \
-// RUN:   --implicit-check-not=cir.coro.suspend_point
+// RUN:   --implicit-check-not=cir.coro.suspend_point --implicit-check-not=cir.coro.cleanup
 
 // FlattenCFG lowers a cir.coroutine as follows:
-//   - initialSuspend, body and finalSuspend become the body of a cleanup scope
-//     whose cleanup is the destroy region, followed by the exit region.
+//   - initialSuspend, body, finalSuspend, destroy and exit are inlined in
+//     that order. finalSuspend falls into destroy, which falls into exit.
 //   - Each cir.await becomes ready -> brcond(resume, suspend). The suspend
 //     block calls cir.coro.intrinsic.save/suspend and switches on the result:
 //     0 resumes, 1 destroys (runs the destroy region), and the default (-1,
@@ -57,7 +57,6 @@ module {
   }
 
 // CHECK-LABEL: cir.func flattened_coroutine @minimal_coroutine(%arg0: !cir.bool)
-// CHECK:   %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot
 
 // initialSuspend: the prelude, then the init await.
 // CHECK:   cir.call @prelude()
@@ -75,10 +74,8 @@ module {
 // CHECK-NEXT:     1: ^[[INIT_DESTROY:bb[0-9]+]]
 // CHECK-NEXT:   ]
 
-// Destroy: record where we came from and run the destroy region.
+// Destroy: run the destroy region.
 // CHECK: ^[[INIT_DESTROY]]:
-// CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT:   cir.store %[[ZERO]], %[[DEST_SLOT]]
 // CHECK-NEXT:   cir.br ^[[DESTROY:bb[0-9]+]]
 
 // Suspended: leave through the exit region without running the destroy region.
@@ -100,41 +97,20 @@ module {
 // CHECK-NEXT:     1: ^[[FINAL_DESTROY:bb[0-9]+]]
 // CHECK-NEXT:   ]
 // CHECK: ^[[FINAL_DESTROY]]:
-// CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   cir.store %[[ONE]], %[[DEST_SLOT]]
 // CHECK-NEXT:   cir.br ^[[DESTROY]]
 // CHECK: ^[[FINAL_SUSPENDED]]:
 // CHECK-NEXT:   cir.br ^[[EXIT]]
 
-// Leaving the final suspend normally also runs the destroy region.
+// Leaving the final suspend normally falls into the destroy region.
 // CHECK: ^[[FINAL_RESUME]]:
 // CHECK-NEXT:   cir.br ^[[FINAL_DONE:bb[0-9]+]]
 // CHECK: ^[[FINAL_DONE]]:
-// CHECK-NEXT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CHECK-NEXT:   cir.store %[[TWO]], %[[DEST_SLOT]]
 // CHECK-NEXT:   cir.br ^[[DESTROY]]
 
-// The destroy region is the cleanup. Every way into it continues to the exit
-// region.
+// The destroy region frees the frame and always continues to the exit region,
+// with no dispatch after the frame is freed.
 // CHECK: ^[[DESTROY]]:
 // CHECK-NEXT:   cir.call @free_frame()
-// CHECK-NEXT:   cir.br ^[[DISPATCH:bb[0-9]+]]
-// CHECK: ^[[DISPATCH]]:
-// CHECK-NEXT:   %[[DEST:.*]] = cir.load %[[DEST_SLOT]]
-// CHECK-NEXT:   cir.switch.flat %[[DEST]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
-// CHECK-NEXT:     0: ^[[FROM_INIT:bb[0-9]+]],
-// CHECK-NEXT:     1: ^[[FROM_FINAL:bb[0-9]+]],
-// CHECK-NEXT:     2: ^[[FROM_DONE:bb[0-9]+]]
-// CHECK-NEXT:   ]
-// CHECK: ^[[FROM_INIT]]:
-// CHECK-NEXT:   cir.br ^[[AFTER_CLEANUP:bb[0-9]+]]
-// CHECK: ^[[FROM_FINAL]]:
-// CHECK-NEXT:   cir.br ^[[AFTER_CLEANUP]]
-// CHECK: ^[[FROM_DONE]]:
-// CHECK-NEXT:   cir.br ^[[AFTER_CLEANUP]]
-// CHECK: ^[[UNREACHABLE]]:
-// CHECK-NEXT:   cir.unreachable
-// CHECK: ^[[AFTER_CLEANUP]]:
 // CHECK-NEXT:   cir.br ^[[EXIT]]
 
 // The exit region.
@@ -189,8 +165,6 @@ module {
 // the same final suspend.
 
 // CHECK-LABEL: cir.func flattened_coroutine @co_return_in_if(%arg0: !cir.bool, %arg1: !cir.bool)
-// CHECK:   %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
-
 // The user await. Its destroy case goes to the destroy region like the init
 // one.
 // CHECK:   cir.coro.intrinsic.suspend
@@ -200,8 +174,6 @@ module {
 // CHECK-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
 // CHECK-NEXT:   ]
 // CHECK: ^[[USER_DESTROY]]:
-// CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   cir.store %[[ONE]], %[[DEST_SLOT]]
 // CHECK-NEXT:   cir.br ^[[DESTROY:bb[0-9]+]]
 
 // CHECK:   cir.brcond %arg1 ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
@@ -221,6 +193,8 @@ module {
 
 // CHECK: ^[[DESTROY]]:
 // CHECK-NEXT:   cir.call @free_frame()
-// CHECK:   cir.return
+// CHECK-NEXT:   cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK: ^[[EXIT]]:
+// CHECK-NEXT:   cir.return
 // CHECK: }
 }

@@ -121,8 +121,8 @@ struct MissingFeatures {
   // Coroutines
   static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
-  static bool coroutineGetRetObjManager() { return false; };
-  static bool coroutineUnwindRegion() { return false; };
+  static bool coroGetRetObjManager() { return false; };
+  static bool coroUnwindRegion() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }

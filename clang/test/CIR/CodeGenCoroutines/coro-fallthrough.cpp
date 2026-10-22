@@ -656,8 +656,6 @@ l:
 // CIR-FLAT-NEXT:  ^bb{{[0-9]+}}:  // no predecessors
 // CIR-FLAT-NEXT:    cir.br ^[[FALLTHROUGH:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^[[FALLTHROUGH]]:
-// CIR-FLAT-NEXT:    %[[DEST:.*]] = cir.const #cir.int<2> : !s32i
-// CIR-FLAT-NEXT:    cir.store %[[DEST]], %{{.*}}
 // CIR-FLAT-NEXT:    cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^[[CORO_CLEANUP]]:
 // CIR-FLAT-NEXT:    {{.*}} = cir.coro.intrinsic.free

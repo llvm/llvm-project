@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: cir-opt --cir-flatten-cfg %t.cir -o %t.flat.cir
-// RUN: FileCheck --input-file=%t.flat.cir %s -check-prefix=CIR-FLAT --implicit-check-not=cir.coroutine --implicit-check-not=cir.await --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit --implicit-check-not=cir.coro.suspend_point
+// RUN: FileCheck --input-file=%t.flat.cir %s -check-prefix=CIR-FLAT --implicit-check-not=cir.coroutine --implicit-check-not=cir.await --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit --implicit-check-not=cir.coro.suspend_point --implicit-check-not=cir.coro.cleanup
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm  -disable-llvm-passes %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=OGCG
 
@@ -251,14 +251,12 @@ VoidTask silly_task() {
 // OGCG: }
 
 // After FlattenCFG, cir.coroutine is inlined into the function: the
-// initialSuspend, body and finalSuspend regions become the body of a cleanup
-// scope whose cleanup is the destroy region (coro.free), followed by the exit
-// region. Each cir.await becomes ready/suspend/resume blocks where suspend
-// dispatches on llvm.coro.suspend: 0 resumes, 1 destroys (runs the coroutine
-// cleanup), and the default suspends (jumps straight to coro.end).
-
+// initialSuspend, body, finalSuspend, destroy (coro.free) and exit regions are
+// placed in that order. Each cir.await becomes ready/suspend/resume blocks
+// where suspend dispatches on llvm.coro.suspend: 0 resumes, 1 destroys
+// (branches to the destroy region), and the default suspends (jumps straight
+// to coro.end).
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z10silly_taskv()
-// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
 // CIR-FLAT:   %[[FRAME_ADDR:.*]] = cir.alloca "__coro_frame_addr"
 // CIR-FLAT:   %[[PROMISE:.*]] = cir.alloca "__promise"
 // CIR-FLAT:   %[[INIT_AWAITER:.*]] = cir.alloca "ref.tmp0"
@@ -302,9 +300,7 @@ VoidTask silly_task() {
 // CIR-FLAT-NEXT:     1: ^[[INIT_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[INIT_DESTROY]]:
-// CIR-FLAT:   %[[DEST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_0]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[INIT_SUSPENDED]]:
 // CIR-FLAT:   cir.br ^[[CORO_RET:bb[0-9]+]]
 // CIR-FLAT: ^[[INIT_RESUME]]:
@@ -324,9 +320,7 @@ VoidTask silly_task() {
 // CIR-FLAT-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[USER_DESTROY]]:
-// CIR-FLAT:   %[[DEST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_1]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[CORO_CLEANUP]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP]]
 // CIR-FLAT: ^[[USER_SUSPENDED]]:
 // CIR-FLAT:   cir.br ^[[CORO_RET]]
 // CIR-FLAT: ^[[USER_RESUME]]:
@@ -353,24 +347,19 @@ VoidTask silly_task() {
 // CIR-FLAT-NEXT:     1: ^[[FINAL_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[FINAL_DESTROY]]:
-// CIR-FLAT:   %[[DEST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_2]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[CORO_CLEANUP]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP]]
 // CIR-FLAT: ^[[FINAL_SUSPENDED]]:
 // CIR-FLAT:   cir.br ^[[CORO_RET]]
 // CIR-FLAT: ^[[FINAL_RESUME]]:
 // CIR-FLAT:   cir.call @_ZNSt14suspend_always12await_resumeEv(%[[FINAL_AWAITER]])
-// CIR-FLAT:   cir.br ^[[FINAL_DONE:bb[0-9]+]]
 
 // Falling off the end of the final suspend also runs the coroutine cleanup.
 
-// CIR-FLAT: ^[[FINAL_DONE]]:
-// CIR-FLAT:   %[[DEST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-FLAT:   cir.store %[[DEST_3]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT:   cir.br ^[[CORO_CLEANUP]]
 
 // Coroutine cleanup (the destroy region): free the frame if
-// llvm.coro.free returns non-null, then leave through the exit region.
+// llvm.coro.free returns non-null, then go straight to the exit region, as OG
+// does. Nothing is read after the frame is freed.
 
 // CIR-FLAT: ^[[CORO_CLEANUP]]:
 // CIR-FLAT:   %[[MEM_TO_FREE:.*]] = cir.coro.intrinsic.free(%[[CORO_ID]], %[[FRAME]])
@@ -382,26 +371,6 @@ VoidTask silly_task() {
 // CIR-FLAT:   cir.call @_ZdlPvm(%[[MEM_TO_FREE]], %[[SIZE2]])
 // CIR-FLAT:   cir.br ^[[AFTER_CORO_FREE]]
 // CIR-FLAT: ^[[AFTER_CORO_FREE]]:
-// CIR-FLAT:   cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
-// CIR-FLAT: ^[[CLEANUP_EXIT]]:
-// CIR-FLAT:   %[[DEST:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.switch.flat %[[DEST]] : !s32i, ^[[DEST_DEFAULT:bb[0-9]+]] [
-// CIR-FLAT-NEXT:     0: ^[[FROM_INIT_DESTROY:bb[0-9]+]],
-// CIR-FLAT-NEXT:     1: ^[[FROM_USER_DESTROY:bb[0-9]+]],
-// CIR-FLAT-NEXT:     2: ^[[FROM_FINAL_DESTROY:bb[0-9]+]],
-// CIR-FLAT-NEXT:     3: ^[[FROM_FINAL_DONE:bb[0-9]+]]
-// CIR-FLAT-NEXT:   ]
-// CIR-FLAT: ^[[FROM_INIT_DESTROY]]:
-// CIR-FLAT-NEXT:   cir.br ^[[EXIT:bb[0-9]+]]
-// CIR-FLAT: ^[[FROM_USER_DESTROY]]:
-// CIR-FLAT-NEXT:   cir.br ^[[EXIT]]
-// CIR-FLAT: ^[[FROM_FINAL_DESTROY]]:
-// CIR-FLAT-NEXT:   cir.br ^[[EXIT]]
-// CIR-FLAT: ^[[FROM_FINAL_DONE]]:
-// CIR-FLAT-NEXT:   cir.br ^[[EXIT]]
-// CIR-FLAT: ^[[DEST_DEFAULT]]:
-// CIR-FLAT-NEXT:   cir.unreachable
-// CIR-FLAT: ^[[EXIT]]:
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_RET]]
 
 // The exit region; every suspend's default destination lands here.
@@ -667,7 +636,6 @@ folly::coro::Task<void> yield1() {
 // co_yield is flattened like a user co_await (a non-final suspend).
 
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z6yield1v()
-// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   %[[PROMISE:.*]] = cir.alloca "__promise"
 // CIR-FLAT:   %[[YIELD_AWAITER:.*]] = cir.alloca "ref.tmp1"
 // CIR-FLAT:   cir.call @_ZNSt14suspend_always12await_resumeEv
@@ -684,9 +652,7 @@ folly::coro::Task<void> yield1() {
 // CIR-FLAT-NEXT:     1: ^[[YIELD_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[YIELD_DESTROY]]:
-// CIR-FLAT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT:   cir.store %[[ONE]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[YIELD_SUSPENDED]]:
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_RET:bb[0-9]+]]
 // CIR-FLAT: ^[[YIELD_RESUME]]:
@@ -1104,7 +1070,6 @@ folly::coro::Task<int> co_returns(int x) {
 // same final suspend block.
 
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z10co_returnsi
-// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   cir.alloca "__coro_frame_addr"
 // CIR-FLAT:   %[[X:.*]] = cir.alloca "x"
 // CIR-FLAT:   %[[PROMISE:.*]] = cir.alloca "__promise"
@@ -1133,9 +1098,7 @@ folly::coro::Task<int> co_returns(int x) {
 // CIR-FLAT-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[USER_DESTROY]]:
-// CIR-FLAT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT:   cir.store %[[ONE]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
+// CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[USER_RESUME]]:
 // CIR-FLAT:   cir.call @_ZNSt14suspend_always12await_resumeEv
 // CIR-FLAT:   %[[X_LOAD:.*]] = cir.load {{.*}} %[[X]]
@@ -1390,8 +1353,6 @@ VoidTask silly_task_with_dtor() {
 
 // Destroy: after ~HasDtor, go on to the coroutine cleanup.
 // CIR-FLAT: ^[[DTOR_TO_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[CORO_DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[CORO_DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 
 // Resume: the rest of the body.
@@ -1472,7 +1433,6 @@ VoidTask await_in_loop(int n) {
 // step (++i).
 
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z13await_in_loopi(
-// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   %[[I:.*]] = cir.alloca "i"
 // CIR-FLAT:   %[[USER_AWAITER:.*]] = cir.alloca "ref.tmp1"
 // CIR-FLAT:   cir.store {{.*}} %{{.*}}, %[[I]]
@@ -1489,8 +1449,6 @@ VoidTask await_in_loop(int n) {
 // CIR-FLAT-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[USER_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[USER_RESUME]]:
 // CIR-FLAT-NEXT:   cir.call @_ZNSt14suspend_always12await_resumeEv(%[[USER_AWAITER]])
@@ -1561,7 +1519,6 @@ VoidTask await_in_if(bool b) {
 // coroutine cleanup.
 
 // CIR-FLAT-LABEL: cir.func flattened_coroutine {{.*}} @_Z11await_in_ifb(
-// CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   cir.alloca "__coro_frame_addr"
 // CIR-FLAT:   %[[B:.*]] = cir.alloca "b"
 // CIR-FLAT:   %[[PROMISE:.*]] = cir.alloca "__promise"
@@ -1578,8 +1535,6 @@ VoidTask await_in_if(bool b) {
 // CIR-FLAT-NEXT:     1: ^[[USER_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[USER_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[USER_RESUME]]:
 // CIR-FLAT-NEXT:   cir.call @_ZNSt14suspend_always12await_resumeEv(%[[USER_AWAITER]])
@@ -1686,8 +1641,6 @@ VoidTask await_in_loop_with_dtor(int n) {
 
 // Destroy: after ~HasDtor, go on to the coroutine cleanup.
 // CIR-FLAT: ^[[DTOR_TO_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[CORO_DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[CORO_DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 
 // Resume: the end of the loop body, then the step.
@@ -1806,8 +1759,6 @@ VoidTask await_in_if_with_dtor(bool b) {
 
 // Destroy: after ~HasDtor, go on to the coroutine cleanup.
 // CIR-FLAT: ^[[DTOR_TO_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[CORO_DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[CORO_DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 
 // Resume: the end of the if, then the rest of the body.
@@ -1955,8 +1906,6 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // CIR-FLAT: ^[[OUTER_TO_RET]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
 // CIR-FLAT: ^[[OUTER_TO_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[CORO_DEST:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[CORO_DEST]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[CORO_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[OUTER_TO_RET2]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
