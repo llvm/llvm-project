@@ -134,7 +134,7 @@ llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
     return llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
                         llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
-  // TODO: Handle IntelIGCA, which currently gets an empty triple, so
+  // FIXME(IGCA): Handle IntelIGCA, which currently gets an empty triple, so
   // --offload-arch=igca_* cannot pick an offload toolchain.
   return {};
 }
