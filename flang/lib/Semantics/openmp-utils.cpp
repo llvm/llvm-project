@@ -2616,8 +2616,8 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
   auto getDirectiveVariant = [&](const parser::OmpClause &clause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
     auto *variant{GetDirectiveVariant(clause)};
-    return variant ? std::make_pair(getVariant(*variant), true) :
-            std::make_pair(nullptr, false);
+    return variant ? std::make_pair(getVariant(*variant), true)
+                   : std::make_pair(nullptr, false);
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
