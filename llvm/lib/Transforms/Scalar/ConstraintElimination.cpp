@@ -1048,8 +1048,11 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
   auto R = getConstraintForSolving(Pred, A, B);
-  return !R.empty() &&
-         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+  if (R.empty())
+    return false;
+  if (R.isEq() || R.isNe())
+    return R.isImpliedBy(getCS(R.IsSigned)).value_or(false);
+  return getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {

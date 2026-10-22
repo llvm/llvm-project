@@ -344,3 +344,140 @@ outer.latch:
 exit:
   ret void
 }
+
+define i1 @latch_eq_start_values_differ(i8 %a, i8 %b) {
+; CHECK-LABEL: define i1 @latch_eq_start_values_differ(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[LT]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[A]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[B]], %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[I]], [[J]]
+; CHECK-NEXT:    [[ACC_NEXT]] = or i1 [[ACC]], [[C]]
+; CHECK-NEXT:    [[I_NEXT]] = add i8 [[I]], 1
+; CHECK-NEXT:    [[J_NEXT]] = add i8 [[J]], 2
+; CHECK-NEXT:    [[CONT:%.*]] = icmp eq i8 [[I_NEXT]], [[J_NEXT]]
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %lt = icmp ult i8 %a, %b
+  br i1 %lt, label %loop, label %exit
+
+loop:
+  %i = phi i8 [ %a, %entry ], [ %i.next, %loop ]
+  %j = phi i8 [ %b, %entry ], [ %j.next, %loop ]
+  %acc = phi i1 [ false, %entry ], [ %acc.next, %loop ]
+  %c = icmp eq i8 %i, %j
+  %acc.next = or i1 %acc, %c
+  %i.next = add i8 %i, 1
+  %j.next = add i8 %j, 2
+  %cont = icmp eq i8 %i.next, %j.next
+  br i1 %cont, label %loop, label %exit
+
+exit:
+  %res = phi i1 [ false, %entry ], [ %acc.next, %loop ]
+  ret i1 %res
+}
+
+define i1 @latch_ne_start_values_maybe_equal(i8 %b) {
+; CHECK-LABEL: define i1 @latch_ne_start_values_maybe_equal(
+; CHECK-SAME: i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[G:%.*]] = icmp ult i8 [[B]], -1
+; CHECK-NEXT:    br i1 [[G]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[B]], %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[I]], [[J]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], [[J]]
+; CHECK-NEXT:    [[ACC_NEXT]] = and i1 [[ACC]], [[C]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i8 [[I]], 0
+; CHECK-NEXT:    [[J_NEXT]] = add i8 [[J]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ne i8 [[I_NEXT]], [[J_NEXT]]
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %g = icmp ult i8 %b, -1
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %i.next, %latch ]
+  %j = phi i8 [ %b, %entry ], [ %j.next, %latch ]
+  %acc = phi i1 [ true, %entry ], [ %acc.next, %latch ]
+  %ule = icmp ule i8 %i, %j
+  call void @llvm.assume(i1 %ule)
+  %c = icmp ult i8 %i, %j
+  %acc.next = and i1 %acc, %c
+  br label %latch
+
+latch:
+  %i.next = add i8 %i, 0
+  %j.next = add i8 %j, 1
+  %cont = icmp ne i8 %i.next, %j.next
+  br i1 %cont, label %loop, label %exit
+
+exit:
+  %res = phi i1 [ true, %entry ], [ %acc.next, %latch ]
+  ret i1 %res
+}
+
+define i1 @latch_ne_start_values_differ(i8 %b) {
+; CHECK-LABEL: define i1 @latch_ne_start_values_differ(
+; CHECK-SAME: i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[G:%.*]] = icmp ne i8 [[B]], 0
+; CHECK-NEXT:    br i1 [[G]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[B]], %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[I]], [[J]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE]])
+; CHECK-NEXT:    [[ACC_NEXT]] = and i1 [[ACC]], true
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i8 [[I]], 0
+; CHECK-NEXT:    [[J_NEXT]] = add i8 [[J]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ne i8 [[I_NEXT]], [[J_NEXT]]
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %g = icmp ne i8 %b, 0
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %i.next, %latch ]
+  %j = phi i8 [ %b, %entry ], [ %j.next, %latch ]
+  %acc = phi i1 [ true, %entry ], [ %acc.next, %latch ]
+  %ule = icmp ule i8 %i, %j
+  call void @llvm.assume(i1 %ule)
+  %c = icmp ult i8 %i, %j
+  %acc.next = and i1 %acc, %c
+  br label %latch
+
+latch:
+  %i.next = add i8 %i, 0
+  %j.next = add i8 %j, 1
+  %cont = icmp ne i8 %i.next, %j.next
+  br i1 %cont, label %loop, label %exit
+
+exit:
+  %res = phi i1 [ true, %entry ], [ %acc.next, %latch ]
+  ret i1 %res
+}
