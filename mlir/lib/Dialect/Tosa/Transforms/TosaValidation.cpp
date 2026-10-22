@@ -1417,8 +1417,8 @@ LogicalResult checkErrorIfSlice(Operation *op) {
   // ERROR_IF(any(size <= 0))
   if (hasSizeValues &&
       llvm::any_of(sizeValues, [](int64_t v) { return v <= 0; }))
-    return op->emitOpError("size values must be > 0, got [") << sizeValues
-                                                             << "]";
+    return op->emitOpError("size values must be > 0, got [")
+           << sizeValues << "]";
 
   // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
   // get_innermost_block_size<in_out_t>() != 0)
