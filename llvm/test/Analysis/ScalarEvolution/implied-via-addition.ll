@@ -56,18 +56,10 @@ define void @implied2(i32 %n) {
 ; Prove that (n u>= -1) ===> (n + 1 u>= 0).
 ; CHECK-LABEL: 'implied2'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2
-; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Predicated backedge-taken count is (1 + (zext i32 %n to i64))<nuw><nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 4294967296
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (1 + (zext i32 %n to i64))<nuw><nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n)<nuw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 -2
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n)<nuw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
   %cmp1 = icmp uge i32 %n, -1

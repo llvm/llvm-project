@@ -9496,6 +9496,19 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       auto *OldType = dyn_cast<IntegerType>(LHS->getType());
       if (!OldType)
         break;
+      // If RHS < MAX on entry to the loop, RHS + 1 does not wrap.
+      bool IsSigned = ICmpInst::isSigned(Pred);
+      APInt Max = IsSigned ? APInt::getSignedMaxValue(OldType->getBitWidth())
+                           : APInt::getMaxValue(OldType->getBitWidth());
+      if (isLoopInvariant(RHS, L) &&
+          isLoopEntryGuardedByCond(L, ICmpInst::getStrictPredicate(Pred), RHS,
+                                   getConstant(Max))) {
+        ExitLimit EL = howManyLessThans(
+            LHS, getAddExpr(getOne(OldType), RHS), L, IsSigned,
+            /*Invert=*/false, ControlsOnlyExit, AllowPredicates);
+        if (EL.hasFullInfo())
+          return EL;
+      }
       // Prefer doubling the bitwidth over adding a single bit to make it more
       // likely that we use a legal type.
       auto *NewType =
