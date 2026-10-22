@@ -233,12 +233,12 @@ func.func @powf() {
   %g_p = arith.constant 23598.0 : f64
   call @func_powff64(%g, %g_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: -nan
+  // CHECK-NEXT: {{-?}}nan
   %h = arith.constant 1.0 : f64
   %h_p = arith.constant 0xfff0000001000000 : f64
   call @func_powff64(%h, %h_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: -nan
+  // CHECK-NEXT: {{-?}}nan
   %i = arith.constant 1.0 : f32
   %i_p = arith.constant 0xffffffff : f32
   call @func_powff32(%i, %i_p) : (f32, f32) -> ()
