@@ -5959,6 +5959,8 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     Result.Standard.setAsIdentityConversion();
     Result.Standard.setFromType(InitTy);
     Result.Standard.setAllToTypes(InitTy);
+    // An EmbedExpr is a single int prvalue, so one conversion sequence covers
+    // all of its elements; narrowing is checked per element after resolution.
     for (Expr *Init : From->inits()) {
       ImplicitConversionSequence ICS = TryCopyInitialization(
           S, Init, InitTy, SuppressUserConversions, InOverloadResolution,
