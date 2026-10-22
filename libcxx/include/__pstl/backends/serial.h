@@ -18,6 +18,7 @@
 #include <__algorithm/min_element.h>
 #include <__algorithm/minmax_element.h>
 #include <__algorithm/mismatch.h>
+#include <__algorithm/partition.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
@@ -310,6 +311,15 @@ struct __uninitialized_move<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
     return std::uninitialized_move(std::move(__first), std::move(__last), std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __partition<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
+    return std::partition(std::move(__first), std::move(__last), std::move(__pred));
   }
 };
 

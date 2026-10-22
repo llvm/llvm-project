@@ -719,6 +719,19 @@ is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIt
 }
 
 template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardIterator
+partition(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
           class _ForwardOutIterator,

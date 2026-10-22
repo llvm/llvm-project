@@ -501,6 +501,12 @@ struct __uninitialized_fill_n;
 // optional<_ForwardIterator>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp &__value) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __partition;
+// template <class _Policy, class _ForwardIterator, class _Predicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
