@@ -1051,6 +1051,7 @@ public:
   bool isXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
+  static bool isSGEMM(unsigned Opcode) { return AMDGPU::getMAIIsSGEMM(Opcode); }
 
   static bool isLDSDIR(const MachineInstr &MI) {
     return SIInstrFlags::isLDSDIR(MI);
