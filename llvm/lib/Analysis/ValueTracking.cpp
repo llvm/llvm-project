@@ -11118,26 +11118,11 @@ const Value *llvm::stripNullTest(const Value *V) {
     }
   }
 
-  // select(cond, X, -X) or select(cond, -X, X)
-  if (const auto *SI = dyn_cast<SelectInst>(V)) {
-    const Value *TrueValue = SI->getTrueValue();
-    const Value *FalseValue = SI->getFalseValue();
-    // when X is variable
+  // select(cond, X, -X)
+  {
     const Value *X;
-    if ((match(FalseValue, m_Neg(m_Value(X))) && X == TrueValue) ||
-        (match(TrueValue, m_Neg(m_Value(X))) && X == FalseValue)) {
+    if (match(V, m_c_Select(m_Value(X), m_Neg(m_Deferred(X)))))
       return X;
-    }
-    // when X is constant
-    if (const auto *TrueC = dyn_cast<Constant>(TrueValue)) {
-      if (const auto *FalseC = dyn_cast<Constant>(FalseValue)) {
-        if (TrueC->getType()->isIntOrIntVectorTy() &&
-            TrueC->getType() == FalseC->getType() &&
-            TrueC == ConstantExpr::getNeg(const_cast<Constant *>(FalseC))) {
-          return TrueC;
-        }
-      }
-    }
   }
 
   return nullptr;
