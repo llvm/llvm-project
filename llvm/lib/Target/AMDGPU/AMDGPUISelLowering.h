@@ -111,7 +111,6 @@ protected:
   /// Check whether value Val can be supported by v_mov_b64, for the current
   /// target.
   bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
-  bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAssertSZExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -229,6 +228,7 @@ public:
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
+  bool shouldCombineMemoryType(EVT VT) const;
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
                                     unsigned NumElem,
