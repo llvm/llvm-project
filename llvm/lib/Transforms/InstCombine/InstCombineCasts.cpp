@@ -37,6 +37,26 @@ using namespace PatternMatch;
 
 using EvaluatedMap = SmallDenseMap<Value *, Value *, 8>;
 
+/// nsw add, sub, or mul with an operand that is trunc nsw back to Ty.
+static BinaryOperator *getNSWBinOpOfTruncNSW(Value *V, Type *Ty) {
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO)
+    return nullptr;
+
+  Instruction::BinaryOps Opc = BO->getOpcode();
+  if (Opc != Instruction::Add && Opc != Instruction::Sub &&
+      Opc != Instruction::Mul)
+    return nullptr;
+  if (!BO->hasNoSignedWrap())
+    return nullptr;
+
+  Value *Wide = nullptr;
+  if (match(BO->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, Wide))) ||
+      match(BO->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, Wide))))
+    return BO;
+  return nullptr;
+}
+
 static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                           InstCombinerImpl &IC,
                                           EvaluatedMap &Processed) {
@@ -65,21 +85,9 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
   case Instruction::Shl:
   case Instruction::UDiv:
   case Instruction::URem: {
-    // sext(binop nsw (trunc nsw X), Y) is binop nsw X, sext(Y) when X already
-    // has the destination type. trunc nsw means X fits in the narrow type, and
-    // nsw on the narrow binop means the result does too, so the wide binop is
-    // nsw. Rebuilding without that flag makes visitSExt emit shl/ashr, which
-    // SCEV cannot treat as a non-wrapping recurrence.
-    Value *X = nullptr;
-    bool NSWWide = false;
-    if (isSigned &&
-        (Opc == Instruction::Add || Opc == Instruction::Sub ||
-         Opc == Instruction::Mul) &&
-        I->hasNoSignedWrap()) {
-      bool W0 = match(I->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, X)));
-      bool W1 = match(I->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, X)));
-      NSWWide = W0 || W1;
-    }
+    // Keep nsw when rebuilding sext(binop nsw (trunc nsw X)). Without it,
+    // visitSExt emits shl/ashr and drops the flag SCEV needs.
+    bool NSWWide = isSigned && getNSWBinOpOfTruncNSW(I, Ty);
 
     Value *WideOps[2];
     for (unsigned OpIdx = 0; OpIdx != 2; ++OpIdx) {
@@ -1971,21 +1979,18 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul: {
-    // sext(binop nsw (trunc nsw X), Y) may sign-extend Y. At least one operand
-    // must already be an iM value behind trunc nsw, so this does not widen
-    // arithmetic that was never connected to the destination type.
-    if (I->hasNoSignedWrap()) {
-      Value *X = nullptr;
-      bool W0 = match(I->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, X)));
-      bool W1 = match(I->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, X)));
-      if (W0 || W1) {
-        Value *Op0 = I->getOperand(0);
-        Value *Op1 = I->getOperand(1);
-        return (canEvaluateSExtdImpl(Op0, Ty) ||
-                Op0->getType() == I->getType()) &&
-               (canEvaluateSExtdImpl(Op1, Ty) ||
-                Op1->getType() == I->getType());
+    // The binop and each trunc nsw must be single-use. Sign-extend the other
+    // operand in place; do not walk it.
+    if (getNSWBinOpOfTruncNSW(I, Ty)) {
+      if (!I->hasOneUse())
+        return false;
+      for (unsigned Idx = 0; Idx != 2; ++Idx) {
+        Value *Op = I->getOperand(Idx);
+        Value *Wide = nullptr;
+        if (match(Op, m_NSWTrunc(m_SpecificType(Ty, Wide))) && !Op->hasOneUse())
+          return false;
       }
+      return true;
     }
     return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
            canEvaluateSExtdImpl(I->getOperand(1), Ty);
@@ -2084,22 +2089,12 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
       ShouldExtendExpression = false;
   // Vectors are not integer types, so shouldChangeType rejects them. Allow the
-  // same scalar legality check when widening an nsw add/sub/mul of trunc nsw.
+  // same scalar legality check for this fold.
   bool LegalType = shouldChangeType(SrcTy, DestTy);
   if (!LegalType && SrcTy->isVectorTy() &&
-      shouldChangeType(SrcTy->getScalarType(), DestTy->getScalarType())) {
-    Value *WideSrc;
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Src)) {
-      Instruction::BinaryOps Opc = BO->getOpcode();
-      LegalType = (Opc == Instruction::Add || Opc == Instruction::Sub ||
-                   Opc == Instruction::Mul) &&
-                  BO->hasNoSignedWrap() &&
-                  (match(BO->getOperand(0),
-                         m_NSWTrunc(m_SpecificType(DestTy, WideSrc))) ||
-                   match(BO->getOperand(1),
-                         m_NSWTrunc(m_SpecificType(DestTy, WideSrc))));
-    }
-  }
+      shouldChangeType(SrcTy->getScalarType(), DestTy->getScalarType()) &&
+      getNSWBinOpOfTruncNSW(Src, DestTy))
+    LegalType = true;
   if (ShouldExtendExpression && LegalType &&
       TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy,
                                              CLOpts.max_type_eval_depth)) {
@@ -2111,19 +2106,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Res = EvaluateInDifferentType(Src, DestTy, true);
     assert(Res->getType() == DestTy);
 
-    // sext(binop nsw (trunc nsw X)) is already the sign-extended value, so do
-    // not wrap it in shl/ashr. The binop has to sit between the trunc and this
-    // sext.
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Src)) {
-      Instruction::BinaryOps Opc = BO->getOpcode();
-      Value *Wide = nullptr;
-      if ((Opc == Instruction::Add || Opc == Instruction::Sub ||
-           Opc == Instruction::Mul) &&
-          BO->hasNoSignedWrap() &&
-          (match(BO->getOperand(0), m_NSWTrunc(m_SpecificType(DestTy, Wide))) ||
-           match(BO->getOperand(1), m_NSWTrunc(m_SpecificType(DestTy, Wide)))))
-        return replaceInstUsesWith(Sext, Res);
-    }
+    // The rebuilt nsw binop is already the sign-extended value.
+    if (getNSWBinOpOfTruncNSW(Src, DestTy))
+      return replaceInstUsesWith(Sext, Res);
     if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
       return replaceInstUsesWith(Sext, Res);
 
