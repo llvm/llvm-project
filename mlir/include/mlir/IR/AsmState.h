@@ -560,6 +560,15 @@ public:
            FallbackAsmResourceMap *map = nullptr);
   ~AsmState();
 
+  /// Add an alias for the given attribute. The alias will be used as a
+  /// suggestion when printing. The final alias may be modified to resolve
+  /// conflicts.
+  void addAlias(Attribute attr, StringRef alias);
+
+  /// Add an alias for the given type. The alias will be used as a suggestion
+  /// when printing. The final alias may be modified to resolve conflicts.
+  void addAlias(Type type, StringRef alias);
+
   /// Get the printer flags.
   const OpPrintingFlags &getPrinterFlags() const;
 
