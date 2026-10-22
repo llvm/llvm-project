@@ -16,20 +16,18 @@
 #define OPTIONS_STRUCT_DEFS
 #include "CodeGenOptions.inc"
 
+using namespace llvm;
+
 static llvm::opt::RegisterLibraryOptions<llvm::CodeGenOptions> Registration;
 
-namespace llvm {
-
-const CodeGenOptions &getCodeGenOptions(const LLVMContext &C) {
+const CodeGenOptions &llvm::getCodeGenOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenOptions>();
 }
 
-const CodeGenOptions &getCodeGenOptions(const Module &M) {
+const CodeGenOptions &llvm::getCodeGenOptions(const Module &M) {
   return getCodeGenOptions(M.getContext());
 }
 
-const CodeGenOptions &getCodeGenOptions(const MachineFunction &MF) {
+const CodeGenOptions &llvm::getCodeGenOptions(const MachineFunction &MF) {
   return getCodeGenOptions(MF.getFunction().getContext());
 }
-
-} // namespace llvm

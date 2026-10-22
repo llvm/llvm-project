@@ -833,7 +833,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   if (isa<Constant>(Addr))
     return false;
 
-  const ScalarOptions &Opts = getScalarOptions(*LI);
+  const ScalarOptions &Opts = getScalarOptions(*LI->getFunction());
   unsigned UsesVisited = 0;
   // Traverse all uses of the load operand value, to see if invariant.start is
   // one of the uses, and whether it dominates the load instruction.

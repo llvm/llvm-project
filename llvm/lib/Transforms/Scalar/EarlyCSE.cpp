@@ -275,7 +275,7 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (getScalarOptions(*Val.Inst).earlycse_debug_hash)
+  if (getScalarOptions(*Val.Inst->getFunction()).earlycse_debug_hash)
     return 0;
 #endif
   return getHashValueImpl(Val);

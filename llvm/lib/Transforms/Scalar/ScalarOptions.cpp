@@ -13,12 +13,10 @@
 #define OPTIONS_STRUCT_DEFS
 #include "ScalarOptions.inc"
 
+using namespace llvm;
+
 static llvm::opt::RegisterLibraryOptions<llvm::ScalarOptions> Registration;
 
-namespace llvm {
-
-const ScalarOptions &getScalarOptions(const Loop &L) {
+const ScalarOptions &llvm::getScalarOptions(const Loop &L) {
   return getScalarOptions(L.getHeader()->getContext());
 }
-
-} // namespace llvm

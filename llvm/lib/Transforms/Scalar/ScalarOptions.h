@@ -10,8 +10,8 @@
 #define LLVM_LIB_TRANSFORMS_SCALAR_SCALAROPTIONS_H
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <limits>
 #include <optional>
@@ -38,8 +38,8 @@ inline const ScalarOptions &getScalarOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<ScalarOptions>();
 }
 
-inline const ScalarOptions &getScalarOptions(const Value &V) {
-  return getScalarOptions(V.getContext());
+inline const ScalarOptions &getScalarOptions(const Function &F) {
+  return getScalarOptions(F.getContext());
 }
 
 const ScalarOptions &getScalarOptions(const Loop &L);

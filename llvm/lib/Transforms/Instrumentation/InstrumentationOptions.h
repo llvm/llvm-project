@@ -35,13 +35,13 @@ enum class RecordStackHistoryMode {
 
 namespace llvm {
 
+class Function;
 class LLVMContext;
 class Module;
-class Value;
 
 const InstrumentationOptions &getInstrumentationOptions(const LLVMContext &C);
 const InstrumentationOptions &getInstrumentationOptions(const Module &M);
-const InstrumentationOptions &getInstrumentationOptions(const Value &V);
+const InstrumentationOptions &getInstrumentationOptions(const Function &F);
 
 } // namespace llvm
 

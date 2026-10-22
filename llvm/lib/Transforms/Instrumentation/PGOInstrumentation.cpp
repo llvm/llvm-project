@@ -2315,7 +2315,8 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
-  const InstrumentationOptions &Opts = getInstrumentationOptions(*TI);
+  const InstrumentationOptions &Opts =
+      getInstrumentationOptions(*TI->getFunction());
   if (Opts.pgo_emit_branch_prob) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
@@ -2395,7 +2396,8 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     else
       OS << "Unknown\\l";
 
-    const InstrumentationOptions &Opts = getInstrumentationOptions(*Node);
+    const InstrumentationOptions &Opts =
+        getInstrumentationOptions(*Node->getParent());
     if (!Opts.pgo_instr_select)
       return Result;
 

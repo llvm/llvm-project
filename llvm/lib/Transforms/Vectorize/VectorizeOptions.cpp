@@ -16,16 +16,14 @@
 #define OPTIONS_STRUCT_DEFS
 #include "VectorizeOptions.inc"
 
+using namespace llvm;
+
 static llvm::opt::RegisterLibraryOptions<llvm::VectorizeOptions> Registration;
 
-namespace llvm {
-
-const VectorizeOptions &getVectorizeOptions(const Loop &L) {
+const VectorizeOptions &llvm::getVectorizeOptions(const Loop &L) {
   return getVectorizeOptions(L.getHeader()->getContext());
 }
 
-const VectorizeOptions &getVectorizeOptions(const sandboxir::Context &C) {
+const VectorizeOptions &llvm::getVectorizeOptions(const sandboxir::Context &C) {
   return C.getLibraryOptions().get<VectorizeOptions>();
 }
-
-} // namespace llvm

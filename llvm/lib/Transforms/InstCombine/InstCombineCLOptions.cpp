@@ -14,13 +14,11 @@
 #define OPTIONS_STRUCT_DEFS
 #include "InstCombineCLOptions.inc"
 
+using namespace llvm;
+
 static llvm::opt::RegisterLibraryOptions<llvm::InstCombineCLOptions>
     Registration;
 
-namespace llvm {
-
-const InstCombineCLOptions &getInstCombineCLOptions(const Function &F) {
+const InstCombineCLOptions &llvm::getInstCombineCLOptions(const Function &F) {
   return F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
 }
-
-} // namespace llvm
