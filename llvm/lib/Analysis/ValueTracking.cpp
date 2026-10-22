@@ -11171,51 +11171,6 @@ static DenormalMode getDenormalMode(DenormalFPEnv Env,
   return &Sem == &APFloat::IEEEsingle() ? Env.F32Mode : Env.DefaultMode;
 }
 
-/// If \p R contains a zero of either sign, add the other one.
-static ConstantFPRange addOppositeZero(ConstantFPRange R) {
-  const fltSemantics &Sem = R.getSemantics();
-  APFloat PosZero = APFloat::getZero(Sem, /*Negative=*/false);
-  APFloat NegZero = APFloat::getZero(Sem, /*Negative=*/true);
-  if (R.contains(PosZero) || R.contains(NegZero))
-    R = R.unionWith(ConstantFPRange::getNonNaN(NegZero, PosZero));
-  return R;
-}
-
-/// Widen the bounds of \p R by an error of \p MaxULPs.
-static ConstantFPRange widenByULPs(const ConstantFPRange &R,
-                                   const APFloat &MaxULPs) {
-  if (R.isNaNOnly())
-    return R;
-  const fltSemantics &Sem = R.getSemantics();
-  // One more ULP for the rounding of the exact bound.
-  APFloat N = MaxULPs;
-  bool LosesInfo;
-  N.convert(Sem, APFloat::rmTowardPositive, &LosesInfo);
-  N.add(APFloat::getOne(Sem), APFloat::rmTowardPositive);
-
-  auto Widen = [&](APFloat B, bool Down) {
-    if (B.isInfinity()) {
-      if (B.isNegative() == Down)
-        return B;
-      B = APFloat::getLargest(Sem, B.isNegative());
-    }
-    // Use the ULP away from zero, which is the larger one at a power of 2.
-    APFloat Mag = abs(B);
-    APFloat Delta = Mag;
-    Delta.next(/*nextDown=*/false);
-    Delta.subtract(Mag, APFloat::rmNearestTiesToEven);
-    Delta.multiply(N, APFloat::rmTowardPositive);
-    if (Down)
-      B.subtract(Delta, APFloat::rmTowardNegative);
-    else
-      B.add(Delta, APFloat::rmTowardPositive);
-    return B;
-  };
-  return ConstantFPRange(Widen(R.getLower(), /*Down=*/true),
-                         Widen(R.getUpper(), /*Down=*/false), R.containsQNaN(),
-                         R.containsSNaN());
-}
-
 static ConstantFPRange
 computeConstantFPRangeImpl(const Value *V, const SimplifyQuery &SQ,
                            DenormalFPEnv Env, unsigned Depth,
@@ -11226,9 +11181,14 @@ computeConstantFPRangeImpl(const Value *V, const SimplifyQuery &SQ,
 static ConstantFPRange
 finishFPRange(const Instruction &I, ConstantFPRange R, DenormalFPEnv Env,
               SmallVectorImpl<const Instruction *> *Used) {
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_fpmath))
-    R = widenByULPs(
-        R, mdconst::extract<ConstantFP>(MD->getOperand(0))->getValueAPF());
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_fpmath)) {
+    // One more ULP for the rounding of the exact bound.
+    APFloat MaxULPs =
+        mdconst::extract<ConstantFP>(MD->getOperand(0))->getValueAPF();
+    MaxULPs.add(APFloat::getOne(MaxULPs.getSemantics()),
+                APFloat::rmTowardPositive);
+    R.widenByULPs(MaxULPs);
+  }
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     // nnan/ninf violations are poison.
     if (FPOp->hasNoNaNs())
@@ -11236,29 +11196,12 @@ finishFPRange(const Instruction &I, ConstantFPRange R, DenormalFPEnv Env,
     if (FPOp->hasNoInfs())
       R = R.getWithoutInf();
     if (FPOp->hasNoSignedZeros())
-      R = addOppositeZero(R);
+      R.addOppositeZero();
   }
   R.flushDenormals(getDenormalMode(Env, R.getSemantics()).Output);
   if (Used)
     Used->push_back(&I);
   return R;
-}
-
-static ConstantFPRange rangeFromIntToFP(const CastInst &Cast, bool Signed,
-                                        const SimplifyQuery &SQ) {
-  const fltSemantics &Sem = Cast.getType()->getFltSemantics();
-  ConstantRange CR = computeConstantRangeIncludingKnownBits(
-      Cast.getOperand(0), Signed, SQ.getWithInstruction(&Cast));
-  if (CR.isEmptySet())
-    return ConstantFPRange::getEmpty(Sem);
-
-  APInt IntMin = Signed ? CR.getSignedMin() : CR.getUnsignedMin();
-  APInt IntMax = Signed ? CR.getSignedMax() : CR.getUnsignedMax();
-  APFloat Lo(Sem), Hi(Sem);
-  Lo.convertFromAPInt(IntMin, Signed, APFloat::rmNearestTiesToEven);
-  Hi.convertFromAPInt(IntMax, Signed, APFloat::rmNearestTiesToEven);
-  // The conversion is monotonic and maps 0 to +0.
-  return ConstantFPRange::getNonNaN(std::move(Lo), std::move(Hi));
 }
 
 static ConstantFPRange
@@ -11300,7 +11243,7 @@ rangeFromFPBinOp(const Instruction &I, const SimplifyQuery &SQ,
   for (ConstantFPRange *R : {&LHS, &RHS}) {
     R->flushDenormals(Mode.Input);
     if (FPOp->hasNoSignedZeros())
-      *R = addOppositeZero(*R);
+      R->addOppositeZero();
   }
 
   switch (I.getOpcode()) {
@@ -11388,7 +11331,7 @@ rangeFromIntrinsic(const IntrinsicInst &I, const SimplifyQuery &SQ,
                                    MinMax(LHS.getUpper(), RHS.getUpper()));
     // Not all backends respect the signed zero ordering of minnum/maxnum.
     if (IID == Intrinsic::minnum || IID == Intrinsic::maxnum)
-      R = addOppositeZero(R);
+      R.addOppositeZero();
     return R;
   }
   default:
@@ -11421,11 +11364,13 @@ computeConstantFPRangeImpl(const Value *V, const SimplifyQuery &SQ,
   ConstantFPRange R = ConstantFPRange::getFull(Sem);
   switch (I->getOpcode()) {
   case Instruction::UIToFP:
-    R = rangeFromIntToFP(cast<CastInst>(*I), /*Signed=*/false, SQ);
+  case Instruction::SIToFP: {
+    bool IsSigned = I->getOpcode() == Instruction::SIToFP;
+    ConstantRange CR = computeConstantRangeIncludingKnownBits(
+        I->getOperand(0), IsSigned, SQ.getWithInstruction(I));
+    R = ConstantFPRange::makeFromIntRange(CR, Sem, IsSigned);
     break;
-  case Instruction::SIToFP:
-    R = rangeFromIntToFP(cast<CastInst>(*I), /*Signed=*/true, SQ);
-    break;
+  }
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     R = rangeFromFPCast(cast<CastInst>(*I), SQ, Env, Depth, Used);
