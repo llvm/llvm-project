@@ -18,7 +18,7 @@
 #include "src/__support/macros/is_defined.h"
 #include "src/__support/macros/properties/architectures.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 
 #include "src/__support/CPP/type_traits.h" // cpp::always_false
 #include "src/__support/common.h"

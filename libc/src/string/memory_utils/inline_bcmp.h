@@ -22,7 +22,8 @@
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_x86
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 #include "src/string/memory_utils/aarch64/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_aarch64_dispatch
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
