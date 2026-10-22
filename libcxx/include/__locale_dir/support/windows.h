@@ -185,8 +185,8 @@ inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __
 #if defined(_LIBCPP_MSVCRT)
   return ::_strtof_l(__nptr, __endptr, __get_c_locale());
 #else
-  // MinGW has no _strtof_l, so we narrow the _strtod_l result to float and set
-  // ERANGE on overflow and underflow like mingw-w64.
+  // mingw-w64 v10 and older lack _strtof_l, so we narrow the _strtod_l result to
+  // float and set ERANGE on overflow and underflow like newer mingw-w64 does.
   const double __res = ::_strtod_l(__nptr, __endptr, __get_c_locale());
   const float __f    = static_cast<float>(__res);
   if (__builtin_isfinite(__res) && (__builtin_isinf(__f) || (__res != 0 && __builtin_fabsf(__f) < FLT_MIN)))
