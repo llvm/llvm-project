@@ -289,7 +289,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = nuw nsw G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
     ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
