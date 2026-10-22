@@ -276,6 +276,8 @@ TEST(Numeric, FPowI) {
       RTNAME(FPow4i)(Real<4>{7}, Int<4>{-5}), Real<4>{1} / Real<4>{16807});
   EXPECT_EQ(
       RTNAME(FPow4i)(Real<4>{2}, Int<4>{-133}), std::ldexp(Real<4>{1}, -133));
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{3}, Int<4>{-88}),
+      static_cast<Real<4>>(std::pow(3.0f, -88.0f)));
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{2}, std::numeric_limits<Int<4>>::min()),
       Real<4>{0});
 
@@ -296,6 +298,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-2}, Int<4>{-3}), Real<8>{-0.125});
   EXPECT_EQ(
       RTNAME(FPow8i)(Real<8>{2}, Int<4>{-1070}), std::ldexp(Real<8>{1}, -1070));
+  EXPECT_EQ(RTNAME(FPow8i)(Real<8>{2}, std::numeric_limits<Int<4>>::min()),
+      Real<8>{0});
 
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0}, Int<8>{0}), Real<8>{1});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.3}, Int<8>{0}), Real<8>{1});
@@ -303,6 +307,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.5}, Int<8>{-1}), Real<8>{2});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-3}, Int<8>{3}), Real<8>{-27});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{-2}, Int<8>{-3}), Real<8>{-0.125});
+  EXPECT_EQ(RTNAME(FPow8k)(Real<8>{2}, std::numeric_limits<Int<8>>::min()),
+      Real<8>{0});
 
 #if HAS_FLOAT80
   EXPECT_EQ(RTNAME(FPow10i)(Real<10>{0}, Int<4>{0}), Real<10>{1});
