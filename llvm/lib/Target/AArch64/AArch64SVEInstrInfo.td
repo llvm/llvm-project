@@ -836,17 +836,6 @@ let Predicates = [HasSVE_or_SME] in {
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
   defm BIC_ZI : sve_int_log_imm_bic<AArch64bic>;
 
-  // Allow retained AND_U intrinsics to select AND-immediate instructions.
-  class SVEAndUImmPat<ValueType VT, ValueType PT, ZPRRegOp ZPR,
-                     ValueType IT, ComplexPattern CP>
-    : Pat<(VT (SVEAndU (PT (SVEAnyPredicate)), (VT ZPR:$a),
-                (VT (splat_vector (IT (CP i64:$imm)))))),
-          (AND_ZI_PSEUDO $a, i64:$imm)>;
-  def : SVEAndUImmPat<nxv16i8, nxv16i1, ZPR8, i32, SVELogicalImm8Pat>;
-  def : SVEAndUImmPat<nxv8i16, nxv8i1, ZPR16, i32, SVELogicalImm16Pat>;
-  def : SVEAndUImmPat<nxv4i32, nxv4i1, ZPR32, i32, SVELogicalImm32Pat>;
-  def : SVEAndUImmPat<nxv2i64, nxv2i1, ZPR64, i64, SVELogicalImm64Pat>;
-
   defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", AArch64smax_p>;
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", AArch64smin_p>;
   defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", AArch64umax_p>;
