@@ -39,11 +39,44 @@
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
 #include <climits>
+
+// ---------------------------------------------------------------------------
+// MinGW (GCC) Compatibility Fix
+// ---------------------------------------------------------------------------
+// MinGW's math.h declares internal names like __isnanf, __signbitf as
+// __host__ functions. This conflicts with our __host__ __device__ definitions.
+// We rename them out of the way before including <cmath>.
+// ---------------------------------------------------------------------------
+#define __isnanf __mingw_hidden_isnanf
+#define __isinf  __mingw_hidden_isinf
+#define __isinff __mingw_hidden_isinff
+#define __finite __mingw_hidden_finite
+#define __finitef __mingw_hidden_finitef
+#define __signbit __mingw_hidden_signbit
+#define __signbitf __mingw_hidden_signbitf
+#define __isnanl __mingw_hidden_isnanl
+#define __isinfl __mingw_hidden_isinfl
+#define __finitel __mingw_hidden_finitel
+#define __signbitl __mingw_hidden_signbitl
+
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
 #undef __CUDACC__
+
+// Restore the names so we can use them for our own definitions.
+#undef __isnanf
+#undef __isinf
+#undef __isinff
+#undef __finite
+#undef __finitef
+#undef __signbit
+#undef __signbitf
+#undef __isnanl
+#undef __isinfl
+#undef __finitel
+#undef __signbitl
 
 // math_functions.h from CUDA 13.2+ defines _NV_RSQRT_SPECIFIER.
 // Clang does not include it, so we need to define it ourselves.
@@ -218,11 +251,30 @@ inline __host__ double __signbitd(double x) {
 #define __USE_FAST_MATH__ 1
 #endif
 
+// ---------------------------------------------------------------------------
+// Macro Poisoning - Universal (NOT Platform-Specific)
+// ---------------------------------------------------------------------------
+// Poison the standard names to prevent ODR violations or incorrect overloads
+// from CUDA headers.
+// ---------------------------------------------------------------------------
+#define isfinite __cuda_disabled_isfinite
+#define isinf    __cuda_disabled_isinf
+#define isnan    __cuda_disabled_isnan
+#define signbit  __cuda_disabled_signbit
+
 #if CUDA_VERSION >= 9000
 #include "crt/math_functions.hpp"
 #else
 #include "math_functions.hpp"
 #endif
+
+// ---------------------------------------------------------------------------
+// Macro Restoration
+// ---------------------------------------------------------------------------
+#undef isfinite
+#undef isinf
+#undef isnan
+#undef signbit
 
 #pragma pop_macro("__USE_FAST_MATH__")
 
@@ -342,7 +394,11 @@ __DEVICE__ unsigned int __isLocal(const void *p) {
 // conditional on __GNUC__.  :)
 #pragma push_macro("signbit")
 #pragma push_macro("__GNUC__")
-#undef __GNUC__
+#ifndef __GNUC__
+#define __GNUC__ 4
+#define __CLANG_CUDA_DEFINED_GNUC
+#endif
+
 #define signbit __ignored_cuda_signbit
 
 // CUDA-9 omits device-side definitions of some math functions if it sees
@@ -365,6 +421,12 @@ __DEVICE__ unsigned int __isLocal(const void *p) {
 #endif
 #pragma pop_macro("_GLIBCXX_MATH_H")
 #pragma pop_macro("_LIBCPP_VERSION")
+
+// Restore original __GNUC__ state
+#ifdef __CLANG_CUDA_DEFINED_GNUC
+#undef __GNUC__
+#undef __CLANG_CUDA_DEFINED_GNUC
+#endif
 #pragma pop_macro("__GNUC__")
 #pragma pop_macro("signbit")
 
@@ -505,7 +567,6 @@ __device__ inline __cuda_builtin_gridDim_t::operator uint3() const {
 #include "curand_mtgp32_kernel.h"
 #pragma pop_macro("dim3")
 #pragma pop_macro("uint3")
-#pragma pop_macro("__USE_FAST_MATH__")
 #pragma pop_macro("__CUDA_INCLUDE_COMPILER_INTERNAL_HEADERS__")
 
 // CUDA runtime uses this undocumented function to access kernel launch
