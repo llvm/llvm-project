@@ -134,10 +134,14 @@ static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
 
 static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
                                         cir::OpenCLVersionAttr cxxVersion) {
-  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
-         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+  return (openCLVersion.getMajorVersion() == 2 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 1 &&
+          cxxVersion.getMinorVersion() == 0) ||
+         (openCLVersion.getMajorVersion() == 3 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 2021 &&
+          cxxVersion.getMinorVersion() == 0);
 }
 
 static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
@@ -4238,10 +4242,13 @@ LogicalResult cir::VecCreateOp::verify() {
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
   const cir::VectorType vecTy = getType();
-  if (getElements().size() != vecTy.getSize()) {
+  if (vecTy.isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
+  if (getElements().size() != vecTy.getFixedSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
-                         << " element count of " << vecTy.getSize();
+                         << " element count of " << vecTy.getFixedSize();
   }
 
   const mlir::Type elementType = vecTy.getElementType();
@@ -4478,9 +4485,13 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
+  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
+      getResult().getType().isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize()) {
+  if (getIndices().size() != getResult().getType().getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
   }
@@ -4493,8 +4504,8 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
-  const uint64_t maxValidIndex =
-      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
+                                 getVec2().getType().getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;

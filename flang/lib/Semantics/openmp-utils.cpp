@@ -2563,20 +2563,21 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         &modifiers->front().u);
   };
 
-  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
+  auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
+    // Keep NOTHING with clauses, e.g. APPLY, so they are not silently dropped.
+    return spec.DirId() == llvm::omp::Directive::OMPD_nothing &&
+            spec.Clauses().v.empty()
+        ? nullptr
+        : &spec;
+  };
+
+  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
     const auto &optionalSpec{std::get<1>(whenClause.v.t)};
     if (!optionalSpec) {
       return {nullptr, false};
     }
-    if (optionalSpec->value().DirId() == llvm::omp::Directive::OMPD_nothing) {
-      return {nullptr, true};
-    }
-    return {&optionalSpec->value(), true};
-  };
-
-  auto getFallbackVariant = [](const parser::OmpDirectiveSpecification &spec) {
-    return spec.DirId() == llvm::omp::Directive::OMPD_nothing ? nullptr : &spec;
+    return {getVariant(optionalSpec->value()), true};
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
@@ -2688,11 +2689,11 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     } else if (const auto *otherwiseClause{
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
       if (otherwiseClause->v && otherwiseClause->v->v) {
-        result.fallback = getFallbackVariant(otherwiseClause->v->v->value());
+        result.fallback = getVariant(otherwiseClause->v->v->value());
       }
     } else if (const auto *defaultVariantClause{
                    std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)}) {
-      result.fallback = getFallbackVariant(defaultVariantClause->v.v.value());
+      result.fallback = getVariant(defaultVariantClause->v.v.value());
     }
   }
   return result;
