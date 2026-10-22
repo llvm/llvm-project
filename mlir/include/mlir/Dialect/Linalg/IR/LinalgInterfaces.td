@@ -44,7 +44,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"lhs",
     /*args=*/(ins),
     /*methodBody=*/[{
-      return $_op.getOperation()->getOperand(0);
+      return $_raw_op->getOperand(0);
     }]>,
     InterfaceMethod<
     /*desc=*/"Returns the right-hand side operand.",
@@ -52,7 +52,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"rhs",
     /*args=*/(ins),
     /*methodBody=*/[{
-      return $_op.getOperation()->getOperand(1);
+      return $_raw_op->getOperand(1);
     }]>,
     InterfaceMethod<
     /*desc=*/[{

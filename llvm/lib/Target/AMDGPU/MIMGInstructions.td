@@ -564,6 +564,7 @@ class VSAMPLE_Sampler_gfx13_Base<mimgopc op, string opcode, RegisterOperand Data
                                  bit isIndexedSamp, int num_addrs,
                                  RegisterOperand Addr3RC = VGPROp_32_Lo256, bit enableDisasm=0>
   : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), (ins SampRC:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
+  let Constraints = !if(!or(isIndexedRsrc, isIndexedSamp), "@earlyclobber $vdata", "");
   // Pin the index-kind MSBs of the rsrc (Inst{49-48}) and samp (Inst{63-62})
   // fields so the four direct/indexed combinations stay distinguishable.
   let Inst{49-48} = !if(isIndexedRsrc, rsrc{8-7}, 0b00);
@@ -1403,7 +1404,7 @@ class MIMG_Sampler_nsa_gfx10<mimgopc op, string opcode,
                              string dns="">
   : MIMG_nsa_gfx10<op.GFX10M, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "$vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
 class MIMG_Sampler_nortn_gfx10<mimgopc op, string opcode,
@@ -1421,7 +1422,7 @@ class MIMG_Sampler_nortn_nsa_gfx10<mimgopc op, string opcode,
                          string dns="">
   : MIMG_nsa_gfx10<op.GFX10M, (outs), num_addrs, dns> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " off, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "off, "#AddrAsm, BaseOpcode.HasD16>.ret;
   // Force vdata to VGPR0 as no result will be returned.
   let vdata = 0;
 }
@@ -1440,7 +1441,7 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
   : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, [],
                    LastVAddrSize> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "$vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
 class MIMG_Sampler_nortn_gfx11<mimgopc op, string opcode,
@@ -2309,12 +2310,12 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 
-let SubtargetPredicate = isGFX125xOnly in {
+let SubtargetPredicate = HasTDMInsts in {
 def TENSOR_LOAD_TO_LDS_d4    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
 def TENSOR_STORE_FROM_LDS_d4 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
 def TENSOR_LOAD_TO_LDS_d2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
 def TENSOR_STORE_FROM_LDS_d2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
-} // End SubtargetPredicate = isGFX125xOnly.
+} // End SubtargetPredicate = HasTDMInsts.
 
 class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands, []>,

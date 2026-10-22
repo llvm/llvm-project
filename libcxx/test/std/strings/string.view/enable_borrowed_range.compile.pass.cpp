@@ -21,6 +21,10 @@
 void test() {
   using std::ranges::enable_borrowed_range;
   static_assert(enable_borrowed_range<std::basic_string_view<char> >);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   static_assert(enable_borrowed_range<std::basic_string_view<wchar_t> >);
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
   static_assert(enable_borrowed_range<std::basic_string_view<char8_t> >);
+#endif
 }

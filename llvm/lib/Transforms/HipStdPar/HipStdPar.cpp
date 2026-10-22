@@ -59,6 +59,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -369,27 +370,62 @@ static inline bool isAcceleratorExecutionRoot(const Function *F) {
     return F->getCallingConv() == CallingConv::AMDGPU_KERNEL;
 }
 
+static inline bool isCXXExceptionRuntimeFunction(StringRef Name) {
+  return Name == "__cxa_throw" || Name == "__cxa_rethrow" ||
+         Name == "__cxa_bad_cast" || Name == "__cxa_bad_typeid" ||
+         Name == "__cxa_throw_bad_array_new_length" ||
+         Name == "__cxa_rethrow_primary_exception" ||
+         Name == "__cxa_call_unexpected";
+}
+
+static inline bool checkIfExceptionHandlingIsSupported(const Function *F) {
+  for (const BasicBlock &BB : *F) {
+    for (const Instruction &I : BB) {
+      if (!I.isEHPad() &&
+          !isa<InvokeInst, ResumeInst, CatchReturnInst, CleanupReturnInst>(I))
+        continue;
+
+      F->getContext().diagnose(DiagnosticInfoUnsupported(
+          *F, "Accelerator does not support C++ exception handling.",
+          I.getDebugLoc(), DS_Error));
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static inline bool checkIfSupported(const Function *F, const CallBase *CB) {
-  const auto Dx = F->getName().rfind("__hipstdpar_unsupported");
+  StringRef Name = F->getName();
+  const auto Dx = Name.rfind("__hipstdpar_unsupported");
+  // HIPStdPar emits unannotated host functions during device compilation and
+  // removes them here when no kernel can reach them. Defer the unsupported
+  // exception diagnostic until this point for the same reason.
+  const bool IsCXXException = isCXXExceptionRuntimeFunction(Name);
 
-  if (Dx == StringRef::npos)
+  if (Dx == StringRef::npos && !IsCXXException)
     return true;
-
-  const auto N = F->getName().substr(0, Dx);
 
   std::string W;
   raw_string_ostream OS(W);
 
-  if (N == "__ASM")
-    OS << "Accelerator does not support the ASM block:\n"
-      << cast<ConstantDataArray>(CB->getArgOperand(0))->getAsCString();
-  else
-    OS << "Accelerator does not support the " << N << " function.";
+  if (IsCXXException) {
+    OS << "Accelerator does not support C++ exception handling.";
+  } else {
+    const auto N = Name.substr(0, Dx);
+    if (N == "__CXX_EXCEPTION")
+      OS << "Accelerator does not support C++ exception handling.";
+    else if (N == "__ASM")
+      OS << "Accelerator does not support the ASM block:\n"
+         << cast<ConstantDataArray>(CB->getArgOperand(0))->getAsCString();
+    else
+      OS << "Accelerator does not support the " << N << " function.";
+  }
 
   auto Caller = CB->getParent()->getParent();
 
   Caller->getContext().diagnose(
-    DiagnosticInfoUnsupported(*Caller, W, CB->getDebugLoc(), DS_Error));
+      DiagnosticInfoUnsupported(*Caller, W, CB->getDebugLoc(), DS_Error));
 
   return false;
 }
@@ -410,6 +446,9 @@ PreservedAnalyses
     do {
       auto F = std::move(Tmp.back());
       Tmp.pop_back();
+
+      if (!checkIfExceptionHandlingIsSupported(F))
+        return PreservedAnalyses::none();
 
       for (auto &&N : *CGA[F]) {
         if (!N.second)
@@ -593,7 +632,7 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
       if (It == std::cend(MathLibToHipStdPar))
         continue;
       ToReplace.emplace_back(&F, It->second);
-      break;
+      continue;
     }
     case Intrinsic::acos:
     case Intrinsic::asin:
@@ -601,6 +640,7 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     case Intrinsic::atan2:
     case Intrinsic::cosh:
     case Intrinsic::modf:
+    case Intrinsic::sincos:
     case Intrinsic::sinh:
     case Intrinsic::tan:
     case Intrinsic::tanh:
@@ -609,8 +649,6 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
       if (F.getReturnType()->isDoubleTy()) {
         switch (ID) {
         case Intrinsic::cos:
-        case Intrinsic::exp:
-        case Intrinsic::exp2:
         case Intrinsic::log:
         case Intrinsic::log10:
         case Intrinsic::log2:

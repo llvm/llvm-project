@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -322,6 +323,10 @@ public:
   }
 };
 
+inline hash_code hash_value(const ElementCount &EC) {
+  return hash_combine(EC.getKnownMinValue(), EC.isScalable());
+}
+
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known
 // minimum size.
@@ -371,7 +376,7 @@ public:
   operator ScalarTy() const {
     if (isScalable()) {
       reportFatalInternalError(
-          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "cannot implicitly convert a scalable size to a fixed-width size in "
           "`TypeSize::operator ScalarTy()`");
     }
     return getFixedValue();

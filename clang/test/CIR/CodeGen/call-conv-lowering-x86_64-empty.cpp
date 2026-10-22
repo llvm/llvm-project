@@ -215,9 +215,11 @@ HiWord giveHiWord(long hi) {
 
 // CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
 // LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
-// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
-// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
-// LLVM:   ret i64 %[[RVAL]]
+// LLVM:   %[[HIP:.+]] = getelementptr inbounds nuw %struct.HiWord, ptr %[[W:.+]], i32 0, i32 1
+// LLVM-NEXT:   store i64 %{{.+}}, ptr %[[HIP]], align 8
+// LLVM-NEXT:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[W]], i64 8
+// LLVM-NEXT:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM-NEXT:   ret i64 %[[RVAL]]
 
 // Caller-side coercion, on the return received and the argument passed.
 long callerHiWord(long hi) {
@@ -225,15 +227,18 @@ long callerHiWord(long hi) {
 }
 
 // CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_HiWord>
+// CIR:   %[[TMP:.+]] = cir.alloca "agg.tmp0" align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
 // CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
 // CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   cir.copy %[[COERCE]] align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_HiWord>
 // CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
 // CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
 // CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %[[AVAL:.+]] = cir.load align(8) %[[APTR]] : !cir.ptr<!s64i>, !s64i
 // CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
 // LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
 // LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})

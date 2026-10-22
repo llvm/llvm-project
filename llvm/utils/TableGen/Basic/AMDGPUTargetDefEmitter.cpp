@@ -479,8 +479,6 @@ collectGenericFeatures(const Record *GPU,
 
 // Ordinary frontend-visible features must be present on every covered GPU.
 // AMDGPUGenericAnyFeature features need only be present on one covered GPU.
-//
-// FIXME: Classify the remaining backend-only features before checking them.
 static void
 validateGenericFeatures(const Record *GPU,
                         const DenseMap<const Record *, unsigned> &FeatureIdx) {

@@ -67,7 +67,7 @@ subroutine test_scalar_mold(p, x)
   ! CHECK: %[[VAL_1:.*]] = fir.zero_bits !fir.ptr<f32>
   ! CHECK: %[[VAL_2:.*]] = fir.embox %[[VAL_1]] : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
   ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.intrinsic_result")
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[TMP]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: fir.store %[[VAL_5]] to %[[p]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   p => NULL(x)
@@ -83,7 +83,7 @@ subroutine test_scalar_char_mold(p, x)
   ! CHECK: %[[VAL_9:.*]] = arith.constant 0 : index
   ! CHECK: %[[VAL_10:.*]] = fir.embox %[[VAL_8]] typeparams %[[VAL_9]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
   ! CHECK: fir.store %[[VAL_10]] to %[[VAL_7]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
-  ! CHECK: %[[TMP_C:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: %[[TMP_C:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name(".tmp.intrinsic_result")
   ! CHECK: %[[VAL_14:.*]] = fir.load %[[TMP_C]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
   ! CHECK: fir.store %[[VAL_14]] to %[[p]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
   p => NULL(x)
@@ -100,7 +100,7 @@ subroutine test_array_mold(p, x)
   ! CHECK: %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_4:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-  ! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name(".tmp.intrinsic_result")
   ! CHECK: %[[VAL_5:.*]] = fir.load %[[TMP_A]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: fir.store %[[VAL_5]] to %[[p]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   p => NULL(x)

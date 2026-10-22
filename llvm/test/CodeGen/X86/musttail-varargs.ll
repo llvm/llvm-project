@@ -245,7 +245,7 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-16, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $16, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %esi
 ; X86-NOSSE-NEXT:    leal 12(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
@@ -264,7 +264,7 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
-; X86-SSE-NEXT:    subl $80, %esp
+; X86-SSE-NEXT:    subl $64, %esp
 ; X86-SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill

@@ -139,6 +139,7 @@ if (current_os != "mac") {
   }
 
   gen_dynamic_list("ubsan_loop_detect_dynamic_list") {
+    extra = "ubsan.syms.extra"
     lib = ":ubsan_loop_detect"
     lib_name = "ubsan_loop_detect"
   }

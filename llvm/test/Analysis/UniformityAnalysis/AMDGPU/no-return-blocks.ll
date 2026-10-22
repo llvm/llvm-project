@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT:  %tmp5 = getelementptr inbounds float, ptr addrspace(1) %arg, i64 %tmp2
 ; CHECK: DIVERGENT:  %tmp10 = load volatile float, ptr addrspace(1) %tmp5, align 4

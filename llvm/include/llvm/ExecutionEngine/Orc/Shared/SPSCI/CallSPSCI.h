@@ -31,7 +31,7 @@ namespace llvm::orc::rt::sps_ci {
 /// Takes the function's address and an argument vector.
 struct CallMain {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_call_main");
+      SymbolNameSpec::c("orc_rt_ci_sps_call_main");
   using SPSSig = int64_t(shared::SPSExecutorAddr,
                          shared::SPSSequence<shared::SPSString>);
 };
@@ -40,7 +40,7 @@ struct CallMain {
 /// WARNING: This operation is experimental and may be removed.
 struct CallVoidVoid {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_call_void_void");
+      SymbolNameSpec::c("orc_rt_ci_sps_call_void_void");
   using SPSSig = void(shared::SPSExecutorAddr);
 };
 
@@ -48,7 +48,7 @@ struct CallVoidVoid {
 /// WARNING: This operation is experimental and may be removed.
 struct CallInt32Void {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_call_int32_void");
+      SymbolNameSpec::c("orc_rt_ci_sps_call_int32_void");
   using SPSSig = int32_t(shared::SPSExecutorAddr);
 };
 
@@ -56,7 +56,7 @@ struct CallInt32Void {
 /// WARNING: This operation is experimental and may be removed.
 struct CallInt32Int32 {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_call_int32_int32");
+      SymbolNameSpec::c("orc_rt_ci_sps_call_int32_int32");
   using SPSSig = int32_t(shared::SPSExecutorAddr, int32_t);
 };
 

@@ -1,8 +1,14 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck %s
 
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -reorder-cfi-jump-tables-profiles=false -o %t.disabled %s
+; RUN: llvm-modextract -b -n 1 -o - %t.disabled | llvm-dis | FileCheck --check-prefix=DISABLED %s
+
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -reorder-cfi-jump-tables-profiles=true -o %t.enabled %s
+; RUN: llvm-modextract -b -n 1 -o - %t.enabled | llvm-dis | FileCheck %s
+
 ; Check that cfi.functions metadata encodes hotness in bits 2-3 of
-; the linkage operand:
+; the linkage operand when enabled:
 ; - Hot functions (Attribute::Hot or PSI.isFunctionHotInCallGraph) -> Hot (3)
 ; - Cold functions (Attribute::Cold or PSI.isFunctionColdInCallGraph) -> Cold (1)
 ; - Normal functions -> Other (2)
@@ -22,6 +28,22 @@
 ; CHECK: !"f_non_canonical_other", i8 9
 ; CHECK: !"f_decl", i8 1,
 ; CHECK: !"f_weak_decl", i8 2,
+
+; When disabled, hotness bits (2-7) are 0:
+; DISABLED: !"f_nocount", i8 0,
+; DISABLED: !"f_entry_count", i8 0
+; DISABLED: !"f_cfg_hot", i8 0
+; DISABLED: !"f_zero", i8 0
+; DISABLED: !"f_one", i8 0
+; DISABLED: !"f_hot_attr", i8 0
+; DISABLED: !"f_cold_attr", i8 0
+; DISABLED: !"f_non_canonical_hot", i8 1
+; DISABLED: !"f_non_canonical_cold", i8 1
+; DISABLED: !"f_non_canonical_nocount", i8 1
+; DISABLED: !"f_other", i8 0
+; DISABLED: !"f_non_canonical_other", i8 1
+; DISABLED: !"f_decl", i8 1,
+; DISABLED: !"f_weak_decl", i8 2,
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
