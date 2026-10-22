@@ -191,8 +191,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
     const auto FunctionWithParams =
         functionDecl(
             hasBody(stmt().bind("scope")), has(typeLoc(forEach(ParamMatcher))),
-            unless(cxxMethodDecl()), unless(isFunctionTemplateSpecialization()),
-            unless(isTemplate()))
+            unless(cxxMethodDecl()), unless(isMain()),
+            unless(isFunctionTemplateSpecialization()), unless(isTemplate()))
             .bind("function-decl");
 
     Finder->addMatcher(FunctionWithParams, this);

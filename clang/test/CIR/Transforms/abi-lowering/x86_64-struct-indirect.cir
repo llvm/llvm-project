@@ -31,9 +31,8 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
-  // CHECK:   %[[VAL:.*]] = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:   %[[LOCAL:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Big>
-  // CHECK:   cir.store %[[VAL]], %[[LOCAL]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:   cir.copy %arg0 align(8) to %[[LOCAL]] align(8) : !cir.ptr<!rec_Big>
   // CHECK:   %[[FLD:.*]] = cir.get_member %[[LOCAL]][2] {name = "c"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
   // CHECK:   %{{.*}} = cir.load %[[FLD]] : !cir.ptr<!s64i>, !s64i
 

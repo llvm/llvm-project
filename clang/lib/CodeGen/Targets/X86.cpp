@@ -101,10 +101,7 @@ struct CCState {
 
 /// X86_32ABIInfo - The X86-32 ABI information.
 class X86_32ABIInfo : public ABIInfo {
-  enum Class {
-    Integer,
-    Float
-  };
+  enum Class { Integer, Float, AlwaysStack };
 
   static const unsigned MinABIStackAlignInBytes = 4;
 
@@ -547,7 +544,7 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
       // floating-point register. (MSVC does not apply this special case.)
       // We apply a similar transformation for pointer types to improve the
       // quality of the generated IR.
-      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+      if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
         if ((!IsWin32StructABI && SeltTy->isRealFloatingType())
             || SeltTy->hasPointerRepresentation())
           return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
@@ -634,25 +631,111 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       Realign);
 }
 
-X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
-  const Type *T = isSingleElementStruct(Ty, getContext());
-  if (!T)
-    T = Ty.getTypePtr();
+/// Like isSingleElementRecord, but only looks through one level of records.
+/// This mirrors how GCC gives a record the mode of its only field.
+static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
+    return nullptr;
 
-  if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
-    BuiltinType::Kind K = BT->getKind();
-    if (K == BuiltinType::Float || K == BuiltinType::Double)
-      return Float;
+  if (RD->hasFlexibleArrayMember())
+    return nullptr;
+
+  const Type *Found = nullptr;
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &I : CXXRD->bases()) {
+      // Ignore empty records.
+      if (isEmptyRecord(Context, I.getType(), true))
+        continue;
+
+      // If we already found an element then this isn't a single-element struct.
+      if (Found)
+        return nullptr;
+
+      Found = I.getType().getTypePtr();
+    }
   }
+
+  // Check for single element.
+  for (const auto *FD : RD->fields()) {
+    QualType FT = FD->getType();
+
+    // Ignore empty fields.
+    if (isEmptyField(Context, FD, true))
+      continue;
+
+    // If we already found an element then this isn't a single-element
+    // struct.
+    if (Found)
+      return nullptr;
+
+    // Treat single element arrays as the element.
+    while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
+      if (AT->getZExtSize() != 1)
+        break;
+      FT = AT->getElementType();
+    }
+
+    Found = FT.getTypePtr();
+  }
+
+  // We don't consider a struct a single-element struct if it has
+  // padding beyond the element type.
+  if (Found && Context.getTypeSize(Found) != Context.getTypeSize(T))
+    return nullptr;
+
+  return Found;
+}
+
+X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
+  if (getContext().getLangOpts().isCompatibleWith(
+          LangOptions::ClangABI::Ver23)) {
+    const Type *T = isSingleElementRecord(Ty, getContext());
+    if (!T)
+      T = Ty.getTypePtr();
+
+    if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
+      BuiltinType::Kind K = BT->getKind();
+      if (K == BuiltinType::Float || K == BuiltinType::Double)
+        return Float;
+    }
+    return Integer;
+  }
+
+  while (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    // Unions are always passed as integers.
+    if (RD->isUnion())
+      return Integer;
+
+    const Type *FT = getSingleFieldType(Ty, getContext());
+
+    // Pick integer for zero-sized types. They will be ignored down the line.
+    if (!FT)
+      return Integer;
+
+    Ty = QualType(FT, 0);
+  }
+
+  // All complex values are passed via the stack.
+  if (Ty->isAnyComplexType())
+    return AlwaysStack;
+
+  // Types like bfloat16 or __float128 are all passed like floats.
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
+    if (BT->isFloatingPoint())
+      return Float;
+
   return Integer;
 }
 
 bool X86_32ABIInfo::updateFreeRegs(QualType Ty, CCState &State) const {
-  if (!IsSoftFloatABI) {
-    Class C = classify(Ty);
-    if (C == Float)
-      return false;
-  }
+  Class C = classify(Ty);
+  if (C == AlwaysStack && !IsMCUABI)
+    return false;
+  if (C == Float && !IsSoftFloatABI)
+    return false;
 
   unsigned Size = getContext().getTypeSize(Ty);
   unsigned SizeInRegs = (Size + 31) / 32;
@@ -2394,7 +2477,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
 llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
   // Wrapper structs/arrays that only contain vectors are passed just like
   // vectors; strip them off if present.
-  if (const Type *InnerTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *InnerTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(InnerTy, 0);
 
   llvm::Type *IRType = CGT.ConvertType(Ty);

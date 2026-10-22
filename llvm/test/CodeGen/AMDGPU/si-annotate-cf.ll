@@ -176,11 +176,11 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    s_cmpk_lt_i32 s0, 0x3e8
 ; SI-NEXT:    s_cbranch_scc0 .LBB3_4
 ; SI-NEXT:  ; %bb.2: ; %for.body
-; SI-NEXT:    s_and_b64 vcc, exec, 0
+; SI-NEXT:    s_and_b64 vcc, exec, -1
 ; SI-NEXT:  .LBB3_3: ; %self.loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_mov_b64 vcc, vcc
-; SI-NEXT:    s_cbranch_vccz .LBB3_3
+; SI-NEXT:    s_cbranch_vccnz .LBB3_3
 ; SI-NEXT:  .LBB3_4: ; %DummyReturnBlock
 ; SI-NEXT:    s_endpgm
 ;
@@ -196,11 +196,11 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    s_cmpk_lt_i32 s0, 0x3e8
 ; FLAT-NEXT:    s_cbranch_scc0 .LBB3_4
 ; FLAT-NEXT:  ; %bb.2: ; %for.body
-; FLAT-NEXT:    s_and_b64 vcc, exec, 0
+; FLAT-NEXT:    s_and_b64 vcc, exec, -1
 ; FLAT-NEXT:  .LBB3_3: ; %self.loop
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_mov_b64 vcc, vcc
-; FLAT-NEXT:    s_cbranch_vccz .LBB3_3
+; FLAT-NEXT:    s_cbranch_vccnz .LBB3_3
 ; FLAT-NEXT:  .LBB3_4: ; %DummyReturnBlock
 ; FLAT-NEXT:    s_endpgm
 entry:

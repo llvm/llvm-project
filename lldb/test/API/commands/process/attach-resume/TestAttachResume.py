@@ -17,7 +17,7 @@ class AttachResumeTestCase(TestBase):
 
     @skipIfRemote
     @expectedFailureNetBSD
-    @skipIfWindows  # llvm.org/pr24778, llvm.org/pr21753
+    @skipIfWindowsAndNoLLDBServer  # llvm.org/pr24778, llvm.org/pr21753
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""
         self.build()

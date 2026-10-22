@@ -445,6 +445,137 @@ entry:
   ret <64 x i32> %0
 }
 
+; Function Attrs:
+;On v79 and above,
+;v0.hf = vcvt(v0.sf,v1.sf) is translated to
+;v2 = vxor(v2,v2); v0.qf32 = vadd(v0.sf,v2.sf);
+;v1.qf32 = vadd(v1.sf,v2.sf); v0.hf = v1:0.qf32
+
+; CHECK-LABEL: convhfsfsf:
+; CHECK-NOT: v0.hf = vcvt(v0.sf,v1.sf)
+; CHECK: v[[REG1:[0-9]+]] = vxor(v[[REG0:[0-9]+]],v[[REG0]])
+; CHECK-DAG: v[[REG2:[0-9]+]].qf32 = vadd(v0.sf,v[[REG1]].sf)
+; CHECK-DAG: v[[REG3:[0-9]+]].qf32 = vadd(v1.sf,v[[REG1]].sf)
+; CHECK: v0.hf = v[[REG3]]:[[REG2]].qf32
+
+; V75-LABEL: convhfsfsf:
+; V75: v0.hf = vcvt(v0.sf,v1.sf)
+
+define dso_local inreg <32 x i32> @convhfsfsf(<32 x i32> noundef %Vu, <32 x i32> noundef %Vv) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32> %Vu, <32 x i32> %Vv)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v0.hf = vcvt(v0.uh) is translated to
+;v1:0.uw = vzxt(v0.uh); v2 = vxor(v2,v2)
+;v3.sf = v0.w ; v1.sf = v1.w
+;v4.qf32 = vadd(v3.sf,v2.sf); v5.qf32 = vadd(v1.sf,v2.sf)
+;v0.hf = v5:4.qf32
+
+; CHECK-LABEL: convhfuh:
+; CHECK-NOT: v0.hf = vcvt(v0.uh)
+; CHECK-DAG: v[[REG1:[0-9]+]]:[[REG0:[0-9]+]].uw = vzxt(v0.uh)
+; CHECK-DAG: v[[REG2:[0-9]+]] = vxor(v[[REG22:[0-9]+]],v[[REG22]])
+; CHECK-DAG: v[[REG3:[0-9]+]].sf = v[[REG0]].w
+; CHECK-DAG: v[[REG11:[0-9]+]].sf = v[[REG1]].w
+; CHECK-DAG: v[[REG4:[0-9]+]].qf32 = vadd(v[[REG3]].sf,v[[REG2]].sf)
+; CHECK-DAG: v[[REG5:[0-9]+]].qf32 = vadd(v[[REG11]].sf,v[[REG2]].sf)
+; CHECK: v0.hf = v[[REG5]]:[[REG4]].qf32
+
+; V75-LABEL: convhfuh:
+; V75: v0.hf = vcvt(v0.uh)
+
+define dso_local inreg <32 x i32> @convhfuh(<32 x i32> noundef %Vu) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.hf.uh.128B(<32 x i32> %Vu)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v1:0.hf = vcvt(v0.b) is translated to
+;v1.h = vdeal(v0.h); v3:2.h = vunpack(v1.b)
+;v0.hf = v2.h; v1.hf = v3.h
+
+; CHECK-LABEL: convhfb:
+; CHECK-NOT: v1:0.hf = vcvt(v0.b)
+; CHECK: v[[REG0:[0-9]+]].h = vdeal(v0.h)
+; CHECK: v[[REG2:[0-9]+]]:[[REG1:[0-9]+]].h = vunpack(v[[REG0]].b)
+; CHECK-DAG: v0.hf = v[[REG1]].h
+; CHECK-DAG: v1.hf = v[[REG2]].h
+
+; V75-LABEL: convhfb:
+; V75: v1:0.hf = vcvt(v0.b)
+
+define dso_local inreg <64 x i32> @convhfb(<32 x i32> noundef %Vu) local_unnamed_addr {
+entry:
+  %0 = tail call <64 x i32> @llvm.hexagon.V6.vcvt.hf.b.128B(<32 x i32> %Vu)
+  ret <64 x i32> %0
+}
+
+;On v79 and above,
+;v1:0.hf = vcvt(v0.ub) is translated to
+;v1.h = vdeal(v0.h); v3:2.uh = vunpack(v1.ub)
+;v0.hf = v2.h; v1.hf = v3.h
+
+; CHECK-LABEL: convhfub:
+; CHECK-NOT: v1:0.hf = vcvt(v0.ub)
+; CHECK: v[[REG0:[0-9]+]].h = vdeal(v0.h)
+; CHECK: v[[REG2:[0-9]+]]:[[REG1:[0-9]+]].uh = vunpack(v[[REG0]].ub)
+; CHECK-DAG: v0.hf = v[[REG1]].h
+; CHECK-DAG: v1.hf = v[[REG2]].h
+
+; V75-LABEL: convhfub:
+; V75: v1:0.hf = vcvt(v0.ub)
+
+define dso_local inreg <64 x i32> @convhfub(<32 x i32> noundef %Vu) local_unnamed_addr {
+entry:
+  %0 = tail call <64 x i32> @llvm.hexagon.V6.vcvt.hf.ub.128B(<32 x i32> %Vu)
+  ret <64 x i32> %0
+}
+
+;On v79 and above,
+;v0.sf = vdmpy(v0.hf,v1.hf) is translated to
+;v1:0.qf32 = vmpy(v0.hf,v1.hf); v2.qf32 = vadd(v0.sf,v1.sf);
+;v0.sf = v2.qf32
+
+; CHECK-LABEL: sfvdmpyhf:
+; CHECK-NOT: v{{.*}}.sf = vdmpy(v{{.*}}.hf,v{{.*}}.hf)
+; CHECK: v[[REG0:[0-9]+]]:[[REG1:[0-9]+]].qf32 = vmpy(v0.hf,v1.hf)
+; CHECK: v[[REG2:[0-9]+]].qf32 = vadd(v{{[0-9]+}}.qf32,v{{[0-9]+}}.qf32)
+; CHECK: v0.sf = v[[REG2]].qf32
+
+; V75-LABEL: sfvdmpyhf:
+; V75: v{{.*}}.sf = vdmpy(v{{.*}}.hf,v{{.*}}.hf)
+
+define dso_local inreg <32 x i32> @sfvdmpyhf(<32 x i32> noundef %Vu, <32 x i32> noundef %Vv) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vdmpy.sf.hf.128B(<32 x i32> %Vu, <32 x i32> %Vv)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v0.sf += vdmpy(v1.hf,v2.hf) is translated to
+;v3:2.qf32 = vmpy(v1.hf,v2.hf); v3.qf32 = vadd(v2.qf32,v3.qf32);
+;v4.qf32 = vadd(v3.qf32,v0.sf); v0.sf = v4.qf32
+
+; CHECK-LABEL: sfvdmpyhf_acc:
+; CHECK-NOT: v{{.*}}.sf += vdmpy(v{{.*}}.hf,v{{.*}}.hf)
+; CHECK: v[[REG3:[0-9]+]]:[[REG2:[0-9]+]].qf32 = vmpy(v1.hf,v2.hf)
+; CHECK: v[[REG4:[0-9]+]].qf32 = vadd(v{{[0-9]+}}.qf32,v{{[0-9]+}}.qf32)
+; CHECK: v[[REG5:[0-9]+]].qf32 = vadd(v[[REG4]].qf32,v0.sf)
+; CHECK: v0.sf = v[[REG5]].qf32
+
+; V75-LABEL: sfvdmpyhf_acc:
+; V75: v{{.*}}.sf += vdmpy(v{{.*}}.hf,v{{.*}}.hf)
+
+define dso_local inreg <32 x i32> @sfvdmpyhf_acc(<32 x i32> noundef %Vx, <32 x i32> noundef %Vu, <32 x i32> noundef %Vv) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vdmpy.sf.hf.acc.128B(<32 x i32> %Vx, <32 x i32> %Vu, <32 x i32> %Vv)
+  ret <32 x i32> %0
+}
+
 declare <32 x i32> @llvm.hexagon.V6.vabs.hf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vabs.sf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vassign.fp.128B(<32 x i32>)
@@ -471,3 +602,9 @@ declare <32 x i32> @llvm.hexagon.V6.vfneg.hf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vfneg.sf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.h.128B(<32 x i32>)
 declare <64 x i32> @llvm.hexagon.V6.vcvt.sf.hf.128B(<32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32>, <32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.uh.128B(<32 x i32>)
+declare <64 x i32> @llvm.hexagon.V6.vcvt.hf.b.128B(<32 x i32>)
+declare <64 x i32> @llvm.hexagon.V6.vcvt.hf.ub.128B(<32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vdmpy.sf.hf.128B(<32 x i32>, <32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vdmpy.sf.hf.acc.128B(<32 x i32>, <32 x i32>, <32 x i32>)

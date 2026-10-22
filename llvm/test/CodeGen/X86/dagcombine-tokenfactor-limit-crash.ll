@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK:          pushq   %rbx
 ; CHECK-NEXT:     andq    $-32, %rsp
-; CHECK-NEXT:     subq    $66144, %rsp            # imm = 0x10260
+; CHECK-NEXT:     subq    $66112, %rsp            # imm = 0x10240
 ; CHECK-NEXT:     .cfi_offset %rbx, -24
 ; CHECK-NEXT:     movabsq $-868076584853899022, %rax # imm = 0xF3F3F8F201F2F8F2
 ; CHECK-NEXT:     movq    %rax, (%rsp)

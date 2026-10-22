@@ -19,7 +19,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(ptr @foo, i32 3)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_i32(ptr @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
@@ -77,7 +77,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(ptr @foo, i32 3)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_i32(ptr @foo, i32 3)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
@@ -125,7 +125,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: %0 = call cc{{.*}} noalias ptr @__invoke_ptr_i8_i8(ptr @bar, i8 signext 1, i8 zeroext 2)
+; CHECK-NEXT: %0 = call wasm_emscripten_invokecc noalias ptr @__invoke_ptr_i8_i8(ptr @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont
