@@ -30,7 +30,6 @@
 #include "llvm/Support/WithColor.h"
 #include <clocale>
 #include <cuchar>
-#include <stddef.h>
 #include <string>
 
 #ifdef _WIN32
