@@ -412,4 +412,5 @@ multi-result op is replaced with values that are defined by multiple ops, or if
 an op is replaced with an op of a different type, an error is produced. This is
 because it is unclear whether the direct replacements actually represent the
 computation of the original op. There are ways to customize this behavior. More
-details can be found at the documentation of `transform::TrackingListener`.
+details can be found at the documentation of [`transform::TrackingListener`](https://mlir.llvm.org/doxygen/classmlir_1_1transform_1_1TrackingListener.html).
+For an overview of how listeners work in general, see [Rewriting MLIR](../../RewritingMLIR.md).
