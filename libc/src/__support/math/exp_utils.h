@@ -111,7 +111,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_E = {0x1.777d0ffda0d24p-56,
 // tiny, underflow, or overflow/inf/nan range for the specific function before
 // calling this helper.
 LIBC_NOINLINE LIBC_INLINE double set_exceptional(double x) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
   // |x| <= 0x1.0p-53 (caller has already checked the exact tiny bound):
@@ -419,7 +419,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble EXP2_MID[128] = {
 LIBC_NOINLINE LIBC_INLINE double
 exp_denorm(double x, int hi, double r_hi, double lo_u, double err_d,
            const ExpBase192 *log2_base = nullptr) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   // Exact subnormal power of 2 when x is an integer in [-1074, -1022].
   if (log2_base == nullptr && LIBC_UNLIKELY(static_cast<double>(hi) == x))
     return FPBits(uint64_t(1) << (hi + 1074)).get_val();

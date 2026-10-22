@@ -141,7 +141,7 @@ LIBC_INLINE_VAR constexpr double EXP2_MID[128] = {
 
 LIBC_NOINLINE LIBC_INLINE double exp_denorm(double x, int hi, double r,
                                             bool is_exp2) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   if (is_exp2 && LIBC_UNLIKELY(static_cast<double>(hi) == x))
     return FPBits(uint64_t(1) << (hi + 1074)).get_val();
 

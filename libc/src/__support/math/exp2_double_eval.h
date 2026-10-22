@@ -34,7 +34,7 @@ namespace math {
 namespace double_eval {
 
 LIBC_ALWAYS_INLINE double exp2(double x) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
