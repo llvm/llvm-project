@@ -390,6 +390,8 @@ Makes programs 10x faster by doing Special New Thing.
   point, instruction, or block, respectively. The context is implied by the
   insertion point.
 
+* `builder` now takes an `llmodule` argument, instead of `llcontext`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -412,6 +414,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
+
+* Deprecated `LLVMCreateBuilderInContext()` in favor of
+  `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
+  `LLVMContextRef`.
 
 ### Changes to the CodeGen infrastructure
 

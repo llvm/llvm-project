@@ -2743,7 +2743,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
-  if (Subtarget.isTargetWin64()) {
+  // The Win64 C ABI passes i128 by reference and returns it in XMM0. The
+  // libcalls for i128 division, remainder and floating point conversions are
+  // compiled with that ABI wherever it is the default C convention (Windows and
+  // UEFI), so lower them accordingly there.
+  if (Subtarget.isCallingConvWin64(CallingConv::C)) {
     setOperationAction(ISD::SDIV, MVT::i128, Custom);
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
@@ -20614,7 +20618,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if (Subtarget.isCallingConvWin64(CallingConv::C) && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -21121,7 +21125,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if (Subtarget.isCallingConvWin64(CallingConv::C) && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -30960,7 +30964,7 @@ static SDValue LowerMULO(SDValue Op, const X86Subtarget &Subtarget,
 }
 
 SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && VT.getSizeInBits() == 128 &&
          "Unexpected return type for lowering");
@@ -31024,7 +31028,7 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
 SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
                                                    SelectionDAG &DAG,
                                                    SDValue &Chain) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -31057,7 +31061,7 @@ SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
 
 SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -36124,7 +36128,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT == MVT::i128 && Subtarget.isTargetWin64()) {
+    if (VT == MVT::i128 && Subtarget.isCallingConvWin64(CallingConv::C)) {
       SDValue Chain;
       SDValue V = LowerWin64_FP_TO_INT128(SDValue(N, 0), DAG, Chain);
       Results.push_back(V);
