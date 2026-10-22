@@ -329,3 +329,93 @@ define <4 x bfloat> @negzero_v4bf16(<4 x bfloat> %a) {
 ; CHECK-NEXT:    ret
   ret <4 x bfloat> <bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0>
 }
+
+; Test that BUILD_VECTOR with an FP constant in lane 0 and +0.0 in upper lanes
+; lowers to a scalar FMOV. On AArch64, writing a scalar FP register zeroes the
+; upper bits of the enclosing vector register.
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32() {
+; CHECK-SD-LABEL: fmov_lane0_zero_upper_v2f32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, #1.00000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_zero_upper_v2f32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI23_0]
+; CHECK-GI-NEXT:    ret
+  ret <2 x float> <float 1.0, float 0.0>
+}
+
+define <2 x double> @fmov_lane0_zero_upper_v2f64() {
+; CHECK-SD-LABEL: fmov_lane0_zero_upper_v2f64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, #1.00000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_zero_upper_v2f64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI24_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI24_0]
+; CHECK-GI-NEXT:    ret
+  ret <2 x double> <double 1.0, double 0.0>
+}
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32_half() {
+; CHECK-SD-LABEL: fmov_lane0_zero_upper_v2f32_half:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, #0.50000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_zero_upper_v2f32_half:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI25_0
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI25_0]
+; CHECK-GI-NEXT:    ret
+  ret <2 x float> <float 0.5, float 0.0>
+}
+
+define <2 x float> @fmov_lane0_zero_upper_v2f32_four() {
+; CHECK-SD-LABEL: fmov_lane0_zero_upper_v2f32_four:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, #4.00000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_zero_upper_v2f32_four:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI26_0
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI26_0]
+; CHECK-GI-NEXT:    ret
+  ret <2 x float> <float 4.0, float 0.0>
+}
+
+define <4 x float> @fmov_lane0_zero_upper_v4f32_two() {
+; CHECK-SD-LABEL: fmov_lane0_zero_upper_v4f32_two:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov s0, #2.00000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_zero_upper_v4f32_two:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    ret
+  ret <4 x float> <float 2.0, float 0.0, float 0.0, float 0.0>
+}
+
+; v4f32 <fpimm, fpimm, 0, 0>: low two lanes equal -> fmov v0.2s writes d0,
+; zeroing the upper 64 bits of q0.
+define <4 x float> @fmov_lane0_lane1_zero_upper_v4f32_two() {
+; CHECK-SD-LABEL: fmov_lane0_lane1_zero_upper_v4f32_two:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v0.2s, #2.00000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fmov_lane0_lane1_zero_upper_v4f32_two:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    ret
+  ret <4 x float> <float 2.0, float 2.0, float 0.0, float 0.0>
+}
