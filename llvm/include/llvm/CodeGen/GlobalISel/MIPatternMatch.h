@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -546,9 +547,10 @@ template <typename Class> struct GInstrBind {
   Class *&Inst;
 
   GInstrBind(Class *&Inst) : Inst(Inst) {}
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
+    if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (auto *Cst = dyn_cast<Class>(TmpMI)) {
         Inst = Cst;
         return true;
@@ -587,26 +589,34 @@ inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
   return {Bits};
 }
 
-/// Match a load of type \p Class, binding its pointer operand (like IR's
-/// m_Load), and optionally the instruction and/or its MachineMemOperand.
-template <typename Class, typename PtrP> struct LoadOp_match {
+/// Match a load of type \p Class, optionally matching its pointer operand and
+/// binding the instruction and/or its MachineMemOperand.
+template <typename Class, typename PtrP = std::nullptr_t> struct LoadOp_match {
   PtrP Ptr;
   Class **InstOut = nullptr;
   const MachineMemOperand **MMOOut = nullptr;
 
+  LoadOp_match(Class *&Inst) : Ptr(nullptr), InstOut(&Inst) {}
+  LoadOp_match(Class *&Inst, MMORef MMO)
+      : Ptr(nullptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
   LoadOp_match(const PtrP &Ptr) : Ptr(Ptr) {}
   LoadOp_match(const PtrP &Ptr, MMORef MMO) : Ptr(Ptr), MMOOut(&MMO.MMO) {}
   LoadOp_match(Class *&Inst, const PtrP &Ptr) : Ptr(Ptr), InstOut(&Inst) {}
   LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
       : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
 
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
       return false;
     auto *Load = dyn_cast<Class>(TmpMI);
-    if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
+    if (!Load)
       return false;
+    if constexpr (!std::is_same_v<PtrP, std::nullptr_t>) {
+      if (!Ptr.match(MRI, Load->getPointerReg()))
+        return false;
+    }
     if (InstOut)
       *InstOut = Load;
     if (MMOOut)
@@ -636,6 +646,16 @@ inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr) {
 template <typename PtrP>
 inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
   return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
+}
+
+inline LoadOp_match<GSExtLoad> m_GSExtLoad(GSExtLoad *&Inst) { return Inst; }
+inline LoadOp_match<GZExtLoad> m_GZExtLoad(GZExtLoad *&Inst) { return Inst; }
+
+inline LoadOp_match<GSExtLoad> m_GSExtLoad(GSExtLoad *&Inst, MMORef MMO) {
+  return LoadOp_match<GSExtLoad>(Inst, MMO);
+}
+inline LoadOp_match<GZExtLoad> m_GZExtLoad(GZExtLoad *&Inst, MMORef MMO) {
+  return LoadOp_match<GZExtLoad>(Inst, MMO);
 }
 
 /// Instruction binders for ops with no operand-form matcher (constant-immediate
