@@ -158,7 +158,7 @@ However:
    (This is why `#include <iostream>` is contraindicated.)
 1. Use `{braced initializers}` in all circumstances where they work, including
 default data member initialization.  They inhibit implicit truncation.
-A variable declared with auto may use = expr instead: its type is deduced
+A variable declared with `auto` may use `= expr` instead: its type is deduced
 from the initializer, so nothing is truncated. Never write `auto x = {expr};`,
 which deduces `std::initializer_list<>`.
 Don't use `= expr` initialization just to effect implicit truncation;
