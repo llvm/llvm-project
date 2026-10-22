@@ -426,7 +426,7 @@ void ICF::run() {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Relocation &r : isec->relocs) {
-        if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
               if (auto *referentIsec =
@@ -570,7 +570,7 @@ void macho::markAddrSigSymbols() {
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
     for (const Relocation &r : isec->relocs) {
-      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
         markSymAsAddrSig(sym);
       else
         error(toString(isec) + ": unexpected section relocation");

@@ -12,6 +12,10 @@
 # RUN: FileCheck %s --check-prefix=ADDRSIG-SAFE-THUNKS < %t/with-addrsig-safe-thunks.map
 # RUN: FileCheck %s --check-prefix=NO-ADDRSIG-SAFE-THUNKS < %t/without-addrsig-safe-thunks.map
 
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/invalid-addrsig.s -o %t/invalid-addrsig.o
+# RUN: not %lld -arch arm64 -lSystem --icf=safe -dylib -o /dev/null %t/invalid-addrsig.o 2>&1 | FileCheck %s --check-prefix=INVALID-ADDRSIG
+# INVALID-ADDRSIG: error: {{.*}}invalid-addrsig.o:(__llvm_addrsig): unexpected section relocation
+
 ## Input has addrsig section: _g1 and _g2 are address-significant, so _g2 is
 ## thunk-folded in safe_thunks ICF and remains untouched in safe ICF.
 ## _f2 is always body-folded into _f1 regardless of ICF level.
@@ -110,3 +114,12 @@ _call_all:
   bl _g1
   bl _g2
   ret
+
+#--- invalid-addrsig.s
+.section __DATA,__objc_imageinfo,regular,no_dead_strip
+.globl _ignored
+_ignored:
+  .long 0, 64
+
+.addrsig
+.addrsig_sym _ignored
