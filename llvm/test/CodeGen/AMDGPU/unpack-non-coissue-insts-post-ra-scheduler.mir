@@ -328,7 +328,8 @@ body:             |
     ; GFX950-NEXT: renamable $vgpr7 = nofpexcept V_ADD_F32_e64 0, killed $sgpr7, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: renamable $vgpr4 = nofpexcept V_ADD_F32_e64 0, killed $sgpr4, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: renamable $vgpr5 = nofpexcept V_ADD_F32_e64 0, killed $sgpr5, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
-    ; GFX950-NEXT: renamable $vgpr10_vgpr11 = nofpexcept V_PK_ADD_F32 8, killed $sgpr10_sgpr11, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: renamable $vgpr10 = nofpexcept V_ADD_F32_e64 0, killed $sgpr10, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: renamable $vgpr11 = nofpexcept V_ADD_F32_e64 0, killed $sgpr11, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
     ;
     ; GFX942-LABEL: name: test_pk_add_unpacking_f32
@@ -367,7 +368,8 @@ body:             |
     ; GFX942-NEXT: renamable $vgpr7 = nofpexcept V_ADD_F32_e64 0, killed $sgpr7, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: renamable $vgpr4 = nofpexcept V_ADD_F32_e64 0, killed $sgpr4, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: renamable $vgpr5 = nofpexcept V_ADD_F32_e64 0, killed $sgpr5, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
-    ; GFX942-NEXT: renamable $vgpr10_vgpr11 = nofpexcept V_PK_ADD_F32 8, killed $sgpr10_sgpr11, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: renamable $vgpr10 = nofpexcept V_ADD_F32_e64 0, killed $sgpr10, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: renamable $vgpr11 = nofpexcept V_ADD_F32_e64 0, killed $sgpr11, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: S_ENDPGM 0
     ;
     ; GFX90A-LABEL: name: test_pk_add_unpacking_f32
@@ -1167,3 +1169,309 @@ body:             |
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_vgpr17 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_sgpr31, 11, killed $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
+...
+---
+name:            test_unpack_window_xdl
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX950-LABEL: name: test_unpack_window_xdl
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_unpack_window_xdl
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_unpack_window_xdl
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            test_unpack_window_xdl2x
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr8_vgpr9
+    ; GFX950-LABEL: name: test_unpack_window_xdl2x
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr8_vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_unpack_window_xdl2x
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr8_vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12 = nofpexcept V_FMA_F32_e64 0, $vgpr8, 0, $vgpr8, 0, $vgpr8, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr13 = nofpexcept V_FMA_F32_e64 0, $vgpr9, 0, $vgpr9, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_unpack_window_xdl2x
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr8_vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 $vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            test_unpack_window_counts_s_nop
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX950-LABEL: name: test_unpack_window_counts_s_nop
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_NOP 7
+    ; GFX950-NEXT: S_NOP 7
+    ; GFX950-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_unpack_window_counts_s_nop
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_NOP 7
+    ; GFX942-NEXT: S_NOP 7
+    ; GFX942-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_unpack_window_counts_s_nop
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_NOP 7
+    ; GFX90A-NEXT: S_NOP 7
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 7
+    S_NOP 7
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            test_no_unpack_after_dgemm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr30_vgpr31, $vgpr8_vgpr9
+    ; GFX950-LABEL: name: test_no_unpack_after_dgemm
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr30_vgpr31, $vgpr8_vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr30_vgpr31, $vgpr30_vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_no_unpack_after_dgemm
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr30_vgpr31, $vgpr8_vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr30_vgpr31, $vgpr30_vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_no_unpack_after_dgemm
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr30_vgpr31, $vgpr8_vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr30_vgpr31, $vgpr30_vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr30_vgpr31, $vgpr30_vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            test_no_unpack_after_sgemm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr30, $vgpr31, $vgpr8_vgpr9
+    ; GFX950-LABEL: name: test_no_unpack_after_sgemm
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr30, $vgpr31, $vgpr8_vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X4F32_vgprcd_e64 $vgpr30, $vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_no_unpack_after_sgemm
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr30, $vgpr31, $vgpr8_vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X4F32_vgprcd_e64 $vgpr30, $vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_no_unpack_after_sgemm
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr30, $vgpr31, $vgpr8_vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X4F32_vgprcd_e64 $vgpr30, $vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X4F32_vgprcd_e64 $vgpr30, $vgpr31, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12_vgpr13 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr14_vgpr15 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            test_no_unpack_pk16_after_xdl
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9
+    ; GFX950-LABEL: name: test_no_unpack_pk16_after_xdl
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr13 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_no_unpack_pk16_after_xdl
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr13 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_no_unpack_pk16_after_xdl
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr13 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr11 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr13 = nofpexcept V_PK_ADD_F16 8, $vgpr8, 8, $vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            test_no_unpack_dot_after_xdl
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9, $vgpr14
+    ; GFX950-LABEL: name: test_no_unpack_dot_after_xdl
+    ; GFX950: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9, $vgpr14
+    ; GFX950-NEXT: {{  $}}
+    ; GFX950-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr10 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr11 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr12 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: $vgpr13 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: S_ENDPGM 0
+    ;
+    ; GFX942-LABEL: name: test_no_unpack_dot_after_xdl
+    ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9, $vgpr14
+    ; GFX942-NEXT: {{  $}}
+    ; GFX942-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr10 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr11 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr12 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: $vgpr13 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: test_no_unpack_dot_after_xdl
+    ; GFX90A: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8, $vgpr9, $vgpr14
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr10 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr11 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr12 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: $vgpr13 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr11 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr12 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr13 = nofpexcept V_DOT2_F32_F16 8, $vgpr8, 8, $vgpr9, 8, $vgpr14, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
