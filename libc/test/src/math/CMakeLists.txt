@@ -1328,8 +1328,12 @@ add_fp_unittest(
   SRCS
     exp_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp
+    libc.src.__support.math.exp_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
