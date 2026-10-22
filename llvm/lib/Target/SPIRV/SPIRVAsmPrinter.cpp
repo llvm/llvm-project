@@ -43,7 +43,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,20 +51,6 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
-enum class SPIRVFPContractMode { On, Off, Fast };
-
-static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
-    "spirv-fp-contract",
-    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
-    cl::values(
-        clEnumValN(SPIRVFPContractMode::On, "on",
-                   "Follow IR metadata (default)"),
-        clEnumValN(SPIRVFPContractMode::Off, "off",
-                   "Force ContractionOff on all kernel entry points"),
-        clEnumValN(SPIRVFPContractMode::Fast, "fast",
-                   "Suppress ContractionOff on all kernel entry points")),
-    cl::init(SPIRVFPContractMode::On));
-
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -112,7 +97,7 @@ public:
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
-  void outputFPFastMathDefaultInfo();
+  void outputFPFastMathDefaultInfo(const Module &M);
   bool isHidden() {
     return MF->getFunction()
         .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
@@ -611,8 +596,8 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       addOpsFromMDNode(cast<MDNode>(Node->getOperand(i)), Inst, MAI);
       outputMCInst(Inst);
     }
-    outputFPFastMathDefaultInfo();
   }
+  outputFPFastMathDefaultInfo(M);
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
     // Only operands of OpEntryPoint instructions are allowed to be
@@ -671,88 +656,8 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
                            SPIRV::Capability::PoisonFreezeKHR)) {
       emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ArithmeticPoisonKHR);
     }
-    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
-    // entry point, --spirv-fp-contract=fast suppresses it.
-    bool EmitContractionOff =
-        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        SPIRVFPContract != SPIRVFPContractMode::Fast &&
-        (SPIRVFPContract == SPIRVFPContractMode::Off ||
-         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
-    if (EmitContractionOff) {
-      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
-        // When SPV_KHR_float_controls2 is enabled, ContractionOff is
-        // deprecated. We need to use FPFastMathDefault with the appropriate
-        // flags instead. Since FPFastMathDefault takes a target type, we need
-        // to emit it for each floating-point type that exists in the module
-        // to match the effect of ContractionOff. As of now, there are 3 FP
-        // types: fp16, fp32 and fp64.
-
-        // We only end up here because there is no "spirv.ExecutionMode"
-        // metadata, so that means no FPFastMathDefault. Therefore, we only
-        // need to make sure AllowContract is set to 0, as the rest of flags.
-        // We still need to emit the OpExecutionMode instruction, otherwise
-        // it's up to the client API to define the flags. Therefore, we need
-        // to find the constant with 0 value.
-
-        // Collect the SPIRVTypes for fp16, fp32, and fp64 and the constant of
-        // type int32 with 0 value to represent the FP Fast Math Mode.
-        std::vector<const MachineInstr *> SPIRVFloatTypes;
-        const MachineInstr *ConstZeroInt32 = nullptr;
-        for (const MachineInstr *MI :
-             MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-          unsigned OpCode = MI->getOpcode();
-
-          // Collect the SPIRV type if it's a float.
-          if (OpCode == SPIRV::OpTypeFloat) {
-            // Skip if the target type is not fp16, fp32, fp64.
-            const unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
-            if (OpTypeFloatSize != 16 && OpTypeFloatSize != 32 &&
-                OpTypeFloatSize != 64) {
-              continue;
-            }
-            SPIRVFloatTypes.push_back(MI);
-            continue;
-          }
-
-          if (OpCode == SPIRV::OpConstantNull) {
-            // Check if the constant is int32, if not skip it.
-            const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-            MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-            bool IsInt32Ty = TypeMI &&
-                             TypeMI->getOpcode() == SPIRV::OpTypeInt &&
-                             TypeMI->getOperand(1).getImm() == 32;
-            if (IsInt32Ty)
-              ConstZeroInt32 = MI;
-          }
-        }
-
-        // When SPV_KHR_float_controls2 is enabled, ContractionOff is
-        // deprecated. We need to use FPFastMathDefault with the appropriate
-        // flags instead. Since FPFastMathDefault takes a target type, we need
-        // to emit it for each floating-point type that exists in the module
-        // to match the effect of ContractionOff. As of now, there are 3 FP
-        // types: fp16, fp32 and fp64.
-        for (const MachineInstr *MI : SPIRVFloatTypes) {
-          MCInst Inst;
-          Inst.setOpcode(SPIRV::OpExecutionModeId);
-          Inst.addOperand(MCOperand::createReg(FReg));
-          unsigned EM =
-              static_cast<unsigned>(SPIRV::ExecutionMode::FPFastMathDefault);
-          Inst.addOperand(MCOperand::createImm(EM));
-          const MachineFunction *MF = MI->getMF();
-          MCRegister TypeReg =
-              MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
-          Inst.addOperand(MCOperand::createReg(TypeReg));
-          assert(ConstZeroInt32 && "There should be a constant zero.");
-          MCRegister ConstReg = MAI->getRegisterAlias(
-              ConstZeroInt32->getMF(), ConstZeroInt32->getOperand(0).getReg());
-          Inst.addOperand(MCOperand::createReg(ConstReg));
-          outputMCInst(Inst);
-        }
-      } else {
-        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
-      }
-    }
+    if (MAI->ImplicitContractionOff.contains(&F))
+      emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
   }
 }
 
@@ -795,99 +700,72 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   }
 }
 
-void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
-  // Collect the SPIRVTypes that are OpTypeFloat and the constants of type
-  // int32, that might be used as FP Fast Math Mode.
-  std::vector<const MachineInstr *> SPIRVFloatTypes;
+void SPIRVAsmPrinter::outputFPFastMathDefaultInfo(const Module &M) {
+  if (MAI->FPFastMathDefaultInfoMap.empty())
+    return;
+  // Collect the int32 constants that might be used as FP Fast Math Mode.
   // Hashtable to associate immediate values with the constant holding them.
   DenseMap<int, const MachineInstr *> ConstMap;
   for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-    // Skip if the instruction is not OpTypeFloat or OpConstant.
+    // Skip if the instruction is not OpConstant.
     unsigned OpCode = MI->getOpcode();
-    if (OpCode != SPIRV::OpTypeFloat && OpCode != SPIRV::OpConstantI &&
-        OpCode != SPIRV::OpConstantNull)
+    if (OpCode != SPIRV::OpConstantI && OpCode != SPIRV::OpConstantNull)
       continue;
 
-    // Collect the SPIRV type if it's a float.
-    if (OpCode == SPIRV::OpTypeFloat) {
-      SPIRVFloatTypes.push_back(MI);
-    } else {
-      // Check if the constant is int32, if not skip it.
-      const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-      MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-      if (!TypeMI || TypeMI->getOpcode() != SPIRV::OpTypeInt ||
-          TypeMI->getOperand(1).getImm() != 32)
-        continue;
-
-      if (OpCode == SPIRV::OpConstantI)
-        ConstMap[MI->getOperand(2).getImm()] = MI;
-      else
-        ConstMap[0] = MI;
-    }
-  }
-
-  for (const auto &[Func, FPFastMathDefaultInfoVec] :
-       MAI->FPFastMathDefaultInfoMap) {
-    if (FPFastMathDefaultInfoVec.empty())
+    // Check if the constant is int32, if not skip it.
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
+    if (!TypeMI || TypeMI->getOpcode() != SPIRV::OpTypeInt ||
+        TypeMI->getOperand(1).getImm() != 32)
       continue;
 
-    for (const MachineInstr *MI : SPIRVFloatTypes) {
-      unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
-      unsigned Index = SPIRV::FPFastMathDefaultInfoVector::
-          computeFPFastMathDefaultInfoVecIndex(OpTypeFloatSize);
-      assert(Index < FPFastMathDefaultInfoVec.size() &&
-             "Index out of bounds for FPFastMathDefaultInfoVec");
-      const auto &FPFastMathDefaultInfo = FPFastMathDefaultInfoVec[Index];
-      assert(FPFastMathDefaultInfo.Ty &&
-             "Expected target type for FPFastMathDefaultInfo");
-      assert(FPFastMathDefaultInfo.Ty->getScalarSizeInBits() ==
-                 OpTypeFloatSize &&
-             "Mismatched float type size");
-      MCInst Inst;
-      Inst.setOpcode(SPIRV::OpExecutionModeId);
-      MCRegister FuncReg = MAI->getGlobalObjReg(Func);
-      assert(FuncReg.isValid());
-      Inst.addOperand(MCOperand::createReg(FuncReg));
-      Inst.addOperand(
-          MCOperand::createImm(SPIRV::ExecutionMode::FPFastMathDefault));
-      MCRegister TypeReg =
-          MAI->getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
-      Inst.addOperand(MCOperand::createReg(TypeReg));
-      unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
-      if (FPFastMathDefaultInfo.ContractionOff &&
-          (Flags & SPIRV::FPFastMathMode::AllowContract))
-        report_fatal_error(
-            "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
-
-      if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
-          !(Flags &
-            (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
-             SPIRV::FPFastMathMode::NSZ))) {
-        if (FPFastMathDefaultInfo.FPFastMathDefault)
-          report_fatal_error("Conflicting FPFastMathFlags: "
-                             "SignedZeroInfNanPreserve but at least one of "
-                             "NotNaN/NotInf/NSZ is enabled.");
-      }
-
-      // Don't emit if none of the execution modes was used.
-      if (Flags == SPIRV::FPFastMathMode::None &&
-          !FPFastMathDefaultInfo.ContractionOff &&
-          !FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
-          !FPFastMathDefaultInfo.FPFastMathDefault)
-        continue;
-
-      // Retrieve the constant instruction for the immediate value.
-      auto It = ConstMap.find(Flags);
-      if (It == ConstMap.end())
-        report_fatal_error("Expected constant instruction for FP Fast Math "
-                           "Mode operand of FPFastMathDefault execution mode.");
-      const MachineInstr *ConstMI = It->second;
-      MCRegister ConstReg = MAI->getRegisterAlias(
-          ConstMI->getMF(), ConstMI->getOperand(0).getReg());
-      Inst.addOperand(MCOperand::createReg(ConstReg));
-      outputMCInst(Inst);
-    }
+    if (OpCode == SPIRV::OpConstantI)
+      ConstMap[MI->getOperand(2).getImm()] = MI;
+    else
+      ConstMap[0] = MI;
   }
+
+  MAI->forEachFPFastMathDefault(
+      M, [&](const Function &F, const MachineInstr &FloatTy,
+             const SPIRV::FPFastMathDefaultInfo &FPFastMathDefaultInfo) {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionModeId);
+        MCRegister FuncReg = MAI->getGlobalObjReg(&F);
+        assert(FuncReg.isValid());
+        Inst.addOperand(MCOperand::createReg(FuncReg));
+        Inst.addOperand(
+            MCOperand::createImm(SPIRV::ExecutionMode::FPFastMathDefault));
+        MCRegister TypeReg = MAI->getRegisterAlias(
+            FloatTy.getMF(), FloatTy.getOperand(0).getReg());
+        Inst.addOperand(MCOperand::createReg(TypeReg));
+        unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
+        if (FPFastMathDefaultInfo.ContractionOff &&
+            (Flags & SPIRV::FPFastMathMode::AllowContract))
+          report_fatal_error(
+              "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
+
+        if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+            !(Flags &
+              (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+               SPIRV::FPFastMathMode::NSZ))) {
+          if (FPFastMathDefaultInfo.FPFastMathDefault)
+            report_fatal_error("Conflicting FPFastMathFlags: "
+                               "SignedZeroInfNanPreserve but at least one of "
+                               "NotNaN/NotInf/NSZ is enabled.");
+        }
+
+        // Retrieve the constant instruction for the immediate value.
+        auto It = ConstMap.find(Flags);
+        if (It == ConstMap.end())
+          report_fatal_error(
+              "Expected constant instruction for FP Fast Math "
+              "Mode operand of FPFastMathDefault execution mode.");
+        const MachineInstr *ConstMI = It->second;
+        MCRegister ConstReg = MAI->getRegisterAlias(
+            ConstMI->getMF(), ConstMI->getOperand(0).getReg());
+        Inst.addOperand(MCOperand::createReg(ConstReg));
+        outputMCInst(Inst);
+      });
 }
 
 void SPIRVAsmPrinter::outputModuleSections() {
