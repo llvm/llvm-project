@@ -113,6 +113,25 @@ Note that `run-benchmarks` does not build anything: the library being benchmarke
 or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
 passed.
 
+## Finding when a benchmark changed
+
+`detect-changepoints` reports the points at which a single benchmark changed, which allows finding regressions
+and progressions in a benchmark. In many cases, pin-pointing the exact commit at which the change happened
+requires gathering finer-grained data (essentially benchmarking between anchor commits). `detect-changepoints`
+reads JSONL with one object per measurement:
+
+```
+# Download every measurement of a benchmark on a machine, and find when it changed.
+curl -sS --fail --compressed -G https://lnt.llvm.org/api/suites/libcxx/series                   \
+     --data-urlencode machine=linux-x86_64-2026-10-16 --data-urlencode metric=execution_time    \
+     --data-urlencode 'test=rng::find_if_not(vector<bool>)_(process_all)/1024'                  \
+     --data-urlencode has_ordinal=true                                                          \
+  | detect-changepoints --aggregate median
+```
+
+Repeated measurements of a commit must be combined with `--aggregate`. See
+`detect-changepoints --help` for details and other options.
+
 ## Test suite schemas
 
 `schemas/` holds the schemas of the `libcxx` and `libstdcxx` test suites as we submit them to LNT.

@@ -1643,7 +1643,12 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) {
-  return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
+  // Reuse one no-op specialization for traits without a folder.
+  return success(
+      (succeeded(
+           foldTrait<std::conditional_t<detect_has_any_fold_trait<Ts>::value,
+                                        Ts, void>>(op, operands, results)) ||
+       ...));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1676,7 +1681,11 @@ LogicalResult verifyTrait(Operation *op) {
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
 LogicalResult verifyTraits(Operation *op) {
-  return success((succeeded(verifyTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(verifyTrait<std::conditional_t<
+                     detect_has_verify_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 
 /// Verify the given trait if it provides a region verifier.
@@ -1692,7 +1701,12 @@ LogicalResult verifyRegionTrait(Operation *op) {
 /// given operation.
 template <typename... Ts>
 LogicalResult verifyRegionTraits(Operation *op) {
-  return success((succeeded(verifyRegionTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(
+           verifyRegionTrait<std::conditional_t<
+               detect_has_verify_region_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 } // namespace op_definition_impl
 
@@ -2135,10 +2149,9 @@ private:
   }
 
   static constexpr bool hasNoDataMembers() {
-    // Checking that the derived class does not define any member by comparing
-    // its size to an ad-hoc EmptyOp.
-    class EmptyOp : public Op<EmptyOp, Traits...> {};
-    return sizeof(ConcreteType) == sizeof(EmptyOp);
+    // Compare with the existing base instead of instantiating the traits again
+    // for an otherwise unused operation type.
+    return sizeof(ConcreteType) == sizeof(Op);
   }
 
   /// Allow access to internal implementation methods.
