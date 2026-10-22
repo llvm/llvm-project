@@ -30,10 +30,10 @@ template <class T>
 struct EvilAlloc {
   explicit EvilAlloc() : inner_(std::pmr::null_memory_resource()) {}
 
-  EvilAlloc(std::pmr::polymorphic_allocator<T>& a) : inner_(a) {}
+  EvilAlloc(std::pmr::polymorphic_allocator<T>&) = delete;
   EvilAlloc(std::pmr::polymorphic_allocator<T>&& a) : inner_(a) {}
-  EvilAlloc(std::pmr::polymorphic_allocator<T> const& a)  = delete;
-  EvilAlloc(std::pmr::polymorphic_allocator<T> const&& a) = delete;
+  EvilAlloc(std::pmr::polymorphic_allocator<T> const& a) : inner_(a) {}
+  EvilAlloc(std::pmr::polymorphic_allocator<T> const&&) = delete;
 
   using value_type = T;
   template <class U>
