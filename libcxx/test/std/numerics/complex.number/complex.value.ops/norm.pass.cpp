@@ -26,32 +26,30 @@ test()
     assert(norm(z) == 25);
 }
 
-void test_edges()
-{
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        double r = norm(testcases[i]);
-        switch (classify(testcases[i]))
-        {
-        case zero:
-            assert(r == 0);
-            assert(!std::signbit(r));
-            break;
-        case non_zero:
-            assert(std::isfinite(r) && r > 0);
-            break;
-        case inf:
-            assert(std::isinf(r) && r > 0);
-            break;
-        case NaN:
-            assert(std::isnan(r));
-            break;
-        case non_zero_nan:
-            assert(std::isnan(r));
-            break;
-        }
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    T r = norm(testcases<T>[i]);
+    switch (classify(testcases<T>[i])) {
+    case zero:
+      assert(r == 0);
+      assert(!std::signbit(r));
+      break;
+    case non_zero:
+      assert(std::isfinite(r) && r > 0);
+      break;
+    case inf:
+      assert(std::isinf(r) && r > 0);
+      break;
+    case NaN:
+      assert(std::isnan(r));
+      break;
+    case non_zero_nan:
+      assert(std::isnan(r));
+      break;
     }
+  }
 }
 
 int main(int, char**)
@@ -59,7 +57,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
-  return 0;
+    return 0;
 }
