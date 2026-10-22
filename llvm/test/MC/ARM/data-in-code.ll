@@ -9,6 +9,11 @@
 ;; Ensure that if a jump table is generated that it has Mapping Symbols
 ;; marking the data-in-code region.
 
+declare void @sink0()
+declare void @sink1()
+declare void @sink2()
+declare void @sink3()
+
 define void @foo(ptr %ptr, i32 %b) nounwind ssp {
   %tmp = load i32, ptr %ptr, align 4
   switch i32 %tmp, label %exit [
@@ -18,15 +23,19 @@ define void @foo(ptr %ptr, i32 %b) nounwind ssp {
     i32 3, label %bb3
   ]
 bb0:
+  call void @sink0()
   store i32 %b, ptr %ptr, align 4
   br label %exit
 bb1:
+  call void @sink1()
   store i32 1, ptr %ptr, align 4
   br label %exit
 bb2:
+  call void @sink2()
   store i32 2, ptr %ptr, align 4
   br label %exit
 bb3:
+  call void @sink3()
   store i32 4, ptr %ptr, align 4
   br label %exit
 exit:
