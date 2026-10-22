@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "../../VectorizeOptions.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
@@ -77,8 +78,7 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
 
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
-  // TODO: Compute alignment.
-  Align LdAlign(1);
+  Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
@@ -273,8 +273,7 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
   // Generate vector store.
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
-  // TODO: Compute alignment.
-  Align StAlign(1);
+  Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
   StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
 
