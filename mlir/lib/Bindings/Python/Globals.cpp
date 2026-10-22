@@ -62,6 +62,9 @@ PyGlobals &PyGlobals::get() {
 }
 
 bool PyGlobals::loadDialectModule(std::string_view dialectNamespace) {
+  if (dialectNamespace == "builtin")
+    return true;
+
   {
     nb::ft_lock_guard lock(mutex);
     std::string dialectNamespaceStr(dialectNamespace);
