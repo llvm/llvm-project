@@ -1,0 +1,24 @@
+; Test that ContextWasInlined (!Attributes: 1) is correctly set for probeless
+; inlined functions via the WasInlined flag on ContextTrieNode.
+;
+; The test binary has main → wrapper → work inlined. wrapper's probes were
+; dropped (compiled with -drop-pseudo-probes-for=wrapper), making it probeless.
+; The WasInlined flag is set on wrapper's trie node from the probe inline tree
+; during probe processing. wrapper gets FunctionSamples via the existing
+; "infer caller from callee entry probe" path, and ContextWasInlined is set
+; from the trie node's WasInlined flag in getOrCreateFunctionSamples.
+;
+; Without the WasInlined fix, wrapper would NOT have !Attributes: 1.
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/was-inlined-pseudoprobe.perfscript --binary=%S/Inputs/was-inlined-pseudoprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t
+
+; work is inlined and sampled — should have Attributes: 1.
+; CHECK:      [main:2 @ wrapper:2 @ work]:
+; CHECK:       !Attributes: 1
+; main is NOT inlined — should NOT have Attributes.
+; CHECK:      [main]:
+; CHECK-NOT:   !Attributes:
+; wrapper is inlined but probeless — should have Attributes: 1
+; CHECK:      [main:2 @ wrapper]:
+; CHECK:       !Attributes: 1
