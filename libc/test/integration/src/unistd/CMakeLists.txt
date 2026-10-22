@@ -273,7 +273,7 @@ add_integration_test(
 add_integration_test(
   execlp_test
   SUITE
-    unistd-integration-tests
+    libc-unistd-integration-tests
   SRCS
     execlp_test.cpp
   DEPENDS
