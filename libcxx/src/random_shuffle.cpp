@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__utility/no_destroy.h>
 #include <algorithm>
 #include <random>
 
@@ -42,9 +43,18 @@ __rs_default::~__rs_default() {
 #endif
 }
 
+// The engine is only accessed through a __rs_default, whose construction acquires the mutex (held until
+// the last copy is destroyed), so accesses are already serialized. This allows initializing the engine
+// lazily without a function-local static, which requires a guard variable.
+static constinit __no_destroy<mt19937> __global_mersenne_twister(__uninitialized_tag{});
+static constinit bool __initialized = false;
+
 __rs_default::result_type __rs_default::operator()() {
-  static mt19937 __rs_g;
-  return __rs_g();
+  if (!__initialized) {
+    __global_mersenne_twister.__emplace();
+    __initialized = true;
+  }
+  return __global_mersenne_twister.__get()();
 }
 
 __rs_default __rs_get() { return __rs_default(); }
