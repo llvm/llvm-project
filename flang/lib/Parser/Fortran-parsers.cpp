@@ -734,9 +734,11 @@ TYPE_PARSER(
         "nonstandard usage: ',' in place of '::'"_port_en_US,
         construct<TypeDeclarationStmt>(declarationTypeSpec,
             defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-            // Start-anchoring would tie with and outrank "expected '::'".
-            withMessageAtFailure("expected entity declarations"_err_en_US,
-                "," >> nonemptyList(entityDecl)))))
+            // Fail silently unless a ',' takes the place of '::', so the
+            // standard "expected '::'" is not joined by a spurious message.
+            lookAhead(","_tok) >>
+                withMessage("expected entity declarations"_err_en_US,
+                    "," >> nonemptyList(entityDecl)))))
 
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
