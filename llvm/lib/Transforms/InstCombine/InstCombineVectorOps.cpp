@@ -950,7 +950,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
     Value *ScalarOp = IEI->getOperand(1);
     Value *IdxOp    = IEI->getOperand(2);
 
-    // If we are inserting into a splat with one poison at IdxOp
+    // If we are inserting into a zero splat with one poison at IdxOp
     // Treat VecOp as a zero vector for this transformation
     if (isPoisonLaneInOtherwiseZeroVector(VecOp, IdxOp)) {
       VecOp = Constant::getNullValue(VecOp->getType());
