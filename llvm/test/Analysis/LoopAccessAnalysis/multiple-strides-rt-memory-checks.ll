@@ -35,11 +35,6 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %2 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 0, i64 %j
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %1 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 1, i64 %i
 ; CHECK-NEXT:      Grouped accesses:
