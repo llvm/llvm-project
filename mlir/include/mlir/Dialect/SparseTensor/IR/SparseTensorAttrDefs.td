@@ -141,7 +141,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     The encoding contains a map that provides the following:
 
     - An ordered sequence of dimension specifications, each of which defines:
-      - the dimension-size (implicit from the tensor’s dimension-shape)
+      - the dimension-size (implicit from the tensor's dimension-shape)
       - a **dimension-expression**
     - An ordered sequence of level specifications, each of which includes a required
       **level-type**, which defines how the level should be stored. Each level-type

@@ -197,12 +197,12 @@ def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
     operations. These declare the set of global variables from a
     module that form the interface of this entry point. The set of
     Interface symbols must be equal to or a superset of the
-    `spirv.GlobalVariable`s referenced by the entry point’s static call
-    tree, within the interface’s storage classes.  Before version 1.4,
-    the interface’s storage classes are limited to the Input and
-    Output storage classes. Starting with version 1.4, the interface’s
+    `spirv.GlobalVariable`s referenced by the entry point's static call
+    tree, within the interface's storage classes.  Before version 1.4,
+    the interface's storage classes are limited to the Input and
+    Output storage classes. Starting with version 1.4, the interface's
     storage classes are all storage classes used in declaring all
-    global variables referenced by the entry point’s call tree.
+    global variables referenced by the entry point's call tree.
 
     <!-- End of AutoGen section -->
 
@@ -483,7 +483,7 @@ def SPIRV_GlobalVariableOp
     scope (like Input, Output, StorageBuffer, etc.) are valid.
 
     Initializer is optional.  If Initializer is present, it will be
-    the initial value of the variable’s memory content. Initializer
+    the initial value of the variable's memory content. Initializer
     must be an symbol defined from a constant instruction or other
     `spirv.GlobalVariable` operation in module scope. Initializer must
     have the same type as the type of the defined symbol.

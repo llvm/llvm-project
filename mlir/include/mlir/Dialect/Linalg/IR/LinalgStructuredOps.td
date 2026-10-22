@@ -831,7 +831,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     The semantics of contracting inputs `A` and `B` on top of `C` to produce
     output `D` is given by
 
-      `D[H] = (SUM_{(I ∪ J) \ H} A[I] * B[J]) + C[H]`
+      `D[H] = (SUM_{(I union J) \ H} A[I] * B[J]) + C[H]`
 
     where `I`, `J`, and `H` are tuples of (pairwise distinct) dimension
     identifiers - meant to range over valid indices - corresponding to the
@@ -852,8 +852,8 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
       (if used on `A` and `C`), an "N-like" dim (if used on `B` and `C`) or a
       "batch"-dim (if used to index into `A`, `B`, and `C`).
 
-    For example, batch-matmul is given by `I = ⟨ b, m, k ⟩`, `J = ⟨ b, k, n ⟩`,
-    `H = ⟨ b, m, n ⟩` (with `k` as a contracting reduction-dimension while `m`,
+    For example, batch-matmul is given by `I = (b, m, k)`, `J = (b, k, n)`,
+    `H = (b, m, n)` (with `k` as a contracting reduction-dimension while `m`,
     `n` and `b` have parallel iteration-type) and gets represented as:
 
     ```mlir
@@ -1247,7 +1247,7 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     The semantics of contracting inputs `A` and `B` with scales `scale_A` and
     `scale_B` on top of `C` to produce output `D` is given by:
 
-      `D[H] = (SUM_{(I ∪ J) \ H} (A[I] * scale_A[I]) * (B[J] * scale_B[J])) + C[H]`
+      `D[H] = (SUM_{(I union J) \ H} (A[I] * scale_A[I]) * (B[J] * scale_B[J])) + C[H]`
 
     The iteration type of each dim is inferred.
 

@@ -157,7 +157,7 @@ def SPIRV_FModOp : SPIRV_ArithmeticBinaryOp<"FMod", SPIRV_Float, []> {
 
     Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.  Otherwise, the result is the remainder r of Operand
-    1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
+    1 divided by Operand 2 where if r != 0, the sign of r is the same as the
     sign of Operand 2.
 
     #### Example:
@@ -232,7 +232,7 @@ def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
 
     Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.  Otherwise, the result is the remainder r of Operand
-    1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
+    1 divided by Operand 2 where if r != 0, the sign of r is the same as the
     sign of Operand 1.
 
     #### Example:
@@ -427,7 +427,7 @@ def SPIRV_ISubBorrowOp : SPIRV_ArithmeticExtendedBinaryOp<"ISubBorrow",
     Operand 1, member 0 gets 2w + Operand 1 - Operand 2, where w is the
     component width.
 
-    Member 1 of the result gets 0 if Operand 1 ≥ Operand 2, and gets 1
+    Member 1 of the result gets 0 if Operand 1 >= Operand 2, and gets 1
     otherwise.
 
     <!-- End of AutoGen section -->
@@ -528,7 +528,7 @@ def SPIRV_SModOp : SPIRV_ArithmeticBinaryOp<"SMod",
 
     Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.  Otherwise, the result is the remainder r of Operand
-    1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
+    1 divided by Operand 2 where if r != 0, the sign of r is the same as the
     sign of Operand 2.
 
     #### Example:
@@ -627,7 +627,7 @@ def SPIRV_SRemOp : SPIRV_ArithmeticBinaryOp<"SRem",
 
     Results are computed per component.  The resulting value is undefined
     if Operand 2 is 0.  Otherwise, the result is the remainder r of Operand
-    1 divided by Operand 2 where if r ≠ 0, the sign of r is the same as the
+    1 divided by Operand 2 where if r != 0, the sign of r is the same as the
     sign of Operand 1.
 
     #### Example:

@@ -49,7 +49,7 @@ def VerifiableTensorEncoding : AttrInterface<"VerifiableTensorEncoding"> {
     dimensions via `tensor.collapse_shape`) do not attempt to verify or
     propagate an encoding at all, since there is no way to statically prove
     an arbitrary encoding remains valid once tensors are combined or a
-    dynamic dimension folds two static ones together — the encoding is
+    dynamic dimension folds two static ones together -- the encoding is
     dropped from the result in that case.
   }];
   let methods = [

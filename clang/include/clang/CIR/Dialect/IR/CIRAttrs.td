@@ -1589,7 +1589,7 @@ def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
     This mirrors the UWTableKindEnum in The LLVM dialect,
     and is passed through to the llvm dialect. According to the LLVM
     documentation:
-        The ‘uwtable’ attribute is about the ABI or the user mandating an /
+        The 'uwtable' attribute is about the ABI or the user mandating an /
             entry in the unwind table.
   }];
 }

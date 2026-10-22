@@ -457,7 +457,7 @@ def SPIRV_ConvertUToPtrOp : SPIRV_Op<"ConvertUToPtr", [UnsignedOp]> {
 
 
 def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
-  let summary = "Convert a pointer’s Storage Class to Generic.";
+  let summary = "Convert a pointer's Storage Class to Generic.";
 
   let description = [{
     Result Type must be an OpTypePointer. Its Storage Class must be Generic.
@@ -500,7 +500,7 @@ def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
 // -----
 
 def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [Pure]> {
-  let summary = "Convert a pointer’s Storage Class to a non-Generic class.";
+  let summary = "Convert a pointer's Storage Class to a non-Generic class.";
 
   let description = [{
     Result Type must be an OpTypePointer. Its Storage Class must be

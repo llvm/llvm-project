@@ -309,7 +309,7 @@ def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
       * exponent bias: 3
       * infinities: supported with exponent set to all 1s and mantissa 0s
       * NaNs: supported with exponent bits set to all 1s and mantissa values of
-        {0,1}⁴ except S.111.0000
+        {0,1}^4 except S.111.0000
       * denormals when exponent is 0
   }];
 }

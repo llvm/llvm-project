@@ -131,7 +131,7 @@ def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer, [Always
   let summary = "Absolute value of operand";
 
   let description = [{
-    Result is x if x ≥ 0; otherwise result is -x, where x is interpreted as a
+    Result is x if x >= 0; otherwise result is -x, where x is interpreted as a
     signed integer.
 
     Result Type and the type of x must both be integer scalar or integer vector
@@ -249,7 +249,7 @@ def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32, [A
     The standard trigonometric arc sine of x radians.
 
     Result is an angle, in radians, whose sine is x. The range of result values
-    is [-π / 2, π / 2]. The resulting value is NaN if abs x > 1.
+    is [-pi / 2, pi / 2]. The resulting value is NaN if abs x > 1.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -275,7 +275,7 @@ def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32, [A
     The standard trigonometric arc cosine of x radians.
 
     Result is an angle, in radians, whose cosine is x. The range of result
-    values is [0, π]. The resulting value is NaN if abs x > 1.
+    values is [0, pi]. The resulting value is NaN if abs x > 1.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -301,7 +301,7 @@ def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32, [A
     The standard trigonometric arc tangent of x radians.
 
     Result is an angle, in radians, whose tangent is y_over_x. The range of
-    result values is [-π / 2, π / 2].
+    result values is [-pi / 2, pi / 2].
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -635,7 +635,7 @@ def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
   let description = [{
     Result is x raised to the y power; x^y.
 
-    The resulting value is poison if x < 0. Result is poison if x = 0 and y ≤ 0.
+    The resulting value is poison if x < 0. Result is poison if x = 0 and y <= 0.
 
     The operand x and y must be a scalar or vector whose component type is
     16-bit or 32-bit floating-point.
@@ -843,7 +843,7 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32, 
 
   let description = [{
     Arc hyperbolic tangent; result is the inverse of tanh. The resulting value
-    is NaN if abs x ≥ 1.
+    is NaN if abs x >= 1.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -868,7 +868,7 @@ def SPIRV_GLAtan2Op : SPIRV_GLBinaryArithmeticOp<"Atan2", 25, SPIRV_Float16or32>
   let description = [{
     Result is the arc tangent of y / x. The signs of x and y are used to
     determine what quadrant the angle is in. The range of result values is
-    [-π, π]. Result is poison if x and y are both 0.
+    [-pi, pi]. Result is poison if x and y are both 0.
 
     The operand y and x must be a scalar or vector whose component type is
     16-bit or 32-bit floating-point.
@@ -892,7 +892,7 @@ def SPIRV_GLRadiansOp : SPIRV_GLUnaryArithmeticOp<"Radians", 11, SPIRV_Float16or
 
   let description = [{
     Result is the quantity in radians for the quantity x given in degrees, i.e.,
-    (π / 180) * x.
+    (pi / 180) * x.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -916,7 +916,7 @@ def SPIRV_GLDegreesOp : SPIRV_GLUnaryArithmeticOp<"Degrees", 12, SPIRV_Float16or
 
   let description = [{
     Result is the quantity in degrees for the quantity x given in radians, i.e.,
-    (180 / π) * x.
+    (180 / pi) * x.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.

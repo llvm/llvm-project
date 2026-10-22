@@ -174,8 +174,8 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
     operations. These declare the set of global variables from a
     module that form the interface of this entry point. The set of
     Interface symbols must be equal to or a superset of the
-    `spirv.GlobalVariable`s referenced by the entry point’s static call
-    tree, within the interface’s storage classes.
+    `spirv.GlobalVariable`s referenced by the entry point's static call
+    tree, within the interface's storage classes.
 
     #### Example:
 

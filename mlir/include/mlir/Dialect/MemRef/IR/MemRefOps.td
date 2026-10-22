@@ -1527,8 +1527,8 @@ def MemRef_ReinterpretCastOp
     memory outside the underlying allocation through the resulting memref is
     undefined behavior.
 
-    We distinguish between *underlying memory* — the sequence of elements as
-    they appear in the contiguous memory of the memref — and the
+    We distinguish between *underlying memory* -- the sequence of elements as
+    they appear in the contiguous memory of the memref -- and the
     *strided memref*, which refers to the underlying memory interpreted
     according to specified offsets, sizes, and strides.
 
@@ -2206,8 +2206,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
     Consecutive `subview` operations on memref's with static dimensions.
 
-    We distinguish between *underlying memory* — the sequence of elements as
-    they appear in the contiguous memory of the memref — and the
+    We distinguish between *underlying memory* -- the sequence of elements as
+    they appear in the contiguous memory of the memref -- and the
     *strided memref*, which refers to the underlying memory interpreted
     according to specified offsets, sizes, and strides.
 
