@@ -59,3 +59,7 @@ void SCFToSPIRVPass::runOnOperation() {
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
+
+std::unique_ptr<OperationPass<>> mlir::createConvertSCFToSPIRVPass() {
+  return std::make_unique<SCFToSPIRVPass>();
+}
