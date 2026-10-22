@@ -29,11 +29,32 @@ class ClangTidyCheckFactories {
 public:
   using CheckFactory = std::function<std::unique_ptr<ClangTidyCheck>(
       StringRef Name, ClangTidyContext *Context)>;
+  using CheckFactoryFunction = std::unique_ptr<ClangTidyCheck> (*)(
+      StringRef Name, ClangTidyContext *Context);
+
+  class FactoryEntry {
+  public:
+    FactoryEntry(CheckFactoryFunction Function);
+    FactoryEntry(CheckFactory Factory);
+    FactoryEntry(const FactoryEntry &Other);
+    FactoryEntry &operator=(const FactoryEntry &Other);
+    FactoryEntry(FactoryEntry &&) = default;
+    FactoryEntry &operator=(FactoryEntry &&) = default;
+
+    std::unique_ptr<ClangTidyCheck> operator()(StringRef Name,
+                                               ClangTidyContext *Context) const;
+
+  private:
+    CheckFactoryFunction Function = nullptr;
+    std::unique_ptr<CheckFactory> Factory;
+  };
+  static_assert(sizeof(FactoryEntry) == 2 * sizeof(void *));
 
   /// Registers check \p Factory with name \p Name.
   ///
   /// For all checks that have default constructors, use \c registerCheck.
   void registerCheckFactory(StringRef Name, CheckFactory Factory);
+  void registerCheckFactory(StringRef Name, const FactoryEntry &Factory);
 
   /// Registers the \c CheckType with the name \p Name.
   ///
@@ -57,10 +78,7 @@ public:
   /// };
   /// \endcode
   template <typename CheckType> void registerCheck(StringRef CheckName) {
-    registerCheckFactory(CheckName,
-                         [](StringRef Name, ClangTidyContext *Context) {
-                           return std::make_unique<CheckType>(Name, Context);
-                         });
+    registerCheckFunction(CheckName, &createCheck<CheckType>);
   }
 
   void eraseCheck(StringRef CheckName) { Factories.erase(CheckName); }
@@ -73,12 +91,23 @@ public:
   std::vector<std::unique_ptr<ClangTidyCheck>>
   createChecksForLanguage(ClangTidyContext *Context) const;
 
-  using FactoryMap = llvm::StringMap<CheckFactory>;
+  using FactoryMap = llvm::StringMap<FactoryEntry>;
   FactoryMap::const_iterator begin() const { return Factories.begin(); }
   FactoryMap::const_iterator end() const { return Factories.end(); }
   bool empty() const { return Factories.empty(); }
 
 private:
+  template <typename CheckType>
+#if defined(__clang__)
+  __attribute__((internal_linkage))
+#endif
+  static std::unique_ptr<ClangTidyCheck>
+  createCheck(StringRef Name, ClangTidyContext *Context) {
+    return std::make_unique<CheckType>(Name, Context);
+  }
+
+  void registerCheckFunction(StringRef Name, CheckFactoryFunction Function);
+
   FactoryMap Factories;
 };
 
