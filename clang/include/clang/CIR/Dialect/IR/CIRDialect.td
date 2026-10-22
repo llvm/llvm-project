@@ -107,6 +107,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
+    static llvm::StringRef getAMDGPUFlatWorkGroupSizeAttrName() { return "cir.amdgpu-flat-work-group-size"; }
+    static llvm::StringRef getAMDGPUWavesPerEUAttrName() { return "cir.amdgpu-waves-per-eu"; }
     // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
     // can build the runtime-registration globals without doing file I/O.
     static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }

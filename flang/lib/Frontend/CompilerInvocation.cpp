@@ -29,6 +29,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -874,7 +876,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (argValue == "none") {
       columns = 0;
     } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
-      columns = -1;
+      if (!argValue.empty() && llvm::all_of(argValue, llvm::isDigit)) {
+        // Route oversized positive decimals to the large-columns diagnostic.
+        columns = std::numeric_limits<std::int64_t>::max();
+      } else {
+        columns = -1;
+      }
     }
     if (columns < 0) {
       diags.Report(clang::diag::err_drv_negative_columns)
@@ -942,12 +949,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
       args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
                    clang::options::OPT_fno_out_of_bounds_subscripts, true));
-
-  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
-  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
-                       args.hasFlag(clang::options::OPT_fenumeration_type,
-                                    clang::options::OPT_fno_enumeration_type,
-                                    false));
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {

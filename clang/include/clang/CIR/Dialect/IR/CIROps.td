@@ -6708,7 +6708,7 @@ def CIR_MatrixExtractRowOp : CIR_Op<"matrix.extract_row", [
     "type of 'result' matches vector type with same element type of 'matrix' "
     "and size equals to num columns",
     "matrix", "result",
-    "cir::VectorType::get("
+    "cir::VectorType::getFixed("
       "mlir::cast<cir::MatrixType>($_self).getElementType(),"
       "mlir::cast<cir::MatrixType>($_self).getNumColumns()"
     ")">
