@@ -7077,12 +7077,12 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
       Clone = llvm::Function::Create(
           Fn->getFunctionType(), llvm::GlobalValue::InternalLinkage,
           Fn->getAddressSpace(), FDInlineName, &getModule());
+      Clone->setCallingConv(Fn->getCallingConv());
+      Clone->setAttributes(Fn->getAttributes());
       Clone->addFnAttr(llvm::Attribute::AlwaysInline);
     }
     if (!Clone->isDeclaration())
       return;
-    Clone->setCallingConv(Fn->getCallingConv());
-    Clone->setAttributes(Fn->getAttributes());
     Fn = Clone;
   } else {
     // Detect the unusual situation where an inline version is shadowed by a

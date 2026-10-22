@@ -808,6 +808,17 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fmuladd(const KnownFPClass &KnownLHS,
+                                   const KnownFPClass &KnownRHS,
+                                   const KnownFPClass &KnownAddend,
+                                   DenormalMode Mode) {
+  // fmuladd can lower to either fma(x, y, z) or fadd(fmul(x, y), z). Compute
+  // the intersection of both possibilities.
+  KnownFPClass FMA = fma(KnownLHS, KnownRHS, KnownAddend, Mode);
+  KnownFPClass MulAdd = fadd(fmul(KnownLHS, KnownRHS, Mode), KnownAddend, Mode);
+  return FMA.intersectWith(MulAdd);
+}
+
 KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
                                       const KnownFPClass &KnownAddend,
                                       DenormalMode Mode) {
@@ -826,6 +837,14 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
   return Known;
+}
+
+KnownFPClass KnownFPClass::fmuladd_square(const KnownFPClass &KnownSquared,
+                                          const KnownFPClass &KnownAddend,
+                                          DenormalMode Mode) {
+  KnownFPClass FMA = fma_square(KnownSquared, KnownAddend, Mode);
+  KnownFPClass MulAdd = fadd(square(KnownSquared, Mode), KnownAddend, Mode);
+  return FMA.intersectWith(MulAdd);
 }
 
 KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
