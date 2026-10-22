@@ -974,3 +974,53 @@ define <2 x float> @fdiv_c1_use(<2 x float> %x, <2 x float> %y) {
   %r = fsub <2 x float> %y, %m
   ret <2 x float> %r
 }
+
+; Regression tests for issue #231509: preserve valid fast-math flags.
+
+define float @fsub_ninf_fdiv_neg_x(float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_ninf_fdiv_neg_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd ninf float [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %div = fdiv float %neg, %y
+  %r = fsub ninf float %z, %div
+  ret float %r
+}
+
+define float @fsub_ninf_fdiv_neg_y(float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_ninf_fdiv_neg_y(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd ninf float [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %y
+  %div = fdiv float %x, %neg
+  %r = fsub ninf float %z, %div
+  ret float %r
+}
+
+define float @fsub_ninf_fmul(float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_ninf_fmul(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd ninf float [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %mul = fmul float %neg, %y
+  %r = fsub ninf float %z, %mul
+  ret float %r
+}
+
+define float @fsub_ninf_fdiv_preserve_inner_flag(float %x, float %y, float %z) {
+; CHECK-LABEL: @fsub_ninf_fdiv_preserve_inner_flag(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd ninf float [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %div = fdiv ninf float %neg, %y
+  %r = fsub ninf float %z, %div
+  ret float %r
+}
