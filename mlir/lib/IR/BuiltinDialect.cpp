@@ -74,7 +74,7 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
 
   std::string
   getResourceKey(const AsmDialectResourceHandle &handle) const override {
-    return cast<DenseResourceElementsHandle>(handle).getKey().str();
+    return DenseResourceBlobHandle(handle).getKey().str();
   }
   FailureOr<AsmDialectResourceHandle>
   declareResource(StringRef key) const final {

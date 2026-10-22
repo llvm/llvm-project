@@ -1396,7 +1396,7 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 
 DenseResourceElementsAttr
 DenseResourceElementsAttr::get(ShapedType type,
-                               DenseResourceElementsHandle handle) {
+                               DenseResourceBlobHandle handle) {
   return Base::get(type.getContext(), type, handle);
 }
 
@@ -1410,8 +1410,32 @@ DenseResourceElementsAttr DenseResourceElementsAttr::get(ShapedType type,
   return get(type, manager.insert(blobName, std::move(blob)));
 }
 
+DenseResourceElementsAttr DenseResourceElementsAttr::get(ShapedType type,
+                                                         StringRef blobName,
+                                                         AsmResourceBlob blob,
+                                                         Dialect *dialect) {
+  assert(dialect && "dialect must not be null");
+  auto *iface =
+      dialect->getRegisteredInterface<ResourceBlobManagerDialectInterface>();
+  assert(iface &&
+         "dialect does not provide ResourceBlobManagerDialectInterface");
+  auto &blobMgr = iface->getBlobManager();
+  auto &entry = blobMgr.insert(blobName, std::move(blob));
+  return get(type, DenseResourceBlobHandle(&entry, dialect));
+}
+
+DenseResourceElementsHandle DenseResourceElementsAttr::getRawHandle() const {
+  auto handle = getResourceHandle();
+  assert(isa<DenseResourceElementsHandle>(
+             static_cast<AsmDialectResourceHandle>(handle)) &&
+         "getRawHandle() called on non-BuiltinDialect resource; use "
+         "getResourceHandle() instead");
+  return DenseResourceElementsHandle(
+      static_cast<AsmDialectResourceHandle>(handle));
+}
+
 ArrayRef<char> DenseResourceElementsAttr::getData() {
-  if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
+  if (AsmResourceBlob *blob = this->getResourceHandle().getBlob())
     return blob->getDataAs<char>();
   return {};
 }
@@ -1492,7 +1516,7 @@ DenseResourceElementsAttrBase<T>::get(ShapedType type, StringRef blobName,
 template <typename T>
 std::optional<ArrayRef<T>>
 DenseResourceElementsAttrBase<T>::tryGetAsArrayRef() const {
-  if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
+  if (AsmResourceBlob *blob = this->getResourceHandle().getBlob())
     return blob->template getDataAs<T>();
   return std::nullopt;
 }

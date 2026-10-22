@@ -145,10 +145,10 @@ def UnknownLoc : DialectAttribute<(attr)>;
 
 def DenseResourceElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
-  ResourceHandle<"DenseResourceElementsHandle">:$rawHandle
+  ResourceHandle<"DenseResourceBlobHandle">:$resourceHandle
 )> {
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *rawHandle)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *resourceHandle)";
 }
 
 let cType = "RankedTensorType" in {
