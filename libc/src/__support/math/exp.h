@@ -187,7 +187,7 @@ exp_double_double(double x, double kd, const DoubleDouble &exp_mid) {
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
-LIBC_INLINE constexpr double set_exceptional(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 

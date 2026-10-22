@@ -828,7 +828,7 @@ LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[4]{
     {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128},
 };
 
-[[maybe_unused]] LIBC_INLINE constexpr double
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
 log1p_accurate(int e_x, int index, fputil::DoubleDouble m_x) {
   DFloat128 e_x_f128(static_cast<float>(e_x));
   DFloat128 sum = fputil::quick_mul(LOG_2, e_x_f128);

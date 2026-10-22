@@ -722,7 +722,8 @@ LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[4]{
 
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
-LIBC_INLINE constexpr double log10_accurate(int e_x, int index, double m_x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log10_accurate(int e_x, int index,
+                                                         double m_x) {
 
   DFloat128 e_x_f128(static_cast<float>(e_x));
   DFloat128 sum = fputil::quick_mul(LOG10_2, e_x_f128);
