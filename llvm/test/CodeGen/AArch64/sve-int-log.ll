@@ -11,6 +11,18 @@ define <vscale x 2 x i64> @and_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 2 x i64> @and_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: and_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = and <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
+  ret <vscale x 2 x i64> %res
+}
+
 define <vscale x 4 x i32> @and_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_s:
 ; CHECK:       // %bb.0:
@@ -191,6 +203,18 @@ define <vscale x 2 x i64> @or_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 2 x i64> @or_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: or_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = or <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
+  ret <vscale x 2 x i64> %res
+}
+
 define <vscale x 4 x i32> @or_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: or_s:
 ; CHECK:       // %bb.0:
@@ -277,6 +301,18 @@ define <vscale x 2 x i64> @xor_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = xor <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @xor_nxv1i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: xor_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %a, i64 0)
+  %b.nxv1 = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %b, i64 0)
+  %res.nxv1 = xor <vscale x 1 x i64> %a.nxv1, %b.nxv1
+  %res = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %res.nxv1, i64 0)
   ret <vscale x 2 x i64> %res
 }
 
@@ -371,14 +407,14 @@ define void @array_and_not_nxv16i8(ptr %a, <vscale x 16 x i8> %m) {
 ; SVE-NEXT:    ptrue p0.b
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    rdvl x9, #1
-; SVE-NEXT:  .LBB39_1: // %vector.body
+; SVE-NEXT:  .LBB42_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
 ; SVE-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1b { z1.b }, p0, [x0, x8]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB39_1
+; SVE-NEXT:    b.ne .LBB42_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -386,14 +422,14 @@ define void @array_and_not_nxv16i8(ptr %a, <vscale x 16 x i8> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.b
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB39_1: // %vector.body
+; SVE2-NEXT:  .LBB42_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
 ; SVE2-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1b { z1.b }, p0, [x0, x8]
 ; SVE2-NEXT:    incb x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB39_1
+; SVE2-NEXT:    b.ne .LBB42_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -422,14 +458,14 @@ define void @array_and_not_nxv8i16(ptr %a, <vscale x 8 x i16> %m) {
 ; SVE-NEXT:    ptrue p0.h
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cnth x9
-; SVE-NEXT:  .LBB40_1: // %vector.body
+; SVE-NEXT:  .LBB43_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
 ; SVE-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB40_1
+; SVE-NEXT:    b.ne .LBB43_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -437,14 +473,14 @@ define void @array_and_not_nxv8i16(ptr %a, <vscale x 8 x i16> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.h
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB40_1: // %vector.body
+; SVE2-NEXT:  .LBB43_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
 ; SVE2-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
 ; SVE2-NEXT:    inch x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB40_1
+; SVE2-NEXT:    b.ne .LBB43_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -473,14 +509,14 @@ define void @array_and_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntw x9
-; SVE-NEXT:  .LBB41_1: // %vector.body
+; SVE-NEXT:  .LBB44_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB41_1
+; SVE-NEXT:    b.ne .LBB44_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -488,14 +524,14 @@ define void @array_and_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB41_1: // %vector.body
+; SVE2-NEXT:  .LBB44_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE2-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE2-NEXT:    incw x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB41_1
+; SVE2-NEXT:    b.ne .LBB44_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -524,14 +560,14 @@ define void @array_and_not_nxv2i64(ptr %a, <vscale x 2 x i64> %m) {
 ; SVE-NEXT:    ptrue p0.d
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntd x9
-; SVE-NEXT:  .LBB42_1: // %vector.body
+; SVE-NEXT:  .LBB45_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
 ; SVE-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB42_1
+; SVE-NEXT:    b.ne .LBB45_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -539,14 +575,14 @@ define void @array_and_not_nxv2i64(ptr %a, <vscale x 2 x i64> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.d
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB42_1: // %vector.body
+; SVE2-NEXT:  .LBB45_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
 ; SVE2-NEXT:    bic z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
 ; SVE2-NEXT:    incd x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB42_1
+; SVE2-NEXT:    b.ne .LBB45_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -576,14 +612,14 @@ define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntw x9
-; SVE-NEXT:  .LBB43_1: // %vector.body
+; SVE-NEXT:  .LBB46_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE-NEXT:    orr z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB43_1
+; SVE-NEXT:    b.ne .LBB46_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -592,14 +628,14 @@ define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE2-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE2-NEXT:    ptrue p0.s
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB43_1: // %vector.body
+; SVE2-NEXT:  .LBB46_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE2-NEXT:    orr z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE2-NEXT:    incw x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB43_1
+; SVE2-NEXT:    b.ne .LBB46_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -629,14 +665,14 @@ define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntw x9
-; SVE-NEXT:  .LBB44_1: // %vector.body
+; SVE-NEXT:  .LBB47_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE-NEXT:    eor z1.d, z1.d, z0.d
 ; SVE-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE-NEXT:    add x8, x8, x9
 ; SVE-NEXT:    cmp x8, #256
-; SVE-NEXT:    b.ne .LBB44_1
+; SVE-NEXT:    b.ne .LBB47_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -644,14 +680,14 @@ define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:  .LBB44_1: // %vector.body
+; SVE2-NEXT:  .LBB47_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; SVE2-NEXT:    bsl2n z1.d, z1.d, z1.d, z0.d
 ; SVE2-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; SVE2-NEXT:    incw x8
 ; SVE2-NEXT:    cmp x8, #256
-; SVE2-NEXT:    b.ne .LBB44_1
+; SVE2-NEXT:    b.ne .LBB47_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:
@@ -679,14 +715,14 @@ define void @array_xor_not_v4i32(ptr %a, <4 x i32> %m) {
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    mvn v0.16b, v0.16b
 ; SVE-NEXT:    mov x8, xzr
-; SVE-NEXT:  .LBB45_1: // %for.body
+; SVE-NEXT:  .LBB48_1: // %for.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ldr q1, [x0, x8]
 ; SVE-NEXT:    eor v1.16b, v1.16b, v0.16b
 ; SVE-NEXT:    str q1, [x0, x8]
 ; SVE-NEXT:    add x8, x8, #16
 ; SVE-NEXT:    cmp x8, #1, lsl #12 // =4096
-; SVE-NEXT:    b.ne .LBB45_1
+; SVE-NEXT:    b.ne .LBB48_1
 ; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE-NEXT:    ret
 ;
@@ -694,14 +730,14 @@ define void @array_xor_not_v4i32(ptr %a, <4 x i32> %m) {
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    mov x8, xzr
 ; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE2-NEXT:  .LBB45_1: // %for.body
+; SVE2-NEXT:  .LBB48_1: // %for.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ldr q1, [x0, x8]
 ; SVE2-NEXT:    bsl2n z1.d, z1.d, z1.d, z0.d
 ; SVE2-NEXT:    str q1, [x0, x8]
 ; SVE2-NEXT:    add x8, x8, #16
 ; SVE2-NEXT:    cmp x8, #1, lsl #12 // =4096
-; SVE2-NEXT:    b.ne .LBB45_1
+; SVE2-NEXT:    b.ne .LBB48_1
 ; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
 ; SVE2-NEXT:    ret
 entry:

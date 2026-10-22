@@ -66,12 +66,139 @@ entry:
   ret void
 }
 
+define void @scalable_and() #0 {
+; CHECK-LABEL: 'scalable_and'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = and <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = and <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = and <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = and <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = and <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = and <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = and <vscale x 16 x i8> poison, poison
+  %nxv8i16 = and <vscale x 8 x i16> poison, poison
+  %nxv4i32 = and <vscale x 4 x i32> poison, poison
+  %nxv2i64 = and <vscale x 2 x i64> poison, poison
+  %nxv1i64 = and <vscale x 1 x i64> poison, poison
+  %nxv2i128 = and <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_or() #0 {
+; CHECK-LABEL: 'scalable_or'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = or <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = or <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = or <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = or <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = or <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = or <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = or <vscale x 16 x i8> poison, poison
+  %nxv8i16 = or <vscale x 8 x i16> poison, poison
+  %nxv4i32 = or <vscale x 4 x i32> poison, poison
+  %nxv2i64 = or <vscale x 2 x i64> poison, poison
+  %nxv1i64 = or <vscale x 1 x i64> poison, poison
+  %nxv2i128 = or <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_xor() #0 {
+; CHECK-LABEL: 'scalable_xor'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = xor <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = xor <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = xor <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = xor <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = xor <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = xor <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = xor <vscale x 16 x i8> poison, poison
+  %nxv8i16 = xor <vscale x 8 x i16> poison, poison
+  %nxv4i32 = xor <vscale x 4 x i32> poison, poison
+  %nxv2i64 = xor <vscale x 2 x i64> poison, poison
+  %nxv1i64 = xor <vscale x 1 x i64> poison, poison
+  %nxv2i128 = xor <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_ashr() #0 {
+; CHECK-LABEL: 'scalable_ashr'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = ashr <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = ashr <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = ashr <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = ashr <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = ashr <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = ashr <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = ashr <vscale x 16 x i8> poison, poison
+  %nxv8i16 = ashr <vscale x 8 x i16> poison, poison
+  %nxv4i32 = ashr <vscale x 4 x i32> poison, poison
+  %nxv2i64 = ashr <vscale x 2 x i64> poison, poison
+  %nxv1i64 = ashr <vscale x 1 x i64> poison, poison
+  %nxv2i128 = ashr <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_lshr() #0 {
+; CHECK-LABEL: 'scalable_lshr'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = lshr <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = lshr <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = lshr <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = lshr <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = lshr <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = lshr <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = lshr <vscale x 16 x i8> poison, poison
+  %nxv8i16 = lshr <vscale x 8 x i16> poison, poison
+  %nxv4i32 = lshr <vscale x 4 x i32> poison, poison
+  %nxv2i64 = lshr <vscale x 2 x i64> poison, poison
+  %nxv1i64 = lshr <vscale x 1 x i64> poison, poison
+  %nxv2i128 = lshr <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_shl() #0 {
+; CHECK-LABEL: 'scalable_shl'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = shl <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = shl <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = shl <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = shl <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv1i64 = shl <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = shl <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = shl <vscale x 16 x i8> poison, poison
+  %nxv8i16 = shl <vscale x 8 x i16> poison, poison
+  %nxv4i32 = shl <vscale x 4 x i32> poison, poison
+  %nxv2i64 = shl <vscale x 2 x i64> poison, poison
+  %nxv1i64 = shl <vscale x 1 x i64> poison, poison
+  %nxv2i128 = shl <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
 define void @scalable_sdiv() #0 {
 ; CHECK-LABEL: 'scalable_sdiv'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:32 Lat:32 SizeLat:32 for: %nxv16i8 = sdiv <vscale x 16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:16 SizeLat:16 for: %nxv8i16 = sdiv <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %nxv4i32 = sdiv <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i64 = sdiv <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = sdiv <vscale x 1 x i64> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i128 = sdiv <vscale x 2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -80,6 +207,7 @@ entry:
   %nxv8i16 = sdiv <vscale x 8 x i16> undef, undef
   %nxv4i32 = sdiv <vscale x 4 x i32> undef, undef
   %nxv2i64 = sdiv <vscale x 2 x i64> undef, undef
+  %nxv1i64 = sdiv <vscale x 1 x i64> poison, poison
   %nxv2i128 = sdiv <vscale x 2 x i128> undef, undef
 
   ret void
@@ -91,6 +219,7 @@ define void @scalable_udiv() #0 {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:16 SizeLat:16 for: %nxv8i16 = udiv <vscale x 8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %nxv4i32 = udiv <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i64 = udiv <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = udiv <vscale x 1 x i64> poison, poison
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i128 = udiv <vscale x 2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -99,7 +228,50 @@ entry:
   %nxv8i16 = udiv <vscale x 8 x i16> undef, undef
   %nxv4i32 = udiv <vscale x 4 x i32> undef, undef
   %nxv2i64 = udiv <vscale x 2 x i64> undef, undef
+  %nxv1i64 = udiv <vscale x 1 x i64> poison, poison
   %nxv2i128 = udiv <vscale x 2 x i128> undef, undef
+
+  ret void
+}
+
+define void @scalable_srem() #0 {
+; CHECK-LABEL: 'scalable_srem'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %nxv16i8 = srem <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %nxv8i16 = srem <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = srem <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = srem <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = srem <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i128 = srem <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = srem <vscale x 16 x i8> poison, poison
+  %nxv8i16 = srem <vscale x 8 x i16> poison, poison
+  %nxv4i32 = srem <vscale x 4 x i32> poison, poison
+  %nxv2i64 = srem <vscale x 2 x i64> poison, poison
+  %nxv1i64 = srem <vscale x 1 x i64> poison, poison
+  %nxv2i128 = srem <vscale x 2 x i128> poison, poison
+
+  ret void
+}
+
+define void @scalable_urem() #0 {
+; CHECK-LABEL: 'scalable_urem'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:4 Lat:4 SizeLat:4 for: %nxv16i8 = urem <vscale x 16 x i8> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %nxv8i16 = urem <vscale x 8 x i16> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv4i32 = urem <vscale x 4 x i32> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv2i64 = urem <vscale x 2 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv1i64 = urem <vscale x 1 x i64> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:4 Lat:4 SizeLat:4 for: %nxv2i128 = urem <vscale x 2 x i128> poison, poison
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+entry:
+  %nxv16i8 = urem <vscale x 16 x i8> poison, poison
+  %nxv8i16 = urem <vscale x 8 x i16> poison, poison
+  %nxv4i32 = urem <vscale x 4 x i32> poison, poison
+  %nxv2i64 = urem <vscale x 2 x i64> poison, poison
+  %nxv1i64 = urem <vscale x 1 x i64> poison, poison
+  %nxv2i128 = urem <vscale x 2 x i128> poison, poison
 
   ret void
 }
