@@ -3,8 +3,7 @@
 
 declare i32 @cond()
 
-; FIXME: ptrtoaddr(%bound) should only be expanded once; see the two
-; ptrtoaddr instructions in the CHECK block below.
+; Make sure ptrtoaddr(%bound) is only expanded once.
 define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_expanded_twice(
 ; CHECK-SAME: ptr [[BOUND:%.*]], ptr [[DST:%.*]]) {
@@ -22,9 +21,8 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 3, [[BOUND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP16]], i64 [[TMP15]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND1]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMAX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
@@ -210,8 +208,8 @@ exit:
   ret void
 }
 
-; FIXME: the umax/umin/sub expression computing the inner loop's trip count
-; (which depends on the outer AddRec %i) is expanded three times over.
+; Make sure the umax/umin/sub expression computing the inner loop's trip count
+; (which depends on the outer AddRec %i) is only expanded once.
 @arr = internal global [8193 x i8] zeroinitializer
 
 define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
@@ -235,14 +233,11 @@ define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    [[K_START:%.*]] = shl nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 [[K_START]])
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP28]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 1)
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP29]], i64 1)
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP28]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP31]], [[TMP30]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP5]], [[I]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP30]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP32]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

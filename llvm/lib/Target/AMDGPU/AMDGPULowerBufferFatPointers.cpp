@@ -1305,9 +1305,10 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     for (auto [I, ElemTy, Offset] :
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
-      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
-                                            AggByteOff + Offset.getFixedValue(),
-                                            Name + "." + Twine(I)));
+      Changed |= visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                AggByteOff + Offset.getFixedValue(),
+                                Name + "." + Twine(I))
+                     .first;
       AggIdxs.pop_back();
     }
     return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1321,9 +1322,11 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
-        Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
+        Changed |=
+            visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                           AggByteOff + I * ElemAllocSize.getFixedValue(),
+                           Name + Twine(I))
+                .first;
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1759,7 +1762,7 @@ void SplitPtrStructs::processConditionals() {
           // Handle the case where previous loops already looked through
           // an addrspacecast.
           if (isSplitFatPtr(RootVal->getType()))
-            MaybeRsrc = std::get<0>(getPtrParts(RootVal));
+            MaybeRsrc = getPtrParts(RootVal).first;
           else
             MaybeRsrc = RootVal;
         }
@@ -1778,7 +1781,7 @@ void SplitPtrStructs::processConditionals() {
         auto *RsrcPHI = IRB.CreatePHI(RsrcTy, PHI->getNumIncomingValues());
         RsrcPHI->takeName(Rsrc);
         for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
-          Value *VRsrc = std::get<0>(getPtrParts(V));
+          Value *VRsrc = getPtrParts(V).first;
           RsrcPHI->addIncoming(VRsrc, BB);
         }
         copyMetadata(RsrcPHI, PHI);
@@ -1790,7 +1793,7 @@ void SplitPtrStructs::processConditionals() {
       NewOff->takeName(Off);
       for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
         assert(OffParts.count(V) && "An offset part had to be created by now");
-        Value *VOff = std::get<1>(getPtrParts(V));
+        Value *VOff = getPtrParts(V).second;
         NewOff->addIncoming(VOff, BB);
       }
       copyMetadata(NewOff, PHI);

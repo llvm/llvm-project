@@ -6,7 +6,7 @@ define void @foo() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: foo:
 ; CHECK:       %bb.0:
 ; X64-NEXT:    nop # avoids zero-length function
-; AARCH64:     brk #0x1
+; AARCH64-NEXT: nop // avoids zero-length function
   call void @llvm.seh.scope.begin()
   unreachable
 }
