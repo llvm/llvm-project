@@ -204,6 +204,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/is_same.h>
+#    include <__utility/checked_int.h>
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
 #    include <__utility/unreachable.h>
@@ -546,8 +547,8 @@ private:
     } else {
       // Otherwise seek to the requested position in the underlying C stream and drop the buffer. This is the expensive
       // path, since it performs a syscall.
-      if (off_type __offset; __builtin_sub_overflow(__byte_off, this->egptr() - this->gptr(), &__offset) ||
-                             __fseek(__file_, __offset, SEEK_CUR))
+      if (auto __offset = __checked_int<off_type>(__byte_off) - (this->egptr() - this->gptr());
+          __offset.__overflowed() || __fseek(__file_, __offset.__value(), SEEK_CUR))
         return pos_type(off_type(-1));
       this->setg(nullptr, nullptr, nullptr);
       __cm_          = 0;

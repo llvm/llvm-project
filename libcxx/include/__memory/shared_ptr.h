@@ -54,6 +54,7 @@
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
+#include <__utility/checked_int.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
@@ -748,20 +749,20 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // When there's 0 elements, the control block alone is enough since it holds one element.
     // Otherwise, we allocate one fewer element than requested because the control block already
     // holds one.
-    size_t __bytes = sizeof(__unbounded_array_control_block);
-    if (__elements != 0) {
-      if (__builtin_mul_overflow(__elements - 1, sizeof(_Tp), &__bytes) ||
-          __builtin_add_overflow(__bytes, sizeof(__unbounded_array_control_block), &__bytes))
-        std::__throw_bad_array_new_length();
-    }
+    __checked_int<size_t> __bytes(sizeof(__unbounded_array_control_block));
+    if (__elements != 0)
+      __bytes = __checked_int<size_t>(__elements - 1) * sizeof(__unbounded_array_control_block) +
+                sizeof(__unbounded_array_control_block);
 
     // We use the bitwise formula below to ensure that we allocate enough bytes for the whole
     // allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
     //
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
-    if (__builtin_add_overflow(__bytes, __align - 1, &__bytes))
+    __bytes += __align - 1;
+    if (__bytes.__overflowed())
       std::__throw_bad_array_new_length();
-    return __bytes & ~(__align - 1);
+
+    return __bytes.__value() & ~(__align - 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
