@@ -170,7 +170,7 @@ log
 | acosh     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.1               | F.10.2.1                   |
 | acospi    |                   |                  |                         | {{ check }}           |                         |                         | 7.12.4.8               | F.10.1.8                   |
 | asin      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.2               | F.10.1.2                   |
-| asinh     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.2               | F.10.2.2                   |
+| asinh     | {{ check }}       |                  |                         | {{ check }}           |                         | {{ check }}             | 7.12.5.2               | F.10.2.2                   |
 | asinpi    | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.4.9               | F.10.1.9                   |
 | atan      | {{ check }}       | 1 ULP            |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.3               | F.10.1.3                   |
 | atan2     | {{ check }}       | 1 ULP            |                         | {{ check }}           | 1 ULP                   |                         | 7.12.4.4               | F.10.1.4                   |
