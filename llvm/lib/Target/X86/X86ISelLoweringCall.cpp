@@ -2936,8 +2936,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 /// as its sret argument. We prove this in IR, since SelectionDAG is built per
 /// basic block and the caller's sret pointer is only visible as a function
 /// argument in the entry block.
-static bool isCallerSRetForwarded(const TargetLowering::CallLoweringInfo &CLI) {
-  const CallBase *CB = CLI.CB;
+static bool isCallerSRetForwarded(const CallBase *CB, const Function &CallerF) {
   if (!CB)
     return false;
 
@@ -2945,14 +2944,14 @@ static bool isCallerSRetForwarded(const TargetLowering::CallLoweringInfo &CLI) {
   // register but no sret Argument has an implicit sret from a demoted return,
   // which cannot be forwarded from IR.
   const Argument *CallerSRet =
-      llvm::find_if(CB->getFunction()->args(),
+      llvm::find_if(CallerF.args(),
                     [](const Argument &Arg) { return Arg.hasStructRetAttr(); });
-  if (CallerSRet == CB->getFunction()->arg_end())
+  if (CallerSRet == CallerF.arg_end())
     return false;
 
   // Check that the callee receives it as its sret argument.
   for (const Use &U : CB->args())
-    if (U->stripPointerCasts() == CallerSRet &&
+    if (U.get() == CallerSRet &&
         CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
       return true;
   return false;
@@ -3037,7 +3036,7 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
     // sret.
-    if (!isCallerSRetForwarded(CLI))
+    if (!isCallerSRetForwarded(CLI.CB, CallerF))
       return false;
   } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
