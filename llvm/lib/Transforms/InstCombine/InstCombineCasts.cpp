@@ -1381,6 +1381,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
 
+  if (DestTy->isIntegerTy(1))
+    if (auto *LI = dyn_cast<LoadInst>(Src))
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0))) {
+        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+                LI, GEP, ICmpInst::ICMP_NE, ConstantInt::getNullValue(SrcTy),
+                Trunc, ConstantInt::get(cast<IntegerType>(SrcTy), 1)))
+          return Res;
+      }
+
   return Changed ? &Trunc : nullptr;
 }
 
@@ -2594,6 +2603,11 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
       FI.getOperand(0), Mask, IC.getSimplifyQuery().getWithInstruction(&FI));
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
+
+  // fpto{u/s}i (trunc X) --> fpto{u/s}i X
+  Value *Src;
+  if (match(FI.getOperand(0), m_Intrinsic<Intrinsic::trunc>(m_Value(Src))))
+    return IC.replaceOperand(FI, 0, Src);
 
   // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
   //

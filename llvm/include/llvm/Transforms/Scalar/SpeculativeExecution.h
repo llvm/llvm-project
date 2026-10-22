@@ -66,6 +66,7 @@
 
 namespace llvm {
 class BasicBlock;
+struct ScalarOptions;
 class TargetTransformInfo;
 
 class SpeculativeExecutionPass
@@ -85,6 +86,8 @@ public:
 private:
   bool runOnBasicBlock(BasicBlock &B);
   bool considerHoistingFromTo(BasicBlock &FromBlock, BasicBlock &ToBlock);
+
+  const ScalarOptions *Opts = nullptr;
 
   // If true, this pass is a nop unless the target architecture has branch
   // divergence.

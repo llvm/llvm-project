@@ -1,4 +1,4 @@
-add_custom_target(libc-fputil-tests)
+add_libc_testsuite(libc-fputil-tests PARENT libc-support-tests)
 
 add_fp_unittest(
   dyadic_float_test
@@ -27,6 +27,19 @@ add_libc_test(
     libc.src.__support.integer_literals
     libc.src.__support.macros.properties.types
     libc.src.__support.sign
+)
+
+add_fp_unittest(
+  fp_bitwise_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    fp_bitwise_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(

@@ -326,10 +326,21 @@ struct KnownFPClass {
       const KnownFPClass &Addend,
       DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fmuladd
+  LLVM_ABI static KnownFPClass
+  fmuladd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+          const KnownFPClass &Addend,
+          DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fma squared, squared, addend
   LLVM_ABI static KnownFPClass
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fmuladd squared, squared, addend
+  LLVM_ABI static KnownFPClass
+  fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                 DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
@@ -460,12 +471,29 @@ struct KnownFPClass {
   /// Propagate known class for fptrunc.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
 
-  /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
-  /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
-  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  /// Propagate known class for rounding intrinsics (rint, nearbyint, round,
+  /// roundeven). \p IsMultiUnitFPType if this is for a multi-unit
+  /// floating-point type.
   LLVM_ABI static KnownFPClass
-  roundToIntegral(const KnownFPClass &Src, bool IsTrunc, bool IsMultiUnitFPType,
+  roundToIntegral(const KnownFPClass &Src, bool IsMultiUnitFPType,
                   DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for trunc.
+  LLVM_ABI static KnownFPClass
+  trunc(const KnownFPClass &Src,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for floor. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  floor(const KnownFPClass &Src, bool IsMultiUnitFPType,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ceil. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  ceil(const KnownFPClass &Src, bool IsMultiUnitFPType,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass
