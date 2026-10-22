@@ -11,7 +11,7 @@ define i32 @test_clamp(i8 %a, i8 %c, i8 %d) {
 ; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
 ; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
 ; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[C32]], 255
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 255, [[C32]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
@@ -35,7 +35,7 @@ define i1 @test_trunc_cmp(i8 %a, i8 %c, i8 %d) {
 ; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
 ; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
-; CHECK-NEXT:    [[SUB:%.*]] = xor i16 [[C32]], 255
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i16 255, [[C32]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i16 [[SUB]], [[A32]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[MUL1]], [[MUL2]]
