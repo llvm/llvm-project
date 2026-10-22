@@ -398,7 +398,7 @@ void BuiltinNameEmitter::EmitDeclarations() {
 
   OS << TypeEnums;
   OS << GenTypeEnums;
-  OS << "};\n";
+  OS << "  OCLT_Count\n};\n";
 
   // Structure definitions.
   OS << R"(
@@ -410,43 +410,64 @@ enum OpenCLAccessQual : unsigned char {
   OCLAQ_ReadWrite
 };
 
+static constexpr unsigned OpenCLTypeIDBits = 7;
+static constexpr unsigned OpenCLTypeVectorWidthBits = 5;
+static constexpr unsigned OpenCLTypeAccessQualifierBits = 2;
+static constexpr unsigned OpenCLTypeAddressSpaceBits = 3;
+static constexpr unsigned OpenCLBuiltinSigTableIndexBits = 14;
+static constexpr unsigned OpenCLBuiltinNumTypesBits = 3;
+static constexpr unsigned OpenCLBuiltinExtensionBits = 7;
+static constexpr unsigned OpenCLBuiltinVersionsBits = 5;
+
 // Represents a return type or argument type.
 struct OpenCLTypeStruct {
   // A type (e.g. float, int, ...).
-  const OpenCLTypeID ID;
+  const unsigned ID : OpenCLTypeIDBits;
   // Vector size (if applicable; 0 for scalars and generic types).
-  const unsigned VectorWidth;
+  const unsigned VectorWidth : OpenCLTypeVectorWidthBits;
   // 0 if the type is not a pointer.
-  const bool IsPointer : 1;
+  const unsigned IsPointer : 1;
   // 0 if the type is not const.
-  const bool IsConst : 1;
+  const unsigned IsConst : 1;
   // 0 if the type is not volatile.
-  const bool IsVolatile : 1;
+  const unsigned IsVolatile : 1;
   // Access qualifier.
-  const OpenCLAccessQual AccessQualifier;
+  const unsigned AccessQualifier : OpenCLTypeAccessQualifierBits;
   // Address space of the pointer (if applicable).
-  const LangAS AS;
+  const unsigned AS : OpenCLTypeAddressSpaceBits;
 };
+static_assert(sizeof(OpenCLTypeStruct) == 4,
+              "OpenCLTypeStruct must remain compact");
 
 // One overload of an OpenCL builtin function.
 struct OpenCLBuiltinStruct {
   // Index of the signature in the OpenCLTypeStruct table.
-  const unsigned SigTableIndex;
+  const unsigned SigTableIndex : OpenCLBuiltinSigTableIndexBits;
   // Entries between index SigTableIndex and (SigTableIndex + NumTypes - 1) in
   // the SignatureTable represent the complete signature.  The first type at
   // index SigTableIndex is the return type.
-  const unsigned NumTypes;
+  const unsigned NumTypes : OpenCLBuiltinNumTypesBits;
   // Function attribute __attribute__((pure))
-  const bool IsPure : 1;
+  const unsigned IsPure : 1;
   // Function attribute __attribute__((const))
-  const bool IsConst : 1;
+  const unsigned IsConst : 1;
   // Function attribute __attribute__((convergent))
-  const bool IsConv : 1;
+  const unsigned IsConv : 1;
   // OpenCL extension(s) required for this overload.
-  const unsigned short Extension;
+  const unsigned Extension : OpenCLBuiltinExtensionBits;
   // OpenCL versions in which this overload is available.
-  const unsigned short Versions;
+  const unsigned Versions : OpenCLBuiltinVersionsBits;
 };
+static_assert(sizeof(OpenCLBuiltinStruct) == 4,
+              "OpenCLBuiltinStruct must remain compact");
+
+static_assert(OCLT_Count <= (1u << OpenCLTypeIDBits),
+              "OpenCLTypeStruct::ID is too narrow");
+static_assert(OCLAQ_ReadWrite < (1u << OpenCLTypeAccessQualifierBits),
+              "OpenCLTypeStruct::AccessQualifier is too narrow");
+static_assert(static_cast<unsigned>(LangAS::opencl_global_host) <
+                  (1u << OpenCLTypeAddressSpaceBits),
+              "OpenCLTypeStruct::AS is too narrow");
 
 )";
 }
@@ -544,10 +565,14 @@ void BuiltinNameEmitter::EmitExtensionTable() {
     // Record index of this extension.
     FunctionExtensionIndex[FE->getName()] = Index++;
   }
-  OS << "};\n\n";
+  OS << "};\n\n"
+     << "static_assert(" << FuncExtensions.size()
+     << " <= (1u << OpenCLBuiltinExtensionBits),\n"
+     << "              \"OpenCLBuiltinStruct::Extension is too narrow\");\n\n";
 }
 
 void BuiltinNameEmitter::EmitTypeTable() {
+  unsigned MaxVectorWidth = 0;
   OS << "static const OpenCLTypeStruct TypeTable[] = {\n";
   for (const auto &T : TypeMap) {
     const char *AccessQual =
@@ -556,17 +581,21 @@ void BuiltinNameEmitter::EmitTypeTable() {
             .Case("WO", "OCLAQ_WriteOnly")
             .Case("RW", "OCLAQ_ReadWrite")
             .Default("OCLAQ_None");
+    unsigned VectorWidth = T.first->getValueAsInt("VecWidth");
+    MaxVectorWidth = std::max(MaxVectorWidth, VectorWidth);
 
     OS << "  // " << T.second << "\n"
-       << "  {OCLT_" << T.first->getValueAsString("Name") << ", "
-       << T.first->getValueAsInt("VecWidth") << ", "
-       << T.first->getValueAsBit("IsPointer") << ", "
+       << "  {OCLT_" << T.first->getValueAsString("Name") << ", " << VectorWidth
+       << ", " << T.first->getValueAsBit("IsPointer") << ", "
        << T.first->getValueAsBit("IsConst") << ", "
-       << T.first->getValueAsBit("IsVolatile") << ", "
-       << AccessQual << ", "
-       << T.first->getValueAsString("AddrSpace") << "},\n";
+       << T.first->getValueAsBit("IsVolatile") << ", " << AccessQual << ", "
+       << "static_cast<unsigned>(" << T.first->getValueAsString("AddrSpace")
+       << ")},\n";
   }
-  OS << "};\n\n";
+  OS << "};\n\n"
+     << "static_assert(" << MaxVectorWidth
+     << " < (1u << OpenCLTypeVectorWidthBits),\n"
+     << "              \"OpenCLTypeStruct::VectorWidth is too narrow\");\n\n";
 }
 
 void BuiltinNameEmitter::EmitSignatureTable() {
@@ -588,7 +617,15 @@ void BuiltinNameEmitter::EmitSignatureTable() {
     }
     OS << "\n";
   }
-  OS << "};\n\n";
+  unsigned SignatureTableSize =
+      SignaturesList.empty()
+          ? 0
+          : SignaturesList.back().second + SignaturesList.back().first.size();
+  OS << "};\n\n"
+     << "static_assert(" << SignatureTableSize
+     << " <= (1u << OpenCLBuiltinSigTableIndexBits),\n"
+     << "              \"OpenCLBuiltinStruct::SigTableIndex is too "
+        "narrow\");\n\n";
 }
 
 // Encode a range MinVersion..MaxVersion into a single bit mask that can be
@@ -616,6 +653,8 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
 
 void BuiltinNameEmitter::EmitBuiltinTable() {
   unsigned Index = 0;
+  unsigned MaxNumTypes = 0;
+  unsigned MaxVersions = 0;
 
   OS << "static const OpenCLBuiltinStruct BuiltinTable[] = {\n";
   for (const auto &SLM : SignatureListMap) {
@@ -632,18 +671,27 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
           Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID");
       unsigned int MaxVersion =
           Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID");
+      unsigned NumTypes =
+          Overload.first->getValueAsListOfDefs("Signature").size();
+      unsigned Versions = EncodeVersions(MinVersion, MaxVersion);
+      MaxNumTypes = std::max(MaxNumTypes, NumTypes);
+      MaxVersions = std::max(MaxVersions, Versions);
 
-      OS << "  { " << Overload.second << ", "
-         << Overload.first->getValueAsListOfDefs("Signature").size() << ", "
+      OS << "  { " << Overload.second << ", " << NumTypes << ", "
          << (Overload.first->getValueAsBit("IsPure")) << ", "
          << (Overload.first->getValueAsBit("IsConst")) << ", "
          << (Overload.first->getValueAsBit("IsConv")) << ", "
-         << FunctionExtensionIndex[ExtName] << ", "
-         << EncodeVersions(MinVersion, MaxVersion) << " },\n";
+         << FunctionExtensionIndex[ExtName] << ", " << Versions << " },\n";
       Index++;
     }
   }
-  OS << "};\n\n";
+  OS << "};\n\n"
+     << "static_assert(" << MaxNumTypes
+     << " < (1u << OpenCLBuiltinNumTypesBits),\n"
+     << "              \"OpenCLBuiltinStruct::NumTypes is too narrow\");\n"
+     << "static_assert(" << MaxVersions
+     << " < (1u << OpenCLBuiltinVersionsBits),\n"
+     << "              \"OpenCLBuiltinStruct::Versions is too narrow\");\n\n";
 }
 
 bool BuiltinNameEmitter::CanReuseSignature(
@@ -964,7 +1012,8 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   // [const|volatile] pointers, so this is ok to do it as a last step.
   if (Ty.IsPointer != 0) {
     for (unsigned Index = 0; Index < QT.size(); Index++) {
-      QT[Index] = Context.getAddrSpaceQualType(QT[Index], Ty.AS);
+      QT[Index] =
+          Context.getAddrSpaceQualType(QT[Index], static_cast<LangAS>(Ty.AS));
       QT[Index] = Context.getPointerType(QT[Index]);
     }
   }
