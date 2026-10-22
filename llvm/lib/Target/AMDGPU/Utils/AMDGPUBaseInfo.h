@@ -534,6 +534,11 @@ bool isVOPC64DPP(unsigned Opc);
 LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
+/// Returns true if this VOP3P opcode has no op_sel_hi field, in which case
+/// those bits are encoded as zero instead of defaulting to one.
+LLVM_READONLY
+bool hasNoOpSelHi(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
@@ -584,6 +589,30 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 LLVM_READONLY
 bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
                                     unsigned BFmt, unsigned BScale);
+
+/// \returns the matrix_a_fmt and matrix_b_fmt operands of an f8f6f4 WMMA.
+/// Works on both MCInst and MachineInstr.
+template <typename InstT>
+std::pair<unsigned, unsigned> getWMMAMatrixFmts(const InstT &MI) {
+  unsigned Opc = MI.getOpcode();
+  int AIdx = getNamedOperandIdx(Opc, OpName::matrix_a_fmt);
+  int BIdx = getNamedOperandIdx(Opc, OpName::matrix_b_fmt);
+  assert(AIdx != -1 && BIdx != -1 && "expected an f8f6f4 WMMA");
+  return {static_cast<unsigned>(MI.getOperand(AIdx).getImm()),
+          static_cast<unsigned>(MI.getOperand(BIdx).getImm())};
+}
+
+/// \returns true if either matrix input of an f8f6f4 WMMA is f8.
+template <typename InstT> bool isWMMAAnyF8(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt <= WMMA::MATRIX_FMT_BF8 || BFmt <= WMMA::MATRIX_FMT_BF8;
+}
+
+/// \returns true if both matrix inputs of an f8f6f4 WMMA are f4.
+template <typename InstT> bool isWMMABothF4(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt == WMMA::MATRIX_FMT_FP4 && BFmt == WMMA::MATRIX_FMT_FP4;
+}
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -1153,6 +1182,9 @@ unsigned getXcntBitMask(const IsaVersion &Version);
 /// STOREcnt and VScnt are the same counter, the name used
 /// depends on the ISA version.
 unsigned getStorecntBitMask(const IsaVersion &Version);
+
+/// \returns barrier member count bit mask in M0 for given isa \p Version.
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version);
 
 namespace Hwreg {
 
@@ -1755,6 +1787,9 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns true if the intrinsic executes an LDSDMA operation
+bool isLDSDMAIntrinsic(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

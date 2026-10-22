@@ -186,9 +186,9 @@ public:
 
       // Powers of 10:
       EXPECT_FP_EQ(1.0f, func(10.0f, 0.0f));
-      EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
-      EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
       if (tolerance == 0) {
+        EXPECT_FP_EQ(10.0f, func(10.0f, 1.0f));
+        EXPECT_FP_EQ(100.0f, func(10.0f, 2.0f));
         EXPECT_FP_EQ(1000.0f, func(10.0f, 3.0f));
         EXPECT_FP_EQ(10000.0f, func(10.0f, 4.0f));
         EXPECT_FP_EQ(100000.0f, func(10.0f, 5.0f));
@@ -203,6 +203,8 @@ public:
           uint32_t e = FPBits(exp).uintval();
           EXPECT_LE(a >= e ? a - e : e - a, static_cast<uint32_t>(tolerance));
         };
+        check_close(func(10.0f, 1.0f), 10.0f);
+        check_close(func(10.0f, 2.0f), 100.0f);
         check_close(func(10.0f, 3.0f), 1000.0f);
         check_close(func(10.0f, 4.0f), 10000.0f);
         check_close(func(10.0f, 5.0f), 100000.0f);

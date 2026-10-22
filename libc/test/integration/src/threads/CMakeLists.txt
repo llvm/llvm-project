@@ -60,6 +60,7 @@ add_integration_test(
     libc.src.threads.thrd_create
     libc.src.threads.thrd_exit
     libc.src.threads.thrd_join
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(

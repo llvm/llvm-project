@@ -1,4 +1,5 @@
-// RUN:   mlir-opt %s -test-math-polynomial-approximation="enable-avx2"        \
+// RUN:   mlir-opt %s -transform-interpreter                                   \
+// RUN:               -test-transform-dialect-erase-schedule                   \
 // RUN:               -convert-vector-to-scf                                   \
 // RUN:               -convert-scf-to-cf                                       \
 // RUN:               -convert-arith-to-llvm                                   \
@@ -40,4 +41,14 @@ func.func @rsqrt() {
 func.func @main() {
   call @rsqrt(): () -> ()
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.math.polynomial_approximation enable_avx2
+    } : !transform.any_op
+    transform.yield
+  }
 }

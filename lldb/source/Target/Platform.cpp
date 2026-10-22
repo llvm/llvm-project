@@ -1539,7 +1539,7 @@ Environment Platform::GetEnvironment() {
   return Environment();
 }
 
-const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
+const std::vector<std::string> &Platform::GetTrapHandlerSymbolNames() {
   if (!m_calculated_trap_handlers) {
     std::lock_guard<std::mutex> guard(m_mutex);
     if (!m_calculated_trap_handlers) {

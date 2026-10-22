@@ -7792,6 +7792,18 @@ TEST_F(FormatTest, BreakBinaryOperatorsInPresenceOfTemplates) {
                Style);
 }
 
+TEST_F(FormatTest, BreakBinaryOperatorsAfterAttributes) {
+  FormatStyle Style = getLLVMStyleWithColumns(25);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("int long_variable_name\n"
+               "    = 1;\n"
+               "int a [[maybe_unused]]\n"
+               "    = 2;",
+               "int long_variable_name = 1;\n"
+               "int a [[maybe_unused]] = 2;",
+               Style);
+}
+
 TEST_F(FormatTest, ConstructorInitializers) {
   verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}");
   verifyFormat("Constructor() : Inttializer(FitsOnTheLine) {}",
@@ -8293,6 +8305,13 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "  int nums[]{1,\n"
                "             2,\n"
                "             3};\n"
+               "}",
+               Style);
+  verifyFormat("int main() {\n"
+               "  MyFunc(&a,\n"
+               "         &b,\n"
+               "         (uint8_t *)c,\n"
+               "         d);\n"
                "}",
                Style);
 }
@@ -12310,6 +12329,36 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "{\n"
                "  p->delete ();\n"
                "}");
+
+  verifyFormat("x = new a *[]{nullptr};");
+  verifyFormat("x = new (a) a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a::a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a) a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a)(a<a> *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
@@ -16679,6 +16728,18 @@ TEST_F(FormatTest, CountsCharactersInMultilineRawStringLiterals) {
   verifyFormat("fffffffffff(R\"(single line raw string)\" + bbbbbb);",
                "fffffffffff(\n"
                " R\"(single line raw string)\" + bbbbbb);");
+}
+
+TEST_F(FormatTest, MultilineRawStringWidthWithCRLF) {
+  auto Style = getLLVMStyleWithColumns(23);
+
+  // The raw string's first line reaches ColumnLimit; CR must not add a column.
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\n"
+                 ")\");",
+                 Style);
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\r\n"
+                 ")\");",
+                 Style);
 }
 
 TEST_F(FormatTest, SkipsUnknownStringLiterals) {
@@ -21740,6 +21801,58 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
+
+  FormatStyle BeforeLambdaBodyStyle = getLLVMStyle();
+  BeforeLambdaBodyStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
+  BeforeLambdaBodyStyle.BraceWrapping.BeforeLambdaBody = true;
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_None;
+
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
+
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_Empty;
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
 }
 
 TEST_F(FormatTest, LambdaWithLineComments) {
