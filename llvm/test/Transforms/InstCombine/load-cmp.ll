@@ -677,3 +677,29 @@ define i1 @cmp_load_multiplied_index_negative(i32 %X) {
   %cmp = icmp eq i16 %load, 82
   ret i1 %cmp
 }
+
+define i1 @cmp_load_multiplied_index_non_const(i32 %X, i32 %fac) {
+; CHECK-LABEL: @cmp_load_multiplied_index_non_const(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[FAC:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw nsw i32 %X, %fac
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 81
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_shifted_index_non_const(i32 %X, i32 %sh) {
+; CHECK-LABEL: @cmp_load_shifted_index_non_const(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X:%.*]], [[SH:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHL]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw nsw i32 %X, %sh
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %shl
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 68
+  ret i1 %cmp
+}
