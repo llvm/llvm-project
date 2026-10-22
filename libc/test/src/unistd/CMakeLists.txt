@@ -249,7 +249,7 @@ add_libc_test(
 add_libc_test(
   execlp_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     execlp_test.cpp
   DEPENDS
