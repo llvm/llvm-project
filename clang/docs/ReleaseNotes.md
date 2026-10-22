@@ -458,6 +458,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
@@ -875,6 +879,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `extern` variable with an initializer. Static data members declared with
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
+
+- Fixed an assertion failure when generating code for an x86 function with the
+  `interrupt` attribute whose first parameter uses a typedef for a pointer
+  type. (#GH204756)
 
 #### Bug Fixes to C++ Support
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
