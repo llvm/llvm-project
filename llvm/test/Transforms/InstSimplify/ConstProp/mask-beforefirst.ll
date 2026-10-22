@@ -25,14 +25,6 @@ define <4 x i1> @v4i1() {
   ret <4 x i1> %res
 }
 
-define <4 x i1> @v4i1_undef() {
-; CHECK-LABEL: define <4 x i1> @v4i1_undef() {
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 false, i1 false, i1 false>
-;
-  %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> <i1 undef, i1 true, i1 false, i1 false>)
-  ret <4 x i1> %res
-}
-
 define <4 x i1> @v4i1_poison() {
 ; CHECK-LABEL: define <4 x i1> @v4i1_poison() {
 ; CHECK-NEXT:    ret <4 x i1> poison

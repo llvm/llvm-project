@@ -4558,10 +4558,10 @@ static Constant *ConstantFoldFixedVectorCall(
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (isa_and_nonnull<PoisonValue>(Elt))
         return PoisonValue::get(FVTy);
-      if (auto *CI = dyn_cast_or_null<ConstantInt>(Elt))
-        SeenActive |= CI->isOne();
-      else if (!isa_and_nonnull<UndefValue>(Elt))
+      auto *CI = dyn_cast_or_null<ConstantInt>(Elt);
+      if (!CI)
         return nullptr;
+      SeenActive |= CI->isOne();
       Result[I] = ConstantInt::getBool(Ty, !SeenActive);
     }
     return ConstantVector::get(Result);
