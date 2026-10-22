@@ -38,8 +38,40 @@ MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
       ColorsEnabled(
           ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
 
-void MarkupFilter::filter(std::string &&InputLine) {
-  Line = std::move(InputLine);
+void MarkupFilter::filter(StringRef Input) {
+  Line.append(Input.data(), Input.size());
+
+  // Process all complete lines (i.e,. those terminated by '\n'), saving any
+  // flush till the end.
+  bool ShouldFlush = false;
+  size_t LineEnd;
+  while ((LineEnd = Line.find('\n')) != std::string::npos) {
+    std::string Rest = Line.substr(LineEnd + 1);
+    Line.resize(LineEnd + 1);
+    processCompleteLine();
+    Line = std::move(Rest);
+    ShouldFlush = true;
+  }
+
+  if (!Line.empty()) {
+    // Anything remaining is a fragment without a newline. Eagerly flush if it
+    // does not contain a potential markup element (i.e., if it contains "{{{"
+    // or ends with "{" or "{{"). Otherwise, buffer it for the next round of
+    // input.
+    StringRef S(Line);
+    if (S.find("{{{") == StringRef::npos && !S.ends_with("{") &&
+        !S.ends_with("{{")) {
+      OS << Line;
+      Line.clear();
+      ShouldFlush = true;
+    }
+  }
+
+  if (ShouldFlush)
+    OS.flush();
+}
+
+void MarkupFilter::processCompleteLine() {
   resetColor();
 
   Parser.parseLine(Line);
@@ -62,11 +94,16 @@ void MarkupFilter::filter(std::string &&InputLine) {
 }
 
 void MarkupFilter::finish() {
+  if (!Line.empty()) {
+    Line += '\n';
+    processCompleteLine();
+  }
   Parser.flush();
   while (std::optional<MarkupNode> Node = Parser.nextNode())
     filterNode(*Node);
   endAnyModuleInfoLine();
   resetColor();
+  OS.flush();
   Modules.clear();
   MMaps.clear();
 }
