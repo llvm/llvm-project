@@ -438,6 +438,9 @@ if (NOT MSVC)
   # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
 
+  # x86_64 LFI
+  set(x86_64_lfi_SOURCES ${x86_64_SOURCES})
+
   if (WIN32)
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
