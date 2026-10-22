@@ -11,7 +11,7 @@
 // This tests that we have two scanning module variants.
 // RUN: find %t/module-cache -name "*.pcm" | wc -l | grep 2
 
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 
 // Verify that there are only two variants and that the expected merges have
 // happened.
