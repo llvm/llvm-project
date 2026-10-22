@@ -14,8 +14,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 cc_library(
     name = "PluginsClang",
     srcs = glob([

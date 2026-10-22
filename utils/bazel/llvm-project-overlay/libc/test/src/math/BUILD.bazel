@@ -10,8 +10,6 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(["libc_math_test_rules.bzl"])
 
-licenses(["notice"])
-
 math_mpfr_test(name = "acos")
 
 math_mpfr_test(

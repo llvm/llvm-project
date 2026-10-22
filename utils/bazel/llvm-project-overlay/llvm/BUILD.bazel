@@ -25,8 +25,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 # Enable checks that alter LLVM's C++ ABI. Usage:
 #   bazel build --@llvm-project//llvm:enable_abi_breaking_checks=true @llvm-project//llvm:llvm
 bool_flag(

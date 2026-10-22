@@ -9,8 +9,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 cc_library(
     name = "lib",
     srcs = glob(["*.cpp"]),

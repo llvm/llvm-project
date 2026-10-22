@@ -27,8 +27,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 exports_files([
     "LICENSE.TXT",
     "utils/lldb-scripts/mlirDataFormatters.py",

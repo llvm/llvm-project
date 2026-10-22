@@ -8,8 +8,6 @@ load("//libc/test/src/math:libc_math_test_rules.bzl", "math_test")
 
 package(default_visibility = ["//visibility:public"])
 
-licenses(["notice"])
-
 math_test(name = "acos")
 
 math_test(

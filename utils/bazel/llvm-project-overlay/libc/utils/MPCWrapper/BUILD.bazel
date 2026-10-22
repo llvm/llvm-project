@@ -16,8 +16,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 cc_library(
     name = "mpc_impl",
     hdrs = ["mpc_inc.h"],

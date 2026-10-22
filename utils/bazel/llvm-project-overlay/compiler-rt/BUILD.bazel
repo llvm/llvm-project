@@ -10,8 +10,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 POSIX_PROFILE_DEFINES = [
     "COMPILER_RT_HAS_ATOMICS=1",
     "COMPILER_RT_HAS_FCNTL_LCK=1",

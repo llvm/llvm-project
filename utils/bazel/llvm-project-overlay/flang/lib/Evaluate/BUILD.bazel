@@ -11,8 +11,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 exports_files(["host.h"])
 
 cc_library(

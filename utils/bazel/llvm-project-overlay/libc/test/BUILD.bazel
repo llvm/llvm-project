@@ -14,8 +14,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 exports_files(["libc_test_rules.bzl"])
 
 # Smoke test verifying libc_release_library macro functionality.

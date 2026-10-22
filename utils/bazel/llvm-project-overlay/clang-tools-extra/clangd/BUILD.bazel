@@ -10,8 +10,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 # TODO: this is a shim to provide Features.inc as needed by Feature.h.
 # Replace this with something that parses Features.inc.in.
 write_file(

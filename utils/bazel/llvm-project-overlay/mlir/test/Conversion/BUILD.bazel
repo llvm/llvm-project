@@ -1,8 +1,6 @@
 load("//llvm:lit_test.bzl", "lit_test")
 load("//llvm:targets.bzl", "llvm_targets")
 
-licenses(["notice"])
-
 package(default_visibility = ["//visibility:public"])
 
 [

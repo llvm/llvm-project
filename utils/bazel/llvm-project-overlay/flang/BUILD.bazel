@@ -15,8 +15,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 exports_files(["LICENSE.TXT"])
 
 expand_template(

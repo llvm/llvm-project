@@ -20,8 +20,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-licenses(["notice"])
-
 write_file(
     name = "generate_vcs_revision",
     out = "include/VCSVersion.inc",

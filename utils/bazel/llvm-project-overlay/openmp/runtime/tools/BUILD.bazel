@@ -8,8 +8,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-licenses(["notice"])
-
 # Invoked at build time to generate the kmp_i18n_id.inc and
 # kmp_i18n_default.inc message catalog headers.
 py_binary(

@@ -12,8 +12,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 # Generate config.h from flang-rt/cmake/config.h.cmake.in. Values match what
 # CMake autodetects on a typical Linux glibc host.
 expand_template(

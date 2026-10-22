@@ -10,8 +10,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 cc_library(
     name = "include_cleaner",
     srcs = glob([

@@ -6,8 +6,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-licenses(["notice"])
-
 # Convenience alias matching the CMake target name (`omp`) and the on-disk
 # library name (libomp.so / libomp.a).
 alias(

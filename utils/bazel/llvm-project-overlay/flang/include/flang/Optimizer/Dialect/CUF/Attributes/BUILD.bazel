@@ -12,8 +12,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 td_library(
     name = "CUFAttrsTdFiles",
     srcs = ["CUFAttr.td"],

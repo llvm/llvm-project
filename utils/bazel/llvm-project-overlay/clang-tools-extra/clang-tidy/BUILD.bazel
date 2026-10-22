@@ -14,8 +14,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 # Include static analyzer checks in clang-tidy. Usage:
 #   $ bazel build --@llvm-project//clang-tools-extra/clang-tidy:enable_static_analyzer=true //...
 #   $ bazel build --@llvm-project//clang-tools-extra/clang-tidy:enable_static_analyzer=false //...

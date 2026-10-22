@@ -8,8 +8,6 @@ load("//libc/test:libc_test_rules.bzl", "libc_test")
 
 package(default_visibility = ["//visibility:public"])
 
-licenses(["notice"])
-
 libc_test(
     name = "math_extras_test",
     srcs = ["math_extras_test.cpp"],

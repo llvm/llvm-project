@@ -11,8 +11,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 cc_library(
     name = "flangFrontend",
     srcs = glob(

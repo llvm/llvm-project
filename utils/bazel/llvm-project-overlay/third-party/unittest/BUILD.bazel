@@ -6,8 +6,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-licenses(["notice"])
-
 exports_files(["LICENSE.TXT"])
 
 # It may be tempting to add compiler flags here, but that should be avoided.

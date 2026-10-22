@@ -29,8 +29,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 # Expose the libc/shared/* RPC headers so flang-rt's io-api-server.cpp can
 # include `<shared/rpc.h>` and `<shared/rpc_dispatch.h>` from a host build
 # without depending on the rest of the libc target graph.

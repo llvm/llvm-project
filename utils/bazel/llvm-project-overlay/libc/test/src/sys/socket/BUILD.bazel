@@ -8,8 +8,6 @@ load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
-licenses(["notice"])
-
 libc_test_library(
     name = "socket_test_support",
     hdrs = ["linux/socket_test_support.h"],

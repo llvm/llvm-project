@@ -9,8 +9,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 [
     cc_test(
         name = "{}".format(file.split(".")[0]),

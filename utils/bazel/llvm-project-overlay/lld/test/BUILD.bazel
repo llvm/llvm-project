@@ -4,8 +4,6 @@
 
 load("//llvm:lit_test.bzl", "lit_expand_template")
 
-licenses(["notice"])
-
 lit_expand_template(
     name = "lit_site_cfg_py",
     testonly = True,

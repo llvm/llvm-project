@@ -22,8 +22,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 exports_files([
     "LICENSE.TXT",
     "source/API/liblldb-private.exports",

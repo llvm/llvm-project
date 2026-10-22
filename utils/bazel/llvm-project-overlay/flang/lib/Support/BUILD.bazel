@@ -12,8 +12,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 # Stub VCSVersion.inc — Bazel builds do not run the LLVM cmake VCS revision
 # generator. Version.cpp includes this header unconditionally and guards the
 # repository/revision symbols with #ifdef, so an empty file is sufficient.

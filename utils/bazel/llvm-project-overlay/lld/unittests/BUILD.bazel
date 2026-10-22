@@ -4,8 +4,6 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-licenses(["notice"])
-
 _REPOSITORY_NAME = repository_name().lstrip("@")
 
 _LLD_SRC_DIR = "../%s/lld" % _REPOSITORY_NAME if _REPOSITORY_NAME else "lld"

@@ -10,8 +10,6 @@ package(
     features = ["layering_check"],
 )
 
-licenses(["notice"])
-
 cc_test(
     name = "clang_tidy_test",
     size = "small",

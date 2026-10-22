@@ -12,8 +12,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 exports_files(["RuntimeFunctions.inc"])
 
 cc_library(

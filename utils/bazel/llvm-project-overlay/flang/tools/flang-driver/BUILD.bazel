@@ -11,8 +11,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 cc_binary(
     name = "flang",
     srcs = [
