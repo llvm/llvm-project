@@ -154,11 +154,27 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
     case CG_V8:
       Builder.defineMacro("__sparcv8");
       Builder.defineMacro("__sparcv8__");
+      Builder.defineMacro("__sparc_v8__");
       break;
     case CG_V9:
       Builder.defineMacro("__sparc_v9__");
       break;
     }
+  }
+  switch (CPU) {
+  case CK_LEON2:
+  case CK_LEON2_AT697E:
+  case CK_LEON2_AT697F:
+  case CK_LEON3:
+  case CK_LEON3_UT699:
+  case CK_LEON3_GR712RC:
+  case CK_LEON4:
+  case CK_LEON4_GR740:
+  case CK_LEON5:
+    Builder.defineMacro("__leon__");
+    break;
+  default:
+    break;
   }
   if (getCPUGeneration(CPU) == CG_V9) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
