@@ -658,16 +658,14 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   }
 
   // Drop the entries where the callstack is empty.
-  for (const uint64_t Id : EntriesToErase) {
+  for (const uint64_t Id : EntriesToErase)
     StackMap.erase(Id);
-  }
 
   if (!EntriesToErase.empty())
     CallstackProfileData.remove_if(
         [&EntriesToErase](const std::pair<uint64_t, MemInfoBlock> &KV) {
-          if (!EntriesToErase.contains(KV.first)) {
+          if (!EntriesToErase.contains(KV.first))
             return false;
-          }
           if (KV.second.AccessHistogramSize > 0)
             free((void *)KV.second.AccessHistogram);
           return true;
