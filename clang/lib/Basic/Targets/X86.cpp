@@ -157,6 +157,14 @@ bool X86TargetInfo::initFeatureMap(
   if (getTriple().getArch() == llvm::Triple::x86_64)
     setFeatureEnabled(Features, "sse2", true);
 
+  // Enable SSE4.1 for Windows MSVC targets to support SIMD intrinsics like
+  // _mm_mullo_epi32 without requiring explicit /arch: flags.
+  if ((getTriple().getArch() == llvm::Triple::x86_64 ||
+       getTriple().getArch() == llvm::Triple::x86) &&
+      getTriple().isWindowsMSVCEnvironment()) {
+    setFeatureEnabled(Features, "sse4.1", true);
+  }
+
   using namespace llvm::X86;
 
   SmallVector<StringRef, 16> CPUFeatures;
