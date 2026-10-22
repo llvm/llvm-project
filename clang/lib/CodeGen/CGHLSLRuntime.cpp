@@ -24,6 +24,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -1247,9 +1248,21 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
 namespace {
 // Describes how a semantic leaf lowers to signature rows
 struct SemanticShape {
-  SmallVector<unsigned> Dimensions; // Empty dims denotes a scalar
+  // Array length followed by matrix major-axis length.
+  SmallVector<unsigned> Dimensions;
   unsigned Cols;
   QualType RowType;
+  bool IsMatrix = false;
+  bool IsRowMajor = false;
+
+  // Direct matrix arguments/results use column-major flattened vectors even
+  // when their signature (and aggregate memory representation) is row-major.
+  unsigned getMatrixElementIndex(unsigned Row, unsigned Col) const {
+    assert(IsMatrix);
+    unsigned MatrixRow = Row % Dimensions.back();
+    return IsRowMajor ? Col * Dimensions.back() + MatrixRow
+                      : MatrixRow * Cols + Col;
+  }
 
   unsigned getNumRows() const {
     unsigned Rows = 1;
@@ -1280,8 +1293,8 @@ static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
   return Decl->getType();
 }
 
-// Walks through the surrounding constant array types of \p Ty, collecting their
-// dimensions until reaching a scalar, vector, or matrix leaf.
+// Collects array dimensions and, for a matrix leaf, its major-axis dimension.
+// RowType is the scalar or vector transferred by each signature load/store.
 static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
   SemanticShape Shape{{}, 1, Ty};
   while (const ConstantArrayType *CAT =
@@ -1294,10 +1307,12 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
     Shape.Cols = VT->getNumElements();
   } else if (const auto *MT =
                  Shape.RowType->getAs<clang::ConstantMatrixType>()) {
-    // FIXME: a matrix leaf lowers to one row per matrix row but if column_major
-    // is specified we transpose the num rows and num cols, this depends on
-    // #211977 to resolve
-    Shape.Cols = MT->getNumColumns();
+    Shape.IsMatrix = true;
+    Shape.IsRowMajor = isMatrixRowMajor(Ctx.getLangOpts(), Shape.RowType);
+    Shape.Dimensions.push_back(Shape.IsRowMajor ? MT->getNumRows()
+                                                : MT->getNumColumns());
+    Shape.Cols = Shape.IsRowMajor ? MT->getNumColumns() : MT->getNumRows();
+    Shape.RowType = Ctx.getExtVectorType(MT->getElementType(), Shape.Cols);
   }
 
   return Shape;
@@ -1307,8 +1322,6 @@ static llvm::dxil::ElementType getSignatureComponentType(CodeGenModule &CGM,
                                                          QualType Ty) {
   if (const auto *VT = Ty->getAs<clang::VectorType>())
     Ty = VT->getElementType();
-  else if (const auto *MT = Ty->getAs<clang::ConstantMatrixType>())
-    Ty = MT->getElementType();
 
   llvm::Type *IRTy = CGM.getTypes().ConvertTypeForMem(Ty);
   bool IsSigned = Ty->isSignedIntegerOrEnumerationType();
@@ -1358,13 +1371,15 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  bool IsMatrixValue = Shape.IsMatrix && Type->isVectorTy();
+  llvm::Type *LeafTy = Shape.IsMatrix && !IsMatrixValue
+                           ? RowTy
+                           : CGM.getTypes().ConvertType(Shape.RowType);
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
   const unsigned NumRows = Shape.getNumRows();
 
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
     std::array<Value *, 4> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
@@ -1381,8 +1396,16 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
           Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
     }
 
-    Result =
-        Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    if (IsMatrixValue) {
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Result =
+            B.CreateInsertElement(Result, B.CreateExtractElement(Value, Col),
+                                  Shape.getMatrixElementIndex(Row, Col));
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Result =
+          Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    }
   }
   return Result;
 }
@@ -1411,11 +1434,19 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
+  bool IsMatrixValue = Shape.IsMatrix && Source->getType()->isVectorTy();
   const unsigned NumRows = Shape.getNumRows();
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
-    llvm::Value *Val =
-        Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    llvm::Value *Val;
+    if (IsMatrixValue) {
+      SmallVector<int, 4> Mask;
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Mask.push_back(Shape.getMatrixElementIndex(Row, Col));
+      Val = B.CreateShuffleVector(Source, Mask);
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Val = Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    }
 
     // Booleans use their memory representation in DXIL signatures, but direct
     // function results use their value representation.
