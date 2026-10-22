@@ -115,6 +115,7 @@ add_fp_unittest(
     is_integer_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.is_integer
     libc.src.__support.macros.properties.types

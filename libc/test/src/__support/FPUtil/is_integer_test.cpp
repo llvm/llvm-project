@@ -13,6 +13,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -20,6 +21,7 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::BFloat16;
+using LIBC_NAMESPACE::fputil::Float128;
 using LIBC_NAMESPACE::fputil::is_integer;
 using LIBC_NAMESPACE::fputil::is_odd_integer;
 
@@ -143,6 +145,7 @@ TEST_IS_INTEGER(Float16, float16)
 TEST_IS_INTEGER(DFloat128, float128)
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
+TEST_IS_INTEGER(Float128, Float128)
 TEST_IS_INTEGER(BFloat16, BFloat16)
 
 TEST(LlvmLibcIsIntegerConstexprTest, ConstexprEval) {
