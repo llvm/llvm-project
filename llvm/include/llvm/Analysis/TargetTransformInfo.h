@@ -872,10 +872,16 @@ public:
   LLVM_ABI bool isLegalICmpImmediate(int64_t Imm) const;
 
   /// Return true if replacing the relational loop exit comparison \p Cond
-  /// with an equality comparison against \p PostIncExitValue is profitable.
+  /// with an equality comparison may be profitable. Targets returning true
+  /// should also implement isProfitableLoopExitEqualityImmediate().
   LLVM_ABI bool
-  preferLoopExitWithEqualityComparison(const ICmpInst &Cond,
-                                       const APInt &PostIncExitValue) const;
+  preferLoopExitWithEqualityComparison(const ICmpInst &Cond) const;
+
+  /// Return true if comparing a loop exit against \p PostIncExitValue with an
+  /// equality comparison is profitable. This is only queried if
+  /// preferLoopExitWithEqualityComparison() returned true.
+  LLVM_ABI bool
+  isProfitableLoopExitEqualityImmediate(const APInt &PostIncExitValue) const;
 
   /// Return true if the addressing mode represented by AM is legal for
   /// this target, for a load/store of the specified type.

@@ -2455,13 +2455,12 @@ bool LSRInstance::FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse) {
 /// prefers the exact exit value as an equality immediate.
 ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
     ICmpInst *Cond, IVStrideUse *&CondUse, BasicBlock *ExitingBlock) {
-  if (Cond->isEquality() || ExitingBlock != L->getLoopLatch())
+  if (Cond->isEquality() || ExitingBlock != L->getLoopLatch() ||
+      !TTI.preferLoopExitWithEqualityComparison(*Cond))
     return Cond;
 
   auto *IV = dyn_cast<PHINode>(CondUse->getOperandValToReplace());
   if (!IV || !IV->getType()->isIntegerTy() || IV->getParent() != L->getHeader())
-    return Cond;
-  if (Cond->getOperand(0) != IV && Cond->getOperand(1) != IV)
     return Cond;
 
   const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IV));
@@ -2488,8 +2487,8 @@ ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
 
   const auto *ExitValue =
       dyn_cast<SCEVConstant>(AR->evaluateAtIteration(ExitCount, SE));
-  if (!ExitValue || !TTI.preferLoopExitWithEqualityComparison(
-                        *Cond, ExitValue->getAPInt() + StepValue))
+  if (!ExitValue || !TTI.isProfitableLoopExitEqualityImmediate(
+                        ExitValue->getAPInt() + StepValue))
     return Cond;
 
   LLVM_DEBUG(dbgs() << "  Rewriting loop exit to compare " << *IV << " against "

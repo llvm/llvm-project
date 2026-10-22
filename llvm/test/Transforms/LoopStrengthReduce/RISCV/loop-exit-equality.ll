@@ -762,4 +762,184 @@ exit:
   ret void
 }
 
+define void @increment_to_17_samesign(ptr %p, i32 %start) {
+; BASE-LABEL: define void @increment_to_17_samesign(
+; BASE-SAME: ptr [[P:%.*]], i32 [[START:%.*]]) {
+; BASE-NEXT:  [[ENTRY:.*:]]
+; BASE-NEXT:    [[ENTER:%.*]] = icmp ult i32 [[START]], 17
+; BASE-NEXT:    br i1 [[ENTER]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; BASE:       [[LOOP_PREHEADER]]:
+; BASE-NEXT:    br label %[[LOOP:.*]]
+; BASE:       [[LOOP]]:
+; BASE-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; BASE-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; BASE-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; BASE-NEXT:    [[CONTINUE:%.*]] = icmp samesign ult i32 [[IV]], 16
+; BASE-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; BASE:       [[EXIT_LOOPEXIT]]:
+; BASE-NEXT:    br label %[[EXIT]]
+; BASE:       [[EXIT]]:
+; BASE-NEXT:    ret void
+;
+; ZIBI-LABEL: define void @increment_to_17_samesign(
+; ZIBI-SAME: ptr [[P:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
+; ZIBI-NEXT:  [[ENTRY:.*:]]
+; ZIBI-NEXT:    [[ENTER:%.*]] = icmp ult i32 [[START]], 17
+; ZIBI-NEXT:    br i1 [[ENTER]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; ZIBI:       [[LOOP_PREHEADER]]:
+; ZIBI-NEXT:    br label %[[LOOP:.*]]
+; ZIBI:       [[LOOP]]:
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
+; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; ZIBI:       [[EXIT_LOOPEXIT]]:
+; ZIBI-NEXT:    br label %[[EXIT]]
+; ZIBI:       [[EXIT]]:
+; ZIBI-NEXT:    ret void
+;
+; ASM-LABEL: increment_to_17_samesign:
+; ASM:       # %bb.0: # %entry
+; ASM-NEXT:    li a2, 16
+; ASM-NEXT:    sext.w a3, a1
+; ASM-NEXT:    bltu a2, a3, .LBB12_2
+; ASM-NEXT:  .LBB12_1: # %loop
+; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
+; ASM-NEXT:    sw a1, 0(a0)
+; ASM-NEXT:    addiw a1, a1, 1
+; ASM-NEXT:    bnei a1, 17, .LBB12_1
+; ASM-NEXT:  .LBB12_2: # %exit
+; ASM-NEXT:    ret
+entry:
+  %enter = icmp ult i32 %start, 17
+  br i1 %enter, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  store volatile i32 %iv, ptr %p
+  %iv.next = add i32 %iv, 1
+  %continue = icmp samesign ult i32 %iv, 16
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @decrement_to_17_samesign(ptr %p, i32 %start) {
+; BASE-LABEL: define void @decrement_to_17_samesign(
+; BASE-SAME: ptr [[P:%.*]], i32 [[START:%.*]]) {
+; BASE-NEXT:  [[ENTRY:.*:]]
+; BASE-NEXT:    [[ENTER:%.*]] = icmp sgt i32 [[START]], 17
+; BASE-NEXT:    br i1 [[ENTER]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; BASE:       [[LOOP_PREHEADER]]:
+; BASE-NEXT:    br label %[[LOOP:.*]]
+; BASE:       [[LOOP]]:
+; BASE-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; BASE-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; BASE-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; BASE-NEXT:    [[CONTINUE:%.*]] = icmp samesign ugt i32 [[IV]], 18
+; BASE-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; BASE:       [[EXIT_LOOPEXIT]]:
+; BASE-NEXT:    br label %[[EXIT]]
+; BASE:       [[EXIT]]:
+; BASE-NEXT:    ret void
+;
+; ZIBI-LABEL: define void @decrement_to_17_samesign(
+; ZIBI-SAME: ptr [[P:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
+; ZIBI-NEXT:  [[ENTRY:.*:]]
+; ZIBI-NEXT:    [[ENTER:%.*]] = icmp sgt i32 [[START]], 17
+; ZIBI-NEXT:    br i1 [[ENTER]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; ZIBI:       [[LOOP_PREHEADER]]:
+; ZIBI-NEXT:    br label %[[LOOP:.*]]
+; ZIBI:       [[LOOP]]:
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
+; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; ZIBI:       [[EXIT_LOOPEXIT]]:
+; ZIBI-NEXT:    br label %[[EXIT]]
+; ZIBI:       [[EXIT]]:
+; ZIBI-NEXT:    ret void
+;
+; ASM-LABEL: decrement_to_17_samesign:
+; ASM:       # %bb.0: # %entry
+; ASM-NEXT:    li a2, 18
+; ASM-NEXT:    sext.w a3, a1
+; ASM-NEXT:    blt a3, a2, .LBB13_2
+; ASM-NEXT:  .LBB13_1: # %loop
+; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
+; ASM-NEXT:    sw a1, 0(a0)
+; ASM-NEXT:    addiw a1, a1, -1
+; ASM-NEXT:    bnei a1, 17, .LBB13_1
+; ASM-NEXT:  .LBB13_2: # %exit
+; ASM-NEXT:    ret
+entry:
+  %enter = icmp sgt i32 %start, 17
+  br i1 %enter, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  store volatile i32 %iv, ptr %p
+  %iv.next = add i32 %iv, -1
+  %continue = icmp samesign ugt i32 %iv, 18
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @decrement_by_two_to_17_samesign(ptr %p) {
+; BASE-LABEL: define void @decrement_by_two_to_17_samesign(
+; BASE-SAME: ptr [[P:%.*]]) {
+; BASE-NEXT:  [[ENTRY:.*]]:
+; BASE-NEXT:    br label %[[LOOP:.*]]
+; BASE:       [[LOOP]]:
+; BASE-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 1003, %[[ENTRY]] ]
+; BASE-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV]], -2
+; BASE-NEXT:    store volatile i32 [[TMP0]], ptr [[P]], align 4
+; BASE-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -2
+; BASE-NEXT:    [[CONTINUE:%.*]] = icmp samesign ugt i32 [[LSR_IV_NEXT]], 19
+; BASE-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT:.*]]
+; BASE:       [[EXIT]]:
+; BASE-NEXT:    ret void
+;
+; ZIBI-LABEL: define void @decrement_by_two_to_17_samesign(
+; ZIBI-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; ZIBI-NEXT:  [[ENTRY:.*]]:
+; ZIBI-NEXT:    br label %[[LOOP:.*]]
+; ZIBI:       [[LOOP]]:
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ 1001, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -2
+; ZIBI-NEXT:    [[LSR_EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 17
+; ZIBI-NEXT:    br i1 [[LSR_EXITCOND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZIBI:       [[EXIT]]:
+; ZIBI-NEXT:    ret void
+;
+; ASM-LABEL: decrement_by_two_to_17_samesign:
+; ASM:       # %bb.0: # %entry
+; ASM-NEXT:    li a1, 1001
+; ASM-NEXT:  .LBB14_1: # %loop
+; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
+; ASM-NEXT:    sw a1, 0(a0)
+; ASM-NEXT:    addiw a1, a1, -2
+; ASM-NEXT:    bnei a1, 17, .LBB14_1
+; ASM-NEXT:  # %bb.2: # %exit
+; ASM-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1001, %entry ], [ %iv.next, %loop ]
+  store volatile i32 %iv, ptr %p
+  %iv.next = add i32 %iv, -2
+  %continue = icmp samesign ugt i32 %iv, 19
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @use_condition(i1)
