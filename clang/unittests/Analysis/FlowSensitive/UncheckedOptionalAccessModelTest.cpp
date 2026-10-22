@@ -1247,13 +1247,11 @@ TEST_P(UncheckedOptionalAccessTest, StdExchangeUnmodeledLoc) {
 
     struct L { $ns::$optional<int> hd; L* tl; };
 
-    void target() {
+    void target(L bar) {
       $ns::$optional<int> opt1 = 3;
-      L bar;
-      bar.hd = 4;
-      bar.tl = &bar;
+      if (!bar.tl->tl->hd) return;
 
-      // bar.tl->tl->hd has value, but any `tl` beyond the first is not modeled.
+      // Any `tl` beyond the first is not modeled.
       std::exchange(opt1, bar.tl->tl->hd);
       opt1.value(); // [[unsafe]]
 
