@@ -180,6 +180,8 @@ public:
 
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 
+  void emitGlobalVariable(const GlobalVariable *GV) override;
+
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
