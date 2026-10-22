@@ -5556,7 +5556,9 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
 }
 
 /// Check whether Opcode1 has less throughput according to the scheduling
-/// model than Opcode2.
+/// model than Opcode2. For variant scheduling classes, the lowest throughput
+/// of Opcode1 and the highest throughput of Opcode2 are compared among all the
+/// scheduling classes they may be resolved to.
 bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
     unsigned Opcode1, unsigned Opcode2) const {
   const MCSchedModel &Sched = ST->getSchedModel();
@@ -5564,21 +5566,30 @@ bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
   if (!Sched.hasInstrSchedModel())
     return false;
 
-  const MCSchedClassDesc *SCD1 =
-      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
-  const MCSchedClassDesc *SCD2 =
-      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
-  // We cannot handle variant scheduling classes without an MI. If we need to
-  // support them for any of the instructions we query the information of we
-  // might need to add a way to resolve them without a MI or not use the
-  // scheduling info.
-  assert(!SCD1->isVariant() && !SCD2->isVariant() &&
-         "Cannot handle variant scheduling classes without an MI");
-  if (!SCD1->isValid() || !SCD2->isValid())
-    return false;
-
-  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
-         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+  auto GetRThroughput = [&](unsigned Opcode, bool Highest) {
+    std::optional<double> Res;
+    SmallVector<unsigned> Worklist = {TII->get(Opcode).getSchedClass()};
+    while (!Worklist.empty()) {
+      unsigned SchedClass = Worklist.pop_back_val();
+      const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+      if (SCD->isVariant()) {
+        append_range(Worklist, AArch64_MC::getVariantSchedClassTargets(
+                                   SchedClass, Sched.getProcessorID()));
+        continue;
+      }
+      if (!SCD->isValid())
+        continue;
+      double RThroughput = MCSchedModel::getReciprocalThroughput(*ST, *SCD);
+      if (!Res || (Highest ? RThroughput > *Res : RThroughput < *Res))
+        Res = RThroughput;
+    }
+    return Res;
+  };
+  std::optional<double> RThroughput1 =
+      GetRThroughput(Opcode1, /*Highest=*/true);
+  std::optional<double> RThroughput2 =
+      GetRThroughput(Opcode2, /*Highest=*/false);
+  return RThroughput1 && RThroughput2 && *RThroughput1 > *RThroughput2;
 }
 
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
@@ -5712,8 +5723,14 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                   Op1Info, Op2Info, I);
+  InstructionCost Cost = BaseT::getCmpSelInstrCost(
+      Opcode, ValTy, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
+  if (Opcode == Instruction::ICmp && isa<ScalableVectorType>(ValTy) &&
+      CostKind == TTI::TCK_RecipThroughput &&
+      hasKnownLowerThroughputFromSchedulingModel(AArch64::CMPEQ_PPzZZ_S,
+                                                 AArch64::CMEQv4i32))
+    Cost *= 2;
+  return Cost;
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
