@@ -19,12 +19,18 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #ifdef LIBC_TARGET_CPU_HAS_SSE2
 #include <immintrin.h>
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
+#ifdef LIBC_COMPILER_IS_MSVC
+#include <arm64_neon.h>
+#else
 #include <arm_neon.h>
+#endif
 #endif // LIBC_TARGET_CPU_HAS_SSE2
 
 namespace LIBC_NAMESPACE_DECL {
@@ -42,7 +48,8 @@ fp_and(T a, T b) {
       return _mm_cvtss_f32(_mm_and_ps(_mm_set_ss(a), _mm_set_ss(b)));
     if constexpr (cpp::is_same_v<T, double>)
       return _mm_cvtsd_f64(_mm_and_pd(_mm_set_sd(a), _mm_set_sd(b)));
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
     if constexpr (cpp::is_same_v<T, float>)
       return vget_lane_f32(
           vreinterpret_f32_u32(vand_u32(vreinterpret_u32_f32(vdup_n_f32(a)),
@@ -73,7 +80,8 @@ fp_or(T a, T b) {
       return _mm_cvtss_f32(_mm_or_ps(_mm_set_ss(a), _mm_set_ss(b)));
     if constexpr (cpp::is_same_v<T, double>)
       return _mm_cvtsd_f64(_mm_or_pd(_mm_set_sd(a), _mm_set_sd(b)));
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
     if constexpr (cpp::is_same_v<T, float>)
       return vget_lane_f32(
           vreinterpret_f32_u32(vorr_u32(vreinterpret_u32_f32(vdup_n_f32(a)),
@@ -104,7 +112,8 @@ fp_xor(T a, T b) {
       return _mm_cvtss_f32(_mm_xor_ps(_mm_set_ss(a), _mm_set_ss(b)));
     if constexpr (cpp::is_same_v<T, double>)
       return _mm_cvtsd_f64(_mm_xor_pd(_mm_set_sd(a), _mm_set_sd(b)));
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
     if constexpr (cpp::is_same_v<T, float>)
       return vget_lane_f32(
           vreinterpret_f32_u32(veor_u32(vreinterpret_u32_f32(vdup_n_f32(a)),
@@ -135,7 +144,8 @@ fp_andnot(T a, T b) {
       return _mm_cvtss_f32(_mm_andnot_ps(_mm_set_ss(b), _mm_set_ss(a)));
     if constexpr (cpp::is_same_v<T, double>)
       return _mm_cvtsd_f64(_mm_andnot_pd(_mm_set_sd(b), _mm_set_sd(a)));
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
     if constexpr (cpp::is_same_v<T, float>)
       return vget_lane_f32(
           vreinterpret_f32_u32(vbic_u32(vreinterpret_u32_f32(vdup_n_f32(a)),
@@ -167,7 +177,8 @@ fp_not(T a) {
     if constexpr (cpp::is_same_v<T, double>)
       return _mm_cvtsd_f64(
           _mm_xor_pd(_mm_set_sd(a), _mm_castsi128_pd(_mm_set1_epi64x(-1))));
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
     if constexpr (cpp::is_same_v<T, float>)
       return vget_lane_f32(
           vreinterpret_f32_u32(vmvn_u32(vreinterpret_u32_f32(vdup_n_f32(a)))),
