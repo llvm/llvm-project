@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfNoIntelPT
 class TestTraceEvents(TraceIntelPTTestCaseBase):
     @testSBAPIAndCommands
     def testCPUEvents(self):
@@ -45,7 +46,6 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
             ],
         )
 
-    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testPauseEvents(self):
         """
