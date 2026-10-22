@@ -2926,6 +2926,13 @@ void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(HLSLPreciseAttr::Create(getASTContext(), AL));
 }
 
+void SemaHLSL::deferFPNaNInfDiagnostic(const CallExpr *Call, bool IsNaN) {
+  // A later precise declaration can invalidate this fast-math diagnostic.
+  DeferredFPNaNInfDiagnostics.emplace_back(
+      Call->getBeginLoc(), PDiag(diag::warn_fp_nan_inf_when_disabled)
+                               << IsNaN << 0 << Call->getSourceRange());
+}
+
 static bool isMatrixType(QualType QT) {
   const Type *Ty = QT->getUnqualifiedDesugaredType();
   return Ty->isDependentType() || Ty->isConstantMatrixType();
@@ -3533,6 +3540,11 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
   diagnoseAvailabilityViolations(TU);
+
+  if (!TU->hasAttr<HLSLPreciseAttr>())
+    for (const auto &D : DeferredFPNaNInfDiagnostics)
+      Diag(D.first, D.second);
+  DeferredFPNaNInfDiagnostics.clear();
 }
 
 // For resource member access through a global struct array, verify that the

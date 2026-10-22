@@ -18,6 +18,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -192,6 +193,7 @@ public:
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   void handlePreciseAttr(Decl *D, const ParsedAttr &AL);
+  void deferFPNaNInfDiagnostic(const CallExpr *Call, bool IsNaN);
   void handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL);
   Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
   bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
@@ -245,6 +247,8 @@ public:
   bool initGlobalResourceArrayDecl(VarDecl *VD);
 
 private:
+  llvm::SmallVector<PartialDiagnosticAt> DeferredFPNaNInfDiagnostics;
+
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.
   llvm::SmallVector<const Attr *> HLSLResourcesTypeAttrs;
