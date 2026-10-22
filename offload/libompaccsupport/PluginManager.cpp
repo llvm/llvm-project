@@ -294,8 +294,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   // Register the images with the RTLs that understand them, if any. There are
   // no devices to register with if liboffload was not initialized.
   llvm::SmallVector<ol_device_handle_t> UsedDevices;
-  for (int32_t i = 0; LibOffloadInitialized && i < Desc->NumDeviceImages;
-       ++i) {
+  for (int32_t i = 0; LibOffloadInitialized && i < Desc->NumDeviceImages; ++i) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &Desc->DeviceImages[i];
 
