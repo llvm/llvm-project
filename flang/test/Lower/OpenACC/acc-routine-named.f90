@@ -15,13 +15,13 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_routinesPacc1()
-! CHECK-SAME:attributes {acc.routine_info = #acc.routine_info<[@[[r1]]]>{{.*}}}
+! CHECK-SAME:attributes {acc.routine_info = #acc.routine_info<[@[[r1]]]>}
 
   subroutine acc2()
     !$acc routine(acc2)
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_routinesPacc2()
-! CHECK-SAME:attributes {acc.routine_info = #acc.routine_info<[@[[r0]]]>{{.*}}}
+! CHECK-SAME:attributes {acc.routine_info = #acc.routine_info<[@[[r0]]]>}
 
 end module

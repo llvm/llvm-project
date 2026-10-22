@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -dwarf-version=5 \
-# RUN:   -filetype=obj -start-after=livedebugvalues -o - %s \
+# RUN:   -filetype=obj -start-after=live-debug-values -o - %s \
 # RUN:   | llvm-dwarfdump - | FileCheck %s
 
 # A displacement cannot be folded into an address pool entry, which is keyed on

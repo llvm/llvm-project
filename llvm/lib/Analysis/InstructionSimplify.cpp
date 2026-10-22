@@ -3626,6 +3626,10 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
 static Value *simplifyICmpWithMinMax(CmpPredicate Pred, Value *LHS, Value *RHS,
                                      const SimplifyQuery &Q,
                                      unsigned MaxRecurse) {
+  // All folds below need a min/max operand.
+  if (!isa<MinMaxIntrinsic>(LHS) && !isa<MinMaxIntrinsic>(RHS))
+    return nullptr;
+
   Type *ITy = getCompareTy(LHS); // The return type.
   Value *A, *B;
   CmpInst::Predicate P = CmpInst::BAD_ICMP_PREDICATE;
@@ -3885,12 +3889,18 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isIntPredicate(Pred) && "Not an integer compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      if (Constant *C =
+              ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI))
+        return C;
+      // Constant folding cannot always decide a comparison between constants.
+      // Fall through to the generic logic below, which can still reason about
+      // them with value tracking.
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
   assert(!isa<UndefValue>(LHS) && "Unexpected icmp undef,%X");
 
@@ -7131,11 +7141,11 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   }
   case Intrinsic::umulh:
-    // Multiply by one.
-    if (match(Op0, m_One()) || match(Op1, m_One()))
-      return Constant::getNullValue(ReturnType);
-    [[fallthrough]];
   case Intrinsic::smulh:
+    // Multiply by one.
+    if (IID == Intrinsic::umulh || BitWidth == 1)
+      if (match(Op0, m_One()) || match(Op1, m_One()))
+        return Constant::getNullValue(ReturnType);
     // Multiply by undef -> zero (NOT undef!) as other arg could still be
     // zero.
     if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1))

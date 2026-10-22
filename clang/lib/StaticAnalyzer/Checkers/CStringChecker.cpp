@@ -2938,6 +2938,11 @@ void CStringChecker::evalMemset(CheckerContext &C,
   SVal SizeVal = C.getSVal(Size.Expression);
   QualType SizeTy = Size.Expression->getType();
 
+  // Avoid assertion failure in the corner case when we see a function named
+  // 'memset' with a nonstandard declaration.
+  if (!SizeTy->isUnsignedIntegerType() || !Size.Expression->isPRValue())
+    return;
+
   ProgramStateRef ZeroSize, NonZeroSize;
   std::tie(ZeroSize, NonZeroSize) = assumeZero(C, State, SizeVal, SizeTy);
 
