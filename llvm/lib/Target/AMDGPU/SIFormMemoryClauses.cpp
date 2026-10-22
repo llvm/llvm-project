@@ -348,8 +348,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
 
         if (!LI.hasSubRanges()) {
           if (!LI.liveAt(ClauseLiveOutIdx)) {
-            KillOps.emplace_back(R.second.first | RegState::Kill,
-                                 AMDGPU::NoSubRegister);
+            KillOps.emplace_back(R.second.first, AMDGPU::NoSubRegister);
           }
         } else {
           LaneBitmask KilledMask;
@@ -367,7 +366,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {
-            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+            KillOps.emplace_back(R.second.first, SubReg);
           }
         }
 
@@ -381,8 +380,8 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         // bundle.
         Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
                        DebugLoc(), TII->get(AMDGPU::KILL));
-        for (auto &Op : KillOps)
-          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        for (auto [State, SubReg] : KillOps)
+          Kill.addUse(Reg, State, SubReg);
         Ind->insertMachineInstrInMaps(*Kill);
       }
 

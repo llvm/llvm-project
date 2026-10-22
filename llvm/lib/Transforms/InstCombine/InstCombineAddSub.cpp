@@ -2028,7 +2028,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                       m_Ctlz(m_Deferred(A), m_One())))),
                                   m_APInt(XorC))))))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
-      *XorC == A->getType()->getScalarSizeInBits() - 1) {
+      *XorC == A->getType()->getScalarSizeInBits() - 1 &&
+      isPowerOf2_32(A->getType()->getScalarSizeInBits())) {
     Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
     Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
                                           {Sub, Builder.getFalse()});

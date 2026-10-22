@@ -1,11 +1,11 @@
-add_custom_target(libc_sys_sendfile_unittests)
+add_libc_testsuite(libc-sys-sendfile-tests)
 
 add_subdirectory(testdata)
 
 add_libc_test(
   sendfile_test
   SUITE
-    libc_sys_sendfile_unittests
+    libc-sys-sendfile-tests
   SRCS
     sendfile_test.cpp
   DEPENDS

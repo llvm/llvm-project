@@ -6436,7 +6436,7 @@ def warn_deprecated_builtin : Warning<
   InGroup<DeprecatedBuiltins>;
 def warn_hip_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
-  InGroup<HipDeprecatedBuiltins>, DefaultIgnore;
+  InGroup<HipDeprecatedBuiltins>;
 def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
@@ -7277,13 +7277,19 @@ def err_builtin_counted_by_ref_invalid_arg
             "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
-
 def err_builtin_counted_by_ref_cannot_leak_reference : Error<
   "value returned by '__builtin_counted_by_ref' cannot be %select{assigned to a "
   "variable|passed into a function|returned from a function}0">;
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
+  "'__builtin_counted_by_ref' cannot be used on %0 because its 'counted_by' attribute refers to bit-field %1">;
+def note_counted_by_counter_field : Note<
+  "bit-field %0 declared here">;
+
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -8819,7 +8825,7 @@ def warn_exception_caught_by_earlier_handler : Warning<
   InGroup<Exceptions>;
 def note_previous_exception_handler : Note<"for type %0">;
 def err_exceptions_disabled : Error<
-  "cannot use '%0' with exceptions disabled">;
+  "cannot use '%select{throw|try}0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
 def warn_throw_in_noexcept_func : Warning<
@@ -9646,7 +9652,7 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
-  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+  "%select{integral|integral or floating-point}1 type of 8, 16, 32, or 64 bits (%0 invalid)">;
 def err_atomic_hint_has_invalid_hint_type : Error<
    "invalid hint type argument to atomic hint operation (%0)">;
 
@@ -9719,7 +9725,7 @@ def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
 def err_atomic_op_hint_data_size : Error<
-  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+  "address argument to atomic %select{fetch|store}0 with hint must be of size 8, 16, 32 or 64 bits">;
 def err_atomic_hint_has_invalid_memory_order : Error<
    "invalid memory order argument to atomic hint operation (%0 invalid)">;
 def warn_atomic_hint_has_invalid_hint_type : Warning<
@@ -9834,8 +9840,17 @@ def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
 def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
-  "cannot use '%0' in "
+  "cannot use '%select{throw|try}0' in "
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
+def err_cuda_device_rtti : Error<
+  "cannot use '%0' in "
+  "%select{__device__|__global__|__host__|__host__ __device__}1 function as "
+  "RTTI is not available in device code">;
+def err_cuda_device_rtti_var_init : Error<
+  "cannot use '%0' in the initializer of a device variable as RTTI is not "
+  "available in device code">;
+def note_cuda_device_rtti_default_used_here : Note<
+  "%select{default member initializer|default argument}0 used here">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
@@ -10160,6 +10175,8 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_unwind_and_goto : Error<"unwind clobber cannot be used with asm goto">;
   def err_asm_invalid_global_var_reg : Error<"register '%0' unsuitable for "
     "global register variables on this target">;
+  def err_asm_invalid_local_var_reg : Error<"register '%0' unsuitable for "
+    "register variables">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
   def err_asm_unsupported_register_type : Error<
@@ -11161,6 +11178,14 @@ def warn_lifetime_safety_noescape_escapes
     : Warning<"parameter is marked [[clang::noescape]] but escapes">,
       InGroup<LifetimeSafetyNoescape>,
       DefaultIgnore;
+
+def warn_lifetime_safety_field_origin_escape
+    : Warning<"return value depends on the object referenced by %0, not on '*this'">,
+      InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+
+def note_lifetime_safety_owned_field_suggestion
+    : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12341,8 +12366,8 @@ def err_omp_collapse_stacked_tile : Error<
   "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
   "of a '#pragma omp tile' that is nested inside another loop-transforming "
   "directive; OpenMP permits this construct, but it is not yet supported">;
-def err_omp_simd_region_cannot_use_stmt : Error<
-  "'%0' statement cannot be used in OpenMP simd region">;
+def err_omp_simd_region_cannot_use_exceptions : Error<
+  "'%select{throw|try}0' cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
@@ -12382,7 +12407,8 @@ def err_omp_prohibited_region : Error<
   "; perhaps you forget to enclose 'omp %3' directive into a teams region?|"
   "; perhaps you forget to enclose 'omp %3' directive into a for, simd, for simd, parallel for, or parallel for simd region?}2">;
 def err_omp_prohibited_region_simd : Error<
-  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, or atomic directive}0">;
+  "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, atomic, or loop directive"
+  "| except for ordered simd, simd, scan, atomic, loop, or loop-transforming directive}0">;
 def err_omp_prohibited_region_atomic : Error<
   "OpenMP constructs may not be nested inside an atomic region">;
 def err_omp_prohibited_region_order
@@ -12422,7 +12448,8 @@ def err_omp_atomic_not_expression_statement : Error<
 def note_omp_atomic_update: Note<
   "%select{expected an expression statement|expected built-in binary or unary operator|expected unary decrement/increment operation|"
   "expected expression of scalar type|expected assignment expression|expected built-in binary operator|"
-  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression}0">;
+  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression|"
+  "expected a valid expression}0">;
 def err_omp_atomic_capture_not_expression_statement : Error<
   "the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x',"
   " where x and v are both lvalue expressions with scalar type">;
@@ -13799,6 +13826,8 @@ def err_hlsl_init_priority_unsupported : Error<
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
     : Error<"semantic %0 is not supported in %1 shader %2">;
+def err_hlsl_semantic_in_wrong_shader_model
+    : Error<"semantic %0 requires shader model %1 or greater">;
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
