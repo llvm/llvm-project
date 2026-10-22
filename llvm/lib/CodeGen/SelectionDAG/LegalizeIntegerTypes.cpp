@@ -6635,27 +6635,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
     return ResVec;
   }
 
-  EVT RetSclrTy = N->getValueType(0).getVectorElementType();
-
-  SmallVector<SDValue, 8> NewOps;
-  NewOps.reserve(NumElems);
-
-  // For each incoming vector
-  for (unsigned VecIdx = 0; VecIdx != NumElems; ++VecIdx) {
-    SDValue Incoming = GetPromotedInteger(N->getOperand(VecIdx));
-    EVT SclrTy = Incoming->getValueType(0).getVectorElementType();
-    unsigned NumElem = Incoming->getValueType(0).getVectorNumElements();
-
-    for (unsigned i=0; i<NumElem; ++i) {
-      // Extract element from incoming vector
-      SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SclrTy, Incoming,
-                               DAG.getVectorIdxConstant(i, dl));
-      SDValue Tr = DAG.getNode(ISD::TRUNCATE, dl, RetSclrTy, Ex);
-      NewOps.push_back(Tr);
-    }
-  }
-
-  return DAG.getBuildVector(N->getValueType(0), dl, NewOps);
+  SmallVector<SDValue> NewOps;
+  NewOps.reserve(ResVT.getVectorMinNumElements());
+  for (const SDValue &Op : N->ops())
+    DAG.ExtractVectorElements(GetPromotedInteger(Op), NewOps);
+  return DAG.getBuildVector(ResVT, dl, NewOps);
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
