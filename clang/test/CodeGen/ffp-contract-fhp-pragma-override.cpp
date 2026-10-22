@@ -2,15 +2,16 @@
 
 float fp_contract_on_1(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_on_1fff(
-  // CHECK: call float @llvm.fmuladd.f32(float {{.*}}, float {{.*}}, float {{.*}})
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   #pragma STDC FP_CONTRACT ON
   return a * b + c;
 }
 
 float fp_contract_on_2(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_on_2fff(
-  // CHECK: fmul float
-  // CHECK: fadd float
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   #pragma STDC FP_CONTRACT ON
   float t = a * b;
   return t + c;
@@ -52,15 +53,16 @@ float fp_contract_default_2(float a, float b, float c) {
 
 float fp_contract_clang_on_1(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_clang_on_1fff(
-  // CHECK: call float @llvm.fmuladd.f32(float {{.*}}, float {{.*}}, float {{.*}})
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   #pragma clang fp contract(on)
   return a * b + c;
 }
 
 float fp_contract_clang_on_2(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_clang_on_2fff(
-  // CHECK: fmul float
-  // CHECK: fadd float
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   #pragma clang fp contract(on)
   float t = a * b;
   return t + c;
@@ -104,14 +106,15 @@ float fp_contract_clang_fast_2(float a, float b, float c) {
 
 float fp_contract_global_on_1(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_global_on_1fff(
-  // CHECK: call float @llvm.fmuladd.f32(float {{.*}}, float {{.*}}, float {{.*}})
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   return a * b + c;
 }
 
 float fp_contract_global_on_2(float a, float b, float c) {
   // CHECK-LABEL: fp_contract_global_on_2fff(
-  // CHECK: fmul float
-  // CHECK: fadd float
+  // CHECK: fmul contract float
+  // CHECK: fadd contract float
   float t = a * b;
   return t + c;
 }
