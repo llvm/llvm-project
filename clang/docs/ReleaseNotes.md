@@ -458,6 +458,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Errors for invalid element types during instantiation of an `ext_vector_type`
+  now include a source location, including in alias templates. (#GH229300)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
