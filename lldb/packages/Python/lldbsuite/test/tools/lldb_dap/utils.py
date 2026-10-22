@@ -838,10 +838,8 @@ class _SocketTransport:
             with contextlib.suppress(OSError):
                 self._socket.shutdown(socket.SHUT_RDWR)
 
-        with contextlib.suppress(OSError, ValueError):
-            self._writer.close()
-        with contextlib.suppress(OSError):
-            self._socket.close()
+        self._writer.close()
+        self._socket.close()
 
     @property
     def is_alive(self):
