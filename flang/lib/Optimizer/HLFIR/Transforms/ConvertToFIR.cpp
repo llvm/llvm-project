@@ -199,7 +199,8 @@ public:
       // A nonallocable coarray has an allocable descriptor and reallocation
       // must not happen so we want to have a descriptor without the
       // “allocatable” attribute
-      if (fir::getBoxCorank(lhs.getType()) > 0) {
+      if (fir::getBoxCorank(lhs.getType()) > 0 &&
+          lhsExv.getBoxOf<fir::BoxValue>()) {
         fir::ExtendedValue readLhs =
             fir::factory::readBoxValue(builder, loc, fir::getBase(lhsExv));
         to = fir::getBase(builder.createBox(loc, readLhs));
