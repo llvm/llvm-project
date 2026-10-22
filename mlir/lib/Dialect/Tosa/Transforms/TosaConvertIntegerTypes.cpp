@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
@@ -17,11 +16,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -61,32 +58,6 @@ namespace mlir::tosa {
 using namespace mlir;
 
 namespace {
-// Preserve inherent dense arrays and known structural scalars at the operation
-// boundary. Extend this policy for additional storage constraints; all other
-// attributes and operations participate in generic conversion. Identical values
-// in discardable or nested metadata still follow the bitwidth mapping.
-static bool shouldPreserveAttribute(Operation *op, NamedAttribute attr) {
-  StringRef name = attr.getName().getValue();
-  if (!op->getInherentAttr(name))
-    return false;
-  if (isa<DenseArrayAttr>(attr.getValue()))
-    return true;
-  if (isa<tensor::ConcatOp>(op) && name == "dim")
-    return true;
-  if (op->getName().getDialectNamespace() !=
-      tosa::TosaDialect::getDialectNamespace())
-    return false;
-
-  // TOSA axes and boolean options have operation-defined storage types.
-  // Identify these by name: a semantic i1 value is also a BoolAttr, and
-  // scalar payloads such as clamp bounds must still be converted.
-  return llvm::StringSwitch<bool>(name)
-      .Cases({"axis", "local_bound", "inverse", "round", "input_unsigned",
-              "output_unsigned", "scale32", "per_channel"},
-             true)
-      .Default(false);
-}
-
 static APInt convertValue(const APInt &value, Type type, unsigned width) {
   return type.isUnsignedInteger() ? value.zextOrTrunc(width)
                                   : value.sextOrTrunc(width);
@@ -125,13 +96,6 @@ public:
       return IntegerType::get(type.getContext(), mapping->second,
                               type.getSignedness());
     });
-    // Reject unsupported typed payloads rather than changing just their type.
-    // Specific payload handlers below take precedence over this fallback.
-    addReplacement([this](TypedAttr attr) -> std::optional<Attribute> {
-      if (replace(attr.getType()) != attr.getType())
-        return nullptr;
-      return std::nullopt;
-    });
     addReplacement(
         [this](IntegerAttr attr) { return skip(convertInteger(attr)); });
     addReplacement(
@@ -139,20 +103,17 @@ public:
     addReplacement([this](DenseTypedElementsAttr attr) {
       return skip(convertDenseElements(attr));
     });
-    addReplacement([this](SparseElementsAttr attr) {
-      return skip(convertSparseElements(attr));
-    });
     addReplacement([this](DenseResourceElementsAttr attr) {
       return skip(convertDenseResource(attr));
     });
   }
 
+  bool hasFailed() const { return conversionFailed; }
+
 private:
   Attribute convertInteger(IntegerAttr attr) {
     Type type = attr.getType();
     Type convertedType = replace(type);
-    if (!convertedType)
-      return nullptr;
     if (type == convertedType)
       return attr;
     return IntegerAttr::get(
@@ -164,8 +125,6 @@ private:
   Attribute convertDenseArray(DenseArrayAttr attr) {
     Type type = attr.getElementType();
     Type convertedType = replace(type);
-    if (!convertedType)
-      return nullptr;
     if (type == convertedType)
       return attr;
     // Dense array assembly only supports byte-sized integers and i1.
@@ -189,7 +148,7 @@ private:
     if (elementType != convertedType.getElementType()) {
       auto convertedElementType =
           dyn_cast<IntegerType>(convertedType.getElementType());
-      if (!isa<IntegerType>(elementType) || !convertedElementType)
+      if (!convertedElementType)
         return nullptr;
       convertedAttr = attr.mapValues(
           convertedType.getElementType(),
@@ -201,16 +160,6 @@ private:
     return convertedAttr.reshape(convertedType);
   }
 
-  Attribute convertSparseElements(SparseElementsAttr attr) {
-    auto type = dyn_cast_or_null<ShapedType>(replace(attr.getType()));
-    auto values =
-        dyn_cast_or_null<DenseElementsAttr>(replace(attr.getValues()));
-    if (!type || !values)
-      return nullptr;
-    // Sparse indices must remain i64 even when i64 values are converted.
-    return SparseElementsAttr::get(type, attr.getIndices(), values);
-  }
-
   Attribute convertDenseResource(DenseResourceElementsAttr attr) {
     ShapedType type = attr.getType();
     Type elementType = type.getElementType();
@@ -220,11 +169,10 @@ private:
     Type convertedElementType = convertedType.getElementType();
     if (elementType == convertedElementType)
       return DenseResourceElementsAttr::get(convertedType, attr.getRawHandle());
-    auto integerType = dyn_cast<IntegerType>(elementType);
-    auto convertedIntegerType =
-        dyn_cast_or_null<IntegerType>(convertedElementType);
-    if (!integerType || !convertedIntegerType)
+    auto convertedIntegerType = dyn_cast<IntegerType>(convertedElementType);
+    if (!convertedIntegerType)
       return nullptr;
+    auto integerType = cast<IntegerType>(elementType);
     const AsmResourceBlob *blob = attr.getRawHandle().getBlob();
     if (!blob)
       return nullptr;
@@ -240,10 +188,8 @@ private:
         convertRawValues(rawData, integerType, convertedIntegerType);
     // Alignment must be a power of two, including for sub-byte and
     // non-power-of-two destination widths.
-    unsigned alignment =
-        std::min<uint64_t>(llvm::PowerOf2Ceil(llvm::divideCeil(
-                               convertedIntegerType.getWidth(), 8)),
-                           alignof(uint64_t));
+    unsigned alignment = llvm::PowerOf2Ceil(
+        llvm::divideCeil(convertedIntegerType.getWidth(), 8));
     return DenseResourceElementsAttr::get(
         convertedType, attr.getRawHandle().getKey(),
         HeapAsmResourceBlob::allocateAndCopyWithAlign(data, alignment));
@@ -251,9 +197,13 @@ private:
 
   // Payload handlers already converted their subelements. Do not apply a
   // second mapping when a destination width is also a source width.
-  static ReplaceFnResult<Attribute> skip(Attribute attr) {
+  ReplaceFnResult<Attribute> skip(Attribute attr) {
+    // replaceElementsIn ignores null replacements, so track failures here.
+    conversionFailed |= !attr;
     return std::make_pair(attr, WalkResult::skip());
   }
+
+  bool conversionFailed = false;
 };
 
 struct TosaConvertIntegerTypes
@@ -277,6 +227,14 @@ struct TosaConvertIntegerTypes
           return signalPassFailure();
         }
       }
+      // These widths are fixed by boolean flags, axes, structural arrays and
+      // sparse indices. Reject these sources rather than exempting those
+      // attributes.
+      if (source == 1 || source == 32 || source == 64) {
+        getOperation().emitError("unsupported source integer bitwidth ")
+            << source;
+        return signalPassFailure();
+      }
       auto [it, inserted] = mappings.try_emplace(source, destination);
       if (!inserted && it->second != destination) {
         getOperation().emitError(
@@ -286,44 +244,13 @@ struct TosaConvertIntegerTypes
       }
     }
     IntegerTypeReplacer replacer(mappings);
-    WalkResult result = getOperation()->walk([&](Operation *op) -> WalkResult {
-      bool invalid = false;
-      SmallVector<NamedAttribute> convertedAttrs;
-      for (NamedAttribute attr : op->getAttrs()) {
-        // Preserve fixed-storage attributes at the operation boundary so the
-        // same attribute can still convert as discardable or nested metadata.
-        Attribute value = attr.getValue();
-        if (!shouldPreserveAttribute(op, attr))
-          value = replacer.replace(value);
-        if (!value)
-          invalid = true;
-        else
-          convertedAttrs.emplace_back(attr.getName(), value);
-      }
-      auto replaceValueType = [&](Value value) {
-        if (Type type = replacer.replace(value.getType()))
-          value.setType(type);
-        else
-          invalid = true;
-      };
-      for (Value value : op->getResults())
-        replaceValueType(value);
-      for (Region &region : op->getRegions())
-        for (Block &block : region)
-          for (BlockArgument arg : block.getArguments())
-            replaceValueType(arg);
-
-      if (invalid) {
-        op->emitError("failed to legalize operation '")
-            << op->getName()
-            << "': failed to convert integer types or attributes";
-        return WalkResult::interrupt();
-      }
-      op->setAttrs(convertedAttrs);
-      return WalkResult::advance();
-    });
-    if (result.wasInterrupted())
+    replacer.recursivelyReplaceElementsIn(getOperation(), /*replaceAttrs=*/true,
+                                          /*replaceLocs=*/false,
+                                          /*replaceTypes=*/true);
+    if (replacer.hasFailed()) {
+      getOperation().emitError("failed to convert integer types or attributes");
       signalPassFailure();
+    }
   }
 };
 } // namespace

@@ -224,6 +224,8 @@ def TosaConvertIntegerTypesPass : Pass<"tosa-convert-integer-types", "ModuleOp">
     `<source>:<destination>` bitwidth pairs.
     A typical use case is `bitwidth-mappings=4:8,48:64` which maps i4 and i48 to
     i8 and i64 respectively.
+    Source bitwidths 1, 32 and 64 are not supported because some attributes
+    require these fixed widths.
 
     Mappings apply once to the original width, preserving signedness and
     leaving unmapped widths unchanged. Widening sign-extends signed and

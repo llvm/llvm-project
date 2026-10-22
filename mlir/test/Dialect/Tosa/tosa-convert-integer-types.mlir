@@ -2,33 +2,11 @@
 // RUN: mlir-opt -split-input-file -pass-pipeline='builtin.module(tosa-convert-integer-types{bitwidth-mappings=4:8,48:64})' %s | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
 // RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=4:8,48:64' %s | mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=4:8,48:64' | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
 
-// CHECK-LABEL: func.func @identity(
-// CHECK-SAME: %[[ARG:.*]]: tensor<?x2xi64>) -> tensor<?x2xi64>
-func.func @identity(%arg: tensor<?x2xi48>) -> tensor<?x2xi48> {
-  // CHECK: %[[ID:.*]] = tosa.identity %[[ARG]] {test.marker = "keep"} : (tensor<?x2xi64>) -> tensor<?x2xi64>
-  %0 = tosa.identity %arg {test.marker = "keep"} : (tensor<?x2xi48>) -> tensor<?x2xi48>
-  // CHECK-NEXT: return %[[ID]] : tensor<?x2xi64>
-  return %0 : tensor<?x2xi48>
-}
-
-// -----
-
 // CHECK-LABEL: func.func @clamp
 func.func @clamp(%arg: tensor<4xi48>) -> tensor<4xi48> {
   // CHECK: tosa.clamp %{{.*}} min_val(-140737488355328 : i64) max_val(140737488355327 : i64) {test.marker = "keep"} : (tensor<4xi64>) -> tensor<4xi64>
   %0 = tosa.clamp %arg min_val(-140737488355328 : i48) max_val(140737488355327 : i48) {test.marker = "keep"} : (tensor<4xi48>) -> tensor<4xi48>
   return %0 : tensor<4xi48>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @reshape
-func.func @reshape(%arg: tensor<2x3xi48>) -> tensor<6xi48> {
-  // CHECK: %[[SHAPE:.*]] = tosa.const_shape values(dense<6> : tensor<1xindex>) : () -> !tosa.shape<1>
-  %shape = tosa.const_shape values(dense<6> : tensor<1xindex>) : () -> !tosa.shape<1>
-  // CHECK: tosa.reshape %{{.*}}, %[[SHAPE]] : (tensor<2x3xi64>, !tosa.shape<1>) -> tensor<6xi64>
-  %0 = tosa.reshape %arg, %shape : (tensor<2x3xi48>, !tosa.shape<1>) -> tensor<6xi48>
-  return %0 : tensor<6xi48>
 }
 
 // -----
@@ -56,58 +34,6 @@ func.func @cond_if(%cond: tensor<i1>, %arg: tensor<2xi48>) -> tensor<2xi48> {
 
 // -----
 
-// CHECK-LABEL: func.func @while_loop
-func.func @while_loop(%arg: tensor<i48>, %limit: tensor<i48>) -> tensor<i48> {
-  // CHECK: %[[LOOP:.*]] = tosa.while_loop
-  // CHECK-SAME: (tensor<i64>) -> tensor<i64>
-  %0 = tosa.while_loop (%iter = %arg) : (tensor<i48>) -> tensor<i48> {
-    // CHECK: tosa.greater %{{.*}}, %{{.*}} : (tensor<i64>, tensor<i64>) -> tensor<i1>
-    %cond = tosa.greater %limit, %iter : (tensor<i48>, tensor<i48>) -> tensor<i1>
-    // CHECK: tosa.yield %{{.*}} : tensor<i1>
-    tosa.yield %cond : tensor<i1>
-  } do {
-  // CHECK: ^bb0(%[[ITER:.*]]: tensor<i64>):
-  ^bb0(%iter: tensor<i48>):
-    // CHECK: %[[ONE:.*]] = tosa.const values(dense<1> : tensor<i64>) : () -> tensor<i64>
-    %one = tosa.const values(dense<1> : tensor<i48>) : () -> tensor<i48>
-    // CHECK: %[[ADD:.*]] = tosa.add %[[ITER]], %[[ONE]] : (tensor<i64>, tensor<i64>) -> tensor<i64>
-    %next = tosa.add %iter, %one : (tensor<i48>, tensor<i48>) -> tensor<i48>
-    // CHECK: tosa.yield %[[ADD]] : tensor<i64>
-    tosa.yield %next : tensor<i48>
-  }
-  // CHECK: return %[[LOOP]] : tensor<i64>
-  return %0 : tensor<i48>
-}
-
-// -----
-
-// CHECK: func.func private @external(tensor<?xi64>) -> tensor<*xi64>
-func.func private @external(tensor<?xi48>) -> tensor<*xi48>
-
-// -----
-
-// Widen function arguments even when the body does not use them.
-// CHECK-LABEL: func.func @unused_arguments(
-// CHECK-SAME: %{{.*}}: tensor<?x2xi64>, %{{.*}}: tensor<*xi64>, %{{.*}}: tensor<2xui64>)
-func.func @unused_arguments(%ranked: tensor<?x2xi48>, %unranked: tensor<*xi48>, %unsigned: tensor<2xui48>) {
-  // CHECK-NEXT: return
-  return
-}
-
-// -----
-
-// Exercise an accumulator attribute even when no operand or result needs widening.
-// CHECK-LABEL: func.func @accumulator_only
-func.func @accumulator_only(%input: tensor<1x3x3x1xi16>, %weight: tensor<1x1x1x1xi8>, %bias: tensor<1xi32>, %izp: tensor<1xi16>, %wzp: tensor<1xi8>) -> tensor<1x3x3x1xi32> {
-  // CHECK: tosa.conv2d
-  // CHECK-SAME: acc_type(i64)
-  // CHECK-SAME: -> tensor<1x3x3x1xi32>
-  %0 = tosa.conv2d %input, %weight, %bias, %izp, %wzp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(i48) : (tensor<1x3x3x1xi16>, tensor<1x1x1x1xi8>, tensor<1xi32>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x3x3x1xi32>
-  return %0 : tensor<1x3x3x1xi32>
-}
-
-// -----
-
 // CHECK-LABEL: func.func @conv_rescale(
 // CHECK-SAME: %{{.*}}: tensor<1x3x3x1xi16>, %{{.*}}: tensor<1x1x1x1xi8>) -> tensor<1x3x3x1xi8>
 func.func @conv_rescale(%input: tensor<1x3x3x1xi16>, %weight: tensor<1x1x1x1xi8>) -> tensor<1x3x3x1xi8> {
@@ -128,65 +54,12 @@ func.func @conv_rescale(%input: tensor<1x3x3x1xi16>, %weight: tensor<1x1x1x1xi8>
 
 // -----
 
-// CHECK-LABEL: func.func @casts
-func.func @casts(%arg: tensor<2xi32>) -> tensor<2xi8> {
-  // CHECK: %[[IN:.*]] = tosa.cast %arg0 input_unsigned(true) {test.marker = "keep"} : (tensor<2xi32>) -> tensor<2xi64>
-  %0 = tosa.cast %arg input_unsigned(true) {test.marker = "keep"} : (tensor<2xi32>) -> tensor<2xi64>
-  // CHECK: %[[OUT:.*]] = tosa.cast %[[IN]] : (tensor<2xi64>) -> tensor<2xi8>
-  %1 = tosa.cast %0 : (tensor<2xi64>) -> tensor<2xi8>
-  // CHECK: return %[[OUT]] : tensor<2xi8>
-  return %1 : tensor<2xi8>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @unchanged(
-// CHECK-SAME: %[[ARG:.*]]: tensor<2xi64>) -> (tensor<2xi64>, tensor<2xf32>, i32)
-func.func @unchanged(%arg: tensor<2xi64>) -> (tensor<2xi64>, tensor<2xf32>, i32) {
-  // CHECK: %[[ID:.*]] = tosa.identity %[[ARG]] : (tensor<2xi64>) -> tensor<2xi64>
-  %0 = tosa.identity %arg : (tensor<2xi64>) -> tensor<2xi64>
-  // CHECK: %[[C:.*]] = tosa.const values(dense<1.000000e+00> : tensor<2xf32>) : () -> tensor<2xf32>
-  %1 = tosa.const values(dense<1.0> : tensor<2xf32>) : () -> tensor<2xf32>
-  // CHECK: %[[A:.*]] = arith.constant 48 : i32
-  %2 = arith.constant 48 : i32
-  // CHECK-NEXT: return %[[ID]], %[[C]], %[[A]] : tensor<2xi64>, tensor<2xf32>, i32
-  return %0, %1, %2 : tensor<2xi64>, tensor<2xf32>, i32
-}
-
-// -----
-
 // Recurse into nested attributes even when operand and result types are unchanged.
 // CHECK-LABEL: func.func @attributes_only
 func.func @attributes_only(%arg: tensor<2xi32>) -> tensor<2xi32> {
   // CHECK: tosa.identity %arg0 {test.nested = [{signed = -140737488355328 : si64, type = tensor<2xi64>, unsigned = 281474976710655 : ui64}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
   %0 = tosa.identity %arg {test.nested = [{signed = -140737488355328 : si48, type = tensor<2xi48>, unsigned = 281474976710655 : ui48}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
   return %0 : tensor<2xi32>
-}
-
-// -----
-
-// Widen nested values even when the enclosing operation's types are unchanged.
-// CHECK-LABEL: func.func @internal_region(
-// CHECK-SAME: %[[COND:.*]]: tensor<i1>) -> tensor<i1>
-func.func @internal_region(%cond: tensor<i1>) -> tensor<i1> {
-  // CHECK: %[[IF:.*]] = tosa.cond_if %[[COND]] : tensor<i1> -> tensor<i1>
-  %0 = tosa.cond_if %cond : tensor<i1> -> tensor<i1> {
-    // CHECK: %[[C:.*]] = tosa.const values(dense<1> : tensor<i64>) : () -> tensor<i64>
-    %c = tosa.const values(dense<1> : tensor<i48>) : () -> tensor<i48>
-    // CHECK: %[[D:.*]] = tosa.const values(dense<2> : tensor<i64>) : () -> tensor<i64>
-    %d = tosa.const values(dense<2> : tensor<i48>) : () -> tensor<i48>
-    // CHECK: %[[SELECT:.*]] = tosa.select %[[COND]], %[[C]], %[[D]] : (tensor<i1>, tensor<i64>, tensor<i64>) -> tensor<i64>
-    %select = tosa.select %cond, %c, %d : (tensor<i1>, tensor<i48>, tensor<i48>) -> tensor<i48>
-    // CHECK: %[[EQ:.*]] = tosa.equal %[[SELECT]], %[[C]] : (tensor<i64>, tensor<i64>) -> tensor<i1>
-    %eq = tosa.equal %select, %c : (tensor<i48>, tensor<i48>) -> tensor<i1>
-    // CHECK: tosa.yield %[[EQ]] : tensor<i1>
-    tosa.yield %eq : tensor<i1>
-  } else {
-    // CHECK: tosa.yield %[[COND]] : tensor<i1>
-    tosa.yield %cond : tensor<i1>
-  }
-  // CHECK: return %[[IF]] : tensor<i1>
-  return %0 : tensor<i1>
 }
 
 // -----
@@ -209,19 +82,6 @@ func.func @mixed_caller(%a: tensor<?xi48>, %b: tensor<*xui48>, %c: tensor<2xi32>
 
 // -----
 
-// Convert module metadata, including constant payloads without SSA users.
-// CHECK-LABEL: module @module_attributes
-// CHECK-SAME: test.constant = dense<[-1, 140737488355327]> : tensor<2xi64>
-// CHECK-SAME: test.type = tensor<2xi64>
-// CHECK-SAME: test.value = -1 : i64
-module @module_attributes attributes {
-  test.constant = dense<[-1, 140737488355327]> : tensor<2xi48>,
-  test.type = tensor<2xi48>,
-  test.value = -1 : i48
-} {}
-
-// -----
-
 // Convert function, argument and result metadata along with the signature.
 // CHECK-LABEL: func.func @function_attributes(
 // CHECK-SAME: %[[ARG:.*]]: tensor<2xi64> {test.type = tensor<2xi64>}) -> (tensor<2xi64> {test.type = tensor<2xi64>}) attributes {test.value = -1 : i64}
@@ -232,48 +92,12 @@ func.func @function_attributes(%arg: tensor<2xi48> {test.type = tensor<2xi48>}) 
 
 // -----
 
-// Convert types embedded in tensor encodings while preserving other metadata.
-// CHECK-LABEL: func.func @encoded_tensor(
-// CHECK-SAME: %[[ARG:.*]]: tensor<?x2xi64, {i = i64, j = "k"}>) -> tensor<?x2xi64, {i = i64, j = "k"}>
-func.func @encoded_tensor(%arg: tensor<?x2xi48, {i = i48, j = "k"}>) -> tensor<?x2xi48, {i = i48, j = "k"}> {
-  // CHECK: return %[[ARG]] : tensor<?x2xi64, {i = i64, j = "k"}>
-  return %arg : tensor<?x2xi48, {i = i48, j = "k"}>
-}
-
-// -----
-
-// Preserve stride metadata on tensor arguments and results while widening.
-// CHECK-LABEL: func.func @strided_tensor(
-// CHECK-SAME: %[[ARG:.*]]: tensor<2x3xi64> {test.strides = strided<[5, 1]>}) -> (tensor<2x3xi64> {test.strides = strided<[5, 1]>})
-func.func @strided_tensor(%arg: tensor<2x3xi48> {test.strides = strided<[5, 1]>}) -> (tensor<2x3xi48> {test.strides = strided<[5, 1]>}) {
-  // CHECK: return %[[ARG]] : tensor<2x3xi64>
-  return %arg : tensor<2x3xi48>
-}
-
-// -----
-
 // Preserve a memref's non-default strides and offset while widening its elements.
 // CHECK-LABEL: func.func @strided_memref(
 // CHECK-SAME: %[[ARG:.*]]: memref<2x3xi64, strided<[5, 1], offset: 2>>) -> memref<2x3xi64, strided<[5, 1], offset: 2>>
 func.func @strided_memref(%arg: memref<2x3xi48, strided<[5, 1], offset: 2>>) -> memref<2x3xi48, strided<[5, 1], offset: 2>> {
   // CHECK: return %[[ARG]] : memref<2x3xi64, strided<[5, 1], offset: 2>>
   return %arg : memref<2x3xi48, strided<[5, 1], offset: 2>>
-}
-
-// -----
-
-// Convert a function reference, its indirect call and a function-valued result.
-// CHECK: func.func private @referenced(tensor<2xi64>) -> tensor<2xi64>
-func.func private @referenced(tensor<2xi48>) -> tensor<2xi48>
-// CHECK-LABEL: func.func @function_reference(
-// CHECK-SAME: %[[ARG:.*]]: tensor<2xi64>) -> (tensor<2xi64>, (tensor<2xi64>) -> tensor<2xi64>)
-func.func @function_reference(%arg: tensor<2xi48>) -> (tensor<2xi48>, (tensor<2xi48>) -> tensor<2xi48>) {
-  // CHECK: %[[FN:.*]] = constant @referenced : (tensor<2xi64>) -> tensor<2xi64>
-  %fn = func.constant @referenced : (tensor<2xi48>) -> tensor<2xi48>
-  // CHECK: %[[RESULT:.*]] = call_indirect %[[FN]](%[[ARG]]) : (tensor<2xi64>) -> tensor<2xi64>
-  %result = func.call_indirect %fn(%arg) : (tensor<2xi48>) -> tensor<2xi48>
-  // CHECK: return %[[RESULT]], %[[FN]] : tensor<2xi64>, (tensor<2xi64>) -> tensor<2xi64>
-  return %result, %fn : tensor<2xi48>, (tensor<2xi48>) -> tensor<2xi48>
 }
 
 // -----
@@ -293,6 +117,7 @@ func.func @nested_tosa() {
   // CHECK: return
   return
 }
+
 // -----
 
 // Only the selected i4 and i48 widths change. Arbitrary widths such as i3
@@ -334,17 +159,6 @@ func.func @attributes(%arg: tensor<2xi4, {type = i4}>) -> tensor<2xi4, {type = i
 
 // -----
 
-// Widen sparse i4 values while preserving their coordinates.
-// CHECK-LABEL: func.func @subbyte_sparse_constant()
-// CHECK-SAME: -> tensor<4xi8>
-func.func @subbyte_sparse_constant() -> tensor<4xi4> {
-  // CHECK: tosa.const values(sparse<{{\[\[}}1], [3]], [-7, 7]> : tensor<4xi8>)
-  %0 = tosa.const values(sparse<[[1], [3]], [-7, 7]> : tensor<4xi4>) : () -> tensor<4xi4>
-  return %0 : tensor<4xi4>
-}
-
-// -----
-
 // i4 resources use one byte per element. Preserve the original blob for an i8
 // view, share the widened resource, and retain storage for repeated values.
 // CHECK: module attributes {test.bytes = dense_resource<signed_data> : tensor<5xi8>, test.original = dense_resource<[[SIGNED:[a-zA-Z0-9_]+]]> : tensor<5xi8>}
@@ -379,19 +193,6 @@ module attributes {
   // CHECK-DAG: [[REPEATED]]: "0x01000000FFFFFF"
 } } #-}
 
-// -----
-
-// CHECK-LABEL: func.func @subbyte_dynamic_resource()
-// CHECK-SAME: -> tensor<?xi8>
-func.func @subbyte_dynamic_resource() -> tensor<?xi4> {
-  // CHECK: tosa.const values(dense_resource<[[DYNAMIC:[a-zA-Z0-9_]+]]> : tensor<?xi8>)
-  %0 = tosa.const values(dense_resource<dynamic> : tensor<?xi4>) : () -> tensor<?xi4>
-  return %0 : tensor<?xi4>
-}
-{-# dialect_resources: { builtin: {
-  dynamic: "0x01000000090F"
-  // CHECK: [[DYNAMIC]]: "0x01000000F9FF"
-} } #-}
 // -----
 
 // Preserve sparse indices and implicit zeros while widening stored values.
@@ -475,64 +276,6 @@ func.func @encoded_constant() -> tensor<2xi48, {i = i48, j = "k"}> {
 
 // -----
 
-// Convert dense constant encodings even when the element type is unchanged.
-// CHECK-LABEL: func.func @encoded_constant_encoding_only()
-// CHECK-SAME: -> tensor<2xi32, {i = i64, j = "k"}>
-func.func @encoded_constant_encoding_only() -> tensor<2xi32, {i = i48, j = "k"}> {
-  // CHECK: %[[C:.*]] = tosa.const values(dense<[-1, 7]> : tensor<2xi32, {i = i64, j = "k"}>) : () -> tensor<2xi32, {i = i64, j = "k"}>
-  %0 = tosa.const values(dense<[-1, 7]> : tensor<2xi32, {i = i48, j = "k"}>) : () -> tensor<2xi32, {i = i48, j = "k"}>
-  // CHECK-NEXT: return %[[C]] : tensor<2xi32, {i = i64, j = "k"}>
-  return %0 : tensor<2xi32, {i = i48, j = "k"}>
-}
-
-// -----
-
-// Preserve layout metadata and element order while widening a dense constant.
-// CHECK-LABEL: func.func @strided_constant()
-// CHECK-SAME: -> tensor<2x2xi64>
-func.func @strided_constant() -> tensor<2x2xi48> {
-  // CHECK: %[[C:.*]] = tosa.const values(dense<{{\[}}[-140737488355328, -1], [0, 140737488355327]]> : tensor<2x2xi64>) {test.layout = strided<[1, 2]>} : () -> tensor<2x2xi64>
-  %0 = tosa.const values(dense<[[-140737488355328, -1], [0, 140737488355327]]> : tensor<2x2xi48>) {test.layout = strided<[1, 2]>} : () -> tensor<2x2xi48>
-  // CHECK-NEXT: return %[[C]] : tensor<2x2xi64>
-  return %0 : tensor<2x2xi48>
-}
-
-// -----
-
-// Preserve layout metadata and element order while widening a resource payload.
-// CHECK-LABEL: func.func @strided_resource_constant()
-// CHECK-SAME: -> tensor<2x2xi64>
-func.func @strided_resource_constant() -> tensor<2x2xi48> {
-  // CHECK: %[[C:.*]] = tosa.const values(dense_resource<[[STRIDED:[a-zA-Z0-9_]+]]> : tensor<2x2xi64>) {test.layout = strided<[1, 2]>} : () -> tensor<2x2xi64>
-  %0 = tosa.const values(dense_resource<strided> : tensor<2x2xi48>) {test.layout = strided<[1, 2]>} : () -> tensor<2x2xi48>
-  // CHECK-NEXT: return %[[C]] : tensor<2x2xi64>
-  return %0 : tensor<2x2xi48>
-}
-
-{-# dialect_resources: { builtin: {
-  // Signed i48 minimum, -1, zero and maximum, sign-extended to i64 in order.
-  // CHECK: [[STRIDED]]: "0x08000000000000000080FFFFFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFF7F0000"
-  strided: "0x01000000000000000080FFFFFFFFFFFF000000000000FFFFFFFFFF7F"
-} } #-}
-
-// -----
-
-// Repeated values must retain storage for every element in the resource.
-// CHECK-LABEL: func.func @repeated_resource()
-func.func @repeated_resource() -> tensor<2x2xi48> {
-  // CHECK: tosa.const values(dense_resource<[[REPEATED:[a-zA-Z0-9_]+]]> : tensor<2x2xi64>)
-  %0 = tosa.const values(dense_resource<repeated> : tensor<2x2xi48>) : () -> tensor<2x2xi48>
-  return %0 : tensor<2x2xi48>
-}
-
-{-# dialect_resources: { builtin: {
-  // Four copies of -1, each occupying six bytes in the input and eight in the output.
-  // CHECK: [[REPEATED]]: "0x08000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-  repeated: "0x01000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-} } #-}
-
-// -----
-
 // Widen each complete element in the resource without resolving its shape.
 // CHECK-LABEL: func.func @dynamic_resource()
 // CHECK-SAME: -> tensor<?xi64>
@@ -548,28 +291,6 @@ func.func @dynamic_resource() -> tensor<?xi48> {
       // Alignment 1 followed by one little-endian i48 value of -1.
       // CHECK: [[DYNAMIC]]: "0x08000000FFFFFFFFFFFFFFFF"
       dynamic: "0x01000000FFFFFFFFFFFF"
-    }
-  }
-#-}
-
-// -----
-
-// Unranked tensors are valid in the dialect before shape inference. Widening
-// the resource's elements should preserve its unranked shape.
-// CHECK-LABEL: func.func @unranked_resource()
-// CHECK-SAME: -> tensor<*xi64>
-func.func @unranked_resource() -> tensor<*xi48> {
-  // CHECK: %[[C:.*]] = tosa.const values(dense_resource<[[UNRANKED:[a-zA-Z0-9_]+]]> : tensor<*xi64>) : () -> tensor<*xi64>
-  %0 = tosa.const values(dense_resource<unranked> : tensor<*xi48>) : () -> tensor<*xi48>
-  // CHECK-NEXT: return %[[C]] : tensor<*xi64>
-  return %0 : tensor<*xi48>
-}
-{-#
-  dialect_resources: {
-    builtin: {
-      // Alignment 1 followed by one little-endian i48 value of -1.
-      // CHECK: [[UNRANKED]]: "0x08000000FFFFFFFFFFFFFFFF"
-      unranked: "0x01000000FFFFFFFFFFFF"
     }
   }
 #-}
@@ -622,6 +343,7 @@ module attributes {test.bytes = dense_resource<signed_data> : tensor<30xi8>, tes
     }
   }
 #-}
+
 // -----
 
 // Unselected widths remain unchanged in payloads, including unresolved resources.

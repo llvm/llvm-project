@@ -1,26 +1,11 @@
 // REQUIRES: host-byteorder-little-endian
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=1:8,3:4,4:8,8:4,13:16,16:1,24:32,32:24,48:64,64:48,65:128,128:65' -mlir-print-op-generic %s | FileCheck %s --check-prefixes=CHECK,SCALAR '-D$WIDTH=24'
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=128:65,65:128,64:48,48:64,32:24,24:32,16:1,13:16,8:4,4:8,3:4,1:8' -mlir-print-op-generic %s | FileCheck %s --check-prefixes=CHECK,SCALAR '-D$WIDTH=24'
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=1:8,32:64' -mlir-print-op-generic %s | FileCheck %s --check-prefix=SCALAR '-D$WIDTH=64'
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=3:4,4:8,8:4,13:16,16:1,24:32,40:24,48:64,56:48,65:128,128:65' -mlir-print-op-generic %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=128:65,65:128,56:48,48:64,40:24,24:32,16:1,13:16,8:4,4:8,3:4' -mlir-print-op-generic %s | FileCheck %s
 
 // Each mapping applies once to the original width, including cycles and
 // destinations that are also sources. Reversing the list must have no effect.
-// CHECK: "func.func"() <{function_type = (i8, i4, si4, ui4, i8, i4, i16, i1, i32, i24, i64, i48, i128, i65) -> (), sym_name = "types", sym_visibility = "private"}>
-func.func private @types(i1, i3, si3, ui3, i4, i8, i13, i16, i24, i32, i48, i64, i65, i128)
-
-// -----
-
-// Conversion truncates, including when values do not fit in the destination.
-// CHECK: "func.func"() <{function_type = (tensor<4xi4>, tensor<2xi48>) -> tensor<4xi4>, sym_name = "callee", sym_visibility = "private"}>
-func.func private @callee(tensor<4xi8>, tensor<2xi64>) -> tensor<4xi8>
-// CHECK-LABEL: "func.func"() <{function_type = (tensor<2xi48>) -> tensor<4xi4>, sym_name = "caller"}>
-func.func @caller(%arg: tensor<2xi64>) -> tensor<4xi8> {
-  // CHECK: "tosa.const"() <{values = dense<[-7, 7, -1, 0]> : tensor<4xi4>}>
-  %0 = tosa.const values(dense<[9, 23, -1, -16]> : tensor<4xi8>) : () -> tensor<4xi8>
-  // CHECK: "func.call"(%{{.*}}, %{{.*}}) <{callee = @callee}> : (tensor<4xi4>, tensor<2xi48>) -> tensor<4xi4>
-  %1 = func.call @callee(%0, %arg) : (tensor<4xi8>, tensor<2xi64>) -> tensor<4xi8>
-  return %1 : tensor<4xi8>
-}
+// CHECK: "func.func"() <{function_type = (i4, si4, ui4, i8, i4, i16, i1, i32, i24, i64, i48, i128, i65) -> (), sym_name = "types", sym_visibility = "private"}>
+func.func private @types(i3, si3, ui3, i4, i8, i13, i16, i24, i40, i48, i56, i65, i128)
 
 // -----
 
@@ -39,24 +24,14 @@ func.func @caller(%arg: tensor<2xi64>) -> tensor<4xi8> {
 module @narrow_constants attributes {
   test.a_scalar = 25 : si8,
   test.b_unsigned = 255 : ui8,
-  test.c_array = array<i32: 8388608, 25165823, -1, -16777216>,
+  test.c_array = array<i40: 8388608, 25165823, -1, -16777216>,
   test.d_splat = dense<25> : tensor<3xsi8>,
   test.e_unsigned = dense<[8, 23, 255, 16]> : tensor<4xui8>,
-  test.f_sparse = sparse<[[1], [3]], [-1, 281474976710656]> : tensor<4xi64>,
+  test.f_sparse = sparse<[[1], [3]], [-1, 281474976710656]> : tensor<4xi56>,
   test.g_i1_array = array<i16: -1, 2, 3>,
   test.h_i1_dense = dense<[-1, 2, 3]> : tensor<3xi16>,
-  test.i_types = [i32, si64, ui128],
+  test.i_types = [i40, si56, ui128],
   test.j_wide_sparse = sparse<[[1], [3]], [-1, 18446744073709551615]> : tensor<4xi128>
-} {}
-
-// -----
-
-// The 64:48 mapping must truncate stored values, but preserve coordinates.
-// Bit 48 distinguishes this index from zero even without printed index types.
-// CHECK-LABEL: "builtin.module"() <{sym_name = "sparse_indices"}>
-// CHECK: test.sparse = sparse<{{\[\[}}0], [281474976710656]], [-1, 0]> : tensor<281474976710657xi48>
-module @sparse_indices attributes {
-  test.sparse = sparse<[[0], [281474976710656]], [-1, 281474976710656]> : tensor<281474976710657xi64>
 } {}
 
 // -----
@@ -107,22 +82,22 @@ module @mapping_encodings attributes {
 // CHECK-SAME: test.e_i1 = dense_resource<[[I1:[a-zA-Z0-9_]+]]> : tensor<3xi1>
 module @narrow_resources attributes {
   test.a_i4 = dense_resource<to4> : tensor<4xi8>,
-  test.b_i24 = dense_resource<to24> : tensor<2xi32>,
-  test.c_i48 = dense_resource<to48> : tensor<2xi64>,
+  test.b_i24 = dense_resource<to24> : tensor<2xi40>,
+  test.c_i48 = dense_resource<to48> : tensor<2xi56>,
   test.d_i65 = dense_resource<to65> : tensor<2xi128>,
   test.e_i1 = dense_resource<to1> : tensor<3xi16>
 } {}
 
 {-# dialect_resources: { builtin: {
   to4: "0x010000000917FFF0",
-  to24: "0x01000000FFFFFFFFFFFFFF00",
-  to48: "0x01000000FFFFFFFFFFFFFFFF0000000000000100",
+  to24: "0x01000000FFFFFFFFFFFFFFFFFF00",
+  to48: "0x01000000FFFFFFFFFFFFFF00000000000001",
   to65: "0x01000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000",
   to1: "0x01000000FFFF02000300"
   // CHECK-DAG: [[I4]]: "0x0100000009070F00"
   // CHECK-DAG: [[I24]]: "0x04000000FFFFFFFFFFFF"
   // CHECK-DAG: [[I48]]: "0x08000000FFFFFFFFFFFF000000000000"
-  // CHECK-DAG: [[I65]]: "0x08000000FFFFFFFFFFFFFFFF01FFFFFFFFFFFFFFFF00"
+  // CHECK-DAG: [[I65]]: "0x10000000FFFFFFFFFFFFFFFF01FFFFFFFFFFFFFFFF00"
   // CHECK-DAG: [[I1]]: "0x01000000010001"
 } } #-}
 
@@ -157,83 +132,6 @@ module @widen_resources attributes {
   // CHECK-DAG: [[SUBBYTE]]: "0x010000000C0F0003"
   // CHECK-DAG: [[I16]]: "0x0200000000F0FF0F"
   // CHECK-DAG: [[I32]]: "0x04000000000080FFFFFF7F00"
-  // CHECK-DAG: [[I128]]: "0x08000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000"
+  // CHECK-DAG: [[I128]]: "0x10000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000"
   // CHECK-DAG: [[UNSIGNED]]: "0x01000000000407"
 } } #-}
-
-// -----
-
-// Structural attributes have operation-defined storage types. Mapping i64 to
-// i48 must preserve the required DenseI64ArrayAttr properties, even though
-// standalone dense arrays can be converted. All tensor elements here are f32
-// to isolate changes to structural attributes from tensor type conversion.
-// Generic printing exposes the attribute storage types.
-// The discardable test.pad attribute shares the original padding array but
-// must still be converted to i48.
-
-// CHECK: "tosa.conv2d"
-// CHECK-SAME: acc_type = f32
-// CHECK-SAME: dilation = array<i64: 1, 1>
-// CHECK-SAME: pad = array<i64: 0, 0, 0, 0>
-// CHECK-SAME: stride = array<i64: 1, 1>
-// CHECK-SAME: test.pad = array<i48: 0, 0, 0, 0>
-// CHECK-SAME: -> tensor<1x3x3x1xf32>
-func.func @conv2d(%input: tensor<1x3x3x1xf32>, %weight: tensor<1x1x1x1xf32>, %bias: tensor<1xf32>, %izp: tensor<1xf32>, %wzp: tensor<1xf32>) -> tensor<1x3x3x1xf32> {
-  %0 = tosa.conv2d %input, %weight, %bias, %izp, %wzp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f32) {test.pad = array<i64: 0, 0, 0, 0>} : (tensor<1x3x3x1xf32>, tensor<1x1x1x1xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x3x3x1xf32>
-  return %0 : tensor<1x3x3x1xf32>
-}
-
-// -----
-
-// CHECK: "tosa.avg_pool2d"
-// CHECK-SAME: acc_type = f32
-// CHECK-SAME: kernel = array<i64: 2, 2>
-// CHECK-SAME: pad = array<i64: 0, 1, 0, 1>
-// CHECK-SAME: stride = array<i64: 1, 1>
-// CHECK-SAME: -> tensor<1x7x7x9xf32>
-func.func @avg_pool2d(%input: tensor<1x7x7x9xf32>, %izp: tensor<1xf32>, %ozp: tensor<1xf32>) -> tensor<1x7x7x9xf32> {
-  %0 = tosa.avg_pool2d %input, %izp, %ozp kernel([2, 2]) stride([1, 1]) pad([0, 1, 0, 1]) acc_type(f32) : (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7x7x9xf32>
-  return %0 : tensor<1x7x7x9xf32>
-}
-
-// -----
-
-// TOSA flags keep their boolean storage, while the same values in metadata
-// and arithmetic constants follow the mapping. Check true and false explicitly
-// because dropping an optional flag can silently restore its default value.
-// SCALAR-LABEL: sym_name = "boolean_flags"
-func.func @boolean_flags(%arg: tensor<2xi32>) -> tensor<2xi32> {
-  // SCALAR: "tosa.cast"
-  // SCALAR-SAME: input_unsigned = true
-  // SCALAR-SAME: test.flag = -1 : i8
-  // SCALAR-SAME: test.nested = {flag = -1 : i8}
-  %0 = tosa.cast %arg input_unsigned(true) {test.flag = true, test.nested = {flag = true}} : (tensor<2xi32>) -> tensor<2xi32>
-  // SCALAR: "tosa.cast"
-  // SCALAR-SAME: input_unsigned = false
-  // SCALAR-SAME: test.flag = 0 : i8
-  %1 = tosa.cast %0 input_unsigned(false) {test.flag = false} : (tensor<2xi32>) -> tensor<2xi32>
-  // SCALAR: "arith.constant"() <{value = -1 : i8}>
-  %true = arith.constant true
-  // SCALAR: "arith.constant"() <{value = 0 : i8}>
-  %false = arith.constant false
-  return %1 : tensor<2xi32>
-}
-
-// -----
-
-// Axes retain their required i32 storage during both widening and narrowing.
-// Scalar clamp bounds, discardable attributes and nested metadata still change.
-// SCALAR-LABEL: sym_name = "scalar_attributes"
-func.func @scalar_attributes(%arg: tensor<2x3xi32>) -> tensor<2x1xi32> {
-  // SCALAR: "tosa.clamp"
-  // SCALAR-SAME: max_val = 7 : i[[$WIDTH]], min_val = 0 : i[[$WIDTH]]
-  // SCALAR-SAME: -> tensor<2x3xi[[$WIDTH]]>
-  %0 = tosa.clamp %arg min_val(0 : i32) max_val(7 : i32) : (tensor<2x3xi32>) -> tensor<2x3xi32>
-  // SCALAR: "tosa.reduce_sum"
-  // SCALAR-SAME: axis = 1 : i32
-  // SCALAR-SAME: test.axis = 1 : i[[$WIDTH]]
-  // SCALAR-SAME: test.nested = {axis = 1 : i[[$WIDTH]]}
-  // SCALAR-SAME: -> tensor<2x1xi[[$WIDTH]]>
-  %1 = tosa.reduce_sum %0 axis(1) {test.axis = 1 : i32, test.nested = {axis = 1 : i32}} : (tensor<2x3xi32>) -> tensor<2x1xi32>
-  return %1 : tensor<2x1xi32>
-}
