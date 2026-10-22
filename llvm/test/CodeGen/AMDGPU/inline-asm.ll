@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | llvm-mc -triple=amdgpu6.00 -filetype=obj -o /dev/null
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | llvm-mc -triple=amdgpu8.02 -filetype=obj -o /dev/null
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -23,11 +25,11 @@ entry:
 
 ; CHECK-LABEL: {{^}}branch_on_asm_vgpr:
 ; Make sure VGPR inline assembly is treated as divergent.
-; CHECK: v_mov_b32 v{{[0-9]+}}, 0
+; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK: v_cmp_eq_u32
 ; CHECK: s_and_saveexec_b64
 define amdgpu_kernel void @branch_on_asm_vgpr(ptr addrspace(1) %out) {
-	%zero = call i32 asm "v_mov_b32 $0, 0", "=v"()
+	%zero = call i32 asm "v_mov_b32_e32 $0, 0", "=v"()
 	%cmp = icmp eq i32 %zero, 0
 	br i1 %cmp, label %if, label %endif
 
@@ -193,7 +195,7 @@ entry:
 define amdgpu_kernel void @code_size_inline_asm_mixed_comments_operands(ptr addrspace(1) %out) {
 entry:
   call void asm sideeffect "; comment
-    v_add_i32_e32 v0, vcc, v1, v2 ; inline comment
+    v_add_f32_e32 v0, v1, v2 ; inline comment
 ; separate comment
     v_bfrev_b32_e32 v0, 1
 

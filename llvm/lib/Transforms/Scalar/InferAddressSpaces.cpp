@@ -1012,8 +1012,12 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
   case Instruction::IntToPtr:
     if (isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI)) {
       Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
-      assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-      return Src;
+      // If we had a no-op inttoptr/ptrtoint pair, we may still have inferred a
+      // source address space from a generic pointer source, so insert a cast
+      // back. See cloneInstructionWithNewAddressSpace.
+      if (Src->getType() == TargetType)
+        return Src;
+      return ConstantExpr::getAddrSpaceCast(Src, TargetType);
     }
     assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(CE)));
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);

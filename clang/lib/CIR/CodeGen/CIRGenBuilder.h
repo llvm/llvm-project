@@ -834,6 +834,12 @@ public:
     return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
   }
 
+  cir::MatrixExtractRowOp createMatrixExtractRow(mlir::Location loc,
+                                                 mlir::Value matrix,
+                                                 mlir::Value rowIdx) {
+    return cir::MatrixExtractRowOp::create(*this, loc, matrix, rowIdx);
+  }
+
   cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
                                          mlir::Value matrix, mlir::Value rowIdx,
                                          mlir::Value columnIdx) {
