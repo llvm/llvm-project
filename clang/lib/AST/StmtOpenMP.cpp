@@ -578,22 +578,24 @@ OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
 OMPUnrollDirective *OMPUnrollDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    unsigned NumGeneratedTopLevelLoops, Stmt *TransformedStmt, Stmt *PreInits) {
+    unsigned NumGeneratedTopLevelLoops, Stmt *TransformedStmt, Stmt *PreInits,
+    Stmt *Finals) {
   assert(NumGeneratedTopLevelLoops <= 1 &&
          "Unrolling generates at most one loop");
 
   auto *Dir = createDirective<OMPUnrollDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
 OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
                                                     unsigned NumClauses) {
   return createEmptyDirective<OMPUnrollDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation());
 }
 

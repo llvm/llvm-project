@@ -1562,12 +1562,15 @@ private:
   /// \param OriginalInits [out] Collection of statements and declarations that
   ///                      must have been executed/declared before entering the
   ///                      loop.
+  /// \param NestedFinals  [out] If non-null, per loop, the Finals of a nested
+  ///                      loop transformation consumed by this one.
   ///
   /// \return Whether there was any error.
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
+      SmallVectorImpl<Stmt *> *NestedFinals = nullptr);
 
   /// Holds the result of the analysis of a (possibly canonical) loop.
   struct LoopAnalysis {
@@ -1609,11 +1612,6 @@ private:
     SmallVector<LoopAnalysis, 2> Loops;
     /// Additional code required before entering the transformed loop sequence.
     SmallVector<Stmt *> LoopSequencePreInits;
-    /// Finalization statements from inner loop-sequence-generating
-    /// transformations (e.g., looprange fuse) whose emitted loops are not
-    /// bound to individual `Loops[i]` entries. The enclosing directive must
-    /// execute these to restore loop-exit values.
-    SmallVector<Stmt *, 2> InnerFinals;
 
     // Convenience function used when building the LoopSequenceAnalysis.
     static bool isLoopSequenceDerivation(Stmt *S) {

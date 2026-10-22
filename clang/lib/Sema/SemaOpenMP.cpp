@@ -15345,7 +15345,10 @@ static void updatePreInits(OMPLoopTransformationDirective *Transform,
 bool SemaOpenMP::checkTransformableLoopNest(
     OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
     SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-    Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits) {
+    Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
+    SmallVectorImpl<Stmt *> *NestedFinals) {
+  if (NestedFinals)
+    NestedFinals->assign(NumLoops, nullptr);
   OriginalInits.emplace_back();
   bool Result = OMPLoopBasedDirective::doForAllLoops(
       AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false, NumLoops,
@@ -15380,8 +15383,15 @@ bool SemaOpenMP::checkTransformableLoopNest(
         OriginalInits.emplace_back();
         return false;
       },
-      [&OriginalInits](OMPLoopTransformationDirective *Transform) {
+      [&OriginalInits,
+       NestedFinals](OMPLoopTransformationDirective *Transform) {
         updatePreInits(Transform, OriginalInits.back());
+        if (NestedFinals)
+          if (Stmt *Finals = Transform->getFinals()) {
+            assert(!(*NestedFinals)[OriginalInits.size() - 1] &&
+                   "Expected one nested transformation per loop");
+            (*NestedFinals)[OriginalInits.size() - 1] = Finals;
+          }
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
@@ -15524,14 +15534,23 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       // given that they are not bounded to a particular loop nest
       // so they need to be treated independently
       updatePreInits(LoopTransform, SeqAnalysis.LoopSequencePreInits);
-      // The generated loops become individual entries in SeqAnalysis.Loops,
-      // so the enclosing directive can decide per-loop where to emit their
-      // finalization. But the transformation's own Finals aren't attached
-      // to any specific generated loop; propagate to the enclosing directive.
-      if (Stmt *InnerFinal = LoopTransform->getFinals())
-        SeqAnalysis.InnerFinals.push_back(InnerFinal);
-      return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind,
-                                 /*IsGeneratedSequence=*/true);
+      unsigned FirstGenerated = SeqAnalysis.Loops.size();
+      if (!analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind,
+                               /*IsGeneratedSequence=*/true))
+        return false;
+      // Attach the transformation's Finals to the generated loop they follow:
+      // the fused loop for fuse, otherwise the last generated loop.
+      if (Stmt *Finals = LoopTransform->getFinals()) {
+        const auto *Fuse =
+            dyn_cast<OMPFuseDirective>(LoopTransform->getDirective());
+        unsigned Idx =
+            Fuse ? Fuse->getFusedLoopIdx() : NumGeneratedTopLevelLoops - 1;
+        assert(FirstGenerated + Idx < SeqAnalysis.Loops.size() &&
+               !SeqAnalysis.Loops[FirstGenerated + Idx].TransformFinals &&
+               "Generated loop already has Finals");
+        SeqAnalysis.Loops[FirstGenerated + Idx].TransformFinals = Finals;
+      }
+      return true;
     }
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
     // Process the transformed loop statement
@@ -15751,25 +15770,29 @@ guardByLoopPreConds(ASTContext &Context,
   return S;
 }
 
-/// Run loop \p I's init only if all enclosing loops have iterations.
-/// Declaration inits are left as is.
+/// Run loop \p I's inits only if all enclosing loops have iterations.
+/// Declarations are left as is.
 static void
 guardNestedLoopInit(ASTContext &Context,
                     ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
                     unsigned I, SmallVectorImpl<Stmt *> &OriginalInit) {
-  Stmt *&Init = OriginalInit.back();
-  if (I > 0 && Init && !isa<DeclStmt>(Init))
-    Init = guardByLoopPreConds(Context, LoopHelpers.take_front(I), Init);
+  if (I == 0)
+    return;
+  for (Stmt *&Init : OriginalInit)
+    if (Init && !isa<DeclStmt>(Init))
+      Init = guardByLoopPreConds(Context, LoopHelpers.take_front(I), Init);
 }
 
 /// Build loop variable finalization statement from HelperExprs.Finals.
 /// Each Final runs only if its loop, and with \p IsLoopNest all enclosing
-/// loops, have iterations. Returns nullptr if there is nothing to finalize.
+/// loops, have iterations; \p NestedFinals[I] is emitted with loop I's.
+/// Returns nullptr if there is nothing to finalize.
 /// Compiler-generated counters and class-type iterators are skipped.
 static Stmt *
 buildLoopFinalization(ASTContext &Context,
                       ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
-                      bool IsLoopNest = false) {
+                      bool IsLoopNest = false,
+                      ArrayRef<Stmt *> NestedFinals = {}) {
   auto GetFinals = [](const OMPLoopBasedDirective::HelperExprs &Helper) {
     SmallVector<Stmt *, 2> Finals;
     for (auto [Counter, Final] :
@@ -15790,16 +15813,22 @@ buildLoopFinalization(ASTContext &Context,
                                 SourceLocation(), SourceLocation());
   };
 
+  auto GetNestedFinals = [&](size_t I) -> Stmt * {
+    return I < NestedFinals.size() ? NestedFinals[I] : nullptr;
+  };
+
   if (IsLoopNest) {
     // if (P0) { F0; if (P1) { F1; ... } }, built from the innermost loop out.
     Stmt *Nested = nullptr;
-    for (const auto &Helper : llvm::reverse(LoopHelpers)) {
-      SmallVector<Stmt *, 2> Body = GetFinals(Helper);
+    for (size_t I = LoopHelpers.size(); I-- > 0;) {
+      SmallVector<Stmt *, 2> Body = GetFinals(LoopHelpers[I]);
+      if (Stmt *F = GetNestedFinals(I))
+        Body.push_back(F);
       if (Nested)
         Body.push_back(Nested);
       if (Body.empty())
         continue;
-      Nested = guardByLoopPreConds(Context, Helper,
+      Nested = guardByLoopPreConds(Context, LoopHelpers[I],
                                    Body.size() == 1 ? Body.front()
                                                     : MakeCompound(Body));
     }
@@ -15807,9 +15836,12 @@ buildLoopFinalization(ASTContext &Context,
   }
 
   SmallVector<Stmt *, 8> FinalizationStmts;
-  for (const auto &Helper : LoopHelpers)
+  for (auto [I, Helper] : llvm::enumerate(LoopHelpers)) {
     for (Stmt *Final : GetFinals(Helper))
       FinalizationStmts.push_back(guardByLoopPreConds(Context, Helper, Final));
+    if (Stmt *F = GetNestedFinals(I))
+      FinalizationStmts.push_back(F);
+  }
   return FinalizationStmts.empty() ? nullptr : MakeCompound(FinalizationStmts);
 }
 
@@ -15835,8 +15867,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<Stmt *>, 4> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_tile, AStmt, NumLoops, LoopHelpers, Body,
-                                  OriginalInits))
+                                  OriginalInits, &NestedFinals))
     return StmtError();
 
   // Delay tiling to when template is completely instantiated.
@@ -16167,7 +16200,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   return OMPTileDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true));
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true,
+                            NestedFinals));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
@@ -16194,8 +16228,9 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<Stmt *>, 4> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_stripe, AStmt, NumLoops, LoopHelpers,
-                                  Body, OriginalInits))
+                                  Body, OriginalInits, &NestedFinals))
     return StmtError();
 
   // Delay striping to when template is completely instantiated.
@@ -16429,7 +16464,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   return OMPStripeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true));
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/true,
+                            NestedFinals));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -16458,8 +16494,9 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
       NumLoops);
   SmallVector<SmallVector<Stmt *>, NumLoops + 1> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_unroll, AStmt, NumLoops, LoopHelpers,
-                                  Body, OriginalInits))
+                                  Body, OriginalInits, &NestedFinals))
     return StmtError();
 
   unsigned NumGeneratedTopLevelLoops = PartialClause ? 1 : 0;
@@ -16468,7 +16505,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   if (SemaRef.CurContext->isDependentContext())
     return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
                                       NumGeneratedTopLevelLoops, nullptr,
-                                      nullptr);
+                                      nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -16494,7 +16531,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   if (NumGeneratedTopLevelLoops == 0)
     return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
                                       NumGeneratedTopLevelLoops, nullptr,
-                                      nullptr);
+                                      nullptr, nullptr);
 
   // Otherwise, we need to provide a de-sugared/transformed AST that can be
   // associated with another loop directive.
@@ -16708,9 +16745,11 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
               OuterIncr.get(), InnerUnrolled, LoopHelper.Init->getBeginLoc(),
               LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
 
-  return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
-                                    NumGeneratedTopLevelLoops, OuterFor,
-                                    buildPreInits(Context, PreInits));
+  return OMPUnrollDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, AStmt, NumGeneratedTopLevelLoops,
+      OuterFor, buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers,
+                            /*IsLoopNest=*/false, NestedFinals));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
@@ -16728,8 +16767,9 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
       NumLoops);
   SmallVector<SmallVector<Stmt *>, NumLoops + 1> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_reverse, AStmt, NumLoops, LoopHelpers,
-                                  Body, OriginalInits))
+                                  Body, OriginalInits, &NestedFinals))
     return StmtError();
 
   // Delay applying the transformation to when template is completely
@@ -16898,7 +16938,8 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   return OMPReverseDirective::Create(
       Context, StartLoc, EndLoc, AStmt, NumLoops, ReversedFor,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/false,
+                            NestedFinals));
 }
 
 /// Build the AST for \#pragma omp split counts(c1, c2, ...).
@@ -16927,8 +16968,9 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
       NumLoops);
   SmallVector<SmallVector<Stmt *>, NumLoops + 1> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_split, AStmt, NumLoops, LoopHelpers,
-                                  Body, OriginalInits))
+                                  Body, OriginalInits, &NestedFinals))
     return StmtError();
 
   // Delay applying the transformation to when template is completely
@@ -17128,10 +17170,11 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
       Context, SplitLoops, FPOptionsOverride(),
       SplitLoops.front()->getBeginLoc(), SplitLoops.back()->getEndLoc());
 
-  return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                   AStmt, SplitStmt,
-                                   buildPreInits(Context, PreInits),
-                                   buildLoopFinalization(Context, LoopHelpers));
+  return OMPSplitDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, SplitStmt,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/false,
+                            NestedFinals));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
@@ -17154,8 +17197,10 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<Stmt *>, 2> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_interchange, AStmt, NumLoops,
-                                  LoopHelpers, Body, OriginalInits))
+                                  LoopHelpers, Body, OriginalInits,
+                                  &NestedFinals))
     return StmtError();
 
   // Delay interchange to when template is completely instantiated.
@@ -17329,7 +17374,8 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   return OMPInterchangeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, /*IsLoopNest=*/false,
+                            NestedFinals));
 }
 
 StmtResult
@@ -17864,14 +17910,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // transformations, also append their preinits (which contain the original
   // loop initialization statement or other statements)
 
-  // Firstly we need to set TransformIndex to match the begining of the
-  // looprange section
-  unsigned int TransformIndex = 0;
-  for (unsigned I : llvm::seq<unsigned>(FirstVal - 1)) {
-    if (SeqAnalysis.Loops[I].isLoopTransformation())
-      ++TransformIndex;
-  }
-
   for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
     if (SeqAnalysis.Loops[I].isRegularLoop()) {
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
@@ -17881,9 +17919,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       // For transformed loops, insert both pre-inits and original inits.
       // Order matters: pre-inits may define variables used in the original
       // inits such as upper bounds...
-      SmallVector<Stmt *> &TransformPreInit =
-          SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
-      llvm::append_range(PreInits, TransformPreInit);
+      llvm::append_range(PreInits, SeqAnalysis.Loops[I].TransformsPreInits);
 
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
                       SeqAnalysis.Loops[I].TheForStmt,
@@ -18118,16 +18154,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               FusedBody, InitStmt.get()->getBeginLoc(), SourceLocation(),
               IncrExpr.get()->getEndLoc());
 
-  // 8. Build finalization statements for fused loops, combining:
-  //   - Finals from inner sequence-generating transformations (looprange
-  //     fuse, split) that produced our SeqAnalysis.Loops entries.
-  //   - Finals from inner single-loop transformations (reverse, tile, ...)
-  //     whose loops are in-range and thus consumed by this fuse.
-  //   - This fuse's own Finals for the fused loops.
-  // Out-of-range loops carry their own Finals inline; see the FinalLoops
-  // assembly below.
+  // 8. Finals: those of in-range inner transformations, then this fuse's own.
+  // Out-of-range loops keep theirs inline.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
-  auto AllFinalsStmts = llvm::to_vector<4>(SeqAnalysis.InnerFinals);
+  SmallVector<Stmt *, 4> AllFinalsStmts;
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1, LastVal)) {
     const LoopAnalysis &Loop = SeqAnalysis.Loops[I];
     if (Loop.isRegularLoop())
@@ -18159,32 +18189,17 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   if (LRC && CountVal != SeqAnalysis.LoopSeqSize) {
     SmallVector<Stmt *, 4> FinalLoops;
 
-    // Reset the transform index
-    TransformIndex = 0;
-
     // Collect all non-fused loops before and after the fused region.
     // Pre-fusion and post-fusion loops are inserted in order exploiting their
     // symmetry, along with their corresponding transformation pre-inits if
     // needed. The fused loop is added between the two regions.
     for (unsigned I : llvm::seq<unsigned>(SeqAnalysis.LoopSeqSize)) {
-      if (I >= FirstVal - 1 && I < FirstVal + CountVal - 1) {
-        // Update the Transformation counter to skip already treated
-        // loop transformations
-        if (!SeqAnalysis.Loops[I].isLoopTransformation())
-          ++TransformIndex;
+      if (I >= FirstVal - 1 && I < FirstVal + CountVal - 1)
         continue;
-      }
 
-      // No need to handle:
-      // Regular loops: they are kept intact as-is.
-      // Loop-sequence-generating transformations: already handled earlier.
-      // Only TransformSingleLoop requires inserting pre-inits here
-      if (SeqAnalysis.Loops[I].isRegularLoop()) {
-        const auto &TransformPreInit =
-            SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
-        if (!TransformPreInit.empty())
-          llvm::append_range(PreInits, TransformPreInit);
-      }
+      // Out-of-range transformations still need their pre-inits.
+      if (SeqAnalysis.Loops[I].isLoopTransformation())
+        llvm::append_range(PreInits, SeqAnalysis.Loops[I].TransformsPreInits);
 
       // For out-of-range loop-transformations, emit their finalization inline
       // right after the transformed loop so that IVs are restored as if the

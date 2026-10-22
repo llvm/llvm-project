@@ -5862,6 +5862,7 @@ class OMPUnrollDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPUnrollDirective(SourceLocation StartLoc, SourceLocation EndLoc)
@@ -5873,6 +5874,8 @@ class OMPUnrollDirective final
   void setPreInits(Stmt *PreInits) {
     Data->getChildren()[PreInitsOffset] = PreInits;
   }
+
+  void setFinals(Stmt *Finals) { Data->getChildren()[FinalsOffset] = Finals; }
 
   /// Set the de-sugared statement.
   void setTransformedStmt(Stmt *S) {
@@ -5890,11 +5893,12 @@ public:
   /// \param TransformedStmt The loop nest after tiling, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
+  /// \param Finals Loop variable finalization statements.
   static OMPUnrollDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
          unsigned NumGeneratedTopLevelLoops, Stmt *TransformedStmt,
-         Stmt *PreInits);
+         Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp unroll' AST node for deserialization.
   ///
@@ -5917,8 +5921,9 @@ public:
   /// Return the pre-init statements.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
 
-  /// Unroll does not model loop variable finalization; always returns nullptr.
-  Stmt *getFinals() const { return nullptr; }
+  /// Return finals statement, used when an enclosing loop transformation
+  /// consumes the unrolled loop.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPUnrollDirectiveClass;
