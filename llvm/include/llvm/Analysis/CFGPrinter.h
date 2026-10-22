@@ -32,6 +32,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include <functional>
+#include <optional>
 #include <sstream>
 
 namespace llvm {
@@ -71,6 +72,8 @@ private:
   using NodeIdFormatterTy =
       std::function<std::optional<std::string>(const BasicBlock *)>;
   std::optional<NodeIdFormatterTy> NodeIdFormatter;
+  bool HideDeoptimizePaths;
+  bool HideUnreachablePaths;
 
 public:
   DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
@@ -79,7 +82,9 @@ public:
   LLVM_ABI
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
               const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
-              std::optional<NodeIdFormatterTy> NodeIdFormatter = std::nullopt);
+              std::optional<NodeIdFormatterTy> NodeIdFormatter = std::nullopt,
+              bool HideDeoptimizePaths = false,
+              bool HideUnreachablePaths = false);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -110,6 +115,10 @@ public:
   std::optional<NodeIdFormatterTy> getNodeIdFormatter() {
     return NodeIdFormatter;
   }
+
+  bool hideDeoptimizePaths() const { return HideDeoptimizePaths; }
+
+  bool hideUnreachablePaths() const { return HideUnreachablePaths; }
 };
 
 template <>
@@ -341,7 +350,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   LLVM_ABI bool isNodeHidden(const BasicBlock *Node,
                              const DOTFuncInfo *CFGInfo);
-  LLVM_ABI void computeDeoptOrUnreachablePaths(const Function *F);
+  LLVM_ABI void computeDeoptOrUnreachablePaths(const Function *F,
+                                               const DOTFuncInfo *CFGInfo);
 };
 } // namespace llvm
 
