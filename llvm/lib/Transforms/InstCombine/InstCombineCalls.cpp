@@ -2547,7 +2547,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                 bool Overflow = false;
                 APInt ShiftedC1 = C1->sshl_ov(*C2, Overflow);
         
-                if (!Overflow && C3->sge(ShiftedC1) && C2->ult(ComputeNumSignBits(X, 0, II))) {
+                if (!Overflow && C3->sge(ShiftedC1) && C2->ult(ComputeNumSignBits(X,II))) {
                     Value *NewShl = Builder.CreateShl(X, ConstantInt::get(II->getType(), *C2));
                     Value *NewMax = Builder.CreateBinaryIntrinsic(Intrinsic::smax, NewShl, ConstantInt::get(II->getType(), *C3));
                     return replaceInstUsesWith(*II, NewMax);
