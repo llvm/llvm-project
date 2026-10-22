@@ -222,6 +222,12 @@ static cl::opt<unsigned> MaxLoopGuardCollectionDepth(
     "scalar-evolution-max-loop-guard-collection-depth", cl::Hidden,
     cl::desc("Maximum depth for recursive loop guard collection"), cl::init(1));
 
+static cl::opt<unsigned> MaxGuardDomTreeSteps(
+    "scalar-evolution-max-guard-dom-tree-steps", cl::Hidden,
+    cl::desc("Maximum number of immediate dominator steps taken when "
+             "collecting loop guards"),
+    cl::init(8));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -12258,8 +12264,9 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
     // operands are non-negative or negative.
-    if (haveSameSign(FoundLHS, FoundRHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
+    if (haveSameSign(FoundLHS, FoundRHS) &&
+        isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+      return true;
     // Create local copies that we can freely swap and canonicalize our
     // conditions to "le/lt".
     CmpPredicate CanonicalPred = Pred, CanonicalFoundPred = FoundPred;
@@ -12276,20 +12283,22 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     assert((ICmpInst::isLT(CanonicalFoundPred) ||
             ICmpInst::isLE(CanonicalFoundPred)) &&
            "Must be!");
-    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS))
+    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS)) {
       // Use implication:
       // x <u y && y >=s 0 --> x <s y.
       // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
-    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS))
+      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
+                                CanonicalFoundLHS, CanonicalFoundRHS))
+        return true;
+    }
+    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS)) {
       // Use implication:
       // x <s y && y <s 0 --> x <u y.
       // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
+      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
+                                CanonicalFoundLHS, CanonicalFoundRHS))
+        return true;
+    }
   }
 
   // Check if we can make progress by sharpening ranges.
@@ -16105,13 +16114,28 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // Third, collect conditions from dominating branches. Starting at the loop
   // predecessor, climb up the predecessor chain, as long as there are
   // predecessors that can be found that have unique successors leading to the
-  // original header.
+  // original header. If there is no such predecessor, continue at the
+  // immediate dominator.
   // TODO: share this logic with isLoopEntryGuardedByCond.
   unsigned NumCollectedConditions = 0;
+  unsigned NumDomTreeSteps = 0;
   VisitedBlocks.insert(Block);
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
-  for (; Pair.first;
-       Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+  for (;; Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+    if (!Pair.first) {
+      // At the first block without a unique predecessor, try to build
+      // conditions for its phis by merging those of their incoming blocks.
+      if (!NumDomTreeSteps && Depth < MaxLoopGuardCollectionDepth) {
+        SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
+        for (auto &Phi : Pair.second->phis())
+          collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
+      }
+      const DomTreeNode *IDom = SE.DT.getNode(Pair.second)->getIDom();
+      if (!IDom || ++NumDomTreeSteps > MaxGuardDomTreeSteps)
+        break;
+      Pair.first = IDom->getBlock();
+      continue;
+    }
     VisitedBlocks.insert(Pair.second);
     const CondBrInst *LoopEntryPredicate =
         dyn_cast<CondBrInst>(Pair.first->getTerminator());
@@ -16126,17 +16150,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // conditions to limit compile-time impact for now.
     if (Depth > 0 && NumCollectedConditions == 2)
       break;
-  }
-  // Finally, if we stopped climbing the predecessor chain because
-  // there wasn't a unique one to continue, try to collect conditions
-  // for PHINodes by recursively following all of their incoming
-  // blocks and try to merge the found conditions to build a new one
-  // for the Phi.
-  if (Pair.second->hasNPredecessorsOrMore(2) &&
-      Depth < MaxLoopGuardCollectionDepth) {
-    SmallDenseMap<const BasicBlock *, LoopGuards> IncomingGuards;
-    for (auto &Phi : Pair.second->phis())
-      collectFromPHI(SE, Guards, Phi, VisitedBlocks, IncomingGuards, Depth);
   }
 
   // Now apply the information from the collected conditions to
