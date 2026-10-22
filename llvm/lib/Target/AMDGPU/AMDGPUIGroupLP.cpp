@@ -28,36 +28,6 @@ using namespace llvm::AMDGPU;
 
 namespace {
 
-static cl::opt<bool> EnableExactSolver(
-    "amdgpu-igrouplp-exact-solver", cl::Hidden,
-    cl::desc("Whether to use the exponential time solver to fit "
-             "the instructions to the pipeline as closely as "
-             "possible."),
-    cl::init(false));
-
-static cl::opt<unsigned> CutoffForExact(
-    "amdgpu-igrouplp-exact-solver-cutoff", cl::init(0), cl::Hidden,
-    cl::desc("The maximum number of scheduling group conflicts "
-             "which we attempt to solve with the exponential time "
-             "exact solver. Problem sizes greater than this will"
-             "be solved by the less accurate greedy algorithm. Selecting "
-             "solver by size is superseded by manually selecting "
-             "the solver (e.g. by amdgpu-igrouplp-exact-solver"));
-
-static cl::opt<uint64_t> MaxBranchesExplored(
-    "amdgpu-igrouplp-exact-solver-max-branches", cl::init(0), cl::Hidden,
-    cl::desc("The amount of branches that we are willing to explore with"
-             "the exact algorithm before giving up."));
-
-static cl::opt<bool> UseCostHeur(
-    "amdgpu-igrouplp-exact-solver-cost-heur", cl::init(true), cl::Hidden,
-    cl::desc("Whether to use the cost heuristic to make choices as we "
-             "traverse the search space using the exact solver. Defaulted "
-             "to on, and if turned off, we will use the node order -- "
-             "attempting to put the later nodes in the later sched groups. "
-             "Experimentally, results are mixed, so this should be set on a "
-             "case-by-case basis."));
-
 class SchedGroup;
 
 // InstructionRule class is used to enact a filter which determines whether or
@@ -226,6 +196,7 @@ using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 // only be used for small sized problems or medium sized problems where an exact
 // solution is highly desired.
 class PipelineSolver {
+  const AMDGPUOptions &CLOpts;
   [[maybe_unused]] ScheduleDAGMI *DAG;
 
   // Instructions that can be assigned to multiple SchedGroups
@@ -360,8 +331,9 @@ public:
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
                  ScheduleDAGMI *DAG, bool IsBottomUp = true)
-      : DAG(DAG), SyncedInstrs(SyncedInstrs),
-        SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
+      : CLOpts(DAG->MF.getSubtarget<GCNSubtarget>().getCLOpts()), DAG(DAG),
+        SyncedInstrs(SyncedInstrs), SyncedSchedGroups(SyncedSchedGroups),
+        IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
       if (!PipelineInstrs.second.empty()) {
@@ -670,7 +642,8 @@ bool PipelineSolver::checkOptimal() {
   }
 
   bool DoneExploring = false;
-  if (MaxBranchesExplored > 0 && BranchesExplored >= MaxBranchesExplored)
+  if (CLOpts.igrouplp_exact_solver_max_branches > 0 &&
+      BranchesExplored >= CLOpts.igrouplp_exact_solver_max_branches)
     DoneExploring = true;
 
   return (DoneExploring || BestCost == 0);
@@ -691,7 +664,7 @@ void PipelineSolver::populateReadyList(
     });
     assert(Match);
 
-    if (UseCostHeur) {
+    if (CLOpts.igrouplp_exact_solver_cost_heur) {
       if (Match->isFull()) {
         ReadyList.push_back(std::pair(*I, MissPenalty));
         continue;
@@ -704,7 +677,7 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur)
+  if (CLOpts.igrouplp_exact_solver_cost_heur)
     std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
@@ -913,11 +886,12 @@ void PipelineSolver::solve() {
   unsigned ProblemSize = computeProblemSize();
   assert(ProblemSize > 0);
 
-  bool BelowCutoff = (CutoffForExact > 0) && ProblemSize <= CutoffForExact;
+  bool BelowCutoff = (CLOpts.igrouplp_exact_solver_cutoff > 0) &&
+                     ProblemSize <= CLOpts.igrouplp_exact_solver_cutoff;
   MissPenalty = (ProblemSize / 2) + 1;
 
   LLVM_DEBUG(DAG->dump());
-  if (EnableExactSolver || BelowCutoff) {
+  if (CLOpts.igrouplp_exact_solver || BelowCutoff) {
     LLVM_DEBUG(dbgs() << "Starting Greedy pipeline solver\n");
     solveGreedy();
     reset();

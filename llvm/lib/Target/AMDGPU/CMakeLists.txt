@@ -38,6 +38,9 @@ tablegen(LLVM R600GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM R600GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM R600GenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS AMDGPUOptions.td)
+tablegen(LLVM AMDGPUOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
@@ -212,6 +215,7 @@ add_llvm_target(AMDGPUCodeGen
   MC
   MIRParser
   ObjCARC
+  Option
   Passes
   Scalar
   SelectionDAG

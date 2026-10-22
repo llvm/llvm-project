@@ -24,12 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-form-memory-clauses"
 
-// Clauses longer then 15 instructions would overflow one of the counters
-// and stall. They can stall even earlier if there are outstanding counters.
-static cl::opt<unsigned>
-MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
-          cl::desc("Maximum length of a memory clause, instructions"));
-
 namespace {
 
 class SIFormMemoryClausesImpl {
@@ -268,7 +262,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
   unsigned FuncMaxClause = MF.getFunction().getFnAttributeAsParsedInteger(
-      "amdgpu-max-memory-clause", MaxClause);
+      "amdgpu-max-memory-clause", ST->getCLOpts().max_memory_clause);
 
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);

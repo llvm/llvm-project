@@ -63,13 +63,6 @@ static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
 
 namespace llvm {
 
-static cl::opt<bool> DumpHSAMetadata(
-    "amdgpu-dump-hsa-metadata",
-    cl::desc("Dump AMDGPU HSA Metadata"));
-static cl::opt<bool> VerifyHSAMetadata(
-    "amdgpu-verify-hsa-metadata",
-    cl::desc("Verify AMDGPU HSA Metadata"));
-
 namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
@@ -572,9 +565,9 @@ void MetadataStreamerMsgPackV4::end() {
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
 
-  if (DumpHSAMetadata)
+  if (CLOpts.dump_hsa_metadata)
     dump(StrOS.str());
-  if (VerifyHSAMetadata)
+  if (CLOpts.verify_hsa_metadata)
     verify(StrOS.str());
 }
 

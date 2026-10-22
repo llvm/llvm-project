@@ -35,10 +35,6 @@ using namespace llvm::AMDGPU;
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
 
-static cl::opt<bool> AmdgcnSkipCacheInvalidations(
-    "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
-    cl::desc("Use this to skip inserting cache invalidating instructions."));
-
 namespace {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -1023,7 +1019,7 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
 SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
-  InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  InsertCacheInv = !ST.getCLOpts().skip_cache_invalidations;
   TgSplitEnabled = TgSplit;
 }
 
