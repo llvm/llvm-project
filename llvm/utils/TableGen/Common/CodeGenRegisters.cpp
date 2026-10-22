@@ -1174,23 +1174,29 @@ bool CodeGenRegisterClass::hasAnySuperRegClasses(
 bool CodeGenRegisterClass::hasSuperRegClass(
     const CodeGenSubRegIndex *SubIdx, const CodeGenRegisterClass *RC) const {
   auto FindI = SuperRegClasses.find(SubIdx);
+  if (FindI == SuperRegClasses.end())
+    return false;
 
-  return FindI != SuperRegClasses.end() && FindI->second.contains(RC);
+  const BitVector &Supers = FindI->second;
+  return RC->CreationIndex < Supers.size() && Supers.test(RC->CreationIndex);
 }
 
 bool CodeGenRegisterClass::hasSuperRegClass(
     const CodeGenRegisterClass *RC) const {
-  return any_of(SuperRegClasses,
-                [RC](const auto &Entry) { return Entry.second.contains(RC); });
+  return any_of(SuperRegClasses, [RC](const auto &Entry) {
+    const BitVector &Supers = Entry.second;
+    return RC->CreationIndex < Supers.size() && Supers.test(RC->CreationIndex);
+  });
 }
 
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
+                                              const CodeGenRegBank &RegBank,
                                               BitVector &Out) const {
   auto FindI = SuperRegClasses.find(SubIdx);
   if (FindI == SuperRegClasses.end())
     return;
-  for (CodeGenRegisterClass *RC : FindI->second)
-    Out.set(RC->EnumValue);
+  for (unsigned I : FindI->second.set_bits())
+    Out.set(RegBank.getRegClassByCreationIndex(I)->EnumValue);
 }
 
 // Populate a unique sorted list of units from a register set.
@@ -1211,21 +1217,21 @@ void CodeGenRegisterClass::buildRegUnitSet(
 
 // Combine our super classes of the given sub-register index with all of their
 // super classes in turn.
-void CodeGenRegisterClass::extendSuperRegClasses(CodeGenSubRegIndex *SubIdx) {
+void CodeGenRegisterClass::extendSuperRegClasses(
+    CodeGenSubRegIndex *SubIdx, const CodeGenRegBank &RegBank) {
   auto It = SuperRegClasses.find(SubIdx);
   if (It == SuperRegClasses.end())
     return;
 
-  SmallVector<CodeGenRegisterClass *> MidRCs;
-  llvm::append_range(MidRCs, It->second);
-
-  for (CodeGenRegisterClass *MidRC : MidRCs) {
+  BitVector MidRCs = It->second;
+  for (unsigned I : MidRCs.set_bits()) {
+    const CodeGenRegisterClass *MidRC = RegBank.getRegClassByCreationIndex(I);
     for (auto &Pair : MidRC->SuperRegClasses) {
       CodeGenSubRegIndex *ComposedSubIdx = Pair.first->compose(SubIdx);
       if (!ComposedSubIdx)
         continue;
 
-      SuperRegClasses[ComposedSubIdx].insert_range(Pair.second);
+      SuperRegClasses[ComposedSubIdx] |= Pair.second;
     }
   }
 }
@@ -1364,6 +1370,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   for (const Record *R : RCs) {
     RegClasses.emplace_back(*this, R);
     CodeGenRegisterClass &RC = RegClasses.back();
+    setCreationIndex(RC);
     RegClassNames.insert(RC.getName());
     if (!RC.Artificial)
       addToMaps(&RC);
@@ -1442,6 +1449,7 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
 
   // Sub-class doesn't exist, create a new one.
   RegClasses.emplace_back(*this, Name, K);
+  setCreationIndex(RegClasses.back());
   RegClassNames.insert(Name);
   addToMaps(&RegClasses.back());
   return {&RegClasses.back(), true};
@@ -2777,7 +2785,7 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
   // pass.
   for (CodeGenSubRegIndex *SubIdx : SubRegIndicesRPOT) {
     for (CodeGenRegisterClass &SubRC : RegClasses)
-      SubRC.extendSuperRegClasses(SubIdx);
+      SubRC.extendSuperRegClasses(SubIdx, *this);
   }
 
   Records.getTimer().stopTimer();
