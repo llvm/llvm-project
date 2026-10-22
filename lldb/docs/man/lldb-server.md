@@ -4,31 +4,16 @@ orphan: true
 
 # lldb-server -- Server for LLDB Debugging Sessions
 
-```{eval-rst}
-.. program:: lldb-server
+```{program} lldb-server
 ```
 
 ## SYNOPSIS
 
-{program}`lldb-server`
-
- v[ersion]
-
-{program}`lldb-server`
-
- g[dbserver] \[
-
-*options*
-
-\]
-
-{program}`lldb-server`
-
- p[latform] \[
-
-*options*
-
-\]
+:::{line-block}
+{program}`lldb-server` v[ersion]
+{program}`lldb-server` g[dbserver] [*options*]
+{program}`lldb-server` p[latform] [*options*]
+:::
 
 ## DESCRIPTION
 
@@ -59,35 +44,15 @@ Runs the platform server. LLDB can afterwards connect to the server using
 
 ## GDBSERVER COMMAND
 
-{program}`lldb-server`
-
- g[dbserver] \[
-
-*options*
-
-\] \[\[
-
-*host*
-
-\]:
-
-*port*
-
-\] \[[--] 
-
-*program*
-
- 
-
-*args*
-
-...\]
+:::{line-block}
+{program}`lldb-server` g[dbserver] [*options*] [[*host*]:*port*] [[--] *program* *args*...]
+:::
 
 ### CONNECTION
 
 :::{option} host:port
 Specifies the hostname and TCP port to listen on. Obligatory unless another
-listening option is used. If host is empty, *localhost* will be used. If port
+listening option is used. If host is empty, *localhost* will be used.  If port
 is zero, a random port will be selected, and written as specified by --pipe
 or --named-pipe options.
 :::
@@ -106,7 +71,7 @@ Write the listening port number to the specified pipe (fd).
 
 :::{option} --reverse-connect
 Connect to the client instead of passively waiting for a connection. In this
-case, \[host\]:port denotes the remote address to connect to.
+case, [host]:port denotes the remote address to connect to.
 :::
 
 ### GENERAL OPTIONS
@@ -144,21 +109,9 @@ to launch or attach.
 
 ## PLATFORM COMMAND
 
-{program}`lldb-server`
-
- p[latform] \[
-
-*options*
-
-\] --server --listen \[\[
-
-*host*
-
-\]:
-
-*port*
-
-\]
+:::{line-block}
+{program}`lldb-server` p[latform] [*options*] --server --listen [[*host*]:*port*]
+:::
 
 ### CONNECTION
 

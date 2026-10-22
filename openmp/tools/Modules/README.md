@@ -3,10 +3,6 @@
 This directory contains CMake modules for OpenMP. These can be included into a
 project to include different OpenMP features.
 
-```{contents}
-:local: true
-```
-
 ## Find OpenMP Target Support
 
 This module will attempt to find OpenMP target offloading support for a given

@@ -4,21 +4,14 @@ orphan: true
 
 # lldb -- The Debugger
 
-```{eval-rst}
-.. program:: lldb
+```{program} lldb
 ```
 
 ## SYNOPSIS
 
-{program}`lldb`
-
- \[
-
-*options*
-
-\] 
-
-*executable*
+:::{line-block}
+{program}`lldb` [*options*] *executable*
+:::
 
 ## DESCRIPTION
 
@@ -297,7 +290,7 @@ loading the file (via -o or -s) will be ignored.
 ## USING LLDB
 
 In {program}`lldb` there is a help command which can be used to find
-descriptions and examples of all {program}`lldb` commands. To get help on
+descriptions and examples of all {program}`lldb` commands.  To get help on
 "breakpoint set" you would type "help breakpoint set".
 
 There is also an apropos command which will search the help text of all
@@ -315,10 +308,10 @@ whose name is ~/.lldbinit followed by a "-" and the name of the current
 program. This would be ~/.lldbinit-lldb for the command line {program}`lldb`
 and ~/.lldbinit-Xcode for Xcode. If there is no application specific init
 file, {program}`lldb` will look for an init file in the home directory.
-If launched with a [REPL] option, it will first look for a REPL configuration
+If launched with a [REPL](#repl) option, it will first look for a REPL configuration
 file, specific to the REPL language. The init file should be named as follow:
 `.lldbinit-<language>-repl` (i.e. `.lldbinit-swift-repl`). If this file doesn't
-exist, or {program}`lldb` wasn't launch with [REPL], meaning there is neither
+exist, or {program}`lldb` wasn't launch with [REPL](#repl), meaning there is neither
 a REPL init file nor an application specific init file, `lldb` will fallback to
 the global ~/.lldbinit.
 

@@ -51,4 +51,3 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 If `llvm/tools` legacy-style combined builds are deprecated, we should then
 skip it everywhere, bringing the tools and runtimes boilerplate back in line.
-

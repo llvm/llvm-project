@@ -9,10 +9,10 @@ possible.
 
 ## Features
 
-> - Portable!
-> - Flexible test discovery.
-> - Parallel test execution.
-> - Support for multiple test formats and test suite designs.
+- Portable!
+- Flexible test discovery.
+- Parallel test execution.
+- Support for multiple test formats and test suite designs.
 
 ## Documentation
 
@@ -32,7 +32,7 @@ ideas on what to work on:
 
 Before submitting patches, run the test suite to ensure nothing has regressed:
 
-```
+```sh
 # From within your LLVM source directory.
 utils/lit/lit.py \
     --path /path/to/your/llvm/build/bin \
@@ -47,14 +47,20 @@ You'll also want to confirm that lit continues to work when testing LLVM.
 Follow the instructions in <http://llvm.org/docs/TestingGuide.html> to run the
 regression test suite:
 
-> make check-llvm
+```sh
+make check-llvm
+```
 
 And be sure to run the llvm-lit wrapper script as well:
 
-> /path/to/your/llvm/build/bin/llvm-lit utils/lit/tests
+```sh
+/path/to/your/llvm/build/bin/llvm-lit utils/lit/tests
+```
 
 Finally, make sure lit works when installed via setuptools:
 
-> python utils/lit/setup.py install
-> lit --path /path/to/your/llvm/build/bin utils/lit/tests
+```sh
+python utils/lit/setup.py install
+lit --path /path/to/your/llvm/build/bin utils/lit/tests
+```
 

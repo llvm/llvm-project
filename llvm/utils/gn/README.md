@@ -1,11 +1,5 @@
 # Building LLVM with GN
 
-```{contents}
-:local: true
-```
-
-(introduction)=
-
 ## Introduction
 
 *Warning* The GN build is experimental and best-effort. It might not work,
@@ -27,14 +21,13 @@ non-goals for the GN build.
 
 This is a [good overview of GN](https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/edit#slide=id.g119d702868_0_12).
 
-(quick-start)=
-
 ## Quick start
 
 1. `git clone https://github.com/llvm/llvm-project.git; cd llvm-project` if
    you don't have a checkout yet.
 2. `llvm/utils/gn/get.py` to download a prebuilt gn binary if you're on a
-   64-bit X86 system running Linux, macOS, or Windows. [Build gn yourself](https://gn.googlesource.com/gn/#getting-started) if you're on a different
+   64-bit X86 system running Linux, macOS, or Windows. [Build gn yourself
+   ](https://gn.googlesource.com/gn/#getting-started) if you're on a different
    platform or don't want to trust prebuilt binaries.
 3. `llvm/utils/gn/gn.py gen out/gn` to run GN and create build files.
    `out/gn` is the build directory, it can have any name, and you can have as
@@ -64,8 +57,6 @@ To not put `BUILD.gn` files into the main tree, they are all below
 `utils/gn/secondary`. For example, the build file for `llvm/lib/Support`
 is in `utils/gn/secondary/llvm/lib/Support`.
 
-(syncing-gn-files-from-cmake-files)=
-
 ## Syncing GN files from CMake files
 
 Sometimes after pulling in the latest changes, the GN build doesn't work.
@@ -80,8 +71,6 @@ a new corresponding `BUILD.gn` file below `llvm/utils/gn/secondary/`.
 
 If the dependencies in a `CMakeLists.txt` file have been changed, you have to
 manually analyze and fix.
-
-(philosophy)=
 
 ## Philosophy
 
