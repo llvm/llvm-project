@@ -1,0 +1,27 @@
+# Test `merge-instantiations=merge/any/all`
+
+RUN: yaml2obj %S/Inputs/mcdc-templates-merge.yaml -o %t.o
+RUN: llvm-profdata merge %S/Inputs/mcdc-templates-merge.proftext -o %t.profdata
+
+RUN: llvm-cov show --show-mcdc -show-instantiations=true %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/mcdc-templates-merge.cpp
+
+RUN: llvm-cov report --show-mcdc-summary %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s
+
+REPORT: mcdc-templates-merge.cpp
+
+# Regions
+CHECK:      10  1  90.00%
+
+# Functions
+CHECK:       3  0 100.00%
+
+# Lines
+CHECK:      19  1  94.74%
+
+# Branches
+CHECK:      11  3  72.73%
+
+# MC/DC Conditions
+CHECK:       4  2  50.00%
+
+REPORT: TOTAL
