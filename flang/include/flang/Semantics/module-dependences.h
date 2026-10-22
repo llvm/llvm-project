@@ -12,7 +12,9 @@
 #include <cinttypes>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
+#include <utility>
 
 namespace Fortran::semantics {
 
@@ -20,31 +22,53 @@ using ModuleCheckSumType = std::uint64_t;
 
 class ModuleDependences {
 public:
-  void AddDependence(
-      std::string &&name, bool intrinsic, ModuleCheckSumType hash) {
+  // 'requiredBy' is the name of the module whose module file
+  // records the dependence.
+  void AddDependence(std::string &&name, bool intrinsic,
+      ModuleCheckSumType hash, std::string &&requiredBy) {
+    Dependence dependence{hash, std::move(requiredBy)};
     if (intrinsic) {
-      intrinsicMap_.insert_or_assign(std::move(name), hash);
+      intrinsicMap_.insert_or_assign(std::move(name), std::move(dependence));
     } else {
-      nonIntrinsicMap_.insert_or_assign(std::move(name), hash);
+      nonIntrinsicMap_.insert_or_assign(std::move(name), std::move(dependence));
     }
   }
   std::optional<ModuleCheckSumType> GetRequiredHash(
-      const std::string &name, bool intrinsic) {
-    if (intrinsic) {
-      if (auto iter{intrinsicMap_.find(name)}; iter != intrinsicMap_.end()) {
-        return iter->second;
-      }
-    } else {
-      if (auto iter{nonIntrinsicMap_.find(name)};
-          iter != nonIntrinsicMap_.end()) {
-        return iter->second;
-      }
+      const std::string &name, bool intrinsic) const {
+    if (const Dependence *dependence{Find(name, intrinsic)}) {
+      return dependence->hash;
     }
     return std::nullopt;
   }
+  // Returns the name of the module that most recently required 'name'
+  const std::string *GetRequiredBy(
+      const std::string &name, bool intrinsic) const {
+    if (const Dependence *dependence{Find(name, intrinsic)}) {
+      return &dependence->requiredBy;
+    }
+    return nullptr;
+  }
+
+  // Returns true the first time it is called for a module name and required
+  // hash, so that the module search path is scanned for homonyms only once.
+  bool MarkHomonymSearchDone(const std::string &name, ModuleCheckSumType hash) {
+    return homonymSearchDone_.emplace(name, hash).second;
+  }
 
 private:
-  std::map<std::string, ModuleCheckSumType> intrinsicMap_, nonIntrinsicMap_;
+  struct Dependence {
+    ModuleCheckSumType hash;
+    std::string requiredBy;
+  };
+  const Dependence *Find(const std::string &name, bool intrinsic) const {
+    const auto &map{intrinsic ? intrinsicMap_ : nonIntrinsicMap_};
+    if (auto iter{map.find(name)}; iter != map.end()) {
+      return &iter->second;
+    }
+    return nullptr;
+  }
+  std::map<std::string, Dependence> intrinsicMap_, nonIntrinsicMap_;
+  std::set<std::pair<std::string, ModuleCheckSumType>> homonymSearchDone_;
 };
 
 } // namespace Fortran::semantics

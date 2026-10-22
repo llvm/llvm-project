@@ -147,6 +147,14 @@ page](https://llvm.org/releases/).
   range, so conforming code is flagged and the warning is disabled by
   default.
 
+- Flang now warns, with `-Whomonymous-module`, when a `USE` in the source
+  being compiled gets a module file because another module file depends on
+  its checksum, while a different module with the same name is already in
+  use. The program then gets two modules with the same name, and the warning
+  explains the errors that usually follow. The warning is enabled by default.
+  The opt-in `-Whomonymous-module-search-order` also reports when a different
+  module file with that name appears earlier in the module search path.
+
 ## New Compiler Flags
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
   rejecting an out-of-range constant subscript with an error. See the entry above
