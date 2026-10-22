@@ -7533,6 +7533,7 @@ static bool isCombineInstrCandidate32(unsigned Opc) {
   switch (Opc) {
   case AArch64::ADDWrr:
   case AArch64::ADDWri:
+  case AArch64::ADDWrs:
   case AArch64::SUBWrr:
   case AArch64::ADDSWrr:
   case AArch64::ADDSWri:
@@ -7552,6 +7553,7 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   switch (Opc) {
   case AArch64::ADDXrr:
   case AArch64::ADDXri:
+  case AArch64::ADDXrs:
   case AArch64::SUBXrr:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXri:
@@ -7797,6 +7799,22 @@ static bool getMaddPatterns(MachineInstr &Root,
     }
   };
 
+  auto setShfFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    unsigned ShiftImm = Root.getOperand(3).getImm();
+    AArch64_AM::ShiftExtendType ShiftTy = AArch64_AM::getShiftType(ShiftImm);
+
+    if ((ShiftTy != AArch64_AM::LSL && ShiftTy != AArch64_AM::LSR &&
+         ShiftTy != AArch64_AM::ASR) ||
+        AArch64_AM::getShiftValue(ShiftImm) == 0)
+      return;
+
+    if (!canCombineWithMUL(MBB, Root.getOperand(1), Opcode, ZeroReg))
+      return;
+
+    Patterns.push_back(Pattern);
+    Found = true;
+  };
+
   auto setVFound = [&](int Opcode, int Operand, unsigned Pattern) {
     if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
@@ -7838,6 +7856,12 @@ static bool getMaddPatterns(MachineInstr &Root,
     break;
   case AArch64::SUBXri:
     setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBXI_OP1);
+    break;
+  case AArch64::ADDWrs:
+    setShfFound(AArch64::MADDWrrr, AArch64::WZR, MCP::MULADDWS_OP1);
+    break;
+  case AArch64::ADDXrs:
+    setShfFound(AArch64::MADDXrrr, AArch64::XZR, MCP::MULADDXS_OP1);
     break;
   case AArch64::ADDv8i8:
     setVFound(AArch64::MULv8i8, 1, MCP::MULADDv8i8_OP1);
@@ -8848,6 +8872,83 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   return MUL;
 }
 
+/// MUL I=A,B,0
+/// ADDrs R,I,C,shift
+/// ==>
+/// SBFM/UBFM J=C,shift
+/// MADD R,A,B,J
+static void genMaddShf(MachineFunction &MF, MachineRegisterInfo &MRI,
+                       const TargetInstrInfo *TII, MachineInstr &Root,
+                       SmallVectorImpl<MachineInstr *> &InsInstrs,
+                       SmallVectorImpl<MachineInstr *> &DelInstrs,
+                       unsigned MaddOpc, bool Is64Bit,
+                       DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  const TargetRegisterClass *RC =
+      Is64Bit ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
+  MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MUL->getOperand(1).getReg();
+  Register SrcReg1 = MUL->getOperand(2).getReg();
+  Register ShiftedReg = Root.getOperand(2).getReg();
+
+  if (ResultReg.isVirtual())
+    MRI.constrainRegClass(ResultReg, RC);
+  if (SrcReg0.isVirtual())
+    MRI.constrainRegClass(SrcReg0, RC);
+  if (SrcReg1.isVirtual())
+    MRI.constrainRegClass(SrcReg1, RC);
+  if (ShiftedReg.isVirtual())
+    MRI.constrainRegClass(ShiftedReg, RC);
+
+  unsigned ShiftImm = Root.getOperand(3).getImm();
+  unsigned ShiftVal = AArch64_AM::getShiftValue(ShiftImm);
+  unsigned RegSize = Is64Bit ? 64 : 32;
+  unsigned BFMOpc;
+  unsigned ImmR, ImmS;
+  switch (AArch64_AM::getShiftType(ShiftImm)) {
+  case AArch64_AM::ASR:
+    BFMOpc = Is64Bit ? AArch64::SBFMXri : AArch64::SBFMWri;
+    ImmR = ShiftVal;
+    ImmS = RegSize - 1;
+    break;
+  case AArch64_AM::LSR:
+    BFMOpc = Is64Bit ? AArch64::UBFMXri : AArch64::UBFMWri;
+    ImmR = ShiftVal;
+    ImmS = RegSize - 1;
+    break;
+  case AArch64_AM::LSL:
+    BFMOpc = Is64Bit ? AArch64::UBFMXri : AArch64::UBFMWri;
+    ImmR = (RegSize - ShiftVal) % RegSize;
+    ImmS = RegSize - 1 - ShiftVal;
+    break;
+  default:
+    llvm_unreachable("Unexpected shift type");
+  }
+
+  Register ShiftReg = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB1 =
+      BuildMI(MF, MIMetadata(Root), TII->get(BFMOpc), ShiftReg)
+          .addReg(ShiftedReg)
+          .addImm(ImmR)
+          .addImm(ImmS);
+  InstrIdxForVirtReg.insert(std::make_pair(ShiftReg, InsInstrs.size()));
+  InsInstrs.push_back(MIB1);
+
+  uint32_t Flags = Root.getFlags() & MUL->getFlags() &
+                   (MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+  MachineInstrBuilder MIB2 =
+      BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
+          .addReg(ShiftReg)
+          .setMIFlags(Flags);
+
+  InsInstrs.push_back(MIB2);
+  DelInstrs.push_back(MUL);
+  DelInstrs.push_back(&Root);
+}
+
 static MachineInstr *
 genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
                const TargetInstrInfo *TII, MachineInstr &Root,
@@ -9325,6 +9426,14 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
+  case AArch64MachineCombinerPattern::MULADDWS_OP1:
+    genMaddShf(MF, MRI, TII, Root, InsInstrs, DelInstrs, AArch64::MADDWrrr,
+               false, InstrIdxForVirtReg);
+    return;
+  case AArch64MachineCombinerPattern::MULADDXS_OP1:
+    genMaddShf(MF, MRI, TII, Root, InsInstrs, DelInstrs, AArch64::MADDXrrr,
+               true, InstrIdxForVirtReg);
+    return;
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
