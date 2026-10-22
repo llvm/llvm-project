@@ -37,7 +37,7 @@ Task test_await_assign() {
   // CIR:   cir.call @_ZN7Awaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
   // CIR:   cir.coro.suspend_point
   // CIR: }, resume : {
-  // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
+  // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) nothrow : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CIR:   cir.yield
   // CIR: },)
@@ -61,16 +61,15 @@ Task test_await_ref() {
   // CIR:   cir.call @_ZN7Awaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
   // CIR:   cir.coro.suspend_point
   // CIR: }, resume : {
-  // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
+  // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) nothrow : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CIR:   cir.yield
   // CIR: },)
   // CIR: %[[LOADED_PTR:.*]] = cir.load %[[TMP_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CIR: cir.store align(8) %[[LOADED_PTR]], %[[R_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-  // OGCG: %[[R_ADDR_OGCG:.*]] = alloca ptr, align 8
   // OGCG: %[[RES_OGCG:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
-  // OGCG: store ptr %[[RES_OGCG]], ptr %[[R_ADDR_OGCG]], align 8
+  // OGCG: store ptr %[[RES_OGCG]], ptr %{{.*}}, align 8
   Awaiter a;
   int &r = co_await a;
 }
