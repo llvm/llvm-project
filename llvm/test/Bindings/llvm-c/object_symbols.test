@@ -1,0 +1,12 @@
+; RUN: llvm-c-test --object-list-symbols < %S/Inputs/simple.o | FileCheck %s
+;
+; Test listing symbols in an ELF object file.
+; The object file was created from:
+;   target triple = "x86_64-unknown-linux-gnu"
+;   @global_var = global i32 42, align 4
+;   define i32 @add(i32 %a, i32 %b) { %sum = add i32 %a, %b; ret i32 %sum }
+
+; CHECK: simple.ll @0x00000000 +0 ((null))
+; CHECK: .text @0x00000000 +0 (.text)
+; CHECK: add @0x00000000 +4 (.text)
+; CHECK: global_var @0x00000000 +4 (.data)
