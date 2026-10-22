@@ -16,17 +16,7 @@ define void @address_index_external_use(ptr %y, i64 %iv, i64 %n, ptr %oc, ptr %o
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP7]], ptr [[OC]], align 1
 ; CHECK-NEXT:    [[PY0:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
-; CHECK-NEXT:    [[PY2:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[TMP14]]
-; CHECK-NEXT:    [[Y2:%.*]] = load float, ptr [[PY2]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
-; CHECK-NEXT:    [[PY3:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[TMP15]]
-; CHECK-NEXT:    [[Y3:%.*]] = load float, ptr [[PY3]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, ptr [[PY0]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[Y2]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> [[TMP11]], float [[Y3]], i64 3
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP13]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[PY0]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP8]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[OY]], align 4
 ; CHECK-NEXT:    ret void
