@@ -534,17 +534,19 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
 
   // `declare_mapper.info` supports the simple case emitted by Flang's
-  // lowering: a single-dimension iterator whose body directly yields one
-  // bounds-free, member-free omp.map.info. Anything else still falls back to
-  // the generic (not yet implemented) diagnostic above.
+  // lowering: a single-dimension iterator whose region yields one bounds-free,
+  // member-free omp.map.info. Anything else still falls back to the generic
+  // (not yet implemented) diagnostic above. Locating the region's unique
+  // `omp.yield` (rather than assuming it terminates the first block) is
+  // required since lowering a scalar subscript (e.g. involving LEN_TRIM) can
+  // introduce control flow inside the iterator.
   auto checkDeclareMapperMap = [&todo](omp::DeclareMapperInfoOp op,
                                        LogicalResult &result) {
     for (Value iterVal : op.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
       bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
       if (supported) {
-        auto yieldOp =
-            dyn_cast<omp::YieldOp>(itersOp.getRegion().front().getTerminator());
+        omp::YieldOp yieldOp = itersOp.getYieldOp();
         supported = yieldOp && yieldOp.getResults().size() == 1;
         if (supported) {
           auto mapInfoOp =
@@ -8544,9 +8546,11 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
       assert(itersOp && "map_iterated value must be defined by omp.iterator");
-      mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
-      auto yieldOp =
-          cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
+      // Lowering a scalar subscript (e.g. involving LEN_TRIM) can introduce
+      // control flow inside the iterator, so its `omp.yield` is not
+      // necessarily in the region's first block.
+      mlir::omp::YieldOp yieldOp = itersOp.getYieldOp();
+      assert(yieldOp && "expected exactly one omp.yield in the iterator body");
       auto mapInfoOp =
           yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
       assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");

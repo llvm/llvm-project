@@ -223,10 +223,6 @@ llvm::SmallVector<IteratorRange>
 getIteratorRangesForObject(const omp::Object &object,
                            llvm::ArrayRef<IteratorRange> ranges);
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
-
 mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   hlfir::Entity entity,
                                   llvm::ArrayRef<mlir::Value> ivs,

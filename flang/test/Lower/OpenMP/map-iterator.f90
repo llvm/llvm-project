@@ -20,9 +20,8 @@
 ! CHECK:           %[[COOR:.*]] = fir.array_coor %[[FIELD]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:           %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:           omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
-! CHECK:         } -> !omp.iterated<!fir.ref<i32>>
-! CHECK:         %[[PARENT:.*]] = omp.map.info var_ptr(%[[V]]#1 : !fir.ref<[[TY]]>, [[TY]]) map_clauses(storage) capture(ByRef) members( :  : ) name("v") partial_map(true) -> !fir.ref<[[TY]]>
-! CHECK:         omp.declare_mapper.info map_entries(%[[PARENT]] : !fir.ref<[[TY]]>) map_iterated(%[[IT]] : !omp.iterated<!fir.ref<i32>>)
+! CHECK:         } inclusive -> !omp.iterated<!fir.ref<i32>>
+! CHECK:         omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!fir.ref<i32>>)
 subroutine f(arg)
   type :: s
     integer :: a(10)
@@ -49,5 +48,5 @@ end
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A_DECL]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:   omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
-! CHECK: } -> !omp.iterated<!fir.ref<i32>>
+! CHECK: } inclusive -> !omp.iterated<!fir.ref<i32>>
 ! CHECK: omp.target {{.*}}map_iterated(%[[IT]] : !omp.iterated<!fir.ref<i32>>)

@@ -646,6 +646,14 @@ void insertChildMapInfoIntoParent(
             indices.second.memberPlacementIndices));
       }
     } else {
+      // A parent registered with no static members has only iterator-driven
+      // children (tracked via `mapIterated`, not `memberMap`); those are
+      // mapped independently at runtime, so there is nothing to attach a
+      // synthesized parent map to. Skip it instead of pushing a standalone,
+      // unconditional storage component for the association variable.
+      if (indices.second.memberMap.empty())
+        continue;
+
       // NOTE: We do not assign default mapped parents a map type, as
       // selecting a child can result in the incorrect map type being
       // applied to the parent and data being incorrectly moved to or
@@ -1106,23 +1114,6 @@ getIteratorRangesForObject(const omp::Object &object,
                            &range.ivSym->GetUltimate()))
       objectRanges.push_back(range);
   return objectRanges;
-}
-
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
-  auto ref = object.ref();
-  if (!ref)
-    return false;
-
-  Fortran::lower::SomeExpr expr = toEvExpr(*ref);
-
-  for (Fortran::evaluate::SymbolRef s : CollectSymbols(expr)) {
-    const Fortran::semantics::Symbol &ult = s->GetUltimate();
-    if (ivSyms.contains(&ult))
-      return true;
-  }
-  return false;
 }
 
 void defaultMangler(Fortran::lower::AbstractConverter &converter,

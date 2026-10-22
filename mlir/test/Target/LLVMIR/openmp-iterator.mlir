@@ -608,6 +608,30 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     omp.target_data map_entries(%map : !llvm.ptr) {}
     llvm.return
   }
+
+  // A region with control flow before the `omp.yield` (e.g. from lowering a
+  // scalar subscript that involves control flow, such as LEN_TRIM) must still
+  // be recognized via the region's unique yield rather than assuming it
+  // terminates the first block.
+  omp.declare_mapper @mapper_with_multiblock_iterator : !llvm.struct<"mb_mapper_type", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %c1 step %c1) {
+      %elem = llvm.getelementptr %arg[%iv] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+      llvm.br ^bb1
+    ^bb1:
+      %m = omp.map.info var_ptr(%elem : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_mapper_multiblock_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mb_mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_multiblock_iterator) name("") -> !llvm.ptr
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
 }
 
 // MAPPER-LABEL: define void @target_data_mapper_iterator
@@ -644,3 +668,19 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // MAPPER: omp_mapper.iterator.inc:
 // MAPPER: %[[NEXT]] = add nuw i64 %[[IV]], 1
 // MAPPER: br label %omp_mapper.iterator.header
+
+// The iterator region has two blocks: the address is computed in the first
+// and the `omp.yield` is in the second, so finding the region's unique yield
+// (rather than assuming the first block ends in `omp.yield`) is required to
+// translate this at all.
+// MAPPER-LABEL: define internal void @.omp_mapper.mapper_with_multiblock_iterator
+// MAPPER-SAME: (ptr noundef %{{[0-9]+}}, ptr noundef %{{[0-9]+}}, ptr noundef %{{[0-9]+}},
+// MAPPER: omp_mapper.iterator.body:
+// MAPPER: %[[MBPHYSIV:.*]] = add i64 0, %{{.*}}
+// MAPPER: br label %omp.iterator.region
+// MAPPER: omp.iterator.region:
+// MAPPER: %[[MBADDR:.*]] = getelementptr i32, ptr %omp.arraymap.ptrcurrent, i64 %[[MBPHYSIV]]
+// MAPPER: br label %omp.iterator.region1
+// MAPPER: omp.iterator.region1:
+// MAPPER: br label %omp.iterator.region.cont
+// MAPPER: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[MBADDR]], ptr %[[MBADDR]], i64 4, i64 %{{.*}}, ptr null)

@@ -295,6 +295,9 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   auto itOp = mlir::omp::IteratorOp::create(
       builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
       mlir::ValueRange{steps});
+  // Fortran iterator-specifier ranges (OpenMP 5.2 3.2.6) include the upper
+  // bound, unlike the op's default (exclusive) loop semantics.
+  itOp->setAttr("loop_inclusive", builder.getUnitAttr());
 
   mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -347,17 +350,6 @@ lowerIteratorRanges(const ClauseTuple &clause,
     iteratorRanges.push_back(lowerIteratorRange<Fortran::evaluate::SomeType>(
         converter, itSpec, stmtCtx, clauseLocation));
   return iteratorRanges;
-}
-
-template <typename ClauseTuple>
-static void collectIteratorIVs(
-    const ClauseTuple &clause, Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<IteratorRange> &iteratorRanges,
-    llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
-  iteratorRanges = lowerIteratorRanges(clause, converter, stmtCtx);
-  for (const IteratorRange &r : iteratorRanges)
-    ivSyms.insert(&r.ivSym->GetUltimate());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2093,17 +2085,22 @@ bool ClauseProcessor::processMap(
       return;
     }
 
-    llvm::SmallVector<IteratorRange> iteratorRanges;
-    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
-    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+    llvm::SmallVector<IteratorRange> iteratorRanges =
+        lowerIteratorRanges(clause, converter, stmtCtx);
 
     // Objects that reference an iterator induction variable are expanded at
     // runtime via `omp.iterator`/`map_iterated`; the rest go through the
-    // regular static map-info path below.
+    // regular static map-info path below. Selecting ranges from each
+    // locator's source-level iterator references (rather than every range in
+    // the clause, or the folded expression) keeps an iterator unused by this
+    // locator from affecting it, and keeps a reference that folding removed
+    // (e.g. `0*i` in `v%a(1+0*i)`) from being silently dropped.
     omp::ObjectList staticObjects;
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     for (const omp::Object &object : objects) {
-      if (!hasIteratorIVReference(object, ivSyms)) {
+      llvm::SmallVector<IteratorRange> objectRanges =
+          getIteratorRangesForObject(object, iteratorRanges);
+      if (objectRanges.empty()) {
         staticObjects.push_back(object);
         continue;
       }
@@ -2118,12 +2115,13 @@ bool ClauseProcessor::processMap(
       // of some other (parent) MapInfoOp built outside that region, since
       // only the aggregated `!omp.iterated<T>` handle escapes the region.
       // We still register the parent with `parentMemberIndices` (with no
-      // child attached) so `insertChildMapInfoIntoParent` synthesizes the
-      // usual partial/"storage" map for the parent object (e.g. the
-      // `declare mapper` association variable itself); the iterator-driven
-      // child map is emitted separately into `result.mapIterated`, mirroring
-      // how `map_vars`/`members` (static) and `map_iterated` (runtime
-      // expanded) already coexist as sibling operands on the owning op.
+      // child attached) so that an existing explicit parent map (if any)
+      // is found and left untouched; `insertChildMapInfoIntoParent` skips
+      // synthesizing a standalone parent map when there is no such existing
+      // map and no static member was attached. The iterator-driven child map
+      // is emitted separately into `result.mapIterated`, mirroring how
+      // `map_vars`/`members` (static) and `map_iterated` (runtime expanded)
+      // already coexist as sibling operands on the owning op.
       bool hasParentObj = object.sym()->owner().IsDerivedType();
       mlir::Value baseAddr;
       if (hasParentObj) {
@@ -2190,7 +2188,7 @@ bool ClauseProcessor::processMap(
       std::string objName = object.sym()->name().ToString();
 
       mlir::Value iterHandle = buildIteratorOp(
-          converter, clauseLocation, iterTy, iteratorRanges,
+          converter, clauseLocation, iterTy, objectRanges,
           [&]() -> mlir::Value {
             lower::StatementContext iterStmtCtx;
             std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
