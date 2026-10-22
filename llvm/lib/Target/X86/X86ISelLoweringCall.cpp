@@ -2940,15 +2940,21 @@ static bool isCallerSRetForwarded(const TargetLowering::CallLoweringInfo &CLI) {
   const CallBase *CB = CLI.CB;
   if (!CB)
     return false;
-  for (const Argument &Arg : CB->getFunction()->args()) {
-    if (!Arg.hasStructRetAttr())
-      continue;
-    for (unsigned I = 0, E = CB->arg_size(); I != E; ++I)
-      if (CB->paramHasAttr(I, Attribute::StructRet) &&
-          CB->getArgOperand(I)->stripPointerCasts() == &Arg)
-        return true;
-    break;
-  }
+
+  // The verifier allows at most one sret parameter. A caller with a sret return
+  // register but no sret Argument has an implicit sret from a demoted return,
+  // which cannot be forwarded from IR.
+  const Argument *CallerSRet =
+      llvm::find_if(CB->getFunction()->args(),
+                    [](const Argument &Arg) { return Arg.hasStructRetAttr(); });
+  if (CallerSRet == CB->getFunction()->arg_end())
+    return false;
+
+  // Check that the callee receives it as its sret argument.
+  for (const Use &U : CB->args())
+    if (U->stripPointerCasts() == CallerSRet &&
+        CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
+      return true;
   return false;
 }
 
