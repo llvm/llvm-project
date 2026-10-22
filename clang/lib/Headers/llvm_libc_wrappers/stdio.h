@@ -14,6 +14,9 @@
 #endif
 
 #include_next <stdio.h>
+#if __has_include("emissary_print.h")
+#include "emissary_print.h"
+#endif
 
 #if defined(__HIP__) || defined(__CUDA__)
 #define __LIBC_ATTRS __attribute__((device))

@@ -1,6 +1,7 @@
 VERS1.0 {
 global:
   ol*;
+  EmissaryRegistryTable;
 local:
   *;
 };
