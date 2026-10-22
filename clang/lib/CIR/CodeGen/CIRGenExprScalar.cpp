@@ -1625,10 +1625,10 @@ public:
     mlir::Type dstTy = cgf.convertType(e->getType());
 
     unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
-                                  ? cast<cir::VectorType>(srcTy).getSize()
+                                  ? cast<cir::VectorType>(srcTy).getFixedSize()
                                   : 0;
     unsigned numElementsDst = isa<cir::VectorType>(dstTy)
-                                  ? cast<cir::VectorType>(dstTy).getSize()
+                                  ? cast<cir::VectorType>(dstTy).getFixedSize()
                                   : 0;
 
     // Use bit vector expansion for ext_vector_type boolean vectors.
@@ -1653,7 +1653,7 @@ public:
     if (numElementsSrc != 3 && numElementsDst == 3) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
-      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      auto dstVec4Ty = cir::VectorType::getFixed(dstElemTy, 4);
       src = createCastsForTypeOfSameSize(src, dstVec4Ty);
       src = convertVec3AndVec4(builder, loc, src, 3);
       return src;
@@ -2989,7 +2989,7 @@ mlir::Value
 ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
                                                 cir::VectorType vectorType,
                                                 ArrayRef<mlir::Value> inits) {
-  const unsigned resElts = vectorType.getSize();
+  const unsigned resElts = vectorType.getFixedSize();
   mlir::Value result =
       builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
   unsigned curIdx = 0;
@@ -3000,7 +3000,7 @@ ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
       continue;
     }
 
-    const unsigned initElts = initType.getSize();
+    const unsigned initElts = initType.getFixedSize();
     assert(curIdx + initElts <= resElts &&
            "Sema should reject excess elements");
     SmallVector<int64_t, 16> mask(resElts, -1);
@@ -3055,11 +3055,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                           vectorType, elements);
 
     // Zero-initialize any remaining values.
-    if (numInitElements < vectorType.getSize()) {
+    const uint64_t vectorSize = vectorType.getFixedSize();
+    if (numInitElements < vectorSize) {
       const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
-      std::fill_n(std::back_inserter(elements),
-                  vectorType.getSize() - numInitElements, zeroValue);
+      std::fill_n(std::back_inserter(elements), vectorSize - numInitElements,
+                  zeroValue);
     }
 
     return cir::VecCreateOp::create(cgf.getBuilder(),
@@ -3274,7 +3275,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
-    if (vecTy.getIsScalable()) {
+    if (vecTy.isScalable()) {
       cgf.getCIRGenModule().errorNYI(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
@@ -3284,7 +3285,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getFixedSize()));
   }
 
   // The result type is size_t (target-dependent width); use it so the IntAttr
