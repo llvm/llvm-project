@@ -1,4 +1,4 @@
-add_custom_target(libc-math-unittests)
+add_libc_testsuite(libc-math-unittests)
 
 add_fp_unittest(
   cosf_test
@@ -206,6 +206,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.tanf
+    libc.src.__support.math.tanf_double_eval
+    libc.src.__support.math.tanf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1400,6 +1403,7 @@ add_fp_unittest(
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
+    libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2025,8 +2029,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2041,8 +2043,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrt
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -2057,8 +2057,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtl
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3922,6 +3920,9 @@ add_fp_unittest(
 )
 
 add_subdirectory(smoke)
+
+add_custom_target(libc-math-all-tests)
+add_dependencies(libc-math-all-tests libc-math-smoke-tests libc-math-unittests)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
