@@ -22,7 +22,7 @@ Implementation Status
    inttypes
    libgen
    locale
-   math/index.rst
+   math/index
    net/if
    netinet/in
    netinet/tcp
