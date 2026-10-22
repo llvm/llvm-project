@@ -12,6 +12,8 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <functional>
+
 namespace mlir {
 class RewritePatternSet;
 
@@ -47,6 +49,35 @@ namespace vector {
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
+
+/// A `FilterConstraintType` lets clients compose multiple lowering strategies
+/// by benefit. Returning failure means this strategy silently declines the op
+/// without consuming it or diagnosing invalid IR; lower-benefit strategies may
+/// still match the same op.
+using FilterConstraintType = std::function<LogicalResult(ContractionOp op)>;
+
+LogicalResult defaultFilter(ContractionOp op);
+
+void populateVectorContractToDotPatterns(
+    RewritePatternSet &patterns,
+    FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractToOuterProductPatterns(
+    RewritePatternSet &patterns,
+    FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractToParallelArithPatterns(
+    RewritePatternSet &patterns,
+    FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractGenericLoweringPatterns(
+    RewritePatternSet &patterns,
+    FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
 void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
     VectorContractLowering vectorContractLoweringOption,
