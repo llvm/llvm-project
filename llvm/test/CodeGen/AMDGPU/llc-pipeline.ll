@@ -348,7 +348,6 @@
 ; GCN-O1-NEXT:        Init Undef Pass
 ; GCN-O1-NEXT:        Process Implicit Definitions
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
-; GCN-O1-NEXT:        Live Variable Analysis
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
@@ -676,7 +675,6 @@
 ; GCN-O1-OPTS-NEXT:        Init Undef Pass
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
 ; GCN-O1-OPTS-NEXT:        Remove unreachable machine basic blocks
-; GCN-O1-OPTS-NEXT:        Live Variable Analysis
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
 ; GCN-O1-OPTS-NEXT:        SI Optimize VGPR LiveRange
@@ -1008,7 +1006,6 @@
 ; GCN-O2-NEXT:        Init Undef Pass
 ; GCN-O2-NEXT:        Process Implicit Definitions
 ; GCN-O2-NEXT:        Remove unreachable machine basic blocks
-; GCN-O2-NEXT:        Live Variable Analysis
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
 ; GCN-O2-NEXT:        SI Optimize VGPR LiveRange
@@ -1356,7 +1353,6 @@
 ; GCN-O3-NEXT:        Init Undef Pass
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
-; GCN-O3-NEXT:        Live Variable Analysis
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        SI Optimize VGPR LiveRange

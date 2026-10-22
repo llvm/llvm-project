@@ -1,4 +1,4 @@
-add_custom_target(libc-fputil-tests)
+add_libc_testsuite(libc-fputil-tests PARENT libc-support-tests)
 
 add_fp_unittest(
   dyadic_float_test

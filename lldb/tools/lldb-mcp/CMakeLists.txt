@@ -29,7 +29,7 @@ endif()
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-mcp
+  lldb_add_rpaths(lldb-mcp
     BUILD_RPATH
       "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH
