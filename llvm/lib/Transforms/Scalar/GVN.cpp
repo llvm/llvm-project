@@ -3426,6 +3426,13 @@ void GVNPassImpl::assignBlockRPONumber(Function &F) {
   InvalidBlockRPONumbers = false;
 }
 
+/// Casts, binary operators, and unary operators are the expressions this fold
+/// rebuilds with substituted operands. PHIs are excluded, so the operand
+/// graph is acyclic.
+static bool isFoldableOutsideExpr(const Value *V) {
+  return isa<CastInst, BinaryOperator, UnaryOperator>(V);
+}
+
 /// Try to constant-fold \p Expr under the substitutions recorded in
 /// \p SimplifiedExprs, extending the map with a result for every expression
 /// visited on the way: either the constant it folds to, or the expression
@@ -3437,12 +3444,7 @@ static Value *trySimplifyExpr(Instruction &Expr,
   if (Value *Cached = SimplifiedExprs.lookup(&Expr))
     return Cached;
 
-  // Only handle Cast, BinOp, UnaryOp for now. Excluding PHIs also means the
-  // operand graph below is acyclic, so the walk always terminates.
-  auto isSupportedExpr = [](const Value *V) {
-    return isa<CastInst, BinaryOperator, UnaryOperator>(V);
-  };
-  if (!isSupportedExpr(&Expr)) {
+  if (!isFoldableOutsideExpr(&Expr)) {
     SimplifiedExprs[&Expr] = &Expr;
     return &Expr;
   }
@@ -3468,7 +3470,7 @@ static Value *trySimplifyExpr(Instruction &Expr,
       if (SimplifiedExprs.contains(Op))
         continue;
       auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || !isSupportedExpr(OpI))
+      if (!OpI || !isFoldableOutsideExpr(OpI))
         continue;
       Stack.push_back(OpI);
       PushedOperand = true;
@@ -3534,48 +3536,78 @@ bool GVNPassImpl::foldOutsideConstExpr(Value *LHS, Value *RHS,
   if (!isOnlyReachableViaThisEdge(Root, DT))
     return false;
 
+  // Only an expression that transitively uses LHS can fold under this
+  // substitution, so walk that user DAG instead of the dominated blocks.
+  // propagateEquality runs on every single-predecessor edge, and each such
+  // edge's region is a suffix of the function. Scanning those suffixes
+  // revisits the same instructions once per edge (quadratic in function
+  // size) even when the equality cannot reach them.
+  const BasicBlock *Region = Root.getEnd();
+  SmallVector<Instruction *, 8> OutsideExprs;
+  SmallVector<Instruction *, 16> Work;
+  SmallPtrSet<Instruction *, 16> Seen;
+
+  auto enqueue = [&](Instruction *I) {
+    if (!isFoldableOutsideExpr(I))
+      return;
+    // Defined inside the region: propagateEquality rewrites direct uses of
+    // LHS there, and an outside expression cannot use an inside one.
+    if (DT->dominates(Region, I->getParent()))
+      return;
+    if (!Seen.insert(I).second)
+      return;
+    OutsideExprs.push_back(I);
+    Work.push_back(I);
+  };
+
+  for (User *U : LHS->users())
+    if (auto *I = dyn_cast<Instruction>(U))
+      enqueue(I);
+  while (!Work.empty()) {
+    Instruction *I = Work.pop_back_val();
+    for (User *U : I->users())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        enqueue(UI);
+  }
+
+  if (OutsideExprs.empty())
+    return false;
+
   // The equality holds throughout the dominated region, so a single
   // substitution map and simplification context serve all of its uses. No
   // context instruction is passed, so a fold can never depend on where in the
-  // region it was discovered.
+  // region it was discovered. Operands are rewritten, not the expressions
+  // themselves, so keys in SimplifiedExprs stay alive for the whole walk.
   DenseMap<Value *, Value *> SimplifiedExprs;
   SimplifiedExprs[LHS] = RHS;
-  SimplifyQuery SQ(Root.getEnd()->getParent()->getDataLayout(), TLI, DT, AC);
+  SimplifyQuery SQ(Region->getParent()->getDataLayout(), TLI, DT, AC);
 
   bool Changed = false;
-  SmallVector<BasicBlock *, 8> DominatedBlocks;
-  DT->getDescendants(const_cast<BasicBlock *>(Root.getEnd()), DominatedBlocks);
-  for (BasicBlock *Block : DominatedBlocks) {
-    for (auto &I : *Block) {
-
-      if (isa<PHINode>(&I))
+  for (Instruction *Expr : OutsideExprs) {
+    bool Tried = false;
+    Value *Folded = nullptr;
+    for (Use &U : make_early_inc_range(Expr->uses())) {
+      auto *UserI = dyn_cast<Instruction>(U.getUser());
+      if (!UserI || isa<PHINode>(UserI))
         continue;
-
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (auto *II = dyn_cast<IntrinsicInst>(UserI))
         if (II->getIntrinsicID() == Intrinsic::fake_use)
           continue;
+      if (!DT->dominates(Region, UserI->getParent()))
+        continue;
 
-      // Only operands are rewritten here, so the instructions keyed in
-      // SimplifiedExprs stay alive for the whole walk.
-      for (Use &U : I.operands()) {
-        Instruction *OpExpr = dyn_cast<Instruction>(U.get());
-        if (!OpExpr)
-          continue;
-
-        // Skip if OpExpr is not defined outside the dominated region.
-        if (DT->dominates(Root.getEnd(), OpExpr->getParent()))
-          continue;
-
-        Value *Folded = trySimplifyExpr(*OpExpr, SimplifiedExprs, SQ);
-        if (Folded == OpExpr)
-          continue;
-
-        LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << I);
-        U.set(Folded);
-        LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << I << "\n");
-        ++NumGVNEqProp;
-        Changed = true;
+      if (!Tried) {
+        Folded = trySimplifyExpr(*Expr, SimplifiedExprs, SQ);
+        Tried = true;
+        if (Folded == Expr)
+          break;
       }
+
+      LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << *UserI);
+      U.set(Folded);
+      LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << *UserI << "\n");
+      ++NumGVNEqProp;
+      Changed = true;
     }
   }
 
@@ -3621,10 +3653,6 @@ bool GVNPassImpl::propagateEquality(
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
 
-    // Fold outside integer expressions used in the dominated region.
-    if (auto *Edge = std::get_if<BasicBlockEdge>(&Root))
-      Changed |= foldOutsideConstExpr(LHS, RHS, *Edge);
-
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
       std::swap(LHS, RHS);
@@ -3652,6 +3680,13 @@ bool GVNPassImpl::propagateEquality(
 
     if (!Visited.insert({LHS, RHS}).second)
       continue;
+
+    // One fold per equality. DominatedBlocks is non-empty for an edge only
+    // when that edge is the successor's only predecessor, which is exactly
+    // when the equality holds throughout the region.
+    if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root))
+      if (!DominatedBlocks.empty())
+        Changed |= foldOutsideConstExpr(LHS, RHS, *Edge);
 
     // If value numbering later sees that an instruction in the scope is equal
     // to 'LHS' then ensure it will be turned into 'RHS'.  In order to preserve
