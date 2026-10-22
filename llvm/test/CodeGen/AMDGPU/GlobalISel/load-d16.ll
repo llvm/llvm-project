@@ -66,6 +66,24 @@ define amdgpu_ps void @sextload_P0_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %p
   ret void
 }
 
+define amdgpu_ps void @sextload_P0_i8_D16_Hi_unmasked(<2 x i16> %vec, ptr %ptra, ptr %out) {
+; GFX12-LABEL: sextload_P0_i8_D16_Hi_unmasked:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    flat_load_d16_hi_i8 v0, v[1:2]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_store_b32 v[3:4], v0
+; GFX12-NEXT:    s_endpgm
+  %a = load i8, ptr %ptra
+  %extended = sext i8 %a to i32
+  %shifted = shl i32 %extended, 16
+  %bits = bitcast <2 x i16> %vec to i32
+  %lo = and i32 %bits, 65535
+  %merged = or i32 %lo, %shifted
+  %res = bitcast i32 %merged to <2 x i16>
+  store <2 x i16> %res, ptr %out
+  ret void
+}
+
 define amdgpu_ps void @zextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra, ptr addrspace(0) %out) {
 ; GFX12-LABEL: zextload_P0_i8_D16:
 ; GFX12:       ; %bb.0:
