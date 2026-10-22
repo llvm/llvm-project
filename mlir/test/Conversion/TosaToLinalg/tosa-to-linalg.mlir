@@ -2822,6 +2822,18 @@ func.func @negate_non_const_zp_dynamic(%arg0: tensor<?xi8>, %in_zp: tensor<1xi8>
 
 // -----
 
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<() -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_rank0
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<i32>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>, %[[OUT_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>
+func.func @negate_non_const_zp_rank0(%arg0: tensor<i32>, %in_zp: tensor<1xi32>, %out_zp: tensor<1xi32>) -> tensor<i32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = []} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<i32>, tensor<1xi32>, tensor<1xi32>)
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<i32>, tensor<1xi32>, tensor<1xi32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (0)>
 // CHECK-LABEL: @negate_mixed_const_zp
