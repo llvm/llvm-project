@@ -187,6 +187,7 @@ def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
 def CppKeywordInC : DiagGroup<"c++-keyword">;
+def EmbedParameterIsMacro : DiagGroup<"embed-parameter-is-macro">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def InitStringTooLongMissingNonString :
   DiagGroup<"unterminated-string-initialization">;
@@ -212,7 +213,8 @@ def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
                                         InitStringTooLongForCpp, CppKeywordInC,
                                         TentativeDefnCompat, JumpBypassesInit,
-                                        DuplicateDeclSpecifier]>;
+                                        DuplicateDeclSpecifier,
+                                        EmbedParameterIsMacro]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;

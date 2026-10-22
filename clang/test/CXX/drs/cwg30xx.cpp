@@ -22,6 +22,8 @@ void f(
 
 } // namespace cwg3005
 
+// cwg3013 is in cwg3013.cpp
+
 namespace cwg3035 { // cwg3035: no
 #if __cplusplus >= 201103L
 static union {
