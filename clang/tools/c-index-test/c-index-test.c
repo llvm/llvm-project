@@ -29,6 +29,10 @@
 #  include <unistd.h>
 #endif
 
+#ifdef __MVS__
+#include <libgen.h>
+#endif
+
 extern int indextest_core_main(int argc, const char **argv);
 extern int indextest_perform_shell_execution(const char *command_line);
 
@@ -73,7 +77,7 @@ char *dirname(char* path)
 
     return path;
 }
-#else
+#elif !defined(__MVS__)
 extern char *basename(const char *);
 extern char *dirname(char *);
 #endif
@@ -1240,7 +1244,15 @@ static CXString GetCursorSource(CXCursor Cursor) {
     clang_disposeString(source);
     return createCXString("<invalid loc>");
   }
+#ifdef __MVS__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored                                                 \
+    "-Wincompatible-pointer-types-discards-qualifiers"
+#endif
   b = basename(clang_getCString(source));
+#ifdef __MVS__
+#pragma GCC diagnostic pop
+#endif
   result = duplicateCXString(b);
   clang_disposeString(source);
   return result;
