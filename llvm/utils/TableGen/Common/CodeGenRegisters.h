@@ -265,8 +265,12 @@ public:
   }
 
   // Return the sub-register at Idx, or NULL if there is none. Only valid after
-  // computeSuperRegs().
-  CodeGenRegister *getSubReg(const CodeGenSubRegIndex *Idx) const;
+  // computeSuperRegs(). Check position Hint first, and update it to the
+  // position of Idx. Registers with the same sub-register indices store Idx at
+  // the same position, so this avoids the search when looking up the same
+  // index in many similar registers.
+  CodeGenRegister *getSubReg(const CodeGenSubRegIndex *Idx,
+                             unsigned &Hint) const;
 
   using SuperRegList = std::vector<const CodeGenRegister *>;
 
