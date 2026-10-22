@@ -67,7 +67,12 @@ namespace {
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
 
-    // HLSL emission must observe the final translation-unit-wide Sema state.
+    // HLSL emission is deferred until HandleTranslationUnit so that it observes
+    // the final translation-unit-wide Sema state. In particular, if the
+    // `precise` keyword appears anywhere in the TU, the whole TU is compiled in
+    // strict FP mode (see BackendConsumer::HandleTranslationUnit). Because the
+    // keyword may appear after functions that would otherwise already have
+    // been emitted, every HLSL compile has to defer.
     bool DeferEmission = false;
     SmallVector<std::function<void()>, 8> DeferredCallbacks;
 

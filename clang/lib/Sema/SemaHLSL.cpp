@@ -2923,9 +2923,7 @@ void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
   if (!TU->hasAttr<HLSLPreciseAttr>())
     TU->addAttr(HLSLPreciseAttr::CreateImplicit(getASTContext()));
 
-  HLSLPreciseAttr *NewAttr = HLSLPreciseAttr::Create(getASTContext(), AL);
-  if (NewAttr)
-    D->addAttr(NewAttr);
+  D->addAttr(HLSLPreciseAttr::Create(getASTContext(), AL));
 }
 
 static bool isMatrixType(QualType QT) {

@@ -9769,8 +9769,8 @@ contributing to their values are performed with IEEE-strict semantics.
 
 Clang currently implements a simplified version of ``precise``: if the keyword
 is used anywhere in a translation unit, the whole translation unit is compiled
-in IEEE-strict floating-point mode, as if ``-Gis`` (``-ffp-model=strict``) had
-been specified.
+in IEEE-strict floating-point mode, as if ``-Gis`` (``-ffp-model=strict``) and
+``-fno-fast-math`` had been specified.
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax
   }];
