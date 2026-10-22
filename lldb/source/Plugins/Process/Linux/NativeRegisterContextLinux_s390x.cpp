@@ -10,7 +10,7 @@
 
 #include "NativeRegisterContextLinux_s390x.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Utility/RegisterInfoLinux_s390x.h"
+#include "Register/Linux/RegisterInfoLinux_s390x.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"

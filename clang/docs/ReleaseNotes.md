@@ -54,6 +54,26 @@ in a future version of Clang.
   mode, as it was removed from the standard by
   [P3475R2](https://wg21.link/P3475R2).
 
+- Because specializations of templated functions can now be instantiated during
+  constant evaluation, certain expressions that could not previously be
+  evaluated as constant expressions can now be evaluated as such. This can
+  affect overload resolution, which can in some cases change the semantics of a
+  program. For example:
+
+  ```cpp
+  // Construct a function `g` for which `g()` is only a constant expression if
+  // `f<int>` can be instantiated during constant evaluation.
+  template <typename T> constexpr T f();
+  constexpr int g() { return f<int>(); }
+  template <typename T> constexpr T f() { return T{1}; }
+
+  // Construct a family of overloads named `h` such that the result of `h()` is
+  // 1 if `g()` is a constant expression; otherwise 2.
+  template <auto = g()>     consteval int h()      { return 1; }
+  template <typename... Ts> consteval int h(Ts...) { return 2; }
+
+  int main() { return h(); }  // Previously returned 2; now returns 1.
+  ```
 
 ### Objective-C Specific Potentially Breaking Changes
 
@@ -68,6 +88,12 @@ in a future version of Clang.
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.
   (#GH231953)
+
+- Clang now mangles a template template parameter that was substituted through
+  an alias template and is used as the base of an unresolved name, such as
+  `TT<T>::value` in a non-type template parameter's type, as the substituted
+  template. Previous versions emitted an ill-formed symbol with no name in that
+  position. `-fclang-abi-compat=23` restores the previous behavior. (#GH88592)
 
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
@@ -141,6 +167,11 @@ features cannot lower the translation-unit ABI level;
   target triples (except 32b arm targets). Can be disabled via
   `-fno-stack-clash-protection`.
 
+- Clang no longer searches all subdirectories of header search paths
+  for module maps by default when resolving a module import. The previous
+  behavior can be restored with `-fmodulemap-allow-subdirectory-search`,
+  which will be removed in a future release.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -170,6 +201,14 @@ features cannot lower the translation-unit ABI level;
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
+
+- The experimental ClangIR code generator is now built into Clang by default, so
+`-fclangir` can be used without any additional CMake options. While ClangIR will
+work for many workloads in some narrow configurations (ie, Itanium only), it
+should prove useful for MLIR experimentation in Clang. This does however have a
+measureable and significant impact on the build-time of clang itself. It can be
+disabled with the CMake option `-DCLANG_ENABLE_CIR=OFF`. See [the CIR
+documentation](CIR/index.md) for more information regarding ClangIR's status and design.
 
 ### C++ Language Changes
 - Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
@@ -251,6 +290,13 @@ features cannot lower the translation-unit ABI level;
   }
 ```
 
+- Implemented the C2y `<stdbit.h>` endian-aware 8-bit load functions
+  `stdc_load8_{le,be}{u,s}{8,16,32,64}` and their aligned counterparts
+  `stdc_load8_aligned_{le,be}{u,s}{8,16,32,64}` with constexpr evaluation
+  support. These functions read N/8 bytes from a `const unsigned char *`
+  and assemble them into an integer using little-endian or big-endian
+  byte order.
+
 - Clang now diagnoses the use of the same identifier with both internal and
   external linkage within a translation unit, as made ill-formed by
   [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
@@ -277,6 +323,10 @@ features cannot lower the translation-unit ABI level;
 
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
+
+- Clang no longer crashes on unknown command-line argument when
+  `-fdiagnostics-format=sarif` is passed
+  (#GH233241).
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
@@ -408,6 +458,10 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
@@ -515,6 +569,16 @@ features cannot lower the translation-unit ABI level;
     DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
   };
   ```
+
+- Added `-Wlifetime-safety-experimental` to group experimental lifetime safety
+  warnings. It is not part of `-Wlifetime-safety-all`. It contains:
+
+  - `-Wlifetime-safety-experimental-invalidation`, renamed from
+    `-Wlifetime-safety-invalidation` and no longer enabled by
+    `-Wlifetime-safety` or `-Wlifetime-safety-strict`.
+  - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
+    member function returns a value derived from a pointer, reference, or view
+    field rather than from `*this`.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -741,6 +805,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -772,6 +837,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when constant-evaluating `__builtin_object_size`
   or `__builtin_dynamic_object_size` with a type argument that is not an
   integer constant expression. (#GH231108)
+- Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
+  applied to a field of a record marked `preserve_static_offset`.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
@@ -814,6 +881,7 @@ features cannot lower the translation-unit ABI level;
   out-of-line definition. (#GH204762)
 
 #### Bug Fixes to C++ Support
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
@@ -1054,6 +1122,7 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
   source file. (#GH222310)
@@ -1090,6 +1159,10 @@ features cannot lower the translation-unit ABI level;
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
 - Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
+- Fixed an assertion failure in the Itanium mangler when a template template
+  parameter substituted through an alias template is used as the base of an
+  unresolved name, such as `TT<T>::value` in a non-type template parameter's
+  type. (#GH88592)
 
 ### OpenACC Specific Changes
 
@@ -1138,6 +1211,10 @@ features cannot lower the translation-unit ABI level;
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
+
+- Added support for the `aarch64-unknown-uefi` target triple. Like
+  `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
+  Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
 #### Android Support
 
@@ -1197,6 +1274,11 @@ features cannot lower the translation-unit ABI level;
   The `-nogpuinc` option disables this path together with the other HIP include
   paths.
 
+- Clang now rejects RTTI operations (`typeid` and `dynamic_cast`) in HIP and
+  CUDA device code. Previously these were silently ignored, potentially causing
+  link-time failures. `dynamic_cast<void*>` is still allowed because it does not
+  use RTTI.
+
 #### CUDA Support
 
 - Fixed missing diagnostics for wrong-side functions reached through constructor
@@ -1216,6 +1298,10 @@ features cannot lower the translation-unit ABI level;
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 - External CUDA kernel declarations now use the correct calling convention. (#GH118212)
+
+- Fixed `__dp4a`, `__dp2a_lo` and `__dp2a_hi` producing unresolved extern
+  functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
+  `__nvvm_idp2a_*` builtins. (#GH233434)
 
 #### AIX Support
 
@@ -1353,6 +1439,17 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Loop-transforming constructs such as `tile` and `unroll` are now allowed
+  inside a `simd` region for OpenMP 6.0 or later, which classifies them as
+  simdizable.
+- The `loop` construct without a `bind` clause or with `bind(thread)` is now
+  allowed inside a `simd` region for OpenMP 5.0 or later, as the OpenMP
+  specification permits.
+- Constructs nested inside a loop-transforming construct are now checked
+  against the restrictions of an enclosing `simd` region or of a loop with an
+  `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
+  inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
+  `order(concurrent)`) were incorrectly accepted.
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
@@ -1369,9 +1466,18 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
 
+- Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
+  offload target was configured, which accepted `try`/`throw` with exceptions disabled
+  and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+
 ### SYCL Support
 
 #### Improvements
+
+### Clang IR Improvements
+
+- Clang builds now build ClangIR support by default. Clang IR is expected to work with most Linux/X86-64 workloads. Normal builds are unchanged, however those who wish to test out the experimental `-fclangir` flag can now do so with a Clang build.
+
 
 ## Additional Information
 

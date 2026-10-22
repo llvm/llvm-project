@@ -1152,13 +1152,6 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
 
   std::optional<AMDGPU::InfoSectionData> InfoData;
 
-  /// Whether the leading .amdgcn_target directive has been emitted to the
-  /// output streamer yet. The emission is deferred until the first piece of
-  /// content (instruction or kernel descriptor) so that any leading
-  /// .amdgcn_target/.amd_amdgpu_isa directive in the source has had a chance to
-  /// update the target ID first.
-  bool TargetDirectiveEmitted = false;
-
   /// State for checking that every kernel named in a .amdhsa_kernel directive
   /// begins with the required prologue instruction sequence. Because the
   /// directive may appear either before or after the kernel's label (it is
@@ -1702,7 +1695,8 @@ public:
   void onBeginOfFile() override;
   /// Emit the deferred leading .amdgcn_target directive if it has not been
   /// emitted yet. Called before emitting the first instruction or kernel
-  /// descriptor.
+  /// descriptor, so that any leading .amdgcn_target/.amd_amdgpu_isa directive
+  /// in the source has had a chance to update the target ID first.
   void emitTargetDirective();
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
@@ -9418,16 +9412,12 @@ void AMDGPUAsmParser::onBeginOfFile() {
 }
 
 void AMDGPUAsmParser::emitTargetDirective() {
-  if (TargetDirectiveEmitted)
-    return;
-  TargetDirectiveEmitted = true;
-
   if (!getParser().getStreamer().getTargetStreamer() ||
       getSTI().getTargetTriple().getArch() == Triple::r600)
     return;
 
   if (isHsaAbi(getSTI()))
-    getTargetStreamer().EmitDirectiveAMDGCNTarget();
+    getTargetStreamer().emitDirectiveAMDGCNTargetOnce();
 }
 
 /// Parse AMDGPU specific expressions.

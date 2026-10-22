@@ -16,12 +16,19 @@
 #define LLVM_IR_CYCLEINFO_H
 
 #include "llvm/ADT/GenericCycleInfo.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 // Use class instead of using to allow forward declarations.
-class CycleInfo : public GenericCycleInfo<SSAContext> {};
+class CycleInfo : public GenericCycleInfo<SSAContext> {
+public:
+  /// Handle invalidation explicitly. Defined in CycleAnalysis.cpp.
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
+};
 
 } // namespace llvm
 
