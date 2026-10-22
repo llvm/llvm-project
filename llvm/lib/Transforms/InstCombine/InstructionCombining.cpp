@@ -83,6 +83,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -3178,10 +3179,14 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       DoesConsume = LocalDoesConsume;
       if (IsLogical) {
         Value *InvertedLogicalOp =
-            Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+            Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB, "",
+                                               ProfcheckDisableMetadataFixes
+                                                   ? nullptr
+                                                   : dyn_cast<SelectInst>(V))
+                    : NonNull;
         if (Builder)
           if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
-            setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+            SI->swapProfMetadata();
         return InvertedLogicalOp;
       }
       return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
