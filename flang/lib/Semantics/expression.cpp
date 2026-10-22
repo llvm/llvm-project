@@ -3305,6 +3305,15 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
           *attrs == common::CUDASubprogramAttrs::HostDevice);
 }
 
+// A specific with only the DEVICE attribute cannot be referenced from host
+// code, whatever its dummy arguments' CUDA data attributes score.
+static bool IsCUDADeviceOnly(const Symbol &symbol) {
+  const auto *subprogram{
+      symbol.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+  auto attrs{subprogram ? subprogram->cudaSubprogramAttrs() : std::nullopt};
+  return attrs && *attrs == common::CUDASubprogramAttrs::Device;
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
@@ -3343,6 +3352,20 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
+    // CUF kernel and OpenACC regions share Scope::Kind::OpenACCConstruct and
+    // may hold device code in a host subprogram; leave those unfiltered.
+    bool inHostCode{
+        context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+        !GetContextualMessages().at().empty()};
+    if (inHostCode) {
+      const semantics::Scope &scope{
+          context_.FindScope(GetContextualMessages().at())};
+      inHostCode = !semantics::FindCUDADeviceContext(&scope);
+      for (const semantics::Scope *s{&scope}; inHostCode && !s->IsGlobal();
+          s = &s->parent()) {
+        inHostCode = s->kind() != semantics::Scope::Kind::OpenACCConstruct;
+      }
+    }
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
       if (isSubroutine != !IsFunction(specific1)) {
@@ -3350,6 +3373,9 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
       }
       const Symbol *specific{ResolveForward(specific1)};
       if (!specific) {
+        continue;
+      }
+      if (inHostCode && IsCUDADeviceOnly(*specific)) {
         continue;
       }
       if (std::optional<characteristics::Procedure> procedure{

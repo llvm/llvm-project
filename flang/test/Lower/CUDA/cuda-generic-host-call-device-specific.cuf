@@ -1,0 +1,33 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A host call site must not resolve to a device-only specific, even when
+! managed actuals score the DEVICE dummies as a closer match.
+
+module m
+  interface sg
+    module procedure s_host
+    module procedure s_dev
+  end interface
+  real(8), managed, allocatable :: a(:), y(:)
+contains
+  subroutine s_host(x, y)
+    real(8), intent(in) :: x
+    real(8), intent(out) :: y
+    y = 2.0d0*x
+  end subroutine
+
+  attributes(device) subroutine s_dev(x, y)
+    real(8), device :: x
+    real(8), device :: y
+    y = x*x
+  end subroutine
+
+  subroutine host_caller(i)
+    integer :: i
+    call sg(a(i), y(i))
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMmPhost_caller
+! CHECK: fir.call @_QMmPs_host
+! CHECK-NOT: fir.call @_QMmPs_dev
