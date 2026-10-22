@@ -733,8 +733,10 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
   }
 #endif
 
-  // Currently the only architecture supported by *-uefi triples are x86_64.
-  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+  // Currently the only architectures supported by *-uefi triples are x86_64
+  // and aarch64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64 &&
+      Target.getArch() != llvm::Triple::aarch64)
     D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
@@ -3385,27 +3387,25 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
+  // Diagnose misuse of /Fo and /Fa.
+  if (Arg *FoArg = Args.getLastArg(options::OPT__SLASH_Fo),
+      *FaArg = Args.getLastArg(options::OPT__SLASH_Fa);
+      FoArg || FaArg) {
+    // Linker inputs do not produce the outputs named by /Fo and /Fa.
+    unsigned NumCompiledInputs = llvm::count_if(
+        Inputs, [](const InputTy &I) { return I.first != types::TY_Object; });
 
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
+    for (Arg *A : {FoArg, FaArg}) {
+      if (!A)
+        continue;
+      StringRef V = A->getValue();
+      if (NumCompiledInputs > 1 && !V.empty() &&
+          !llvm::sys::path::is_separator(V.back())) {
+        // Check whether /Fo or /Fa names an output file for multiple inputs.
+        Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+            << A->getSpelling() << V;
+        Args.eraseArg(A->getOption().getID());
+      }
     }
   }
 
@@ -5181,6 +5181,16 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
         /*CreatePrefixForHost=*/true);
   }
 
+  StringRef DefaultExt = ".json";
+  StringRef DefaultExtNoDot = "json";
+  if (const Arg *CompressArg =
+          Args.getLastArgNoClaim(options::OPT_ftime_trace_compress_EQ)) {
+    if (StringRef(CompressArg->getValue()) == "zstd") {
+      DefaultExt = ".json.zst";
+      DefaultExtNoDot = "json.zst";
+    }
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
@@ -5189,7 +5199,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
                                ? llvm::sys::path::stem(Result.getFilename())
                                : llvm::sys::path::stem(BaseInput));
       Tmp += OffloadingPrefix;
-      Tmp += ".json";
+      Tmp += DefaultExt;
       llvm::sys::path::append(Path, Tmp);
     }
   } else {
@@ -5199,7 +5209,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
-      Path += ".json";
+      Path += DefaultExt;
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -5208,10 +5218,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
-      Path += ".json";
+      Path += DefaultExt;
     } else {
       Path = Result.getFilename();
-      llvm::sys::path::replace_extension(Path, "json");
+      llvm::sys::path::replace_extension(Path, DefaultExtNoDot);
     }
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);
@@ -5344,8 +5354,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
 
-  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
+  ToolSelector TS(
+      JA, *TC, C, isSaveTempsEnabled(),
+      embedBitcodeInObject() &&
+          !TC->isUsingLTO(C.getArgs(), JA->getOffloadingDeviceKind()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)

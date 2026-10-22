@@ -73,3 +73,36 @@ body:             |
     %3:_(p0) = G_PTR_ADD %1:_, %2:_(i64)
     $x0 = COPY %3
 ...
+---
+name:            test_ptradd_null_constant_offset
+body:             |
+  bb.1:
+    liveins: $x0
+    ; (ptr_add 0, C) should fold to a pointer G_CONSTANT, not G_INTTOPTR of C.
+    ; CHECK-LABEL: name: test_ptradd_null_constant_offset
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 12
+    ; CHECK-NEXT: $x0 = COPY [[C]](p0)
+    %0:_(p0) = G_CONSTANT i64 0
+    %1:_(i64) = G_CONSTANT i64 12
+    %2:_(p0) = G_PTR_ADD %0, %1
+    $x0 = COPY %2(p0)
+...
+---
+name:            test_ptradd_null_variable_offset
+body:             |
+  bb.1:
+    liveins: $x0
+    ; (ptr_add 0, x) -> (int_to_ptr x) when the offset is not constant.
+    ; CHECK-LABEL: name: test_ptradd_null_variable_offset
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](i64)
+    ; CHECK-NEXT: $x0 = COPY [[INTTOPTR]](p0)
+    %0:_(p0) = G_CONSTANT i64 0
+    %1:_(i64) = COPY $x0
+    %2:_(p0) = G_PTR_ADD %0, %1
+    $x0 = COPY %2(p0)
+...

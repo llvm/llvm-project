@@ -15,7 +15,7 @@
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -127,7 +127,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       }
 
       SourceInfo Info(Loc);
-      if (Info.isAvailible())
+      if (Info.isAvailable())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
                 Info.getColumn());
       else
@@ -222,8 +222,8 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
   // Register and page-lock the memory.
   auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
   if (!LockedPtrOrErr) {
-    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": "
-                        << toString(LockedPtrOrErr.takeError());
+    std::string ErrStr = toString(LockedPtrOrErr.takeError());
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": " << ErrStr;
     return nullptr;
   }
   ODBG(ODT_Interface) << Name << " returns device ptr " << *LockedPtrOrErr;
@@ -239,9 +239,10 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   // Unregister and unlock the memory.
-  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr))
-    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": "
-                        << toString(std::move(Err));
+  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr)) {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": " << ErrStr;
+  }
   ODBG(ODT_Interface) << Name << " returns";
 }
 
@@ -615,7 +616,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
-        /*ReleaseHDTTMap=*/true, StateInfo);
+        /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -1186,7 +1187,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
+                                    /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1367,7 +1369,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
-                                TPR.getEntry());
+                                TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
@@ -1408,7 +1410,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
-                                  TPR.getEntry());
+                                  TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;

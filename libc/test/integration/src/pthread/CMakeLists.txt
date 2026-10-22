@@ -217,6 +217,7 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_join
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(

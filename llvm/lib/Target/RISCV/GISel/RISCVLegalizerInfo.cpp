@@ -199,7 +199,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    if (XLen == 32 && ST.hasStdExtD()) {
+    if (XLen == 32 && (ST.hasStdExtD() || ST.hasStdExtZilsd())) {
       MergeUnmergeActions.legalIf(
           all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
     }
@@ -371,7 +371,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
          {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s32, getScalarMemAlign(32)}});
-  } else if (ST.hasStdExtD()) {
+  } else if (ST.hasStdExtD() || ST.hasStdExtZilsd()) {
+    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd); LLT cannot tell the
+    // two apart, so one rule covers both.
+    // FIXME: We require natural alignment, so under -mzilsd-word-align an
+    // align-4 i64 access is split into two s32 ones. riscv-prera-zilsd-opt
+    // merges them back into LD_RV32/SD_RV32, but it is skipped at -O0.
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
     StoreActions.legalForTypesWithMemDesc(
@@ -596,18 +601,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}})
       .lower();
 
-  // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
-      .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
-      .libcallFor({{s32, s64}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s16, s32}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s16, s64}})
+      .libcallFor({{s16, s32}, {s16, s64}, {s32, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
       .legalFor(ST.hasStdExtZfhmin(), {{s32, s16}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s64, s16}})
       .libcallFor(!ST.hasStdExtZfhmin(), {{s32, s16}})
+      .libcallFor(!(ST.hasStdExtZfhmin() && ST.hasStdExtD()), {{s64, s16}})
       .libcallFor({{s64, s32}})
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
@@ -616,6 +621,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .clampScalar(0, sXLen, sXLen)
+      .minScalar(1, s32)
       .libcallFor({{sXLen, s32}, {sXLen, s64}})
       .libcallFor(ST.is64Bit(), {{sXLen, s128}});
 
@@ -629,7 +635,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
-      .legalFor(ST.hasStdExtZfh(), {s16})
+      .legalFor(ST.hasStdExtZfhmin(), {s16})
       .customFor(!ST.is64Bit(), {s32})
       .customFor(ST.is64Bit(), {s32, s64})
       .lowerFor({s64, s128});
@@ -667,7 +673,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
       .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
       .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
@@ -680,7 +686,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
       .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
       .minScalar(0, sXLen)
-      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .minScalar(1, s32)
       .libcallFor({{s32, s32},
                    {s64, s32},
                    {s32, s64},
@@ -728,7 +734,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH, G_FMODF})
+                               G_FTANH, G_FMODF, G_FSINCOS})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
@@ -884,6 +890,26 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   default:
     return false;
+  case Intrinsic::riscv_orc_b: {
+    if (!STI.hasStdExtZbb())
+      return false;
+
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (Ty == sXLen)
+      return true;
+    if (!STI.is64Bit() || Ty != LLT::scalar(32))
+      return false;
+
+    // Each output byte depends only on the corresponding input byte.
+    auto Src = MIRBuilder.buildAnyExt(sXLen, MI.getOperand(2));
+    auto Result = MIRBuilder.buildIntrinsic(IntrinsicID, {DstOp(sXLen)})
+                      .addUse(Src.getReg(0));
+    MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::riscv_clmulh:
     Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
                                  {MI.getOperand(2), MI.getOperand(3)});
@@ -1097,7 +1123,13 @@ bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
     break;
   }
 
-  MIRBuilder.buildBrIndirect(TargetReg);
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch()) {
+    // When cf-protection-branch is enabled, we need to use a software
+    // guarded branch for jump table branch.
+    MIRBuilder.buildInstr(RISCV::G_SW_GUARDED_BRIND, {}, {TargetReg});
+  } else {
+    MIRBuilder.buildBrIndirect(TargetReg);
+  }
 
   MI.eraseFromParent();
   return true;

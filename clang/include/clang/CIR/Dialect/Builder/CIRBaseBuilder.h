@@ -74,6 +74,7 @@ public:
       clang::LangOptions::FPE_Ignore;
   llvm::RoundingMode defaultConstrainedRounding =
       llvm::RoundingMode::NearestTiesToEven;
+  cir::FastMathFlags fastMathFlags = cir::FastMathFlags::none;
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
@@ -251,6 +252,19 @@ public:
     return defaultConstrainedRounding;
   }
 
+  /// Set the fast-math flags attached to floating-point operations.
+  void setFastMathFlags(cir::FastMathFlags flags) { fastMathFlags = flags; }
+
+  /// Get the fast-math flags attached to floating-point operations.
+  cir::FastMathFlags getFastMathFlags() const { return fastMathFlags; }
+
+  /// Returns a null attribute when no fast-math flags are set.
+  cir::FastMathFlagsAttr getFastMathFlagsAttr() {
+    if (fastMathFlags == cir::FastMathFlags::none)
+      return {};
+    return cir::FastMathFlagsAttr::get(getContext(), fastMathFlags);
+  }
+
   /// Build the `#cir.fenv` attribute describing the constrained floating-point
   /// environment currently in effect. This is attached to floating-point
   /// operations that support it to capture the rounding and exception
@@ -331,16 +345,20 @@ public:
   mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
                                mlir::Value rhs) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
-    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    if (cir::isAnyFloatingPointType(complexTy.getElementType())) {
+      cir::FenvAttr fenv = getConstrainedFPAttr();
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs, fenv);
+    }
     return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
   }
 
@@ -887,34 +905,32 @@ public:
     return cir::RemOp::create(*this, loc, lhs, rhs);
   }
 
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+  template <typename OpTy>
+  mlir::Value createFPBinOp(mlir::Location loc, mlir::Value lhs,
+                            mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FAddOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return OpTy::create(*this, loc, lhs, rhs, getConstrainedFPAttr(),
+                        getFastMathFlagsAttr());
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return createFPBinOp<cir::FAddOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FSubOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FSubOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FMulOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FMulOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FDivOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FDivOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FRemOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
+    return createFPBinOp<cir::FRemOp>(loc, lhs, rhs);
   }
 
   mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
@@ -947,18 +963,40 @@ public:
     return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
+  /// Compares \p lhs and \p rhs element-wise.  Each result element is a
+  /// signed integer of the operand element's bit width.  That is not the
+  /// result an FP80 element needs, so an FP80 compare names its result type
+  /// with the overload below.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
                                  mlir::Value lhs, mlir::Value rhs) {
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
-    IntType integralTy =
-        getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
-    VectorType integralVecTy =
-        cir::VectorType::get(integralTy, vecCast.getSize());
+    mlir::Type elemTy = vecCast.getElementType();
+    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
+             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
+                 &llvm::APFloat::x87DoubleExtended()) &&
+           "an FP80 vector compare must name its result type");
+    IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
+    return createVecCompare(loc,
+                            cir::VectorType::get(integralTy, vecCast.getSize()),
+                            kind, lhs, rhs);
+  }
+
+  /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
+  /// must be a vector of integers or bools with as many elements as \p lhs.
+  /// The result element width can then differ from the operand element's
+  /// bit width, as for FP80, whose result elements are 128 bits.
+  cir::VecCmpOp createVecCompare(mlir::Location loc, VectorType resultTy,
+                                 cir::CmpOpKind kind, mlir::Value lhs,
+                                 mlir::Value rhs) {
+    assert(mlir::cast<VectorType>(lhs.getType()).getSize() ==
+               resultTy.getSize() &&
+           cir::isIntOrBoolType(resultTy.getElementType()) &&
+           "vector compare result must be an int or bool vector of the "
+           "operand length");
     cir::FenvAttr fenv;
     if (cir::isFPOrVectorOfFPType(lhs.getType()))
       fenv = getConstrainedFPAttr();
-    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs,
-                                 fenv);
+    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {

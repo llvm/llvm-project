@@ -208,6 +208,7 @@ private:
 
   bool parseDirectiveSEHAllocStack(SMLoc L);
   bool parseDirectiveSEHPrologEnd(SMLoc L);
+  bool parseDirectiveSEHEndC(SMLoc L);
   bool parseDirectiveSEHSaveR19R20X(SMLoc L);
   bool parseDirectiveSEHSaveFPLR(SMLoc L);
   bool parseDirectiveSEHSaveFPLRX(SMLoc L);
@@ -776,8 +777,8 @@ public:
     return (Val >= 0 && Val < 64);
   }
 
-  template <int Width> bool isSImm() const {
-    return bool(isSImmScaled<Width, 1>());
+  template <int Width> DiagnosticPredicate isSImm() const {
+    return isSImmScaled<Width, 1>();
   }
 
   template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
@@ -882,27 +883,30 @@ public:
     return false;
   }
 
-  template <int Scale> bool isUImm12Offset() const {
+  template <int Scale> DiagnosticPredicate isUImm12Offset() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicate::NoMatch;
 
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return isSymbolicUImm12Offset(getImm());
+      return DiagnosticPredicate(isSymbolicUImm12Offset(getImm()));
 
     int64_t Val = MCE->getValue();
-    return (Val % Scale) == 0 && Val >= 0 && (Val / Scale) < 0x1000;
+    if ((Val % Scale) == 0 && Val >= 0 && (Val / Scale) < 0x1000)
+      return DiagnosticPredicate::Match;
+    return DiagnosticPredicate::NearMatch;
   }
 
-  template <int N, int M>
-  bool isImmInRange() const {
+  template <int N, int M> DiagnosticPredicate isImmInRange() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicate::NoMatch;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return false;
+      return DiagnosticPredicate::NoMatch;
     int64_t Val = MCE->getValue();
-    return (Val >= N && Val <= M);
+    if (Val >= N && Val <= M)
+      return DiagnosticPredicate::Match;
+    return DiagnosticPredicate::NearMatch;
   }
 
   bool isHinteUImm16() const {
@@ -3764,6 +3768,7 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"wfxt"}, {AArch64::FeatureWFxT}},
     {{"cflt"}, {AArch64::FeatureCFLT}},
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
+    {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -6037,6 +6042,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
   case Match_InvalidMemoryIndexed16UImm6:
     return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
+  case Match_InvalidMemoryIndexed32UImm8:
+    return Error(Loc, "index must be a multiple of 32 in range [0, 8160].");
   case Match_InvalidMemoryIndexed4UImm6:
     return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
   case Match_InvalidMemoryIndexed2UImm6:
@@ -6884,6 +6891,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed4UImm6:
   case Match_InvalidMemoryIndexed8UImm6:
   case Match_InvalidMemoryIndexed16UImm6:
+  case Match_InvalidMemoryIndexed32UImm8:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm8:
@@ -7074,12 +7082,8 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
-      return Error(IDLoc, "too few operands for instruction", SMRange(IDLoc, (*Operands.back()).getEndLoc()));
-    // CFLT has both register and immediate forms. The matcher may select an
-    // immediate-form failure for an invalid register operand.
-    if (Tok.starts_with("cflt") &&
-        static_cast<AArch64Operand &>(*Operands[ErrorInfo]).isScalarReg())
-      MatchResult = Match_InvalidOperand;
+      return Error(IDLoc, "too few operands for instruction",
+                   SMRange(IDLoc, (*Operands.back()).getEndLoc()));
     // Any time we get here, there's nothing fancy to do. Just get the
     // operand SMLoc and display the diagnostic.
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
@@ -7139,6 +7143,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHAllocStack(Loc);
     else if (IDVal == ".seh_endprologue")
       parseDirectiveSEHPrologEnd(Loc);
+    else if (IDVal == ".seh_end_c")
+      parseDirectiveSEHEndC(Loc);
     else if (IDVal == ".seh_save_r19r20_x")
       parseDirectiveSEHSaveR19R20X(Loc);
     else if (IDVal == ".seh_save_fplr")
@@ -7672,6 +7678,11 @@ bool AArch64AsmParser::parseDirectiveSEHAllocStack(SMLoc L) {
 /// ::= .seh_endprologue
 bool AArch64AsmParser::parseDirectiveSEHPrologEnd(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIPrologEnd();
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveSEHEndC(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIEndC();
   return false;
 }
 
@@ -8679,40 +8690,19 @@ ParseStatus AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
 }
 
 ParseStatus AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-
   SMLoc SS = getLoc();
   const AsmToken &TokE = getTok();
-  bool IsHash = TokE.is(AsmToken::Hash);
 
-  if (!IsHash && TokE.isNot(AsmToken::Identifier))
+  if (TokE.isNot(AsmToken::Identifier))
     return ParseStatus::NoMatch;
 
-  int64_t Pattern;
-  if (IsHash) {
-    Lex(); // Eat hash
+  auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
+  if (!Pat)
+    return ParseStatus::NoMatch;
 
-    // Parse the immediate operand.
-    const MCExpr *ImmVal;
-    SS = getLoc();
-    if (Parser.parseExpression(ImmVal))
-      return ParseStatus::Failure;
-
-    auto *MCE = dyn_cast<MCConstantExpr>(ImmVal);
-    if (!MCE)
-      return TokError("invalid operand for instruction");
-
-    Pattern = MCE->getValue();
-  } else {
-    // Parse the pattern
-    auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
-    if (!Pat)
-      return ParseStatus::NoMatch;
-
-    Lex();
-    Pattern = Pat->Encoding;
-    assert(Pattern >= 0 && Pattern < 32);
-  }
+  Lex();
+  int64_t Pattern = Pat->Encoding;
+  assert(Pattern >= 0 && Pattern < 32);
 
   Operands.push_back(
       AArch64Operand::CreateImm(MCConstantExpr::create(Pattern, getContext()),

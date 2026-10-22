@@ -54,7 +54,7 @@ int use(Derived *d) { return d->b; }
 // CIR: cir.func{{.*}} @_Z3useP7Derived(%[[ARG0:.*]]: !cir.ptr<!rec_Derived>
 // CIR:  %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR:  cir.store %[[ARG0]], %[[D_ADDR]]
-// CIR:  %[[D_PTR:.*]] = cir.load align(8) %0
+// CIR:  %[[D_PTR:.*]] = cir.load align(8) %[[D_ADDR]]
 // CIR:  %[[D_B_ADDR:.*]] = cir.get_member %[[D_PTR]][1] {name = "b"}
 // CIR:  %[[D_B:.*]] = cir.load align(4) %[[D_B_ADDR]]
 
