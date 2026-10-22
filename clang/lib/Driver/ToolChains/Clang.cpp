@@ -3506,6 +3506,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
       ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
+  else if (Args.hasArg(options::OPT_fno_fast_math))
+    CmdArgs.push_back("-fno-fast-math");
 
   // Handle __FINITE_MATH_ONLY__ similarly.
   // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
