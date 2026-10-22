@@ -1,0 +1,8 @@
+; RUN: %stack-size-estimator %S/Inputs/test_combined.json --entry-function main | FileCheck %s
+
+; CHECK: --- Detected Cycles (Recursive SCCs) ---
+; CHECK-NEXT: None
+; CHECK: ✅ Max stack usage from 'main': 96 bytes
+; CHECK: --- Path Contributing to Max Stack Usage ---
+; CHECK-NEXT: - main (@0x17c0): 64 bytes
+; CHECK-NEXT: - bar (@0x17a0): 32 bytes

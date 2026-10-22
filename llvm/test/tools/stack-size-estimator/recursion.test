@@ -1,0 +1,15 @@
+; RUN: %stack-size-estimator %S/Inputs/test_recursion.json --entry-function main | FileCheck %s
+
+; CHECK: --- Detected Cycles (Recursive SCCs) ---
+; CHECK-NEXT: SCC #0: 2 functions, Max Stack Contribution: 30 bytes
+; CHECK-NEXT: - A (@0x64)
+; CHECK-NEXT: - B (@0xc8)
+
+; CHECK: ✅ Max stack usage from 'main': 35 bytes
+
+; CHECK: --- Path Contributing to Max Stack Usage ---
+; CHECK-NEXT: - main (@0x12c): 5 bytes
+; CHECK-NEXT: - Beginning of cycle (SCC #0)
+; CHECK-NEXT: - A (@0x64): 10 bytes
+; CHECK-NEXT: - B (@0xc8): 20 bytes
+; CHECK-NEXT: - End of cycle (SCC #0)
