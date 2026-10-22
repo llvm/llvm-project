@@ -1035,9 +1035,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   // The createTarget functions embeds user written code into
   // the target region which may inject allocas which need to
   // be moved to the entry block of our target or risk malformed
-  // optimisations by later passes, this is only relevant for
-  // the device pass which appears to be a little more delicate
-  // when it comes to optimisations (however, we do not block on
+  // optimisations by later passes (however, we do not block on
   // that here, it's up to the inserter to the list to do so).
   // This notbaly has to occur after the OutlinedInfo candidates
   // have been extracted so we have an end product that will not
@@ -9398,9 +9396,8 @@ static Expected<Function *> createOutlinedFunction(
 
   // As we embed the user code in the middle of our target region after we
   // generate entry code, we must move what allocas we can into the entry
-  // block to avoid possible breaking optimisations for device
-  if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
+  // block to avoid possible breaking optimisations
+  OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   BasicBlock *ExitBB = splitBB(Builder, /*CreateBranch=*/true, "target.exit");
   BasicBlock *OutlinedBodyBB =
@@ -11494,9 +11491,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic update expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
@@ -11524,18 +11518,28 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
     return Builder.CreateOr(Src1, Src2);
   case AtomicRMWInst::Xor:
     return Builder.CreateXor(Src1, Src2);
-  case AtomicRMWInst::Xchg:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::Max:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smax, Src1, Src2);
   case AtomicRMWInst::Min:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, Src1, Src2);
   case AtomicRMWInst::UMax:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, Src1, Src2);
   case AtomicRMWInst::UMin:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umin, Src1, Src2);
+  case AtomicRMWInst::FAdd:
+    return Builder.CreateFAdd(Src1, Src2);
+  case AtomicRMWInst::FSub:
+    return Builder.CreateFSub(Src1, Src2);
   case AtomicRMWInst::FMax:
+    return Builder.CreateMaxNum(Src1, Src2);
   case AtomicRMWInst::FMin:
+    return Builder.CreateMinNum(Src1, Src2);
   case AtomicRMWInst::FMaximum:
+    return Builder.CreateMaximum(Src1, Src2);
   case AtomicRMWInst::FMinimum:
+    return Builder.CreateMinimum(Src1, Src2);
+  case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::FMaximumNum:
   case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
@@ -11576,15 +11580,26 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
   case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
     emitRMWOp = XElemTy;
     break;
   case AtomicRMWInst::Sub:
+  case AtomicRMWInst::FSub:
     emitRMWOp = (IsXBinopExpr && XElemTy);
     break;
   default:
     emitRMWOp = false;
   }
-  emitRMWOp &= XElemTy->isIntegerTy();
+  emitRMWOp &=
+      (XElemTy->isIntegerTy() || XElemTy->isFloatTy() || XElemTy->isDoubleTy());
 
   std::pair<Value *, Value *> Res;
   if (emitRMWOp) {
@@ -11746,8 +11761,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic capture expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',

@@ -1267,6 +1267,15 @@ filegroup(
     ],
 )
 
+gentbl_cc_library(
+    name = "IROptionsTableGen",
+    strip_include_prefix = "lib/IR",
+    tbl_outs = {"lib/IR/IROptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/IR/IROptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Core",
     srcs = glob([
@@ -1298,6 +1307,8 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":Demangle",
+        ":IROptionsTableGen",
+        ":Option",
         ":Remarks",
         ":Support",
         ":TargetParser",
@@ -3325,6 +3336,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/MSP430/MSP430GenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":MSP430OptionsTableGen",
+        ],
     },
     {
         "name": "NVPTX",
@@ -4149,6 +4163,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Mips/MipsOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Mips/MipsOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MSP430OptionsTableGen",
+    strip_include_prefix = "lib/Target/MSP430",
+    tbl_outs = {"lib/Target/MSP430/MSP430Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/MSP430/MSP430Options.td",
     deps = [":OptParserTdFiles"],
 )
 

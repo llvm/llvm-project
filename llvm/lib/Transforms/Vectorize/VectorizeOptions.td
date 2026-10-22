@@ -138,6 +138,8 @@ defm : ValueField<"vectorizer-min-trip-count", "unsigned", "16",
 // verification of the H-CFGs built.
 defm : BoolField<"vplan-build-outerloop-stress-test", "false",
   "Build VPlan for every supported loop nest in the function and bail out right after the build (stress test the VPlan H-CFG construction in the VPlan-native vectorization path)">;
+defm : BoolField<"vplan-outer-loop-legality-checks", "false",
+  "Check that the memory accesses of outer loops are safe to vectorize, instead of trusting the explicit vectorization pragma">;
 let Condition = AssertsOnly in {
 defm : ListField<"vplan-print-after", "StringRef",
   "Print VPlans after specified VPlan transformations (regexp)">;
@@ -274,6 +276,8 @@ defm : ValueField<"slp-reassociate-reorder-limit", "unsigned", "32",
   "Max flattened operand columns for which associative-chain reordering runs the full operand reorder">;
 defm : ValueField<"slp-recursion-max-depth", "unsigned", "12",
   "Limit the recursion depth when building a vectorizable tree">;
+defm : ValueField<"slp-reduction-budget", "unsigned", "65536",
+  "Limit the number of scalars in the rejected trees of the same reduction">;
 defm : BoolField<"slp-revec", "false",
   "Enable vectorization for wider vector utilization">;
 // The runtime checks and the guard branch execute on both the vector and the

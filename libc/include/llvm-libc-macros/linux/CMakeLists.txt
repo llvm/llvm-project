@@ -35,6 +35,14 @@ add_header(
 )
 
 add_header(
+  sys_eventfd_macros
+  HDR
+    sys-eventfd-macros.h
+  DEPENDS
+    .fcntl_macros
+)
+
+add_header(
   sys_file_macros
   HDR
     sys-file-macros.h
