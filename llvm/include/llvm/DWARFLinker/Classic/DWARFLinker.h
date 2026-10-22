@@ -277,6 +277,9 @@ public:
     Options.Threads = NumThreads;
   }
 
+  /// The classic linker does not use a shared thread pool.
+  void setThreadPool(ThreadPoolInterface *Pool) override {}
+
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
     assert(!llvm::is_contained(Options.AccelTables, Kind));

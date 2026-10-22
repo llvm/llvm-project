@@ -20,7 +20,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <forward_list>
 
 namespace Fortran::parser {
 class CharBlock;
@@ -92,7 +91,12 @@ private:
 };
 
 // Analyze a parser::ArraySpec or parser::CoarraySpec
-ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &);
+// A zero-size explicit-shape bounds array (F2023) declares a scalar; its
+// bounds are dropped from the shape but are still specification expressions,
+// appended to droppedBoundsToCheck so the caller can validate them during
+// declaration checking
+ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &,
+    std::vector<Bound> &droppedBoundsToCheck);
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &, const parser::ComponentArraySpec &);
 ArraySpec AnalyzeDeferredShapeSpecList(
@@ -145,12 +149,6 @@ private:
 struct SymbolAndTypeMappings;
 void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     Scope &newScope, SymbolAndTypeMappings * = nullptr);
-
-parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context);
-parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name);
-std::string MangleDefinedOperator(const parser::CharBlock &name);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

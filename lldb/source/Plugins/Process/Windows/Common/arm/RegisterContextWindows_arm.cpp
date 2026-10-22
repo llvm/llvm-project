@@ -14,6 +14,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
+#include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_arm.h"
 #include "TargetThreadWindows.h"
 
@@ -37,7 +38,7 @@ using namespace lldb_private;
 
 // Include RegisterInfos_arm to declare our g_register_infos_arm structure.
 #define DECLARE_REGISTER_INFOS_ARM_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_arm.h"
+#include "Register/Arch/RegisterInfos_arm.h"
 #undef DECLARE_REGISTER_INFOS_ARM_STRUCT
 
 static size_t k_num_register_infos = std::size(g_register_infos_arm);
@@ -274,6 +275,7 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
 
   const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
 
+  Log *log = GetLog(WindowsLog::Registers);
   switch (reg) {
   case gpr_r0:
     m_context.R0 = reg_value.GetAsUInt32();
@@ -421,6 +423,8 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
+    LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
+             reg_value.GetAsUInt32(), reg);
     return false;
   }
 

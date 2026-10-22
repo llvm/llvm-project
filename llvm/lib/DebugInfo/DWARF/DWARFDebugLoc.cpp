@@ -21,7 +21,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cinttypes>
 #include <cstdint>
 
 using namespace llvm;

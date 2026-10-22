@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -439,6 +440,13 @@ ExprResult Sema::ActOnBuiltinBitCastExpr(SourceLocation KWLoc, Declarator &D,
 ExprResult Sema::BuildBuiltinBitCastExpr(SourceLocation KWLoc,
                                          TypeSourceInfo *TSI, Expr *Operand,
                                          SourceLocation RParenLoc) {
+  if (Operand->hasPlaceholderType()) {
+    ExprResult PR = CheckPlaceholderExpr(Operand);
+    if (PR.isInvalid())
+      return ExprError();
+    Operand = PR.get();
+  }
+
   CastOperation Op(*this, TSI->getType(), Operand);
   Op.OpRange = CastOperation::OpRangeType(KWLoc, KWLoc, RParenLoc);
   TypeLoc TL = TSI->getTypeLoc();
@@ -980,6 +988,11 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
+  // Similarly, dynamic_cast is not available in CUDA device code, except for
+  // dynamic_cast to void*.
+  if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
+
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {
     bool MicrosoftABI =
@@ -1482,16 +1495,23 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    // C++26 [expr.static.cast]p8
+    //   If the enumeration type has a fixed underlying type, the value is
+    //   first converted to that type by integral promotion ([conv.prom]) or
+    //   integral conversion ([conv.integral]), if necessary, and then to the
+    //   enumeration type.
+    const auto *ED = DestType->castAsEnumDecl();
+    bool DestIsFixedBoolean =
+        ED->isFixed() && ED->getIntegerType()->isBooleanType();
     if (SrcType->isIntegralOrEnumerationType()) {
-      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
-      // type, the value is first converted to that type by integral conversion
-      const auto *ED = DestType->castAsEnumDecl();
-      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
-                 ? CK_IntegralToBoolean
-                 : CK_IntegralCast;
+      Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      Kind = CK_FloatingToIntegral;
+      // C++26 [expr.static.cast]p8
+      //   A value of floating-point type can also be explicitly converted
+      //   to ... the underlying type of the enumeration ([conv.fpint]), and
+      //   subsequently to the enumeration type.
+      Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
   }
@@ -2598,19 +2618,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     // casting the return value of dlsym() and GetProcAddress().
     // FIXME: Conditionally-supported behavior should be configurable in the
     // TargetInfo or similar.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
   if (DestType->isFunctionPointerType()) {
     // See above.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
@@ -2966,6 +2980,16 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
           Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
           SrcExpr.get()->getValueKind(), nullptr, CCK);
     Kind = CK_HLSLAggregateSplatCast;
+    return true;
+  }
+
+  // HLSL includes packed data types that can be converted directly to and from
+  // uint, and with each other
+  if (Self.HLSL().CanPerformPackedTypeCast(SrcExpr.get(), DestType)) {
+    SrcExpr =
+        Self.ImpCastExprToType(SrcExpr.get(), DestType, CK_IntegralCast,
+                               SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_IntegralCast;
     return true;
   }
 

@@ -15,6 +15,7 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
@@ -32,6 +33,9 @@ class Instruction;
 class LLVMContextImpl;
 class Module;
 class OptPassGate;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 template <typename T> class SmallVectorImpl;
 template <typename T> class StringMapEntry;
 class StringRef;
@@ -40,6 +44,10 @@ class LLVMRemarkStreamer;
 
 namespace remarks {
 class RemarkStreamer;
+}
+
+namespace vfs {
+class FileSystem;
 }
 
 namespace SyncScope {
@@ -87,18 +95,19 @@ public:
   /// operand bundle tags without comparing strings. Keep this in sync with
   /// LLVMContext::LLVMContext().
   enum : unsigned {
-    OB_deopt = 0,                  // "deopt"
-    OB_funclet = 1,                // "funclet"
-    OB_gc_transition = 2,          // "gc-transition"
-    OB_cfguardtarget = 3,          // "cfguardtarget"
-    OB_preallocated = 4,           // "preallocated"
-    OB_gc_live = 5,                // "gc-live"
-    OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
-    OB_ptrauth = 7,                // "ptrauth"
-    OB_kcfi = 8,                   // "kcfi"
-    OB_convergencectrl = 9,        // "convergencectrl"
-    OB_align = 10,                 // "align"
-    OB_deactivation_symbol = 11,   // "deactivation-symbol"
+#define ATTR(Name, Str) OB_##Name,
+#include "llvm/IR/BundleAttributes.def"
+    OB_deopt,                  // "deopt"
+    OB_funclet,                // "funclet"
+    OB_gc_transition,          // "gc-transition"
+    OB_cfguardtarget,          // "cfguardtarget"
+    OB_preallocated,           // "preallocated"
+    OB_gc_live,                // "gc-live"
+    OB_clang_arc_attachedcall, // "clang.arc.attachedcall"
+    OB_ptrauth,                // "ptrauth"
+    OB_kcfi,                   // "kcfi"
+    OB_convergencectrl,        // "convergencectrl"
+    OB_deactivation_symbol,    // "deactivation-symbol"
     OB_LastBundleID = OB_deactivation_symbol
   };
 
@@ -266,6 +275,12 @@ public:
   LLVM_ABI void
   setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer);
 
+  /// The virtual filesystem used for inputs.
+  /// Clients that enable the IO sandbox must set one to prevent violations.
+  LLVM_ABI vfs::FileSystem &getVirtualFileSystem() const;
+  LLVM_ABI IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity
   LLVM_ABI static const char *
@@ -327,6 +342,10 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   LLVM_ABI void setOptPassGate(OptPassGate &);
+
+  /// The library options this context reads in place of their process-wide
+  /// values.
+  LLVM_ABI cl::LibraryOptionsContext &getLibraryOptions() const;
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value

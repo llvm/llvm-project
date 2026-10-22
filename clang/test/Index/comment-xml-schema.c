@@ -35,6 +35,9 @@
 // RUN: xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/valid-para-kind-01.xml
 //
 // RUN: xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/valid-inline-command-01.xml
+//
+// RUN: xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/valid-concept-01.xml
+// RUN: xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/valid-concept-02.xml
 
 // RUN: not xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/invalid-function-01.xml 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
 // RUN: not xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/invalid-function-02.xml 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
@@ -52,6 +55,9 @@
 //
 // RUN: not xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/invalid-para-kind-01.xml 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
 // RUN: not xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/invalid-para-kind-02.xml 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
+//
+// RUN: not xmllint --noout --relaxng %S/../../bindings/xml/comment-xml-schema.rng %S/Inputs/CommentXML/invalid-concept-01.xml 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID
+//
 
 // CHECK-INVALID: fails to validate
 

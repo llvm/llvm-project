@@ -21,7 +21,7 @@ namespace llvm {
 class LowerGlobalDtorsPass
     : public OptionalPassInfoMixin<LowerGlobalDtorsPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace llvm

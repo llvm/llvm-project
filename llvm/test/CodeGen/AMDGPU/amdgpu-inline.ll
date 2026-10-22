@@ -1,8 +1,8 @@
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
-; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -amdgpu-inline-max-bb=1 < %s | FileCheck -check-prefixes=GCN,GCN-MAXBB1 %s
+; RUN: opt -mtriple=amdgpu--amdhsa -O3 -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgpu--amdhsa -O3 -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgpu--amdhsa -passes='default<O3>' -S -inline-threshold=1 < %s | FileCheck -check-prefixes=GCN,GCN-INL1,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgpu--amdhsa -passes='default<O3>' -S < %s | FileCheck -check-prefixes=GCN,GCN-INLDEF,GCN-MAXBBDEF %s
+; RUN: opt -mtriple=amdgpu--amdhsa -passes='default<O3>' -S -amdgpu-inline-max-bb=1 < %s | FileCheck -check-prefixes=GCN,GCN-MAXBB1 %s
 
 define coldcc float @foo(float %x, float %y) {
 entry:

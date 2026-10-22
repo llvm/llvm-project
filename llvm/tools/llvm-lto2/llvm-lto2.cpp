@@ -18,6 +18,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Plugins/PassPlugin.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <atomic>
+#include <list>
 
 using namespace llvm;
 using namespace lto;
@@ -207,8 +209,7 @@ static cl::list<std::string>
                 cl::desc("Load passes from plugin library"));
 
 static cl::opt<LTO::LTOKind> UnifiedLTOMode(
-    "unified-lto", cl::Optional,
-    cl::desc("Set LTO mode with the following options:"),
+    "unified-lto", cl::desc("Set LTO mode with the following options:"),
     cl::values(clEnumValN(LTO::LTOK_UnifiedThin, "thin",
                           "ThinLTO with Unified LTO enabled"),
                clEnumValN(LTO::LTOK_UnifiedRegular, "full",
@@ -293,7 +294,9 @@ static int usage() {
 }
 
 static int run(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "Resolution-based LTO test harness");
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
@@ -342,6 +345,8 @@ static int run(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   if (TimeTrace) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
@@ -451,13 +456,7 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else if (!DTLTODistributor.empty()) {
-    Backend = createOutOfProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(Threads),
-        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
-        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
-  } else
+  else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
@@ -480,7 +479,17 @@ static int run(int argc, char **argv) {
 
   LTO::LTOKind LTOMode = UnifiedLTOMode;
 
-  LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
+  std::unique_ptr<LTO> Lto;
+  if (!DTLTODistributor.empty()) {
+    Lto = std::make_unique<DTLTO>(
+        std::move(Conf), 1, LTOMode, nullptr, ThinLTOEmitIndexes,
+        ThinLTOEmitImports, OutputFilename, DTLTODistributor,
+        DTLTODistributorArgsSV, DTLTOCompiler, DTLTOCompilerPrependArgsSV,
+        DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
+  } else {
+    Lto =
+        std::make_unique<LTO>(std::move(Conf), std::move(Backend), 1, LTOMode);
+  }
 
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
@@ -514,7 +523,7 @@ static int run(int argc, char **argv) {
       continue;
 
     MBs.push_back(std::move(MB));
-    check(Lto.add(std::move(Input), Res), F);
+    check(Lto->add(std::move(Input), Res), F);
   }
 
   if (!CommandLineResolutions.empty()) {
@@ -527,15 +536,17 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  Lto.setBitcodeLibFuncs(
+  Lto->setBitcodeLibFuncs(
       SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   FileCache Cache;
   if (!CacheDir.empty())
-    Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
+    Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer,
+                             !DTLTODistributor.empty()),
                   "failed to create cache");
 
-  check(Lto.run(AddStream, Cache), "LTO::run failed");
+  check(Lto->run(AddStream, Cache), "LTO::run failed");
+  Lto->waitForCleanup();
   return static_cast<int>(HasErrors);
 }
 

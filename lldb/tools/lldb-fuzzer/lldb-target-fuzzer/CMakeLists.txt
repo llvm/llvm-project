@@ -23,6 +23,7 @@ if(TARGET lldb-target-fuzzer)
     COMMENT "Running the LLDB target fuzzer..."
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/fuzzer-artifacts/target-artifacts
     COMMAND $<TARGET_FILE:lldb-target-fuzzer> -artifact_prefix=target-
+      -dict=${CMAKE_CURRENT_SOURCE_DIR}/target.dict
     USES_TERMINAL
     )
   set_target_properties(fuzz-lldb-target PROPERTIES FOLDER "LLDB/Fuzzer")  

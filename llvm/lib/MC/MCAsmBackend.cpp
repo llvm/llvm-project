@@ -74,11 +74,14 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
     return std::make_unique<ELFObjectWriter>(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
         Endian == llvm::endianness::little);
+  case Triple::GOFF:
+    return createGOFFObjectWriter(cast<MCGOFFObjectTargetWriter>(std::move(TW)),
+                                  OS, DwoOS);
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   default:
-    report_fatal_error("dwo only supported with COFF, ELF, and Wasm");
+    report_fatal_error("dwo only supported with COFF, ELF, GOFF, and Wasm");
   }
 }
 

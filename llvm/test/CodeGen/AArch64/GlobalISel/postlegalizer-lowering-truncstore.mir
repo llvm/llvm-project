@@ -11,12 +11,12 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(s32) = COPY $w1
-    ; CHECK-NEXT: G_STORE %val(s32), %ptr(p0) :: (store (s8))
+    ; CHECK-NEXT: %val:_(i32) = COPY $w1
+    ; CHECK-NEXT: G_STORE %val(i32), %ptr(p0) :: (store (i8))
     %ptr:_(p0) = COPY $x0
-    %val:_(s32) = COPY $w1
-    %trunc:_(s8) = G_TRUNC %val
-    G_STORE %trunc(s8), %ptr(p0) :: (store (s8))
+    %val:_(i32) = COPY $w1
+    %trunc:_(i8) = G_TRUNC %val
+    G_STORE %trunc(i8), %ptr(p0) :: (store (i8))
 ...
 ---
 name:            truncstore_vector
@@ -28,13 +28,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %trunc:_(<4 x s8>) = G_TRUNC %val(<4 x s32>)
-    ; CHECK-NEXT: G_STORE %trunc(<4 x s8>), %ptr(p0) :: (store (<4 x s8>))
+    ; CHECK-NEXT: %val:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: %trunc:_(<4 x i8>) = G_TRUNC %val(<4 x i32>)
+    ; CHECK-NEXT: G_STORE %trunc(<4 x i8>), %ptr(p0) :: (store (<4 x i8>))
     %ptr:_(p0) = COPY $x0
-    %val:_(<4 x s32>) = COPY $q0
-    %trunc:_(<4 x s8>) = G_TRUNC %val
-    G_STORE %trunc(<4 x s8>), %ptr(p0) :: (store (<4 x s8>))
+    %val:_(<4 x i32>) = COPY $q0
+    %trunc:_(<4 x i8>) = G_TRUNC %val
+    G_STORE %trunc(<4 x i8>), %ptr(p0) :: (store (<4 x i8>))
 ...
 ---
 name:            truncstore_too_large
@@ -46,11 +46,11 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %val:_(s128) = COPY $q0
-    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC %val(s128)
-    ; CHECK-NEXT: G_STORE %trunc(s32), %ptr(p0) :: (store (s32))
+    ; CHECK-NEXT: %val:_(i128) = COPY $q0
+    ; CHECK-NEXT: %trunc:_(i32) = G_TRUNC %val(i128)
+    ; CHECK-NEXT: G_STORE %trunc(i32), %ptr(p0) :: (store (i32))
     %ptr:_(p0) = COPY $x0
-    %val:_(s128) = COPY $q0
-    %trunc:_(s32) = G_TRUNC %val
-    G_STORE %trunc(s32), %ptr(p0) :: (store (s32))
+    %val:_(i128) = COPY $q0
+    %trunc:_(i32) = G_TRUNC %val
+    G_STORE %trunc(i32), %ptr(p0) :: (store (i32))
 ...

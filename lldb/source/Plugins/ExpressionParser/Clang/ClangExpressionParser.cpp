@@ -96,8 +96,6 @@
 #include "lldb/Utility/StringList.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
-#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <cctype>
@@ -651,6 +649,12 @@ static void SetupLangOpts(CompilerInstance &compiler,
     }
     break;
   }
+
+  // The cases above enable Objective-C speculatively; undo that for targets
+  // whose object file format can't support it.
+  if (!ObjCLanguageRuntime::IsSupportedForArchitecture(
+          ArchSpec(compiler.getTargetOpts().Triple)))
+    lang_opts.ObjC = false;
 
   diagnostic_manager.AddDiagnostic(
       llvm::formatv("{0}Ran expression as '{1}'.", language_fallback_reason,

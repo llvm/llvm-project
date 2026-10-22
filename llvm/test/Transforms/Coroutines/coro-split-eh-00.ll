@@ -57,7 +57,7 @@ eh.resume:
 ; VERIFY Resume Parts
 
 ; Verify that resume function does not contains both print calls appearing after coro.end
-; CHECK-LABEL: define internal fastcc void @f.resume
+; CHECK-LABEL: define internal void @f.resume
 ; CHECK: invoke void @print(i32 1)
 ; CHECK:   to label %CoroEnd unwind label %lpad
 
@@ -79,7 +79,6 @@ declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)
 
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
-declare ptr @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.end(ptr, i1, token)
 

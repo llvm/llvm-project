@@ -19,7 +19,7 @@ namespace llvm {
 class Function;
 class InjectTLIMappings : public OptionalPassInfoMixin<InjectTLIMappings> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // End namespace llvm

@@ -5,10 +5,10 @@ __attribute__((nodebug)) static void add(int i, int j, void handler(int)) {
 }
 
 static void handler(int result) {
-  printf("result %d\n", result); // breakpoint
+  printf("result %d\n", result); // first_frame, breakpoint
 }
 
 int main(int argc, char const *argv[]) {
-  add(2, 3, handler);
+  add(2, 3, handler); // third_frame
   return 0;
 }

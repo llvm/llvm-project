@@ -526,7 +526,7 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     Operation *op = operand.getOwner();
     Type type = operand.get().getType();
 
-    bool isToken = isa<TokenType>(type);
+    bool isToken = isa<async::TokenType>(type);
     bool isGroup = isa<GroupType>(type);
     bool isValue = isa<ValueType>(type);
 

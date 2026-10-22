@@ -24,6 +24,8 @@
 #include <tuple>
 
 #define OMPT_IF_BUILT(stmt) stmt
+#define OMPT_IF_BUILT_AND_INITIALIZED(stmt)                                    \
+  OMPT_IF_BUILT(performIfOmptInitialized(stmt))
 
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
@@ -126,6 +128,14 @@ public:
   void endTargetDisassociatePointer(int64_t DeviceId, void *HstPtrBegin,
                                     void *TgtPtrBegin, size_t Size, void *Code);
 
+  /// Top-level function for invoking callback before target memset API
+  void beginTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                         void *TgtPtrBegin, size_t Size, void *Code);
+
+  /// Top-level function for invoking callback after target memset API
+  void endTargetMemset(int64_t DeviceId, void *HostPtrBegin, void *TgtPtrBegin,
+                       size_t Size, void *Code);
+
   // Target kernel callbacks
 
   /// Top-level function for invoking callback before target construct
@@ -165,6 +175,11 @@ public:
       return std::make_pair(
           std::mem_fn(&Interface::beginTargetDisassociatePointer),
           std::mem_fn(&Interface::endTargetDisassociatePointer));
+
+    if constexpr (OpType == ompt_target_data_memset ||
+                  OpType == ompt_target_data_memset_async)
+      return std::make_pair(std::mem_fn(&Interface::beginTargetMemset),
+                            std::mem_fn(&Interface::endTargetMemset));
 
     llvm_unreachable("Unhandled target data operation type!");
   }
@@ -324,6 +339,7 @@ private:
 
 #else
 #define OMPT_IF_BUILT(stmt)
+#define OMPT_IF_BUILT_AND_INITIALIZED(stmt)
 #endif
 
 #endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

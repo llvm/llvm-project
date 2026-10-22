@@ -1094,7 +1094,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       auto *EWC = llvm::dyn_cast_or_null<ExprWithCleanups>(RetExpr);
       if (EWC)
         for (auto &C : EWC->getObjects())
-          if (auto *BD = C.dyn_cast<BlockDecl *>())
+          if (auto *BD = dyn_cast<BlockDecl *>(C))
             if (BD == blockDecl)
               return true;
       return false;
@@ -1576,6 +1576,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   else {
     PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
+    maybeCreateMCDCCondBitmap();
     EmitStmt(blockDecl->getBody());
   }
 
@@ -1587,7 +1588,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     entry_ptr = entry_ptr->getNextNode()->getIterator();
   else
     entry_ptr = entry->end();
-  Builder.SetInsertPoint(entry, entry_ptr);
+  Builder.SetInsertPoint(entry_ptr);
 
   // Emit debug information for all the DeclRefExprs.
   // FIXME: also for 'this'
@@ -2508,16 +2509,15 @@ static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
   llvm::FoldingSetNodeID id;
   generator.Profile(id);
 
-  void *insertPos;
-  BlockByrefHelpers *node
-    = CGM.ByrefHelpersCache.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  BlockByrefHelpers *node = CGM.ByrefHelpersCache.lookup(id, InsertToken);
   if (node) return static_cast<T*>(node);
 
   generator.CopyHelper = buildByrefCopyHelper(CGM, byrefInfo, generator);
   generator.DisposeHelper = buildByrefDisposeHelper(CGM, byrefInfo, generator);
 
   T *copy = new (CGM.getContext()) T(std::forward<T>(generator));
-  CGM.ByrefHelpersCache.InsertNode(copy, insertPos);
+  CGM.ByrefHelpersCache.insert(copy, InsertToken);
   return copy;
 }
 

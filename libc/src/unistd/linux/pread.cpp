@@ -13,7 +13,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
+#include "src/__support/macros/sanitizer.h" // for LIBC_MSAN_UNPOISON
 #include <sys/syscall.h>                    // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(ssize_t, pread,
   }
   // The cast is important since there is a check that dereferences the pointer
   // which fails on void*.
-  MSAN_UNPOISON(reinterpret_cast<char *>(buf), count);
+  LIBC_MSAN_UNPOISON(reinterpret_cast<char *>(buf), count);
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
     return -1;

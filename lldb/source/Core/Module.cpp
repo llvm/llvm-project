@@ -96,10 +96,7 @@ static ModuleCollection &GetModuleCollection() {
   // it for now.  If we decide this is a big problem we can introduce a
   // Finalize method that will tear everything down in a predictable order.
 
-  static ModuleCollection *g_module_collection = nullptr;
-  if (g_module_collection == nullptr)
-    g_module_collection = new ModuleCollection();
-
+  static ModuleCollection *g_module_collection = new ModuleCollection();
   return *g_module_collection;
 }
 
@@ -109,9 +106,8 @@ std::recursive_mutex &Module::GetAllocationModuleCollectionMutex() {
   // will tear itself down before the "g_module_collection_mutex" below will.
   // So we leak a Mutex object below to safeguard against that
 
-  static std::recursive_mutex *g_module_collection_mutex = nullptr;
-  if (g_module_collection_mutex == nullptr)
-    g_module_collection_mutex = new std::recursive_mutex; // NOTE: known leak
+  static std::recursive_mutex *g_module_collection_mutex =
+      new std::recursive_mutex; // NOTE: known leak
   return *g_module_collection_mutex;
 }
 
@@ -147,9 +143,9 @@ Module::Module(const ModuleSpec &module_spec)
             static_cast<void *>(this),
             module_spec.GetArchitecture().GetArchitectureName(),
             module_spec.GetFileSpec().GetPath().c_str(),
-            module_spec.GetObjectName().IsEmpty() ? "" : "(",
-            module_spec.GetObjectName().AsCString(""),
-            module_spec.GetObjectName().IsEmpty() ? "" : ")");
+            module_spec.GetObjectName().empty() ? "" : "(",
+            module_spec.GetObjectName().c_str(),
+            module_spec.GetObjectName().empty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -220,10 +216,10 @@ Module::Module(const ModuleSpec &module_spec)
     m_symfile_spec = matching_module_spec.GetSymbolFileSpec();
 
   // Copy the object name over
-  if (matching_module_spec.GetObjectName())
-    m_object_name = matching_module_spec.GetObjectName();
-  else
-    m_object_name = module_spec.GetObjectName();
+  if (!matching_module_spec.GetObjectName().empty())
+    m_object_name = ConstString(matching_module_spec.GetObjectName());
+  else if (!module_spec.GetObjectName().empty())
+    m_object_name = ConstString(module_spec.GetObjectName());
 
   // Always trust the object offset (file offset) and object modification time
   // (for mod time in a BSD static archive) of from the matching module
@@ -249,10 +245,9 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-            static_cast<void *>(this), m_arch.GetArchitectureName(),
-            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s')", static_cast<void *>(this),
+            m_arch.GetArchitectureName(),
+            GetSpecificationDescription().c_str());
 }
 
 Module::Module()
@@ -278,10 +273,9 @@ Module::~Module() {
     modules.erase(pos);
   }
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
-            static_cast<void *>(this), m_arch.GetArchitectureName(),
-            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::~Module((%s) '%s')", static_cast<void *>(this),
+            m_arch.GetArchitectureName(),
+            GetSpecificationDescription().c_str());
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important
@@ -313,9 +307,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
         m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
-          StreamString s;
-          s.Printf("0x%16.16" PRIx64, header_addr);
-          m_object_name.SetString(s.GetString());
+          m_memory_module_addr = header_addr;
 
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -630,10 +622,13 @@ Module::LookupInfo::LookupInfo(const LookupInfo &lookup_info,
       m_language(lookup_info.GetLanguageType()),
       m_name_type_mask(lookup_info.GetNameTypeMask()) {}
 
-Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
+Module::LookupInfo::LookupInfo(ConstString name,
+                               ConstString lookup_name_override,
                                FunctionNameType name_type_mask,
                                LanguageType lang_type)
-    : m_name(name), m_lookup_name(lookup_name), m_language(lang_type) {
+    : m_name(name),
+      m_lookup_name(lookup_name_override ? lookup_name_override : name),
+      m_language(lang_type) {
   std::optional<ConstString> basename;
   Language *lang = Language::FindPlugin(lang_type);
 
@@ -674,7 +669,7 @@ Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
     }
   }
 
-  if (basename) {
+  if (basename && !lookup_name_override) {
     // The name supplied was incomplete for lookup purposes. For example, in C++
     // we may have gotten something like "a::count". In this case, we want to do
     // a lookup on the basename "count" and then make sure any matching results
@@ -705,12 +700,11 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
       lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
   }
 
-  ConstString lookup_name = lookup_name_override ? lookup_name_override : name;
-
   std::vector<Module::LookupInfo> infos;
   infos.reserve(lang_types.size());
   for (LanguageType lang_type : lang_types) {
-    Module::LookupInfo info(name, lookup_name, name_type_mask, lang_type);
+    Module::LookupInfo info(name, lookup_name_override, name_type_mask,
+                            lang_type);
     infos.push_back(info);
   }
   return infos;
@@ -1029,6 +1023,11 @@ std::string Module::GetSpecificationDescription() const {
     spec += m_object_name.GetCString();
     spec += ')';
   }
+  if (m_memory_module_addr.has_value()) {
+    StreamString s;
+    s.Printf("(0x%" PRIx64 ")", m_memory_module_addr.value());
+    spec += s.GetData();
+  }
   return spec;
 }
 
@@ -1040,8 +1039,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   }
 
   if (level == eDescriptionLevelBrief) {
-    const char *filename = m_file.GetFilename().GetCString();
-    if (filename)
+    llvm::StringRef filename = m_file.GetFilename();
+    if (!filename.empty())
       s << filename;
   } else {
     char path[PATH_MAX];
@@ -1052,6 +1051,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   const char *object_name = m_object_name.GetCString();
   if (object_name)
     s << llvm::formatv("({0})", object_name);
+  if (m_memory_module_addr.has_value())
+    s << llvm::formatv("({0})", m_memory_module_addr.value());
 }
 
 bool Module::FileHasChanged() const {
@@ -1067,8 +1068,8 @@ bool Module::FileHasChanged() const {
 
 void Module::ReportWarningOptimization(
     std::optional<lldb::user_id_t> debugger_id) {
-  ConstString file_name = GetFileSpec().GetFilename();
-  if (file_name.IsEmpty())
+  llvm::StringRef file_name = GetFileSpec().GetFilename();
+  if (file_name.empty())
     return;
 
   StreamString ss;
@@ -1159,10 +1160,7 @@ void Module::Dump(Stream *s) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
-  s->Printf("Module %s%s%s%s\n", m_file.GetPath().c_str(),
-            m_object_name ? "(" : "",
-            m_object_name ? m_object_name.GetCString() : "",
-            m_object_name ? ")" : "");
+  s->Printf("Module %s\n", GetSpecificationDescription().c_str());
 
   s->IndentMore();
 
@@ -1183,7 +1181,7 @@ ObjectFile *Module::GetObjectFile() {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_objfile.load()) {
       LLDB_SCOPED_TIMERF("Module::GetObjectFile () module = %s",
-                         GetFileSpec().GetFilename().AsCString(""));
+                         GetFileSpec().GetFilename().str().c_str());
       lldb::offset_t data_offset = 0;
       lldb::offset_t file_size = 0;
 
@@ -1221,13 +1219,19 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_sections_up with sections from objfile.
-  if (!m_sections_up) {
-    ObjectFile *obj_file = GetObjectFile();
-    if (obj_file != nullptr)
-      obj_file->CreateSections(*GetUnifiedSectionList());
+  // Guard the lazy build with m_sections_mutex rather than m_mutex:
+  // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
+  // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+    if (m_sections_up)
+      return m_sections_up.get();
   }
-  return m_sections_up.get();
+  ObjectFile *obj_file = GetObjectFile();
+  if (obj_file)
+    obj_file->GetSectionList();
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  return obj_file ? GetUnifiedSectionList() : m_sections_up.get();
 }
 
 LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
@@ -1334,6 +1338,9 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
+  if (m_did_preload_symbols.exchange(true))
+    return;
+
   LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
@@ -1407,6 +1414,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   m_symfile_spec = file;
   m_symfile_up.reset();
   m_did_load_symfile = false;
+  m_did_preload_symbols = false;
 }
 
 bool Module::IsExecutable() {
@@ -1443,6 +1451,10 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
 
 bool Module::SetLoadAddress(Target &target, lldb::addr_t value,
                             bool value_is_offset, bool &changed) {
+  // Acquire the module mutex so that any re-entrant calls in
+  // ObjectFile::SetLoadAddress already own the recurisve mutex before
+  // acquiring a second lock.
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ObjectFile *object_file = GetObjectFile();
   if (object_file != nullptr) {
     changed = object_file->SetLoadAddress(target, value, value_is_offset);
@@ -1476,11 +1488,14 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
       return false;
   }
 
-  ConstString object_name = module_ref.GetObjectName();
-  if (object_name) {
-    if (object_name != GetObjectName())
-      return false;
-  }
+  llvm::StringRef object_name = module_ref.GetObjectName();
+  if (!object_name.empty() && object_name != GetObjectName())
+    return false;
+
+  // A module read from memory is the image at the address it was read from.
+  std::optional<lldb::addr_t> load_addr = module_ref.GetLoadAddress();
+  if (load_addr && m_memory_module_addr && *load_addr != *m_memory_module_addr)
+    return false;
   return true;
 }
 
@@ -1652,8 +1667,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache() {
-  if (!ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+DataFileCache *Module::GetIndexCache(bool memory_module) {
+  bool lldb_index_enabled = false;
+  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+    lldb_index_enabled = true;
+  if (memory_module && ModuleList::GetGlobalModuleListProperties()
+                           .GetEnableLLDBIndexCacheMemoryModules())
+    lldb_index_enabled = true;
+  if (!lldb_index_enabled)
     return nullptr;
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
@@ -1662,4 +1683,12 @@ DataFileCache *Module::GetIndexCache() {
                             .GetLLDBIndexCachePath()
                             .GetPath());
   return g_data_file_cache;
+}
+
+lldb_private::ModuleSpecList Module::GetSeparateDebugInfoFiles() {
+  SymbolFile *symfile = GetSymbolFile(/*can_create=*/true);
+  if (!symfile)
+    return {};
+
+  return symfile->GetSeparateDebugInfoFiles();
 }

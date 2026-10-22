@@ -24,7 +24,7 @@ def user_is_root():
     return False
 
 
-class LLVMConfig(object):
+class LLVMConfig:
     def __init__(self, lit_config, config):
         self.lit_config = lit_config
         self.config = config
@@ -150,6 +150,9 @@ class LLVMConfig(object):
         have_zstd = getattr(config, "have_zstd", None)
         if have_zstd:
             features.add("zstd")
+        have_lzma = getattr(config, "have_lzma", None)
+        if have_lzma:
+            features.add("lzma")
 
         if getattr(config, "reverse_iteration", None):
             features.add("reverse_iteration")

@@ -32,7 +32,8 @@ class IVUsers;
 /// The Expr member keeps track of the expression, User is the actual user
 /// instruction of the operand, and 'OperandValToReplace' is the operand of
 /// the User that is the use.
-class IVStrideUse final : public CallbackVH, public ilist_node<IVStrideUse> {
+class LLVM_ABI IVStrideUse final : public CallbackVH,
+                                   public ilist_node<IVStrideUse> {
   friend class IVUsers;
 public:
   IVStrideUse(IVUsers *P, Instruction* U, Value *O)
@@ -105,8 +106,8 @@ class IVUsers {
   SmallPtrSet<const Value *, 32> EphValues;
 
 public:
-  IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI, DominatorTree *DT,
-          ScalarEvolution *SE);
+  LLVM_ABI IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI,
+                   DominatorTree *DT, ScalarEvolution *SE);
 
   IVUsers(IVUsers &&X)
       : L(std::move(X.L)), AC(std::move(X.AC)), DT(std::move(X.DT)),
@@ -124,19 +125,19 @@ public:
   /// AddUsersIfInteresting - Inspect the specified Instruction.  If it is a
   /// reducible SCEV, recursively add its users to the IVUsesByStride set and
   /// return true.  Otherwise, return false.
-  bool AddUsersIfInteresting(Instruction *I);
+  LLVM_ABI bool AddUsersIfInteresting(Instruction *I);
 
-  IVStrideUse &AddUser(Instruction *User, Value *Operand);
+  LLVM_ABI IVStrideUse &AddUser(Instruction *User, Value *Operand);
 
   /// getReplacementExpr - Return a SCEV expression which computes the
   /// value of the OperandValToReplace of the given IVStrideUse.
-  const SCEV *getReplacementExpr(const IVStrideUse &IU) const;
+  LLVM_ABI const SCEV *getReplacementExpr(const IVStrideUse &IU) const;
 
   /// getExpr - Return the expression for the use. Returns nullptr if the result
   /// is not invertible.
-  const SCEV *getExpr(const IVStrideUse &IU) const;
+  LLVM_ABI const SCEV *getExpr(const IVStrideUse &IU) const;
 
-  const SCEV *getStride(const IVStrideUse &IU, const Loop *L) const;
+  LLVM_ABI const SCEV *getStride(const IVStrideUse &IU, const Loop *L) const;
 
   typedef ilist<IVStrideUse>::iterator iterator;
   typedef ilist<IVStrideUse>::const_iterator const_iterator;
@@ -152,17 +153,17 @@ public:
 
   bool isEphemeral(const Value *V) const { return EphValues.count(V); }
 
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
-  void print(raw_ostream &OS, const Module * = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, const Module * = nullptr) const;
 
   /// dump - This method is used for debugging.
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
-Pass *createIVUsersPass();
+LLVM_ABI Pass *createIVUsersPass();
 
-class IVUsersWrapperPass : public LoopPass {
+class LLVM_ABI IVUsersWrapperPass : public LoopPass {
   std::unique_ptr<IVUsers> IU;
 
 public:
@@ -190,8 +191,8 @@ class IVUsersAnalysis : public AnalysisInfoMixin<IVUsersAnalysis> {
 public:
   typedef IVUsers Result;
 
-  IVUsers run(Loop &L, LoopAnalysisManager &AM,
-              LoopStandardAnalysisResults &AR);
+  LLVM_ABI IVUsers run(Loop &L, LoopAnalysisManager &AM,
+                       LoopStandardAnalysisResults &AR);
 };
 
 }

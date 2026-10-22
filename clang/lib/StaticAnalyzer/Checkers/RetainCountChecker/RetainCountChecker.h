@@ -309,8 +309,7 @@ public:
   checkRegionChanges(ProgramStateRef state,
                      const InvalidatedSymbols *invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext* LCtx,
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
                      const CallEvent *Call) const;
 
   ExplodedNode* checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,

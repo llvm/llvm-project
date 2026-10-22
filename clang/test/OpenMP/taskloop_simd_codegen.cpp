@@ -208,7 +208,7 @@ struct S {
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
-// CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: !{!"llvm.loop.vectorize.enable"}
 // CHECK: !{!"llvm.loop.vectorize.width", i32 4}
 // CHECK: !{!"llvm.loop.vectorize.width", i32 32}
 // CHECK: !{!"llvm.loop.vectorize.width", i32 8}

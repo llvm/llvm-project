@@ -183,9 +183,7 @@ define <8 x i16> @dup_trunc_sext_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %x,
 ; CHECK-GI-NEXT:    cmgt v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[2]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp slt <8 x i16> %a, %b

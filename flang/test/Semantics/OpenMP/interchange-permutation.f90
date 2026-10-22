@@ -6,7 +6,7 @@ subroutine double_permutation
   implicit none
   integer i, j
 
-  !ERROR: At most one PERMUTATION clause can appear on the INTERCHANGE directive
+  !ERROR: At most one PERMUTATION clause can appear on INTERCHANGE directive
   !$omp interchange permutation(2,1) permutation(2,1)
   do i = 1, 5
   do j = 1, 5

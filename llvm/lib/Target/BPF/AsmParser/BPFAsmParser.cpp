@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -236,8 +235,10 @@ public:
         .Case("gotol", true)
         .Case("gotox", true)
         .Case("may_goto", true)
+        .Case("unwind_goto", true)
         .Case("*", true)
         .Case("exit", true)
+        .Case("unwind_exit", true)
         .Case("lock", true)
         .Case("ld_pseudo", true)
         .Case("store_release", true)

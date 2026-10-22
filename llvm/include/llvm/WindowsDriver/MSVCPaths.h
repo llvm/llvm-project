@@ -12,15 +12,12 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
 
 namespace llvm {
-
-namespace vfs {
-class FileSystem;
-}
 
 enum class SubDirectoryType {
   Bin,

@@ -42,5 +42,35 @@ RUN: llvm-cas --cas %t/ac --validate
 
 # Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
 # allocated record, leaving it invalid.
-RUN: truncate -s -40 %t/ac/v1.1/actions.v1
+# FIXME: Use `truncate -s -40` once Ubuntu 26.04 is the LTS support baseline,
+# see https://github.com/uutils/coreutils/issues/9128
+RUN: %python -c "with open(r'%t/ac/v1.1/actions.v1', 'r+b') as f: f.truncate(f.seek(0, 2) - 40)"
 RUN: not llvm-cas --cas %t/ac --validate
+
+# Validation errors are only printed when recovering with --verbose.
+RUN: rm -rf %t/recover
+RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
+RUN: rm %t/recover/v1.1/data.v1
+RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
+RUN:   2>%t/recover.err | FileCheck %s --check-prefix=RECOVER
+RUN: count 0 < %t/recover.err
+RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
+RUN: rm %t/recover/v1.1/data.v1
+RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
+RUN:   --in-process 2>%t/recover.err | FileCheck %s --check-prefix=RECOVER
+RUN: count 0 < %t/recover.err
+RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
+RUN: rm %t/recover/v1.1/data.v1
+RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
+RUN:   --verbose 2>&1 | FileCheck %s --check-prefixes=ERR,RECOVER
+RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
+RUN: rm %t/recover/v1.1/data.v1
+RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
+RUN:   --in-process --verbose 2>&1 | FileCheck %s --check-prefixes=ERR,RECOVER
+RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
+RUN: rm %t/recover/v1.1/data.v1
+RUN: not llvm-cas --cas %t/recover --validate-if-needed --force 2>&1 \
+RUN:   | FileCheck %s --check-prefix=ERR
+
+ERR: llvm-cas: validate-if-needed: {{.+}}
+RECOVER: recovered from invalid data

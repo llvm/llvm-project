@@ -1250,6 +1250,10 @@ public:
   removeOperandBundle(CallBase *CB, uint32_t ID,
                       InsertPosition InsertPt = nullptr);
 
+  LLVM_ABI static CallBase *
+  removeOperandBundleAt(CallBase *CB, size_t Offset,
+                        InsertPosition InsertPtr = nullptr);
+
   /// Return the convergence control token for this call, if it exists.
   Value *getConvergenceControlToken() const {
     if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
@@ -1583,6 +1587,12 @@ public:
   void addParamAttrs(unsigned ArgNo, const AttrBuilder &B) {
     assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
+  }
+
+  /// Adds the attribute to the indicated argument
+  void maybeAddParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.maybeAddParamAttribute(getContext(), ArgNo, Kind);
   }
 
   /// removes the attribute from the list of attributes.
@@ -2347,6 +2357,12 @@ public:
   /// Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<const_bundle_op_iterator> bundle_op_infos() const {
     return make_range(bundle_op_info_begin(), bundle_op_info_end());
+  }
+
+  auto operand_bundles() const {
+    return map_range(bundle_op_infos(), [this](BundleOpInfo BOI) {
+      return operandBundleFromBundleOpInfo(BOI);
+    });
   }
 
   /// Populate the BundleOpInfo instances and the Use& vector from \p

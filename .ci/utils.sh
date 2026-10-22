@@ -79,7 +79,7 @@ function start-group {
 }
 
 export PIP_BREAK_SYSTEM_PACKAGES=1
-pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+pip install --require-hashes -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 # The ARM64 builders run on AWS and don't have access to the GCS cache.
 if [[ -n "$GITHUB_ACTIONS" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then

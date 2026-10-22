@@ -89,6 +89,7 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
+  DK_UnsupportedTargetIntrinsic,
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
@@ -240,14 +241,14 @@ public:
 class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata
     : public DiagnosticInfo {
 private:
-  /// The module that is concerned by this debug metadata version diagnostic.
+  /// The module that is concerned by this invalid debug metadata diagnostic.
   const Module &M;
 
 public:
-  /// \p The module that is concerned by this debug metadata version diagnostic.
+  /// \p The module that is concerned by this invalid debug metadata diagnostic.
   DiagnosticInfoIgnoringInvalidDebugMetadata(
       const Module &M, DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+      : DiagnosticInfo(DK_DebugMetadataInvalid, Severity), M(M) {}
 
   const Module &getModule() const { return M; }
 
@@ -1123,6 +1124,29 @@ public:
   }
 
   const Twine &getMessage() const { return Msg; }
+
+  void print(DiagnosticPrinter &DP) const override;
+};
+
+/// Diagnostic information for unsupported target intrinsics in backend.
+class LLVM_ABI DiagnosticInfoUnsupportedTargetIntrinsic
+    : public DiagnosticInfoWithLocationBase {
+private:
+  unsigned IntrinsicID;
+  StringRef RequiredFeatures;
+
+public:
+  DiagnosticInfoUnsupportedTargetIntrinsic(
+      const Function &Fn, unsigned IntrinsicID,
+      const DiagnosticLocation &Loc = DiagnosticLocation());
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_UnsupportedTargetIntrinsic;
+  }
+
+  unsigned getIntrinsicID() const { return IntrinsicID; }
+  StringRef getRequiredFeatures() const { return RequiredFeatures; }
+  std::string getMessage() const;
 
   void print(DiagnosticPrinter &DP) const override;
 };

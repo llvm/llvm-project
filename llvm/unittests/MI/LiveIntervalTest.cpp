@@ -1,7 +1,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -42,7 +42,7 @@ void initLLVM() {
 /// unittests, we go for "AMDGPU" to be able to test normal and subregister
 /// liveranges.
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  Triple TargetTriple("amdgcn--");
+  Triple TargetTriple("amdgpu9.00--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
   if (!T)
@@ -50,7 +50,7 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
 
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TargetTriple, "gfx900", "", Options, std::nullopt,
+      T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
                              std::nullopt, CodeGenOptLevel::Aggressive));
 }
 
@@ -68,7 +68,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(&TM);
   if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
@@ -169,7 +169,8 @@ static void testHandleMoveIntoNewBundle(MachineFunction &MF, LiveIntervals &LIS,
 
 /**
  * Split block numbered \p BlockNum at instruction \p SplitAt using
- * MachineBasicBlock::splitAt updating liveness intervals.
+ * MachineBasicBlock::splitAt updating liveness intervals and the dominator
+ * tree.
  */
 static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
                         unsigned SplitAt, unsigned BlockNum) {
@@ -177,7 +178,19 @@ static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
   MachineBasicBlock &MBB = *SplitInstr.getParent();
 
   // Split block and update live intervals
-  MBB.splitAt(SplitInstr, false, &LIS);
+  MachineBasicBlock *SplitBB = MBB.splitAt(SplitInstr, false, &LIS);
+  if (SplitBB == &MBB)
+    return;
+
+  // Update the dominator tree
+  using DomTreeT = DomTreeBase<MachineBasicBlock>;
+  SmallVector<DomTreeT::UpdateType, 4> DTUpdates;
+  for (MachineBasicBlock *Succ : SplitBB->successors()) {
+    DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+    DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
+  }
+  DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
+  LIS.getDomTree().applyUpdates(DTUpdates);
 }
 
 /**
@@ -235,23 +248,6 @@ body: |
 )MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
 
   doTest<LiveIntervalsWrapperPass>(MIRString, T, ShouldPass);
-}
-
-static void liveVariablesTest(StringRef MIRFunc,
-                              TestPassT<LiveVariablesWrapperPass>::TestFx T,
-                              bool ShouldPass = true) {
-  SmallString<160> S;
-  StringRef MIRString = (Twine(R"MIR(
----
-...
-name: func
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-body: |
-  bb.0:
-)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
-  doTest<LiveVariablesWrapperPass>(MIRString, T, ShouldPass);
 }
 
 } // End of anonymous namespace.
@@ -790,6 +786,39 @@ TEST(LiveIntervalTest, SplitAtMultiInstruction) {
       });
 }
 
+TEST(LiveIntervalTest, SplitAtMovesRegMaskInterference) {
+  // %0 is defined before and used after a call-clobber regmask, then split
+  // (with the regmask) into a new block, so %0 becomes block-local and still
+  // crosses the regmask. checkRegMaskInterference takes the single-MBB fast
+  // path over the per-block regmask slice, so a stale slice after splitAt
+  // makes it miss the clobber.
+  liveIntervalTest(
+      R"MIR(
+    successors: %bb.1
+    S_NOP 0
+    %0 = IMPLICIT_DEF
+    S_NOP 0, csr_amdgpu
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0
+)MIR",
+      [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+        LiveIntervals &LIS = LISWrapper.getLIS();
+        // Split before the def, moving the def, regmask, and use into a new
+        // block; %0 is then block-local and still crosses the regmask.
+        testSplitAt(MF, LIS, 0, 0);
+        LiveInterval &LI = LIS.getInterval(Register::index2VirtReg(0));
+        MachineBasicBlock *MBB = LIS.intervalIsInOneMBB(LI);
+        ASSERT_TRUE(MBB);
+        // The block %0 now lives in must own the moved regmask slot...
+        EXPECT_FALSE(LIS.getRegMaskSlotsInBlock(MBB->getNumber()).empty());
+        // ...so the allocator still sees the call-clobber interference.
+        BitVector UsableRegs(MF.getSubtarget().getRegisterInfo()->getNumRegs());
+        EXPECT_TRUE(LIS.checkRegMaskInterference(LI, UsableRegs));
+      });
+}
+
 TEST(LiveIntervalTest, RepairIntervals) {
   liveIntervalTest(
       R"MIR(
@@ -882,52 +911,6 @@ TEST(LiveIntervalTest, LiveThroughSegments) {
         FirstSeg->valno->def = NewIdx;
       },
       false);
-}
-
-TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef1) {
-  liveVariablesTest(
-      R"MIR(
-    %0 = IMPLICIT_DEF
-    S_NOP 0, implicit %0
-    S_NOP 0, implicit undef %0
-)MIR",
-      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
-        auto &LV = LVWrapper.getLV();
-        auto &FirstNop = getMI(MF, 1, 0);
-        auto &SecondNop = getMI(MF, 2, 0);
-        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-
-        Register R = Register::index2VirtReg(0);
-        LV.recomputeForSingleDefVirtReg(R);
-
-        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-      });
-}
-
-TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef2) {
-  liveVariablesTest(
-      R"MIR(
-    %0 = IMPLICIT_DEF
-    S_NOP 0, implicit %0
-    S_NOP 0, implicit undef %0, implicit %0
-)MIR",
-      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
-        auto &LV = LVWrapper.getLV();
-        auto &FirstNop = getMI(MF, 1, 0);
-        auto &SecondNop = getMI(MF, 2, 0);
-        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
-
-        Register R = Register::index2VirtReg(0);
-        LV.recomputeForSingleDefVirtReg(R);
-
-        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
-      });
 }
 
 int main(int argc, char **argv) {

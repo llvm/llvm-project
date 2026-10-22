@@ -16,17 +16,24 @@
 
 // We use a template to implement likely/unlikely to make sure that we don't
 // accidentally pass an integer.
+// Note that `__builtin_expect` requires the second argument to be a constant
+// expression.
 namespace LIBC_NAMESPACE_DECL {
 namespace details {
 template <typename T>
-LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
-  return __builtin_expect(value, expected);
+LIBC_ALWAYS_INLINE constexpr bool expects_bool_condition(T value) = delete;
+
+template <>
+LIBC_ALWAYS_INLINE constexpr bool expects_bool_condition<bool>(bool value) {
+  return value;
 }
 } // namespace details
 } // namespace LIBC_NAMESPACE_DECL
-#define LIBC_LIKELY(x) LIBC_NAMESPACE::details::expects_bool_condition(x, true)
+#define LIBC_LIKELY(x)                                                         \
+  (__builtin_expect(LIBC_NAMESPACE::details::expects_bool_condition((x)), true))
 #define LIBC_UNLIKELY(x)                                                       \
-  LIBC_NAMESPACE::details::expects_bool_condition(x, false)
+  (__builtin_expect(LIBC_NAMESPACE::details::expects_bool_condition((x)),      \
+                    false))
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
@@ -52,10 +59,12 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH_SMALL_TABLES 0x02
 #define LIBC_MATH_NO_ERRNO 0x04
 #define LIBC_MATH_NO_EXCEPT 0x08
+#define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
+#define LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY 0x20
 #define LIBC_MATH_FAST                                                         \
   (LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES |                     \
-   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
-#define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
+   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT |                                  \
+   LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
 
 #ifndef LIBC_MATH
 #define LIBC_MATH 0
@@ -67,6 +76,9 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if ((LIBC_MATH) & LIBC_MATH_SMALL_TABLES)
 #define LIBC_MATH_HAS_SMALL_TABLES
+#define LIBC_MATH_SMALL_TABLES_INLINE LIBC_NOINLINE LIBC_INLINE
+#else
+#define LIBC_MATH_SMALL_TABLES_INLINE LIBC_ALWAYS_INLINE
 #endif
 
 #if ((LIBC_MATH) & LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)
@@ -79,6 +91,10 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if ((LIBC_MATH) & LIBC_MATH_NO_EXCEPT)
 #define LIBC_MATH_HAS_NO_EXCEPT
+#endif
+
+#if ((LIBC_MATH) & LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
+#define LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

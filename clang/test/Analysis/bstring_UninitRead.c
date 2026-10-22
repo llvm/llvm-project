@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN: -analyzer-checker=core,alpha.unix.cstring
+// RUN: -analyzer-checker=core,unix.cstring.UninitializedRead
 
 //===----------------------------------------------------------------------===//
 // mempcpy() using character array. This is the easiest case, as memcpy
@@ -151,4 +151,21 @@ char *ff_mov_lang_to_iso639_to;
 void ff_mov_lang_to_iso639() {
   memcpy(ff_mov_lang_to_iso639_to,
          mov_mdhd_language_map[ff_mov_lang_to_iso639_code], 4);
+}
+
+void memcpy_multidim_crossing_subarray(void *dst) {
+  const long b[4][1200] = {};
+  const long *f = &b[0][0];
+  f = f + 2001; // crosses into b[1][801]
+  memcpy(dst, f, sizeof(long)); // no-warning
+}
+
+const long b[1][4][1200][1] = {0};
+extern void *dst[];
+void memcpy_multidim_crossing_multiple_dimensions() {
+  const long *f = &b[0][0][0][0];
+  for (unsigned long i = 0; i < 2; i++) {
+    memcpy(dst[i], f, sizeof(long)); // no-warning
+    f = f + 2001;
+  }
 }

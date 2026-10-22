@@ -6,7 +6,7 @@ define void @test(ptr %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP8]] to i32

@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s
-// XFAIL: vg_leak
 
 class C<bit cond> {
   list<int> X = !if(cond, [1, 2, 3], []);

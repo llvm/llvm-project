@@ -85,8 +85,7 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         elif data_type == eStructuredDataTypeFloat:
             return self.GetFloatValue()
         elif data_type == eStructuredDataTypeString:
-            size = len(self) or 1023
-            return self.GetStringValue(size + 1)
+            return self.GetStringValue()
         elif data_type == eStructuredDataTypeGeneric:
             return self.GetGenericValue()
         else:

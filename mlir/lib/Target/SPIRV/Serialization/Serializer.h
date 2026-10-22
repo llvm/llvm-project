@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -328,6 +329,22 @@ private:
                                            uint32_t opcode,
                                            ArrayRef<uint32_t> operands);
 
+  LogicalResult encodeExtensionInstruction(Operation *op,
+                                           StringRef extensionSetName,
+                                           uint32_t opcode,
+                                           ArrayRef<uint32_t> operands,
+                                           SmallVectorImpl<uint32_t> &binary);
+
+  uint32_t encodeDebugStringInst(StringRef str);
+
+  LogicalResult encodeDebugInfoGraphInst(spirv::GraphARMOp op,
+                                         uint32_t &debugGraphID);
+
+  LogicalResult encodeDebugInfoOperationInst(uint32_t debugGraphID,
+                                             const SetVector<Operation *> &ops);
+
+  LogicalResult encodeDebugInfoTensorInst(Value tensor);
+
   uint32_t getValueID(Value val) const { return valueIDMap.lookup(val); }
 
   LogicalResult processAddressOfOp(spirv::AddressOfOp addressOfOp);
@@ -363,6 +380,9 @@ private:
   // Utilities
   //===--------------------------------------------------------------------===//
 
+  /// Updates tosaOpsMap after ensuring that the op is inside a graph.
+  void updateTosaOpsMap(Operation *op);
+
   /// Emits an OpDecorate instruction to decorate the given `target` with the
   /// given `decoration`.
   LogicalResult emitDecoration(uint32_t target, spirv::Decoration decoration,
@@ -397,6 +417,9 @@ private:
   /// use by other debug instructions.
   uint32_t fileID = 0;
 
+  /// Map from graph debug info string payloads to their OpString <id>s.
+  llvm::StringMap<uint32_t> debugStringIDMap;
+
   /// The next available result <id>.
   uint32_t nextID = 1;
 
@@ -417,6 +440,7 @@ private:
   SmallVector<uint32_t, 0> typesGlobalValues;
   SmallVector<uint32_t, 0> functions;
   SmallVector<uint32_t, 0> graphs;
+  SmallVector<uint32_t, 0> graphsDebugInfo;
 
   /// Recursive struct references are serialized as OpTypePointer instructions
   /// to the recursive struct type. However, the OpTypePointer instruction
@@ -484,6 +508,10 @@ private:
 
   /// Map from extended instruction set name to <id>s.
   llvm::StringMap<uint32_t> extendedInstSetIDMap;
+
+  /// Map of graph <id> to map of locations in that graph to set of tosa ops in
+  /// that location
+  DenseMap<uint32_t, DenseMap<Location, SetVector<Operation *>>> tosaOpsMap;
 
   /// Map from values used in OpPhi instructions to their offset in the
   /// `functions` section.

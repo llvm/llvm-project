@@ -1,0 +1,90 @@
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=none %s -o - | FileCheck %s
+---
+name: loadcnt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: loadcnt_0
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_0
+...
+---
+name: loadcnt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: loadcnt_1
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_1
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_1
+...
+---
+name: loadcnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: loadcnt_max-1
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_62
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_62
+...
+---
+name: dscnt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dscnt_0
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Dscnt_0
+    S_WAIT_LOADCNT_DSCNT .Dscnt_0
+...
+---
+name: dscnt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dscnt_1
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Dscnt_1
+    S_WAIT_LOADCNT_DSCNT .Dscnt_1
+...
+---
+name: dscnt_max-1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dscnt_max-1
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Dscnt_62
+    S_WAIT_LOADCNT_DSCNT .Dscnt_62
+...
+---
+name: loadcnt_dscnt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: loadcnt_dscnt
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_3_Dscnt_5
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_3_Dscnt_5
+...
+---
+name: all-zero
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: all-zero
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+...
+---
+name: all-off
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: all-off
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .AllOff
+    S_WAIT_LOADCNT_DSCNT .AllOff
+...
+---
+name: zero-number
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: zero-number
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    S_WAIT_LOADCNT_DSCNT 0
+...
+---
+name: all-off-number
+body: |
+  bb.0:
+    ; dscnt[5:0]=63, loadcnt[13:8]=63 -> 0x3F3F = 16191
+    ; CHECK-LABEL: name: all-off-number
+    ; CHECK: S_WAIT_LOADCNT_DSCNT .AllOff
+    S_WAIT_LOADCNT_DSCNT 16191
+...

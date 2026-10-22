@@ -696,6 +696,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     case 'S':
       TM |= TypeModifier::LMUL1;
       break;
+    case 'A':
+      TM |= TypeModifier::AltFP8;
+      break;
     default:
       llvm_unreachable("Illegal non-primitive type transformer!");
     }
@@ -768,6 +771,12 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     break;
   case VectorTypeModifier::MaskVector:
     ScalarType = ScalarTypeKind::Boolean;
+    Scale = LMUL.getScale(ElementBitwidth);
+    ElementBitwidth = 1;
+    break;
+  case VectorTypeModifier::DoubleLMULMaskVector:
+    ScalarType = ScalarTypeKind::Boolean;
+    LMUL.MulLog2LMUL(1);
     Scale = LMUL.getScale(ElementBitwidth);
     ElementBitwidth = 1;
     break;
@@ -913,6 +922,14 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
       // Update ElementBitwidth need to update Scale too.
       Scale = LMUL.getScale(ElementBitwidth);
       break;
+    case TypeModifier::AltFP8:
+      if (ScalarType == ScalarTypeKind::FloatE4M3)
+        ScalarType = ScalarTypeKind::FloatE5M2;
+      else if (ScalarType == ScalarTypeKind::FloatE5M2)
+        ScalarType = ScalarTypeKind::FloatE4M3;
+      else
+        llvm_unreachable("AltFP8 modifier requires an OFP8 base type");
+      break;
     default:
       llvm_unreachable("Unknown type modifier mask!");
     }
@@ -1020,21 +1037,19 @@ std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
 //===----------------------------------------------------------------------===//
 // RVVIntrinsic implementation
 //===----------------------------------------------------------------------===//
-RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
-                           StringRef NewOverloadedName,
-                           StringRef OverloadedSuffix, StringRef IRName,
-                           bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
-                           PolicyScheme Scheme, bool SupportOverloading,
-                           bool HasBuiltinAlias, StringRef ManualCodegen,
-                           const RVVTypes &OutInTypes,
-                           const std::vector<int64_t> &NewIntrinsicTypes,
-                           unsigned NF, Policy NewPolicyAttrs,
-                           bool HasFRMRoundModeOp, unsigned TWiden, bool AltFmt)
+RVVIntrinsic::RVVIntrinsic(
+    StringRef NewName, StringRef Suffix, StringRef NewOverloadedName,
+    StringRef OverloadedSuffix, StringRef IRName, bool IsMasked,
+    bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
+    bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
+    const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
+    unsigned NF, bool HasSegInstSEW, Policy NewPolicyAttrs,
+    bool HasFRMRoundModeOp, unsigned TWiden, bool AltFmt)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
-      TWiden(TWiden) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), HasSegInstSEW(HasSegInstSEW),
+      PolicyAttrs(NewPolicyAttrs), TWiden(TWiden) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
@@ -1089,8 +1104,8 @@ std::string RVVIntrinsic::getSuffixStr(
 
 llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     llvm::ArrayRef<PrototypeDescriptor> Prototype, bool IsMasked,
-    bool HasMaskedOffOperand, bool HasVL, unsigned NF,
-    PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
+    bool HasMaskedOffOperand, bool MaskedPrototypeHasResultMask, bool HasVL,
+    unsigned NF, PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
   SmallVector<PrototypeDescriptor> NewPrototype(Prototype);
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
@@ -1130,8 +1145,14 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         NewPrototype.insert(NewPrototype.begin() + NF + 1,
                             PrototypeDescriptor::Mask);
     } else {
-      // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
-      NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
+      if (MaskedPrototypeHasResultMask)
+        NewPrototype.insert(
+            NewPrototype.begin() + 1,
+            PrototypeDescriptor(BaseTypeModifier::Vector,
+                                VectorTypeModifier::DoubleLMULMaskVector));
+      else
+        NewPrototype.insert(NewPrototype.begin() + 1,
+                            PrototypeDescriptor::Mask);
     }
   } else {
     if (NF == 1) {
@@ -1155,7 +1176,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
       }
     }
- }
+  }
 
   // If HasVL, append PrototypeDescriptor:VL to last operand
   if (HasVL)
@@ -1292,6 +1313,8 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
   OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
   OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
+  OS << "/*MaskedPrototypeHasResultMask=*/"
+     << (int)Record.MaskedPrototypeHasResultMask << ", ";
   OS << "/*AltFmt=*/" << (int)Record.AltFmt << ",";
   OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
   OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme

@@ -4,6 +4,7 @@ add_llvm_library(LLVMBOLTPasses
   AllocCombiner.cpp
   AsmDump.cpp
   BinaryPasses.cpp
+  BranchLivenessUtils.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
   DataflowAnalysis.cpp

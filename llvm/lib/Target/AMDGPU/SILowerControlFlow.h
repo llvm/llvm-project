@@ -13,7 +13,7 @@
 
 namespace llvm {
 class SILowerControlFlowPass
-    : public OptionalPassInfoMixin<SILowerControlFlowPass> {
+    : public RequiredPassInfoMixin<SILowerControlFlowPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

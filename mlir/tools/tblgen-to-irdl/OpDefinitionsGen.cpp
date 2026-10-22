@@ -351,8 +351,9 @@ static Value createRegionConstraint(OpBuilder &builder,
 
   if (predRec.getName() == "AnyRegion") {
     ValueRange entryBlockArgs = {};
-    auto op =
-        irdl::RegionOp::create(builder, UnknownLoc::get(ctx), entryBlockArgs);
+    auto op = irdl::RegionOp::create(
+        builder, UnknownLoc::get(ctx), entryBlockArgs,
+        /*numberOfBlocks=*/nullptr, /*constrainedArguments=*/false);
     return op.getResult();
   }
 
@@ -393,7 +394,8 @@ static irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   StringRef opName = getOperatorName(tblgenOp);
 
   irdl::OperationOp op = irdl::OperationOp::create(
-      builder, UnknownLoc::get(ctx), StringAttr::get(ctx, opName));
+      builder, UnknownLoc::get(ctx), StringAttr::get(ctx, opName),
+      /*sym_visibility=*/nullptr);
 
   // Add the block in the region.
   Block &opBlock = op.getBody().emplaceBlock();
@@ -499,7 +501,8 @@ static irdl::TypeOp createIRDLType(OpBuilder &builder,
   std::string combined = ("!" + typeName).str();
 
   irdl::TypeOp op = irdl::TypeOp::create(builder, UnknownLoc::get(ctx),
-                                         StringAttr::get(ctx, combined));
+                                         StringAttr::get(ctx, combined),
+                                         /*sym_visibility=*/nullptr);
 
   op.getBody().emplaceBlock();
 
@@ -513,7 +516,8 @@ static irdl::AttributeOp createIRDLAttr(OpBuilder &builder,
   std::string combined = ("#" + attrName).str();
 
   irdl::AttributeOp op = irdl::AttributeOp::create(
-      builder, UnknownLoc::get(ctx), StringAttr::get(ctx, combined));
+      builder, UnknownLoc::get(ctx), StringAttr::get(ctx, combined),
+      /*sym_visibility=*/nullptr);
 
   op.getBody().emplaceBlock();
 
@@ -523,7 +527,8 @@ static irdl::AttributeOp createIRDLAttr(OpBuilder &builder,
 static irdl::DialectOp createIRDLDialect(OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   return irdl::DialectOp::create(builder, UnknownLoc::get(ctx),
-                                 StringAttr::get(ctx, selectedDialect));
+                                 StringAttr::get(ctx, selectedDialect),
+                                 /*sym_visibility=*/nullptr);
 }
 
 static bool emitDialectIRDLDefs(const RecordKeeper &records, raw_ostream &os) {

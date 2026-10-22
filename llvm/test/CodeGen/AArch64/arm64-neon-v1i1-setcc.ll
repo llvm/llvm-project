@@ -13,8 +13,7 @@ define i64 @test_sext_extr_cmp_0(<1 x i64> %v1, <1 x i64> %v2) {
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    csetm x0, ge
 ; CHECK-NEXT:    ret
   %1 = icmp sge <1 x i64> %v1, %v2
   %2 = extractelement <1 x i1> %1, i32 0
@@ -26,8 +25,7 @@ define i64 @test_sext_extr_cmp_1(<1 x double> %v1, <1 x double> %v2) {
 ; CHECK-LABEL: test_sext_extr_cmp_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    csetm x0, eq
 ; CHECK-NEXT:    ret
   %1 = fcmp oeq <1 x double> %v1, %v2
   %2 = extractelement <1 x i1> %1, i32 0

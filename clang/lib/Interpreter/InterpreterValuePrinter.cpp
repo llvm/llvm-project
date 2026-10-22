@@ -204,7 +204,7 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
       if (ElemTy->isBuiltinType()) {
         // Single dim arrays, advancing.
         uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
-        InnerV.setRawBits((void *)Offset, ElemSize * 8);
+        InnerV.setRawBits((void *)Offset, ElemSize);
       } else {
         // Multi dim arrays, position to the next dimension.
         size_t Stride = ElemCount / N;
@@ -424,9 +424,8 @@ public:
       Args.push_back(E);
     else if (Ty->isIntegralOrEnumerationType())
       HandleIntegralOrEnumType(Ty);
-    else if (Ty->isVoidType()) {
-      // Do we need to still run `E`?
-    }
+    // A void expression is not an argument of the call; convertExprToValue
+    // evaluates it before the call instead.
 
     return InterfaceKind::NoAlloc;
   }
@@ -529,8 +528,10 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 
   // Build `__clang_Interpreter_SetValue*` call.
 
-  // Get rid of ExprWithCleanups.
-  if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
+  // Get rid of ExprWithCleanups; it is put back around the result below.
+  Expr *FullExpr = E;
+  auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E);
+  if (EWC)
     E = EWC->getSubExpr();
 
   QualType Ty = E->IgnoreImpCasts()->getType();
@@ -618,6 +619,11 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
     SetValueE =
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::NoAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
+    // A void expression must still be evaluated:
+    // `(E, __clang_Interpreter_SetValueNoAlloc(...))`.
+    if (DesugaredTy->isVoidType() && !SetValueE.isInvalid())
+      SetValueE =
+          S.CreateBuiltinBinOp(E->getEndLoc(), BO_Comma, E, SetValueE.get());
     break;
   }
   default:
@@ -626,9 +632,17 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 
   // It could fail, like printing an array type in C. (not supported)
   if (SetValueE.isInvalid())
-    return E;
+    return FullExpr;
 
-  return SetValueE.get();
+  // The temporaries of E must be destroyed at the end of the statement.
+  // Without the cleanups, CodeGen destroys them at the end of the function
+  // running the top-level statements, which it finishes after emitting the
+  // deferred declarations: their destructors would not be emitted.
+  Expr *Result = SetValueE.get();
+  if (EWC && !isa<ExprWithCleanups>(Result))
+    Result = ExprWithCleanups::Create(
+        Ctx, Result, EWC->cleanupsHaveSideEffects(), EWC->getObjects());
+  return Result;
 }
 
 } // namespace clang

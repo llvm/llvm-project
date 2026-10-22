@@ -13,8 +13,8 @@ define void @test_sdiv_variant_divisor_induction(ptr noalias %a, ptr noalias %c)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i16> [[VEC_IND2]], splat (i16 1024)
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP4]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x i64> @llvm.masked.sdiv.v2i64(<2 x i64> [[TMP12]], <2 x i64> [[VEC_IND1]], <2 x i1> [[TMP2]])

@@ -38,8 +38,7 @@ struct _OrImpl<false> {
 //
 // However, `_Or<_Pred...>` itself will evaluate its result immediately (without having to
 // be instantiated) since it is an alias, unlike `disjunction<_Pred...>`, which is a struct.
-// If you want to defer the evaluation of `_Or<_Pred...>` itself, use `_Lazy<_Or, _Pred...>`
-// or `disjunction<_Pred...>` directly.
+// If you want to defer the evaluation , use `disjunction{,_v}<_Pred...>`.
 template <class... _Args>
 using _Or _LIBCPP_NODEBUG = typename _OrImpl<sizeof...(_Args) != 0>::template _Result<false_type, _Args...>;
 

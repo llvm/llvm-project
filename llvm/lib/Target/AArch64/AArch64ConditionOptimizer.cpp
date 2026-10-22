@@ -55,8 +55,14 @@
 //
 // TODO: maybe handle TBNZ/TBZ the same way as CMP when used instead for "a < 0"
 // TODO: For cross-block:
-//   - handle other conditional instructions (e.g. CSET)
 //   - allow second branching to be anything if it doesn't require adjusting
+//
+// Cross-block optimizeCrossBlock() handles four head/true-successor
+// combinations:
+//   Bcc    (head) + Bcc    (true) -- original case
+//   Select (head) + Bcc    (true) -- head ends with CSEL/CSET/etc.
+//   Bcc    (head) + Select (true) -- true-successor ends with CSEL/CSET/etc.
+//   Select (head) + Select (true) -- both blocks end with a select
 //
 //===----------------------------------------------------------------------===//
 
@@ -136,6 +142,8 @@ private:
   bool tryOptimizePair(CmpCondPair &First, CmpCondPair &Second);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
+  std::pair<MachineInstr *, AArch64CC::CondCode>
+  findCondConsumer(MachineBasicBlock *MBB);
 };
 
 class AArch64ConditionOptimizerLegacy : public MachineFunctionPass {
@@ -603,7 +611,94 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-// Optimizes CMP+Bcc pairs across two basic blocks in the dominator tree.
+// Finds the last valid conditional consumer in MBB and returns it together
+// with its condition code. Handles two cases:
+//
+//  1. Bcc terminator: if the block ends with a Bcc, analyzeBranch extracts
+//     the condition code directly from the branch operands.
+//
+//  2. Select-family instruction (CSET/CSEL/CSINC/CSINV/CSNEG): scans
+//     backward past terminators to find the sole non-branch NZCV consumer,
+//     verifying there is no interfering NZCV read or write between it and
+//     the CMP that produces the flags.
+//
+// Returns {nullptr, Invalid} if no suitable consumer is found or if any
+// safety check fails.
+std::pair<MachineInstr *, AArch64CC::CondCode>
+AArch64ConditionOptimizerImpl::findCondConsumer(MachineBasicBlock *MBB) {
+  // Case 1: block ends with a Bcc terminator.
+  if (MachineInstr *BrMI = getBccTerminator(MBB)) {
+    SmallVector<MachineOperand, 4> CondOperands;
+    MachineBasicBlock *TBBDest = nullptr, *FBBDest = nullptr;
+    if (TII->analyzeBranch(*MBB, TBBDest, FBBDest, CondOperands))
+      return {nullptr, AArch64CC::Invalid};
+    AArch64CC::CondCode CC = parseCondCode(CondOperands);
+    if (CC == AArch64CC::Invalid)
+      return {nullptr, AArch64CC::Invalid};
+    return {BrMI, CC};
+  }
+
+  // Case 2: no Bcc terminator — scan backward for a select-family instruction
+  // (CSET/CSEL/CSINC/CSINV/CSNEG) that is the sole NZCV consumer in the block.
+  MachineInstr *Found = nullptr;
+  AArch64CC::CondCode FoundCC = AArch64CC::Invalid;
+
+  for (MachineInstr &MI : reverse(*MBB)) {
+    // Skip terminators (e.g. an unconditional branch at the end of the block)
+    // and debug instructions, which carry no real semantics.
+    if (MI.isTerminator() || MI.isDebugInstr())
+      continue;
+
+    if (!Found) {
+      // We have not yet found the select. Keep scanning backward.
+
+      // If something writes NZCV before we find a select, the flags at that
+      // point are not from the CMP we are looking for. Stop searching.
+      if (MI.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr))
+        return {nullptr, AArch64CC::Invalid};
+
+      // findCondCodeUseOperandIdxForBranchOrSelect returns the operand index
+      // of the condition code for any branch or select-family instruction, or
+      // -1 if the instruction does not use a condition code.
+      // We exclude branches because getBccTerminator already handles those;
+      // we only want non-branch conditionals: CSET, CSEL, CSINC, CSINV, CSNEG.
+      int CCOpIdx =
+          AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(MI);
+      if (CCOpIdx >= 0 && !MI.isBranch()) {
+        Found = &MI;
+        FoundCC = (AArch64CC::CondCode)(int)MI.getOperand(CCOpIdx).getImm();
+        continue;
+      }
+
+      // Any other instruction that reads NZCV (but is not a select) means the
+      // flags are consumed by something we do not understand. Stop searching.
+      if (MI.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
+        return {nullptr, AArch64CC::Invalid};
+
+    } else {
+      // We already found a select. Now verify there is no second NZCV reader
+      // between the found select and the CMP. If there is, the CMP feeds two
+      // consumers and cannot be safely adjusted.
+      if (MI.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
+        return {nullptr, AArch64CC::Invalid};
+
+      if (MI.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+        // A CMP instruction is the flag producer we are looking for; stop
+        // scanning. findAdjustableCmp will locate it from CondMI.
+        if (isCmpInstruction(MI.getOpcode()))
+          break;
+        // Any other NZCV writer means the select is not reading from the CMP
+        // we would find further back.
+        return {nullptr, AArch64CC::Invalid};
+      }
+    }
+  }
+  return {Found, FoundCC};
+}
+
+// Optimizes CMP+conditional pairs across two basic blocks in the dominator
+// tree. The conditional consumer in each block may be a Bcc terminator or a
+// select-family instruction (CSEL/CSET/CSINC/CSINV/CSNEG).
 bool AArch64ConditionOptimizerImpl::optimizeCrossBlock(MachineBasicBlock &HBB) {
   SmallVector<MachineOperand, 4> HeadCondOperands;
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
@@ -616,36 +711,28 @@ bool AArch64ConditionOptimizerImpl::optimizeCrossBlock(MachineBasicBlock &HBB) {
     return false;
   }
 
-  SmallVector<MachineOperand, 4> TrueCondOperands;
-  MachineBasicBlock *TBB_TBB = nullptr, *TBB_FBB = nullptr;
-  if (TII->analyzeBranch(*TBB, TBB_TBB, TBB_FBB, TrueCondOperands)) {
+  // Find the conditional consumer(Bcc or select-family) and its condition
+  // code in each block. findCondConsumer() handles both cases uniformly.
+  auto [HeadCondMI, HeadCondCode] = findCondConsumer(&HBB);
+  if (!HeadCondMI)
     return false;
-  }
 
-  MachineInstr *HeadBrMI = getBccTerminator(&HBB);
-  MachineInstr *TrueBrMI = getBccTerminator(TBB);
-  if (!HeadBrMI || !TrueBrMI)
+  auto [TrueCondMI, TrueCondCode] = findCondConsumer(TBB);
+  if (!TrueCondMI)
     return false;
 
   // Since we may modify cmps in these blocks, make sure NZCV does not live out.
   if (nzcvLivesOut(&HBB) || nzcvLivesOut(TBB))
     return false;
 
-  // Find the CMPs controlling each branch
-  MachineInstr *HeadCmpMI = findAdjustableCmp(HeadBrMI);
-  MachineInstr *TrueCmpMI = findAdjustableCmp(TrueBrMI);
+  // Find the CMPs controlling each conditional.
+  MachineInstr *HeadCmpMI = findAdjustableCmp(HeadCondMI);
+  MachineInstr *TrueCmpMI = findAdjustableCmp(TrueCondMI);
   if (!HeadCmpMI || !TrueCmpMI)
     return false;
 
   if (!registersMatch(HeadCmpMI, TrueCmpMI))
     return false;
-
-  AArch64CC::CondCode HeadCondCode = parseCondCode(HeadCondOperands);
-  AArch64CC::CondCode TrueCondCode = parseCondCode(TrueCondOperands);
-  if (HeadCondCode == AArch64CC::CondCode::Invalid ||
-      TrueCondCode == AArch64CC::CondCode::Invalid) {
-    return false;
-  }
 
   LLVM_DEBUG(dbgs() << "Checking cross-block pair: "
                     << AArch64CC::getCondCodeName(HeadCondCode) << " #"
@@ -653,8 +740,8 @@ bool AArch64ConditionOptimizerImpl::optimizeCrossBlock(MachineBasicBlock &HBB) {
                     << AArch64CC::getCondCodeName(TrueCondCode) << " #"
                     << TrueCmpMI->getOperand(2).getImm() << '\n');
 
-  CmpCondPair Head{HeadCmpMI, HeadBrMI, HeadCondCode};
-  CmpCondPair True{TrueCmpMI, TrueBrMI, TrueCondCode};
+  CmpCondPair Head{HeadCmpMI, HeadCondMI, HeadCondCode};
+  CmpCondPair True{TrueCmpMI, TrueCondMI, TrueCondCode};
 
   return tryOptimizePair(Head, True);
 }

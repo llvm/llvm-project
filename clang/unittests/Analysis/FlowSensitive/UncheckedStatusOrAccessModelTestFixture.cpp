@@ -4572,6 +4572,18 @@ TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturnEnds) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, ReturnIfError) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+  absl::Status target(STATUSOR_INT sor) {
+    ABSL_RETURN_IF_ERROR(sor.status());
+    *sor;
+    return {};
+  }
+  )cc");
+}
+
 } // namespace
 
 std::string

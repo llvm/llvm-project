@@ -36,8 +36,8 @@ offsets in the input binary.
 
 ## Encoding format
 The encoding is specified in
-[BoltAddressTranslation.h](/bolt/include/bolt/Profile/BoltAddressTranslation.h)
-and [BoltAddressTranslation.cpp](/bolt/lib/Profile/BoltAddressTranslation.cpp).
+[BoltAddressTranslation.h](https://github.com/llvm/llvm-project/blob/main/bolt/include/bolt/Profile/BoltAddressTranslation.h)
+and [BoltAddressTranslation.cpp](https://github.com/llvm/llvm-project/blob/main/bolt/lib/Profile/BoltAddressTranslation.cpp).
 
 ### Layout
 The general layout is as follows:

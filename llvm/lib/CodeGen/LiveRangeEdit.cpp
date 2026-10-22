@@ -167,9 +167,20 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   ++NumDCEFoldedLoads;
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
-    LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
-    VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
-    LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+    Register CopyDstReg = CopyMI->getOperand(0).getReg();
+    LiveInterval &CopyDstLI = LIS.getInterval(CopyDstReg);
+
+    // The addSegment below extends CopyDstLI. If this vreg is already
+    // assigned in the LiveRegMatrix, the matrix becomes inconsistent.
+    // Notify the delegate so it can unassign and re-enqueue the vreg.
+    if (TheDelegate && CopyDstReg.isVirtual() && VRM &&
+        VRM->hasPhys(CopyDstReg))
+      TheDelegate->LRE_WillShrinkVirtReg(CopyDstReg);
+
+    VNInfo *VNI = CopyDstLI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+    CopyDstLI.addSegment(
+        LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+
     Register R = CopyMI->getOperand(1).getReg();
     if (R.isVirtual()) {
       LiveInterval &SrcLI = LIS.getInterval(R);
@@ -181,9 +192,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   return true;
 }
 
-bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
+bool LiveRangeEdit::useIsKill(const LiveInterval &LI, const MachineInstr &MI,
                               const MachineOperand &MO) const {
-  const MachineInstr &MI = *MO.getParent();
   SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
   if (LI.Query(Idx).isKill())
     return true;
@@ -272,7 +282,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // Always shrink COPY uses that probably come from live range splitting.
     if ((MI->readsVirtualRegister(Reg) &&
          (MO.isDef() || TII.isCopyInstr(*MI))) ||
-        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, MO))))
+        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, *MI, MO))))
       ToShrink.insert(&LI);
     else if (MO.readsReg())
       HasLiveVRegUses = true;

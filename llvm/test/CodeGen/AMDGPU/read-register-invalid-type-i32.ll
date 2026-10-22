@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgcn < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck %s
 
 ; CHECK: invalid type for register "exec".
 

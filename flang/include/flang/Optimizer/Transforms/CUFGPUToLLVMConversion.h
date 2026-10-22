@@ -9,8 +9,6 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_CUFGPUTOLLVMCONVERSION_H_
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUFGPUTOLLVMCONVERSION_H_
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace fir {

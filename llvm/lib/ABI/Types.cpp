@@ -7,44 +7,137 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::abi;
 
+uint64_t llvm::abi::Type::getABISizeInBits() const {
+  switch (getKind()) {
+  case TypeKind::Integer:
+    if (cast<IntegerType>(this)->isBitInt())
+      return getTypeAllocSize().getFixedValue() * 8;
+    return getTypeStoreSizeInBits().getFixedValue();
+  case TypeKind::Float:
+    return getTypeAllocSize().getFixedValue() * 8;
+  case TypeKind::Complex:
+    return 2 * cast<ComplexType>(this)->getElementType()->getABISizeInBits();
+  case TypeKind::Vector: {
+    const auto *VT = cast<VectorType>(this);
+    if (VT->isScalable())
+      return 0;
+    const Type *EltTy = VT->getElementType();
+    const auto *IT = dyn_cast<IntegerType>(EltTy);
+    uint64_t EltWidth = IT && !IT->isBitInt() ? IT->getFixedSizeInBitsOrZero()
+                                              : EltTy->getABISizeInBits();
+    uint64_t Width = EltWidth * VT->getNumElements().getFixedValue();
+    return bit_ceil(std::max<uint64_t>(Width, 8));
+  }
+  case TypeKind::Void:
+  case TypeKind::Atomic:
+  case TypeKind::MemberPointer:
+  case TypeKind::Pointer:
+  case TypeKind::Array:
+  case TypeKind::Tuple:
+  case TypeKind::Record:
+    return getFixedSizeInBitsOrZero();
+  }
+  llvm_unreachable("unknown ABI type kind");
+}
+
+bool llvm::abi::Type::isSVESizelessType() const {
+  if (getKind() == TypeKind::Vector) {
+    const VectorType *VT = static_cast<const VectorType *>(this);
+    return VT->isSVEType() && VT->isScalable();
+  }
+  if (getKind() == TypeKind::Tuple) {
+    const VectorType *VT =
+        static_cast<const TupleType *>(this)->getVectorType();
+    return VT->isSVEType() && VT->isScalable();
+  }
+  return false;
+}
+
+bool llvm::abi::Type::isEmptyRecord() const {
+  const auto *RT = dyn_cast<RecordType>(this);
+  return RT && RT->isEmpty();
+}
+
 bool RecordType::isEmpty() const {
-  if (hasFlexibleArrayMember() || isPolymorphic() ||
-      getNumVirtualBaseClasses() != 0)
+  if (hasFlexibleArrayMember())
+    return false;
+
+  // We shouldn't need to check for emptiness if the record has virtual bases
+  // because it can't be passed in registers. This assertion is here to enforce
+  // that assumption.
+  assert(getNumVirtualBaseClasses() == 0 || !canPassInRegisters());
+
+  if (getNumVirtualBaseClasses() > 0)
     return false;
 
   for (const FieldInfo &Base : getBaseClasses()) {
-    const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
-    if (!BaseRT || !BaseRT->isEmpty())
+    if (!Base.FieldType->isEmptyRecord())
       return false;
   }
 
-  for (const FieldInfo &FI : getFields()) {
+  for (const FieldInfo &FI : getFields())
     if (!FI.isEmpty())
       return false;
-  }
+
   return true;
+}
+
+const FieldInfo *
+RecordType::getElementContainingOffset(unsigned OffsetInBits) const {
+  auto Contains = [&](const FieldInfo &Element) {
+    unsigned Start = Element.OffsetInBits;
+    unsigned Size = Element.FieldType->getSizeInBits().getFixedValue();
+    return OffsetInBits >= Start && OffsetInBits < Start + Size;
+  };
+
+  for (const FieldInfo &Base : getBaseClasses())
+    if (!Base.FieldType->isEmptyRecord() && Contains(Base))
+      return &Base;
+
+  for (const FieldInfo &VBase : getVirtualBaseClasses())
+    if (!VBase.FieldType->isEmptyRecord() && Contains(VBase))
+      return &VBase;
+
+  for (const FieldInfo &Field : getFields()) {
+    if (Field.IsUnnamedBitfield)
+      continue;
+    if (Contains(Field))
+      return &Field;
+  }
+
+  return nullptr;
 }
 
 bool FieldInfo::isEmpty() const {
   if (IsUnnamedBitfield)
     return true;
-  if (IsBitField && BitFieldWidth == 0)
-    return true;
 
   const Type *Ty = FieldType;
+  bool WasArray = false;
   while (const auto *AT = dyn_cast<ArrayType>(Ty)) {
-    if (AT->getNumElements() != 1)
-      break;
+    // Constant arrays of zero length always count as empty.
+    if (AT->getNumElements() == 0)
+      return true;
     Ty = AT->getElementType();
+    WasArray = true;
   }
 
-  if (const auto *RT = dyn_cast<RecordType>(Ty))
-    return RT->isEmpty();
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return false;
 
-  return Ty->isZeroSize();
+  // C++ record fields are never empty unless [[no_unique_address]] applies.
+  // That exception does not apply to arrays of C++ empty records.
+  if (RT->isCXXRecord() && (WasArray || !HasNoUniqueAddress))
+    return false;
+
+  return RT->isEmpty();
 }

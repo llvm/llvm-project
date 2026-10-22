@@ -2,34 +2,45 @@
 Test lldb-dap unknown request.
 """
 
-import lldbdap_testcase
+from dataclasses import dataclass
+from typing import Optional
+
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import EmptyBodyResponse, LaunchArgs
 
 
-class TestDAP_unknown_request(lldbdap_testcase.DAPTestCaseBase):
+@dataclass(frozen=True)
+class UnknownArgs:
+    foo: Optional[str] = None
+    id: Optional[int] = None
+
+    command_ = "unknown"
+    response_class_ = EmptyBodyResponse
+
+
+class TestDAP_unknown_request(DAPTestCaseBase):
     """
     Tests handling of unknown request.
     """
 
-    def test_no_arguments(self):
+    def test(self):
+        session = self.build_and_create_session()
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        self.dap_server.request_configurationDone()
-        self.dap_server.wait_for_stopped()
+        process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
+        session.verify_stopped_on_entry(after=process_event)
 
-        response = self.dap_server.request_custom("unknown")
-        self.assertFalse(response["success"])
-        self.assertEqual(response["body"]["error"]["format"], "unknown request")
+        # Test without arguments.
+        unknown_args = UnknownArgs()
+        response = session.send_request(unknown_args).error()
+        resp_body = self.expect_not_none(response.body)
+        resp_error = self.expect_not_none(resp_body.error)
+        self.assertEqual(resp_error.format, "unknown request")
 
-        self.continue_to_exit()
+        # Test with arguments.
+        unknown_args = UnknownArgs(foo="bar", id=42)
+        response = session.send_request(unknown_args).error()
+        resp_body = self.expect_not_none(response.body)
+        resp_error = self.expect_not_none(resp_body.error)
+        self.assertEqual(resp_error.format, "unknown request")
 
-    def test_with_arguments(self):
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        self.dap_server.request_configurationDone()
-        self.dap_server.wait_for_stopped()
-
-        response = self.dap_server.request_custom("unknown", {"foo": "bar", "id": 42})
-        self.assertFalse(response["success"])
-        self.assertEqual(response["body"]["error"]["format"], "unknown request")
-
-        self.continue_to_exit()
+        session.continue_to_exit()

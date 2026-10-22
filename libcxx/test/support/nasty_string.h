@@ -70,7 +70,7 @@ struct nasty_char_traits {
 
   static constexpr int_type not_eof(int_type c) noexcept { return eq_int_type(c, eof()) ? ~eof() : c; }
 
-  static constexpr char_type to_char_type(int_type c) noexcept { return char_type(c); }
+  static constexpr char_type to_char_type(int_type c) noexcept { return {static_cast<char>(c)}; }
 
   static constexpr int_type to_int_type(char_type c) noexcept { return int_type(c.c); }
 

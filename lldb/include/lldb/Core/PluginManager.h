@@ -20,6 +20,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -171,6 +172,40 @@ struct TraceExporterCallbacks {
   ThreadTraceExportCommandCreator create_thread_trace_export_command;
 };
 
+template <typename Callback> struct PluginInstance {
+  typedef Callback CallbackType;
+
+  PluginInstance() = default;
+  PluginInstance(llvm::StringRef name, llvm::StringRef description,
+                 Callback create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr)
+      : name(name), description(description), enabled(true),
+        create_callback(create_callback),
+        debugger_init_callback(debugger_init_callback) {}
+
+  llvm::StringRef name;
+  llvm::StringRef description;
+  bool enabled;
+  Callback create_callback;
+  DebuggerInitializeCallback debugger_init_callback;
+};
+
+struct ScriptedInterfaceInstance
+    : public PluginInstance<ScriptedInterfaceCreateInstance> {
+  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
+                            ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptedExtension extension,
+                            lldb::ScriptLanguage language,
+                            ScriptedInterfaceUsages usages)
+      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
+                                                        create_callback),
+        extension(extension), language(language), usages(usages) {}
+
+  lldb::ScriptedExtension extension;
+  lldb::ScriptLanguage language;
+  ScriptedInterfaceUsages usages;
+};
+
 class PluginManager {
 public:
   static void Initialize();
@@ -229,6 +264,15 @@ public:
 
   static std::unique_ptr<Architecture>
   CreateArchitectureInstance(const ArchSpec &arch);
+
+  // BugReporter
+  static void RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             BugReporterCreateInstance create_callback);
+
+  static void UnregisterPlugin(BugReporterCreateInstance create_callback);
+
+  static std::unique_ptr<BugReporter>
+  CreateBugReporterInstance(llvm::StringRef name = {});
 
   // Disassembler
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -641,10 +685,12 @@ public:
   GetInstrumentationRuntimeCallbacks(bool enabled_only = true);
 
   // TypeSystem
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             TypeSystemCreateInstance create_callback,
-                             LanguageSet supported_languages_for_types,
-                             LanguageSet supported_languages_for_expressions);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 TypeSystemCreateInstance create_callback,
+                 LanguageSet supported_languages_for_types,
+                 LanguageSet supported_languages_for_expressions,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(TypeSystemCreateInstance create_callback);
 
@@ -658,21 +704,37 @@ public:
   // Scripted Interface
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              ScriptedInterfaceCreateInstance create_callback,
+                             lldb::ScriptedExtension extension,
                              lldb::ScriptLanguage language,
                              ScriptedInterfaceUsages usages);
 
   static bool UnregisterPlugin(ScriptedInterfaceCreateInstance create_callback);
 
-  static uint32_t GetNumScriptedInterfaces();
+  static size_t GetNumScriptedInterfaces();
 
   static llvm::StringRef GetScriptedInterfaceNameAtIndex(uint32_t idx);
 
   static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
 
+  static lldb::ScriptedExtension
+  GetScriptedInterfaceExtensionAtIndex(uint32_t idx);
+
   static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
 
   static ScriptedInterfaceUsages
   GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
+
+  /// Invoke \p callback once per registered scripted extension, passing the
+  /// first interface registered for it. An extension backed by several
+  /// languages is only reported once. When \p language is not
+  /// `eScriptLanguageUnknown`, only interfaces for that language count.
+  static void ForEachScriptedExtension(
+      llvm::function_ref<void(const ScriptedInterfaceInstance &)> callback,
+      lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown);
+
+  static void AutoCompleteScriptedExtension(
+      llvm::StringRef partial_name, CompletionRequest &request,
+      lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown);
 
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -791,6 +853,9 @@ public:
 
   static llvm::SmallVector<RegisteredPluginInfo> GetArchitecturePluginInfo();
   static bool SetArchitecturePluginEnabled(llvm::StringRef name, bool enable);
+
+  static llvm::SmallVector<RegisteredPluginInfo> GetBugReporterPluginInfo();
+  static bool SetBugReporterPluginEnabled(llvm::StringRef name, bool enable);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
   static bool SetDisassemblerPluginEnabled(llvm::StringRef name, bool enable);

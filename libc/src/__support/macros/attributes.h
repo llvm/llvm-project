@@ -24,10 +24,30 @@
 #define __has_attribute(x) 0
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
 #define LIBC_INLINE inline
 #define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
+
+#if __has_attribute(always_inline)
+#define LIBC_ALWAYS_INLINE LIBC_INLINE __attribute__((always_inline))
+#elif defined(LIBC_COMPILER_IS_MSVC) || defined(_MSC_VER)
+#define LIBC_ALWAYS_INLINE __forceinline
+#else
+#define LIBC_ALWAYS_INLINE LIBC_INLINE
+#endif // __has_attribute(always_inline)
+
+#if __has_attribute(noinline)
+#define LIBC_NOINLINE __attribute__((noinline))
+#elif defined(LIBC_COMPILER_IS_MSVC) || defined(_MSC_VER)
+#define LIBC_NOINLINE __declspec(noinline)
+#else
+#define LIBC_NOINLINE
+#endif // __has_attribute(noinline)
 
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
@@ -146,6 +166,18 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
 #else
 #define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
+#if __has_cpp_attribute(no_unique_address)
+#define LIBC_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define LIBC_NO_UNIQUE_ADDRESS
+#endif
+
+#if __has_attribute(trivial_abi)
+#define LIBC_TRIVIAL_ABI [[clang::trivial_abi]]
+#else
+#define LIBC_TRIVIAL_ABI
 #endif
 
 #if __has_attribute(ext_vector_type) &&                                        \

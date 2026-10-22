@@ -35,7 +35,7 @@ define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    catchret from [[PAD]] to label %[[COROSAVE:.*]]
 ; CHECK:       [[COROSAVE]]:
 ; CHECK-NEXT:    [[INDEX_ADDR3:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 12
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR3]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR3]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[RESUME:.*]], label %[[AFTERCOROEND]]
 ; CHECK:       [[RESUME]]:
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i32, ptr [[VAL_SPILL_ADDR]], align 4

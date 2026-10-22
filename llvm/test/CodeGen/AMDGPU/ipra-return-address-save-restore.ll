@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=1 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; This test is to make sure the return address registers, if clobbered in the
 ; function or the function has calls, are save/restored when IPRA is enabled/disabled.

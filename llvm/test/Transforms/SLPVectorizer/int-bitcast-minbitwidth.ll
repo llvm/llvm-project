@@ -7,7 +7,7 @@ define void @t(i64 %v) {
 ; CHECK-SAME: i64 [[V:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[V]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i16> [[TMP2]], <i16 2, i16 3, i16 6, i16 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP3]])

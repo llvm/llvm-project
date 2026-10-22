@@ -444,9 +444,8 @@ entry:
 define <2 x double> @vec_neg_fma_flag_propagation(<2 x double> %a) {
 ; CHECK-FAST-LABEL: vec_neg_fma_flag_propagation:
 ; CHECK-FAST:       # %bb.0: # %entry
-; CHECK-FAST-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
-; CHECK-FAST-NEXT:    addi 3, 3, .LCPI12_0@toc@l
-; CHECK-FAST-NEXT:    lxvd2x 0, 0, 3
+; CHECK-FAST-NEXT:    xxleqv 0, 0, 0
+; CHECK-FAST-NEXT:    xvcvsxwdp 0, 0
 ; CHECK-FAST-NEXT:    xvmaddadp 34, 34, 0
 ; CHECK-FAST-NEXT:    blr
 ;
@@ -459,9 +458,8 @@ define <2 x double> @vec_neg_fma_flag_propagation(<2 x double> %a) {
 ;
 ; CHECK-LABEL: vec_neg_fma_flag_propagation:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI12_0@toc@l
-; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxleqv 0, 0, 0
+; CHECK-NEXT:    xvcvsxwdp 0, 0
 ; CHECK-NEXT:    xvmaddadp 34, 34, 0
 ; CHECK-NEXT:    blr
 entry:

@@ -48,7 +48,7 @@ public:
   GlobalMergePass(const TargetMachine *TM, GlobalMergeOptions Options)
       : TM(TM), Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

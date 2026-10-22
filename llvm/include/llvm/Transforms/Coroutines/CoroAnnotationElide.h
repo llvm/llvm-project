@@ -27,8 +27,9 @@ struct CoroAnnotationElidePass
     : OptionalPassInfoMixin<CoroAnnotationElidePass> {
   CoroAnnotationElidePass() = default;
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 };
 } // end namespace llvm
 

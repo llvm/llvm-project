@@ -72,9 +72,10 @@ LIBC_INLINE double asin(double x) {
     }
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return x * asin_eval(x * x);
+    double xsq = x * x;
+    return fputil::multiply_add(x * xsq, asin_eval(xsq), x);
 #else
-    using Float128 = fputil::DyadicFloat<128>;
+    using DFloat128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
 
     unsigned idx = 0;
@@ -103,22 +104,22 @@ LIBC_INLINE double asin(double x) {
 
     // Get x^2 - idx/64 exactly.  When FMA is available, double-double
     // multiplication will be correct for all rounding modes.  Otherwise we use
-    // Float128 directly.
-    Float128 x_f128(x);
+    // DFloat128 directly.
+    DFloat128 x_f128(x);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     // u = x^2 - idx/64
-    Float128 u_hi(
+    DFloat128 u_hi(
         fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, x_sq.hi));
-    Float128 u = fputil::quick_add(u_hi, Float128(x_sq.lo));
+    DFloat128 u = fputil::quick_add(u_hi, DFloat128(x_sq.lo));
 #else
-    Float128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
-    Float128 u = fputil::quick_add(
-        x_sq_f128, Float128(static_cast<double>(idx) * (-0x1.0p-6)));
+    DFloat128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
+    DFloat128 u = fputil::quick_add(
+        x_sq_f128, DFloat128(static_cast<double>(idx) * (-0x1.0p-6)));
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
-    Float128 p_f128 = asin_eval(u, idx);
-    Float128 r = fputil::quick_mul(x_f128, p_f128);
+    DFloat128 p_f128 = asin_eval(u, idx);
+    DFloat128 r = fputil::quick_mul(x_f128, p_f128);
 
     return static_cast<double>(r);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -189,8 +190,9 @@ LIBC_INLINE double asin(double x) {
   double v_hi = fputil::sqrt<double>(u);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  double p = asin_eval(u);
-  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, PI_OVER_TWO.hi);
+  double neg2_v = -2.0 * v_hi;
+  double r = x_sign * fputil::multiply_add(neg2_v * u, asin_eval(u),
+                                           PI_OVER_TWO.hi + neg2_v);
   return r;
 #else
 
@@ -238,7 +240,7 @@ LIBC_INLINE double asin(double x) {
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
 
-  // Ziv's accuracy test failed, we redo the computations in Float128.
+  // Ziv's accuracy test failed, we redo the computations in DFloat128.
   // Recalculate mod 1/64.
   idx = static_cast<unsigned>(fputil::nearest_integer(u * 0x1.0p6));
 
@@ -271,17 +273,18 @@ LIBC_INLINE double asin(double x) {
   double t = h * (-0.25) / u;
   double vll = fputil::multiply_add(vl, t, vl_lo);
   // m_v = -(v_hi + v_lo + v_ll).
-  Float128 m_v = fputil::quick_add(
-      Float128(vh), fputil::quick_add(Float128(vl), Float128(vll)));
+  DFloat128 m_v = fputil::quick_add(
+      DFloat128(vh), fputil::quick_add(DFloat128(vl), DFloat128(vll)));
   m_v.sign = Sign::NEG;
 
-  // Perform computations in Float128:
+  // Perform computations in DFloat128:
   //   asin(x) = pi/2 - (v_hi + v_lo + vll) * P(u).
-  Float128 y_f128(fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
+  DFloat128 y_f128(
+      fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
 
-  Float128 p_f128 = asin_eval(y_f128, idx);
-  Float128 r0_f128 = fputil::quick_mul(m_v, p_f128);
-  Float128 r_f128 = fputil::quick_add(PI_OVER_TWO_F128, r0_f128);
+  DFloat128 p_f128 = asin_eval(y_f128, idx);
+  DFloat128 r0_f128 = fputil::quick_mul(m_v, p_f128);
+  DFloat128 r_f128 = fputil::quick_add(PI_OVER_TWO_F128, r0_f128);
 
   if (xbits.is_neg())
     r_f128.sign = Sign::NEG;

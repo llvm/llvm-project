@@ -72,7 +72,7 @@ class CGDebugInfo {
   llvm::DIFile *CurLocFile = nullptr;
   unsigned CurLocLine = 0;
   unsigned CurLocColumn = 0;
-  llvm::MDNode *CurInlinedAt = nullptr;
+  llvm::DILocation *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
   llvm::DICompositeType *ObjTy = nullptr;
@@ -97,9 +97,17 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/HLSLPackedTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/SPIRVTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
+
+  /// DI element indices used by preserve-access intrinsics.
+  llvm::DenseMap<const FieldDecl *, unsigned> FieldIndexCache;
 
   /// Cache that maps VLA types to size expressions for that type,
   /// represented by instantiated Metadata nodes.
@@ -349,6 +357,18 @@ private:
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
+  /// A helper function to collect debug info for btf_decl_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFDeclTagAnnotations(const Decl *D,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
+  /// A helper function to collect debug info for btf_type_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFTypeTagAnnotations(QualType Ty,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,
@@ -477,10 +497,10 @@ public:
 
   /// Update the current inline scope. All subsequent calls to \p EmitLocation
   /// will create a location with this inlinedAt field.
-  void setInlinedAt(llvm::MDNode *InlinedAt) { CurInlinedAt = InlinedAt; }
+  void setInlinedAt(llvm::DILocation *InlinedAt) { CurInlinedAt = InlinedAt; }
 
   /// \return the current inline scope.
-  llvm::MDNode *getInlinedAt() const { return CurInlinedAt; }
+  llvm::DILocation *getInlinedAt() const { return CurInlinedAt; }
 
   // Converts a SourceLocation to a DebugLoc
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Loc);
@@ -609,8 +629,10 @@ public:
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);
 
-  /// Emit record type's standalone debug info.
-  llvm::DIType *getOrCreateRecordType(QualType Ty, SourceLocation L);
+  /// Return the complete record type and field index for preserve-access
+  /// intrinsics.
+  std::pair<llvm::DIType *, unsigned>
+  getOrCreatePreserveAccessInfo(QualType Ty, const FieldDecl *Field);
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);

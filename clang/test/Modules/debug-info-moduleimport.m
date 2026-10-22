@@ -44,3 +44,16 @@
 // SKEL-CHECK: ![[CUFILE]] = !DIFile({{.*}}directory: "[[COMP_DIR:.*]]"
 // SKEL-CHECK: distinct !DICompileUnit({{.*}}file: ![[DWOFILE:[0-9]+]]{{.*}}splitDebugFilename: "/MODULE-CACHE{{.*}}dwoId
 // SKEL-CHECK: ![[DWOFILE]] = !DIFile({{.*}}directory: "[[COMP_DIR]]"
+
+// With -fno-debug-record-sysroot and a sysroot that covers the module's
+// include path (%S contains %S/Inputs), the DICompileUnit has no sysroot
+// field and the DIModule has no includePath field.
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps \
+// RUN:   -fmodules-cache-path=%t/cache %s -I %S/Inputs -isysroot %S -I %t \
+// RUN:   -emit-llvm -debugger-tuning=lldb -fno-debug-record-sysroot -o - \
+// RUN:   | FileCheck %s --check-prefix=NO-SYSROOT
+
+// NO-SYSROOT-NOT: sysroot:
+// NO-SYSROOT-NOT: includePath:
+// NO-SYSROOT: !DIModule(scope: null, name: "DebugObjC")
