@@ -505,11 +505,11 @@ public:
       OpNum = 0;
       return true;
     case RISCV::PseudoCALLReg:
+    case RISCV::PseudoJump:
       OpNum = 1;
       return true;
     case RISCV::AUIPC:
     case RISCV::JAL:
-    case RISCV::PseudoJump:
     case RISCV::C_BEQZ:
     case RISCV::C_BNEZ:
       OpNum = 1;
