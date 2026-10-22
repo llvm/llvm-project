@@ -2322,8 +2322,13 @@ void ModuleMapLoader::handleConfigMacros(
 }
 
 void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
-  ActiveModule->UnresolvedConflicts.emplace_back(CD.Id,
-                                                 std::string{CD.Message});
+  Module::UnresolvedConflict Conflict;
+
+  Conflict.Id = CD.Id;
+  Conflict.Message = CD.Message;
+
+  // FIXME: when we move to C++20 we should consider using emplace_back
+  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
 }
 
 void ModuleMapLoader::handleInferredModuleDecl(
