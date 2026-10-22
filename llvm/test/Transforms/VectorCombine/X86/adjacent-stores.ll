@@ -124,6 +124,10 @@ define void @width512(ptr %p, <16 x float> %x) #4 {
 }
 
 ; Being below the width limit does not make a 192-bit vector type legal.
+; TODO: Reshuffle non-power-of-two stores into power-of-two stores
+;       (e.g. 3+3 floats into 4+2).
+; TODO: Merge into a single masked store when profitable
+;       (e.g. a masked 8-lane store for these 6 floats).
 define void @illegal_width192(ptr %p, <6 x float> %x) #4 {
 ; CHECK-LABEL: define void @illegal_width192(
 ; CHECK-SAME: ptr [[P:%.*]], <6 x float> [[X:%.*]]) #[[ATTR3:[0-9]+]] {
