@@ -59,10 +59,9 @@ define void @st1d_fixed_intrinsic(ptr %ptr) #0 {
 ; CHECK-NEXT:    str x30, [sp, #128] // 8-byte Spill
 ; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ldr z0, [x20, #1, mul vl]
-; CHECK-NEXT:    ldr z1, [x20]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
 ; CHECK-NEXT:    ldr x30, [sp, #128] // 8-byte Reload
-; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #160
