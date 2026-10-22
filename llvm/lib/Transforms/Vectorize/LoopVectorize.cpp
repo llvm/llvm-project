@@ -5157,8 +5157,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
           "UserVF ignored because it may be larger than the maximal safe VF",
           "InvalidUserVF", ORE, OrigLoop);
     } else {
-      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-             "VF needs to be a power of two");
+      assert(UserVF.isPowerOf2() && "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM->collectNonVectorizedAndSetWideningDecisions(UserVF);
