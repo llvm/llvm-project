@@ -1020,7 +1020,7 @@ std::string Module::GetSpecificationDescription() const {
   std::string spec(GetFileSpec().GetPath());
   if (!m_object_name.empty()) {
     spec += '(';
-    spec += m_object_name.c_str();
+    spec += m_object_name;
     spec += ')';
   }
   if (m_memory_module_addr.has_value()) {
