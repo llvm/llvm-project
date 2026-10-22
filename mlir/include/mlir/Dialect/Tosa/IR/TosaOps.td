@@ -170,6 +170,9 @@ def Tosa_AvgPool2dAdaptiveOp
     average, only the number of valid input tensor values, but not padding, are
     used to calculate the divisor. Compared to avg_pool2d, the kernel/stride/
     pad values are provided as inputs.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins Tosa_Tensor4D:$input,

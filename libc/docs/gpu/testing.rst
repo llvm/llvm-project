@@ -108,11 +108,11 @@ The CMake target depends on how the library was built.
 
         $> ninja check-libc
 
-   #. Hermetic tests - You can run hermetic with tests the command:
+   #. Libc tests - You can run libc tests with the command:
 
       .. code-block:: sh
 
-        $> ninja libc-hermetic-tests
+        $> ninja libc-tests
 
    #. Integration tests - You can run integration tests by the command:
 
