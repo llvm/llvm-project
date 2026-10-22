@@ -3,8 +3,7 @@
 
 define <4 x i1> @v4i1_zero() {
 ; CHECK-LABEL: define <4 x i1> @v4i1_zero() {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> zeroinitializer)
-; CHECK-NEXT:    ret <4 x i1> [[RES]]
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> zeroinitializer)
   ret <4 x i1> %res
@@ -12,8 +11,7 @@ define <4 x i1> @v4i1_zero() {
 
 define <4 x i1> @v4i1_ones() {
 ; CHECK-LABEL: define <4 x i1> @v4i1_ones() {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <4 x i1> [[RES]]
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
 ;
   %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> splat (i1 true))
   ret <4 x i1> %res
@@ -21,8 +19,7 @@ define <4 x i1> @v4i1_ones() {
 
 define <4 x i1> @v4i1() {
 ; CHECK-LABEL: define <4 x i1> @v4i1() {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> <i1 false, i1 true, i1 false, i1 true>)
-; CHECK-NEXT:    ret <4 x i1> [[RES]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 false, i1 false, i1 false>
 ;
   %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> <i1 false, i1 true, i1 false, i1 true>)
   ret <4 x i1> %res
@@ -30,8 +27,7 @@ define <4 x i1> @v4i1() {
 
 define <4 x i1> @v4i1_undef() {
 ; CHECK-LABEL: define <4 x i1> @v4i1_undef() {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> <i1 undef, i1 true, i1 false, i1 false>)
-; CHECK-NEXT:    ret <4 x i1> [[RES]]
+; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 false, i1 false, i1 false>
 ;
   %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> <i1 undef, i1 true, i1 false, i1 false>)
   ret <4 x i1> %res
@@ -39,8 +35,7 @@ define <4 x i1> @v4i1_undef() {
 
 define <4 x i1> @v4i1_poison() {
 ; CHECK-LABEL: define <4 x i1> @v4i1_poison() {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>)
-; CHECK-NEXT:    ret <4 x i1> [[RES]]
+; CHECK-NEXT:    ret <4 x i1> poison
 ;
   %res = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>)
   ret <4 x i1> %res
@@ -48,8 +43,7 @@ define <4 x i1> @v4i1_poison() {
 
 define <vscale x 4 x i1> @nxv4i1_zero() {
 ; CHECK-LABEL: define <vscale x 4 x i1> @nxv4i1_zero() {
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i1> @llvm.mask.beforefirst.nxv4i1(<vscale x 4 x i1> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 4 x i1> [[RES]]
+; CHECK-NEXT:    ret <vscale x 4 x i1> splat (i1 true)
 ;
   %res = call <vscale x 4 x i1> @llvm.mask.beforefirst(<vscale x 4 x i1> zeroinitializer)
   ret <vscale x 4 x i1> %res
@@ -57,8 +51,7 @@ define <vscale x 4 x i1> @nxv4i1_zero() {
 
 define <vscale x 4 x i1> @nxv4i1_ones() {
 ; CHECK-LABEL: define <vscale x 4 x i1> @nxv4i1_ones() {
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i1> @llvm.mask.beforefirst.nxv4i1(<vscale x 4 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 4 x i1> [[RES]]
+; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
 ;
   %res = call <vscale x 4 x i1> @llvm.mask.beforefirst(<vscale x 4 x i1> splat (i1 true))
   ret <vscale x 4 x i1> %res
@@ -66,8 +59,7 @@ define <vscale x 4 x i1> @nxv4i1_ones() {
 
 define <vscale x 4 x i1> @nxv4i1_poison() {
 ; CHECK-LABEL: define <vscale x 4 x i1> @nxv4i1_poison() {
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i1> @llvm.mask.beforefirst.nxv4i1(<vscale x 4 x i1> poison)
-; CHECK-NEXT:    ret <vscale x 4 x i1> [[RES]]
+; CHECK-NEXT:    ret <vscale x 4 x i1> poison
 ;
   %res = call <vscale x 4 x i1> @llvm.mask.beforefirst(<vscale x 4 x i1> poison)
   ret <vscale x 4 x i1> %res
