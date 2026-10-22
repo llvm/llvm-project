@@ -120,15 +120,16 @@ bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays,
 bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
                    bool AsIfNoUniqueAddr = false);
 
-/// isSingleElementStruct - Determine if a structure is a "single
-/// element struct", i.e. it has exactly one non-empty field or
+/// isSingleElementRecord - Determine if a record is a "single
+/// element record", i.e. it has exactly one non-empty field or
 /// exactly one field which is itself a single element
-/// struct. Structures with flexible array members are never
-/// considered single element structs.
+/// record. Both structures and unions are decomposed, at the top level
+/// and at every level of nesting. Records with flexible array members
+/// are never considered single element records.
 ///
 /// \return The field declaration for the single non-empty field, if
 /// it exists.
-const Type *isSingleElementStruct(QualType T, ASTContext &Context);
+const Type *isSingleElementRecord(QualType T, ASTContext &Context);
 
 Address EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                        const ABIArgInfo &AI);

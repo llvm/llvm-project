@@ -315,7 +315,7 @@ body: |
     $vgpr0 = COPY %2
 ...
 
-# ERR: remark: <unknown>:0:0: cannot select: %2:vgpr_32(s32) = G_FMAXNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fmaxnum_ieee_op0_f32)
+# ERR: remark: <unknown>:0:0: instruction is not legal: %2:vgpr(s32) = G_FMAXNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fmaxnum_ieee_op0_f32)
 
 ---
 name: g_fmaxnum_ieee_op0_f32
@@ -331,7 +331,7 @@ body: |
     $vgpr0 = COPY %2
 ...
 
-# ERR: remark: <unknown>:0:0: cannot select: %2:vgpr_32(s32) = G_FMINNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fminnum_ieee_op0_f32)
+# ERR: remark: <unknown>:0:0: instruction is not legal: %2:vgpr(s32) = G_FMINNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fminnum_ieee_op0_f32)
 
 ---
 name: g_fminnum_ieee_op0_f32

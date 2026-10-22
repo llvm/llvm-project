@@ -1,4 +1,3 @@
-# UNSUPPORTED: system-windows
 # REQUIRES: aarch64
 
 # This checks that lldb's disassembler colors AArch64 disassembly.

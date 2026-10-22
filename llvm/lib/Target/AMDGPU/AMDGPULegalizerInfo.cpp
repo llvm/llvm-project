@@ -472,6 +472,9 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (MemSize != RegSize && RegSize != 32)
     return false;
 
+  if (IsLoad && RegSize == 16 && !ST.d16PreservesUnusedBits())
+    return false;
+
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
                                     Query.MMODescrs[0].Ordering !=
                                         AtomicOrdering::NotAtomic))
@@ -1033,21 +1036,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  MinNumMaxNumIeee.legalFor({F32, F64});
-  MinNumMaxNum.customFor({F32, F64});
+  MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), {F32, F64});
+  MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), {F32, F64})
+      .customFor({F32, F64});
 
   if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor({F16});
-    MinNumMaxNum.customFor({F16});
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), {F16});
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), {F16})
+        .customFor({F16});
   }
 
   // V2F16
   if (ST.hasVOP3PInsts()) {
-    MinNumMaxNumIeee.legalFor({V2F16})
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), {V2F16})
         .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
                         oneMoreElement(0))
         .clampMaxNumElements(0, F16, 2);
-    MinNumMaxNum.customFor({V2F16})
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), {V2F16})
+        .customFor({V2F16})
         .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
                         oneMoreElement(0))
         .clampMaxNumElements(0, F16, 2);
@@ -1055,7 +1061,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // V2F64
   if (ST.hasAnyPackedFP64Ops()) {
-    MinNumMaxNum.customFor({V2F64})
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), {V2F64})
+        .customFor({V2F64})
         .moreElementsIf(all(elementTypeIs(0, F64), isSmallOddVector(0)),
                         oneMoreElement(0))
         .clampMaxNumElements(0, F64, 2);
@@ -1063,8 +1070,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // V2BF16
   if (ST.hasBF16PackedInsts()) {
-    MinNumMaxNumIeee.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
-    MinNumMaxNum.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), {V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), {V2BF16})
+        .moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
         .customFor({V2BF16})
         .clampMaxNumElementsStrict(0, BF16, 2);
   } else {
@@ -1664,13 +1674,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
          {V4S32, ConstantPtr, V4S32, GlobalAlign32},
          {S64, ConstantPtr, S64, GlobalAlign32}});
 
-    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
-                                     {{S16, GlobalPtr, S8, GlobalAlign8},
-                                      {S16, GlobalPtr, S16, GlobalAlign16},
-                                      {S16, LocalPtr, S8, 8},
-                                      {S16, LocalPtr, S16, 16},
-                                      {S16, PrivatePtr, S8, 8},
-                                      {S16, PrivatePtr, S16, 16}});
+    if (IsStore || ST.d16PreservesUnusedBits()) {
+      Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                       {{S16, GlobalPtr, S8, GlobalAlign8},
+                                        {S16, GlobalPtr, S16, GlobalAlign16},
+                                        {S16, LocalPtr, S8, 8},
+                                        {S16, LocalPtr, S16, 16},
+                                        {S16, PrivatePtr, S8, 8},
+                                        {S16, PrivatePtr, S16, 16}});
+    }
 
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
@@ -4461,7 +4473,7 @@ bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
   // We don't need to concern ourselves with the snan handling difference, so
   // use the one which will directly select.
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  if (MFI->getMode().IEEE)
+  if (MFI->getMode().IEEE && !ST.hasIEEEMinimumMaximumInsts())
     B.buildFMinNumIEEE(Min, Fract, Const, Flags);
   else
     B.buildFMinNum(Min, Fract, Const, Flags);
@@ -6269,12 +6281,13 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   const bool UseIEEE = MFI->getMode().IEEE;
 
   auto MaxFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics));
-  auto ClampMax = UseIEEE ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags) :
-                            B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
+  auto ClampMax = UseIEEE && !ST.hasIEEEMinimumMaximumInsts()
+                      ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags)
+                      : B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
 
   auto MinFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics, true));
 
-  if (UseIEEE)
+  if (UseIEEE && !ST.hasIEEEMinimumMaximumInsts())
     B.buildFMaxNumIEEE(Dst, ClampMax, MinFlt, Flags);
   else
     B.buildFMaxNum(Dst, ClampMax, MinFlt, Flags);
@@ -7888,8 +7901,8 @@ bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(Helper, MI);
 
-  return ST.supportsGetDoorbellID() ?
-         legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
+  return ST.supportsGetDoorbellID() ? legalizeTrapHsa(Helper, MI)
+                                    : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
 bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
@@ -7994,14 +8007,28 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapHsa(LegalizerHelper &Helper,
+                                          MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   // We need to simulate the 's_trap 2' instruction on targets that run in
   // PRIV=1 (where it is treated as a nop).
   if (ST.hasPrivEnabledTrap2NopBug()) {
-    ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI,
-                                           MI.getDebugLoc());
+    // insertSimulatedTrap may split the block after MI. An instruction's
+    // parent block is part of its CSE profile, so notify observers about the
+    // instructions that may be moved by the split.
+    GISelChangeObserver &Observer = Helper.Observer;
+    MachineBasicBlock &MBB = B.getMBB();
+    SmallVector<MachineInstr *, 8> MovedInstrs;
+    for (MachineInstr &I :
+         make_range(std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+      Observer.changingInstr(I);
+      MovedInstrs.push_back(&I);
+    }
+    ST.getInstrInfo()->insertSimulatedTrap(MRI, MBB, MI, MI.getDebugLoc());
+    for (MachineInstr *MovedMI : MovedInstrs)
+      Observer.changedInstr(*MovedMI);
     MI.eraseFromParent();
     return true;
   }

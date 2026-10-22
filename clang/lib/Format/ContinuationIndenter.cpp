@@ -1692,10 +1692,11 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
          Current.isNot(tok::l_paren) &&
          !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
                                TT_PointerOrReference)) ||
-        PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
-                                    TT_FunctionAnnotationRParen,
-                                    TT_JavaAnnotation,
-                                    TT_LeadingJavaAnnotation))) ||
+        (PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
+                                     TT_FunctionAnnotationRParen,
+                                     TT_JavaAnnotation,
+                                     TT_LeadingJavaAnnotation) &&
+         !Current.isBinaryOperator()))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||
       (State.Line->ReturnTypeWrapped && PreviousNonComment &&
@@ -2557,7 +2558,8 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
   // Compute the raw string style to use in case this is a raw string literal
   // that can be reformatted.
   auto RawStringStyle = getRawStringStyle(Current, State);
-  if (RawStringStyle && !Current.Finalized) {
+  if (RawStringStyle && !Current.Finalized &&
+      (!Current.MacroCtx || Current.MacroCtx->Role != MR_ExpandedArg)) {
     Penalty = reformatRawStringLiteral(Current, State, *RawStringStyle, DryRun,
                                        Newline);
   } else if (Current.IsMultiline && Current.isNot(TT_BlockComment)) {

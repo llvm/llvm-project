@@ -54,6 +54,13 @@ struct DebuggingResource
   bool isAddressable() const override { return false; }
 };
 
+/// Runtime checks can terminate execution, but do not access user memory.
+struct FortranRuntimeResource
+    : public mlir::SideEffects::Resource::Base<FortranRuntimeResource> {
+  mlir::StringRef getName() const final { return "FortranRuntimeResource"; }
+  bool isAddressable() const override { return false; }
+};
+
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
     : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {

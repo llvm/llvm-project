@@ -157,19 +157,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::i128, Promote);
   AddPromotedToType(ISD::LOAD, MVT::i128, MVT::v4i32);
 
-  // TODO: Would be better to consume as directly legal
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
-
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes())
@@ -796,9 +783,11 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return isTypeLegal(VT.getScalarType());
+TargetLowering::FPImmAction
+AMDGPUTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return isTypeLegal(VT.getScalarType()) ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
 }
 
 // We don't want to shrink f64 / f32 constants.
