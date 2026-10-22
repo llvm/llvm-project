@@ -1,14 +1,14 @@
 ; RUN: llc -enable-machine-outliner -mtriple=aarch64-unknown-linux < %s | FileCheck %s
 @x = dso_local global i32 0, align 4
 
-define dso_local i32 @check_boundaries(i32 %p) #0 {
+define dso_local i32 @check_boundaries() #0 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
   store i32 0, i32* %1, align 4
-  store i32 %p, i32* %2, align 4
+  store i32 0, i32* %2, align 4
   %6 = load i32, i32* %2, align 4
   %7 = icmp ne i32 %6, 0
   br i1 %7, label %9, label %8
