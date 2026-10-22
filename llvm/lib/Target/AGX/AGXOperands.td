@@ -288,6 +288,28 @@ def AGXMemIndex : Operand<i32> {
   let ParserMatchClass = AGXMemIndexAsm;
 }
 
+// Texture operands: the 32-bit byte offset of the texture descriptor, the
+// 16-bit sampler index and the coordinates (32-bit registers, or 16-bit ones:
+// operand bit 8).
+def AGXTexOffset : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexOffsetEncoding";
+  let DecoderMethod = "decodeTexOffset";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+def AGXTexSampler : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexSamplerEncoding";
+  let DecoderMethod = "decodeTexSampler";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+def AGXTexCoords : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexCoordsEncoding";
+  let DecoderMethod = "decodeTexCoords";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+
 // Threadgroup memory base: 16-bit register, 16-bit uniform or zero.
 def AGXLocalBase : Operand<i32> {
   let PrintMethod = "printLocalBase";

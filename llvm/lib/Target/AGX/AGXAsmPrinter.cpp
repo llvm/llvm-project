@@ -111,6 +111,8 @@ void AGXAsmPrinter::emitFunctionBodyStart() {
     OutStreamer->emitRawComment(
         " global data buffer at u" + Twine(MFI->getGlobalDataHalfIndex() / 2) +
         "_u" + Twine(MFI->getGlobalDataHalfIndex() / 2 + 1));
+  if (MFI->hasTextureHeap())
+    OutStreamer->emitRawComment(" texture heap at u0_u1");
   OutStreamer->emitRawComment(" threadgroup memory: " +
                               Twine(MFI->getThreadgroupSize()) + " bytes");
   OutStreamer->emitRawComment(" stack size: " +
@@ -148,6 +150,8 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///     4, half: the kernel argument with the parameter attribute
 ///     "agx-hidden"="threadgroup-bytes", which the launch sets to the
 ///     threadgroup memory of the dispatch (static and dynamic bytes).
+///     5, half: the 64-bit texture heap address goes in the uniforms from
+///     half (0), for llvm.agx.texture.sample.
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -244,6 +248,8 @@ void AGXAsmPrinter::recordKernel() {
     if (Role.isValid() && Role.getValueAsString() == "threadgroup-bytes")
       R.append({4, Half(A.getArgNo())});
   }
+  if (MFI->hasTextureHeap())
+    R.append({5, 0});
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }
 

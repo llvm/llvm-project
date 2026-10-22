@@ -481,6 +481,8 @@ The extensions are:
   attribute ``"agx-hidden"="threadgroup-bytes"``, which is not a source
   argument: the driver sets it to the threadgroup memory of the dispatch, the
   kernel's threadgroup memory bytes plus the dynamic ones of the launch.
+* ``5, half``: the driver sets the 64-bit uniform from ``half`` (always 0)
+  to the address of the texture heap (see "Textures").
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
@@ -510,6 +512,30 @@ Type               Value  Field
 
 There are no relocations in ``.text``, and references to globals of other
 objects are not supported.
+
+Textures
+--------
+
+``llvm.agx.texture.sample(i32 %offset, i16 %sampler, float %x, float %y,
+i32 immarg %dim)`` samples a texture with the texture unit and returns its
+four channels as ``<4 x i32>``: the bits of floats for float, unorm and snorm
+formats, integers for integer formats. ``%dim`` is 0 (1D, ``%y`` unused) or 2
+(2D). It is ``texture_sample`` in its bindless form: the 24-byte texture
+descriptor is at ``%offset`` bytes from the *texture heap* address, and
+``%sampler`` is an index into the sampler heap of the compute command
+(``drm_asahi_cmd_compute.sampler_heap`` and ``sampler_count``: 8-byte sampler
+descriptors). The level is chosen automatically (level 0 without
+derivatives), so mipmapped textures are not supported. Both descriptors use
+the layouts of Mesa's ``cmdbuf.xml`` (``Texture``, ``Sampler``). The result
+is asynchronous like a load, followed by a wait before its first use, and
+does not share registers with the sources.
+
+The descriptor base of a bindless ``texture_sample`` must be a 64-bit uniform
+register below the 64th at a multiple of four halves. If any function of a
+module samples, every kernel of the module therefore receives the texture
+heap address in ``u0_u1``, before its arguments (record extension 5, and
+``texture heap at u0_u1`` in the resource comments): non-kernel functions
+read the same uniforms.
 
 Execution model
 ===============

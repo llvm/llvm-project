@@ -76,6 +76,9 @@ public:
   AGX_ENCODER(LocalIndex)
   AGX_ENCODER(AtomicSrc)
   AGX_ENCODER(BrTarget)
+  AGX_ENCODER(TexOffset)
+  AGX_ENCODER(TexSampler)
+  AGX_ENCODER(TexCoords)
 #undef AGX_ENCODER
 
 private:
@@ -380,6 +383,37 @@ void AGXMCCodeEmitter::getAtomicSrcEncoding(const MCInst &MI, unsigned OpNo,
   if (Info.Kind != AGX::RegKind::GPR32 && Info.Kind != AGX::RegKind::GPR64)
     report(MI, "atomic data must be a 32-bit register or a pair");
   setOp(Op, Info.HalfIndex);
+}
+
+void AGXMCCodeEmitter::getTexOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                            APInt &Op,
+                                            SmallVectorImpl<MCFixup> &,
+                                            const MCSubtargetInfo &) const {
+  AGX::RegInfo Info = regInfo(MI.getOperand(OpNo));
+  if (Info.Kind != AGX::RegKind::GPR32)
+    report(MI, "texture offset must be a 32-bit register");
+  setOp(Op, Info.HalfIndex & 0xff);
+}
+
+void AGXMCCodeEmitter::getTexSamplerEncoding(const MCInst &MI, unsigned OpNo,
+                                             APInt &Op,
+                                             SmallVectorImpl<MCFixup> &,
+                                             const MCSubtargetInfo &) const {
+  AGX::RegInfo Info = regInfo(MI.getOperand(OpNo));
+  if (Info.Kind != AGX::RegKind::GPR16)
+    report(MI, "sampler index must be a 16-bit register");
+  setOp(Op, Info.HalfIndex & 0xff);
+}
+
+void AGXMCCodeEmitter::getTexCoordsEncoding(const MCInst &MI, unsigned OpNo,
+                                            APInt &Op,
+                                            SmallVectorImpl<MCFixup> &,
+                                            const MCSubtargetInfo &) const {
+  AGX::RegInfo Info = regInfo(MI.getOperand(OpNo));
+  if (!Info.isGPR())
+    report(MI, "texture coordinates must be general purpose registers");
+  bool Is16 = Info.Kind == AGX::RegKind::GPR16;
+  setOp(Op, (Info.HalfIndex & 0xff) | (uint64_t(Is16) << 8));
 }
 
 void AGXMCCodeEmitter::getBrTargetEncoding(const MCInst &MI, unsigned OpNo,

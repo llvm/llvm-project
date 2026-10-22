@@ -247,6 +247,23 @@ static DecodeStatus decodeMemReg(MCInst &MI, uint64_t V, uint64_t,
                 D);
 }
 
+static DecodeStatus decodeTexOffset(MCInst &MI, uint64_t V, uint64_t,
+                                    const MCDisassembler *D) {
+  return addReg(MI, AGX::RegKind::GPR32, V & 0xff, D);
+}
+
+static DecodeStatus decodeTexSampler(MCInst &MI, uint64_t V, uint64_t,
+                                     const MCDisassembler *D) {
+  return addReg(MI, AGX::RegKind::GPR16, V & 0xff, D);
+}
+
+static DecodeStatus decodeTexCoords(MCInst &MI, uint64_t V, uint64_t,
+                                    const MCDisassembler *D) {
+  bool Is16 = (V >> 8) & 1;
+  return addReg(MI, Is16 ? AGX::RegKind::GPR16 : AGX::RegKind::GPR32, V & 0xff,
+                D);
+}
+
 static DecodeStatus decodeAtomicDst(MCInst &MI, uint64_t V, uint64_t,
                                     const MCDisassembler *D) {
   if (!((V >> 8) & 1)) {
@@ -352,6 +369,8 @@ static const uint8_t *getTable(unsigned Bytes) {
     return DecoderTableG1364;
   case 10:
     return DecoderTableG1380;
+  case 12:
+    return DecoderTableG1396;
   default:
     return nullptr;
   }
@@ -412,7 +431,7 @@ DecodeStatus AGXDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Bytes.size() < 2)
     return MCDisassembler::Fail;
   unsigned Avail = std::min<size_t>(Bytes.size(), 12);
-  for (unsigned TableBytes : {2u, 4u, 6u, 8u, 10u}) {
+  for (unsigned TableBytes : {2u, 4u, 6u, 8u, 10u, 12u}) {
     // First as if all bytes up to the long form belonged to the instruction,
     // then with only the bytes of each possible short form.
     if (tryDecode(MI, Size, Bytes, TableBytes, Avail, Address) ==

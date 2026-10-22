@@ -846,6 +846,56 @@ def DEVICE_STORE_g13
   let Inst{45-44} = u6;
 }
 
+// texture_sample in its bindless form (Mesa agx_pack.c and cmdbuf.xml): the
+// texture descriptor at the 64-bit uniform u0_u1 (U = 0) plus the byte offset
+// in the 32-bit register T (Tt = 3), the sampler S a 16-bit register holding
+// an index into the command's sampler heap (St = 1), automatic LOD (mode 0)
+// and q3 = 0b1100 as Mesa sets them; R receives the channels of the 4-bit
+// mask. The long form appends the high register bits and dim{3}.
+let mayLoad = 1 in
+def TEXTURE_SAMPLE_g13
+    : AGXReal<"texture_sample", (outs AGXMemReg:$R),
+              (ins AGXImm:$g, AGXTexOffset:$T, AGXTexSampler:$S,
+                   AGXTexCoords:$C, AGXImm:$dim, AGXMemMask:$mask),
+              "$g, $R, $T, $S, $C, $dim, $mask", 8, 12> {
+  bits<1> g;
+  bits<9> R;
+  bits<8> T;
+  bits<8> S;
+  bits<9> C;
+  bits<4> dim;
+  bits<4> mask;
+  let IsMemory = 1;
+  let Inst{5-0} = 0b110001;
+  let Inst{7-6} = 0;
+  let Inst{8} = R{8};
+  let Inst{14-9} = R{5-0};
+  let Inst{21-16} = C{5-0};
+  let Inst{22} = 0;
+  let Inst{23} = 0;
+  let Inst{29-24} = 0;
+  let Inst{31-30} = 0;
+  let Inst{37-32} = T{5-0};
+  let Inst{39-38} = 3;
+  let Inst{42-40} = dim{2-0};
+  let Inst{46-43} = 0b1100;
+  let Inst{47} = C{8};
+  let Inst{51-48} = mask;
+  let Inst{55-52} = 0;
+  let Inst{61-56} = S{5-0};
+  let Inst{62} = 1;
+  let Inst{63} = g;
+  let Inst{70-64} = 0;
+  let Inst{71} = dim{3};
+  let Inst{73-72} = R{7-6};
+  let Inst{75-74} = C{7-6};
+  let Inst{77-76} = 0;
+  let Inst{79-78} = T{7-6};
+  let Inst{91-80} = 0;
+  let Inst{93-92} = S{7-6};
+  let Inst{95-94} = 0;
+}
+
 // Initialise uniform registers from general purpose registers. The index is
 // the first 16-bit uniform register written.
 let mayStore = 1, hasSideEffects = 1 in
