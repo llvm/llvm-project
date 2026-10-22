@@ -15,6 +15,7 @@
 
 #include "AGXInstPrinter.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"

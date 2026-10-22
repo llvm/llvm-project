@@ -49,6 +49,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <cmath>
 
 using namespace llvm;
 

@@ -33,8 +33,10 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/Support/MathExtras.h"
+#include <cmath>
 
 using namespace llvm;
 
