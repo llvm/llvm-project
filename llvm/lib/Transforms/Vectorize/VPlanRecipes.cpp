@@ -4124,6 +4124,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       Cloned->mutateType(ResultTy);
   }
 
+  Cloned->dropPoisonGeneratingAttributes();
+  Cloned->dropPoisonGeneratingMetadata();
   applyFlags(*Cloned);
   applyMetadata(*Cloned);
 
