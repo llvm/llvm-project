@@ -395,7 +395,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
 
   if (DwarfOpConvert == Default)
-    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) || (tuneForLLDB() && !TT.isOSBinFormatMachO()));
+    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) ||
+                        (tuneForLLDB() && !TT.isOSBinFormatMachO()));
   else
     EnableOpConvert = (DwarfOpConvert == Enable);
 
@@ -446,8 +447,8 @@ void DwarfDebug::applyDwarfVersion(unsigned DwarfVersion) {
 
   // Split DWARF would benefit object size significantly by trading reductions
   // in address pool usage for slightly increased range list encodings.
-  MinimizeAddr = DwarfVersion >= 5 ? MinimizeAddrInV5Option
-                                   : MinimizeAddrInV5::Disabled;
+  MinimizeAddr =
+      DwarfVersion >= 5 ? MinimizeAddrInV5Option : MinimizeAddrInV5::Disabled;
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
