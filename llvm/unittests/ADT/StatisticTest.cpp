@@ -162,6 +162,42 @@ TEST(StatisticTest, API) {
     EXPECT_EQ(S2->first, "Counter2");
     EXPECT_EQ(S2->second, 1u);
   }
+
+  // Check that disabling the statistics works correctly.
+  DisableStatistics();
+  EXPECT_FALSE(AreStatisticsEnabled());
+
+  // Incrementing should do nothing.
+  Counter++;
+  Counter2++;
+  EXPECT_TRUE(GetStatistics().empty());
+
+  // Check that they successfully re-register and count after re-enabling.
+  EnableStatistics();
+
+  Counter++;
+  Counter2++;
+
+  {
+    auto Range = GetStatistics();
+    EXPECT_EQ(Range.begin() + 2, Range.end());
+    EXPECT_EQ(Counter, 1u);
+    EXPECT_EQ(Counter2, 1u);
+
+    OptionalStatistic S1;
+    OptionalStatistic S2;
+    extractCounters(Range, S1, S2);
+
+    EXPECT_EQ(S1.has_value(), true);
+    EXPECT_EQ(S2.has_value(), true);
+
+    EXPECT_EQ(S1->first, "Counter");
+    EXPECT_EQ(S1->second, 1u);
+
+    EXPECT_EQ(S2->first, "Counter2");
+    EXPECT_EQ(S2->second, 1u);
+  }
+
 #else
   // No need to test the output ResetStatistics(), there's nothing to reset so
   // we can't tell if it failed anyway.

@@ -55,11 +55,12 @@ public:
 
   std::atomic<uint64_t> Value;
   std::atomic<bool> Initialized;
+  std::atomic<bool> Registered;
 
   constexpr TrackingStatistic(const char *DebugType, const char *Name,
                               const char *Desc)
       : DebugType(DebugType), Name(Name), Desc(Desc), Value(0),
-        Initialized(false) {}
+        Initialized(false), Registered(false) {}
 
   const char *getDebugType() const { return DebugType; }
   const char *getName() const { return Name; }
@@ -177,8 +178,13 @@ using Statistic = NoopStatistic;
 #define ALWAYS_ENABLED_STATISTIC(VARNAME, DESC)                                \
   static llvm::TrackingStatistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC}
 
-/// Enable the collection and printing of statistics.
+/// Enable the collection and printing of statistics. If statistics were
+/// previously disabled, statistics are reset.
 LLVM_ABI void EnableStatistics(bool DoPrintOnExit = true);
+
+/// Disable the collection and printing of statistics. If statistics were
+/// previously enabled, statistics are reset.
+LLVM_ABI void DisableStatistics();
 
 /// Check if statistics are enabled.
 LLVM_ABI bool AreStatisticsEnabled();
@@ -220,6 +226,8 @@ LLVM_ABI std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 /// compilation should ensure that no compilations are in progress at the point
 /// this function is called and that only one compilation executes until calling
 /// GetStatistics().
+///
+/// This function is called whenever statistics are enabled and disabled.
 LLVM_ABI void ResetStatistics();
 
 } // end namespace llvm
