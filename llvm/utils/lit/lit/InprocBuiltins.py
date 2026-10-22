@@ -74,7 +74,7 @@ def executeBuiltinEcho(cmd, cmd_shenv):
     is_redirected = True
     if stdout == subprocess.PIPE:
         is_redirected = False
-        stdout = TextIOWrapper(BytesIO())
+        stdout = TextIOWrapper(BytesIO(), encoding="utf-8", newline="")
     elif kIsWindows:
         # Reopen stdout with `newline=""` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
