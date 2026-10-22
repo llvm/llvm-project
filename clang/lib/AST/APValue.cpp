@@ -100,7 +100,11 @@ static_assert(
     "Type is insufficiently aligned");
 
 APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
-    : Ptr(P ? cast<ValueDecl>(P->getCanonicalDecl()) : nullptr), Local{I, V} {}
+    : Ptr(P ? cast<ValueDecl>(P->getCanonicalDecl()->isInvalidDecl()
+                                  ? P
+                                  : P->getCanonicalDecl())
+            : nullptr),
+      Local{I, V} {}
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
     : Ptr(P), Local{I, V} {}
 
@@ -133,7 +137,7 @@ QualType APValue::LValueBase::getType() const {
     for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl()); Redecl;
          Redecl = cast_or_null<ValueDecl>(Redecl->getPreviousDecl())) {
       QualType T = Redecl->getType();
-      if (!T->isIncompleteArrayType())
+      if (!T->isIncompleteArrayType() && !Redecl->isInvalidDecl())
         return T;
     }
     return D->getType();
