@@ -14576,7 +14576,7 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
 
 static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
                                                    LSBaseSDNode *Base,
-                                                   unsigned Bytes, int Dist,
+                                                   TypeSize Bytes, int Dist,
                                                    const SelectionDAG &DAG) {
   if (LS->isVolatile() || Base->isVolatile())
     return false;
@@ -14588,28 +14588,41 @@ static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
   if (LS->getChain() != Base->getChain())
     return false;
   EVT VT = LS->getMemoryVT();
-  if (VT.getSizeInBits() / 8 != Bytes)
+  if (VT.getStoreSize() != Bytes)
     return false;
 
-  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG);
-  auto LocDecomp = BaseIndexOffset::match(LS, DAG);
+  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG, Bytes.isScalable());
+  auto LocDecomp = BaseIndexOffset::match(LS, DAG, Bytes.isScalable());
+  StackOffset Offset;
+  if (!BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
+    return false;
 
-  int64_t Offset = 0;
-  if (BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
-    return (Dist * (int64_t)Bytes == Offset);
-  return false;
+  int64_t ExpectedOffset = Dist * (int64_t)Bytes.getKnownMinValue();
+  if (Bytes.isFixed())
+    return Offset == StackOffset::getFixed(ExpectedOffset);
+
+  // getVScale folds scalable offsets to constants when vscale is known.
+  ConstantRange VScaleRange =
+      getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
+  if (const APInt *KnownVScale = VScaleRange.getSingleElement()) {
+    uint64_t VScale = KnownVScale->getZExtValue();
+    uint64_t ActualBytes = Offset.getFixed() + Offset.getScalable() * VScale;
+    return ActualBytes == ExpectedOffset * VScale;
+  }
+
+  return Offset == StackOffset::getScalable(ExpectedOffset);
 }
 
 bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   LoadSDNode *Base,
-                                                  unsigned Bytes,
+                                                  TypeSize Bytes,
                                                   int Dist) const {
   return areNonVolatileConsecutiveLoadsOrStores(LD, Base, Bytes, Dist, *this);
 }
 
 bool SelectionDAG::areNonVolatileConsecutiveStores(StoreSDNode *ST,
                                                    StoreSDNode *Base,
-                                                   unsigned Bytes,
+                                                   TypeSize Bytes,
                                                    int Dist) const {
   return areNonVolatileConsecutiveLoadsOrStores(ST, Base, Bytes, Dist, *this);
 }
