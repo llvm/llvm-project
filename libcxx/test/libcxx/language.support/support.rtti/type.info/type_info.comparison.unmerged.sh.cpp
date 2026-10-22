@@ -8,46 +8,46 @@
 
 // UNSUPPORTED: no-rtti
 
-// The shared library isn't available on the device.
-// UNSUPPORTED: android
+// The Microsoft ABI type_info can't be constructed from a name.
+// UNSUPPORTED: msvc
 
-// No shared library support.
-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+// Test the non-unique (strcmp) type_info comparison with unmerged RTTI,
+// two type_info objects that for the same type whose names are equal strings
+// at different addresses (which occurs with shared library boundaries).
+// Unmerged RTTI is simulated directly here, without any shared library needed.
 
-// Building the shared library requires symbol exports.
-// UNSUPPORTED: windows
-
-// The type A has external linkage, so its RTTI name is not prefixed with '*'.
-// Its RTTI is emitted separately in the shared library and in the main executable,
-// and libc++ compares the names with strcmp, so the two type_index values must be equal.
-
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fPIC -shared -o %t.lib.so -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %{link_flags}
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %t.main.o %t.lib.so %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %s %{flags} %{compile_flags} -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>
-#include <typeindex>
+#include <cstring>
+#include <typeinfo>
 
-// Hidden visibility keeps each copy of the RTTI local to its own module.
-struct [[gnu::visibility("hidden")]] A {
-  int x;
+// std::type_info's name constructor is protected, so we derive from it to expose a public constructor.
+struct TypeInfo : std::type_info {
+  explicit TypeInfo(const char* name) : std::type_info(name) {}
 };
 
-std::type_index registerA();
+static const char external_1[] = "1A";
+static const char external_2[] = "1A";
+static const char internal_1[] = "*N12_GLOBAL__N_11AE";
+static const char internal_2[] = "*N12_GLOBAL__N_11AE";
 
-#if defined(TU1)
-std::type_index registerA() { return std::type_index(typeid(A)); }
-
-#elif defined(MAIN)
 int main(int, char**) {
-  std::type_index executable = std::type_index(typeid(A));
-  std::type_index shared     = registerA();
+  // Externally visible type: one type, so copies compare equal by name
+  TypeInfo ext1(external_1);
+  TypeInfo ext2(external_2);
+  assert(ext1 == ext2);
+  assert(!ext1.before(ext2) && !ext2.before(ext1));
 
-  assert(executable.name() != shared.name());
-  assert(executable == shared);
+  // Internal-linkage type ('*' prefix): equal names does not mean equal type.
+  // so only the RTTI object compares equal.
+  TypeInfo int1(internal_1);
+  TypeInfo int2(internal_2);
+  assert(int1 == int1);
+  assert(int1 != int2);
+  assert(int1.before(int2) != int2.before(int1));
+
+  assert(std::strcmp(int1.name(), "N12_GLOBAL__N_11AE") == 0);
   return 0;
 }
-#else
-#  error
-#endif
