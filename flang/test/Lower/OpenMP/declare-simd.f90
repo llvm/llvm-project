@@ -197,7 +197,7 @@ end subroutine declare_simd_linear_ref
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[C4:.*]] = arith.constant 4 : i32
 ! CHECK: omp.declare_simd linear(ref(%[[X]]#0 : !fir.ref<i32> = %[[C4]] : i32))
-! CHECK-SAME: linear_var_types([i32]){{$}}
+! CHECK-SAME: {linear_var_types = [i32]}{{$}}
 ! CHECK: return
 
 subroutine declare_simd_linear_uval(y)
