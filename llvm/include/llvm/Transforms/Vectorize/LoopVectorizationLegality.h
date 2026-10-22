@@ -528,7 +528,7 @@ private:
 
   /// Set up outer loop inductions by checking Phis in outer loop header for
   /// supported inductions (int and pointer inductions). Return false if any of
-  /// these Phis is not a supported induction or if we fail to find an
+  /// these Phis is not a supported induction or if we fail to find any
   /// induction.
   bool setupOuterLoopInductions();
 
