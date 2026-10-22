@@ -3308,8 +3308,13 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
 // A specific with only the DEVICE attribute cannot be referenced from host
 // code, whatever its dummy arguments' CUDA data attributes score.
 static bool IsCUDADeviceOnly(const Symbol &symbol) {
-  const auto *subprogram{
-      symbol.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+  const Symbol *ultimate{&symbol.GetUltimate()};
+  // Type-bound specifics: inspect the bound procedure.
+  if (const auto *binding{
+          ultimate->detailsIf<semantics::ProcBindingDetails>()}) {
+    ultimate = &binding->symbol().GetUltimate();
+  }
+  const auto *subprogram{ultimate->detailsIf<semantics::SubprogramDetails>()};
   auto attrs{subprogram ? subprogram->cudaSubprogramAttrs() : std::nullopt};
   return attrs && *attrs == common::CUDASubprogramAttrs::Device;
 }
@@ -3360,7 +3365,9 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     if (inHostCode) {
       const semantics::Scope &scope{
           context_.FindScope(GetContextualMessages().at())};
-      inHostCode = !semantics::FindCUDADeviceContext(&scope);
+      // An OpenACC routine body may run on the device.
+      inHostCode = !semantics::FindCUDADeviceContext(&scope) &&
+          !semantics::HasOpenACCRoutineDirective(&scope);
       for (const semantics::Scope *s{&scope}; inHostCode && !s->IsGlobal();
           s = &s->parent()) {
         inHostCode = s->kind() != semantics::Scope::Kind::OpenACCConstruct;
