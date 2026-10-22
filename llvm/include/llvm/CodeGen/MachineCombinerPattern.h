@@ -21,6 +21,7 @@ namespace llvm {
 enum class CombinerObjective {
   MustReduceDepth,            // The data dependency chain must be improved.
   MustReduceRegisterPressure, // The register pressure must be reduced.
+  MustReduceLatency,          // The new pattern must have lower latency.
   Default                     // The critical path must not be lengthened.
 };
 
