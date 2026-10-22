@@ -5,15 +5,13 @@ define i64 @func(i32 %p, i1 %cmp1) {
 ; CHECK-LABEL: define i64 @func(
 ; CHECK-SAME: i32 [[P:%.*]], i1 [[CMP1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[P]], -1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[P0:%.*]] = phi i32 [ [[NOT]], [[ENTRY:%.*]] ], [ [[CONV:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[P0:%.*]] = phi i32 [ [[P]], [[ENTRY:%.*]] ], [ -2, [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP1]], i32 0, i32 -1231558963
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[COND]], [[P0]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[XOR]], 1
-; CHECK-NEXT:    [[CONV]] = zext i1 [[CMP2]] to i32
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY]], label [[FOR_EXIT:%.*]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i32 [[XOR]], -2
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret i64 0
 ;
