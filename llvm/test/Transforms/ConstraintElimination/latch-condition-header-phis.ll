@@ -7,7 +7,6 @@ declare i64 @next(i64)
 ; The latch branches back only if i.next <s j.next, and 0 <s n holds on
 ; entry, so i <s j holds in the header.
 define void @latch_slt(i64 %n) {
-;
 ; CHECK-LABEL: define void @latch_slt(
 ; CHECK-SAME: i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -44,7 +43,6 @@ exit:
 
 ; The latch branches back on the false edge of i.next >=u j.next.
 define void @latch_uge_false_edge(i64 %n) {
-;
 ; CHECK-LABEL: define void @latch_uge_false_edge(
 ; CHECK-SAME: i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -168,7 +166,6 @@ exit:
 
 ; Negative: the latch compares a value that is not a phi's backedge value.
 define void @latch_cmp_not_backedge_value(i64 %n) {
-;
 ; CHECK-LABEL: define void @latch_cmp_not_backedge_value(
 ; CHECK-SAME: i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -301,8 +298,6 @@ exit1:
 ; loop, not of the outer loop, so it says nothing about i and j on entry to the
 ; outer header.
 define void @latch_slt_inner_loop_latch(i64 %n, i1 %c) {
-;
-;
 ; CHECK-LABEL: define void @latch_slt_inner_loop_latch(
 ; CHECK-SAME: i64 [[N:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

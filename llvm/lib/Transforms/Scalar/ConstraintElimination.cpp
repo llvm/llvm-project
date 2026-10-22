@@ -1273,8 +1273,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   Value *V0, *V1;
   BasicBlock *LoopPred = L->getLoopPredecessor();
   if (&BB == Latch && LoopPred &&
-      match(Br->getCondition(), m_ICmp(Pred, m_Value(V0), m_Value(V1))) &&
-      (Br->getSuccessor(0) == Header || Br->getSuccessor(1) == Header)) {
+      match(Br->getCondition(), m_ICmp(Pred, m_Value(V0), m_Value(V1)))) {
     auto [P0, Start0] = getPhiWithBackedgeValue(L, LoopPred, V0);
     auto [P1, Start1] = getPhiWithBackedgeValue(L, LoopPred, V1);
     if (P0 && P1 && P0 != P1) {
