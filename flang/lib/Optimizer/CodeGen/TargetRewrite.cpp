@@ -618,6 +618,9 @@ public:
           argAttrsArray.emplace_back(
               argAttrs.getDictionary(rewriter->getContext()));
         }
+        // Trailing operands (e.g. character lengths) have no attributes.
+        argAttrsArray.append(trailingOpers.size(),
+                             rewriter->getDictionaryAttr({}));
         newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
