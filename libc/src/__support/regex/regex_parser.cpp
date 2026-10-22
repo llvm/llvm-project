@@ -15,7 +15,11 @@
 
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/new.h"
+#include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
@@ -131,44 +135,57 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
   return atom;
 }
 
-// Folds concatenated atoms right-to-left in 64-atom (256-byte) stack chunks so
-// right-associative make_concat stays O(1) without orphaned prefixes and
-// recursion is bounded to <= 157 frames across MAX_NODE_LIMIT.
-ErrorOr<ExprId> parse_concat(cpp::string_view &rem, int cflags, ExprPool &pool,
-                             size_t total_atoms) {
-  constexpr size_t CHUNK_SIZE = 64;
-  cpp::array<ExprId, CHUNK_SIZE> atoms{};
-  size_t count = 0;
-  while (!rem.empty() && count < CHUNK_SIZE) {
-    if (total_atoms >= ExprPool::MAX_NODE_LIMIT)
+} // namespace
+
+ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
+                          ExprPool &pool) {
+  // Collect quantified atoms in a 64-atom (256-byte) stack buffer, spilling to
+  // the heap only for longer chains, then fold right-to-left so
+  // right-associative make_concat stays O(1) without orphaned prefixes.
+  // TODO: Replace inline_atoms + heap_atoms with an AllocChecker-backed
+  // SmallVector / unique_ptr once available in src/__support/CPP/.
+  constexpr size_t INLINE_ATOM_COUNT = 64;
+  cpp::array<ExprId, INLINE_ATOM_COUNT> inline_atoms{};
+  ExprId *heap_atoms = nullptr;
+  cpp::scope_exit cleanup([&heap_atoms] { delete[] heap_atoms; });
+  cpp::span<ExprId> atoms(inline_atoms);
+  size_t atom_count = 0;
+
+  cpp::string_view rem = pattern;
+  while (!rem.empty()) {
+    if (atom_count >= ExprPool::MAX_NODE_LIMIT)
       return Error(REG_ESPACE);
+    if (atom_count == atoms.size()) {
+      size_t new_cap = atoms.size() * 2;
+      AllocChecker ac;
+      ExprId *new_atoms = new (ac) ExprId[new_cap];
+      if (!ac)
+        return Error(REG_ESPACE);
+      ExprId *dst = new_atoms;
+      for (ExprId existing : atoms) {
+        *dst = existing;
+        ++dst;
+      }
+      delete[] heap_atoms;
+      heap_atoms = new_atoms;
+      atoms = cpp::span<ExprId>(heap_atoms, new_cap);
+    }
     ErrorOr<ExprId> atom = parse_quantified_atom(rem, cflags, pool);
     if (!atom.has_value())
       return atom;
-    atoms[count] = *atom;
-    ++count;
-    ++total_atoms;
+    atoms[atom_count] = *atom;
+    ++atom_count;
   }
 
-  ErrorOr<ExprId> acc = rem.empty()
-                            ? pool.empty_str()
-                            : parse_concat(rem, cflags, pool, total_atoms);
+  ErrorOr<ExprId> acc = pool.empty_str();
   if (!acc.has_value())
     return acc;
-
-  for (size_t i = count; i > 0; --i) {
+  for (size_t i = atom_count; i > 0; --i) {
     acc = pool.make_concat(atoms[i - 1], *acc);
     if (!acc.has_value())
       return acc;
   }
   return acc;
-}
-
-} // namespace
-
-ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
-                          ExprPool &pool) {
-  return parse_concat(pattern, cflags, pool, 0);
 }
 
 } // namespace regex
