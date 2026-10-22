@@ -9,22 +9,40 @@ declare void @use(ptr, ptr, ptr)
 declare void @sink(i32)
 
 define void @layout_strong(i32 %n) sspstrong "stack-protector-layout-only" {
-; CHECK-LABEL: layout_strong:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str w0, [sp, #4]
-; CHECK-NEXT:    add x0, sp, #16
-; CHECK-NEXT:    add x1, sp, #12
-; CHECK-NEXT:    add x2, sp, #8
-; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr w0, [sp, #4]
-; CHECK-NEXT:    bl sink
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-NEXT:    add sp, sp, #48
-; CHECK-NEXT:    ret
+; OPT-LABEL: layout_strong:
+; OPT:       // %bb.0:
+; OPT-NEXT:    sub sp, sp, #48
+; OPT-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; OPT-NEXT:    .cfi_def_cfa_offset 48
+; OPT-NEXT:    .cfi_offset w30, -16
+; OPT-NEXT:    str w0, [sp, #4]
+; OPT-NEXT:    add x0, sp, #16
+; OPT-NEXT:    add x1, sp, #12
+; OPT-NEXT:    add x2, sp, #8
+; OPT-NEXT:    bl use
+; OPT-NEXT:    ldr w0, [sp, #4]
+; OPT-NEXT:    bl sink
+; OPT-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; OPT-NEXT:    add sp, sp, #48
+; OPT-NEXT:    ret
+;
+; O0-LABEL: layout_strong:
+; O0:       // %bb.0:
+; O0-NEXT:    sub sp, sp, #48
+; O0-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    .cfi_offset w30, -16
+; O0-NEXT:    mov w8, w0
+; O0-NEXT:    add x2, sp, #8
+; O0-NEXT:    add x1, sp, #12
+; O0-NEXT:    add x0, sp, #16
+; O0-NEXT:    str w8, [sp, #4]
+; O0-NEXT:    bl use
+; O0-NEXT:    ldr w0, [sp, #4]
+; O0-NEXT:    bl sink
+; O0-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; O0-NEXT:    add sp, sp, #48
+; O0-NEXT:    ret
   %scalar = alloca i32, align 4
   %addrof = alloca i32, align 4
   %small = alloca [4 x i8], align 4
@@ -37,22 +55,40 @@ define void @layout_strong(i32 %n) sspstrong "stack-protector-layout-only" {
 }
 
 define void @layout_ssp(i32 %n) ssp "stack-protector-layout-only" {
-; CHECK-LABEL: layout_ssp:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str w0, [sp, #12]
-; CHECK-NEXT:    add x0, sp, #16
-; CHECK-NEXT:    add x1, sp, #4
-; CHECK-NEXT:    add x2, sp, #8
-; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr w0, [sp, #12]
-; CHECK-NEXT:    bl sink
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-NEXT:    add sp, sp, #48
-; CHECK-NEXT:    ret
+; OPT-LABEL: layout_ssp:
+; OPT:       // %bb.0:
+; OPT-NEXT:    sub sp, sp, #48
+; OPT-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; OPT-NEXT:    .cfi_def_cfa_offset 48
+; OPT-NEXT:    .cfi_offset w30, -16
+; OPT-NEXT:    str w0, [sp, #12]
+; OPT-NEXT:    add x0, sp, #16
+; OPT-NEXT:    add x1, sp, #4
+; OPT-NEXT:    add x2, sp, #8
+; OPT-NEXT:    bl use
+; OPT-NEXT:    ldr w0, [sp, #12]
+; OPT-NEXT:    bl sink
+; OPT-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; OPT-NEXT:    add sp, sp, #48
+; OPT-NEXT:    ret
+;
+; O0-LABEL: layout_ssp:
+; O0:       // %bb.0:
+; O0-NEXT:    sub sp, sp, #48
+; O0-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    .cfi_offset w30, -16
+; O0-NEXT:    mov w8, w0
+; O0-NEXT:    add x2, sp, #8
+; O0-NEXT:    add x1, sp, #4
+; O0-NEXT:    add x0, sp, #16
+; O0-NEXT:    str w8, [sp, #12]
+; O0-NEXT:    bl use
+; O0-NEXT:    ldr w0, [sp, #12]
+; O0-NEXT:    bl sink
+; O0-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; O0-NEXT:    add sp, sp, #48
+; O0-NEXT:    ret
   %scalar = alloca i32, align 4
   %addrof = alloca i32, align 4
   %small = alloca [4 x i8], align 4
@@ -106,13 +142,14 @@ define void @cookie(i32 %n) sspstrong {
 ; O0-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; O0-NEXT:    .cfi_def_cfa_offset 64
 ; O0-NEXT:    .cfi_offset w30, -16
-; O0-NEXT:    adrp x8, __stack_chk_guard
-; O0-NEXT:    ldr x8, [x8, :lo12:__stack_chk_guard]
-; O0-NEXT:    str x8, [sp, #40]
-; O0-NEXT:    str w0, [sp, #4]
-; O0-NEXT:    add x0, sp, #16
-; O0-NEXT:    add x1, sp, #12
+; O0-NEXT:    mov w8, w0
+; O0-NEXT:    adrp x9, __stack_chk_guard
+; O0-NEXT:    ldr x9, [x9, :lo12:__stack_chk_guard]
+; O0-NEXT:    str x9, [sp, #40]
 ; O0-NEXT:    add x2, sp, #8
+; O0-NEXT:    add x1, sp, #12
+; O0-NEXT:    add x0, sp, #16
+; O0-NEXT:    str w8, [sp, #4]
 ; O0-NEXT:    bl use
 ; O0-NEXT:    ldr w0, [sp, #4]
 ; O0-NEXT:    bl sink
