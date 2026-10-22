@@ -260,12 +260,14 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo    &MFI = MF.getFrameInfo();
+  SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
 
   return !(MFI.hasCalls()               // has calls
            || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
            || MRI.isPhysRegUsed(SP::O6) // %sp is used
            || hasFP(MF)                 // need %fp
-           || MF.hasInlineAsm());       // has inline assembly
+           || MF.hasInlineAsm()         // has inline assembly
+           || SMFI->isLargeProc());     // is a large procedure
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
@@ -347,6 +349,8 @@ void SparcFrameLowering::processFunctionBeforeFrameFinalized(
   // Far branches beyond 23-bit offset require a spill slot for scratch
   // register.
   bool IsLargeFunction = !isInt<23>(estimateFunctionSizeInBytes(TII, MF));
+  SMFI->setLargeProc(IsLargeFunction);
+
   if (IsLargeFunction) {
     int FI =
         MFI.CreateSpillStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC));

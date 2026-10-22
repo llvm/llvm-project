@@ -31,6 +31,10 @@ namespace llvm {
     /// IsLeafProc - True if the function is a leaf procedure.
     bool IsLeafProc;
 
+    /// IsLeafProc - True if the function is larger than the coverage of `ba`
+    /// instruction.
+    bool IsLargeProc = false;
+
     /// BranchRelaxationSpillFrameIndex - FrameIndex of the spill slot when
     /// there is no scavenged register in insertIndirectBranch.
     int BranchRelaxationSpillFrameIndex = -1;
@@ -59,6 +63,9 @@ namespace llvm {
 
     void setLeafProc(bool rhs) { IsLeafProc = rhs; }
     bool isLeafProc() const { return IsLeafProc; }
+
+    void setLargeProc(bool rhs) { IsLargeProc = rhs; }
+    bool isLargeProc() const { return IsLargeProc; }
 
     int getBranchRelaxationSpillFrameIndex() {
       return BranchRelaxationSpillFrameIndex;
