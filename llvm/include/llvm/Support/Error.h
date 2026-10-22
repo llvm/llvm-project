@@ -168,7 +168,7 @@ class [[nodiscard]] Error {
   // visitErrors needs direct access to the payload.
   template <typename HandlerT>
   friend void visitErrors(const Error &E, HandlerT H);
-
+  friend void discardError(Error E);
   // Expected<T> needs to be able to steal the payload when constructed from an
   // error.
   template <typename T> friend class Expected;
@@ -375,7 +375,6 @@ class LLVM_ABI ErrorList final : public ErrorInfo<ErrorList> {
   // ErrorList.
   template <typename HandlerT>
   friend void visitErrors(const Error &E, HandlerT H);
-
   // joinErrors is implemented in terms of join.
   friend Error joinErrors(Error, Error);
 
@@ -1019,6 +1018,16 @@ void handleAllErrors(Error E, HandlerTs &&... Handlers) {
 inline void handleAllErrors(Error E) {
   cantFail(std::move(E));
 }
+
+/// Drop any error. If E is an error llvm_unreachable
+/// will not be called.
+inline void discardError(Error E) {
+  if (!E)
+   return;
+    
+  std::unique_ptr<ErrorInfoBase> Payload = E.takePayload();
+}
+
 
 /// Visit all the ErrorInfo(s) contained in E by passing them to the respective
 /// handler, without consuming the error.

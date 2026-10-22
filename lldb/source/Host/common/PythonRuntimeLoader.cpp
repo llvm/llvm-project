@@ -122,7 +122,7 @@ llvm::Expected<std::string> LoadPythonRuntime() {
   if (const char *override_path = std::getenv("LLDB_PYTHON_LIBRARY");
       override_path && *override_path) {
     if (try_path(override_path)) {
-      consumeError(std::move(failures));
+      discardError(std::move(failures));
       return loaded;
     }
   }
@@ -131,7 +131,7 @@ llvm::Expected<std::string> LoadPythonRuntime() {
   // The build-time Python is the closest stable-ABI match for what the
   // plugin was compiled against, so prefer it over the platform fallbacks.
   if (try_path(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH)) {
-    consumeError(std::move(failures));
+    discardError(std::move(failures));
     return loaded;
   }
 #endif
@@ -141,7 +141,7 @@ llvm::Expected<std::string> LoadPythonRuntime() {
       [&](const char *candidate) { return found = try_path(candidate); });
 
   if (found) {
-    consumeError(std::move(failures));
+    discardError(std::move(failures));
     return loaded;
   }
   return std::move(failures);
