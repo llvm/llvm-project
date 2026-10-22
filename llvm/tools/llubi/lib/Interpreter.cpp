@@ -1591,6 +1591,23 @@ public:
       }
       return std::move(Res);
     }
+    case Intrinsic::get_active_lane_mask: {
+      if (Args[0].isPoison() || Args[1].isPoison())
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      // Lane I is active iff Base + I < N without wrapping, i.e. iff Base < N
+      // and I < N - Base, where N - Base cannot wrap.
+      const APInt &Base = Args[0].asInteger();
+      const APInt &N = Args[1].asInteger();
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const uint32_t NumActive =
+          Base.uge(N) ? 0 : (N - Base).getLimitedValue(Len);
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      Res.insert(Res.end(), NumActive, AnyValue::boolean(true));
+      Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
+      return std::move(Res);
+    }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:

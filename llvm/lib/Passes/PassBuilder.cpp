@@ -88,6 +88,7 @@
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
@@ -566,15 +567,15 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
       inconvertibleErrorCode());
 }
 
-PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
+PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
+                         std::optional<PipelineTuningOptions> PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : LibraryOptions(PTO.LibraryOptions ? PTO.LibraryOptions
-                     : TM               ? TM->Options.MCOptions.LibraryOptions
-                                        : nullptr),
-      Opts(cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions)),
-      TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+    : Context(Context), Opts(Context.getLibraryOptions().get<PassesOptions>()),
+      TM(TM),
+      PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
+      PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

@@ -316,3 +316,52 @@ llvm.func @loop_annotation_with_locs() {
 // CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], ![[START_LOC:.*]], ![[END_LOC:.*]]}
 // CHECK: ![[START_LOC]] = !DILocation(line: 42, column: 4, scope:
 // CHECK: ![[END_LOC]] = !DILocation(line: 52, column: 4, scope:
+
+// -----
+
+// Loops with equal annotations share a single node, unless their ids differ.
+// The id does not show up in the metadata, and branches with the same id (the
+// back edges of one loop) still share their node.
+
+#same = #llvm.loop_annotation<mustProgress = true>
+#id0 = #llvm.loop_annotation<id = distinct[0]<>, mustProgress = true>
+#id1 = #llvm.loop_annotation<id = distinct[1]<>, mustProgress = true>
+
+// CHECK-LABEL: @loop_ids
+llvm.func @loop_ids(%cond: i1) {
+  // CHECK: br label %[[BB1:.*]], !llvm.loop ![[SAME_LOOP:[0-9]+]]
+  llvm.br ^bb1 loop_annotation = #same
+^bb1:
+  // CHECK: br label %[[BB2:.*]], !llvm.loop ![[SAME_LOOP]]
+  llvm.br ^bb2 loop_annotation = #same
+^bb2:
+  // CHECK: br label %[[BB3:.*]], !llvm.loop ![[LOOP0:[0-9]+]]
+  llvm.br ^bb3 loop_annotation = #id0
+^bb3:
+  // CHECK: br label %[[BB4:.*]], !llvm.loop ![[LOOP1:[0-9]+]]
+  llvm.br ^bb4 loop_annotation = #id1
+^bb4:
+  // CHECK: br i1 %{{.*}}, label %[[BB4]], label %[[BB5:.*]], !llvm.loop ![[LOOP1]]
+  llvm.cond_br %cond, ^bb4, ^bb5 loop_annotation = #id1
+^bb5:
+  llvm.return
+}
+
+// CHECK: ![[SAME_LOOP]] = distinct !{![[SAME_LOOP]], ![[MUST_PROGRESS:[0-9]+]]}
+// CHECK: ![[MUST_PROGRESS]] = !{!"llvm.loop.mustprogress"}
+// CHECK: ![[LOOP0]] = distinct !{![[LOOP0]], ![[MUST_PROGRESS]]}
+// CHECK: ![[LOOP1]] = distinct !{![[LOOP1]], ![[MUST_PROGRESS]]}
+
+// -----
+
+// CHECK-LABEL: @loop_align
+llvm.func @loop_align() {
+  // CHECK: br label %{{.*}}, !llvm.loop ![[ALIGN_LOOP:[0-9]+]]
+  llvm.br ^bb1 loop_annotation = #llvm.loop_annotation<mustProgress = true, align = 32>
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[ALIGN_LOOP]] = distinct !{![[ALIGN_LOOP]], ![[MUST_PROGRESS:[0-9]+]], ![[ALIGN:[0-9]+]]}
+// CHECK-DAG: ![[MUST_PROGRESS]] = !{!"llvm.loop.mustprogress"}
+// CHECK-DAG: ![[ALIGN]] = !{!"llvm.loop.align", i32 32}

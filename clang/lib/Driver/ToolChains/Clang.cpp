@@ -4162,8 +4162,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
-  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
-                     options::OPT_fno_modulemap_allow_subdirectory_search);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                    options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -7326,14 +7326,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mnop_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mrecord_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)

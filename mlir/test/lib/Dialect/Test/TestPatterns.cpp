@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../../IR/DumpNotifications.h"
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "TestTypes.h"
@@ -492,7 +493,9 @@ struct TestGreedyPatternDriver
     // Additional patterns for testing the GreedyPatternRewriteDriver.
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
 
+    DumpNotifications listener;
     GreedyRewriteConfig config;
+    config.setListener(dumpNotifications ? &listener : nullptr);
     config.setUseTopDownTraversal(useTopDownTraversal)
         .setMaxIterations(this->maxIterations)
         .enableFolding(this->fold)
@@ -500,6 +503,10 @@ struct TestGreedyPatternDriver
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
+  Option<bool> dumpNotifications{
+      *this, "dump-notifications",
+      llvm::cl::desc("Print rewrite listener notifications"),
+      llvm::cl::init(false)};
   Option<bool> useTopDownTraversal{
       *this, "top-down",
       llvm::cl::desc("Seed the worklist in general top-down order"),
@@ -513,51 +520,6 @@ struct TestGreedyPatternDriver
   Option<bool> cseConstants{
       *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
       llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
-};
-
-struct DumpNotifications : public RewriterBase::Listener {
-  void notifyBlockInserted(Block *block, Region *previous,
-                           Region::iterator previousIt) override {
-    llvm::outs() << "notifyBlockInserted";
-    if (block->getParentOp()) {
-      llvm::outs() << " into " << block->getParentOp()->getName() << ": ";
-    } else {
-      llvm::outs() << " into unknown op: ";
-    }
-    if (previous == nullptr) {
-      llvm::outs() << "was unlinked\n";
-    } else {
-      llvm::outs() << "was linked\n";
-    }
-  }
-  void notifyOperationInserted(Operation *op,
-                               OpBuilder::InsertPoint previous) override {
-    llvm::outs() << "notifyOperationInserted: " << op->getName();
-    if (!previous.isSet()) {
-      llvm::outs() << ", was unlinked\n";
-    } else {
-      if (!previous.getPoint().getNodePtr()) {
-        llvm::outs() << ", was linked, exact position unknown\n";
-      } else if (previous.getPoint() == previous.getBlock()->end()) {
-        llvm::outs() << ", was last in block\n";
-      } else {
-        llvm::outs() << ", previous = " << previous.getPoint()->getName()
-                     << "\n";
-      }
-    }
-  }
-  void notifyBlockErased(Block *block) override {
-    llvm::outs() << "notifyBlockErased\n";
-  }
-  void notifyOperationErased(Operation *op) override {
-    llvm::outs() << "notifyOperationErased: " << op->getName() << "\n";
-  }
-  void notifyOperationModified(Operation *op) override {
-    llvm::outs() << "notifyOperationModified: " << op->getName() << "\n";
-  }
-  void notifyOperationReplaced(Operation *op, ValueRange values) override {
-    llvm::outs() << "notifyOperationReplaced: " << op->getName() << "\n";
-  }
 };
 
 struct TestStrictPatternDriver
