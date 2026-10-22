@@ -22,7 +22,6 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/stdlib/environ_internal.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
@@ -39,8 +38,6 @@ namespace internal {
 template <typename ExecFn>
 LIBC_INLINE ErrorOr<int> exec_with_arg_list(const char *arg0, va_list *args,
                                             ExecFn exec) {
-  LIBC_CRASH_ON_NULLPTR(arg0);
-
   va_list args_count;
   va_copy(args_count, *args);
   size_t argc = 1;

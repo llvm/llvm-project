@@ -26,6 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execlp, (const char *file, const char *arg0, ...)) {
   LIBC_CRASH_ON_NULLPTR(file);
+  LIBC_CRASH_ON_NULLPTR(arg0);
 
   va_list varargs;
   va_start(varargs, arg0);
