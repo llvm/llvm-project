@@ -1402,7 +1402,6 @@ Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     // is sparse. For a disjunctive operation, it yields a "sparse" result if
     // all operands are sparse.
     bool conjSpVals = xSpVals || ySpVals;
-    bool disjSpVals = xSpVals && ySpVals;
     if (x.has_value() && y.has_value()) {
       const ExprId e0 = *x;
       const ExprId e1 = *y;
@@ -1421,23 +1420,23 @@ Merger::buildTensorExp(linalg::GenericOp op, Value v) {
       if (isa<arith::DivUIOp>(def) && !maybeZero(e1))
         return {addExp(TensorExp::Kind::kDivU, e0, e1), conjSpVals};
       if (isa<arith::AddFOp>(def))
-        return {addExp(TensorExp::Kind::kAddF, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kAddF, e0, e1), conjSpVals};
       if (isa<complex::AddOp>(def))
-        return {addExp(TensorExp::Kind::kAddC, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kAddC, e0, e1), conjSpVals};
       if (isa<arith::AddIOp>(def))
-        return {addExp(TensorExp::Kind::kAddI, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kAddI, e0, e1), conjSpVals};
       if (isa<arith::SubFOp>(def))
-        return {addExp(TensorExp::Kind::kSubF, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kSubF, e0, e1), conjSpVals};
       if (isa<complex::SubOp>(def))
-        return {addExp(TensorExp::Kind::kSubC, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kSubC, e0, e1), conjSpVals};
       if (isa<arith::SubIOp>(def))
-        return {addExp(TensorExp::Kind::kSubI, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kSubI, e0, e1), conjSpVals};
       if (isa<arith::AndIOp>(def))
         return {addExp(TensorExp::Kind::kAndI, e0, e1), conjSpVals};
       if (isa<arith::OrIOp>(def))
-        return {addExp(TensorExp::Kind::kOrI, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kOrI, e0, e1), conjSpVals};
       if (isa<arith::XOrIOp>(def))
-        return {addExp(TensorExp::Kind::kXorI, e0, e1), disjSpVals};
+        return {addExp(TensorExp::Kind::kXorI, e0, e1), conjSpVals};
       if (isa<arith::ShRSIOp>(def) && isInvariant(e1))
         return {addExp(TensorExp::Kind::kShrS, e0, e1), conjSpVals};
       if (isa<arith::ShRUIOp>(def) && isInvariant(e1))
