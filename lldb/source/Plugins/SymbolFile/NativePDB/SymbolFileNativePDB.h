@@ -248,6 +248,8 @@ private:
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
   Block *GetOrCreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
+                                                  PdbCompilandSymId var_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param,
