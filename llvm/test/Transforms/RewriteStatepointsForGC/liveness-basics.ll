@@ -4,7 +4,6 @@
 
 ; Tests to make sure we consider %obj live in both the taken and untaken
 ; predeccessor of merge.
-
 define ptr addrspace(1) @test1(i1 %cmp, ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test1
 entry:
@@ -30,10 +29,10 @@ merge:                                            ; preds = %untaken, %taken
 ; CHECK-LABEL: merge:
 ; CHECK-NEXT: %.0 = phi ptr addrspace(1) [ %obj.relocated, %taken ], [ %obj.relocated2, %untaken ]
 ; CHECK-NEXT: ret ptr addrspace(1) %.0
-; A local kill should not effect liveness in predecessor block
   ret ptr addrspace(1) %obj
 }
 
+; A local kill should not effect liveness in predecessor block
 define ptr addrspace(1) @test2(i1 %cmp, ptr %loc) gc "statepoint-example" {
 ; CHECK-LABEL: @test2
 entry:
@@ -49,8 +48,6 @@ taken:                                            ; preds = %entry
 ; CHECK-NEXT:  gc.statepoint
 ; CHECK-NEXT:  gc.relocate
 ; CHECK-NEXT:  ret ptr addrspace(1) %obj.relocated
-; A local kill should effect values live from a successor phi.  Also, we
-; should only propagate liveness from a phi to the appropriate predecessors.
   %obj = load ptr addrspace(1), ptr %loc
   call void @foo() [ "deopt"() ]
   ret ptr addrspace(1) %obj
@@ -59,6 +56,8 @@ untaken:                                          ; preds = %entry
   ret ptr addrspace(1) null
 }
 
+; A local kill should effect values live from a successor phi.  Also, we
+; should only propagate liveness from a phi to the appropriate predecessors.
 define ptr addrspace(1) @test3(i1 %cmp, ptr %loc) gc "statepoint-example" {
 ; CHECK-LABEL: @test3
 entry:
@@ -80,8 +79,6 @@ untaken:                                          ; preds = %entry
 ; CHECK-LABEL: taken:
 ; CHECK-NEXT: gc.statepoint
 ; CHECK-NEXT: br label %merge
-; A base pointer must be live if it is needed at a later statepoint,
-; even if the base pointer is otherwise unused.
   call void @foo() [ "deopt"() ]
   br label %merge
 
@@ -90,6 +87,8 @@ merge:                                            ; preds = %untaken, %taken
   ret ptr addrspace(1) %phi
 }
 
+; A base pointer must be live if it is needed at a later statepoint,
+; even if the base pointer is otherwise unused.
 define ptr addrspace(1) @test4(i1 %cmp, ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test4
 entry:
@@ -105,9 +104,6 @@ entry:
 ; CHECK-NEXT:  %obj.relocated3 =
 ; CHECK-NEXT:  ret ptr addrspace(1) %derived.relocated2
 ;
-; Make sure that a phi def visited during iteration is considered a kill.
-; Also, liveness after base pointer analysis can change based on new uses,
-; not just new defs.
   %derived = getelementptr i64, ptr addrspace(1) %obj, i64 8
   call void @foo() [ "deopt"() ]
   call void @foo() [ "deopt"() ]
@@ -116,6 +112,9 @@ entry:
 
 declare void @consume(...) readonly "gc-leaf-function"
 
+; Make sure that a phi def visited during iteration is considered a kill.
+; Also, liveness after base pointer analysis can change based on new uses,
+; not just new defs.
 define ptr addrspace(1) @test5(i1 %cmp, ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test5
 entry:
