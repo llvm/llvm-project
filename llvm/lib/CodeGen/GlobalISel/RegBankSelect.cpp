@@ -1336,6 +1336,57 @@ bool RegBankSelectImpl::assignRegisterBanks(
       if (MI.isImplicitDef())
         continue;
 
+      // Debug uses do not constrain register banks. Preserve an existing bank
+      // or class, and leave registers with definitions for those definitions
+      // to map. For a debug-only register, use a simple target mapping when
+      // one exists. Otherwise make the location unavailable instead of
+      // inserting code for debug information.
+      if (MI.isDebugInstr()) {
+        const RegisterBankInfo::InstructionMapping *Mapping = nullptr;
+        for (auto [Idx, MO] : enumerate(MI.operands())) {
+          if (!MO.isReg())
+            continue;
+          Register Reg = MO.getReg();
+          if (!Reg.isVirtual() || !MRI->getRegClassOrRegBank(Reg).isNull())
+            continue;
+          if (!MRI->def_empty(Reg))
+            continue;
+
+          if (!MRI->getType(Reg).isValid()) {
+            MO.setReg(0);
+            MO.setSubReg(0);
+            continue;
+          }
+
+          if (!Mapping)
+            Mapping = &RBI->getInstrMapping(MI);
+
+          const RegisterBank *RegBank = nullptr;
+          if (Mapping->isValid() &&
+              Mapping->getNumOperands() == MI.getNumOperands()) {
+            const RegisterBankInfo::ValueMapping &ValMapping =
+                Mapping->getOperandMapping(Idx);
+            if (ValMapping.NumBreakDowns == 1) {
+              const RegisterBankInfo::PartialMapping &Part =
+                  ValMapping.BreakDown[0];
+              TypeSize Size = RBI->getSizeInBits(Reg, *MRI, *TRI);
+              if (Part.RegBank && Part.StartIdx == 0 &&
+                  Part.Length >= Size.getKnownMinValue() &&
+                  RBI->getMaximumSize(Part.RegBank->getID()) >= Part.Length)
+                RegBank = Part.RegBank;
+            }
+          }
+
+          if (RegBank)
+            MRI->setRegBank(Reg, *RegBank);
+          else {
+            MO.setReg(0);
+            MO.setSubReg(0);
+          }
+        }
+        continue;
+      }
+
       if (!assignInstr(MI, GetCachedMBFI, GetCachedMBPI)) {
         reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
