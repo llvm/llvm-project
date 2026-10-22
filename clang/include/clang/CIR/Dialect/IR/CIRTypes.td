@@ -456,7 +456,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins CIR_ArrayElementType:$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
