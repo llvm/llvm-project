@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel < %s \
-; RUN:   | FileCheck --check-prefixes=CHECK,X64 %s
-; RUN: llc -mtriple=i686-unknown-linux-gnu -stop-after=finalize-isel < %s \
-; RUN:   | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 \
+; RUN:   -stop-after=finalize-isel < %s | FileCheck --check-prefixes=CHECK,X64 %s
+; RUN: llc -mtriple=i686-unknown-linux-gnu -global-isel=0 \
+; RUN:   -stop-after=finalize-isel < %s | FileCheck --check-prefixes=CHECK,X86 %s
 
 ; An "rm" operand picks a register, marked foldable so that the register
 ; allocator can still put it in a stack slot, but only when the allocator can
@@ -38,6 +38,22 @@ define void @input_i128(i128 %x) {
 ; CHECK-LABEL: name: input_i128
 ; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
   call void asm sideeffect "# $0", "rm"(i128 %x)
+  ret void
+}
+
+; 'r' gives these a GR64 (GR32 on i686), which the asm would print as a
+; register too wide for the value, so they keep using memory.
+define void @input_half(half %x) {
+; CHECK-LABEL: name: input_half
+; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+  call void asm sideeffect "# $0", "rm"(half %x)
+  ret void
+}
+
+define void @input_bfloat(bfloat %x) {
+; CHECK-LABEL: name: input_bfloat
+; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+  call void asm sideeffect "# $0", "rm"(bfloat %x)
   ret void
 }
 

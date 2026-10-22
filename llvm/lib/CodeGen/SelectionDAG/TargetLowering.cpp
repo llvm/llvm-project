@@ -6320,6 +6320,17 @@ static bool
 shouldPreferFoldableRegister(const TargetLowering &TLI,
                              const TargetRegisterInfo *TRI,
                              const TargetLowering::AsmOperandInfo &OpInfo) {
+  // Without a fold to fall back on, 'm' is the only choice that can't run out
+  // of registers. Above -O0 only, which leaves -O0 code as it was.
+  if (!TLI.supportsRegMemInlineAsmFolding() ||
+      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  // An indirect operand is already in memory: a register would only add a
+  // load or store around the asm, and isn't supported for an indirect input.
+  if (OpInfo.isIndirect)
+    return false;
+
   // Codes stays empty for a constraint with alternatives ("r|m") until one is
   // selected, so this only ever matches a plain "rm" plus immediate codes. Any
   // other code (e.g. a specific register or another register class) leaves
@@ -6337,27 +6348,18 @@ shouldPreferFoldableRegister(const TargetLowering &TLI,
       return false;
   }
 
-  // Without a fold to fall back on, 'm' is the only choice that can't run out
-  // of registers. Above -O0 only, which leaves -O0 code as it was.
-  if (!TLI.supportsRegMemInlineAsmFolding() ||
-      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
-    return false;
-
-  // An indirect operand is already in memory: a register would only add a
-  // load or store around the asm, and isn't supported for an indirect input.
-  if (OpInfo.isIndirect)
-    return false;
-
-  // The register allocator folds one register operand, so the value must fit
+  // The register allocator folds one register operand, so the value must be
   // in a single register, and some types (e.g. x87 and vector types) can't go
-  // in an 'r' register at all.
+  // in an 'r' register at all. The value must also fill the register: X86
+  // gives a half or bfloat value a GR64 (GR32 on i686), so the asm would see
+  // a register name too wide for the value, where memory works.
   MVT VT = OpInfo.ConstraintVT;
   if (VT == MVT::Other || VT.isScalableVector())
     return false;
 
   const TargetRegisterClass *RC =
       TLI.getRegForInlineAsmConstraint(TRI, "r", VT).second;
-  return RC && VT.getFixedSizeInBits() <= TRI->getRegSizeInBits(*RC);
+  return RC && VT.getFixedSizeInBits() == TRI->getRegSizeInBits(*RC);
 }
 
 /// Split up the constraint string from the inline assembly value into the
@@ -6695,8 +6697,10 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
         Ret.emplace_back(Code, CType);
     }
 
+    // As below, an operand with a matching input can only be a register.
     Ret.emplace_back("r", getConstraintType("r"));
-    Ret.emplace_back("m", getConstraintType("m"));
+    if (!OpInfo.hasMatchingInput())
+      Ret.emplace_back("m", getConstraintType("m"));
     return Ret;
   }
 
