@@ -37,6 +37,7 @@ class CIndexer {
   bool StorePreamblesInMemory = false;
   unsigned Options; // CXGlobalOptFlags.
 
+  std::string CachedLibClangPath;
   std::string ResourcesPath;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
@@ -76,6 +77,9 @@ public:
 
   /// Get the path of the clang resource files.
   const std::string &getClangResourcesPath();
+
+  /// Get the path of libclang.
+  const std::string &getLibClangPath();
 
   StringRef getClangToolchainPath();
 
