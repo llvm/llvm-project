@@ -1056,6 +1056,9 @@ namespace {
 struct DecompositionLinks {
   ConstraintSystem &CS;
   unsigned NumPushed = 0;
+#ifndef NDEBUG
+  unsigned NumRows;
+#endif
   DecompositionLinks(Value *A, Value *B, const ConstraintTy &C,
                      ConstraintInfo &Info, const DataLayout &DL)
       : CS(Info.getCS(C.IsSigned)) {
@@ -1068,8 +1071,13 @@ struct DecompositionLinks {
       NumPushed += CS.addRow(Row, NumVars);
       NumPushed += CS.addRow(Negated, NumVars);
     }
+#ifndef NDEBUG
+    NumRows = CS.size();
+#endif
   }
   ~DecompositionLinks() {
+    assert(CS.size() == NumRows &&
+           "rows added while DecompositionLinks is alive");
     while (NumPushed--)
       CS.popLastConstraint();
   }
