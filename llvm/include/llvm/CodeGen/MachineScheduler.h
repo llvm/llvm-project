@@ -122,10 +122,10 @@ enum Direction {
 
 /// Returns -misched-prera-direction.
 LLVM_ABI MISched::Direction getPreRADirection();
-/// Returns the post-RA anti-dependency break mode, applying the
-/// -misched-postra-antidep override to \p Default when it is set.
-LLVM_ABI TargetSubtargetInfo::AntiDepBreakMode
-getPostRAAntiDepBreakMode(TargetSubtargetInfo::AntiDepBreakMode Default);
+/// Returns -misched-postra-break-antideps.
+LLVM_ABI TargetSubtargetInfo::AntiDepBreakMode getPostRABreakAntiDeps();
+/// Returns whether -misched-postra-break-antideps was specified.
+LLVM_ABI bool hasPostRABreakAntiDepsOverride();
 /// Returns whether -verify-misched is set.
 LLVM_ABI bool shouldVerifyScheduling();
 
@@ -321,10 +321,13 @@ class LLVM_ABI AntiDepState {
   std::unique_ptr<AntiDepBreaker> Breaker;
 
   /// Instruction index of the current region's end in its basic block.
-  unsigned EndIndex = 0;
+  unsigned RegionEndIndex = 0;
 
   /// Position from which boundary instructions are scanned for liveness.
-  MachineBasicBlock::iterator ScanPos;
+  MachineBasicBlock::iterator BoundaryScanPos;
+
+  /// Instruction index corresponding to `BoundaryScanPos`.
+  unsigned BoundaryScanIndex = 0;
 
   /// Whether ScheduleDAGMI::schedule() processed the current region.
   bool RegionProcessed = false;
@@ -337,7 +340,7 @@ public:
 
   void finishBlock();
 
-  void enterRegion(MachineBasicBlock *MBB, MachineBasicBlock::iterator End);
+  void enterRegion(MachineBasicBlock::iterator End);
 
   void exitRegion(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End);
@@ -347,7 +350,9 @@ public:
                              MachineBasicBlock::iterator End,
                              AntiDepBreaker::DbgValueVector &DbgValues);
 
-  void finishRegion();
+private:
+  void scanRangeBackwards(MachineBasicBlock::iterator From,
+                          MachineBasicBlock::iterator To, unsigned &Count);
 };
 
 /// ScheduleDAGMI is an implementation of ScheduleDAGInstrs that simply
@@ -380,11 +385,15 @@ protected:
 #endif
 
 public:
-  /// Construct a post-RA scheduler with anti-dependency breaking enabled.
+  ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
+                bool RemoveKillFlags)
+      : ScheduleDAGMI(C, std::move(S), RemoveKillFlags,
+                      TargetSubtargetInfo::ANTIDEP_NONE) {}
+
+  /// Construct a post-RA scheduler with the requested anti-dependency mode.
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags,
-                TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
-                    TargetSubtargetInfo::ANTIDEP_NONE)
+                TargetSubtargetInfo::AntiDepBreakMode AntiDepMode)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
         LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)),
         AntiDep(C, SchedImpl->doMBBSchedRegionsTopDown()
@@ -423,8 +432,7 @@ public:
   /// Implement the ScheduleDAGInstrs interface for handling the next scheduling
   /// region. This covers all instructions in a block, while schedule() may only
   /// cover a subset.
-  void enterRegion(MachineBasicBlock *bb,
-                   MachineBasicBlock::iterator begin,
+  void enterRegion(MachineBasicBlock *bb, MachineBasicBlock::iterator begin,
                    MachineBasicBlock::iterator end,
                    unsigned regioninstrs) override;
 
@@ -1496,13 +1504,19 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
+ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
+  return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                           /*RemoveKillFlags=*/true, getPostRABreakAntiDeps());
+}
+
+template <typename Strategy = PostGenericScheduler>
 ScheduleDAGMI *
 createSchedPostRA(MachineSchedContext *C,
-                  TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
-                      TargetSubtargetInfo::ANTIDEP_NONE) {
+                  TargetSubtargetInfo::AntiDepBreakMode DefaultMode) {
+  TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
+      hasPostRABreakAntiDepsOverride() ? getPostRABreakAntiDeps() : DefaultMode;
   return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
-                           /*RemoveKillFlags=*/true,
-                           getPostRAAntiDepBreakMode(AntiDepMode));
+                           /*RemoveKillFlags=*/true, AntiDepMode);
 }
 
 class MachineSchedulerPass

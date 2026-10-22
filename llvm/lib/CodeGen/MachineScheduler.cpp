@@ -204,9 +204,9 @@ static cl::opt<bool>
     DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                            cl::desc("Print critical path length to stdout"));
 
-static cl::opt<TargetSubtargetInfo::AntiDepBreakMode> PostRAAntiDep(
-    "misched-postra-antidep", cl::Hidden,
-    cl::desc("Override the post-RA MISched anti-dependency break mode"),
+static cl::opt<TargetSubtargetInfo::AntiDepBreakMode> PostRABreakAntiDeps(
+    "misched-postra-break-antideps", cl::Hidden,
+    cl::desc("Set the post-RA MISched anti-dependency break mode"),
     cl::init(TargetSubtargetInfo::ANTIDEP_NONE),
     cl::values(clEnumValN(TargetSubtargetInfo::ANTIDEP_NONE, "none",
                           "No anti-dependency breaking"),
@@ -220,9 +220,11 @@ static cl::opt<bool> VerifyScheduling(
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
 MISched::Direction llvm::getPreRADirection() { return PreRADirection; }
-TargetSubtargetInfo::AntiDepBreakMode
-llvm::getPostRAAntiDepBreakMode(TargetSubtargetInfo::AntiDepBreakMode Default) {
-  return PostRAAntiDep.getNumOccurrences() > 0 ? PostRAAntiDep : Default;
+TargetSubtargetInfo::AntiDepBreakMode llvm::getPostRABreakAntiDeps() {
+  return PostRABreakAntiDeps;
+}
+bool llvm::hasPostRABreakAntiDepsOverride() {
+  return PostRABreakAntiDeps.getNumOccurrences() > 0;
 }
 bool llvm::shouldVerifyScheduling() { return VerifyScheduling; }
 
@@ -1133,7 +1135,8 @@ AntiDepState::AntiDepState(MachineSchedContext *C,
     Breaker.reset(createAggressiveAntiDepBreaker(*C->MF, *C->RegClassInfo,
                                                  CriticalPathRCs));
   } else {
-    assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL);
+    assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL &&
+           "Unexpected anti-dependency break mode");
     Breaker.reset(createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
   }
 }
@@ -1142,8 +1145,9 @@ void AntiDepState::startBlock(MachineBasicBlock *MBB) {
   if (!Breaker)
     return;
   Breaker->StartBlock(MBB);
-  ScanPos = MBB->end();
-  EndIndex = MBB->size();
+  BoundaryScanPos = MBB->end();
+  BoundaryScanIndex = MBB->size();
+  RegionEndIndex = BoundaryScanIndex;
 }
 
 void AntiDepState::finishBlock() {
@@ -1152,23 +1156,28 @@ void AntiDepState::finishBlock() {
   Breaker->FinishBlock();
 }
 
-void AntiDepState::enterRegion(MachineBasicBlock *MBB,
-                               MachineBasicBlock::iterator End) {
+void AntiDepState::enterRegion(MachineBasicBlock::iterator End) {
   if (!Breaker)
     return;
 
-  unsigned Count =
-      std::distance(MBB->instr_begin(), ScanPos.getInstrIterator());
-  for (auto I = ScanPos; I != End;) {
+  // Scheduling regions exclude boundary instructions and may have gaps between
+  // them. Scan those gaps so the breaker's liveness remains synchronized.
+  scanRangeBackwards(BoundaryScanPos, End, BoundaryScanIndex);
+  RegionEndIndex = BoundaryScanIndex;
+  RegionProcessed = false;
+}
+
+void AntiDepState::scanRangeBackwards(MachineBasicBlock::iterator From,
+                                      MachineBasicBlock::iterator To,
+                                      unsigned &Count) {
+  for (auto I = From; I != To;) {
     MachineInstr &MI = *--I;
     --Count;
     if (!MI.isDebugOrPseudoInstr())
-      Breaker->Observe(MI, Count, EndIndex);
+      Breaker->Observe(MI, Count, RegionEndIndex);
     if (MI.isBundle())
       Count -= MI.getBundleSize();
   }
-  EndIndex = std::distance(MBB->instr_begin(), End.getInstrIterator());
-  RegionProcessed = false;
 }
 
 void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
@@ -1176,19 +1185,13 @@ void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
   if (!Breaker)
     return;
 
-  ScanPos = Begin;
+  BoundaryScanPos = Begin;
   if (RegionProcessed)
-    return;
-
-  unsigned Count = EndIndex;
-  for (auto I = End; I != Begin;) {
-    MachineInstr &MI = *--I;
-    --Count;
-    if (!MI.isDebugOrPseudoInstr())
-      Breaker->Observe(MI, Count, EndIndex);
-    if (MI.isBundle())
-      Count -= MI.getBundleSize();
-  }
+    BoundaryScanIndex -= std::distance(Begin, End);
+  else
+    // schedule() skips empty and single-instruction regions. Scan a skipped
+    // region here so its instructions still contribute to liveness.
+    scanRangeBackwards(End, Begin, BoundaryScanIndex);
 }
 
 bool AntiDepState::breakAntiDependencies(
@@ -1197,14 +1200,9 @@ bool AntiDepState::breakAntiDependencies(
     AntiDepBreaker::DbgValueVector &DbgValues) {
   if (!Breaker)
     return false;
-  return Breaker->BreakAntiDependencies(SUnits, Begin, End, EndIndex,
-                                        DbgValues) != 0;
-}
-
-void AntiDepState::finishRegion() {
-  if (!Breaker)
-    return;
   RegionProcessed = true;
+  return Breaker->BreakAntiDependencies(SUnits, Begin, End, RegionEndIndex,
+                                        DbgValues) != 0;
 }
 
 // Provide a vtable anchor.
@@ -1287,8 +1285,8 @@ void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
 }
 
 void ScheduleDAGMI::finishBlock() {
-  SchedImpl->leaveMBB();
   AntiDep.finishBlock();
+  SchedImpl->leaveMBB();
   ScheduleDAGInstrs::finishBlock();
 }
 
@@ -1297,12 +1295,11 @@ void ScheduleDAGMI::finishBlock() {
 /// in the region, including the boundary itself and single-instruction regions
 /// that don't get scheduled.
 void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
-                                     MachineBasicBlock::iterator begin,
-                                     MachineBasicBlock::iterator end,
-                                     unsigned regioninstrs)
-{
+                                MachineBasicBlock::iterator begin,
+                                MachineBasicBlock::iterator end,
+                                unsigned regioninstrs) {
   ScheduleDAGInstrs::enterRegion(bb, begin, end, regioninstrs);
-  AntiDep.enterRegion(bb, end);
+  AntiDep.enterRegion(end);
 
   SchedImpl->initPolicy(begin, end, regioninstrs);
 
@@ -1437,8 +1434,6 @@ void ScheduleDAGMI::schedule() {
     dumpSchedule();
     dbgs() << '\n';
   });
-
-  AntiDep.finishRegion();
 }
 
 /// Apply each ScheduleDAGMutation step in order.
