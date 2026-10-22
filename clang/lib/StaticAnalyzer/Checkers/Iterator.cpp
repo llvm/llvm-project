@@ -251,6 +251,9 @@ ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
                     SymMgr.getType(Pos->getOffset()))
           .getAsSymbol();
   // Even a symbolic offset can simplify to a concrete value.
+  // FIXME: Represent iterator offsets as NonLoc so that concrete results can be
+  // preserved. Rejecting them here makes callers lose position information or
+  // skip range checks.
   if (!NewOffset)
     return nullptr;
   return setIteratorPosition(State, Iter, Pos->setTo(NewOffset));

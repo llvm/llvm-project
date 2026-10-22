@@ -551,6 +551,8 @@ void IteratorModeling::handleIncrement(CheckerContext &C,
   auto NewState =
     advancePosition(State, Iter, OO_Plus,
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+  // FIXME: When the new offset is concrete, this fallback discards its value
+  // and its relation to the previous position.
   if (!NewState)
     NewState = createIteratorPosition(State, Iter, Pos->getContainer(), Elem,
                                       C.getStackFrame(), C.blockCount());
@@ -578,6 +580,8 @@ void IteratorModeling::handleDecrement(CheckerContext &C,
   auto NewState =
     advancePosition(State, Iter, OO_Minus,
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))));
+  // FIXME: When the new offset is concrete, this fallback discards its value
+  // and its relation to the previous position.
   if (!NewState)
     NewState = createIteratorPosition(State, Iter, Pos->getContainer(), Elem,
                                       C.getStackFrame(), C.blockCount());
@@ -625,6 +629,8 @@ void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C,
     State = setIteratorPosition(State, TgtVal, *NewPos);
     C.addTransition(State);
   } else {
+    // FIXME: A concrete new offset is replaced with a fresh symbol here,
+    // losing its value and its relation to the original position.
     assignToContainer(C, Elem, TgtVal, Pos->getContainer());
   }
 }
@@ -670,6 +676,8 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
     ProgramStateRef NewState = setIteratorPosition(State, NewVal, *NewPos);
     C.addTransition(NewState);
   } else {
+    // FIXME: A concrete new offset is replaced with a fresh symbol here,
+    // losing its value and its relation to the original position.
     assignToContainer(C, Elem, NewVal, OldPos->getContainer());
   }
 }
