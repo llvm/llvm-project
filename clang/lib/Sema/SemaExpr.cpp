@@ -4948,6 +4948,12 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                        ExprKind))
     return true;
 
+  // The operand of sizeof is parsed in an unevaluated context, but a variably
+  // modified operand is evaluated if the sizeof itself is.
+  std::optional<EnterExpressionEvaluationContext> Evaluated;
+  if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+      isUnevaluatedContext())
+    Evaluated.emplace(*this, parentEvaluationContext().Context);
   if (!CheckVariablyModifiedTypeUse(ExprType, OpLoc))
     return true;
 
