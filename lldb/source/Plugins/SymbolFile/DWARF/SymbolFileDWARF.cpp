@@ -323,6 +323,9 @@ struct lldb_private::plugin::dwarf::StandaloneDWARFLineTableInfo {
   uint32_t CalculateNumCompileUnits();
   CompUnitSP ParseCompileUnitAtIndex(uint32_t cu_idx);
   bool ParseLineTable(CompileUnit &comp_unit);
+  uint32_t ResolveSymbolContext(const Address &so_addr,
+                                SymbolContextItem resolve_scope,
+                                SymbolContext &sc);
 
   const llvm::DWARFDebugLine::LineTable *GetLineTable(uint32_t cu_idx) const;
 
@@ -458,6 +461,33 @@ bool StandaloneDWARFLineTableInfo::ParseLineTable(CompileUnit &comp_unit) {
       ConvertLineTable(comp_unit, *line_table, m_symfile.m_first_code_address)
           .release());
   return true;
+}
+
+uint32_t StandaloneDWARFLineTableInfo::ResolveSymbolContext(
+    const Address &so_addr, SymbolContextItem resolve_scope,
+    SymbolContext &sc) {
+  if (m_symfile.m_first_code_address == LLDB_INVALID_ADDRESS)
+    m_symfile.InitializeFirstCodeAddress();
+  const DWARFDebugAranges &aranges = GetAranges(m_symfile.m_first_code_address);
+  const dw_offset_t cu_idx = aranges.FindAddress(so_addr.GetFileAddress());
+  if (cu_idx == DW_INVALID_OFFSET)
+    return 0;
+
+  CompUnitSP cu_sp = m_symfile.GetCompileUnitAtIndex(cu_idx);
+  sc.comp_unit = cu_sp.get();
+  if (!sc.comp_unit)
+    return 0;
+  uint32_t resolved = eSymbolContextCompUnit;
+
+  if (resolve_scope & eSymbolContextLineEntry) {
+    if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
+      Address exe_so_addr(so_addr);
+      if (m_symfile.FixupAddress(exe_so_addr) &&
+          line_table->FindLineEntryByAddress(exe_so_addr, sc.line_entry))
+        resolved |= eSymbolContextLineEntry;
+    }
+  }
+  return resolved;
 }
 
 void SymbolFileDWARF::Initialize() {
@@ -2347,35 +2377,10 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
   if (resolve_scope &
       (eSymbolContextCompUnit | eSymbolContextFunction | eSymbolContextBlock |
        eSymbolContextLineEntry | eSymbolContextVariable)) {
+    if (StandaloneDWARFLineTableInfo *standalone = GetStandaloneLineTableInfo())
+      return standalone->ResolveSymbolContext(so_addr, resolve_scope, sc);
+
     lldb::addr_t file_vm_addr = so_addr.GetFileAddress();
-
-    if (StandaloneDWARFLineTableInfo *standalone =
-            GetStandaloneLineTableInfo()) {
-      if (m_first_code_address == LLDB_INVALID_ADDRESS)
-        InitializeFirstCodeAddress();
-      const DWARFDebugAranges &aranges =
-          standalone->GetAranges(m_first_code_address);
-      const dw_offset_t cu_idx = aranges.FindAddress(file_vm_addr);
-      if (cu_idx == DW_INVALID_OFFSET)
-        return 0;
-
-      CompUnitSP cu_sp = GetCompileUnitAtIndex(cu_idx);
-      sc.comp_unit = cu_sp.get();
-      if (!sc.comp_unit)
-        return 0;
-      resolved |= eSymbolContextCompUnit;
-
-      if (resolve_scope & eSymbolContextLineEntry) {
-        if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
-          Address exe_so_addr(so_addr);
-          if (FixupAddress(exe_so_addr) &&
-              line_table->FindLineEntryByAddress(exe_so_addr, sc.line_entry))
-            resolved |= eSymbolContextLineEntry;
-        }
-      }
-      return resolved;
-    }
-
     DWARFDebugInfo &debug_info = DebugInfo();
     const DWARFDebugAranges &aranges = debug_info.GetCompileUnitAranges();
     const dw_offset_t cu_offset = aranges.FindAddress(file_vm_addr);
