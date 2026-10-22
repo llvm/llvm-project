@@ -41,6 +41,7 @@ s64 internal_atoll(const char *nptr);
 void *internal_memchr(const void *s, int c, uptr n);
 void *internal_memrchr(const void *s, int c, uptr n);
 int internal_memcmp(const void* s1, const void* s2, uptr n);
+void *internal_memccpy(void *d, const void *s, int c, uptr n);
 ALWAYS_INLINE void *internal_memcpy(void *dest, const void *src, uptr n) {
   return __sanitizer_internal_memcpy(dest, src, n);
 }
