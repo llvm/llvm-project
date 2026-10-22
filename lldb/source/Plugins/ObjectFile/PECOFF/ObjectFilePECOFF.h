@@ -14,6 +14,7 @@
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/COFF.h"
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {
@@ -106,6 +107,23 @@ public:
   lldb::ByteOrder GetByteOrder() const override;
 
   bool IsExecutable() const override;
+
+  bool IsSystem() const override {
+    std::string path_str = m_file.GetPath();
+    if (path_str.empty())
+      return false;
+    std::replace(path_str.begin(), path_str.end(), '\\', '/');
+    llvm::StringRef path = path_str;
+
+    // Skip past drive letter.
+    if (!llvm::isAlpha(path[0]))
+      return false;
+    path = path.substr(1);
+
+    return path.starts_with_insensitive(":/windows/system32/") ||
+           path.starts_with_insensitive(":/windows/syswow64/") ||
+           path.starts_with_insensitive(":/windows/winsxs/");
+  }
 
   uint32_t GetAddressByteSize() const override;
 
