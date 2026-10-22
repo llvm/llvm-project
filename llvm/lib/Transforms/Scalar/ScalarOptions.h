@@ -9,7 +9,11 @@
 #ifndef LLVM_LIB_TRANSFORMS_SCALAR_SCALAROPTIONS_H
 #define LLVM_LIB_TRANSFORMS_SCALAR_SCALAROPTIONS_H
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <limits>
 #include <optional>
@@ -27,5 +31,25 @@ enum class MatrixLayoutTy { ColumnMajor, RowMajor };
 
 #define OPTIONS_STRUCT_DECL
 #include "ScalarOptions.inc"
+
+namespace llvm {
+
+inline const ScalarOptions &getScalarOptions(const LLVMContext &C) {
+  return C.getLibraryOptions().get<ScalarOptions>();
+}
+
+inline const ScalarOptions &getScalarOptions(const Function &F) {
+  return getScalarOptions(F.getContext());
+}
+
+inline const ScalarOptions &getScalarOptions(const Loop &L) {
+  return getScalarOptions(L.getHeader()->getContext());
+}
+
+inline const ScalarOptions &getScalarOptions(const Value &V) {
+  return getScalarOptions(V.getContext());
+}
+
+} // namespace llvm
 
 #endif // LLVM_LIB_TRANSFORMS_SCALAR_SCALAROPTIONS_H
