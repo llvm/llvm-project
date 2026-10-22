@@ -3,8 +3,6 @@
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
-; FIXME: SCEV cannot prove this yet, fold the exit to false.
-
 ; If x <u 10, then x - 5 is in [-5, 5), so x - 5 <s 5.
 define void @ult_const_slt_offset(i32 %x) {
 ; CHECK-LABEL: define void @ult_const_slt_offset(
@@ -16,9 +14,7 @@ define void @ult_const_slt_offset(i32 %x) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[X_M5:%.*]] = add i32 [[X]], -5
-; CHECK-NEXT:    [[Q:%.*]] = icmp sge i32 [[X_M5]], 5
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
