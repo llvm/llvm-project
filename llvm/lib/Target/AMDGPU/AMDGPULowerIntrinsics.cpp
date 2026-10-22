@@ -46,7 +46,7 @@ private:
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
   bool visitUnscaledWMMA(IntrinsicInst &I);
-  bool visitTensorLoadToLDS(IntrinsicInst &I);
+  bool visitMcastLoad(IntrinsicInst &I);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -118,11 +118,18 @@ bool AMDGPULowerIntrinsicsImpl::run() {
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
       break;
+    case Intrinsic::amdgcn_cluster_load_b32:
+    case Intrinsic::amdgcn_cluster_load_b64:
+    case Intrinsic::amdgcn_cluster_load_b128:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
     case Intrinsic::amdgcn_tensor_load_to_lds:
       if (!HasMcastFullMaskBug)
         break;
-      forEachCall(
-          F, [&](IntrinsicInst *II) { Changed |= visitTensorLoadToLDS(*II); });
+      forEachCall(F,
+                  [&](IntrinsicInst *II) { Changed |= visitMcastLoad(*II); });
       break;
     }
   }
@@ -351,28 +358,38 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   return true;
 }
 
-// A multicast tensor load whose workgroup mask has all 16 bits set may never
-// return to some of the workgroups. Restrict the mask to the half of the
-// cluster that holds the issuing workgroup: workgroups 0-7 use 0x00ff and
-// workgroups 8-15 use 0xff00. It is still a single load per wave, and every
-// named workgroup still receives the data.
-bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
-  assert(I.getIntrinsicID() == Intrinsic::amdgcn_tensor_load_to_lds);
-
-  // The workgroup mask is in bits [15:0] of dword 0 of D# group 1.
+// A multicast load whose workgroup mask has all 16 bits set may never return
+// to some of the workgroups. Restrict the mask to the half of the cluster that
+// holds the issuing workgroup: workgroups 0-7 use 0x00ff and workgroups 8-15
+// use 0xff00. It is still a single load per wave, and every named workgroup
+// still receives the data.
+bool AMDGPULowerIntrinsicsImpl::visitMcastLoad(IntrinsicInst &I) {
+  // A tensor load has the mask in bits [15:0] of dword 0 of D# group 1. A
+  // cluster load has it in bits [15:0] of its last operand, which goes to M0.
   constexpr uint32_t FullMask = 0xffff;
-  Value *Group1 = I.getArgOperand(1);
-  unsigned NumElts = cast<FixedVectorType>(Group1->getType())->getNumElements();
-  KnownBits Known = computeKnownBits(Group1, APInt::getOneBitSet(NumElts, 0),
-                                     SimplifyQuery(M.getDataLayout(), &I));
+  bool IsTensor = I.getIntrinsicID() == Intrinsic::amdgcn_tensor_load_to_lds;
+  unsigned MaskIdx = IsTensor ? 1 : I.arg_size() - 1;
+  Value *MaskOp = I.getArgOperand(MaskIdx);
+  SimplifyQuery Q(M.getDataLayout(), &I);
+  KnownBits Known;
+  if (IsTensor) {
+    unsigned NumElts =
+        cast<FixedVectorType>(MaskOp->getType())->getNumElements();
+    Known = computeKnownBits(MaskOp, APInt::getOneBitSet(NumElts, 0), Q);
+  } else {
+    Known = computeKnownBits(MaskOp, Q);
+  }
   if ((Known.Zero.getZExtValue() & FullMask) != 0)
     return false;
   bool IsKnownFull = (Known.One.getZExtValue() & FullMask) == FullMask;
 
   IRBuilder<> B(&I);
-  Value *Mask = findScalarElement(Group1, 0);
-  if (!Mask)
-    Mask = B.CreateExtractElement(Group1, uint64_t(0));
+  Value *Mask = MaskOp;
+  if (IsTensor) {
+    Mask = findScalarElement(MaskOp, 0);
+    if (!Mask)
+      Mask = B.CreateExtractElement(MaskOp, uint64_t(0));
+  }
 
   // Compute the half mask in the entry block so it is not recomputed in loops.
   IRBuilder<> EntryB(I.getContext());
@@ -389,7 +406,9 @@ bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
     NewMask = B.CreateSelect(IsFull, NewMask, Mask);
   }
 
-  I.setArgOperand(1, B.CreateInsertElement(Group1, NewMask, uint64_t(0)));
+  if (IsTensor)
+    NewMask = B.CreateInsertElement(MaskOp, NewMask, uint64_t(0));
+  I.setArgOperand(MaskIdx, NewMask);
   return true;
 }
 

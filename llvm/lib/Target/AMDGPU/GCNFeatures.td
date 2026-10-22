@@ -1684,7 +1684,7 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
 >;
 
 defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
-  "Multicast tensor loads with all 16 workgroup mask bits set may never complete",
+  "Multicast loads with all 16 workgroup mask bits set may never complete",
   /*GenPredicate=*/0
 >;
 
