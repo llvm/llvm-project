@@ -1,19 +1,20 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
 ; RUN:   -store-sequencing-max-frontier-size=3 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefix=FRONTIER
+; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,FRONTIER
 
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
 ; RUN:   -store-sequencing-max-memops-in-flight=5 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefix=INFLIGHT
+; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,INFLIGHT
 
 ; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler \
 ; RUN:   -store-sequencing-max-frontier-size=3 \
 ; RUN:   -store-sequencing-max-memops-in-flight=5 \
-; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN:   -enable-store-sequencing 2>&1 | FileCheck %s --check-prefixes=CHECK,BOTH
 
 define void @test_oversize_unanalyzable_frontier_results_in_promotion(ptr %p) {
-; FRONTIER-LABEL: test_oversize_unanalyzable_frontier_results_in_promotion:%bb.0
+; CHECK-LABEL: test_oversize_unanalyzable_frontier_results_in_promotion:%bb.0
+
 ; FRONTIER:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; FRONTIER:       Promoting SU([[S1:[0-9]+]]) to sequencing store
 ; FRONTIER:       SU([[S1]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.10)
@@ -25,7 +26,6 @@ define void @test_oversize_unanalyzable_frontier_results_in_promotion(ptr %p) {
 ; FRONTIER-NEXT:    SU({{[0-9]+}}): Ord Latency=0 Barrier
 ; FRONTIER:       SU([[S0]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.50)
 
-; INFLIGHT-LABEL: test_oversize_unanalyzable_frontier_results_in_promotion:%bb.0
 ; INFLIGHT:       Promoting SU([[S:[0-9]+]]) to sequencing store
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT:       SU([[B]]): STRWui {{.*}} :: (store (s32) into %ir.p)
@@ -53,7 +53,8 @@ define void @test_oversize_unanalyzable_frontier_results_in_promotion(ptr %p) {
 }
 
 define i32 @test_noalias_unanalyzable_load_not_retained_across_promotion(ptr %p) {
-; FRONTIER-LABEL: test_noalias_unanalyzable_load_not_retained_across_promotion:%bb.0
+; CHECK-LABEL: test_noalias_unanalyzable_load_not_retained_across_promotion:%bb.0
+
 ; FRONTIER:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; FRONTIER:       Promoting SU([[S1:[0-9]+]]) to sequencing store
 ; FRONTIER:       SU([[S1]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.20)
@@ -66,7 +67,6 @@ define i32 @test_noalias_unanalyzable_load_not_retained_across_promotion(ptr %p)
 ; FRONTIER:       SU([[L]]): {{.*}} = LDRWui {{.*}} :: (load (s32) from %ir.p.gep.60)
 ; FRONTIER:       SU([[S0]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.50)
 
-; INFLIGHT-LABEL: test_noalias_unanalyzable_load_not_retained_across_promotion:%bb.0
 ; INFLIGHT:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT:       Promoting SU([[S1:[0-9]+]]) to sequencing store
@@ -103,7 +103,8 @@ define i32 @test_noalias_unanalyzable_load_not_retained_across_promotion(ptr %p)
 }
 
 define void @test_oversize_analyzable_frontier_results_in_promotion(ptr noalias %p) {
-; FRONTIER-LABEL: test_oversize_analyzable_frontier_results_in_promotion:%bb.0
+; CHECK-LABEL: test_oversize_analyzable_frontier_results_in_promotion:%bb.0
+
 ; FRONTIER:       Promoting SU([[S:[0-9]+]]) to sequencing store
 ; FRONTIER:       SU([[S]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.20)
 ; FRONTIER-NOT:   {{^}}SU(
@@ -112,7 +113,6 @@ define void @test_oversize_analyzable_frontier_results_in_promotion(ptr noalias 
 ; FRONTIER-NEXT:    SU({{[0-9]+}}): Ord Latency=0 Barrier
 ; FRONTIER-NEXT:    SU({{[0-9]+}}): Ord Latency=0 Barrier
 
-; INFLIGHT-LABEL: test_oversize_analyzable_frontier_results_in_promotion:%bb.0
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT:       SU([[B]]): STRWui {{.*}} :: (store (s32) into %ir.p)
 ; INFLIGHT-NOT:   {{^}}SU(
@@ -138,7 +138,7 @@ define void @test_oversize_analyzable_frontier_results_in_promotion(ptr noalias 
 }
 
 define void @test_excess_memops_in_flight_introduce_barrier(ptr noalias %p, ptr noalias %q, ptr noalias %r, ptr noalias %s, ptr noalias %t, ptr %u) {
-; INFLIGHT-LABEL: test_excess_memops_in_flight_introduce_barrier:%bb.0
+; CHECK-LABEL: test_excess_memops_in_flight_introduce_barrier:%bb.0
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT:       SU([[B]]): STRWui {{.*}} :: (store (s32) into %ir.u)
 ; INFLIGHT-NOT:   {{^}}SU(
@@ -158,7 +158,7 @@ define void @test_excess_memops_in_flight_introduce_barrier(ptr noalias %p, ptr 
 }
 
 define void @test_excess_memops_in_flight_introduce_barrier_repeatedly(ptr noalias %p) {
-; INFLIGHT-LABEL: test_excess_memops_in_flight_introduce_barrier_repeatedly:%bb.0
+; CHECK-LABEL: test_excess_memops_in_flight_introduce_barrier_repeatedly:%bb.0
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B0:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT-NOT:   Number of in-flight
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B1:[0-9]+]]) to barrier chain and clearing maps.
@@ -208,7 +208,8 @@ define void @test_excess_memops_in_flight_introduce_barrier_repeatedly(ptr noali
 }
 
 define void @test_promotion_discounts_memops_in_flight(ptr %p) {
-; INFLIGHT-LABEL: test_promotion_discounts_memops_in_flight:%bb.0
+; CHECK-LABEL: test_promotion_discounts_memops_in_flight:%bb.0
+
 ; INFLIGHT:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
 ; INFLIGHT:       Promoting SU([[S1:[0-9]+]]) to sequencing store
@@ -226,7 +227,6 @@ define void @test_promotion_discounts_memops_in_flight(ptr %p) {
 ; INFLIGHT-NEXT:    SU([[S0]]): Ord Latency=0 Barrier
 ; INFLIGHT:       SU([[S0]]): STRWui {{.*}} :: (store (s32) into %ir.p.gep.80)
 
-; BOTH-LABEL: test_promotion_discounts_memops_in_flight:%bb.0
 ; BOTH-NOT:   Number of in-flight
 ; BOTH:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; BOTH-NOT:   Number of in-flight
@@ -271,7 +271,7 @@ define void @test_promotion_discounts_memops_in_flight(ptr %p) {
 }
 
 define i32 @test_retained_loads_count_towards_memops_in_flight(ptr %p, i64 %i) {
-; INFLIGHT-LABEL: test_retained_loads_count_towards_memops_in_flight:%bb.0
+; CHECK-LABEL: test_retained_loads_count_towards_memops_in_flight:%bb.0
 ; INFLIGHT:       Promoting SU([[S:[0-9]+]]) to sequencing store
 ; INFLIGHT-NOT:   Number of in-flight
 ; INFLIGHT:       Number of in-flight memory operations reached 5, promoting SU([[B:[0-9]+]]) to barrier chain and clearing maps.
@@ -307,7 +307,7 @@ define i32 @test_retained_loads_count_towards_memops_in_flight(ptr %p, i64 %i) {
 }
 
 define void @test_memops_in_flight_reset_after_barrier(ptr %p) {
-; INFLIGHT-LABEL: test_memops_in_flight_reset_after_barrier:%bb.0
+; CHECK-LABEL: test_memops_in_flight_reset_after_barrier:%bb.0
 ; INFLIGHT-NOT:   Number of in-flight
 ; INFLIGHT:       Promoting SU([[S0:[0-9]+]]) to sequencing store
 ; INFLIGHT-NOT:   Number of in-flight

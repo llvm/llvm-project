@@ -89,7 +89,8 @@ static cl::opt<unsigned>
     HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
                cl::desc("The limit to use while constructing the DAG "
                         "prior to scheduling, at which point a trade-off "
-                        "is made to avoid excessive compile time."));
+                        "is made to avoid excessive compile time. Ignored when "
+                        "store-sequencing is enabled."));
 
 static cl::opt<bool> EnableStoreSequencing(
     "enable-store-sequencing", cl::Hidden, cl::init(false),
@@ -1103,7 +1104,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       BarrierChain->addPredBarrier(SU);
 
     // Reduce maps if they grow huge.
-    if (MemOpsProcessed >= HugeRegion) {
+    if (!EnableStoreSequencing && MemOpsProcessed >= HugeRegion) {
       LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
@@ -1122,8 +1123,6 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
       BarrierChain = SU;
       addBarrierMemoryDeps();
-
-      MemOpsProcessed = 0;
       continue;
     }
 
