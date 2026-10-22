@@ -1,11 +1,4 @@
-add_custom_target(libc-tests)
-
-add_custom_target(exhaustive-check-libc)
-add_custom_target(libc-long-running-tests)
-
-# Build-only targets for lit (don't run tests, just build executables)
-add_custom_target(libc-tests-build)
-add_custom_target(libc-integration-tests-build)
+add_libc_testsuite(libc-tests ROOT)
 
 # Configure the site config file for lit
 configure_lit_site_cfg(
