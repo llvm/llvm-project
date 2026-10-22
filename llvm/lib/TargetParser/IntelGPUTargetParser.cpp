@@ -84,10 +84,9 @@ StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
   }
 }
 
-// TODO: Ensure -fsycl --offload-arch provides a list of valid IGCA
-// architectures, similar to how compiling for an nvptx triple returns a list
-// of valid GPU architectures. The user trying to input an invalid IGCA target
-// without being told what IGCA targets actually exist might get confusing.
+// FIXME(IGCA): Make -fsycl --offload-arch provides a list of valid IGCA
+// targets upon a bad IGCA target, similar to how compiling for an nvptx triple
+// returns a list of valid GPU architectures.
 void llvm::IntelGPU::fillValidIGCATargetList(
     SmallVectorImpl<StringRef> &Values) {
 #define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET) Values.push_back(NAME);
