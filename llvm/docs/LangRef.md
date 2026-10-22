@@ -12318,7 +12318,7 @@ element type is supported by scalar atomic loads.
 optional on non-atomic loads. Note: if the alignment is not greater than or equal
 to the size of the `<ty>` type, or the element type for an `elementwise` load,
 the atomic operation is likely to require a lock and have poor performance.
-`!nontemporal` does not have any defined semantics for atomic loads.
+`!nontemporal` has target-defined semantics for atomic loads.
 
 The constant `align` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
@@ -12457,8 +12457,8 @@ element type is supported by scalar atomic stores.
 optional on non-atomic stores. Note: if the alignment is not greater than or
 equal to the size of the `<value>` type, or the element type for an
 `elementwise` store, the atomic operation is likely to require a lock and have
-poor performance. `!nontemporal` does not have any defined semantics for
-atomic stores.
+poor performance. `!nontemporal` has target-defined semantics for atomic
+stores.
 
 The optional constant `align` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the

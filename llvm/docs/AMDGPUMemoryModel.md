@@ -426,6 +426,22 @@ The following properties follow from the definitions above:
    operation with inclusive scopes, such that their common scope includes both
    `W` and `R`.
 
+(amdgpu-memmodel-temporal-hints)=
+
+## Temporal Hints
+
+`!nontemporal` on a non-atomic `load` or `store`, or on a `load atomic` or
+`store atomic`, is a *temporal hint*: the accessed data is not expected to be
+reused soon, so the implementation may avoid retaining it in caches.
+
+A temporal hint does not change the value, atomicity, ordering, scope,
+availability or visibility of an access, and may be dropped. The scope selects
+the cache level at which an access completes; the temporal hint only controls
+whether the caches retain the data. The two are independent.
+
+`!nontemporal` has no effect on `atomicrmw`, `cmpxchg`, or accesses to local
+memory (`addrspace(3)`), which is not cached.
+
 (amdgcn-av-vulkan)=
 
 ## The Vulkan Memory Model

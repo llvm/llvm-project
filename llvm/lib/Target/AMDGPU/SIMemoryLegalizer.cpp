@@ -2354,6 +2354,11 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
 
+    if (MOI.isNonTemporal())
+      Changed |= CC->enableVolatileAndOrNonTemporal(
+          MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, /*IsVolatile=*/false,
+          /*IsNonTemporal=*/true);
+
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -2414,6 +2419,11 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
     // the scope of the instruction to a greater scope.
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
+
+    if (MOI.isNonTemporal())
+      Changed |= CC->enableVolatileAndOrNonTemporal(
+          MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, /*IsVolatile=*/false,
+          /*IsNonTemporal=*/true);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
