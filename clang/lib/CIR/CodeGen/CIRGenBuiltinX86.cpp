@@ -24,6 +24,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -1077,48 +1078,54 @@ mlir::Value CIRGenFunction::emitX86CpuInit(mlir::Location loc) {
   return builder.createCallOp(loc, initFunc, {}).getResult();
 }
 
-mlir::Value CIRGenFunction::emitX86MSVCIntrin(unsigned builtinID,
+mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
                                               const CallExpr *E) {
-  Address indexAddress(emitPointerWithAlignment(E->getArg(0)));
-  mlir::Value argValue = emitScalarExpr(E->getArg(1));
+  switch (builtinID) {
+  case MSVCIntrin::_BitScanForward:
+  case MSVCIntrin::_BitScanReverse: {
+    Address indexAddress(emitPointerWithAlignment(E->getArg(0)));
+    mlir::Value argValue = emitScalarExpr(E->getArg(1));
 
-  mlir::Location loc = getLoc(E->getExprLoc());
-  mlir::Type argType = argValue.getType();
-  mlir::Type indexType = indexAddress.getElementType();
-  mlir::Type resultType = convertType(E->getType());
+    mlir::Location loc = getLoc(E->getExprLoc());
+    mlir::Type argType = argValue.getType();
+    mlir::Type indexType = indexAddress.getElementType();
+    mlir::Type resultType = convertType(E->getType());
 
-  mlir::Value argZero = builder.getNullValue(argType, loc);
-  mlir::Value notZero =
-      cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, argValue, argZero);
+    mlir::Value argZero = builder.getNullValue(argType, loc);
+    mlir::Value notZero =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, argValue, argZero);
 
-  cir::IfOp::create(
-      builder, loc, notZero, /*no else branch*/ false,
-      [&](mlir::OpBuilder &b, mlir::Location) {
-        // TODO: forward or reverse scan
-        if (builtinID == X86::BI_BitScanForward ||
-            builtinID == X86::BI_BitScanForward64) {
-          mlir::Value zeroCount =
-              cir::BitCtzOp::create(builder, loc, argValue, true).getResult();
-          mlir::Value castCount = builder.createCast(
-              loc, cir::CastKind::integral, zeroCount, indexType);
-          builder.createStore(loc, castCount, indexAddress, false);
-        } else {
-          unsigned argWidth = mlir::cast<cir::IntType>(argType).getWidth();
-          mlir::Value argTypeLastIndex =
-              builder.getConstantInt(loc, indexType, argWidth - 1);
+    cir::IfOp::create(
+        builder, loc, notZero, /*no else branch*/ false,
+        [&](mlir::OpBuilder &b, mlir::Location) {
+          if (builtinID == MSVCIntrin::_BitScanForward) {
+            mlir::Value zeroCount =
+                cir::BitCtzOp::create(builder, loc, argValue, true).getResult();
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            builder.createStore(loc, castCount, indexAddress, false);
+          } else {
+            unsigned argWidth = mlir::cast<cir::IntType>(argType).getWidth();
+            mlir::Value argTypeLastIndex =
+                builder.getConstantInt(loc, indexType, argWidth - 1);
 
-          mlir::Value zeroCount =
-              cir::BitClzOp::create(builder, loc, argValue, true).getResult();
-          mlir::Value castCount = builder.createCast(
-              loc, cir::CastKind::integral, zeroCount, indexType);
-          mlir::Value index =
-              builder.createNSWSub(loc, argTypeLastIndex, castCount);
-          builder.createStore(loc, index, indexAddress, false);
-        }
-        builder.createYield(loc);
-      });
-  return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
-                            resultType);
+            mlir::Value zeroCount =
+                cir::BitClzOp::create(builder, loc, argValue, true).getResult();
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            mlir::Value index =
+                builder.createNSWSub(loc, argTypeLastIndex, castCount);
+            builder.createStore(loc, index, indexAddress, false);
+          }
+          builder.createYield(loc);
+        });
+    return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
+                              resultType);
+  }
+  default:
+    cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
+    return {};
+  }
 }
 
 std::optional<mlir::Value>
@@ -1133,13 +1140,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
 
-  if (builtinID == X86::BI_BitScanForward ||
-      builtinID == X86::BI_BitScanForward64 ||
-      builtinID == X86::BI_BitScanReverse ||
-      builtinID == X86::BI_BitScanReverse64)
-    return emitX86MSVCIntrin(builtinID, expr);
-
-  assert(!cir::MissingFeatures::msvcBuiltins());
+  if (std::optional<MSVCIntrin> MsvcIntId =
+      CodeGenUtils::translateX86ToMsvcIntrin(builtinID))
+    return emitX86MSVCIntrin(*MsvcIntId, expr);
 
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
