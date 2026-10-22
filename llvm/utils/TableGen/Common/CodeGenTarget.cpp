@@ -355,23 +355,25 @@ bool CodeGenTarget::isLittleEndianEncoding() const {
   return getInstructionSet()->getValueAsBit("isLittleEndianEncoding");
 }
 
-const BitsInit *
+ArrayRef<const Init *>
 CodeGenTarget::getInstructionEncodingBits(const Record *EncodingDef) const {
-  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  ArrayRef<const Init *> Bits =
+      EncodingDef->getValueAsBitsInit("Inst")->getBits();
   if (!isLittleEndianEncoding())
-    return BI;
+    return Bits;
 
   // Pseudo instructions are not encoded.
   if (EncodingDef->isSubClassOf("Instruction") &&
       (EncodingDef->getValueAsString("Namespace") == "TargetOpcode" ||
        EncodingDef->getValueAsBit("isPseudo")))
-    return BI;
+    return Bits;
 
   auto [It, Inserted] = ReversedEncodingBits.try_emplace(EncodingDef);
   if (Inserted) {
-    SmallVector<const Init *, 32> ReversedBits(reverse(BI->getBits()));
-    RecordKeeper &MutableRK = const_cast<RecordKeeper &>(Records);
-    It->second = BitsInit::get(MutableRK, ReversedBits);
+    const Init **Reversed =
+        ReversedEncodingBitsAllocator.Allocate<const Init *>(Bits.size());
+    llvm::copy(reverse(Bits), Reversed);
+    It->second = ArrayRef(Reversed, Bits.size());
   }
   return It->second;
 }

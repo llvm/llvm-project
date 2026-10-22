@@ -19,9 +19,9 @@
 
 namespace llvm {
 
-class BitsInit;
 class CodeGenInstruction;
 class CodeGenTarget;
+class Init;
 class Record;
 class RecordVal;
 class VarLenInst;
@@ -141,10 +141,10 @@ public:
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);
-  void parseFixedLenEncoding(const BitsInit &RecordInstBits);
+  void parseFixedLenEncoding(ArrayRef<const Init *> RecordInstBits);
 
   void parseVarLenOperands(const VarLenInst &VLI);
-  void parseFixedLenOperands(const BitsInit &Bits);
+  void parseFixedLenOperands(ArrayRef<const Init *> Bits);
 };
 
 } // namespace llvm
