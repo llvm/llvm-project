@@ -1688,3 +1688,115 @@ define signext i32 @ssh1sadd_intrinsic_i32(i32 signext %a, i32 signext %b) nounw
   %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
   ret i32 %res
 }
+
+define i64 @test_sha_i64(i64 %a, i32 %shamt) {
+; CHECK-LABEL: test_sha_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sha a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 %shamt)
+  ret i64 %res
+}
+
+define i64 @test_sha_i64_imm(i64 %a) {
+; CHECK-LABEL: test_sha_i64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 3)
+  ret i64 %res
+}
+
+define i64 @test_sha_i64_negimm(i64 %a) {
+; CHECK-LABEL: test_sha_i64_negimm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 3
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 -3)
+  ret i64 %res
+}
+
+define i64 @test_sha_i64_mask(i64 %a, i32 %shamt) {
+; CHECK-LABEL: test_sha_i64_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sha a0, a0, a1
+; CHECK-NEXT:    ret
+  %m = and i32 %shamt, 255
+  %res = call i64 @llvm.riscv.sha.i64(i64 %a, i32 %m)
+  ret i64 %res
+}
+
+define i64 @test_shar_i64(i64 %a, i32 %shamt) {
+; CHECK-LABEL: test_shar_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shar a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shar.i64(i64 %a, i32 %shamt)
+  ret i64 %res
+}
+
+define i64 @test_shar_i64_imm(i64 %a) {
+; CHECK-LABEL: test_shar_i64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shar.i64(i64 %a, i32 3)
+  ret i64 %res
+}
+
+define i64 @test_shar_i64_negimm(i64 %a) {
+; CHECK-LABEL: test_shar_i64_negimm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srari a0, a0, 3
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shar.i64(i64 %a, i32 -3)
+  ret i64 %res
+}
+
+define i64 @test_shl_u64(i64 %a, i32 %shamt) {
+; CHECK-LABEL: test_shl_u64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shl a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shl.u64(i64 %a, i32 %shamt)
+  ret i64 %res
+}
+
+define i64 @test_shlr_u64(i64 %a, i32 %shamt) {
+; CHECK-LABEL: test_shlr_u64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shlr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 %shamt)
+  ret i64 %res
+}
+
+define i64 @test_shl_u64_imm(i64 %a) {
+; CHECK-LABEL: test_shl_u64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 3
+; CHECK-NEXT:    shl a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shl.u64(i64 %a, i32 3)
+  ret i64 %res
+}
+
+define i64 @test_shlr_u64_negimm(i64 %a) {
+; CHECK-LABEL: test_shlr_u64_negimm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, -3
+; CHECK-NEXT:    shlr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.riscv.shlr.u64(i64 %a, i32 -3)
+  ret i64 %res
+}
+
+define signext i32 @ssha_intrinsic_i32_signext(i32 signext %a, i32 signext %shamt) nounwind {
+; CHECK-LABEL: ssha_intrinsic_i32_signext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssha.ws a0, a0, a1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 %shamt)
+  ret i32 %res
+}

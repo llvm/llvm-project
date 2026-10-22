@@ -125,6 +125,7 @@ class RISCVUImmNegLeaf<int bitsNum>
 
 def uimm4_neg : RISCVUImmNegLeaf<4>;
 def uimm5_neg : RISCVUImmNegLeaf<5>;
+def uimm6_neg : RISCVUImmNegLeaf<6>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -2106,7 +2107,9 @@ def riscv_pm2addasu  : RVSDNode<"PM2ADDASU", SDT_RISCVHorizontalMulAcc>;
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
 
-def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
+// Shift amount is a scalar. The shifted value is a packed vector, or a scalar
+// for the 32-bit scalar saturating shifts.
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisInt<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
 def riscv_psll : RVSDNode<"PSLL", SDT_RISCVPackedShift>;
@@ -2116,6 +2119,13 @@ def riscv_pssha : RVSDNode<"PSSHA", SDT_RISCVPackedShift>;
 def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
 def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
 def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
+
+// Non-saturating 64-bit shifts. The shift amount is a signed value taken from
+// the low 8 bits of rs2.
+def riscv_sha  : RVSDNode<"SHA",  SDTIntShiftOp>;
+def riscv_shar : RVSDNode<"SHAR", SDTIntShiftOp>;
+def riscv_shl  : RVSDNode<"SHL",  SDTIntShiftOp>;
+def riscv_shlr : RVSDNode<"SHLR", SDTIntShiftOp>;
 
 // RV32 packed narrowing shift.
 def SDT_RISCVPackedNarrowingShift
@@ -2610,6 +2620,16 @@ let append Predicates = [IsRV32] in {
   def : PatGprShiftMask<ushlsat, SSHL, shiftMask256>;
   def : PatGprImm<sshlsat, SSLAI, uimm5>;
   // No SSLLI
+
+  // 32-bit saturating and rounding shift patterns
+  def : PatGprImm<riscv_pssha, SSLAI, uimm5>;
+  def : PatGprImm<riscv_psshar, SSLAI, uimm5>;
+  def : PatGprImm<riscv_pssha, SRAI, uimm5_neg>;
+  def : PatGprImm<riscv_psshar, SRARI_RV32, uimm5_neg>;
+  def : PatGprShiftMask<riscv_pssha, SSHA, shiftMask256>;
+  def : PatGprShiftMask<riscv_psshar, SSHAR, shiftMask256>;
+  def : PatGprShiftMask<riscv_psshl, SSHL, shiftMask256>;
+  def : PatGprShiftMask<riscv_psshlr, SSHLR, shiftMask256>;
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
@@ -3707,10 +3727,20 @@ let append Predicates = [IsRV64] in {
   def : PatGprImm<riscv_psshar, PSSLAI_W, uimm5, v2i32>;
   def : PatGprImm<riscv_pssha, PSRAI_W, uimm5_neg, v2i32>;
   def : PatGprImm<riscv_psshar, PSRARI_W, uimm5_neg, v2i32>;
-  def : PatGprShift<riscv_pssha, PSSHA_WS, v2i32>;
-  def : PatGprShift<riscv_psshar, PSSHAR_WS, v2i32>;
-  def : PatGprShift<riscv_psshl, PSSHL_WS, v2i32>;
-  def : PatGprShift<riscv_psshlr, PSSHLR_WS, v2i32>;
+  def : PatGprShiftMask<riscv_pssha, PSSHA_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_psshar, PSSHAR_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_psshl, PSSHL_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_psshlr, PSSHLR_WS, shiftMask256, v2i32>;
+
+  // 64-bit shift patterns
+  def : PatGprImm<riscv_sha, SLLI, uimm6>;
+  def : PatGprImm<riscv_shar, SLLI, uimm6>;
+  def : PatGprImm<riscv_sha, SRAI, uimm6_neg>;
+  def : PatGprImm<riscv_shar, SRARI_RV64, uimm6_neg>;
+  def : PatGprShiftMask<riscv_sha, SHA, shiftMask256>;
+  def : PatGprShiftMask<riscv_shar, SHAR, shiftMask256>;
+  def : PatGprShiftMask<riscv_shl, SHL, shiftMask256>;
+  def : PatGprShiftMask<riscv_shlr, SHLR, shiftMask256>;
 
   // 32-bit packed saturation patterns
   def : PatGprImm<riscv_sati, PSATI_W, sati_width5, v2i32>;

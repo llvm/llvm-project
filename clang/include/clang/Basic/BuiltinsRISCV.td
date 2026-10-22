@@ -282,6 +282,18 @@ def sati_i64 : RISCVBuiltin<"int64_t(int64_t, _Constant unsigned int)">;
 def usati_u64 : RISCVBuiltin<"uint64_t(int64_t, _Constant unsigned int)">;
 } // Features = "experimental-p,64bit"
 
+// Scalar Saturating and Rounding Shift
+def ssha_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshar_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshl_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+def sshlr_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+let Features = "experimental-p,64bit" in {
+def sha_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shar_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shl_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
+def shlr_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
+} // Features = "experimental-p,64bit"
+
 // Scalar Multiply High
 def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
