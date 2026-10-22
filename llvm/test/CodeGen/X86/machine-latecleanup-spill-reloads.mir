@@ -35,7 +35,7 @@
     ret void
   }
 
-  define void @store_without_pointer_info_keeps_reload_reusable(ptr %p) {
+  define void @store_without_pointer_info_blocks_reload_reuse(ptr %p) {
     ret void
   }
 
@@ -56,7 +56,7 @@
     ret void
   }
 
-  define void @same_spill_slot_disjoint_store_blocks_reload_reuse() {
+  define void @same_spill_slot_disjoint_store_keeps_reload_reusable() {
     ret void
   }
 
@@ -281,9 +281,9 @@ body:             |
     RET64
 ...
 ---
-# The store describes its access but names no frame index, so it is not a
-# store to the tracked slot and the reload stays reusable.
-name:            store_without_pointer_info_keeps_reload_reusable
+# The store names no memory object, so it may alias the spill slot and the
+# reload cannot be reused.
+name:            store_without_pointer_info_blocks_reload_reuse
 tracksRegLiveness: true
 frameInfo:
   stackSize:       48
@@ -295,9 +295,10 @@ body:             |
   bb.0:
     liveins: $rdi, $rdx
 
-    ; CHECK-LABEL: name: store_without_pointer_info_keeps_reload_reusable
+    ; CHECK-LABEL: name: store_without_pointer_info_blocks_reload_reuse
     ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64))
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
     ; CHECK-NEXT: RET64
     $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
@@ -357,7 +358,7 @@ body:             |
 ---
 # The load reads a frame object that is not a spill slot, and the store names
 # that object through its IR value. Reusing the load would return the value
-# from before the store, so isSpillSlotReload() must refuse to track it.
+# from before the store, so isNonFixedSpillSlotReload() must refuse to track it.
 name:            non_spill_slot_reload_is_not_reused_across_ir_store
 tracksRegLiveness: true
 frameInfo:
@@ -408,7 +409,9 @@ body:             |
     RET64
 ...
 ---
-name:            same_spill_slot_disjoint_store_blocks_reload_reuse
+# The store writes a byte of the same spill slot that the reload does not
+# read, so the reload stays reusable.
+name:            same_spill_slot_disjoint_store_keeps_reload_reusable
 tracksRegLiveness: true
 frameInfo:
   stackSize:       64
@@ -420,10 +423,9 @@ body:             |
   bb.0:
     liveins: $rcx
 
-    ; CHECK-LABEL: name: same_spill_slot_disjoint_store_blocks_reload_reuse
+    ; CHECK-LABEL: name: same_spill_slot_disjoint_store_keeps_reload_reusable
     ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, 52, $noreg, $cl :: (store (s8) into %stack.0 + 12, align 4)
-    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
     ; CHECK-NEXT: RET64
     $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
