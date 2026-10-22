@@ -2210,6 +2210,13 @@ class PatHorizontalMul<SDPatternOperator OpNode, RVInst Inst,
     : Pat<(ResultVT (OpNode (SrcVT GPR:$rs1), (SrcVT GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
 
+class PatHorizontalMulAdd<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (add (ResultVT GPR:$rd),
+                        (binop_oneuse<OpNode> (SrcVT GPR:$rs1),
+                                             (SrcVT GPR:$rs2)))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 // (rs1 << 1) + rs2
 class PatPSh1Add<RVInst Inst, ValueType vt>
     : Pat<(vt (add (riscv_psll (vt GPR:$rs1), (XLenVT 1)), (vt GPR:$rs2))),
@@ -2590,6 +2597,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, i32, v4i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, i32, v2i16>;
@@ -3429,6 +3440,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, v2i32, v8i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, v2i32, v4i16>;
