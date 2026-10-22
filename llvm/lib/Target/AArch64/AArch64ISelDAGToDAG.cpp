@@ -1201,8 +1201,7 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
     SDValue Inner = N.getOperand(0);
     uint64_t ShrImm = 0;
     uint64_t ShlImm = 0;
-    if ((VT == MVT::i32 || VT == MVT::i64) &&
-        isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
+    if (isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
         ShrImm < VT.getSizeInBits() &&
         isOpcWithIntImmediate(Inner.getNode(), ISD::SHL, ShlImm) &&
         ShlImm < VT.getSizeInBits() && Inner.hasOneUse())
