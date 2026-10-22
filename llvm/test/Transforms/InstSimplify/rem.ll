@@ -234,14 +234,10 @@ define i32 @not_urem_constant_dividend_known_smaller_than_divisor(i32 %x) {
   ret i32 %r
 }
 
-; This would require computing known bits on both x and y. Is it worth doing?
-
 define i32 @urem_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @urem_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 250
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 251
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[AND]], [[OR]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %and = and i32 %x, 250
   %or = or i32 %y, 251
