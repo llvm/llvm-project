@@ -3887,10 +3887,12 @@ void cir::CoroutineOp::getSuccessorRegions(
   }
 
   // body can fall through into final_suspend (co_return), exit directly
-  // from any suspend_point inside it that just suspends, or reach destroy,
-  // either from a suspend_point being destroyed, or from an exception
-  // escaping body's own catch-all.
+  // from any suspend_point inside it that just suspends, or reach destroy
+  // from a suspend_point being destroyed. An exception that escapes body, for
+  // example one that unhandled_exception() rethrows, will leave through the
+  // unwind region once it is implemented.
   if (parent == &getBody()) {
+    assert(!cir::MissingFeatures::coroUnwindRegion());
     regions.emplace_back(&getFinalSuspend());
     regions.emplace_back(&getExit());    // any suspend_point inside body
     regions.emplace_back(&getDestroy()); // destroy() on any suspend inside body
@@ -3908,13 +3910,9 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // destroy has two possible outcomes depending on why it was entered:
-  // ordinary destroy dispatch falls through to exit (normal return); an
-  // exception that reached destroy needs to keep propagating instead, i.e.
-  // leave the whole op rather than go through exit's cir.return.
+  // destroy falls through to exit (normal return).
   if (parent == &getDestroy()) {
     regions.emplace_back(&getExit());
-    regions.push_back(RegionSuccessor(getOperation())); // unwind out of the op
     return;
   }
   // exit always terminates the op there's no region it loops back into.
