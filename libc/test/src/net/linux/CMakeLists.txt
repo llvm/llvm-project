@@ -1,9 +1,9 @@
-add_custom_target(libc_net_unittests)
+add_libc_testsuite(libc-net-tests)
 
 add_libc_test(
   if_indextoname_test
   SUITE
-    libc_net_unittests
+    libc-net-tests
   SRCS
     if_indextoname_test.cpp
   DEPENDS
@@ -17,7 +17,7 @@ add_libc_test(
 add_libc_test(
   if_nametoindex_test
   SUITE
-    libc_net_unittests
+    libc-net-tests
   SRCS
     if_nametoindex_test.cpp
   DEPENDS
@@ -29,7 +29,7 @@ add_libc_test(
 add_libc_test(
   if_nameindex_test
   SUITE
-    libc_net_unittests
+    libc-net-tests
   SRCS
     if_nameindex_test.cpp
   DEPENDS
