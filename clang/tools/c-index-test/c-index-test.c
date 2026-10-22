@@ -29,10 +29,6 @@
 #  include <unistd.h>
 #endif
 
-#ifdef __MVS__
-#include <libgen.h>
-#endif
-
 extern int indextest_core_main(int argc, const char **argv);
 extern int indextest_perform_shell_execution(const char *command_line);
 
@@ -40,7 +36,9 @@ extern int indextest_perform_shell_execution(const char *command_line);
 /* Utility functions.                                                         */
 /******************************************************************************/
 
-#ifdef _MSC_VER
+#ifdef __MVS__
+#include <libgen.h>
+#elif _MSC_VER
 char *basename(const char* path)
 {
     char* base1 = (char*)strrchr(path, '/');
@@ -77,7 +75,7 @@ char *dirname(char* path)
 
     return path;
 }
-#elif !defined(__MVS__)
+#else
 extern char *basename(const char *);
 extern char *dirname(char *);
 #endif
