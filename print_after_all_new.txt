@@ -1,0 +1,4385 @@
+; *** IR Dump After EntryExitInstrumenterPass on main ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+; *** IR Dump After AlwaysInlinerPass on [module] ***
+; ModuleID = 'test.c'
+source_filename = "test.c"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx13.0.0"
+
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+
+attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 21.0.0git (https://github.com/llvm/llvm-project.git fb07683bc2402a75f6a5c568cdab195b695cd322)"}
+!5 = distinct !{!5, !6}
+!6 = !{!"llvm.loop.mustprogress"}
+; *** IR Dump After CoroConditionalWrapper on [module] ***
+; ModuleID = 'test.c'
+source_filename = "test.c"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx13.0.0"
+
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+
+attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 21.0.0git (https://github.com/llvm/llvm-project.git fb07683bc2402a75f6a5c568cdab195b695cd322)"}
+!5 = distinct !{!5, !6}
+!6 = !{!"llvm.loop.mustprogress"}
+; *** IR Dump After AnnotationRemarksPass on main ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) ***
+; ModuleID = 'test.c'
+source_filename = "test.c"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx13.0.0"
+
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+
+attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 21.0.0git (https://github.com/llvm/llvm-project.git fb07683bc2402a75f6a5c568cdab195b695cd322)"}
+!5 = distinct !{!5, !6}
+!6 = !{!"llvm.loop.mustprogress"}
+*** IR Dump After Expand large div/rem (expand-large-div-rem) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Expand fp (expand-fp) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Expand Atomic instructions (atomic-expand) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Lower Garbage Collection Instructions (gc-lowering) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Shadow Stack GC Lowering (shadow-stack-gc-lowering) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Lower @llvm.global_dtors via `__cxa_atexit` (lower-global-dtors) ***
+; ModuleID = 'test.c'
+source_filename = "test.c"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx13.0.0"
+
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+
+attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"uwtable", i32 1}
+!3 = !{i32 7, !"frame-pointer", i32 1}
+!4 = !{!"clang version 21.0.0git (https://github.com/llvm/llvm-project.git fb07683bc2402a75f6a5c568cdab195b695cd322)"}
+!5 = distinct !{!5, !6}
+!6 = !{!"llvm.loop.mustprogress"}
+*** IR Dump After Remove unreachable blocks from the CFG (unreachableblockelim) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Instrument function entry/exit with calls to e.g. mcount() (post inlining) (post-inline-ee-instrument) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Scalarize Masked Memory Intrinsics (scalarize-masked-mem-intrin) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Expand reduction intrinsics (expand-reductions) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After AArch64 Stack Tagging (aarch64-stack-tagging) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After SME ABI Pass (aarch64-sme-abi) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Exception handling preparation (dwarf-eh-prepare) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Prepare callbr (callbrprepare) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+*** IR Dump After Safe Stack instrumentation pass (safe-stack) ***
+; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
+define i32 @main() #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  store i32 5, ptr %2, align 4
+  store i32 10, ptr %3, align 4
+  %12 = load i32, ptr %2, align 4
+  %13 = load i32, ptr %3, align 4
+  %14 = add nsw i32 %12, %13
+  store i32 %14, ptr %4, align 4
+  store i32 100, ptr %5, align 4
+  store i32 200, ptr %6, align 4
+  %15 = load i32, ptr %5, align 4
+  %16 = load i32, ptr %6, align 4
+  %17 = add nsw i32 %15, %16
+  store i32 %17, ptr %7, align 4
+  %18 = load i32, ptr %2, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = add nsw i32 %18, %19
+  store i32 %20, ptr %8, align 4
+  store i32 15, ptr %9, align 4
+  store i32 0, ptr %10, align 4
+  br label %21
+
+21:                                               ; preds = %27, %0
+  %22 = load i32, ptr %10, align 4
+  %23 = icmp slt i32 %22, 10
+  br i1 %23, label %24, label %30
+
+24:                                               ; preds = %21
+  %25 = load i32, ptr %10, align 4
+  %26 = mul nsw i32 %25, 2
+  store i32 %26, ptr %11, align 4
+  br label %27
+
+27:                                               ; preds = %24
+  %28 = load i32, ptr %10, align 4
+  %29 = add nsw i32 %28, 1
+  store i32 %29, ptr %10, align 4
+  br label %21, !llvm.loop !5
+
+30:                                               ; preds = %21
+  %31 = load i32, ptr %4, align 4
+  ret i32 %31
+}
+# *** IR Dump After IRTranslator (irtranslator) ***:
+# Machine code for function main: IsSSA, TracksLiveness
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %11:_(s32) = G_CONSTANT i32 0
+  %12:_(s32) = G_CONSTANT i32 5
+  %13:_(s32) = G_CONSTANT i32 10
+  %17:_(s32) = G_CONSTANT i32 100
+  %18:_(s32) = G_CONSTANT i32 200
+  %25:_(s32) = G_CONSTANT i32 15
+  %30:_(s32) = G_CONSTANT i32 2
+  %33:_(s32) = G_CONSTANT i32 1
+  %0:_(p0) = G_FRAME_INDEX %stack.0
+  %1:_(p0) = G_FRAME_INDEX %stack.1
+  %2:_(p0) = G_FRAME_INDEX %stack.2
+  %3:_(p0) = G_FRAME_INDEX %stack.3
+  %4:_(p0) = G_FRAME_INDEX %stack.4
+  %5:_(p0) = G_FRAME_INDEX %stack.5
+  %6:_(p0) = G_FRAME_INDEX %stack.6
+  %7:_(p0) = G_FRAME_INDEX %stack.7
+  %8:_(p0) = G_FRAME_INDEX %stack.8
+  %9:_(p0) = G_FRAME_INDEX %stack.9
+  %10:_(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %11:_(s32), %0:_(p0) :: (store (s32) into %ir.1)
+  G_STORE %12:_(s32), %1:_(p0) :: (store (s32) into %ir.2)
+  G_STORE %13:_(s32), %2:_(p0) :: (store (s32) into %ir.3)
+  %14:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:_(s32) = nsw G_ADD %14:_, %15:_
+  G_STORE %16:_(s32), %3:_(p0) :: (store (s32) into %ir.4)
+  G_STORE %17:_(s32), %4:_(p0) :: (store (s32) into %ir.5)
+  G_STORE %18:_(s32), %5:_(p0) :: (store (s32) into %ir.6)
+  %19:_(s32) = G_LOAD %4:_(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:_(s32) = G_LOAD %5:_(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:_(s32) = nsw G_ADD %19:_, %20:_
+  G_STORE %21:_(s32), %6:_(p0) :: (store (s32) into %ir.7)
+  %22:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:_(s32) = nsw G_ADD %22:_, %23:_
+  G_STORE %24:_(s32), %7:_(p0) :: (store (s32) into %ir.8)
+  G_STORE %25:_(s32), %8:_(p0) :: (store (s32) into %ir.9)
+  G_STORE %11:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %27:_(s1) = G_ICMP intpred(slt), %26:_(s32), %13:_
+  G_BRCOND %27:_(s1), %bb.3
+  G_BR %bb.5
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %31:_(s32) = nsw G_MUL %29:_, %30:_
+  G_STORE %31:_(s32), %10:_(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %34:_(s32) = nsw G_ADD %32:_, %33:_
+  G_STORE %34:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:_(s32) = G_LOAD %3:_(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:_(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64O0PreLegalizerCombiner (aarch64-O0-prelegalizer-combiner) ***:
+# Machine code for function main: IsSSA, TracksLiveness
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %11:_(s32) = G_CONSTANT i32 0
+  %12:_(s32) = G_CONSTANT i32 5
+  %13:_(s32) = G_CONSTANT i32 10
+  %17:_(s32) = G_CONSTANT i32 100
+  %18:_(s32) = G_CONSTANT i32 200
+  %25:_(s32) = G_CONSTANT i32 15
+  %30:_(s32) = G_CONSTANT i32 2
+  %33:_(s32) = G_CONSTANT i32 1
+  %0:_(p0) = G_FRAME_INDEX %stack.0
+  %1:_(p0) = G_FRAME_INDEX %stack.1
+  %2:_(p0) = G_FRAME_INDEX %stack.2
+  %3:_(p0) = G_FRAME_INDEX %stack.3
+  %4:_(p0) = G_FRAME_INDEX %stack.4
+  %5:_(p0) = G_FRAME_INDEX %stack.5
+  %6:_(p0) = G_FRAME_INDEX %stack.6
+  %7:_(p0) = G_FRAME_INDEX %stack.7
+  %8:_(p0) = G_FRAME_INDEX %stack.8
+  %9:_(p0) = G_FRAME_INDEX %stack.9
+  %10:_(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %11:_(s32), %0:_(p0) :: (store (s32) into %ir.1)
+  G_STORE %12:_(s32), %1:_(p0) :: (store (s32) into %ir.2)
+  G_STORE %13:_(s32), %2:_(p0) :: (store (s32) into %ir.3)
+  %14:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:_(s32) = nsw G_ADD %14:_, %15:_
+  G_STORE %16:_(s32), %3:_(p0) :: (store (s32) into %ir.4)
+  G_STORE %17:_(s32), %4:_(p0) :: (store (s32) into %ir.5)
+  G_STORE %18:_(s32), %5:_(p0) :: (store (s32) into %ir.6)
+  %19:_(s32) = G_LOAD %4:_(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:_(s32) = G_LOAD %5:_(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:_(s32) = nsw G_ADD %19:_, %20:_
+  G_STORE %21:_(s32), %6:_(p0) :: (store (s32) into %ir.7)
+  %22:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:_(s32) = nsw G_ADD %22:_, %23:_
+  G_STORE %24:_(s32), %7:_(p0) :: (store (s32) into %ir.8)
+  G_STORE %25:_(s32), %8:_(p0) :: (store (s32) into %ir.9)
+  G_STORE %11:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %27:_(s1) = G_ICMP intpred(sge), %26:_(s32), %13:_
+  %35:_(s1) = G_CONSTANT i1 true
+  G_BRCOND %27:_(s1), %bb.5
+  G_BR %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %37:_(s32) = G_CONSTANT i32 1
+  %31:_(s32) = nsw G_SHL %29:_, %37:_(s32)
+  G_STORE %31:_(s32), %10:_(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:_(s32) = G_LOAD %9:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %34:_(s32) = nsw G_ADD %32:_, %33:_
+  G_STORE %34:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:_(s32) = G_LOAD %3:_(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:_(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Localizer (localizer) ***:
+# Machine code for function main: IsSSA, TracksLiveness
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %30:_(s32) = G_CONSTANT i32 2
+  %33:_(s32) = G_CONSTANT i32 1
+  %10:_(p0) = G_FRAME_INDEX %stack.10
+  %0:_(p0) = G_FRAME_INDEX %stack.0
+  %11:_(s32) = G_CONSTANT i32 0
+  G_STORE %11:_(s32), %0:_(p0) :: (store (s32) into %ir.1)
+  %1:_(p0) = G_FRAME_INDEX %stack.1
+  %12:_(s32) = G_CONSTANT i32 5
+  G_STORE %12:_(s32), %1:_(p0) :: (store (s32) into %ir.2)
+  %2:_(p0) = G_FRAME_INDEX %stack.2
+  %13:_(s32) = G_CONSTANT i32 10
+  G_STORE %13:_(s32), %2:_(p0) :: (store (s32) into %ir.3)
+  %14:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:_(s32) = nsw G_ADD %14:_, %15:_
+  %3:_(p0) = G_FRAME_INDEX %stack.3
+  G_STORE %16:_(s32), %3:_(p0) :: (store (s32) into %ir.4)
+  %4:_(p0) = G_FRAME_INDEX %stack.4
+  %17:_(s32) = G_CONSTANT i32 100
+  G_STORE %17:_(s32), %4:_(p0) :: (store (s32) into %ir.5)
+  %5:_(p0) = G_FRAME_INDEX %stack.5
+  %18:_(s32) = G_CONSTANT i32 200
+  G_STORE %18:_(s32), %5:_(p0) :: (store (s32) into %ir.6)
+  %19:_(s32) = G_LOAD %4:_(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:_(s32) = G_LOAD %5:_(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:_(s32) = nsw G_ADD %19:_, %20:_
+  %6:_(p0) = G_FRAME_INDEX %stack.6
+  G_STORE %21:_(s32), %6:_(p0) :: (store (s32) into %ir.7)
+  %22:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:_(s32) = nsw G_ADD %22:_, %23:_
+  %7:_(p0) = G_FRAME_INDEX %stack.7
+  G_STORE %24:_(s32), %7:_(p0) :: (store (s32) into %ir.8)
+  %8:_(p0) = G_FRAME_INDEX %stack.8
+  %25:_(s32) = G_CONSTANT i32 15
+  G_STORE %25:_(s32), %8:_(p0) :: (store (s32) into %ir.9)
+  %9:_(p0) = G_FRAME_INDEX %stack.9
+  G_STORE %11:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %39:_(p0) = G_FRAME_INDEX %stack.9
+  %26:_(s32) = G_LOAD %39:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %44:_(s32) = G_CONSTANT i32 10
+  %27:_(s1) = G_ICMP intpred(sge), %26:_(s32), %44:_
+  %35:_(s1) = G_CONSTANT i1 true
+  G_BRCOND %27:_(s1), %bb.5
+  G_BR %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %40:_(p0) = G_FRAME_INDEX %stack.9
+  %29:_(s32) = G_LOAD %40:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %37:_(s32) = G_CONSTANT i32 1
+  %31:_(s32) = nsw G_SHL %29:_, %37:_(s32)
+  %38:_(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %31:_(s32), %38:_(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %41:_(p0) = G_FRAME_INDEX %stack.9
+  %32:_(s32) = G_LOAD %41:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %43:_(s32) = G_CONSTANT i32 1
+  %34:_(s32) = nsw G_ADD %32:_, %43:_
+  G_STORE %34:_(s32), %41:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %42:_(p0) = G_FRAME_INDEX %stack.3
+  %28:_(s32) = G_LOAD %42:_(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:_(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Legalizer (legalizer) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %0:_(p0) = G_FRAME_INDEX %stack.0
+  %11:_(s32) = G_CONSTANT i32 0
+  G_STORE %11:_(s32), %0:_(p0) :: (store (s32) into %ir.1)
+  %1:_(p0) = G_FRAME_INDEX %stack.1
+  %12:_(s32) = G_CONSTANT i32 5
+  G_STORE %12:_(s32), %1:_(p0) :: (store (s32) into %ir.2)
+  %2:_(p0) = G_FRAME_INDEX %stack.2
+  %13:_(s32) = G_CONSTANT i32 10
+  G_STORE %13:_(s32), %2:_(p0) :: (store (s32) into %ir.3)
+  %14:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:_(s32) = nsw G_ADD %14:_, %15:_
+  %3:_(p0) = G_FRAME_INDEX %stack.3
+  G_STORE %16:_(s32), %3:_(p0) :: (store (s32) into %ir.4)
+  %4:_(p0) = G_FRAME_INDEX %stack.4
+  %17:_(s32) = G_CONSTANT i32 100
+  G_STORE %17:_(s32), %4:_(p0) :: (store (s32) into %ir.5)
+  %5:_(p0) = G_FRAME_INDEX %stack.5
+  %18:_(s32) = G_CONSTANT i32 200
+  G_STORE %18:_(s32), %5:_(p0) :: (store (s32) into %ir.6)
+  %19:_(s32) = G_LOAD %4:_(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:_(s32) = G_LOAD %5:_(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:_(s32) = nsw G_ADD %19:_, %20:_
+  %6:_(p0) = G_FRAME_INDEX %stack.6
+  G_STORE %21:_(s32), %6:_(p0) :: (store (s32) into %ir.7)
+  %22:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:_(s32) = nsw G_ADD %22:_, %23:_
+  %7:_(p0) = G_FRAME_INDEX %stack.7
+  G_STORE %24:_(s32), %7:_(p0) :: (store (s32) into %ir.8)
+  %8:_(p0) = G_FRAME_INDEX %stack.8
+  %25:_(s32) = G_CONSTANT i32 15
+  G_STORE %25:_(s32), %8:_(p0) :: (store (s32) into %ir.9)
+  %9:_(p0) = G_FRAME_INDEX %stack.9
+  G_STORE %11:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %39:_(p0) = G_FRAME_INDEX %stack.9
+  %26:_(s32) = G_LOAD %39:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %44:_(s32) = G_CONSTANT i32 10
+  %47:_(s32) = G_ICMP intpred(sge), %26:_(s32), %44:_
+  G_BRCOND %47:_(s32), %bb.5
+  G_BR %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %40:_(p0) = G_FRAME_INDEX %stack.9
+  %29:_(s32) = G_LOAD %40:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %45:_(s64) = G_CONSTANT i64 1
+  %31:_(s32) = nsw G_SHL %29:_, %45:_(s64)
+  %38:_(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %31:_(s32), %38:_(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %41:_(p0) = G_FRAME_INDEX %stack.9
+  %32:_(s32) = G_LOAD %41:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %43:_(s32) = G_CONSTANT i32 1
+  %34:_(s32) = nsw G_ADD %32:_, %43:_
+  G_STORE %34:_(s32), %41:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %42:_(p0) = G_FRAME_INDEX %stack.3
+  %28:_(s32) = G_LOAD %42:_(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:_(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64PostLegalizerLowering (aarch64-postlegalizer-lowering) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %0:_(p0) = G_FRAME_INDEX %stack.0
+  %11:_(s32) = G_CONSTANT i32 0
+  G_STORE %11:_(s32), %0:_(p0) :: (store (s32) into %ir.1)
+  %1:_(p0) = G_FRAME_INDEX %stack.1
+  %12:_(s32) = G_CONSTANT i32 5
+  G_STORE %12:_(s32), %1:_(p0) :: (store (s32) into %ir.2)
+  %2:_(p0) = G_FRAME_INDEX %stack.2
+  %13:_(s32) = G_CONSTANT i32 10
+  G_STORE %13:_(s32), %2:_(p0) :: (store (s32) into %ir.3)
+  %14:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:_(s32) = nsw G_ADD %14:_, %15:_
+  %3:_(p0) = G_FRAME_INDEX %stack.3
+  G_STORE %16:_(s32), %3:_(p0) :: (store (s32) into %ir.4)
+  %4:_(p0) = G_FRAME_INDEX %stack.4
+  %17:_(s32) = G_CONSTANT i32 100
+  G_STORE %17:_(s32), %4:_(p0) :: (store (s32) into %ir.5)
+  %5:_(p0) = G_FRAME_INDEX %stack.5
+  %18:_(s32) = G_CONSTANT i32 200
+  G_STORE %18:_(s32), %5:_(p0) :: (store (s32) into %ir.6)
+  %19:_(s32) = G_LOAD %4:_(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:_(s32) = G_LOAD %5:_(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:_(s32) = nsw G_ADD %19:_, %20:_
+  %6:_(p0) = G_FRAME_INDEX %stack.6
+  G_STORE %21:_(s32), %6:_(p0) :: (store (s32) into %ir.7)
+  %22:_(s32) = G_LOAD %1:_(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:_(s32) = G_LOAD %2:_(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:_(s32) = nsw G_ADD %22:_, %23:_
+  %7:_(p0) = G_FRAME_INDEX %stack.7
+  G_STORE %24:_(s32), %7:_(p0) :: (store (s32) into %ir.8)
+  %8:_(p0) = G_FRAME_INDEX %stack.8
+  %25:_(s32) = G_CONSTANT i32 15
+  G_STORE %25:_(s32), %8:_(p0) :: (store (s32) into %ir.9)
+  %9:_(p0) = G_FRAME_INDEX %stack.9
+  G_STORE %11:_(s32), %9:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %39:_(p0) = G_FRAME_INDEX %stack.9
+  %26:_(s32) = G_LOAD %39:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %44:_(s32) = G_CONSTANT i32 10
+  %47:_(s32) = G_ICMP intpred(sge), %26:_(s32), %44:_
+  G_BRCOND %47:_(s32), %bb.5
+  G_BR %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %40:_(p0) = G_FRAME_INDEX %stack.9
+  %29:_(s32) = G_LOAD %40:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %45:_(s64) = G_CONSTANT i64 1
+  %31:_(s32) = nsw G_SHL %29:_, %45:_(s64)
+  %38:_(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %31:_(s32), %38:_(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %41:_(p0) = G_FRAME_INDEX %stack.9
+  %32:_(s32) = G_LOAD %41:_(p0) :: (dereferenceable load (s32) from %ir.10)
+  %43:_(s32) = G_CONSTANT i32 1
+  %34:_(s32) = nsw G_ADD %32:_, %43:_
+  G_STORE %34:_(s32), %41:_(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %42:_(p0) = G_FRAME_INDEX %stack.3
+  %28:_(s32) = G_LOAD %42:_(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:_(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After RegBankSelect (regbankselect) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized, RegBankSelected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %0:gpr(p0) = G_FRAME_INDEX %stack.0
+  %11:gpr(s32) = G_CONSTANT i32 0
+  G_STORE %11:gpr(s32), %0:gpr(p0) :: (store (s32) into %ir.1)
+  %1:gpr(p0) = G_FRAME_INDEX %stack.1
+  %12:gpr(s32) = G_CONSTANT i32 5
+  G_STORE %12:gpr(s32), %1:gpr(p0) :: (store (s32) into %ir.2)
+  %2:gpr(p0) = G_FRAME_INDEX %stack.2
+  %13:gpr(s32) = G_CONSTANT i32 10
+  G_STORE %13:gpr(s32), %2:gpr(p0) :: (store (s32) into %ir.3)
+  %14:gpr(s32) = G_LOAD %1:gpr(p0) :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr(s32) = G_LOAD %2:gpr(p0) :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr(s32) = nsw G_ADD %14:gpr, %15:gpr
+  %3:gpr(p0) = G_FRAME_INDEX %stack.3
+  G_STORE %16:gpr(s32), %3:gpr(p0) :: (store (s32) into %ir.4)
+  %4:gpr(p0) = G_FRAME_INDEX %stack.4
+  %17:gpr(s32) = G_CONSTANT i32 100
+  G_STORE %17:gpr(s32), %4:gpr(p0) :: (store (s32) into %ir.5)
+  %5:gpr(p0) = G_FRAME_INDEX %stack.5
+  %18:gpr(s32) = G_CONSTANT i32 200
+  G_STORE %18:gpr(s32), %5:gpr(p0) :: (store (s32) into %ir.6)
+  %19:gpr(s32) = G_LOAD %4:gpr(p0) :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr(s32) = G_LOAD %5:gpr(p0) :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr(s32) = nsw G_ADD %19:gpr, %20:gpr
+  %6:gpr(p0) = G_FRAME_INDEX %stack.6
+  G_STORE %21:gpr(s32), %6:gpr(p0) :: (store (s32) into %ir.7)
+  %22:gpr(s32) = G_LOAD %1:gpr(p0) :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr(s32) = G_LOAD %2:gpr(p0) :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr(s32) = nsw G_ADD %22:gpr, %23:gpr
+  %7:gpr(p0) = G_FRAME_INDEX %stack.7
+  G_STORE %24:gpr(s32), %7:gpr(p0) :: (store (s32) into %ir.8)
+  %8:gpr(p0) = G_FRAME_INDEX %stack.8
+  %25:gpr(s32) = G_CONSTANT i32 15
+  G_STORE %25:gpr(s32), %8:gpr(p0) :: (store (s32) into %ir.9)
+  %9:gpr(p0) = G_FRAME_INDEX %stack.9
+  G_STORE %11:gpr(s32), %9:gpr(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %39:gpr(p0) = G_FRAME_INDEX %stack.9
+  %26:gpr(s32) = G_LOAD %39:gpr(p0) :: (dereferenceable load (s32) from %ir.10)
+  %44:gpr(s32) = G_CONSTANT i32 10
+  %47:gpr(s32) = G_ICMP intpred(sge), %26:gpr(s32), %44:gpr
+  G_BRCOND %47:gpr(s32), %bb.5
+  G_BR %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %40:gpr(p0) = G_FRAME_INDEX %stack.9
+  %29:gpr(s32) = G_LOAD %40:gpr(p0) :: (dereferenceable load (s32) from %ir.10)
+  %45:gpr(s64) = G_CONSTANT i64 1
+  %31:gpr(s32) = nsw G_SHL %29:gpr, %45:gpr(s64)
+  %38:gpr(p0) = G_FRAME_INDEX %stack.10
+  G_STORE %31:gpr(s32), %38:gpr(p0) :: (store (s32) into %ir.11)
+  G_BR %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %41:gpr(p0) = G_FRAME_INDEX %stack.9
+  %32:gpr(s32) = G_LOAD %41:gpr(p0) :: (dereferenceable load (s32) from %ir.10)
+  %43:gpr(s32) = G_CONSTANT i32 1
+  %34:gpr(s32) = nsw G_ADD %32:gpr, %43:gpr
+  G_STORE %34:gpr(s32), %41:gpr(p0) :: (store (s32) into %ir.10)
+  G_BR %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %42:gpr(p0) = G_FRAME_INDEX %stack.3
+  %28:gpr(s32) = G_LOAD %42:gpr(p0) :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr(s32)
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After InstructionSelect (instruction-select) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 Instruction Selection (aarch64-isel) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Finalize ISel and expand pseudo-instructions (finalize-isel) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Local Stack Slot Allocation (localstackalloc) ***:
+# Machine code for function main: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Eliminate PHI nodes for register allocation (phi-node-elimination) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Two-Address instruction pass (twoaddressinstruction) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  %12:gpr32 = MOVi32imm 5
+  STRWui %12:gpr32, %stack.1, 0 :: (store (s32) into %ir.2)
+  %13:gpr32 = MOVi32imm 10
+  STRWui %13:gpr32, %stack.2, 0 :: (store (s32) into %ir.3)
+  %14:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %15:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %16:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+  STRWui %16:gpr32, %stack.3, 0 :: (store (s32) into %ir.4)
+  %17:gpr32 = MOVi32imm 100
+  STRWui %17:gpr32, %stack.4, 0 :: (store (s32) into %ir.5)
+  %18:gpr32 = MOVi32imm 200
+  STRWui %18:gpr32, %stack.5, 0 :: (store (s32) into %ir.6)
+  %19:gpr32 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  %20:gpr32 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  %21:gpr32 = nsw ADDWrr %19:gpr32, %20:gpr32
+  STRWui %21:gpr32, %stack.6, 0 :: (store (s32) into %ir.7)
+  %22:gpr32 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  %23:gpr32 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  %24:gpr32 = nsw ADDWrr %22:gpr32, %23:gpr32
+  STRWui %24:gpr32, %stack.7, 0 :: (store (s32) into %ir.8)
+  %25:gpr32 = MOVi32imm 15
+  STRWui %25:gpr32, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  %26:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %48:gpr32 = SUBSWri %26:gpr32common, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  %29:gpr32 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %31:gpr32 = UBFMWri %29:gpr32, 31, 30
+  STRWui %31:gpr32, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  %32:gpr32common = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  %34:gpr32common = nsw ADDWri %32:gpr32common, 1, 0
+  STRWui %34:gpr32common, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  %28:gpr32 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  $w0 = COPY %28:gpr32
+  RET_ReallyLR implicit $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Fast Register Allocator (regallocfast) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVi32imm 5
+  STRWui killed renamable $w8, %stack.1, 0 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVi32imm 10
+  STRWui killed renamable $w8, %stack.2, 0 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.3, 0 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVi32imm 100
+  STRWui killed renamable $w8, %stack.4, 0 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVi32imm 200
+  STRWui killed renamable $w8, %stack.5, 0 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.6, 0 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.7, 0 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVi32imm 15
+  STRWui killed renamable $w8, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  RET_ReallyLR implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Remove Redundant DEBUG_VALUE analysis (removeredundantdebugvalues) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVi32imm 5
+  STRWui killed renamable $w8, %stack.1, 0 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVi32imm 10
+  STRWui killed renamable $w8, %stack.2, 0 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.3, 0 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVi32imm 100
+  STRWui killed renamable $w8, %stack.4, 0 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVi32imm 200
+  STRWui killed renamable $w8, %stack.5, 0 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.6, 0 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.7, 0 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVi32imm 15
+  STRWui killed renamable $w8, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  RET_ReallyLR implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Fixup Statepoint Caller Saved (fixup-statepoint-caller-saved) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP]
+  fi#1: size=4, align=4, at location [SP]
+  fi#2: size=4, align=4, at location [SP]
+  fi#3: size=4, align=4, at location [SP]
+  fi#4: size=4, align=4, at location [SP]
+  fi#5: size=4, align=4, at location [SP]
+  fi#6: size=4, align=4, at location [SP]
+  fi#7: size=4, align=4, at location [SP]
+  fi#8: size=4, align=4, at location [SP]
+  fi#9: size=4, align=4, at location [SP]
+  fi#10: size=4, align=4, at location [SP]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  STRWui $wzr, %stack.0, 0 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVi32imm 5
+  STRWui killed renamable $w8, %stack.1, 0 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVi32imm 10
+  STRWui killed renamable $w8, %stack.2, 0 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.3, 0 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVi32imm 100
+  STRWui killed renamable $w8, %stack.4, 0 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVi32imm 200
+  STRWui killed renamable $w8, %stack.5, 0 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui %stack.4, 0 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui %stack.5, 0 :: (dereferenceable load (s32) from %ir.6)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.6, 0 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui %stack.1, 0 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui %stack.2, 0 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, %stack.7, 0 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVi32imm 15
+  STRWui killed renamable $w8, %stack.8, 0 :: (store (s32) into %ir.9)
+  STRWui $wzr, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, %stack.10, 0 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui %stack.9, 0 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, %stack.9, 0 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui %stack.3, 0 :: (dereferenceable load (s32) from %ir.4)
+  RET_ReallyLR implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization (prologepilog) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVi32imm 5
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVi32imm 10
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVi32imm 100
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVi32imm 200
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVi32imm 15
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET_ReallyLR implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Post-RA pseudo instruction expansion pass (postrapseudos) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVi32imm 5
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVi32imm 10
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVi32imm 100
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVi32imm 200
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  renamable $w8 = nsw ADDWrr killed renamable $w8, killed renamable $w9
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVi32imm 15
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET_ReallyLR implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 pseudo instruction expansion pass (aarch64-expand-pseudo) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Insert KCFI indirect call checks (kcfi) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 speculation hardening pass (aarch64-speculation-hardening) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Analyze Machine Code For Garbage Collection (gc-analysis) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Insert fentry calls (fentry-insert) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Insert XRay ops (xray-instrumentation) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Implement the 'patchable-function' attribute (patchable-function) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Workaround A53 erratum 835769 pass (aarch64-fix-cortex-a53-835769-pass) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Contiguously Lay Out Funclets (funclet-layout) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Remove Loads Into Fake Uses (remove-loads-into-fake-uses) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After StackMap Liveness Analysis (stackmap-liveness) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Live DEBUG_VALUE analysis (livedebugvalues) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Machine Sanitizer Binary Metadata (machine-sanmd) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 sls hardening pass (aarch64-sls-hardening) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 Pointer Authentication (aarch64-ptrauth) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 Branch Targets (aarch64-branch-targets) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.1 (%ir-block.0):
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.2 (%ir-block.21):
+; predecessors: %bb.1, %bb.4
+  successors: %bb.3, %bb.5
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.5, implicit killed $nzcv
+  B %bb.3
+
+bb.3 (%ir-block.24):
+; predecessors: %bb.2
+  successors: %bb.4(0x80000000); %bb.4(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.4
+
+bb.4 (%ir-block.27):
+; predecessors: %bb.3
+  successors: %bb.2(0x80000000); %bb.2(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.2
+
+bb.5 (%ir-block.30):
+; predecessors: %bb.2
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Branch relaxation pass (branch-relaxation) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.0 (%ir-block.0):
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.1 (%ir-block.21):
+; predecessors: %bb.0, %bb.3
+  successors: %bb.2, %bb.4
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.4, implicit killed $nzcv
+  B %bb.2
+
+bb.2 (%ir-block.24):
+; predecessors: %bb.1
+  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.3
+
+bb.3 (%ir-block.27):
+; predecessors: %bb.2
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.4 (%ir-block.30):
+; predecessors: %bb.1
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Insert CFI remember/restore state instructions (cfi-fixup) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.0 (%ir-block.0):
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.1 (%ir-block.21):
+; predecessors: %bb.0, %bb.3
+  successors: %bb.2, %bb.4
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.4, implicit killed $nzcv
+  B %bb.2
+
+bb.2 (%ir-block.24):
+; predecessors: %bb.1
+  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.3
+
+bb.3 (%ir-block.27):
+; predecessors: %bb.2
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.4 (%ir-block.30):
+; predecessors: %bb.1
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Stack Frame Layout Analysis (stack-frame-layout) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.0 (%ir-block.0):
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.1 (%ir-block.21):
+; predecessors: %bb.0, %bb.3
+  successors: %bb.2, %bb.4
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.4, implicit killed $nzcv
+  B %bb.2
+
+bb.2 (%ir-block.24):
+; predecessors: %bb.1
+  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.3
+
+bb.3 (%ir-block.27):
+; predecessors: %bb.2
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.4 (%ir-block.30):
+; predecessors: %bb.1
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After Unpack machine instruction bundles (unpack-mi-bundles) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.0 (%ir-block.0):
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.1 (%ir-block.21):
+; predecessors: %bb.0, %bb.3
+  successors: %bb.2, %bb.4
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.4, implicit killed $nzcv
+  B %bb.2
+
+bb.2 (%ir-block.24):
+; predecessors: %bb.1
+  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.3
+
+bb.3 (%ir-block.27):
+; predecessors: %bb.2
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.4 (%ir-block.30):
+; predecessors: %bb.1
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
+# *** IR Dump After AArch64 Assembly Printer (aarch64-asm-printer) ***:
+# Machine code for function main: NoPHIs, TracksLiveness, NoVRegs, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Frame Objects:
+  fi#0: size=4, align=4, at location [SP-4]
+  fi#1: size=4, align=4, at location [SP-8]
+  fi#2: size=4, align=4, at location [SP-12]
+  fi#3: size=4, align=4, at location [SP-16]
+  fi#4: size=4, align=4, at location [SP-20]
+  fi#5: size=4, align=4, at location [SP-24]
+  fi#6: size=4, align=4, at location [SP-28]
+  fi#7: size=4, align=4, at location [SP-32]
+  fi#8: size=4, align=4, at location [SP-36]
+  fi#9: size=4, align=4, at location [SP-40]
+  fi#10: size=4, align=4, at location [SP-44]
+
+bb.0 (%ir-block.0):
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  $sp = frame-setup SUBXri $sp, 48, 0
+  frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  STRWui $wzr, $sp, 11 :: (store (s32) into %ir.1)
+  renamable $w8 = MOVZWi 5, 0
+  STRWui killed renamable $w8, $sp, 10 :: (store (s32) into %ir.2)
+  renamable $w8 = MOVZWi 10, 0
+  STRWui killed renamable $w8, $sp, 9 :: (store (s32) into %ir.3)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 8 :: (store (s32) into %ir.4)
+  renamable $w8 = MOVZWi 100, 0
+  STRWui killed renamable $w8, $sp, 7 :: (store (s32) into %ir.5)
+  renamable $w8 = MOVZWi 200, 0
+  STRWui killed renamable $w8, $sp, 6 :: (store (s32) into %ir.6)
+  renamable $w8 = LDRWui $sp, 7 :: (dereferenceable load (s32) from %ir.5)
+  renamable $w9 = LDRWui $sp, 6 :: (dereferenceable load (s32) from %ir.6)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 5 :: (store (s32) into %ir.7)
+  renamable $w8 = LDRWui $sp, 10 :: (dereferenceable load (s32) from %ir.2)
+  renamable $w9 = LDRWui $sp, 9 :: (dereferenceable load (s32) from %ir.3)
+  $w8 = ADDWrs killed renamable $w8, killed renamable $w9, 0
+  STRWui killed renamable $w8, $sp, 4 :: (store (s32) into %ir.8)
+  renamable $w8 = MOVZWi 15, 0
+  STRWui killed renamable $w8, $sp, 3 :: (store (s32) into %ir.9)
+  STRWui $wzr, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.1 (%ir-block.21):
+; predecessors: %bb.0, %bb.3
+  successors: %bb.2, %bb.4
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  dead renamable $w8 = SUBSWri killed renamable $w8, 10, 0, implicit-def $nzcv
+  Bcc 10, %bb.4, implicit killed $nzcv
+  B %bb.2
+
+bb.2 (%ir-block.24):
+; predecessors: %bb.1
+  successors: %bb.3(0x80000000); %bb.3(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = UBFMWri killed renamable $w8, 31, 30
+  STRWui killed renamable $w8, $sp, 1 :: (store (s32) into %ir.11)
+  B %bb.3
+
+bb.3 (%ir-block.27):
+; predecessors: %bb.2
+  successors: %bb.1(0x80000000); %bb.1(100.00%)
+
+  renamable $w8 = LDRWui $sp, 2 :: (dereferenceable load (s32) from %ir.10)
+  renamable $w8 = nsw ADDWri killed renamable $w8, 1, 0
+  STRWui killed renamable $w8, $sp, 2 :: (store (s32) into %ir.10)
+  B %bb.1
+
+bb.4 (%ir-block.30):
+; predecessors: %bb.1
+
+  renamable $w0 = LDRWui $sp, 8 :: (dereferenceable load (s32) from %ir.4)
+  $sp = frame-destroy ADDXri $sp, 48, 0
+  RET undef $lr, implicit killed $w0
+
+# End machine code for function main.
+
