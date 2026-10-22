@@ -8,6 +8,7 @@
 
 #include "InstructionEncoding.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenTarget.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -398,7 +399,8 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 }
 
-InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+InstructionEncoding::InstructionEncoding(const CodeGenTarget &Target,
+                                         const Record *EncodingDef,
                                          const CodeGenInstruction *Inst)
     : EncodingDef(EncodingDef), Inst(Inst) {
   const Record *InstDef = Inst->TheDef;
@@ -421,7 +423,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     if (DecoderMethod.empty())
       parseVarLenOperands(VLI);
   } else {
-    const auto *BI = cast<BitsInit>(InstField->getValue());
+    const BitsInit *BI = Target.getInstructionEncodingBits(EncodingDef);
     parseFixedLenEncoding(*BI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())

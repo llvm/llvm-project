@@ -86,7 +86,7 @@ class InstructionEncoding {
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef,
+  InstructionEncoding(const CodeGenTarget &Target, const Record *EncodingDef,
                       const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.

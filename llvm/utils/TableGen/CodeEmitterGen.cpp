@@ -339,7 +339,7 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 void CodeEmitterGen::addInstructionCasesForEncoding(
     const Record *R, const Record *EncodingDef, std::string &Case,
     std::string &BitOffsetCase) {
-  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  const BitsInit *BI = Target.getInstructionEncodingBits(EncodingDef);
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
@@ -397,7 +397,7 @@ APInt CodeEmitterGen::getInstructionBaseValue(const CodeGenInstruction *CGI,
     EncodingDef = EBM.get(HwMode);
   }
 
-  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  const BitsInit *BI = Target.getInstructionEncodingBits(EncodingDef);
   APInt Value(BitWidth, 0);
   for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I) {
     if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
@@ -490,10 +490,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
 }
 
 CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
-    : RK(RK), Target(RK), CGH(Target.getHwModes()) {
-  // For little-endian instruction bit encodings, reverse the bit order.
-  Target.reverseBitsForLittleEndianEncoding();
-}
+    : RK(RK), Target(RK), CGH(Target.getHwModes()) {}
 
 void CodeEmitterGen::run(raw_ostream &O) {
   emitSourceFileHeader("Machine Code Emitter", O);
@@ -513,13 +510,13 @@ void CodeEmitterGen::run(raw_ostream &O) {
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, CGH);
       for (const auto &[Key, Value] : EBM) {
-        const BitsInit *BI = Value->getValueAsBitsInit("Inst");
+        const BitsInit *BI = Target.getInstructionEncodingBits(Value);
         BitWidth = std::max(BitWidth, BI->getNumBits());
         HwModes.insert(Key);
       }
       continue;
     }
-    const BitsInit *BI = R->getValueAsBitsInit("Inst");
+    const BitsInit *BI = Target.getInstructionEncodingBits(R);
     BitWidth = std::max(BitWidth, BI->getNumBits());
   }
   UseAPInt = BitWidth > 64;

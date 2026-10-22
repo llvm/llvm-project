@@ -75,6 +75,7 @@ class CodeGenTarget {
 
   mutable StringRef InstNamespace;
   mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
+  mutable DenseMap<const Record *, const BitsInit *> ReversedEncodingBits;
   mutable CodeGenIntrinsicMap Intrinsics;
 
   mutable unsigned NumPseudoInstructions = 0;
@@ -244,9 +245,10 @@ public:
   ///
   bool isLittleEndianEncoding() const;
 
-  /// reverseBitsForLittleEndianEncoding - For little-endian instruction bit
-  /// encodings, reverse the bit order of all instructions.
-  void reverseBitsForLittleEndianEncoding();
+  /// Return the bits of the "Inst" field of \p EncodingDef, which must be an
+  /// InstructionEncoding with a fixed length encoding. For little-endian
+  /// instruction bit encodings the bits are returned in reverse order.
+  const BitsInit *getInstructionEncodingBits(const Record *EncodingDef) const;
 
   /// guessInstructionProperties - should we just guess unset instruction
   /// properties?
