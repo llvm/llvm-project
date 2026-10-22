@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu11.00--amdpal <%s | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00--amdpal < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}amdgpu_cs_chain_func:
 ; CHECK:         .set .Lamdgpu_cs_chain_func.private_seg_size, 16{{$}}
@@ -28,6 +28,19 @@
 ; CHECK:         .set .Lchain_indirect_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
 ; CHECK:         .set .Lchain_indirect_and_wwf.has_indirect_call, 1{{$}}
 
+; CHECK-LABEL: {{^}}chain_indirect_gfx_and_wwf:
+; CHECK:         .set .Lchain_indirect_gfx_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
+; CHECK:         .set .Lchain_indirect_gfx_and_wwf.has_indirect_call, 1{{$}}
+
+; CHECK-LABEL: {{^}}gfx_stack_only:
+; CHECK:         .set .Lgfx_stack_only.private_seg_size, 20{{$}}
+
+; CHECK-LABEL: {{^}}wwf_callee_stack_only:
+; CHECK:         .set .Lwwf_callee_stack_only.private_seg_size, 16+max(.Lgfx_stack_only.private_seg_size){{$}}
+
+; CHECK-LABEL: {{^}}chain_own_and_callee_stack:
+; CHECK:         .set .Lchain_own_and_callee_stack.private_seg_size, 32+max(.Lwwf_callee_stack_only.private_seg_size){{$}}
+
 ; CHECK-LABEL: .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
@@ -41,10 +54,10 @@
 ; CHECK:             .backend_stack_size: 0x10{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x10{{$}}
 ; CHECK-LABEL:      chain_and_gfx:
-; CHECK:             .backend_stack_size: 0x20{{$}}
+; CHECK:             .backend_stack_size: 0x3c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
 ; CHECK-LABEL:      chain_and_wwf:
-; CHECK:             .backend_stack_size: 0x50{{$}}
+; CHECK:             .backend_stack_size: 0x6c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x50{{$}}
 ; CHECK-LABEL:      chain_callee_larger_stack:
 ; CHECK:             .backend_stack_size: 0x8{{$}}
@@ -53,11 +66,20 @@
 ; CHECK:             .backend_stack_size: 0x24{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x24{{$}}
 ; CHECK-LABEL:      chain_indirect_and_wwf:
-; CHECK:             .backend_stack_size: 0x40{{$}}
+; CHECK:             .backend_stack_size: 0x5c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
+; CHECK-LABEL:      chain_indirect_gfx_and_wwf:
+; CHECK:             .backend_stack_size: 0x5c{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
+; CHECK-LABEL:      chain_own_and_callee_stack:
+; CHECK:             .backend_stack_size: 0x44{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
 ; CHECK-LABEL:      gfx_alloca:
 ; CHECK:             .backend_stack_size: 0x1c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x1c{{$}}
+; CHECK-LABEL:      gfx_stack_only:
+; CHECK:             .backend_stack_size: 0x14{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x14{{$}}
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
 ; CHECK-NEXT:  - 0
@@ -137,8 +159,38 @@ define amdgpu_cs_chain void @chain_indirect_and_wwf(ptr inreg %callee, <40 x i32
   unreachable
 }
 
+define amdgpu_cs_chain void @chain_indirect_gfx_and_wwf(ptr inreg %callee) {
+.entry:
+  %a = alloca [12 x i32], addrspace(5)
+  store i32 11, ptr addrspace(5) %a
+  call void (ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_alloca, ptr addrspace(5) %a)
+  call amdgpu_gfx void %callee()
+  ret void
+}
+
 define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_func() {
 .entry:
+  ret void
+}
+
+; Stack sizes accumulate transitively through non-chain callees, across calling
+; conventions.
+define amdgpu_gfx void @gfx_stack_only() {
+  %a = alloca [4 x i32], addrspace(5)
+  store volatile i32 12, ptr addrspace(5) %a
+  ret void
+}
+
+define amdgpu_gfx_whole_wave void @wwf_callee_stack_only(i1 %active) {
+  call amdgpu_gfx void @gfx_stack_only()
+  ret void
+}
+
+define amdgpu_cs_chain void @chain_own_and_callee_stack() {
+.entry:
+  %a = alloca [4 x i32], addrspace(5)
+  store volatile i32 13, ptr addrspace(5) %a
+  call void (ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_callee_stack_only)
   ret void
 }
 

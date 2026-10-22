@@ -20999,7 +20999,12 @@ within a map that has been added by the same *vendor-name*.
      ".lds_size"                   integer        Size in bytes of LDS memory.
      ".vgpr_count"                 integer        Number of VGPRs used by the shader.
      ".sgpr_count"                 integer        Number of SGPRs used by the shader.
-     ".stack_frame_size_in_bytes"  integer        Amount of stack size used by the shader.
+     ".stack_frame_size_in_bytes"  integer        Amount of stack size used by the shader itself, not including
+                                                  the stack used by any of its callees.
+     ".backend_stack_size"         integer        Amount of stack size used by the shader, including the stack
+                                                  used by its known callees. Chain callees are excluded, since they
+                                                  reuse the caller's stack frame. Indirect calls and recursion do
+                                                  not contribute.
      ".shader_subtype"             string         Shader subtype/kind. Values include:
 
                                                     - "Unknown"
