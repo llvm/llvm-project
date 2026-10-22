@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: no-exceptions
 
+// <vector>
+
+// void resize(size_type sz);
+
 // This test file validates that std::vector<T>::resize(size_type) provides the strong exception guarantee
 // if no exception is thrown by the move constructor of T during the resize call. It also checks that if
 // T's move constructor is not noexcept, resize provides only the basic exception guarantee.
@@ -35,7 +39,8 @@ void test_allocation_exception_for_strong_guarantee(
   std::size_t old_cap  = v.capacity();
 
   try {
-    v.resize(new_size);
+    v.resize(new_size); // Expected exception
+    assert(false);
   } catch (...) { // std::length_error, std::bad_alloc
     assert(v.data() == old_data);
     assert(v.size() == old_size);
@@ -60,7 +65,8 @@ void test_default_ctor_exception_for_strong_guarantee(
   std::size_t new_size       = old_size + 1;
 
   try {
-    v.resize(new_size);
+    v.resize(new_size); // Expected exception
+    assert(false);
   } catch (...) {
     assert(v.data() == old_data);
     assert(v.size() == old_size);
@@ -85,7 +91,8 @@ void test_copy_ctor_exception_for_strong_guarantee(std::vector<throwing_data<T>,
   std::size_t new_size       = 2 * old_cap;
 
   try {
-    v.resize(new_size);
+    v.resize(new_size); // Expected exception
+    assert(false);
   } catch (...) {
     assert(v.data() == old_data);
     assert(v.size() == old_size);
@@ -107,7 +114,8 @@ void test_move_ctor_exception_for_basic_guarantee(std::vector<move_only_throwing
     v.emplace_back(values[i], throw_after);
 
   try {
-    v.resize(2 * v.capacity());
+    v.resize(2 * v.capacity()); // Expected exception
+    assert(false);
   } catch (...) {
     use_unspecified_but_valid_state_vector(v);
   }
