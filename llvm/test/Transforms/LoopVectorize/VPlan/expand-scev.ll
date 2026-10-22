@@ -725,6 +725,81 @@ exit:
   ret void
 }
 
+; The outer trip count bounds %i to [0, 100), so {0,+,3}<%outer> can be
+; expanded with a nuw nsw multiply.
+define void @addrec_zero_start_mul_nowrap(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_zero_start_mul_nowrap'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<inner.preheader>:
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul ir<%i>, ir<3>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %end = shl nuw nsw i64 %i, 2
+  %guard = icmp eq i64 %i, 0
+  br i1 %guard, label %outer.latch, label %inner
+
+inner:
+  %j = phi i64 [ %i, %outer ], [ %j.next, %inner ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %j
+  store i8 0, ptr %gep
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %end
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %outer.ec = icmp eq i64 %i.next, 100
+  br i1 %outer.ec, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; Same as above, but the outer trip count is unknown, so the multiply may wrap.
+define void @addrec_zero_start_mul_may_wrap(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'addrec_zero_start_mul_may_wrap'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<inner.preheader>:
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul ir<%i>, ir<3>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %end = shl nuw nsw i64 %i, 2
+  %guard = icmp eq i64 %i, 0
+  br i1 %guard, label %outer.latch, label %inner
+
+inner:
+  %j = phi i64 [ %i, %outer ], [ %j.next, %inner ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %j
+  store i8 0, ptr %gep
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %end
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %outer.ec = icmp eq i64 %i.next, %n
+  br i1 %outer.ec, label %exit, label %outer
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.scalable.enable"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
