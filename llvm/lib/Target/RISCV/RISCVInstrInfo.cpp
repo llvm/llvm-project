@@ -493,21 +493,12 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  const DebugLoc &DL, Register DstReg,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   RegState KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-        .addImm(0);
-    return;
-  }
-
-  // Extracting from X0_Pair may create copies from DUMMY_REG_PAIR_WITH_X0.
-  if (SrcReg == RISCV::DUMMY_REG_PAIR_WITH_X0 &&
-      RISCV::GPRRegClass.contains(DstReg)) {
-    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(RISCV::X0)
         .addImm(0);
     return;
   }
@@ -544,11 +535,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       }
     }
 
-    MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
-    MCRegister OddReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd);
-    // We need to correct the odd register of X0_Pair.
-    if (OddReg == RISCV::DUMMY_REG_PAIR_WITH_X0)
-      OddReg = RISCV::X0;
+    auto [EvenReg, OddReg] = TRI->getGPRPairSubRegs(SrcReg);
     assert(DstReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
 
     // Emit an ADDI for both parts of GPRPair.

@@ -23,6 +23,10 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
+namespace llvm {
+struct VectorizeOptions;
+} // namespace llvm
+
 namespace llvm::sandboxir {
 
 /// This is a simple bottom-up (top-down) vectorizer Region pass.
@@ -38,6 +42,7 @@ namespace llvm::sandboxir {
 /// accepts or rejects the IR transaction, depending on the cost.
 class LLVM_ABI BundleVec final : public RegionPass {
 private:
+  const VectorizeOptions *Opts = nullptr;
   /// Set to true whenever the pass modifies the IR.
   bool Change = false;
   AuxPassArgsRegistry ArgsRegistry;

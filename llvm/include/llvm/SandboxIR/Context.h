@@ -237,6 +237,9 @@ public:
   /// Clears function-level state.
   void clear();
 
+  cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LLVMCtx.getLibraryOptions();
+  }
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
   void save() { IRTracker.save(); }

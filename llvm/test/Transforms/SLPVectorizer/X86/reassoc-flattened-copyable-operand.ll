@@ -52,7 +52,7 @@ define void @test(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7
 ; CHECK-NEXT:    [[TMP88:%.*]] = shufflevector <8 x double> [[TMP86]], <8 x double> [[TMP87]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP89:%.*]] = insertelement <8 x double> <double 1.000000e+00, double poison, double 1.000000e+00, double poison, double 1.000000e+00, double 1.000000e+00, double poison, double poison>, double [[TMP27]], i64 1
 ; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <8 x double> [[TMP89]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 1, i32 4, i32 5, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP91:%.*]] = fmul reassoc nsz arcp afn <8 x double> [[TMP88]], [[TMP90]]
+; CHECK-NEXT:    [[TMP91:%.*]] = fmul reassoc arcp afn <8 x double> [[TMP88]], [[TMP90]]
 ; CHECK-NEXT:    store <8 x double> [[TMP91]], ptr getelementptr inbounds nuw (i8, ptr @hexsh_, i64 136), align 8
 ; CHECK-NEXT:    ret void
 ;

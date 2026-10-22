@@ -20,7 +20,7 @@ class SignedTypesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         debug_info=no_match(["pdb"]),
-        archs=["i[3-6]86", "x86_64"],
+        archs=["i[3-6]86", "aarch64"],
         bugnumber="llvm.org/pr24489",
     )
     def test(self):

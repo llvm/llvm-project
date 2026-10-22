@@ -1,4 +1,4 @@
-add_custom_target(libc-shared-tests)
+add_libc_testsuite(libc-shared-tests)
 
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
@@ -17,6 +17,7 @@ else()
     SRCS
       shared_math_test.cpp
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.math.acos

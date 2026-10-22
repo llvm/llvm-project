@@ -262,7 +262,8 @@ static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }
 
-  return true;
+  // Check for tail padding.
+  return StartPos == Layout->getSizeInBits();
 }
 
 /// Get pointer operand of memory accessing instruction. If \p I is
@@ -1465,7 +1466,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       int64_t ElementSize = DL.getTypeStoreSize(ElementType).getFixedValue();
       auto *ConstContent = cast<Constant>(*Content);
       Type *Int32Ty = Type::getInt32Ty(ElementType->getContext());
-      SmallVector<int64_t> ElementOffsets(Offsets.begin(), Offsets.end());
+      SmallVector<int64_t> ElementOffsets(OffsetsSorted.begin(),
+                                          OffsetsSorted.end());
 
       for (int i = 0, e = VT->getElementCount().getFixedValue(); i != e; ++i) {
         Value *ElementContent = ConstantExpr::getExtractElement(
@@ -8789,9 +8791,10 @@ void AAMemoryLocationImpl::categorizePtrValue(
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(&Obj) &&
-               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
-                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
+    } else if (isa<ConstantPointerNull>(&Obj) && ObjectAS == AccessAS &&
+               !NullPointerIsDefined(getAssociatedFunction(), AccessAS)) {
+      // Accessing null is undefined, but not accessing a null pointer cast to
+      // another address space, which may be a valid address there.
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
@@ -12987,8 +12990,12 @@ struct AAInvariantLoadPointerCallSiteReturned final
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
+    // Nothing is known about the result of an indirect call.
     const Function *F = getAssociatedFunction();
-    assert(F && "no associated function for return from call");
+    if (!F) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
     if (!F->isDeclaration() && !F->isIntrinsic())
       return AAInvariantLoadPointerImpl::initialize(A);

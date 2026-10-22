@@ -504,9 +504,6 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return HasGFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const {
-    return HasGFX90AInsts || HasGFX1250Insts;
-  }
 
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
@@ -617,6 +614,8 @@ public:
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() == GFX11;
   }
+
+  bool hasPkF32InvalidOpSel() const { return HasGFX950Insts; }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 

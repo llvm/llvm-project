@@ -64,3 +64,53 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogPPCF128) {
   EXPECT_EQ(fcNegative | fcPositive, Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
+
+// TODO: The textual MIR parser does not support the ppcf128 LLT, so we have to
+// construct these instructions directly as a workaround.
+TEST_F(AArch64GISelMITest, TestFPClassPPCF128TruncNoInf) {
+  // ppcf128 trunc cannot introduce +-Inf.
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  LLT Ty = LLT::ppcf128();
+  auto X = B.buildUndef(Ty);
+  auto NoInf = B.buildInstr(TargetOpcode::G_FADD, {Ty}, {X, X},
+                            MachineInstr::MIFlag::FmNoInfs);
+  auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {Ty}, {NoInf});
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(Trunc.getReg(0));
+  EXPECT_TRUE(Known.isKnownNeverPosInfinity());
+  EXPECT_TRUE(Known.isKnownNeverNegInfinity());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassPPCF128FloorNoInf) {
+  // ppcf128 floor may introduce -Inf, but cannot introduce +Inf.
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  LLT Ty = LLT::ppcf128();
+  auto X = B.buildUndef(Ty);
+  auto NoInf = B.buildInstr(TargetOpcode::G_FADD, {Ty}, {X, X},
+                            MachineInstr::MIFlag::FmNoInfs);
+  auto Floor = B.buildInstr(TargetOpcode::G_FFLOOR, {Ty}, {NoInf});
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(Floor.getReg(0));
+  EXPECT_TRUE(Known.isKnownNeverPosInfinity());
+  EXPECT_FALSE(Known.isKnownNeverNegInfinity());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassPPCF128CeilNoInf) {
+  // ppcf128 ceil may introduce +Inf, but cannot introduce -Inf.
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  LLT Ty = LLT::ppcf128();
+  auto X = B.buildUndef(Ty);
+  auto NoInf = B.buildInstr(TargetOpcode::G_FADD, {Ty}, {X, X},
+                            MachineInstr::MIFlag::FmNoInfs);
+  auto Ceil = B.buildInstr(TargetOpcode::G_FCEIL, {Ty}, {NoInf});
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(Ceil.getReg(0));
+  EXPECT_FALSE(Known.isKnownNeverPosInfinity());
+  EXPECT_TRUE(Known.isKnownNeverNegInfinity());
+}
