@@ -248,6 +248,8 @@ private:
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
   Block *GetOrCreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
+                                                  PdbCompilandSymId var_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param,
@@ -284,6 +286,11 @@ private:
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
   std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
+  std::vector<CompilerContext> GetContextForTypedef(PdbGlobalSymId id);
+
+  /// Returns true if \p udt is a typedef rather than the S_UDT that is emitted
+  /// for every tag type.
+  bool IsTypedefUdt(const llvm::codeview::UDTSym &udt);
 
   /// Caches the basenames of symbols found in the globals stream.
   ///
@@ -308,6 +315,10 @@ private:
                                            PdbTypeSymId func_ty);
 
   std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
+
+  /// Append the function referenced by the S_PROCREF/S_LPROCREF \p global.
+  void AppendFunctionForProcRef(PdbGlobalSymId global,
+                                SymbolContextList &sc_list);
 
   /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
   /// \p method_type.
@@ -351,6 +362,8 @@ private:
   std::once_flag m_cached_udt_declarations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
+  /// typedef basename -> Global ID(s) of its S_UDT
+  lldb_private::UniqueCStringMap<uint32_t> m_typedef_base_names;
 
   /// mangled name/full function name -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;

@@ -60,6 +60,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsTiling.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
@@ -212,6 +213,11 @@ class ACCLoopTiling : public acc::impl::ACCLoopTilingBase<ACCLoopTiling> {
 public:
   using ACCLoopTilingBase<ACCLoopTiling>::ACCLoopTilingBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCLoopTilingBase<ACCLoopTiling>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     MLIRContext *context = funcOp.getContext();
@@ -225,5 +231,4 @@ public:
     (void)applyPatternsGreedily(funcOp, std::move(patterns), grc);
   }
 };
-
 } // namespace

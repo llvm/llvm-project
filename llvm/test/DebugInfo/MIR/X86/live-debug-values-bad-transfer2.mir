@@ -1,4 +1,4 @@
-# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE
+# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=live-debug-values -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE
 #
 # Test that the DBG_VALUE of ecx below does not get propagated. It is considered
 # live-in on LiveDebugValues' first pass through the loop, but on the second it

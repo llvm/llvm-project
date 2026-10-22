@@ -1756,6 +1756,25 @@ PdbAstBuilderClang::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
+std::string PdbAstBuilderClang::GetQualifiedName(llvm::StringRef name) {
+  std::string result;
+  while (!name.empty()) {
+    size_t pos = name.find('`');
+    result += name.take_front(pos);
+    if (pos == llvm::StringRef::npos)
+      break;
+    name = name.drop_front(pos);
+    if (name.consume_front("`anonymous namespace'") ||
+        name.consume_front("`anonymous-namespace'")) {
+      result += "(anonymous namespace)";
+    } else {
+      result += name.front();
+      name = name.drop_front();
+    }
+  }
+  return result;
+}
+
 void PdbAstBuilderClang::Dump(Stream &stream, llvm::StringRef filter,
                               bool show_color) {
   m_clang.Dump(stream.AsRawOstream(), filter, show_color);

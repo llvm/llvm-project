@@ -24,6 +24,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -38,6 +39,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -78,7 +80,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   uint64_t Minor = *Version.getMinor();
 
   auto &Ctx = M.getContext();
-  IRBuilder<> B(M.getContext());
+  IRBuilder<> B(M);
   MDNode *Val = MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Major)),
                                   ConstantAsMetadata::get(B.getInt32(Minor))});
   StringRef DXILValKey = "dx.valver";
@@ -91,7 +93,7 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
                         llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(M, Elements);
   MDNode *RootSignature = RSBuilder.BuildRootSignature();
 
   ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
@@ -102,6 +104,23 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+Expected<unsigned> packSemanticSignature(
+    MutableArrayRef<llvm::hlsl::SemanticSignatureElement> Elements,
+    llvm::Triple::EnvironmentType Stage, llvm::hlsl::IOType IOTy,
+    CodeGenOptions::HLSLSemanticSignaturePackingMode Mode,
+    bool UseNative16BitTypes) {
+  using namespace llvm::hlsl;
+  // Vertex inputs and pixel outputs have fixed packing rules, independent of
+  // the packing mode used between programmable stages.
+  if (Stage == llvm::Triple::Vertex && IOTy == IOType::In)
+    return packSignatureStacked(Elements, Stage, IOTy);
+  if (Stage == llvm::Triple::Pixel && IOTy == IOType::Out)
+    return packSignatureIndexed(Elements, Stage, IOTy);
+  if (Mode == CodeGenOptions::HLSLSemanticSignaturePackingMode::Optimized)
+    return packSignatureOptimized(Elements, Stage, IOTy, UseNative16BitTypes);
+  return packSignaturePrefixStable(Elements, Stage, IOTy, UseNative16BitTypes);
 }
 
 MDNode *buildSemanticSignatureMD(
@@ -1061,32 +1080,41 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
+  // Compute ID intrinsics return i32 components, but the semantic may use
+  // 16-bit integers. Narrow each component before assembling the input.
   if (const auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     Value *Result = PoisonValue::get(Ty);
     for (unsigned I = 0; I < VT->getNumElements(); ++I) {
       Value *Elt = B.CreateCall(F, {B.getInt32(I)});
+      Elt = B.CreateTrunc(Elt, VT->getElementType());
       Result = B.CreateInsertElement(Result, Elt, I);
     }
     return Result;
   }
-  return B.CreateCall(F, {B.getInt32(0)});
+  return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn) {
+                                      unsigned BuiltIn,
+                                      bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
-  MDNode *Operands = MDNode::get(
+  IRBuilder<> B(*GV->getParent());
+  // Emit all decorations as a single spirv.Decorations node.
+  SmallVector<Metadata *, 2> Decorations;
+  Decorations.push_back(MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
-  MDNode *Decoration = MDNode::get(Ctx, {Operands});
-  GV->addMetadata("spirv.Decorations", *Decoration);
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))}));
+  if (NeedsFlat)
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(
+                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 }
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
+  IRBuilder<> B(*GV->getParent());
   MDNode *Operands =
       MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
                         ConstantAsMetadata::get(B.getInt32(Location))});
@@ -1116,13 +1144,14 @@ static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
 
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
-                                           unsigned BuiltInID) {
+                                           unsigned BuiltInID,
+                                           bool NeedsFlat = false) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  addSPIRVBuiltinDecoration(GV, BuiltInID, NeedsFlat);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
@@ -1219,9 +1248,21 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
 namespace {
 // Describes how a semantic leaf lowers to signature rows
 struct SemanticShape {
-  SmallVector<unsigned> Dimensions; // Empty dims denotes a scalar
+  // Array length followed by matrix major-axis length.
+  SmallVector<unsigned> Dimensions;
   unsigned Cols;
   QualType RowType;
+  bool IsMatrix = false;
+  bool IsRowMajor = false;
+
+  // Direct matrix arguments/results use column-major flattened vectors even
+  // when their signature (and aggregate memory representation) is row-major.
+  unsigned getMatrixElementIndex(unsigned Row, unsigned Col) const {
+    assert(IsMatrix);
+    unsigned MatrixRow = Row % Dimensions.back();
+    return IsRowMajor ? Col * Dimensions.back() + MatrixRow
+                      : MatrixRow * Cols + Col;
+  }
 
   unsigned getNumRows() const {
     unsigned Rows = 1;
@@ -1252,8 +1293,8 @@ static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
   return Decl->getType();
 }
 
-// Walks through the surrounding constant array types of \p Ty, collecting their
-// dimensions until reaching a scalar, vector, or matrix leaf.
+// Collects array dimensions and, for a matrix leaf, its major-axis dimension.
+// RowType is the scalar or vector transferred by each signature load/store.
 static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
   SemanticShape Shape{{}, 1, Ty};
   while (const ConstantArrayType *CAT =
@@ -1266,10 +1307,12 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
     Shape.Cols = VT->getNumElements();
   } else if (const auto *MT =
                  Shape.RowType->getAs<clang::ConstantMatrixType>()) {
-    // FIXME: a matrix leaf lowers to one row per matrix row but if column_major
-    // is specified we transpose the num rows and num cols, this depends on
-    // #211977 to resolve
-    Shape.Cols = MT->getNumColumns();
+    Shape.IsMatrix = true;
+    Shape.IsRowMajor = isMatrixRowMajor(Ctx.getLangOpts(), Shape.RowType);
+    Shape.Dimensions.push_back(Shape.IsRowMajor ? MT->getNumRows()
+                                                : MT->getNumColumns());
+    Shape.Cols = Shape.IsRowMajor ? MT->getNumColumns() : MT->getNumRows();
+    Shape.RowType = Ctx.getExtVectorType(MT->getElementType(), Shape.Cols);
   }
 
   return Shape;
@@ -1279,8 +1322,6 @@ static llvm::dxil::ElementType getSignatureComponentType(CodeGenModule &CGM,
                                                          QualType Ty) {
   if (const auto *VT = Ty->getAs<clang::VectorType>())
     Ty = VT->getElementType();
-  else if (const auto *MT = Ty->getAs<clang::ConstantMatrixType>())
-    Ty = MT->getElementType();
 
   llvm::Type *IRTy = CGM.getTypes().ConvertTypeForMem(Ty);
   bool IsSigned = Ty->isSignedIntegerOrEnumerationType();
@@ -1299,9 +1340,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
     SemanticIndices.push_back(FirstSemanticIndex + I);
 
   // The remaining members keep their default value and will be filled at a
-  // later stage, either during packing or analysis of usage
-  //
-  // FIXME #189762: Element.InterpMode is to be set
+  // later stage, either during packing or analysis of usage. Interpolation
+  // is set by the load/store traversal after visiting each leaf.
   return llvm::hlsl::SemanticSignatureElement(
       SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
       llvm::hlsl::getSemanticKind(Name), SemanticIndices,
@@ -1323,7 +1363,7 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1331,13 +1371,15 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  bool IsMatrixValue = Shape.IsMatrix && Type->isVectorTy();
+  llvm::Type *LeafTy = Shape.IsMatrix && !IsMatrixValue
+                           ? RowTy
+                           : CGM.getTypes().ConvertType(Shape.RowType);
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
   const unsigned NumRows = Shape.getNumRows();
 
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
     std::array<Value *, 4> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
@@ -1354,8 +1396,16 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
           Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
     }
 
-    Result =
-        Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    if (IsMatrixValue) {
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Result =
+            B.CreateInsertElement(Result, B.CreateExtractElement(Value, Col),
+                                  Shape.getMatrixElementIndex(Row, Col));
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Result =
+          Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    }
   }
   return Result;
 }
@@ -1376,8 +1426,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_store_output,
-      {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_store_output, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1385,11 +1434,19 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
+  bool IsMatrixValue = Shape.IsMatrix && Source->getType()->isVectorTy();
   const unsigned NumRows = Shape.getNumRows();
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
-    llvm::Value *Val =
-        Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    llvm::Value *Val;
+    if (IsMatrixValue) {
+      SmallVector<int, 4> Mask;
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Mask.push_back(Shape.getMatrixElementIndex(Row, Col));
+      Val = B.CreateShuffleVector(Source, Mask);
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Val = Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    }
 
     // Booleans use their memory representation in DXIL signatures, but direct
     // function results use their value representation.
@@ -1547,6 +1604,26 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::ShadingRate:
+    assert(llvm::is_contained({llvm::Triple::Hull, llvm::Triple::Domain,
+                               llvm::Triple::Geometry, llvm::Triple::Pixel},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry &&
+           "FIXME: loading SV_ShadingRate is not yet implemented for this "
+           "shader stage");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      // Non-float pixel inputs cannot be interpolated and must be Flat.
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::ShadingRateKHR */ 4444,
+                                    inputRequiresFlatDecoration(Type));
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
   default:
     break;
   }
@@ -1604,6 +1681,28 @@ void CGHLSLRuntime::emitSystemSemanticStore(
            "diagnosed by Sema");
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
+  case llvm::dxbc::PSV::SemanticKind::ShadingRate:
+    assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
+                               llvm::Triple::Domain, llvm::Triple::Geometry,
+                               llvm::Triple::Mesh},
+                              Stage) &&
+           "SV_ShadingRate is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    assert(Stage != llvm::Triple::Hull && Stage != llvm::Triple::Domain &&
+           Stage != llvm::Triple::Geometry && Stage != llvm::Triple::Mesh &&
+           "FIXME: storing SV_ShadingRate is not yet implemented for this "
+           "shader stage");
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
+                              Semantic->getAttrName()->getName(),
+                              /* BuiltIn::PrimitiveShadingRateKHR */ 4432);
+      return;
+    }
+    break;
   default:
     break;
   }
@@ -1663,7 +1762,8 @@ CGHLSLRuntime::handleStructSemanticLoad(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
@@ -1674,7 +1774,7 @@ CGHLSLRuntime::handleStructSemanticLoad(
   for (unsigned I = 0; I < ST->getNumElements(); ++I) {
     auto [ChildValue, NextAttr] =
         handleSemanticLoad(B, FD, ST->getElementType(I), *FieldDecl, AttrBegin,
-                           AttrEnd, Signature);
+                           AttrEnd, Signature, Modifiers);
     AttrBegin = NextAttr;
     assert(ChildValue);
     Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
@@ -1690,7 +1790,8 @@ CGHLSLRuntime::handleStructSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
 
   const llvm::StructType *ST = cast<StructType>(Source->getType());
 
@@ -1707,7 +1808,7 @@ CGHLSLRuntime::handleStructSemanticStore(
   for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin = handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin,
-                                    AttrEnd, Signature);
+                                    AttrEnd, Signature, Modifiers);
   }
 
   return AttrBegin;
@@ -1719,16 +1820,33 @@ CGHLSLRuntime::handleSemanticLoad(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   assert(AttrBegin != AttrEnd);
+  // Pass the enclosing declaration's mask down the traversal, replacing (not
+  // merging) it when an inner field has its own interpolation modifiers.
+  if (const auto *A = Decl->getAttr<HLSLInterpolationModifierAttr>())
+    Modifiers =
+        static_cast<llvm::hlsl::InterpolationModifier>(A->getModifiers());
   if (Type->isStructTy())
     return handleStructSemanticLoad(B, FD, Type, Decl, AttrBegin, AttrEnd,
-                                    Signature);
+                                    Signature, Modifiers);
 
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
-  return std::make_pair(
-      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature), AttrBegin);
+  size_t PreviousSize = Signature.size();
+  llvm::Value *Value =
+      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature);
+  // Intrinsic-only system values and SPIR-V loads do not add DXIL signature
+  // elements. Non-pixel inputs retain Undefined.
+  if (Signature.size() != PreviousSize) {
+    auto &Element = Signature.back();
+    Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
+        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::In);
+  }
+  return std::make_pair(Value, AttrBegin);
 }
 
 specific_attr_iterator<HLSLAppliedSemanticAttr>
@@ -1737,15 +1855,28 @@ CGHLSLRuntime::handleSemanticStore(
     const clang::DeclaratorDecl *Decl,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
     specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature,
+    llvm::hlsl::InterpolationModifier Modifiers) {
   assert(AttrBegin != AttrEnd);
+  // An inner field overrides the enclosing return declaration's modifiers.
+  if (const auto *A = Decl->getAttr<HLSLInterpolationModifierAttr>())
+    Modifiers =
+        static_cast<llvm::hlsl::InterpolationModifier>(A->getModifiers());
   if (Source->getType()->isStructTy())
     return handleStructSemanticStore(B, FD, Source, Decl, AttrBegin, AttrEnd,
-                                     Signature);
+                                     Signature, Modifiers);
 
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
+  size_t PreviousSize = Signature.size();
   handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature);
+  if (Signature.size() != PreviousSize) {
+    auto &Element = Signature.back();
+    Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
+        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
+        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
+        llvm::hlsl::IOType::Out);
+  }
   return AttrBegin;
 }
 
@@ -1862,6 +1993,36 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       auto *RSDecl = RSAttr->getSignatureDecl();
       addRootSignatureMD(RSDecl->getVersion(), RSDecl->getRootElements(),
                          EntryFn, M);
+    }
+  }
+
+  if (CGM.getTarget().getTriple().isDXIL()) {
+    // Use the entry's shader stage, not the target environment, which may be
+    // 'library' when compiling multiple entry points.
+    auto Stage = FD->getAttr<HLSLShaderAttr>()->getType();
+    using PackingMode = CodeGenOptions::HLSLSemanticSignaturePackingMode;
+    auto Mode = CGM.getCodeGenOpts().getHLSLSemanticSignaturePacking();
+    for (auto IOTy : {llvm::hlsl::IOType::In, llvm::hlsl::IOType::Out}) {
+      bool IsOutput = IOTy == llvm::hlsl::IOType::Out;
+      auto &Signature = IsOutput ? OutputSignature : InputSignature;
+      auto Packed = packSemanticSignature(Signature, Stage, IOTy, Mode,
+                                          CGM.getLangOpts().NativeHalfType);
+      if (!Packed) {
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::err_hlsl_signature_packing)
+            << IsOutput << llvm::toString(Packed.takeError());
+        return;
+      }
+      // Library entry points retain stage-specific packing without warnings.
+      if (Mode != PackingMode::Default &&
+          CGM.getTarget().getTriple().getEnvironment() !=
+              llvm::Triple::Library &&
+          ((Stage == llvm::Triple::Vertex && !IsOutput) ||
+           (Stage == llvm::Triple::Pixel && IsOutput)))
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::warn_hlsl_signature_packing_ignored)
+            << (Mode == PackingMode::Optimized ? "optimized" : "prefix-stable")
+            << IsOutput;
     }
   }
 

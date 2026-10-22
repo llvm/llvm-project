@@ -98,9 +98,12 @@
 ; LAXX-NEXT:       Remove dead machine instructions
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Natural Loop Construction
+; LAXX-NEXT:       Machine Register Class Info Analysis
+; LAXX-NEXT:       Machine Trace Metrics
+; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
+; LAXX-NEXT:       Machine InstCombiner
 ; LAXX-NEXT:       Machine Cycle Info Analysis
 ; LAXX-NEXT:       Machine Block Frequency Analysis
-; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Early Machine Loop Invariant Code Motion
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis
@@ -117,11 +120,10 @@
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions
 ; LAXX-NEXT:       Remove unreachable machine basic blocks
-; LAXX-NEXT:       Live Variable Analysis
-; LAXX-NEXT:       Eliminate PHI nodes for register allocation
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Slot index numbering
 ; LAXX-NEXT:       Live Interval Analysis
+; LAXX-NEXT:       Eliminate PHI nodes for register allocation
 ; LAXX-NEXT:       Two-Address instruction pass
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components

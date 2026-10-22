@@ -12,6 +12,7 @@
 
 #include "L0Kernel.h"
 #include "L0Device.h"
+#include "L0Plugin.h"
 #include "L0Program.h"
 
 namespace llvm::omp::target::plugin {
@@ -102,11 +103,14 @@ ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &L0Device,
 }
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
+                                   LevelZeroPluginContextTy &UserCtx,
                                    L0LaunchEnvTy &KEnv) const {
   // Set Kernel Indirect flags.
   ze_kernel_indirect_access_flags_t Flags = 0;
   Flags |= L0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
   Flags |= L0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  // Allocations made through a liboffload context live in its own allocators.
+  Flags |= UserCtx.getIndirectFlags();
 
   if (KEnv.KernelPR.IndirectAccessFlags != Flags) {
     // Combine with common access flags.
@@ -193,7 +197,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         "expected by the kernel (%u)",
         LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
 
-  if (auto Err = setIndirectFlags(L0Device, KEnv))
+  assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
+  if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))
     return Err;
 
   // The next call should unlock the KernelLock internally.

@@ -28,6 +28,7 @@ KERNEL_TEST(SingleCounterSyncEvent, single_counter)
 KERNEL_TEST(GlobalCtor, global_ctor)
 KERNEL_TEST(GlobalDtor, global_dtor)
 KERNEL_TEST(GridSize, gridsize)
+KERNEL_TEST(ByValPtr, byval_ptr)
 
 struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
   void SetUpKernels(const char *program, std::vector<const char *> kernels) {
@@ -163,6 +164,32 @@ TEST_P(olLaunchKernelCompositeTest, Success) {
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
     ASSERT_EQ(Data[i], N + F.a + F.b + i);
+
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
+}
+
+struct Wrapper {
+  uint32_t *Out;
+};
+
+TEST_P(olLaunchKernelByValPtrTest, Success) {
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+
+  Wrapper W{(uint32_t *)Mem};
+
+  void *ArgPtrs[] = {&W};
+  size_t ArgSizes[] = {sizeof(W)};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
+    ASSERT_EQ(Data[i], i);
 
   ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
