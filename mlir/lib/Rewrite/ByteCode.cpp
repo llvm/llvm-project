@@ -42,18 +42,24 @@ PDLByteCodePattern PDLByteCodePattern::create(pdl_interp::RecordMatchOp matchOp,
   PatternBenefit benefit = matchOp.getBenefit();
   MLIRContext *ctx = matchOp.getContext();
 
+  StringRef debugName = matchOp.getRewriter().getLeafReference().getValue();
   // Collect the set of generated operations.
   SmallVector<StringRef, 8> generatedOps;
   if (ArrayAttr generatedOpsAttr = matchOp.getGeneratedOpsAttr())
     generatedOps =
         llvm::to_vector<8>(generatedOpsAttr.getAsValueRange<StringAttr>());
 
-  // Check to see if this is pattern matches a specific operation type.
-  if (std::optional<StringRef> rootKind = matchOp.getRootKind())
-    return PDLByteCodePattern(rewriterAddr, configSet, *rootKind, benefit, ctx,
-                              generatedOps);
-  return PDLByteCodePattern(rewriterAddr, configSet, MatchAnyOpTypeTag(),
-                            benefit, ctx, generatedOps);
+  // Check to see if this pattern matches a specific operation type.
+  std::optional<StringRef> rootKind = matchOp.getRootKind();
+  PDLByteCodePattern pattern =
+      rootKind
+          ? PDLByteCodePattern(rewriterAddr, configSet, *rootKind, benefit, ctx,
+                               generatedOps)
+          : PDLByteCodePattern(rewriterAddr, configSet, MatchAnyOpTypeTag(),
+                               benefit, ctx, generatedOps);
+
+  pattern.setDebugName(debugName);
+  return pattern;
 }
 
 //===----------------------------------------------------------------------===//
