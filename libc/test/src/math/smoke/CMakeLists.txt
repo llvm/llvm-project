@@ -1,5 +1,4 @@
-add_custom_target(libc-math-smoke-tests)
-add_dependencies(libc-math-unittests libc-math-smoke-tests)
+add_libc_testsuite(libc-math-smoke-tests PARENT libc-math-tests)
 
 add_fp_unittest(
   cosf_test
@@ -287,7 +286,7 @@ add_fp_unittest(
 add_fp_unittest(
   faddl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     faddl_test.cpp
   HDRS
@@ -302,7 +301,7 @@ add_fp_unittest(
 add_fp_unittest(
   faddf128_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     faddf128_test.cpp
   HDRS
@@ -3699,8 +3698,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3713,8 +3710,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3727,8 +3722,6 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3745,8 +3738,6 @@ add_fp_unittest(
     libc.src.math.sqrtf128
     libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.sqrt
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -4842,7 +4833,7 @@ add_fp_unittest(
 add_fp_unittest(
   atanpif16_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     atanpif16_test.cpp
   DEPENDS
@@ -4899,7 +4890,7 @@ add_fp_unittest(
 add_fp_unittest(
   asinpif16_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     asinpif16_test.cpp
   DEPENDS

@@ -1641,7 +1641,13 @@ bool DataFlowSanitizer::runImpl(
     DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F),
                        FnsWithForceZeroLabel.count(F), GetTLI(*F));
 
-    if (Opts.dfsan_reaches_function_callbacks) {
+    // Skip wrappers: they may be called from uninstrumented code (e.g. the
+    // runtime calling the reaches function callback), so their argument
+    // shadows are stale, which can cause infinite callback recursion.
+    if (Opts.dfsan_reaches_function_callbacks && !UnwrappedFnMap.count(F)) {
+      // Instructions inserted below all precede this one.
+      Instruction *FirstOrigInst = &F->getEntryBlock().front();
+
       // Add callback for arguments reaching this function.
       for (auto &FArg : F->args()) {
         Instruction *Next = &F->getEntryBlock().front();
@@ -1663,6 +1669,14 @@ bool DataFlowSanitizer::runImpl(
         }
         IRBuilder<> IRB(Next);
         DFSF.addReachesFunctionCallbacksIfEnabled(IRB, *Next, &FArg);
+      }
+
+      // Don't instrument the instrumentation inserted above; e.g. the callback
+      // calls would otherwise clobber __dfsan_arg_tls.
+      for (Instruction &I : F->getEntryBlock()) {
+        if (&I == FirstOrigInst)
+          break;
+        DFSF.SkipInsts.insert(&I);
       }
     }
 

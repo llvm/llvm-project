@@ -373,12 +373,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
-    if (F.getFnAttribute("fentry-call").getValueAsString() != "true") {
-      if (F.hasFnAttribute("mnop-mcount"))
-        report_fatal_error("mnop-mcount only supported with fentry-call");
-      if (F.hasFnAttribute("mrecord-mcount"))
-        report_fatal_error("mrecord-mcount only supported with fentry-call");
-    }
     if (F.getParent()->getStackProtectorGuard() != "global") {
       if (F.getParent()->hasStackProtectorGuardRecord())
         report_fatal_error("mstack-protector-guard-record only supported with "
