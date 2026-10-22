@@ -21,13 +21,12 @@ namespace {
 
 class LogicalValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(LogicalValueKind, LogicalValueKind,
-    testing::ValuesIn(KindsByType<TypeCategory::Logical>::kinds),
+    testing::ValuesIn(LogicalKinds),
     [](const testing::TestParamInfo<int> &info) {
       return "LOGICAL_" + std::to_string(info.param);
     });
 
-static constexpr int KindPos(int kind) {
-  constexpr auto &LogicalKinds{KindsByType<TypeCategory::Logical>::kinds};
+constexpr int KindPos(int kind) {
   for (std::size_t i{0}; i < std::size(LogicalKinds); ++i) {
     if (LogicalKinds[i] == kind) {
       return static_cast<int>(i);

@@ -22,6 +22,12 @@
 
 namespace Fortran::common {
 
+static constexpr int IntegerKinds[] FORTRAN_INTEGER_KINDS;
+static constexpr int UnsignedKinds[] FORTRAN_UNSIGNED_KINDS;
+static constexpr int RealKinds[] FORTRAN_REAL_KINDS;
+static constexpr int LogicalKinds[] FORTRAN_LOGICAL_KINDS;
+static constexpr int CharacterKinds[] FORTRAN_CHARACTER_KINDS;
+
 /// Iterable lists of valid kinds for each TypeCategory.
 template <TypeCategory CAT> struct KindsByType;
 template <> struct KindsByType<TypeCategory::Integer> {

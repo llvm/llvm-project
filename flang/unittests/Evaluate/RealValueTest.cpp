@@ -46,8 +46,7 @@ TYPED_TEST_SUITE(RealValueHostTypedKind, RealHostTypedKinds, KindName);
 
 class RealValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(RealValueKind, RealValueKind,
-    testing::ValuesIn(KindsByType<TypeCategory::Real>::kinds),
-    [](const testing::TestParamInfo<int> &info) {
+    testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
       return "REAL_" + std::to_string(info.param);
     });
 

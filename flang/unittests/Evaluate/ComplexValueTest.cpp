@@ -20,8 +20,7 @@ namespace {
 
 class ComplexValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(ComplexValueKind, ComplexValueKind,
-    testing::ValuesIn(KindsByType<TypeCategory::Complex>::kinds),
-    [](const testing::TestParamInfo<int> &info) {
+    testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
       return "COMPLEX_" + std::to_string(info.param);
     });
 
@@ -53,10 +52,9 @@ std::string AsFortranString(const ComplexValue &z, int kind) {
   return s;
 }
 
-static constexpr int KindPos(int kind) {
-  constexpr auto &ComplexKinds{KindsByType<TypeCategory::Complex>::kinds};
-  for (std::size_t i{0}; i < std::size(ComplexKinds); ++i) {
-    if (ComplexKinds[i] == kind) {
+constexpr int KindPos(int kind) {
+  for (std::size_t i{0}; i < std::size(RealKinds); ++i) {
+    if (RealKinds[i] == kind) {
       return static_cast<int>(i);
     }
   }
