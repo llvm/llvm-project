@@ -255,6 +255,13 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store), UpdateKind(UpdateKind) {}
 };
 
+/// Holds details about a "compressed" pointer: the conditional induction PHI
+/// used to derive the pointer and the SCEV expression for the pointer.
+struct CompressedPtrInfo {
+  PHINode *ConditionalInductionPHI;
+  const SCEVAddRecExpr *PtrSCEV;
+};
+
 /// Indicates the characteristics of a loop with an uncountable exit.
 /// * None      -- No uncountable exit present.
 /// * ReadOnly  -- At least one uncountable exit in a readonly loop.
@@ -298,6 +305,11 @@ public:
   /// induction descriptor.
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
 
+  /// ConditionalInductionList saves conditional inductions and maps them to
+  /// their descriptors.
+  using ConditionalInductionList =
+      MapVector<PHINode *, ConditionalInductionDescriptor>;
+
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
   using RecurrenceSet = SmallPtrSet<const PHINode *, 8>;
@@ -340,6 +352,10 @@ public:
 
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
+
+  bool hasConditionalInductions() const {
+    return !ConditionalInductions.empty();
+  }
 
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
@@ -650,6 +666,12 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
+  /// Adds \p Phi to the conditional induction list and collects load/store
+  /// users of the PHI. Returns true if all users of \p Phi are legal for
+  /// vectorization.
+  bool addConditionalInduction(PHINode *Phi,
+                               const ConditionalInductionDescriptor &CondID);
+
   const VectorizeOptions &Opts;
 
   /// The loop that we evaluate.
@@ -696,6 +718,9 @@ private:
   /// variables can be pointers.
   InductionList Inductions;
 
+  /// Holds all of the conditional inductions found in the loop.
+  ConditionalInductionList ConditionalInductions;
+
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
 
@@ -726,6 +751,11 @@ private:
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
+
+  /// Contains all pointers used in the loop that are defined using an index
+  /// derived from a conditional induction PHI. Loads/stores to these pointers
+  /// map to expandloads or compressstores.
+  SmallDenseMap<const Value *, CompressedPtrInfo> CompressedPtrs;
 
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;
