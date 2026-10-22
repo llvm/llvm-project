@@ -507,32 +507,39 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   ASTContext &Ctx = SVB.getContext();
 
   // Field initialization is meaningful only when the entire source object is
-  // read. Do not widen partial copies or nonzero offsets to their base object
+  // read.
   if (UninitializedRead.isEnabled()) {
     const auto *BufR = BufVal.getAsRegion();
-    const auto *Object = llvm::dyn_cast_or_null<TypedValueRegion>(
-        BufR ? BufR->StripCasts(false) : nullptr);
+    const auto *Length = SVB.getKnownValue(State, Size);
+    CharUnits CharSize = Ctx.getTypeSizeInChars(
+        CK == CharKind::Regular ? Ctx.CharTy : Ctx.WideCharTy);
 
-    if (Object && !isa<ElementRegion>(Object)) {
-      QualType Ty = Object->getValueType();
-      const llvm::APSInt *Length = SVB.getKnownValue(State, Size);
-      CharUnits CharSize = Ctx.getTypeSizeInChars(
-          CK == CharKind::Regular ? Ctx.CharTy : Ctx.WideCharTy);
+    const auto IsWholeStructObject = [&](const TypedValueRegion *R) {
+      if (!R || !Length)
+        return false;
 
-      if (Ctx.getBaseElementType(Ty)->isStructureType() &&
-          !Ty->isIncompleteType() && !Ty->isVariablyModifiedType() && Length &&
-          Ctx.getTypeSizeInChars(Ty).isMultipleOf(CharSize) &&
-          *Length == Ctx.getTypeSizeInChars(Ty) / CharSize) {
-        if (const auto *FR = findUninitializedField(State, Object)) {
-          SmallString<128> Buf;
-          llvm::raw_svector_ostream OS(Buf);
-          OS << "The ";
-          printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
-          OS << " argument contains uninitialized data (e.g., field: '"
-             << FR->getDecl()->getName() << "')";
-          emitUninitializedReadBug(C, State, Buffer.Expression, FR, OS.str());
-          return nullptr;
-        }
+      QualType Ty = R->getValueType();
+      return Ctx.getBaseElementType(Ty)->isStructureType() &&
+             !Ty->isIncompleteType() && !Ty->isVariablyModifiedType() &&
+             Ctx.getTypeSizeInChars(Ty).isMultipleOf(CharSize) &&
+             *Length == Ctx.getTypeSizeInChars(Ty) / CharSize;
+    };
+
+    const auto *Object = llvm::dyn_cast_or_null<TypedValueRegion>(BufR);
+    if (!IsWholeStructObject(Object))
+      Object = llvm::dyn_cast_or_null<TypedValueRegion>(
+          BufR ? BufR->StripCasts(false) : nullptr);
+
+    if (IsWholeStructObject(Object)) {
+      if (const auto *FR = findUninitializedField(State, Object)) {
+        SmallString<128> Buf;
+        llvm::raw_svector_ostream OS(Buf);
+        OS << "The ";
+        printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+        OS << " argument contains uninitialized data (e.g., field: '"
+           << FR->getDecl()->getName() << "')";
+        emitUninitializedReadBug(C, State, Buffer.Expression, FR, OS.str());
+        return nullptr;
       }
     }
   }

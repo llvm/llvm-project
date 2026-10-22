@@ -132,6 +132,43 @@ void mempcpy_struct_fully_uninit() {
                                         // expected-note@-1{{Other elements might also be undefined}}
 }
 
+void mempcpy_struct_array_first_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2;
+
+  memcpy(&s2, &s1[0], sizeof(s1[0])); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                      // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void mempcpy_struct_array_first_element_fully_init() {
+  struct st s1[2];
+  struct st s2;
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  mempcpy(&s2, &s1[0], sizeof(s1[0])); // no-warning
+}
+
+void memcpy_struct_array_second_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2;
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  memcpy(&s2, &s1[1], sizeof(s1[1])); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                      // expected-note@-1{{Other elements might also be undefined}}
+}
+
+void mempcpy_struct_array_last_element_fully_uninit() {
+  struct st s1[2];
+  struct st s2[2];
+
+  s1[0].i = 0;
+  s1[0].j = 0;
+  mempcpy(&s2, &s1, sizeof(s1)); // expected-warning{{The 2nd argument contains uninitialized data}}
+                                 // expected-note@-1{{Other elements might also be undefined}}
+}
+
 // Creduced crash. In this case, an symbolicregion is wrapped in an
 // elementregion for the src argument.
 void *ga_copy_strings_from_0;
