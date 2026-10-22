@@ -813,7 +813,7 @@ define i32 @smin_maybe_zero(i32 %x, i32 %y) {
 define i32 @smin_known_never_zero_vec_element(<4 x i32> %x) {
 ; X86-LABEL: smin_known_never_zero_vec_element:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [54,4294967273,12,1]
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [u,4294967273,u,u]
 ; X86-NEXT:    movdqa %xmm1, %xmm2
 ; X86-NEXT:    pcmpgtd %xmm0, %xmm2
 ; X86-NEXT:    pand %xmm2, %xmm0
@@ -951,7 +951,8 @@ define i32 @smax_known_zero(i32 %x, i32 %y) {
 define i32 @smax_known_never_zero_vec_element(<4 x i32> %x) {
 ; X86-LABEL: smax_known_never_zero_vec_element:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [54,4294967273,4294967284,4294967295]
+; X86-NEXT:    movl $54, %eax
+; X86-NEXT:    movd %eax, %xmm1
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    pcmpgtd %xmm1, %xmm2
 ; X86-NEXT:    pand %xmm2, %xmm0
@@ -963,7 +964,9 @@ define i32 @smax_known_never_zero_vec_element(<4 x i32> %x) {
 ;
 ; X64-LABEL: smax_known_never_zero_vec_element:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    movl $54, %eax
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
