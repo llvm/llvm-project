@@ -341,13 +341,16 @@ std::string CharacterValueImpl::ToStdString() const {
       storage_);
 }
 
-CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
+std::optional<CharacterValueImpl> CharacterValueImpl::ToAscii(
+    int kind) const {
   if (IsNull()) {
     return Zero(kind);
   }
 
-  return WithBasicString([kind](const auto &s) -> CharacterValueImpl {
-    return WithCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
+  return WithBasicString(
+      [kind](const auto &s) -> std::optional<CharacterValueImpl> {
+    return WithCharProto(
+        kind, [&s](auto ct) -> std::optional<CharacterValueImpl> {
       using CharT = std::decay_t<decltype(ct)>;
       using StringT = std::basic_string<CharT>;
 
@@ -356,7 +359,7 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
       StringT str;
       for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
         if (static_cast<std::uint64_t>(*iter) > 127) {
-          return Zero(sizeof(ct));
+          return std::nullopt;
         }
         str.push_back(static_cast<CharT>(*iter));
       }

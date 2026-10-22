@@ -120,7 +120,9 @@ public:
   bool operator>=(const CharacterValue &y) const { return !(*this < y); }
   bool operator>(const CharacterValue &y) const { return y < *this; }
 
-  CharacterValue ToAscii(int kind) const;
+  /// Convert to the given kind; std::nullopt if any character is not 7-bit
+  /// ASCII.
+  std::optional<CharacterValue> ToAscii(int kind) const;
 
   /// Assign n copies of the given character, fixing the kind from the char
   /// type.
