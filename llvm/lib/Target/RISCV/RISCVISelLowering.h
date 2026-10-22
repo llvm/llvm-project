@@ -62,8 +62,8 @@ public:
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 
@@ -347,6 +347,11 @@ public:
   /// specified type.
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      unsigned *Fast = nullptr) const override;
+
+  bool allowsMisalignedMemoryAccesses(
+      LLT Ty, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 

@@ -41,11 +41,11 @@ namespace {
 /// Loop prefetch implementation class.
 class LoopDataPrefetch {
 public:
-  LoopDataPrefetch(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
-                   ScalarEvolution *SE, const TargetTransformInfo *TTI,
+  LoopDataPrefetch(const ScalarOptions &Opts, AssumptionCache *AC,
+                   DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
+                   const TargetTransformInfo *TTI,
                    OptimizationRemarkEmitter *ORE)
-      : Opts(ScalarOptions::Global), AC(AC), DT(DT), LI(LI), SE(SE), TTI(TTI),
-        ORE(ORE) {}
+      : Opts(Opts), AC(AC), DT(DT), LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
 
   bool run();
 
@@ -159,7 +159,9 @@ PreservedAnalyses LoopDataPrefetchPass::run(Function &F,
       &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  LoopDataPrefetch LDP(AC, DT, LI, SE, TTI, ORE);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopDataPrefetch LDP(Opts, AC, DT, LI, SE, TTI, ORE);
   bool Changed = LDP.run();
 
   if (Changed) {
@@ -186,7 +188,9 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
   const TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  LoopDataPrefetch LDP(AC, DT, LI, SE, TTI, ORE);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopDataPrefetch LDP(Opts, AC, DT, LI, SE, TTI, ORE);
   return LDP.run();
 }
 

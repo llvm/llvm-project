@@ -61,6 +61,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2920,7 +2921,14 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // This specially handles arguments of attributes appertains to a type of C
   // struct field such that the name lookup within a struct finds the member
   // name, which is not the case for other contexts in C.
-  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+  // A late-parsed attribute on a function pointer field has the pointee's
+  // parameters in the struct's scope too; as when the attribute was written, a
+  // parameter shadows a field of the same name.
+  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope() &&
+      llvm::none_of(S->decls(), [&](Decl *D) {
+        return isa<ParmVarDecl>(D) &&
+               cast<ParmVarDecl>(D)->getDeclName() == NameInfo.getName();
+      })) {
     // See if this is reference to a field of struct.
     LookupResult R(*this, NameInfo, LookupMemberName);
     // LookupName handles a name lookup from within anonymous struct.
@@ -5900,6 +5908,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Param, Init ? Init : Param->getDefaultArg(),
+                                  CallLoc);
+
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
                                    Init, InitializationContext->Context);
 }
@@ -5968,6 +5980,9 @@ ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
       Field->setInvalidDecl();
     return ExprError();
   }
+
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Field, InClassInit, Loc);
 
   // CWG2631
   // An immediate invocation that is not evaluated where it appears is
@@ -18350,8 +18365,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
+  EvalProxy SProxy(*this);
   bool Folded =
-      E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
+      (getLangOpts().CPlusPlus
+           ? E->EvaluateAsMandatedConstantRValue(EvalResult, Context, SProxy)
+           : E->EvaluateAsRValue(EvalResult, Context,
+                                 /*isConstantContext=*/true)) &&
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
@@ -18539,11 +18558,10 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
-          FD->isConsteval() ||
-          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
+    if (isLambdaMethod(FD) && !isLambdaCallOperator(FD))
+      Current.InImmediateFunctionContext = FD->isConsteval() ||
+                                           Parent.isConstantEvaluated() ||
+                                           Parent.isImmediateFunctionContext();
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }
@@ -18664,8 +18682,9 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
     Expr::EvalResult Eval;
-    bool Res = E.get()->EvaluateAsConstantExpr(
-        Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+    EvalProxy SProxy(*this);
+    bool Res = E.get()->EvaluateAsMandatedConstantExpr(
+        Eval, getASTContext(), SProxy, ConstantExprKind::ImmediateInvocation);
     if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
@@ -18720,8 +18739,10 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
-  bool Result = CE->EvaluateAsConstantExpr(
-      Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
+  EvalProxy SProxy(SemaRef);
+  bool Result =
+      CE->EvaluateAsMandatedConstantExpr(Eval, SemaRef.getASTContext(), SProxy,
+                                         ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();

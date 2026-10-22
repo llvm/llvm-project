@@ -248,7 +248,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         minuendVA = referentIsec->getVA(minuend.addend);
       }
       referentVA = minuendVA - fromSym->getVA();
-    } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
+    } else if (auto *referentSym = dyn_cast_if_present<Symbol *>(r.referent)) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
@@ -270,7 +270,8 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         writeChainedFixup(loc, referentSym, r.addend);
         continue;
       }
-    } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+    } else if (auto *referentIsec =
+                   dyn_cast_if_present<InputSection *>(r.referent)) {
       assert(!::shouldOmitFromOutput(referentIsec));
       referentVA = referentIsec->getVA(r.addend);
 
