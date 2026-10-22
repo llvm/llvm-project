@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++20 -emit-llvm -triple x86_64-linux -o - %s | FileCheck %s
 // RUN: %clang_cc1 -std=c++2b -emit-llvm -triple x86_64-linux -o - %s 2>/dev/null | FileCheck %s
 
 struct S {
