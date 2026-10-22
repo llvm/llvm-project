@@ -1,9 +1,9 @@
-!RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -Wstat-kind
+!RUN: %python %S/test_errors.py %s %flang_fc1 -fopenmp -Werror -Wstat-kind
 
 program stat_test
   use iso_c_binding
   use iso_fortran_env
-  integer :: coarray[*]
+  integer :: i, coarray[*]
   integer, allocatable :: a(:)
   type(event_type) :: e[*]
   type(team_type) :: t
@@ -27,6 +27,12 @@ program stat_test
   
   !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
   form team(1, t, stat=myint8)
+
+  !WARNING: The stat-variable should have a decimal exponent range of at least four [-Wstat-kind]
+  !$omp parallel do if(coarray[1, stat=myint8] > 0)
+  do i = 1, 2
+  end do
+  !$omp end parallel do
   
   coarray[1, stat=myint16] = 0 ! ok
   sync all(stat=myint16) ! ok

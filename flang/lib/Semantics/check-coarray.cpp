@@ -170,6 +170,7 @@ static void CheckStatOrErrmsg(SemanticsContext &context,
                   type->category() == TypeCategory::Integer &&
                   type->kind() < 2) { // F2023 9.7.4 p1
                 context.Warn(common::UsageWarning::StatKind,
+                    parser::UnwrapRef<parser::Variable>(stat).GetSource(),
                     "The stat-variable should have a decimal exponent range of at least four"_warn_en_US);
               }
             }
