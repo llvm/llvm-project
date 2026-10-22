@@ -96,10 +96,8 @@ public:
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
                                     Instruction *Inst = nullptr) const override;
-  bool
-  preferLoopExitWithEqualityComparison(const ICmpInst &Cond) const override;
-  bool isProfitableLoopExitEqualityImmediate(
-      const APInt &PostIncExitValue) const override;
+  bool preferLoopExitWithEqualityComparison(
+      const ICmpInst &Cond, const APInt &PostIncExitValue) const override;
   InstructionCost
   getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                       Type *Ty, TTI::TargetCostKind CostKind) const override;

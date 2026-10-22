@@ -304,7 +304,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 }
 
 bool RISCVTTIImpl::preferLoopExitWithEqualityComparison(
-    const ICmpInst &Cond) const {
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
   if (!ST->hasStdExtZibi())
     return false;
 
@@ -320,11 +320,6 @@ bool RISCVTTIImpl::preferLoopExitWithEqualityComparison(
               Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE))))
     return false;
 
-  return true;
-}
-
-bool RISCVTTIImpl::isProfitableLoopExitEqualityImmediate(
-    const APInt &PostIncExitValue) const {
   int64_t Imm = PostIncExitValue.getSExtValue();
   return Imm == -1 || (Imm >= 1 && Imm <= 31);
 }

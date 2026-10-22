@@ -317,11 +317,8 @@ public:
 
   virtual bool isLegalICmpImmediate(int64_t Imm) const { return false; }
 
-  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &) const {
-    return false;
-  }
-
-  virtual bool isProfitableLoopExitEqualityImmediate(const APInt &) const {
+  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &,
+                                                    const APInt &) const {
     return false;
   }
 
