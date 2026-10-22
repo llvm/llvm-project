@@ -140,8 +140,9 @@ protected:
 
     // Create an element access.
     mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-    mlir::Value index =
+    OwningOpRef<cir::ConstantOp> indexOp =
         cir::ConstantOp::create(b, loc, cir::IntAttr::get(i32Ty, 2));
+    mlir::Value index = indexOp.get();
     OwningOpRef<cir::PtrStrideOp> accessPtr =
         cir::PtrStrideOp::create(b, loc, ptrToElemTy, decayVal, index);
     mlir::Value accessVal = accessPtr.get();

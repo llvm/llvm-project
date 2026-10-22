@@ -5329,14 +5329,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       DenseSet<unsigned> NodeCallClones;
       for (auto *C : Node->Clones)
         NodeCallClones.insert(C->Call.cloneNo());
-      unsigned I = 0;
       // Now check all the function clones.
       for (auto &FC : FuncCloneInfos) {
-        // Function clones should be sequential.
-        assert(FC.FuncClone.cloneNo() == I);
+        unsigned I = FC.FuncClone.cloneNo();
         // Skip the first clone which got the original call.
         // Also skip any other clones created for this Node.
-        if (++I == 1 || NodeCallClones.contains(I)) {
+        if (I == 0 || NodeCallClones.contains(I)) {
           continue;
         }
         // Record the call clones created for this callsite in this function
