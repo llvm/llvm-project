@@ -22,6 +22,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  MergeConsecutiveReduceOps.cpp
   MorphOps.cpp
   TransposeMatmul.cpp
   ShardingInterfaceImpl.cpp
