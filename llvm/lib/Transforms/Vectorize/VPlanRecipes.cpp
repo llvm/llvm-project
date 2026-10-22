@@ -148,6 +148,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -1560,6 +1561,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
                                   VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
+  }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
+                                              std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
@@ -5289,6 +5296,21 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
          "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
+
+void VPConditionalInductionPHIRecipe::execute(VPTransformState &State) {
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "conditional.iv");
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalInductionPHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "CONDITIONAL-INDUCTION-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);

@@ -353,6 +353,11 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
+
   bool hasConditionalInductions() const {
     return !ConditionalInductions.empty();
   }
@@ -493,6 +498,26 @@ public:
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo>
+  getCompressedPtrInfo(const Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns the CompressedPtrInfo for \p I if it corresponds to a compressed
+  /// load or store (which can map to an llvm.masked.expandload or
+  /// llvm.masked.compressstore), otherwise std::nullopt.
+  std::optional<CompressedPtrInfo>
+  isCompressedLoadOrStore(const Instruction *I) {
+    if (isa<LoadInst, StoreInst>(I))
+      return getCompressedPtrInfo(getLoadStorePointerOperand(I));
+    return std::nullopt;
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
