@@ -324,8 +324,8 @@ public:
   // Re-usable checks
   ProgramStateRef checkNonNull(CheckerContext &C, ProgramStateRef State,
                                AnyArgExpr Arg, SVal l) const;
-  // Check whether the origin region behind \p Element (like the actual array
-  // region \p Element is from) is initialized.
+  // Check whether the source buffer or its backing array contains
+  // uninitialized data.
   ProgramStateRef checkInit(CheckerContext &C, ProgramStateRef state,
                             AnyArgExpr Buffer, SVal Element, SVal Size,
                             CharKind CK) const;
@@ -552,8 +552,6 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!SuperR)
     return State;
 
-  // FIXME: We ought to able to check objects as well. Maybe
-  // UninitializedObjectChecker could help?
   if (!SuperR->getValueType()->isArrayType())
     return State;
 
