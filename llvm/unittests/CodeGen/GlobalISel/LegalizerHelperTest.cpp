@@ -1502,9 +1502,9 @@ TEST_F(AArch64GISelMITest, NarrowScalarPhiInvokeResult) {
             Helper.narrowScalar(*Phi, 0, S64));
 
   auto CheckStr = R"(
-  CHECK: [[LO:%[0-9]+]]:_(i64), [[HI:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[VAL:%[0-9]+]]:_(i128)
-  CHECK-NEXT: G_INVOKE_REGION_START
-  CHECK-NEXT: [[VAL]]:_(i128) = G_IMPLICIT_DEF
+  CHECK: G_INVOKE_REGION_START
+  CHECK-NEXT: [[VAL:%[0-9]+]]:_(i128) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[LO:%[0-9]+]]:_(i64), [[HI:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[VAL]]:_(i128)
   CHECK-NEXT: G_BR
   CHECK: [[PHI_LO:%[0-9]+]]:_(i64) = G_PHI [[LO]]:_(i64), %bb.0
   CHECK-NEXT: [[PHI_HI:%[0-9]+]]:_(i64) = G_PHI [[HI]]:_(i64), %bb.0
@@ -1591,11 +1591,11 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   CHECK: [[INITVAL_E23:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[INITVAL_E2]]:_(i32), [[INITVAL_E3]]:_(i32)
   CHECK: G_BRCOND
 
-  CHECK: [[MIDVAL_E0:%[0-9]+]]:_(i32), [[MIDVAL_E1:%[0-9]+]]:_(i32), [[MIDVAL_E2:%[0-9]+]]:_(i32), [[MIDVAL_E3:%[0-9]+]]:_(i32), [[MIDVAL_E4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[MIDVAL:%[0-9]+]]:_(<5 x i32>)
+  CHECK: G_INVOKE_REGION_START
+  CHECK-NEXT: [[MIDVAL:%[0-9]+]]:_(<5 x i32>) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[MIDVAL_E0:%[0-9]+]]:_(i32), [[MIDVAL_E1:%[0-9]+]]:_(i32), [[MIDVAL_E2:%[0-9]+]]:_(i32), [[MIDVAL_E3:%[0-9]+]]:_(i32), [[MIDVAL_E4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[MIDVAL]]:_(<5 x i32>)
   CHECK: [[MIDVAL_E01:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[MIDVAL_E0]]:_(i32), [[MIDVAL_E1]]:_(i32)
   CHECK: [[MIDVAL_E23:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[MIDVAL_E2]]:_(i32), [[MIDVAL_E3]]:_(i32)
-  CHECK-NEXT: G_INVOKE_REGION_START
-  CHECK-NEXT: [[MIDVAL]]:_(<5 x i32>) = G_IMPLICIT_DEF
   CHECK: G_BR
 
   CHECK: [[PHI0:%[0-9]+]]:_(<2 x i32>) = G_PHI [[INITVAL_E01]]:_(<2 x i32>), %bb.0, [[MIDVAL_E01]]:_(<2 x i32>), %bb.1
