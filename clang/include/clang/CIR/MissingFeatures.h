@@ -120,7 +120,6 @@ struct MissingFeatures {
   static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
-  static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.

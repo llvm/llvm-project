@@ -1331,7 +1331,7 @@ void CIRGenFunction::pushDestroyAndDeferDeactivation(
 void CIRGenFunction::pushLifetimeExtendedDestroy(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const ValueDecl *extendingDecl) {
-  if (isInConditionalBranch()) {
+  if (isInConditionalBranch() || hiddenOutermostConditional) {
     cgm.errorNYI("conditional lifetime-extended destroy");
     return;
   }
