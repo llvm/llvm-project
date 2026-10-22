@@ -982,10 +982,6 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
     if (auto Err = Device->Device->synchronize(Queue->AsyncInfo,
                                                /*Release=*/true))
       return Err;
-
-    // The queue was synchronized correctly, plugin should cache internal
-    // references to hardware queues. We can free `AsyncInfo`.
-    delete Queue->AsyncInfo;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
     Context->addOutstandingQueue(Device, Queue->AsyncInfo);
@@ -1175,8 +1171,11 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
-  bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  // A null device handle means the pointer belongs to the host.
+  bool IsDstHost =
+      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost =
+      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {

@@ -5482,6 +5482,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
+      const bool IsFMA = IID == Intrinsic::fma;
+
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
         KnownFPClass KnownSrc, KnownAddend;
@@ -5506,7 +5508,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           KnownAddend.knownNot(fcInf);
         }
 
-        Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+        Known = IsFMA
+                    ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
         break;
       }
 
@@ -5528,7 +5532,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
       break;
     }
     case Intrinsic::sqrt:

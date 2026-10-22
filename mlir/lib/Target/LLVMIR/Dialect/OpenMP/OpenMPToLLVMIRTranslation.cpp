@@ -1187,17 +1187,26 @@ static LogicalResult inlineConvertOmpRegions(
   // Special case for single-block regions that don't create additional blocks:
   // insert operations without creating additional blocks.
   if (region.hasOneBlock()) {
+    llvm::BasicBlock *insertBlock = builder.GetInsertBlock();
     llvm::Instruction *potentialTerminator =
-        builder.GetInsertBlock()->empty() ? nullptr
-                                          : &builder.GetInsertBlock()->back();
+        insertBlock->empty() ? nullptr : &insertBlock->back();
 
-    if (potentialTerminator && potentialTerminator->isTerminator())
+    if (potentialTerminator && potentialTerminator->isTerminator()) {
+      assert(builder.GetInsertPoint() == potentialTerminator->getIterator() &&
+             "Insertion point should be the terminator");
       potentialTerminator->removeFromParent();
-    moduleTranslation.mapBlock(&region.front(), builder.GetInsertBlock());
+      // Reset insertion point to the end of the block.
+      builder.SetInsertPoint(insertBlock);
+    }
+    moduleTranslation.mapBlock(&region.front(), insertBlock);
 
+    // convertBlock leaves the location of the region's last op current. Restore
+    // the caller's, as convertOmpOpRegions does for every block it converts.
+    llvm::DebugLoc loc = builder.getCurrentDebugLocation();
     if (failed(moduleTranslation.convertBlock(
             region.front(), /*ignoreArguments=*/true, builder)))
       return failure();
+    builder.SetCurrentDebugLocation(loc);
 
     // The continuation arguments are simply the translated terminator operands.
     if (continuationBlockArgs)
@@ -1578,24 +1587,27 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
   bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op);
 
   llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
-  auto allocaIP = latestAllocaBlock->getTerminator()->getIterator();
-  builder.restoreIP(allocaIP);
   SmallVector<llvm::Value *> byRefVars(op.getNumReductionVars());
+  {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    auto allocaIP = latestAllocaBlock->getTerminator()->getIterator();
+    builder.restoreIP(allocaIP);
 
-  for (unsigned i = 0; i < op.getNumReductionVars(); ++i) {
-    if (isByRef[i]) {
-      if (!reductionDecls[i].getAllocRegion().empty())
-        continue;
+    for (unsigned i = 0; i < op.getNumReductionVars(); ++i) {
+      if (isByRef[i]) {
+        if (!reductionDecls[i].getAllocRegion().empty())
+          continue;
 
-      // TODO: remove after all users of by-ref are updated to use the alloc
-      // region: Allocate reduction variable (which is a pointer to the real
-      // reduciton variable allocated in the inlined region)
-      llvm::Type *varTy =
-          moduleTranslation.convertType(reductionDecls[i].getType());
-      if (useDeviceSharedMem)
-        byRefVars[i] = ompBuilder->createOMPAllocShared(builder, varTy);
-      else
-        byRefVars[i] = builder.CreateAlloca(varTy);
+        // TODO: remove after all users of by-ref are updated to use the alloc
+        // region: Allocate reduction variable (which is a pointer to the real
+        // reduciton variable allocated in the inlined region)
+        llvm::Type *varTy =
+            moduleTranslation.convertType(reductionDecls[i].getType());
+        if (useDeviceSharedMem)
+          byRefVars[i] = ompBuilder->createOMPAllocShared(builder, varTy);
+        else
+          byRefVars[i] = builder.CreateAlloca(varTy);
+      }
     }
   }
 
@@ -5886,10 +5898,18 @@ static llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
       .Case([&](LLVM::AndOp) { return llvm::AtomicRMWInst::BinOp::And; })
       .Case([&](LLVM::OrOp) { return llvm::AtomicRMWInst::BinOp::Or; })
       .Case([&](LLVM::XOrOp) { return llvm::AtomicRMWInst::BinOp::Xor; })
+      .Case([&](LLVM::SMaxOp) { return llvm::AtomicRMWInst::BinOp::Max; })
+      .Case([&](LLVM::SMinOp) { return llvm::AtomicRMWInst::BinOp::Min; })
       .Case([&](LLVM::UMaxOp) { return llvm::AtomicRMWInst::BinOp::UMax; })
       .Case([&](LLVM::UMinOp) { return llvm::AtomicRMWInst::BinOp::UMin; })
       .Case([&](LLVM::FAddOp) { return llvm::AtomicRMWInst::BinOp::FAdd; })
       .Case([&](LLVM::FSubOp) { return llvm::AtomicRMWInst::BinOp::FSub; })
+      .Case([&](LLVM::MaxNumOp) { return llvm::AtomicRMWInst::BinOp::FMax; })
+      .Case([&](LLVM::MinNumOp) { return llvm::AtomicRMWInst::BinOp::FMin; })
+      .Case(
+          [&](LLVM::MaximumOp) { return llvm::AtomicRMWInst::BinOp::FMaximum; })
+      .Case(
+          [&](LLVM::MinimumOp) { return llvm::AtomicRMWInst::BinOp::FMinimum; })
       .Default(llvm::AtomicRMWInst::BinOp::BAD_BINOP);
 }
 

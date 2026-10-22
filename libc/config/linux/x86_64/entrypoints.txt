@@ -72,6 +72,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.net.if_indextoname
     libc.src.net.if_nametoindex
 
+    # netinet/ether.h entrypoints
+    libc.src.netinet.ether.ether_ntoa
+    libc.src.netinet.ether.ether_ntoa_r
+
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
     libc.src.netinet.in6addr_loopback
@@ -322,6 +326,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: Need to check if pwait2 is available before providing.
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
+
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
 
     # sys/file.h entrypoints
     libc.src.sys.file.flock
@@ -1535,7 +1542,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.pclose
     libc.src.stdio.perror
+    libc.src.stdio.popen
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -1673,8 +1682,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.confstr
     libc.src.unistd.environ
     libc.src.unistd.execl
+    libc.src.unistd.execlp
     libc.src.unistd.execv
     libc.src.unistd.execvp
+    libc.src.unistd.execvpe
     libc.src.unistd.fork
     libc.src.unistd.getopt
     libc.src.unistd.optarg
@@ -1774,6 +1785,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.time.tzset
 
       # unistd.h entrypoints
+      libc.src.unistd.setegid
+      libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
       libc.src.unistd.setreuid
