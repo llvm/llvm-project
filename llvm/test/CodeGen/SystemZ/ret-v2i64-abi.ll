@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu < %s | FileCheck -check-prefixes=LINUX,LINUX-BASE %s
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 < %s | FileCheck -check-prefixes=LINUX,LINUX-Z13 %s
 
-; FIXME: Why do the zos checks not get emitted?
+; FIXME: update_llc_test_checks.py does not support the z/OS HLASM output.
 ; RUN: llc -mtriple=s390x-ibm-zos < %s | FileCheck -check-prefixes=ZOS,ZOS-BASE %s
 ; RUN: llc -mtriple=s390x-ibm-zos -mcpu=z13 < %s | FileCheck -check-prefixes=ZOS,ZOS-Z13 %s
 
