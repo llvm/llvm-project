@@ -627,6 +627,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// Report a base class conversion that the address computed by a BPF
+  /// preserved access expression depends on.
+  void checkPreservedAccessBaseConversions(const Expr *E);
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 

@@ -21,10 +21,33 @@ class BasicBlock;
 class Instruction;
 class Module;
 
+/// Whether a record element becomes a BTF member: data members, variant parts
+/// and non-virtual C++ bases, the latter as anonymous members. Virtual bases
+/// have no fixed offset.
+inline bool isBTFRecordElement(const DINode *Element) {
+  switch (Element->getTag()) {
+  case dwarf::DW_TAG_member:
+    return !cast<DIDerivedType>(Element)->isStaticMember();
+  case dwarf::DW_TAG_inheritance:
+    return !cast<DIDerivedType>(Element)->isVirtual();
+  case dwarf::DW_TAG_variant_part:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Whether a debug info tag describes a record that BTF represents as a
+/// struct. A C++ record declared with the class keyword is one as well.
+inline bool isBTFStructTag(unsigned Tag) {
+  return Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_class_type;
+}
+
 /// Return the bit offset used to order an element of a BTF structure record.
 inline uint64_t getBTFRecordElementOffset(const DINode *Element) {
   switch (Element->getTag()) {
   case dwarf::DW_TAG_member:
+  case dwarf::DW_TAG_inheritance:
     return cast<DIDerivedType>(Element)->getOffsetInBits();
   case dwarf::DW_TAG_variant_part:
     return cast<DICompositeType>(Element)->getOffsetInBits();

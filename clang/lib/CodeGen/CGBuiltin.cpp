@@ -2714,6 +2714,62 @@ static void ClearPadding(CodeGenFunction &CGF, Address Src,
   }
 }
 
+/// Return a conversion between a class and its base that the address computed
+/// by E depends on, looking through the expressions that form the address but
+/// not into operands that only contribute side effects or values.
+static const CastExpr *findBaseConversionOnAddressPath(const Expr *E) {
+  while (E) {
+    E = E->IgnoreParens();
+    if (const auto *CE = dyn_cast<CastExpr>(E)) {
+      switch (CE->getCastKind()) {
+      case CK_DerivedToBase:
+      case CK_UncheckedDerivedToBase:
+      case CK_BaseToDerived:
+        return CE;
+      default:
+        E = CE->getSubExpr();
+        continue;
+      }
+    }
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      E = ME->getBase();
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      E = ASE->getBase();
+    } else if (const auto *UO = dyn_cast<clang::UnaryOperator>(E)) {
+      if (UO->getOpcode() != UO_AddrOf && UO->getOpcode() != UO_Deref)
+        return nullptr;
+      E = UO->getSubExpr();
+    } else if (const auto *BO = dyn_cast<clang::BinaryOperator>(E)) {
+      if (BO->getOpcode() == BO_Comma)
+        E = BO->getRHS();
+      else if (BO->isAdditiveOp())
+        E = BO->getLHS()->getType()->isPointerType() ? BO->getLHS()
+                                                     : BO->getRHS();
+      else
+        return nullptr;
+    } else if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+      if (const CastExpr *CE =
+              findBaseConversionOnAddressPath(CO->getTrueExpr()))
+        return CE;
+      E = CO->getFalseExpr();
+    } else {
+      return nullptr;
+    }
+  }
+  return nullptr;
+}
+
+void CodeGenFunction::checkPreservedAccessBaseConversions(const Expr *E) {
+  // A BPF CO-RE relocation is relative to the record that has the field, so
+  // the offset of a base subobject, which may differ in the target, would not
+  // be relocated.
+  if (!getTarget().getTriple().isBPF())
+    return;
+  if (const CastExpr *CE = findBaseConversionOnAddressPath(E))
+    CGM.Error(CE->getExprLoc(),
+              "CO-RE access through a base class conversion not supported");
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -3380,6 +3436,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       CGM.Error(E->getExprLoc(), "using builtin_preserve_access_index() without -g");
       return RValue::get(EmitScalarExpr(E->getArg(0)));
     }
+
+    checkPreservedAccessBaseConversions(E->getArg(0));
 
     // Nested builtin_preserve_access_index() not supported
     if (IsInPreservedAIRegion) {
