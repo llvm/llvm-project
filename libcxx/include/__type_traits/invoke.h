@@ -59,10 +59,10 @@
 // inline const bool __is_nothrow_invocable_v = is_nothrow_invocable_v<Func, Args...>;
 //
 // template <class Func, class... Args>
-// struct __is_nothrow_invocable_r : is_nothrow_invocable_r<Func, Args...> {};
+// inline const bool __is_nothrow_invocable_r_v = is_nothrow_invocable_r_v<Func, Args...>;
 //
 // template <class Func, class... Args>
-// struct __invoke_result : invoke_result<Func, Args...> {};
+// struct __invoke_result : invoke_result {};
 //
 // template <class Func, class... Args>
 // using __invoke_result_t = invoke_result_t<Func, Args...>;
@@ -77,17 +77,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class... _Args>
 using __invoke_result_t _LIBCPP_NODEBUG =
     decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
-
-template <class, class... _Args>
-struct __invoke_result_impl {};
-
-template <class... _Args>
-struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
-};
-
-template <class... _Args>
-using __invoke_result _LIBCPP_NODEBUG = __invoke_result_impl<void, _Args...>;
 
 template <class _Void, class... _Args>
 inline const bool __is_invocable_impl = false;
@@ -141,6 +130,32 @@ template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __invoke_result_t<_Args...> __invoke(_Args&&... __args)
     _NOEXCEPT_(__is_nothrow_invocable_v<_Args...>) {
   return __builtin_invoke(static_cast<_Args&&>(__args)...);
+}
+
+template <class _Void, class... _Args>
+struct __invoke_result_impl {};
+
+template <class... _Args>
+struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> {
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
+};
+
+template <class... _Args>
+using __invoke_result _LIBCPP_NODEBUG = __invoke_result_impl<void, _Args...>;
+
+template <class... _Args>
+using __is_invocable_r _LIBCPP_NODEBUG = _BoolConstant<__is_invocable_r_v<_Args...> >;
+
+template <class _Ret, class... _Args>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<!is_void<_Ret>::value, _Ret>
+__invoke_r(_Args&&... __args) {
+  return std::__invoke(static_cast<_Args&&>(__args)...);
+}
+
+template <class _Ret, class... _Args>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<is_void<_Ret>::value, _Ret>
+__invoke_r(_Args&&... __args) {
+  std::__invoke(static_cast<_Args&&>(__args)...);
 }
 
 #else // __has_builtin(__builtin_invoke)
@@ -339,8 +354,6 @@ struct __invoke_result
 template <class _Func, class... _Args>
 using __invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Func, _Args...>::type;
 
-#endif // __has_builtin(__builtin_invoke_r)
-
 template <class _Ret, class _Func, class... _Args>
 struct __is_invocable_r : integral_constant<bool, __is_invocable_r_v<_Ret, _Func, _Args...> > {};
 
@@ -364,6 +377,8 @@ template <class _Ret, class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Ret __invoke_r(_Args&&... __args) {
   return __invoke_void_return_wrapper<_Ret>::__call(std::forward<_Args>(__args)...);
 }
+
+#endif // __has_builtin(__builtin_invoke)
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -401,7 +416,7 @@ template <class _Fn, class... _Args>
 struct _LIBCPP_NO_SPECIALIZATIONS invoke_result : __invoke_result<_Fn, _Args...> {};
 
 template <class _Fn, class... _Args>
-using invoke_result_t = __invoke_result_t<_Fn, _Args...>;
+using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
 
 #endif
 
