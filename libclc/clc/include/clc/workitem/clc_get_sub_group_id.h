@@ -11,6 +11,6 @@
 
 #include "clc/internal/clc.h"
 
-_CLC_OVERLOAD _CLC_CONST _CLC_DECL uint __clc_get_sub_group_id();
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_id(void);
 
 #endif // __CLC_WORKITEM_CLC_GET_SUB_GROUP_ID_H__
