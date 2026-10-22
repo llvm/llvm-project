@@ -8146,14 +8146,32 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
                                      STI);
 }
 
+// clang-format off
+// Atomic load lowering grid, one (LLVM ordering, native support) combination
+// per line:
+//
+//   seq_cst, ld.acquire supported:    fence seq_cst; load acquire
+//   seq_cst, ld.acquire unsupported:  fence seq_cst; load monotonic; fence acquire
+//   acquire, ld.acquire supported:    load acquire
+//   acquire, ld.acquire unsupported:  load monotonic; fence acquire
+//
+// Atomic store lowering grid, in the same form:
+//
+//   seq_cst, st.release supported:    fence seq_cst; store monotonic
+//   seq_cst, st.release unsupported:  fence seq_cst; store monotonic
+//   release, st.release supported:    store release
+//   release, st.release unsupported:  fence release; store monotonic
+//
+//  Note that ordered fences are only supported on architectures where
+//  acquire/release loads/stores are supported. On lower architectures, all
+//  LLVM fences are lowered "membar". This is correct, because membar provides
+//  all the guarantees of "fence.sc".
+//  Lowering is based on the PTX Atomics ABI:
+//  https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+// clang-format on
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff AtomicExpandPass should enforce the
-  // instruction's ordering with fences instead of leaving that ordering on the
-  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
-  // operations (which are not natively supported by the PTX `atom`
-  // instruction), and elementwise atomicrmw expansion.
-  //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
   // syncscope, and volatile semantics. For PTX, it is more efficient to use
@@ -8171,6 +8189,9 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // seq_cst, we emulate it by lowering to a fence.sc followed by an atom
   // according to the PTX atomics ABI.
   // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  //
+  // Atomic loads with a memory order not supported on the SM can be
+  // inefficiently emulated by appending a `fence.acquire` after a relaxed load.
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
@@ -8183,14 +8204,32 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
            !STI.hasMemoryOrdering() ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   }
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getOrdering() == AtomicOrdering::SequentiallyConsistent ||
+           (!STI.hasMemoryOrdering() && isAcquireOrStronger(LI->getOrdering()));
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getOrdering() == AtomicOrdering::SequentiallyConsistent ||
+           (!STI.hasMemoryOrdering() && isReleaseOrStronger(SI->getOrdering()));
   return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  // If the operation is emulated by a CAS-loop, or the target does not support
-  // memory-order qualifiers, we set its IR ordering to monotonic.
-  // AtomicExpandPass inserts fences to enforce the original memory ordering.
+  // Returns the new AtomicOrdering for the original op once AtomicExpandPass
+  // has split it into leading/trailing fences + the op itself. Per the grids
+  // above:
+  // - cmpxchg / atomicrmw at seq_cst (not CAS-emulated): Acquire
+  //   ("fence.sc; atom.<op>.acquire" pattern).
+  // - load at any ordering when hasMemoryOrdering: Acquire
+  //   ("fence.sc; ld.acquire" for seq_cst; the acquire load is already typed
+  //    on supported targets).
+  // - everything else (CAS-emulated ops, seq_cst on !hasMemoryOrdering,
+  //   release-or-stronger store on !hasMemoryOrdering, etc.): Monotonic
+  //   (i.e., relaxed) -- the surrounding fences carry the ordering.
+  //
+  // If the operation is emulated by a CAS-loop, we lower the instruction to
+  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
+  // the correct memory ordering around the CAS loop.
   //
   // When the operation is not emulated, but the memory order is seq_cst,
   // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
@@ -8212,16 +8251,19 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits())
+          STI.getMinCmpXchgSizeInBits()) {
     return AtomicOrdering::Acquire;
-  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+  } else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+             RI &&
+             RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
     // A non-elementwise `Expand` means we are expanding sub(x) to add(-x).
     // The atomic add will have acquire ordering.
     if (ExpansionKind == AtomicExpansionKind::None ||
         (ExpansionKind == AtomicExpansionKind::Expand && !RI->isElementwise()))
       return AtomicOrdering::Acquire;
+  } else if (isa<LoadInst>(I)) {
+    return AtomicOrdering::Acquire;
   }
 
   return AtomicOrdering::Monotonic;
@@ -8230,23 +8272,45 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
+  // Emits the leading fence per the grids above:
+  // - cmpxchg / atomicrmw: fence.sc iff Ord == seq_cst, else fence.release
+  //   if Ord is release-or-stronger.
+  // - load: fence.sc iff Ord == seq_cst.
+  // - store: same shape as cmpxchg/rmw (fence.sc or fence.release based on
+  //   Ord being seq_cst vs release-or-stronger).
+  // Returns nullptr if no leading fence is needed for this Inst/Ord.
+  //
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
   // `Inst` before its memory order was modified. We cannot enforce this with an
   // assert, because AtomicExpandPass will have modified the memory order
   // between the initial call to shouldInsertFencesForAtomic() and the call to
   // this function.
-  if (!isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
-    return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
-
-  // Specialize for cmpxchg and atomicrmw
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
-
-  if (isReleaseOrStronger(Ord))
-    return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
-                                   ? AtomicOrdering::SequentiallyConsistent
-                                   : AtomicOrdering::Release,
-                               SSID.value());
+  if (isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)) {
+    // Specialize for cmpxchg and atomicrmw
+    if (isReleaseOrStronger(Ord))
+      return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
+                                     ? AtomicOrdering::SequentiallyConsistent
+                                     : AtomicOrdering::Release,
+                                 SSID.value());
+  } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
+    // volatile operations have sys scope by default
+    SSID = LI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("")
+                            : SSID;
+    if (Ord == AtomicOrdering::SequentiallyConsistent)
+      return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent,
+                                 SSID.value());
+  } else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+    // volatile operations have sys scope by default
+    SSID = SI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("")
+                            : SSID;
+    if (isReleaseOrStronger(Ord))
+      return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
+                                     ? AtomicOrdering::SequentiallyConsistent
+                                     : AtomicOrdering::Release,
+                                 SSID.value());
+  }
 
   return nullptr;
 }
@@ -8254,33 +8318,42 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
+  // Emits the trailing fence per the grids above:
+  // - cmpxchg / atomicrmw: fence.acquire iff Ord is acquire-or-stronger AND
+  //   the op is being CAS-emulated (i.e., the inner CAS uses relaxed).
+  // - load: fence.acquire iff !hasMemoryOrdering (covers both the acquire
+  //   and seq_cst cells of the load grid).
+  // - store: never (release-side ordering for stores comes from the leading
+  //   fence or the typed `st.release` instruction).
+  // Returns nullptr if no trailing fence is needed for this Inst/Ord.
+  //
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
   // `Inst` before its memory order was modified. See `emitLeadingFence` for why
   // this cannot be enforced with an assert.  Specialize for cmpxchg and
   // atomicrmw
   auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
   auto *RI = dyn_cast<AtomicRMWInst>(Inst);
-  if (!CI && !RI)
-    return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
-
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
+  if (CI || RI) {
+    bool IsEmulated = !STI.hasMemoryOrdering();
+    if (CI)
+      IsEmulated |=
+          cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+          STI.getMinCmpXchgSizeInBits();
+    else {
+      AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+      IsEmulated |=
+          Expansion == AtomicExpansionKind::CmpXChg ||
+          (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
+    }
 
-  bool IsEmulated = !STI.hasMemoryOrdering();
-  if (CI)
-    IsEmulated |=
-        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-        STI.getMinCmpXchgSizeInBits();
-  else {
-    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
-    IsEmulated |=
-        Expansion == AtomicExpansionKind::CmpXChg ||
-        (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
-  }
+    if (isAcquireOrStronger(Ord) && IsEmulated)
+      return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
-  if (isAcquireOrStronger(Ord) && IsEmulated)
+  } else if (isa<LoadInst>(Inst) && !STI.hasMemoryOrdering()) {
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
-
+  }
   return nullptr;
 }
 

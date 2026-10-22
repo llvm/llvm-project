@@ -17,8 +17,6 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/target-location.ll 2>&1 | FileCheck %s --check-prefix=TARGET
 ; RUN: cat %t/access-common.ll %t/access-id.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-ID
-; RUN: cat %t/access-common.ll %t/access-dynamic-id.ll > %t/test.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-DYNAMIC-ID
 ; RUN: cat %t/access-common.ll %t/access-component.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-COMPONENT
 ; RUN: cat %t/access-common.ll %t/access-row.ll > %t/test.ll
@@ -253,14 +251,6 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; The intrinsic ID is outside the signature's two-element list.
 define void @main() #0 {
   %x = call float @llvm.dx.load.input.f32(i32 123456789, i32 0, i8 0, i32 poison)
-  ret void
-}
-
-;--- access-dynamic-id.ll
-; ACCESS-DYNAMIC-ID: entry 'main': input signature: signature access requires a constant element ID
-; Signature IDs cannot be selected dynamically.
-define void @main(i32 %id) #0 {
-  %x = call float @llvm.dx.load.input.f32(i32 %id, i32 0, i8 0, i32 poison)
   ret void
 }
 

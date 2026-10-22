@@ -708,3 +708,111 @@ entry:
   %or26 = sext <8 x i1> %or2668 to <8 x i32>
   ret <8 x i32> %or26
 }
+
+define <16 x i16> @PR233272(<16 x i16> %v0, <16 x i16> %v1, <16 x i16> %v2, <16 x i16> %v3, <16 x i16> %v4, <16 x i16> %v5, <16 x i16> %v6, <16 x i16> %val) {
+; SSE-LABEL: PR233272:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm1, %xmm8
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm13
+; SSE-NEXT:    movdqa %xmm8, %xmm14
+; SSE-NEXT:    pcmpgtw %xmm3, %xmm14
+; SSE-NEXT:    movdqa %xmm0, %xmm15
+; SSE-NEXT:    pcmpgtw %xmm2, %xmm15
+; SSE-NEXT:    pcmpgtw %xmm5, %xmm3
+; SSE-NEXT:    por %xmm14, %xmm3
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm2
+; SSE-NEXT:    por %xmm15, %xmm2
+; SSE-NEXT:    pcmpgtw %xmm6, %xmm4
+; SSE-NEXT:    pandn %xmm2, %xmm4
+; SSE-NEXT:    pcmpgtw %xmm7, %xmm5
+; SSE-NEXT:    pandn %xmm3, %xmm5
+; SSE-NEXT:    pcmpgtw %xmm13, %xmm7
+; SSE-NEXT:    pandn %xmm5, %xmm7
+; SSE-NEXT:    pcmpgtw %xmm12, %xmm6
+; SSE-NEXT:    pandn %xmm4, %xmm6
+; SSE-NEXT:    pcmpgtw %xmm11, %xmm12
+; SSE-NEXT:    pandn %xmm6, %xmm12
+; SSE-NEXT:    pcmpgtw %xmm10, %xmm13
+; SSE-NEXT:    pandn %xmm7, %xmm13
+; SSE-NEXT:    pcmpgtw %xmm9, %xmm10
+; SSE-NEXT:    pandn %xmm13, %xmm10
+; SSE-NEXT:    pcmpgtw %xmm1, %xmm11
+; SSE-NEXT:    pandn %xmm12, %xmm11
+; SSE-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSE-NEXT:    pandn %xmm11, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm8, %xmm9
+; SSE-NEXT:    pandn %xmm10, %xmm9
+; SSE-NEXT:    packsswb %xmm9, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE-NEXT:    psllw $15, %xmm0
+; SSE-NEXT:    psraw $15, %xmm0
+; SSE-NEXT:    pand {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE-NEXT:    psllw $15, %xmm1
+; SSE-NEXT:    psraw $15, %xmm1
+; SSE-NEXT:    pand {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: PR233272:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm8
+; AVX2-NEXT:    vpcmpgtw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm8, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm4, %ymm3, %ymm2
+; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm5, %ymm4, %ymm2
+; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm5, %ymm2
+; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpcmpgtw %ymm0, %ymm6, %ymm0
+; AVX2-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm7, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR233272:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm7 killed $ymm7 def $zmm7
+; AVX512-NEXT:    # kill: def $ymm6 killed $ymm6 def $zmm6
+; AVX512-NEXT:    # kill: def $ymm5 killed $ymm5 def $zmm5
+; AVX512-NEXT:    # kill: def $ymm4 killed $ymm4 def $zmm4
+; AVX512-NEXT:    # kill: def $ymm3 killed $ymm3 def $zmm3
+; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpcmpgtw %zmm1, %zmm0, %k0
+; AVX512-NEXT:    vpcmpgtw %zmm2, %zmm1, %k1
+; AVX512-NEXT:    korw %k1, %k0, %k1
+; AVX512-NEXT:    vpcmplew %zmm3, %zmm2, %k1 {%k1}
+; AVX512-NEXT:    vpcmplew %zmm4, %zmm3, %k1 {%k1}
+; AVX512-NEXT:    vpcmplew %zmm5, %zmm4, %k1 {%k1}
+; AVX512-NEXT:    vpcmplew %zmm6, %zmm5, %k1 {%k1}
+; AVX512-NEXT:    vpcmplew %zmm0, %zmm6, %k1 {%k1}
+; AVX512-NEXT:    vmovdqu16 %zmm7, %zmm0 {%k1} {z}
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    retq
+  %c0 = icmp sgt <16 x i16> %v0, %v1
+  %c1 = icmp sgt <16 x i16> %v1, %v2
+  %c2 = icmp sle <16 x i16> %v2, %v3
+  %c3 = icmp sle <16 x i16> %v3, %v4
+  %c4 = icmp sle <16 x i16> %v4, %v5
+  %c5 = icmp sle <16 x i16> %v5, %v6
+  %c6 = icmp sle <16 x i16> %v6, %v0
+  %op11 = or <16 x i1> %c0, %c1
+  %op22 = and <16 x i1> %op11, %c2
+  %op33 = and <16 x i1> %op22, %c3
+  %op44 = and <16 x i1> %op33, %c4
+  %op55 = and <16 x i1> %op44, %c5
+  %op66 = and <16 x i1> %c6, %op55
+  %res = select <16 x i1> %op66, <16 x i16> %val, <16 x i16> zeroinitializer
+  ret <16 x i16> %res
+}
