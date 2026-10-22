@@ -932,7 +932,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     MVT EltVT = VT.getVectorElementType();
     if (EltVT == MVT::f32 || EltVT == MVT::f64) {
       setOperationAction({ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
-                          ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
+                          ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM,
+                          ISD::VECREDUCE_FMAXIMUMNUM,
+                          ISD::VECREDUCE_FMINIMUMNUM},
                          VT, Custom);
     }
   }
@@ -1891,6 +1893,10 @@ static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
     return ISD::FMAXIMUM;
   case ISD::VECREDUCE_FMINIMUM:
     return ISD::FMINIMUM;
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return ISD::FMAXIMUMNUM;
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return ISD::FMINIMUMNUM;
   default:
     llvm_unreachable("unhandled reduction opcode");
   }
@@ -1901,8 +1907,10 @@ static std::optional<unsigned>
 getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
   switch (ReductionOpcode) {
   case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
     return NVPTXISD::FMAXNUM3;
   case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     return NVPTXISD::FMINNUM3;
   case ISD::VECREDUCE_FMAXIMUM:
     return NVPTXISD::FMAXIMUM3;
@@ -1930,7 +1938,9 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
       EltTy == MVT::f32 && STI.hasFeature(NVPTX::SM100) &&
       STI.hasFeature(NVPTX::PTX88) &&
       (Opcode == ISD::VECREDUCE_FMAX || Opcode == ISD::VECREDUCE_FMIN ||
-       Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM);
+       Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM ||
+       Opcode == ISD::VECREDUCE_FMAXIMUMNUM ||
+       Opcode == ISD::VECREDUCE_FMINIMUMNUM);
 
   // A list of SDNode opcodes with equivalent semantics, sorted descending by
   // number of inputs they take.
@@ -3674,6 +3684,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);

@@ -8523,6 +8523,10 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
     if (!SrcVT.isSimple() || !VT.isSimple())
       return SDValue();
 
+    // [x]vffint.s.l needs LSX and at least one full 128-bit source register.
+    if (!Subtarget.hasExtLSX() || SrcVT.getSizeInBits() < 128)
+      return SDValue();
+
     // Combine [x]vffint.s.l for vector si64 to float conversion.
     return MergeBlocksConvert(N, DAG, LoongArchISD::VFFINT, BlockBits);
   }

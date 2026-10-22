@@ -195,6 +195,51 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "#endif",
                Style);
 
+  verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#else\n"
+               "    g();\n"
+               "#endif",
+               Style);
+
+  verifyFormat("while (a)\n"
+               "  if (b)\n"
+               "    f(\n"
+               "#ifdef A\n"
+               "        1);\n"
+               "#else\n"
+               "        2);\n"
+               "#endif",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  f(\n"
+               "#ifdef A\n"
+               "      1\n"
+               "#else\n"
+               "      2\n"
+               "#endif\n"
+               "  );",
+               Style);
+
+  verifyFormat("#if A\n"
+               "if (a) {\n"
+               "  f();\n"
+               "}\n"
+               "#else\n"
+               "if (b) {\n"
+               "  g();\n"
+               "}\n"
+               "#endif",
+               "#if A\n"
+               "if (a) f();\n"
+               "#else\n"
+               "if (b) g();\n"
+               "#endif",
+               Style);
+
   verifyFormat("#if 0\n"
                "#elif 1\n"
                "#endif\n"

@@ -1416,6 +1416,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pusati_u32x2:
   case RISCV::BI__builtin_riscv_psati_i16x4:
   case RISCV::BI__builtin_riscv_psati_i32x2:
+  // Scalar Saturation
+  case RISCV::BI__builtin_riscv_sati_i32:
+  case RISCV::BI__builtin_riscv_usati_u32:
+  case RISCV::BI__builtin_riscv_sati_i64:
+  case RISCV::BI__builtin_riscv_usati_u64:
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulh_i32:
   case RISCV::BI__builtin_riscv_mulhu_u32: {
@@ -1668,6 +1673,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pusati_u16x4:
     case RISCV::BI__builtin_riscv_pusati_u32x2:
       ID = Intrinsic::riscv_pusati;
+      break;
+    case RISCV::BI__builtin_riscv_sati_i32:
+    case RISCV::BI__builtin_riscv_sati_i64:
+      ID = Intrinsic::riscv_sati;
+      break;
+    case RISCV::BI__builtin_riscv_usati_u32:
+    case RISCV::BI__builtin_riscv_usati_u64:
+      ID = Intrinsic::riscv_usati;
       break;
     case RISCV::BI__builtin_riscv_mulh_i32:
       ID = Intrinsic::smulh;
