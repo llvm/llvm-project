@@ -1921,6 +1921,41 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       ID = Intrinsic::riscv_pwmaccsu_i32x2;
       break;
     }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
+  // Packed Multiplication with Widening Horizontal Addition and Accumulate.
+  case RISCV::BI__builtin_riscv_pm2wadda_i64:
+  case RISCV::BI__builtin_riscv_pm2wadda_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddau_u64:
+  case RISCV::BI__builtin_riscv_pm2wsuba_i64:
+  case RISCV::BI__builtin_riscv_pm2wsuba_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddasu_i64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pm2wadda_i64:
+      ID = Intrinsic::riscv_pm2wadda;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wadda_x_i64:
+      ID = Intrinsic::riscv_pm2wadda_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddau_u64:
+      ID = Intrinsic::riscv_pm2waddau;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsuba_i64:
+      ID = Intrinsic::riscv_pm2wsuba;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsuba_x_i64:
+      ID = Intrinsic::riscv_pm2wsuba_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddasu_i64:
+      ID = Intrinsic::riscv_pm2waddasu;
+      break;
+    }
+
     IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;
   }

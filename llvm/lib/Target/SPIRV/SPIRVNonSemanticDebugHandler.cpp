@@ -330,8 +330,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
 
   CompileUnits.clear();
   DebugTypes.clear();
-  SubprogramDeclarations.clear();
-  SubprogramDefinitions.clear();
+  Subprograms.clear();
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
   LocalVariables.clear();
@@ -393,16 +392,14 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   }
 
   // Find all debug info types that may be referenced by NSDI instructions.
+  // Member types are not roots: each one is emitted only from its composite.
   DebugInfoFinder Finder;
   Finder.processModule(*M);
-  DebugTypes.assign(Finder.types().begin(), Finder.types().end());
+  copy_if(Finder.types(), std::back_inserter(DebugTypes), [](const DIType *Ty) {
+    return Ty->getTag() != dwarf::DW_TAG_member;
+  });
 
-  for (const DISubprogram *SP : Finder.subprograms()) {
-    if (SP->isDefinition())
-      SubprogramDefinitions.push_back(SP);
-    else
-      SubprogramDeclarations.push_back(SP);
-  }
+  Subprograms.assign(Finder.subprograms().begin(), Finder.subprograms().end());
 
   // Walk LLVM globals to map each DIGlobalVariable to its llvm::GlobalVariable.
   DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
@@ -896,6 +893,8 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
     return emitDebugTypePointer(DT, ExtInstSetReg, MAI);
   case dwarf::DW_TAG_typedef:
     return emitDebugTypedef(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+  case dwarf::DW_TAG_member:
+    return emitDebugTypeMember(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   default:
     return EmitResult::unsupported();
   }
@@ -1301,6 +1300,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   std::optional<MCRegister> StaticMemberRegOpt;
   if (const DIDerivedType *SM = GV->getStaticDataMemberDeclaration()) {
+    // Do not create the member here, just look it up to avoid orphaning it.
     StaticMemberRegOpt = lookupOptReg(DebugScopeRegs, SM);
     if (!StaticMemberRegOpt)
       return std::nullopt;
@@ -1459,15 +1459,16 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
                   ExtInstSetReg, Ops, MAI));
 }
 
-std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
+SPIRVNonSemanticDebugHandler::EmitResult
+SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
     const DIDerivedType *M, MCRegister VoidTypeReg, MCRegister I32TypeReg,
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   EmitResult Ty = getOrCreateDebugScope(M->getBaseType());
   if (!Ty)
-    return std::nullopt;
+    return Ty;
 
   if (!isUInt<32>(M->getOffsetInBits()) || !isUInt<32>(M->getSizeInBits()))
-    return std::nullopt;
+    return EmitResult::unsupported();
 
   MCRegister NameReg = getCachedOpStringReg(M->getName());
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
@@ -1494,10 +1495,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
   // available but is not emitted as the optional Value operand, and under DWARF
   // 5 a static member is tagged DW_TAG_variable, which the caller's member loop
   // skips.
-  return emitExtInst(
+  return EmitResult::emitted(emitExtInst(
       SPIRV::NonSemanticExtInst::DebugTypeMember, VoidTypeReg, ExtInstSetReg,
       {NameReg, Ty.Reg, SrcReg, LineReg, ColReg, OffsetReg, SizeReg, FlagsReg},
-      MAI);
+      MAI));
 }
 
 SPIRVNonSemanticDebugHandler::EmitResult
@@ -1518,9 +1519,9 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
     const auto *M = dyn_cast<DIDerivedType>(Element);
     if (!M || M->getTag() != dwarf::DW_TAG_member)
       continue;
-    if (auto MemberReg =
-            emitDebugTypeMember(M, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
-      MemberRegs.push_back(*MemberReg);
+    EmitResult Member = getOrCreateDebugScope(M);
+    if (Member)
+      MemberRegs.push_back(Member.Reg);
   }
 
   MCRegister NameReg = getCachedOpStringReg(CT->getName());
@@ -1604,8 +1605,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     }
   }
 
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions)) {
+  for (const DISubprogram *SP : Subprograms) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(SP, MAI);
@@ -2301,15 +2301,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DINamespace>))
-    getOrCreateDebugScope(S);
-  for (const DIType *Ty : DebugTypes)
-    getOrCreateDebugScope(Ty);
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions))
-    getOrCreateDebugScope(SP);
-  for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DILexicalBlock>))
+       concat<const DIScope *const>(LexicalBlocks, DebugTypes, Subprograms))
     getOrCreateDebugScope(S);
 
   // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the
