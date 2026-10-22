@@ -100,8 +100,9 @@ define <2 x i1> @isnot_pow2or0_decrement_op_vec(<2 x i8> %x) {
 define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_commute1(
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 7) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i32 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 0, 7) i8 @llvm.ctpop.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[TMP2]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = srem i32 42, %p ; thwart complexity-based canonicalization
@@ -116,8 +117,9 @@ define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 7) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i32 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 0, 7) i8 @llvm.ctpop.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = urem i32 42, %p ; thwart complexity-based canonicalization
@@ -130,8 +132,9 @@ define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute3(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 7) i32 @llvm.ctpop.i32(i32 [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i32 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 0, 7) i8 @llvm.ctpop.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = urem i32 42, %p ; thwart complexity-based canonicalization
