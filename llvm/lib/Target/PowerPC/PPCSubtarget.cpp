@@ -115,9 +115,6 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (HasPairedSingles && HasAltivec)
     report_fatal_error("Paired Singles and Altivec cannot both be enabled.\n",
                        false);
-  if (HasPairedSingles && HasSPE)
-    report_fatal_error("Paired Singles and SPE cannot both be enabled.\n",
-                       false);
 
   // If not SPE, set standard FPU
   if (!HasSPE)
@@ -127,6 +124,11 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
+
+  // Paired Singles only exists on Big Endian.
+  if (HasPairedSingles && IsLittleEndian)
+    report_fatal_error(
+        "Paired Singles are only supported for Big-Endian targets.\n", false);
 
   if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
     if (!getTargetTriple().isOSAIX() || !IsPPC64)

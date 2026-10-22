@@ -58,7 +58,7 @@ class PSForm_QX<bits<6> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}      = 0;
 }
 
-// NOTE: this is differrent than `dcbzl`, *this is* `dcbz_l` which is 750CL specific,
+// NOTE: this is different than `dcbzl`, *this is* `dcbz_l` which is 750CL specific,
 // has separate encodings, slightly different semantics, and requires a locked cache.
 class PSForm_DCBZL<bits<10> xo, dag OOL, dag IOL, string asmstr,
                    InstrItinClass itin, list<dag> pattern>
@@ -117,7 +117,7 @@ def PSQ_STUX : PSForm_QX<39, (outs ptr_rc_nor0:$ea_res),
                RegConstraint<"$dst.ptrreg = $ea_res">;
 }
 
-let mayRaiseFPException = 1, hasSideEffects = 0 in {
+let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
 let isCommutable = 1 in {
 defm PS_ADD    : AForm_2r<4, 21, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRB),
@@ -158,20 +158,20 @@ defm PS_RES    : XForm_26r<4, 24, (outs f8rc:$RST), (ins f8rc:$RB),
 // Reciprocal Square Root Estimate.
 defm PS_RSQRTE : XForm_26r<4, 26, (outs f8rc:$RST), (ins f8rc:$RB),
                            "ps_rsqrte", "$RST, $RB", IIC_FPGeneral, []>;
-// Multply A with the 1st element of B.
+// Multiply A with the 1st element of B.
 defm PS_MULS0  : AForm_3r<4, 12, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC),
                           "ps_muls0", "$FRT, $FRA, $FRC", IIC_FPGeneral, []>;
-// Multply A with the 2nd element of B.
+// Multiply A with the 2nd element of B.
 defm PS_MULS1  : AForm_3r<4, 13, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC),
                           "ps_muls1", "$FRT, $FRA, $FRC", IIC_FPGeneral, []>;
-// Multiply Acculate A with C+B 1st element.
+// Multiply Accumulate A with C+B 1st element.
 defm PS_MADDS0 : AForm_1r<4, 14, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_madds0", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                           []>;
-// Multiply Acculate A with C+B 2nd element.
+// Multiply Accumulate A with C+B 2nd element.
 defm PS_MADDS1 : AForm_1r<4, 15, (outs f8rc:$FRT),
                           (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                           "ps_madds1", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
@@ -240,7 +240,7 @@ def PS_CMPO1 : XForm_17<4, 96, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
                         "ps_cmpo1 $BF, $RA, $RB", IIC_FPCompare>;
 }
 
-let hasSideEffects = 1 in {
+let mayStore = 1, hasSideEffects = 1 in {
 // Zero-fill a *LOCKED* l1 data cache.
 def DCBZ_L : PSForm_DCBZL<1014, (outs), (ins (memrr $RA, $RB):$addr),
                           "dcbz_l $addr", IIC_LdStDCBF, []>;

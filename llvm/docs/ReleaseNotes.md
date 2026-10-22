@@ -333,6 +333,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the PowerPC Backend
 
+* Support for decoding, and encoding Paired Singles instructions has been added.
+
 ### Changes to the RISC-V Backend
 
 * Added experimental MC support for the ACLIC v0.20 extensions: `Smidctrl`,
