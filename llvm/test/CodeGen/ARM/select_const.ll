@@ -276,9 +276,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 ;
 ; THUMB-LABEL: select_neg1_or_0:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    ands r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    lsls r0, r0, #31
+; THUMB-NEXT:    asrs r0, r0, #31
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -319,6 +318,30 @@ define i32 @select_neg1_or_0_signext(i1 signext %cond) {
   ret i32 %sel
 }
 
+; Ensure the (sub 0, (and x, 1)) -> shift-pair combine does not fire when the
+; AND result has multiple uses.
+define i32 @select_neg1_or_0_and_multi_use(i32 %x) {
+; ARM-LABEL: select_neg1_or_0_and_multi_use:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    mov r0, #7
+; ARM-NEXT:    mov pc, lr
+;
+; THUMB2-LABEL: select_neg1_or_0_and_multi_use:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    movs r0, #7
+; THUMB2-NEXT:    bx lr
+;
+; THUMB-LABEL: select_neg1_or_0_and_multi_use:
+; THUMB:       @ %bb.0:
+; THUMB-NEXT:    movs r0, #7
+; THUMB-NEXT:    bx lr
+  %bit = and i32 %x, 1
+  %neg = sub i32 0, %bit
+  %use = add i32 %bit, 7
+  %res = add i32 %neg, %use
+  ret i32 %res
+}
+
 ; select Cond, C+1, C --> add (zext Cond), C
 
 define i32 @select_Cplus1_C(i1 %cond) {
@@ -341,11 +364,11 @@ define i32 @select_Cplus1_C(i1 %cond) {
 ; THUMB-LABEL: select_Cplus1_C:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB15_2
+; THUMB-NEXT:    bne .LBB16_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB15_2:
+; THUMB-NEXT:  .LBB16_2:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 42, i32 41
@@ -373,11 +396,11 @@ define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 ; THUMB-LABEL: select_Cplus1_C_zeroext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bne .LBB16_2
+; THUMB-NEXT:    bne .LBB17_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB16_2:
+; THUMB-NEXT:  .LBB17_2:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 42, i32 41
@@ -404,11 +427,11 @@ define i32 @select_Cplus1_C_signext(i1 signext %cond) {
 ; THUMB-LABEL: select_Cplus1_C_signext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB17_2
+; THUMB-NEXT:    bne .LBB18_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB17_2:
+; THUMB-NEXT:  .LBB18_2:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 42, i32 41
@@ -437,11 +460,11 @@ define i32 @select_C_Cplus1(i1 %cond) {
 ; THUMB-LABEL: select_C_Cplus1:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB18_2
+; THUMB-NEXT:    bne .LBB19_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB18_2:
+; THUMB-NEXT:  .LBB19_2:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 41, i32 42
@@ -469,11 +492,11 @@ define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 ; THUMB-LABEL: select_C_Cplus1_zeroext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bne .LBB19_2
+; THUMB-NEXT:    bne .LBB20_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB19_2:
+; THUMB-NEXT:  .LBB20_2:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 41, i32 42
@@ -500,11 +523,11 @@ define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 ; THUMB-LABEL: select_C_Cplus1_signext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB20_2
+; THUMB-NEXT:    bne .LBB21_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB20_2:
+; THUMB-NEXT:  .LBB21_2:
 ; THUMB-NEXT:    movs r0, #41
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 41, i32 42
@@ -535,11 +558,11 @@ define i32 @select_C1_C2(i1 %cond) {
 ; THUMB-LABEL: select_C1_C2:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB21_2
+; THUMB-NEXT:    bne .LBB22_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB21_2:
+; THUMB-NEXT:  .LBB22_2:
 ; THUMB-NEXT:    movs r0, #255
 ; THUMB-NEXT:    adds r0, #166
 ; THUMB-NEXT:    bx lr
@@ -569,11 +592,11 @@ define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 ; THUMB-LABEL: select_C1_C2_zeroext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bne .LBB22_2
+; THUMB-NEXT:    bne .LBB23_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB22_2:
+; THUMB-NEXT:  .LBB23_2:
 ; THUMB-NEXT:    movs r0, #255
 ; THUMB-NEXT:    adds r0, #166
 ; THUMB-NEXT:    bx lr
@@ -602,11 +625,11 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
 ; THUMB-LABEL: select_C1_C2_signext:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB23_2
+; THUMB-NEXT:    bne .LBB24_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #42
 ; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB23_2:
+; THUMB-NEXT:  .LBB24_2:
 ; THUMB-NEXT:    movs r0, #255
 ; THUMB-NEXT:    adds r0, #166
 ; THUMB-NEXT:    bx lr
@@ -662,15 +685,15 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    push {r4, r5, r6, r7, lr}
 ; THUMB-NEXT:    movs r6, #1
 ; THUMB-NEXT:    ands r0, r6
-; THUMB-NEXT:    bne .LBB24_2
+; THUMB-NEXT:    bne .LBB25_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r5, #23
-; THUMB-NEXT:    b .LBB24_3
-; THUMB-NEXT:  .LBB24_2:
+; THUMB-NEXT:    b .LBB25_3
+; THUMB-NEXT:  .LBB25_2:
 ; THUMB-NEXT:    movs r1, #3
 ; THUMB-NEXT:    mvns r5, r1
-; THUMB-NEXT:  .LBB24_3:
-; THUMB-NEXT:    ldr r1, .LCPI24_0
+; THUMB-NEXT:  .LBB25_3:
+; THUMB-NEXT:    ldr r1, .LCPI25_0
 ; THUMB-NEXT:    ands r5, r1
 ; THUMB-NEXT:    movs r4, #0
 ; THUMB-NEXT:    subs r7, r5, #1
@@ -678,26 +701,26 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    mov r1, r12
 ; THUMB-NEXT:    sbcs r1, r4
 ; THUMB-NEXT:    eors r3, r6
-; THUMB-NEXT:    ldr r4, .LCPI24_0
+; THUMB-NEXT:    ldr r4, .LCPI25_0
 ; THUMB-NEXT:    eors r2, r4
 ; THUMB-NEXT:    orrs r2, r3
 ; THUMB-NEXT:    cmp r2, #0
-; THUMB-NEXT:    beq .LBB24_5
+; THUMB-NEXT:    beq .LBB25_5
 ; THUMB-NEXT:  @ %bb.4:
 ; THUMB-NEXT:    mov r12, r0
 ; THUMB-NEXT:    mov r1, r12
-; THUMB-NEXT:  .LBB24_5:
-; THUMB-NEXT:    beq .LBB24_7
+; THUMB-NEXT:  .LBB25_5:
+; THUMB-NEXT:    beq .LBB25_7
 ; THUMB-NEXT:  @ %bb.6:
 ; THUMB-NEXT:    movs r7, r5
-; THUMB-NEXT:  .LBB24_7:
+; THUMB-NEXT:  .LBB25_7:
 ; THUMB-NEXT:    movs r0, r7
 ; THUMB-NEXT:    pop {r4, r5, r6, r7}
 ; THUMB-NEXT:    pop {r2}
 ; THUMB-NEXT:    bx r2
 ; THUMB-NEXT:    .p2align 2
 ; THUMB-NEXT:  @ %bb.8:
-; THUMB-NEXT:  .LCPI24_0:
+; THUMB-NEXT:  .LCPI25_0:
 ; THUMB-NEXT:    .long 65537 @ 0x10001
   %sel = select i1 %cond, i64 -4, i64 23
   %bo = and i64 %sel, 4295032833  ; 0x100010001
@@ -733,20 +756,20 @@ define i64 @opaque_constant2(i1 %cond, i64 %x) {
 ; THUMB-LABEL: opaque_constant2:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #31
-; THUMB-NEXT:    bne .LBB25_2
+; THUMB-NEXT:    bne .LBB26_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, #23
-; THUMB-NEXT:    b .LBB25_3
-; THUMB-NEXT:  .LBB25_2:
-; THUMB-NEXT:    ldr r0, .LCPI25_0
-; THUMB-NEXT:  .LBB25_3:
+; THUMB-NEXT:    b .LBB26_3
+; THUMB-NEXT:  .LBB26_2:
+; THUMB-NEXT:    ldr r0, .LCPI26_0
+; THUMB-NEXT:  .LBB26_3:
 ; THUMB-NEXT:    movs r1, #22
 ; THUMB-NEXT:    bics r0, r1
 ; THUMB-NEXT:    movs r1, #0
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:    .p2align 2
 ; THUMB-NEXT:  @ %bb.4:
-; THUMB-NEXT:  .LCPI25_0:
+; THUMB-NEXT:  .LCPI26_0:
 ; THUMB-NEXT:    .long 65537 @ 0x10001
   %sel = select i1 %cond, i64 65537, i64 23
   %bo = and i64 %sel, 65537
