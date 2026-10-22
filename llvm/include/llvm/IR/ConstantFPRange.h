@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class ConstantRange;
 class raw_ostream;
 struct KnownFPClass;
 
@@ -129,6 +130,15 @@ public:
   /// std::nullopt.
   LLVM_ABI static std::optional<ConstantFPRange>
   makeExactFCmpRegion(FCmpInst::Predicate Pred, const APFloat &Other);
+
+  /// Return the range of an integer from \p CR converted to \p DstSem with the
+  /// rounding mode \p RM. The integer is signed if \p IsSigned is true.
+  ///
+  /// Example: unsigned i8 [0, 255] returns [+0, 255]
+  LLVM_ABI static ConstantFPRange
+  makeFromIntRange(const ConstantRange &CR, const fltSemantics &DstSem,
+                   bool IsSigned,
+                   APFloat::roundingMode RM = APFloat::rmNearestTiesToEven);
 
   /// Does the predicate \p Pred hold between ranges this and \p Other?
   /// NOTE: false does not mean that inverse predicate holds!
@@ -243,6 +253,13 @@ public:
   /// Flush denormal values to zero according to the specified mode.
   /// For dynamic mode, we return the union of all possible results.
   LLVM_ABI void flushDenormals(DenormalMode::DenormalModeKind Mode);
+
+  /// Widen each bound away from the range by \p ULPs units in the last place
+  /// of that bound, using the larger unit at a power of two.
+  LLVM_ABI void widenByULPs(const APFloat &ULPs);
+
+  /// If the range contains a zero of either sign, add the other one.
+  LLVM_ABI void addOppositeZero();
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {
