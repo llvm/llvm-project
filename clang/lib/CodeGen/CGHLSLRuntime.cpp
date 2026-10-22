@@ -1179,18 +1179,16 @@ addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV,
   GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 }
 
-static llvm::Value *
-createSPIRVInputLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
-                     const Twine &Name, bool IsBuiltIn, unsigned Operand,
-                     llvm::hlsl::InterpolationMode InterpMode) {
+static llvm::Value *createSPIRVInputLoad(
+    IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty, const Twine &Name,
+    llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
+    llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  auto Decoration = IsBuiltIn ? llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn
-                              : llvm::hlsl::SPIRVInterfaceDecoration::Location;
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   return B.CreateLoad(Ty, GV);
 }
@@ -1213,13 +1211,14 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
 
   return createSPIRVInputLoad(B, CGM.getModule(), Type, VariableName.str(),
-                              /* IsBuiltIn= */ false, Location, InterpMode);
+                              llvm::hlsl::SPIRVInterfaceDecoration::Location,
+                              Location, InterpMode);
 }
 
-static void createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M,
-                                   llvm::Value *Source, const Twine &Name,
-                                   bool IsBuiltIn, unsigned Operand,
-                                   llvm::hlsl::InterpolationMode InterpMode) {
+static void createSPIRVOutputStore(
+    IRBuilder<> &B, llvm::Module &M, llvm::Value *Source, const Twine &Name,
+    llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
+    llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Source->getType(), /* isConstant= */ false,
       llvm::GlobalValue::ExternalLinkage,
@@ -1227,8 +1226,6 @@ static void createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  auto Decoration = IsBuiltIn ? llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn
-                              : llvm::hlsl::SPIRVInterfaceDecoration::Location;
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   B.CreateStore(Source, GV);
 }
@@ -1250,7 +1247,8 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedOutputSemanticLocation += ElementCount;
   createSPIRVOutputStore(B, CGM.getModule(), Source, VariableName.str(),
-                         /* IsBuiltIn= */ false, Location, InterpMode);
+                         llvm::hlsl::SPIRVInterfaceDecoration::Location,
+                         Location, InterpMode);
 }
 
 namespace {
@@ -1582,9 +1580,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "FIXME: loading SV_Position is not yet implemented for this "
            "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVInputLoad(
-          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* IsBuiltIn= */ true, /* FragCoord */ 15, InterpMode);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* FragCoord */ 15, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1594,9 +1593,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_VertexID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVInputLoad(
-          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* IsBuiltIn= */ true, /* VertexIndex */ 42, InterpMode);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* VertexIndex */ 42, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1606,9 +1606,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVInputLoad(
-          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* IsBuiltIn= */ true, /* InstanceIndex */ 43, InterpMode);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* InstanceIndex */ 43, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1624,9 +1625,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "FIXME: loading SV_ShadingRate is not yet implemented for this "
            "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVInputLoad(
-          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* IsBuiltIn= */ true, /* ShadingRateKHR */ 4444, InterpMode);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* ShadingRateKHR */ 4444, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1662,9 +1664,10 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVOutputStore(
-          B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
-          /* IsBuiltIn= */ true, /* Position */ 0, InterpMode);
+      createSPIRVOutputStore(B, CGM.getModule(), Source,
+                             Semantic->getAttrName()->getName(),
+                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                             /* Position */ 0, InterpMode);
       return;
     }
     break;
@@ -1695,7 +1698,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       // carry the Flat decoration implied for integer vertex outputs.
       createSPIRVOutputStore(B, CGM.getModule(), Source,
                              Semantic->getAttrName()->getName(),
-                             /* IsBuiltIn= */ true,
+                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                              /* PrimitiveShadingRateKHR */ 4432,
                              llvm::hlsl::InterpolationMode::Undefined);
       return;
