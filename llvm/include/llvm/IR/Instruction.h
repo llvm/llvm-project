@@ -906,6 +906,7 @@ public:
     case Instruction::CatchRet:
     case Instruction::Call:
     case Instruction::Invoke:
+    case Instruction::CallBr:
       return true;
     }
   }
