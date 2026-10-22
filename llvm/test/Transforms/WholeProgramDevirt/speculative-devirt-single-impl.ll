@@ -11,11 +11,10 @@ target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: remark: devirt-single.cc:30:32: single-impl: devirtualized a call to vf
-; CHECK: remark: devirt-single.cc:35:32: single-impl: devirtualized a call to vf_empty
 ; CHECK: remark: devirt-single.cc:41:32: single-impl: devirtualized a call to vf
 ; CHECK: remark: devirt-single.cc:51:32: single-impl: devirtualized a call to vf
 ; CHECK: remark: devirt-single.cc:13:0: devirtualized vf
-; CHECK: remark: devirt-single.cc:23:0: devirtualized vf_empty
+; CHECK-NOT: devirtualized
 
 @vt1 = constant [1 x ptr] [ptr @vf], !type !8
 @vt2 = constant [1 x ptr] [ptr @vf_empty], !type !12
@@ -24,6 +23,8 @@ define i1 @vf(ptr %this) #0 !dbg !7 {
   ret i1 true
 }
 
+; This should NOT be devirtualized because during non-lto empty functions
+; are skipped.
 define void @vf_empty(ptr %this) !dbg !11 {
   ret void
 }
@@ -49,10 +50,7 @@ define void @call1(ptr %obj) #1 !dbg !9 {
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid1")
   call void @llvm.assume(i1 %p)
   %fptr = load ptr, ptr %vtable, align 8
-  ; CHECK: if.true.direct_targ:
-  ; CHECK:   call i1 @vf_empty(
-  ; CHECK: if.false.orig_indirect:
-  ; CHECK:   call i1 %fptr(
+  ; CHECK: call i1 %fptr
   %1 = call i1 %fptr(ptr %obj), !dbg !10
   ret void
 }
@@ -132,5 +130,5 @@ declare void @llvm.assume(i1)
 
 
 
-; CHECK: 2 wholeprogramdevirt - Number of whole program devirtualization targets
-; CHECK: 4 wholeprogramdevirt - Number of single implementation devirtualizations
+; CHECK: 1 wholeprogramdevirt - Number of whole program devirtualization targets
+; CHECK: 3 wholeprogramdevirt - Number of single implementation devirtualizations
