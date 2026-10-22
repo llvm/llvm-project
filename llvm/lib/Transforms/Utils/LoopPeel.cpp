@@ -523,7 +523,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
-  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  auto Guards = ScalarEvolution::LoopGuards::collectOnDemand(&L, SE);
   BTC = SE.applyLoopGuards(BTC, Guards);
   RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
@@ -656,7 +656,6 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
-    DesiredPeelCountLast = std::max(DesiredPeelCountLast, NewPeelCount);
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {

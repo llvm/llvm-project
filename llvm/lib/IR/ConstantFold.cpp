@@ -65,7 +65,8 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   if (SrcTy == DestTy)
     return V; // no-op cast
 
-  if (V->isAllOnesValue())
+  // Pointers have no all-ones constant.
+  if (V->isAllOnesValue() && !DestTy->isPtrOrPtrVectorTy())
     return Constant::getAllOnesValue(DestTy);
 
   // Handle ConstantInt -> Constant{Byte, FP}

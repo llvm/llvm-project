@@ -246,6 +246,13 @@ class LLVM_MemOpPatterns {
       inst->setMetadata(llvm::LLVMContext::MD_invariant_group, metadata);
     }
   }];
+  code setRangeCode = [{
+    if ($range) {
+      llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
+          .createRange($range->getLower(), $range->getUpper());
+      inst->setMetadata(llvm::LLVMContext::MD_range, metadata);
+    }
+  }];
   code setAccessGroupsMetadataCode = [{
     moduleTranslation.setAccessGroupsMetadata(op, inst);
   }];
