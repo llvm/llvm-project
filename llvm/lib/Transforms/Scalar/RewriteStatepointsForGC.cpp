@@ -2132,9 +2132,7 @@ static void relocationViaAlloca(
       }
     }
 
-    llvm::sort(Uses);
-    auto Last = llvm::unique(Uses);
-    Uses.erase(Last, Uses.end());
+    llvm::sort_and_unique(Uses);
 
     for (Instruction *Use : Uses) {
       if (isa<PHINode>(Use)) {
