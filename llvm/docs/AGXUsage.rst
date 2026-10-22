@@ -467,14 +467,28 @@ then                        the number of arguments of the source kernel,
                             and for each: kind (0 = its bytes are in the
                             uniforms, 1 = a pointer to them is), size in
                             bytes, first half (0xffffffff if unused)
+then                        optional tagged extensions, up to the size of
+                            the record; a reader stops at a tag it does not
+                            know
 ==========================  ==============================================
+
+The extensions are:
+
+* ``1, x, y, z``: the kernel runs clusters of x * y * z CTAs as one
+  threadgroup (function attribute ``agx-cluster-dims``).
+* ``2, ...`` and ``3, ...``: checked mode (see "Checked mode").
+* ``4, half``: the first half of the kernel argument with the parameter
+  attribute ``"agx-hidden"="threadgroup-bytes"``, which is not a source
+  argument: the driver sets it to the threadgroup memory of the dispatch, the
+  kernel's threadgroup memory bytes plus the dynamic ones of the launch.
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
 
 Threadgroup variables are globals in address space 3 without an initializer.
-They are allocated per kernel in threadgroup memory, at offsets in order of
-first use.
+They are allocated per kernel in threadgroup memory, those the kernel uses in
+module order, each aligned to its alignment, then those of size zero (whose
+memory is the dynamic threadgroup memory of the launch), in module order.
 
 Device and constant variables (globals in address spaces 0, 1 and 4) live in
 the *global data buffer*. When a module defines any, each kernel receives

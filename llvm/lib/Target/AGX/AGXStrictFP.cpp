@@ -1596,6 +1596,19 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
                     (FlushTy->isFloatTy() || FlushTy->isHalfTy()) &&
                     !CI->getType()->isVectorTy();
     SoftFloat SF(B);
+    bool Nearest = isa<ConstantInt>(Rounding) &&
+                   cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
+    bool Double = ResTy->isDoubleTy() || OpTy->isDoubleTy();
+    // Directed rounding is computed in software, and the half precision ALU
+    // keeps denormals (AGXCodeGenPrepare flushes plain half operations, which
+    // these become only here): in a function that flushes them, flush the
+    // operands and the result explicitly.
+    if (!Mismatch && KnownDefault && Default && !Double &&
+        (FlushTy->isHalfTy() || (FlushTy->isFloatTy() && !Nearest)) &&
+        !CI->getType()->isVectorTy()) {
+      Mismatch = true;
+      Flush = B.getTrue();
+    }
     // A denormal mode that differs from the function's: flush the operands
     // explicitly (and the result below).
     if (Mismatch)
@@ -1605,9 +1618,6 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
                                               SF.flushDenormal(CI->getArgOperand(I)),
                                               CI->getArgOperand(I)));
 
-    bool Nearest = isa<ConstantInt>(Rounding) &&
-                   cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
-    bool Double = ResTy->isDoubleTy() || OpTy->isDoubleTy();
     Value *R = Nearest || Double
                    ? nullptr
                    : lowerRounded(CI, Rounding, ST.hasCanonicalNaN());

@@ -158,12 +158,14 @@ public:
   }
 
   /// The NaN result of an operation with the given operands of format In,
-  /// in format Out: the canonical NaN, or the first NaN operand quieted
-  /// (the default NaN if there is none).
+  /// in format Out: the first NaN operand quieted, or the default NaN if
+  /// there is none. With canonical NaNs the default NaN is PTX's canonical
+  /// one, and only double precision operations keep payloads (PTX ISA
+  /// 9.7.3): conversions from or to other formats give the canonical NaN.
   Value *nanResult(ArrayRef<Value *> Ops, Fmt In, Fmt Out) {
-    if (CanonicalNaN)
+    if (CanonicalNaN && (In.P != F64.P || Out.P != F64.P))
       return c64(Out.signBit() - 1);
-    Value *R = c64(Out.infBits() | Out.quietBit());
+    Value *R = CanonicalNaN ? c64(Out.signBit() - 1) : c64(Out.infBits() | Out.quietBit());
     for (Value *X : reverse(Ops)) {
       Value *Payload = B.CreateAnd(X, c64(In.fracMask()));
       Payload = In.P > Out.P ? B.CreateLShr(Payload, In.P - Out.P)

@@ -1493,7 +1493,9 @@ static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
 /// Return the denormal mode that can be assumed when executing a floating point
 /// operation at \p CtxI.
 static DenormalMode getInstrDenormalMode(const Function *CtxF, Type *Ty) {
-  if (!CtxF)
+  // A function with constrained operations may change the denormal mode at
+  // run time, like the rounding mode
+  if (!CtxF || CtxF->hasFnAttribute(Attribute::StrictFP))
     return DenormalMode::getDynamic();
   return CtxF->getDenormalMode(Ty->getScalarType()->getFltSemantics());
 }
@@ -3690,10 +3692,33 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         case Intrinsic::experimental_constrained_fcmps:
           return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
+        // Denormal operands or results depend on the denormal mode, which
+        // in a function with constrained operations may change at run time
+        // like the rounding mode (whatever the function's attribute says).
+        if (Op1V.isDenormal() || Op2V.isDenormal() || Res.isDenormal())
+          return nullptr;
         if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
                                St))
           return ConstantFP::get(Ty, Res);
         return nullptr;
+      }
+
+      switch (IntrinsicID) {
+      default:
+        break;
+      case Intrinsic::minnum:
+      case Intrinsic::maxnum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
+        // as for the constrained operations: a denormal operand may be
+        // flushed by the denormal mode at run time
+        if (Call && Call->getFunction() &&
+            Call->getFunction()->hasFnAttribute(Attribute::StrictFP) &&
+            (Op1V.isDenormal() || Op2V.isDenormal()))
+          return nullptr;
+        break;
       }
 
       switch (IntrinsicID) {
@@ -4272,6 +4297,10 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
             St = Res.fusedMultiplyAdd(C2, C3, RM);
             break;
           }
+          // as for the binary operations
+          if (C1.isDenormal() || C2.isDenormal() || C3.isDenormal() ||
+              Res.isDenormal())
+            return nullptr;
           if (mayFoldConstrained(
                   const_cast<ConstrainedFPIntrinsic *>(ConstrIntr), St))
             return ConstantFP::get(Ty, Res);
