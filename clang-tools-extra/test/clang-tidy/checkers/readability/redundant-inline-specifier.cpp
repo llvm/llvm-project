@@ -61,7 +61,7 @@ constexpr inline int Get42() { return 42; }
 
 
 static constexpr inline int NAMESPACE_STATIC = 42;
-// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: variable 'NAMESPACE_STATIC' is declared 'static inline' outside of a header; use 'static' instead [readability-redundant-inline-specifier]
+// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: variable 'NAMESPACE_STATIC' is declared 'static inline' outside of a header; use 'static' instead
 // CHECK-FIXES: static constexpr int NAMESPACE_STATIC = 42;
 
 inline static int fn0(int i)
