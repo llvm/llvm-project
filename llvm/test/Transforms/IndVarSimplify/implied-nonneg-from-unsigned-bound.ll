@@ -5,8 +5,6 @@
 ; If x <=u y and y <=u INT_MAX, then x >=s 0.
 ; In these tests the guard compares y with x, and the exit compares
 ; smax(x, w) with a constant.
-;
-; FIXME: SCEV cannot prove this yet, fold the exits to constants where possible.
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
@@ -22,9 +20,7 @@ define void @ugt_smin(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -65,9 +61,7 @@ define void @uge(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -108,9 +102,7 @@ define void @ugt_sle(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[M]], -1
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -151,9 +143,7 @@ define void @ugt_sge(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp sge i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -194,9 +184,7 @@ define void @ugt_weaker(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[M]], -5
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
