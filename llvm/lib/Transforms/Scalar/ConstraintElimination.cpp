@@ -1046,10 +1046,45 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   return std::nullopt;
 }
 
+static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
+                                     ConstraintInfo &Info,
+                                     const DataLayout &DL);
+
+namespace {
+/// Adds A == decompose(A) and B == decompose(B) to the system of C, if needed,
+/// while alive.
+struct DecompositionLinks {
+  ConstraintSystem &CS;
+  unsigned NumPushed = 0;
+  DecompositionLinks(Value *A, Value *B, const ConstraintTy &C,
+                     ConstraintInfo &Info, const DataLayout &DL)
+      : CS(Info.getCS(C.IsSigned)) {
+    unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
+    for (Value *V : {A, B}) {
+      RowTy Row = getDecompositionLinkRow(V, C, Info, DL);
+      RowTy Negated = ConstraintSystem::negateOrEqual(Row);
+      if (Row.empty() || Negated.empty())
+        continue;
+      NumPushed += CS.addRow(Row, NumVars);
+      NumPushed += CS.addRow(Negated, NumVars);
+    }
+  }
+  ~DecompositionLinks() {
+    while (NumPushed--)
+      CS.popLastConstraint();
+  }
+};
+} // namespace
+
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
   auto R = getConstraintForSolving(Pred, A, B);
-  return !R.empty() &&
-         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+  if (R.empty())
+    return false;
+  auto &CS = getCS(R.IsSigned);
+  if (CS.isConditionImpliedInSubSystem(R.Coefficients))
+    return true;
+  DecompositionLinks Links(A, B, R, *this, DL);
+  return Links.NumPushed && CS.isConditionImpliedInSubSystem(R.Coefficients);
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {
@@ -1986,25 +2021,10 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     if (C.empty())
       return std::nullopt;
 
-    auto &CS = Info.getCS(C.IsSigned);
-    unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
-    unsigned NumPushed = 0;
-    for (Value *V : {A, B}) {
-      RowTy Row =
-          getDecompositionLinkRow(V, C, Info, CheckInst->getDataLayout());
-      RowTy Negated = ConstraintSystem::negateOrEqual(Row);
-      if (Row.empty() || Negated.empty())
-        continue;
-      NumPushed += CS.addRow(Row, NumVars);
-      NumPushed += CS.addRow(Negated, NumVars);
-    }
-    if (NumPushed == 0)
+    DecompositionLinks Links(A, B, C, Info, CheckInst->getDataLayout());
+    if (Links.NumPushed == 0)
       return std::nullopt;
-
-    std::optional<bool> Res = TryWithConstraint(C);
-    while (NumPushed--)
-      CS.popLastConstraint();
-    return Res;
+    return TryWithConstraint(C);
   };
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
