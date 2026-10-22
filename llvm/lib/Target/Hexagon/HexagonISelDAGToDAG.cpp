@@ -1038,6 +1038,8 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
     case ISD::VECTOR_SHUFFLE:     return SelectHvxShuffle(N);
 
     case HexagonISD::VROR:        return SelectHvxRor(N);
+    case ISD::UINT_TO_FP:
+      return SelectHvxUIntToFp(N);
     }
   }
 

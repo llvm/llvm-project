@@ -148,6 +148,7 @@ private:
   void SelectHvxShuffle(SDNode *N);
   void SelectHvxRor(SDNode *N);
   void SelectHvxVAlign(SDNode *N);
+  void SelectHvxUIntToFp(SDNode *N);
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;
