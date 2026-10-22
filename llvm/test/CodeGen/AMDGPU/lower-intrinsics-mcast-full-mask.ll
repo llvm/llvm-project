@@ -124,6 +124,48 @@ define void @tensor_load_to_lds_inserted_partial_mask(<4 x i32> %d0, <8 x i32> %
   ret void
 }
 
+; A runtime mask with a known zero bit can never name all 16 workgroups.
+define void @tensor_load_to_lds_known_partial_mask(<4 x i32> %d0, <8 x i32> %d1, i32 %x) {
+; CHECK-LABEL: define void @tensor_load_to_lds_known_partial_mask(
+; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X]], 32767
+; CHECK-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %mask = and i32 %x, 32767
+  %d1.mask = insertelement <8 x i32> %d1, i32 %mask, i64 0
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1.mask, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  ret void
+}
+
+; A runtime mask with all 16 workgroup bits known set needs no runtime check.
+define void @tensor_load_to_lds_known_full_mask(<4 x i32> %d0, <8 x i32> %d1, i32 %x) {
+; BUG-LABEL: define void @tensor_load_to_lds_known_full_mask(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[TMP1]], 8
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -256, i32 -65281
+; BUG-NEXT:    [[MASK:%.*]] = or i32 [[X]], 65535
+; BUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[MASK]]
+; BUG-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[D1_MASK]], i32 [[TMP4]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_known_full_mask(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
+; NOBUG-NEXT:    [[MASK:%.*]] = or i32 [[X]], 65535
+; NOBUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
+;
+  %mask = or i32 %x, 65535
+  %d1.mask = insertelement <8 x i32> %d1, i32 %mask, i64 0
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1.mask, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  ret void
+}
+
 ; Tensor stores do not multicast.
 define void @tensor_store_from_lds_full_mask(<4 x i32> %d0, <8 x i32> %d1) {
 ; CHECK-LABEL: define void @tensor_store_from_lds_full_mask(

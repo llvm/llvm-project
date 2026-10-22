@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -351,24 +352,27 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
 }
 
 // A multicast tensor load whose workgroup mask has all 16 bits set may never
-// return to some of the workgroups. Split it into two multicasts of eight
-// workgroups by the cluster flat ID of the issuing workgroup: workgroups 0-7
-// use 0x00ff and workgroups 8-15 use 0xff00, so every named workgroup still
-// receives the data.
+// return to some of the workgroups. Restrict the mask to the half of the
+// cluster that holds the issuing workgroup: workgroups 0-7 use 0x00ff and
+// workgroups 8-15 use 0xff00. It is still a single load per wave, and every
+// named workgroup still receives the data.
 bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
   assert(I.getIntrinsicID() == Intrinsic::amdgcn_tensor_load_to_lds);
 
-  IRBuilder<> B(&I);
-  // The workgroup mask is in dword 0 of D# group 1.
+  // The workgroup mask is in bits [15:0] of dword 0 of D# group 1.
+  constexpr uint32_t FullMask = 0xffff;
   Value *Group1 = I.getArgOperand(1);
+  unsigned NumElts = cast<FixedVectorType>(Group1->getType())->getNumElements();
+  KnownBits Known = computeKnownBits(Group1, APInt::getOneBitSet(NumElts, 0),
+                                     SimplifyQuery(M.getDataLayout(), &I));
+  if ((Known.Zero.getZExtValue() & FullMask) != 0)
+    return false;
+  bool IsKnownFull = (Known.One.getZExtValue() & FullMask) == FullMask;
+
+  IRBuilder<> B(&I);
   Value *Mask = findScalarElement(Group1, 0);
   if (!Mask)
     Mask = B.CreateExtractElement(Group1, uint64_t(0));
-
-  constexpr uint32_t FullMask = 0xffff;
-  ConstantInt *CMask = dyn_cast<ConstantInt>(Mask);
-  if (CMask && (CMask->getZExtValue() & FullMask) != FullMask)
-    return false;
 
   // Compute the half mask in the entry block so it is not recomputed in loops.
   IRBuilder<> EntryB(I.getContext());
@@ -379,7 +383,7 @@ bool AMDGPULowerIntrinsicsImpl::visitTensorLoadToLDS(IntrinsicInst &I) {
   Value *HalfMask = EntryB.CreateSelect(
       IsUpperHalf, EntryB.getInt32(0xffffff00), EntryB.getInt32(0xffff00ff));
   Value *NewMask = B.CreateAnd(HalfMask, Mask);
-  if (!CMask) {
+  if (!IsKnownFull) {
     Value *IsFull =
         B.CreateICmpEQ(B.CreateAnd(Mask, FullMask), B.getInt32(FullMask));
     NewMask = B.CreateSelect(IsFull, NewMask, Mask);
