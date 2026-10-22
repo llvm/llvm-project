@@ -2032,6 +2032,41 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
     __kmp_pop_workshare(global_tid, ct_pdo, loc);
 }
 
+/*!
+@ingroup WORK_SHARING
+@param loc Source location
+@param global_tid Global thread id
+
+Mark the end of a statically scheduled distribute and parallel loop
+*/
+void __kmpc_dist_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
+  KMP_POP_PARTITIONED_TIMER();
+  KE_TRACE(10, ("__kmpc_dist_for_static_fini called T#%d\n", global_tid));
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_work) {
+    // Workshare type is distribute and parallel loop.
+    // Emit ws-loop-end event for all threads.
+    // Emit distribute-end event for the primary threads.
+    ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+    ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+    int tid = __kmp_tid_from_gtid(global_tid);
+
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_loop_static, ompt_scope_end, &(team_info->parallel_data),
+        &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+
+    if (tid == 0)
+      ompt_callbacks.ompt_callback(ompt_callback_work)(
+          ompt_work_distribute, ompt_scope_end, &(team_info->parallel_data),
+          &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+
+  if (__kmp_env_consistency_check)
+    __kmp_pop_workshare(global_tid, ct_pdo, loc);
+}
+
 // User routines which take C-style arguments (call by value)
 // different from the Fortran equivalent routines
 
