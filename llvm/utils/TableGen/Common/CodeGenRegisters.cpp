@@ -2530,6 +2530,10 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
     if (RC1 == RC2)
       continue;
 
+    // Skip disjoint class pairs, without loading the members.
+    if (!RC1->getMemberBV().anyCommon(RC2->getMemberBV()))
+      continue;
+
     // Compute the set intersection of RC1 and RC2.
     const CodeGenRegister::Vec &Memb1 = RC1->getMembers();
     const CodeGenRegister::Vec &Memb2 = RC2->getMembers();
