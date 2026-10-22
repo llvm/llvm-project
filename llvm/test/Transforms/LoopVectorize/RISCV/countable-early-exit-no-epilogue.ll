@@ -3,20 +3,22 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -low-trip-count-loop-body-size-limit=0 -tail-folding-policy=must-fold-tail -S %s | FileCheck %s --check-prefix=NO-EPILOGUE
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -vectorizer-min-trip-count=0 -tail-folding-policy=dont-fold-tail -force-vector-width=2 -S %s | FileCheck %s --check-prefix=EPILOGUE
 
-; FIXME: Currently this gets miscompiled, as the forced scalar epilogue is missing.
 define i32 @countable_early_exit(ptr noalias %b) {
 ; NO-EPILOGUE-LABEL: define i32 @countable_early_exit(
 ; NO-EPILOGUE-SAME: ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; NO-EPILOGUE-NEXT:  [[ENTRY:.*:]]
-; NO-EPILOGUE-NEXT:    br label %[[VECTOR_PH:.*]]
-; NO-EPILOGUE:       [[VECTOR_PH]]:
-; NO-EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
-; NO-EPILOGUE:       [[VECTOR_BODY]]:
-; NO-EPILOGUE-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
-; NO-EPILOGUE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; NO-EPILOGUE:       [[MIDDLE_BLOCK]]:
-; NO-EPILOGUE-NEXT:    br label %[[EXIT2:.*]]
-; NO-EPILOGUE:       [[EXIT1:.*:]]
+; NO-EPILOGUE-NEXT:  [[ENTRY:.*]]:
+; NO-EPILOGUE-NEXT:    br label %[[LOOP:.*]]
+; NO-EPILOGUE:       [[LOOP]]:
+; NO-EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; NO-EPILOGUE-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 3
+; NO-EPILOGUE-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[LATCH]]
+; NO-EPILOGUE:       [[LATCH]]:
+; NO-EPILOGUE-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; NO-EPILOGUE-NEXT:    store i32 1, ptr [[GEP]], align 4
+; NO-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NO-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; NO-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]]
+; NO-EPILOGUE:       [[EXIT1]]:
 ; NO-EPILOGUE-NEXT:    ret i32 1
 ; NO-EPILOGUE:       [[EXIT2]]:
 ; NO-EPILOGUE-NEXT:    ret i32 2

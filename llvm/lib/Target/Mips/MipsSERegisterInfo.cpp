@@ -16,7 +16,6 @@
 #include "MipsMachineFunction.h"
 #include "MipsSEInstrInfo.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -145,8 +144,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
-  MipsABIInfo ABI =
-      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
+  MipsABIInfo ABI = MF.getSubtarget<MipsSubtarget>().getABI();
   const MipsRegisterInfo *RegInfo =
     static_cast<const MipsRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
 

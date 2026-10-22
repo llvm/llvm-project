@@ -25,7 +25,7 @@ define void @trip7_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD1]], [[TMP3]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP5]], ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 7)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
@@ -617,7 +617,7 @@ exit:
 
 define void @tc4_vf4(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc4_vf4(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -688,6 +688,48 @@ loop:
 
 exit:
   ret void
+}
+
+define i32 @countable_early_exit_tc_4(ptr noalias %b) #0 {
+; CHECK-LABEL: define i32 @countable_early_exit_tc_4(
+; CHECK-SAME: ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 3
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[EXIT2]]:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = icmp eq i64 %iv, 3
+  br i1 %c, label %exit1, label %latch
+
+latch:
+  %gep = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 1, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit2, label %loop
+
+exit1:
+  ret i32 1
+
+exit2:
+  ret i32 2
 }
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }

@@ -19,6 +19,7 @@ class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
 class PredicatedScalarEvolution;
 } // namespace llvm
 
@@ -113,8 +114,7 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
       return GetCalleeIntrinsic(
           VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
-      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
-          ->getZExtValue();
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
     }
   }
   return Intrinsic::not_intrinsic;
@@ -135,30 +135,10 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
-/// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID, for use on a wide induction, which adds the step.
-inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
-  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return ID.getInductionBinOp()->getFastMathFlags();
-
-  if (auto *AddO = dyn_cast_if_present<AddOperator>(ID.getInductionBinOp())) {
-    return VPIRFlags::WrapFlagsTy(AddO->hasNoUnsignedWrap(),
-                                  AddO->hasNoSignedWrap());
-  }
-
-  // The step of a sub induction is negated, so NUW cannot be preserved. NSW
-  // can, if the step is not the signed minimum.
-  if (auto *SubO = dyn_cast_if_present<SubOperator>(ID.getInductionBinOp())) {
-    ConstantInt *Step = ID.getConstIntStepValue();
-    return VPIRFlags::WrapFlagsTy(false,
-                                  SubO->hasNoSignedWrap() && Step &&
-                                      !Step->isMinValue(/*IsSigned=*/true));
-  }
-
-  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
-         "Expected int induction");
-  return VPIRFlags::WrapFlagsTy(false, false);
-}
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
@@ -207,13 +187,14 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
-/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
-/// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *createScalarIVSteps(
-    VPlan &Plan, InductionDescriptor::InductionKind Kind,
-    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+/// StartV and step \p Step, truncated to \p ResultTy, inserting recipes via \p
+/// Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Type *ResultTy, VPValue *StartV,
+                    VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
@@ -247,12 +228,7 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 LLVM_ABI_FOR_TEST VPValue *
 reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
 
-/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
-/// the frequency of a block that always executes. Wider than
-/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
-inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
-
-/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+/// Returns \p Freq as a BranchProbability, relative to the full mass.
 BranchProbability getExecutionProbability(BlockFrequency Freq);
 
 /// Computes for each block in \p Blocks, which must be in reverse post-order,
@@ -303,6 +279,9 @@ class VPSCEVExpander {
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)

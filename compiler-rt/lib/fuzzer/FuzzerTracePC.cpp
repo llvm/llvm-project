@@ -128,25 +128,6 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   ValueProfileMap.AddValueModPrime(Idx);
 }
 
-/// \return the address of the previous instruction.
-/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.h`
-inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
-#if defined(__arm__)
-  // T32 (Thumb) branch instructions might be 16 or 32 bit long,
-  // so we return (pc-2) in that case in order to be safe.
-  // For A32 mode we return (pc-4) because all instructions are 32 bit long.
-  return (PC - 3) & (~1);
-#elif defined(__sparc__) || defined(__mips__)
-  return PC - 8;
-#elif defined(__riscv__)
-  return PC - 2;
-#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
-  return PC - 1;
-#else
-  return PC - 4;
-#endif
-}
-
 /// \return the address of the next instruction.
 /// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.cpp`
 ALWAYS_INLINE uintptr_t TracePC::GetNextInstructionPc(uintptr_t PC) {

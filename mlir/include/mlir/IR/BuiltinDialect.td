@@ -20,7 +20,6 @@ def Builtin_Dialect : Dialect {
   let summary =
     "A dialect containing the builtin Attributes, Operations, and Types";
   let name = "builtin";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir";
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;

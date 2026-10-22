@@ -198,16 +198,22 @@ void ScriptedProcess::DidLaunch() { DidLaunchOrAttach(); }
 void ScriptedProcess::DidLaunchOrAttach() {
   m_pid = GetInterface().GetProcessID();
 
-  StructuredData::DictionarySP bits_sp = GetInterface().GetAddressableBits();
-  if (!bits_sp)
+  // The addressable bits are optional: without them, the process keeps the
+  // masks it inherits from the target.
+  StructuredData::DictionarySP metadata_sp = GetInterface().GetMetadata();
+  StructuredData::Dictionary *bits = nullptr;
+  if (!metadata_sp ||
+      !metadata_sp->GetValueForKeyAsDictionary("addressable_bits", bits))
     return;
 
+  uint64_t lowmem_bits = 0;
+  uint64_t highmem_bits = 0;
+  bits->GetValueForKeyAsInteger("lowmem", lowmem_bits);
+  if (!bits->GetValueForKeyAsInteger("highmem", highmem_bits))
+    highmem_bits = lowmem_bits;
+
   AddressableBits addressable_bits;
-  uint64_t num_bits = 0;
-  if (bits_sp->GetValueForKeyAsInteger("lowmem", num_bits))
-    addressable_bits.SetLowmemAddressableBits(num_bits);
-  if (bits_sp->GetValueForKeyAsInteger("highmem", num_bits))
-    addressable_bits.SetHighmemAddressableBits(num_bits);
+  addressable_bits.SetAddressableBits(lowmem_bits, highmem_bits);
   SetAddressableBitMasks(addressable_bits);
 }
 

@@ -1330,13 +1330,13 @@ define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-SD-LABEL: rhadd8x2_sext_lsr:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    shl.2s v0, v0, #24
 ; CHECK-SD-NEXT:    shl.2s v1, v1, #24
+; CHECK-SD-NEXT:    shl.2s v0, v0, #24
 ; CHECK-SD-NEXT:    movi d2, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-SD-NEXT:    sshr.2s v1, v1, #24
-; CHECK-SD-NEXT:    mvn.8b v0, v0
-; CHECK-SD-NEXT:    sub.2s v0, v1, v0
+; CHECK-SD-NEXT:    sshr.2s v0, v0, #24
+; CHECK-SD-NEXT:    mvn.8b v1, v1
+; CHECK-SD-NEXT:    sub.2s v0, v0, v1
 ; CHECK-SD-NEXT:    and.8b v0, v0, v2
 ; CHECK-SD-NEXT:    ushr.2s v0, v0, #1
 ; CHECK-SD-NEXT:    ret

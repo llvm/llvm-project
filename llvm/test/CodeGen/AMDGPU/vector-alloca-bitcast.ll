@@ -258,7 +258,7 @@ bb13:                                             ; preds = %.preheader
 ; OPT: store i32 %0, ptr addrspace(1) %out, align 4
 
 ; GCN-LABEL: {{^}}vector_read_alloca_bitcast_assume:
-; GCN-COUNT: buffer_store_dword
+; GCN-ALLOCA-COUNT-4: buffer_store_dword
 
 define amdgpu_kernel void @vector_read_alloca_bitcast_assume(ptr addrspace(1) %out, i32 %index) {
 entry:

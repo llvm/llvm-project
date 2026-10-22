@@ -46,6 +46,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -342,6 +343,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_floop_versioning,
                    clang::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  if (args.hasFlag(clang::options::OPT_floop_tripcount_versioning,
+                   clang::options::OPT_fno_loop_tripcount_versioning, false))
+    opts.LoopTripCountVersioning = 1;
 
   opts.UnrollLoops = args.hasFlag(clang::options::OPT_funroll_loops,
                                   clang::options::OPT_fno_unroll_loops,
@@ -875,10 +880,14 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
-      opts.fixedFormColumns = 1000000;
+      opts.fixedFormColumns = std::nullopt;
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else if (columns > std::numeric_limits<int>::max()) {
+      diags.Report(clang::diag::err_drv_large_columns)
+          << arg->getOption().getName() << arg->getValue()
+          << std::numeric_limits<int>::max();
     } else {
       opts.fixedFormColumns = columns;
     }
@@ -906,6 +915,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                                     clang::options::OPT_fno_implicit_none_ext,
                                     false));
 
+  // -f{no-}implicit-module-prefix
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitModulePrefix,
+      args.hasFlag(clang::options::OPT_fimplicit_module_prefix,
+                   clang::options::OPT_fno_implicit_module_prefix, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::options::OPT_fbackslash,
@@ -927,12 +942,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
       args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
                    clang::options::OPT_fno_out_of_bounds_subscripts, true));
-
-  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
-  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
-                       args.hasFlag(clang::options::OPT_fenumeration_type,
-                                    clang::options::OPT_fno_enumeration_type,
-                                    false));
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
@@ -1857,6 +1866,12 @@ bool CompilerInvocation::createFromArgs(
       args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
                    clang::options::OPT_fno_openacc_combined_loop_firstprivate,
                    /*default=*/true));
+
+  // -f[no-]openacc-acc-kernels-do-concurrent-independent
+  invoc.loweringOpts.setOpenACCKernelsDoConcurrentIndependent(args.hasFlag(
+      clang::options::OPT_fopenacc_acc_kernels_do_concurrent_independent,
+      clang::options::OPT_fno_openacc_acc_kernels_do_concurrent_independent,
+      /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
