@@ -1,8 +1,11 @@
-// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --split-input-file %s | FileCheck %s
+// RUN: fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu lower-memref=true" --split-input-file %s | FileCheck %s
+// RUN: not fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --split-input-file %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 // Test that memref dialect operations, as produced by fir-to-memref and
 // lower-affine, are lowered together with the fir.convert ops that bridge
-// !fir.ref and memref values.
+// !fir.ref and memref values when lower-memref is enabled.
+
+// DISABLED: failed to legalize operation 'memref.load'
 
 // CHECK-LABEL: llvm.func @load_scalar(
 // CHECK-SAME:    %[[ARG0:.*]]: !llvm.ptr) -> i32 {
