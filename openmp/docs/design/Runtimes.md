@@ -1149,10 +1149,12 @@ cross-team reduction follows from the size of the reduction: if the data
 reduced per team is larger than 32 bytes, one block per compute unit;
 otherwise, as many blocks as fill this number of waves per compute unit, but
 at least one per compute unit. No more blocks are launched than the loop has
-iterations for. In Generic mode, only large reductions are sized this way. The
-`num_teams` clause sets the number of blocks, and `OMP_NUM_TEAMS` caps it. The
-default on AMDGPU devices is `16`. On other devices, the default is `0`: kernels
-with a cross-team reduction get the same number of blocks as other kernels.
+iterations for. (A loop too short for one block per compute unit gets the same
+grid as a kernel without a reduction.) In Generic mode, only large reductions
+are sized this way. The `num_teams` clause sets the number of blocks, and
+`OMP_NUM_TEAMS` caps it. The default on AMDGPU devices is `16`. On other
+devices, the default is `0`: kernels with a cross-team reduction get the same
+number of blocks as other kernels.
 
 #### OFFLOAD_TRACK_ALLOCATION_TRACES
 
