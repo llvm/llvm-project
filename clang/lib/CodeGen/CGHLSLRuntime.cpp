@@ -1113,11 +1113,11 @@ static bool requiresFlatInterpolation(llvm::Type *Ty) {
   return Ty->isIntegerTy() || Ty->isDoubleTy();
 }
 
-static llvm::dxbc::PSV::InterpolationMode
-getSPIRVInterpolationMode(llvm::dxbc::PSV::InterpolationMode InterpMode,
+static llvm::hlsl::InterpolationMode
+getSPIRVInterpolationMode(llvm::hlsl::InterpolationMode InterpMode,
                           llvm::Type *Ty, llvm::Triple::EnvironmentType Stage,
                           llvm::hlsl::IOType IO) {
-  using llvm::dxbc::PSV::InterpolationMode;
+  using llvm::hlsl::InterpolationMode;
   if (!((Stage == llvm::Triple::Pixel && IO == llvm::hlsl::IOType::In) ||
         (Stage == llvm::Triple::Vertex && IO == llvm::hlsl::IOType::Out)))
     return InterpolationMode::Undefined;
@@ -1127,11 +1127,12 @@ getSPIRVInterpolationMode(llvm::dxbc::PSV::InterpolationMode InterpMode,
   return InterpMode;
 }
 
-static void addSPIRVInterfaceDecorations(
-    llvm::GlobalVariable *GV, unsigned Decoration, unsigned Operand,
-    llvm::dxbc::PSV::InterpolationMode InterpMode =
-        llvm::dxbc::PSV::InterpolationMode::Undefined) {
-  using llvm::dxbc::PSV::InterpolationMode;
+static void
+addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV, unsigned Decoration,
+                             unsigned Operand,
+                             llvm::hlsl::InterpolationMode InterpMode =
+                                 llvm::hlsl::InterpolationMode::Undefined) {
+  using llvm::hlsl::InterpolationMode;
 
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
@@ -1176,7 +1177,7 @@ static void addSPIRVInterfaceDecorations(
 static llvm::Value *
 createSPIRVInputLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
                      const Twine &Name, bool IsBuiltIn, unsigned Operand,
-                     llvm::dxbc::PSV::InterpolationMode InterpMode) {
+                     llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
@@ -1191,7 +1192,7 @@ createSPIRVInputLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
     llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    llvm::hlsl::InterpolationMode InterpMode) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
@@ -1209,10 +1210,10 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
                               /* IsBuiltIn= */ false, Location, InterpMode);
 }
 
-static void
-createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
-                       const Twine &Name, bool IsBuiltIn, unsigned Operand,
-                       llvm::dxbc::PSV::InterpolationMode InterpMode) {
+static void createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M,
+                                   llvm::Value *Source, const Twine &Name,
+                                   bool IsBuiltIn, unsigned Operand,
+                                   llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Source->getType(), /* isConstant= */ false,
       llvm::GlobalValue::ExternalLinkage,
@@ -1228,8 +1229,7 @@ createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
 void CGHLSLRuntime::emitSPIRVUserSemanticStore(
     llvm::IRBuilder<> &B, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    std::optional<unsigned> Index, llvm::hlsl::InterpolationMode InterpMode) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
@@ -1437,8 +1437,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   if (CGM.getTarget().getTriple().isSPIRV())
     return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                      InterpMode);
@@ -1452,8 +1451,7 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
 void CGHLSLRuntime::emitUserSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   if (CGM.getTarget().getTriple().isSPIRV())
     return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index,
                                       InterpMode);
@@ -1470,8 +1468,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     HLSLAppliedSemanticAttr *Semantic,
     llvm::dxbc::PSV::SemanticKind SemanticKind,
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
@@ -1592,8 +1589,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     HLSLAppliedSemanticAttr *Semantic,
     llvm::dxbc::PSV::SemanticKind SemanticKind,
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::Position:
     assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
@@ -1635,8 +1631,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
@@ -1662,8 +1657,7 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
 void CGHLSLRuntime::handleScalarSemanticStore(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    SemanticSignatures &Signature,
-    llvm::dxbc::PSV::InterpolationMode InterpMode) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());

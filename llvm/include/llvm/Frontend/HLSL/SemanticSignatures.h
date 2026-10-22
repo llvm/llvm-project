@@ -34,6 +34,9 @@ namespace hlsl {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
+// For now just use the DXIL ABI enums directly. This may change in the future.
+using dxbc::PSV::InterpolationMode;
+
 // Definitions of the in-memory data layout structures
 
 // Bitmask denoting whether a semantic is an input, output, inout or a value
