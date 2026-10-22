@@ -29971,6 +29971,11 @@
 // C++20 char8_t:
 {"_ZTSPDu", "typeinfo name for char8_t*"},
 
+// C++11 char16_t and char32_t, C++20 char8_t literal template parameters:
+{"_Z1fILDu99EEiv", "int f<(char8_t)99>()"},
+{"_Z1fILDs99EEiv", "int f<(char16_t)99>()"},
+{"_Z1fILDi99EEiv", "int f<(char32_t)99>()"},
+
 // C++20 lambda-expressions:
 {"_ZNK1xMUlTyT_E_clIiEEDaS_", "auto x::'lambda'<typename $T>($T)::operator()<int>(x) const"},
 {"_ZNK1xMUlTnPA3_ivE_clILS0_0EEEDav", "auto x::'lambda'<int (*$N) [3]>()::operator()<(int [3])0>() const"},
