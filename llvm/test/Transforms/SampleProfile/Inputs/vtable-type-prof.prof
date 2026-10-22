@@ -1,0 +1,13 @@
+test:3000:0
+ 1: 1000 Derived1_bar:600 Derived2_bar:400
+ 1: vtables Derived1:600 Derived2:400
+ 2: 1000 Derived1_foo:1000
+ 2: vtables Derived1:1000
+test_shared_vtable_load:2000:0
+ 1: 1000 Derived1_bar:1000
+ 1: vtables Derived1:1000
+ 3: 1000 Derived1_foo:1000
+test_cold:100:0
+ 1: 0
+ 2: 100
+ 3: 100
