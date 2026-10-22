@@ -1,157 +1,200 @@
-:orphan:
+---
+orphan: true
+---
 
-lldb-server -- Server for LLDB Debugging Sessions
-=================================================
+# lldb-server -- Server for LLDB Debugging Sessions
 
+```{eval-rst}
 .. program:: lldb-server
+```
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-| :program:`lldb-server` v[ersion]
-| :program:`lldb-server` g[dbserver] [*options*]
-| :program:`lldb-server` p[latform] [*options*]
+{program}`lldb-server`
 
-DESCRIPTION
------------
+ v[ersion]
 
-:program:`lldb-server` provides the server counterpart of the LLVM debugger.
+{program}`lldb-server`
+
+ g[dbserver] \[
+
+*options*
+
+\]
+
+{program}`lldb-server`
+
+ p[latform] \[
+
+*options*
+
+\]
+
+## DESCRIPTION
+
+{program}`lldb-server` provides the server counterpart of the LLVM debugger.
 The server runs and monitors the debugged program, while the user interfaces
 with it via a client, either running locally or connecting remotely.
 
 All of the code in the LLDB project is available under the Apache 2.0 License
 with LLVM exceptions.
 
-COMMANDS
---------
+## COMMANDS
 
 The first argument to lldb-server specifies a command to run.
 
-.. option:: v[ersion]
+:::{option} v[ersion]
+Prints lldb-server version and exits.
+:::
 
- Prints lldb-server version and exits.
+:::{option} g[dbserver]
+Runs the server using the gdb-remote protocol. LLDB can afterwards
+connect to the server using *gdb-remote* command.
+:::
 
-.. option:: g[dbserver]
+:::{option} p[latform]
+Runs the platform server. LLDB can afterwards connect to the server using
+*platform select*, followed by *platform connect*.
+:::
 
- Runs the server using the gdb-remote protocol. LLDB can afterwards
- connect to the server using *gdb-remote* command.
+## GDBSERVER COMMAND
 
-.. option:: p[latform]
+{program}`lldb-server`
 
- Runs the platform server. LLDB can afterwards connect to the server using
- *platform select*, followed by *platform connect*.
+ g[dbserver] \[
 
-GDBSERVER COMMAND
------------------
+*options*
 
-| :program:`lldb-server` g[dbserver] [*options*] [[*host*]:*port*] [[--] *program* *args*...]
+\] \[\[
 
-CONNECTION
-~~~~~~~~~~
+*host*
 
-.. option:: host:port
+\]:
 
- Specifies the hostname and TCP port to listen on. Obligatory unless another
- listening option is used. If host is empty, *localhost* will be used.  If port
- is zero, a random port will be selected, and written as specified by --pipe
- or --named-pipe options.
+*port*
 
-.. option:: --fd <fd>
+\] \[[--] 
 
- Communicate over the given file descriptor instead of sockets.
+*program*
 
-.. option:: --named-pipe <name>
+ 
 
- Write the listening port number to the specified named pipe.
+*args*
 
-.. option:: --pipe <fd>
+...\]
 
- Write the listening port number to the specified pipe (fd).
+### CONNECTION
 
-.. option:: --reverse-connect
+:::{option} host:port
+Specifies the hostname and TCP port to listen on. Obligatory unless another
+listening option is used. If host is empty, *localhost* will be used. If port
+is zero, a random port will be selected, and written as specified by --pipe
+or --named-pipe options.
+:::
 
- Connect to the client instead of passively waiting for a connection. In this
- case, [host]:port denotes the remote address to connect to.
+:::{option} --fd <fd>
+Communicate over the given file descriptor instead of sockets.
+:::
 
-GENERAL OPTIONS
-~~~~~~~~~~~~~~~
+:::{option} --named-pipe <name>
+Write the listening port number to the specified named pipe.
+:::
 
-.. option:: --help
+:::{option} --pipe <fd>
+Write the listening port number to the specified pipe (fd).
+:::
 
- Prints out the usage information and exits.
+:::{option} --reverse-connect
+Connect to the client instead of passively waiting for a connection. In this
+case, \[host\]:port denotes the remote address to connect to.
+:::
 
-.. option:: --log-channels <channel1 categories...:channel2 categories...>
+### GENERAL OPTIONS
 
- Channels to log. A colon-separated list of entries. Each entry starts with
- a channel followed by a space-separated list of categories.
+:::{option} --help
+Prints out the usage information and exits.
+:::
 
-.. option:: --log-file <file>
+:::{option} --log-channels <channel1 categories...:channel2 categories...>
+Channels to log. A colon-separated list of entries. Each entry starts with
+a channel followed by a space-separated list of categories.
+:::
 
- Destination file to log to. If empty, log to stderr.
+:::{option} --log-file <file>
+Destination file to log to. If empty, log to stderr.
+:::
 
-.. option:: --setsid
+:::{option} --setsid
+Run lldb-server in a new session.
+:::
 
- Run lldb-server in a new session.
+### TARGET SELECTION
 
-TARGET SELECTION
-~~~~~~~~~~~~~~~~
+:::{option} --attach <pid-or-name>
+Attach to the process given by a (numeric) process id or a name.
+:::
 
-.. option:: --attach <pid-or-name>
+:::{option} -- program args
+Launch a program for debugging.
+:::
 
- Attach to the process given by a (numeric) process id or a name.
-
-.. option:: -- program args
-
- Launch a program for debugging.
-
-If neither of target options are used, :program:`lldb-server` is started
+If neither of target options are used, {program}`lldb-server` is started
 without a specific target. It can be afterwards instructed by the client
 to launch or attach.
 
-PLATFORM COMMAND
-----------------
+## PLATFORM COMMAND
 
-| :program:`lldb-server` p[latform] [*options*] --server --listen [[*host*]:*port*]
+{program}`lldb-server`
 
-CONNECTION
-~~~~~~~~~~
+ p[latform] \[
 
-.. option:: --server
+*options*
 
- Run in server mode, handling multiple connections. If this is not specified,
- lldb-server will accept only one connection and exit when it is finished.
+\] --server --listen \[\[
 
-.. option:: --listen <host>:<port>
+*host*
 
- Hostname and port to listen on. Obligatory. If *port* is zero, a random port
- will be used.
+\]:
 
-.. option:: --socket-file <path>
+*port*
 
- Write the listening socket port number to the specified file.
+\]
 
-GENERAL OPTIONS
-~~~~~~~~~~~~~~~
+### CONNECTION
 
-.. option:: --log-channels <channel1 categories...:channel2 categories...>
+:::{option} --server
+Run in server mode, handling multiple connections. If this is not specified,
+lldb-server will accept only one connection and exit when it is finished.
+:::
 
- Channels to log. A colon-separated list of entries. Each entry starts with
- a channel followed by a space-separated list of categories.
+:::{option} --listen <host>:<port>
+Hostname and port to listen on. Obligatory. If *port* is zero, a random port
+will be used.
+:::
 
-.. option:: --log-file <file>
+:::{option} --socket-file <path>
+Write the listening socket port number to the specified file.
+:::
 
- Destination file to log to. If empty, log to stderr.
+### GENERAL OPTIONS
 
-GDB-SERVER CONNECTIONS
-~~~~~~~~~~~~~~~~~~~~~~
+:::{option} --log-channels <channel1 categories...:channel2 categories...>
+Channels to log. A colon-separated list of entries. Each entry starts with
+a channel followed by a space-separated list of categories.
+:::
 
-.. option:: --gdbserver-port <port>
+:::{option} --log-file <file>
+Destination file to log to. If empty, log to stderr.
+:::
 
- Define a port to be used for gdb-server connections. This port is used for
- multiple connections.
+### GDB-SERVER CONNECTIONS
 
-EXAMPLES
---------
+:::{option} --gdbserver-port <port>
+Define a port to be used for gdb-server connections. This port is used for
+multiple connections.
+:::
+
+## EXAMPLES
 
 The server can be started in several modes.
 
@@ -162,35 +205,35 @@ to the debugged executable, arguments starting with a - must be passed after
 --. The server will launch the new executable and stop it immediately, waiting
 for the client to connect.
 
-  lldb-server g :1234 /path/to/program program-argument -- --program-option
+> lldb-server g :1234 /path/to/program program-argument -- --program-option
 
 For convenience, passing the executable after -- is also supported.
 
-  lldb-server g :1234 -- /path/to/program program-argument --program-option
+> lldb-server g :1234 -- /path/to/program program-argument --program-option
 
 In order to attach to a running process, pass --attach along with the process
 identifier or name. The process will be stopped immediately after starting
 the server. Note that terminating the server will usually cause the process
 to be detached and continue execution.
 
-  lldb-server g :1234 --attach 12345
-  lldb-server g :1234 --attach program-name
+> lldb-server g :1234 --attach 12345
+> lldb-server g :1234 --attach program-name
 
 Use *gdb-remote* command to connect to the server:
 
-  (lldb) gdb-remote 1234
+> (lldb) gdb-remote 1234
 
 lldb-server can also be started without an inferior. In this case, the client
 can select the target after connecting to the server. Note that some commands
 (e.g. *target create*) will disconnect and launch a local lldb-server instead.
 
-  lldb-server g :1234
+> lldb-server g :1234
+>
+> (lldb) gdb-remote 1234
+> (lldb) process launch a.out
 
-  (lldb) gdb-remote 1234
-  (lldb) process launch a.out
+## SEE ALSO
 
-SEE ALSO
---------
+The {doc}`LLDB project page </index>` has many different resources
+for {program}`lldb-server` users.
 
-The :doc:`LLDB project page </index>` has many different resources
-for :program:`lldb-server` users.
