@@ -22,37 +22,26 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#if _LIBCPP_HAS_THREADS
+#if _LIBCPP_STD_VER >= 11 && _LIBCPP_HAS_THREADS
 
 // __thread_hardware_concurrency() has the same semantics as std::[j]thread::hardware_concurrency(), but allows querying
 // this information without depending on std::thread itself. Rather than adding a new symbol to the built library, it is
 // declared as an alias of std::thread::hardware_concurrency(), which has always been part of the ABI.
 
-#  define _LIBCPP_THREAD_ABI_NAMESPACE_STR _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE)
-
 #  ifdef _LIBCPP_ABI_MICROSOFT
 #    define _LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL                                                                 \
-      "?hardware_concurrency@thread@" _LIBCPP_THREAD_ABI_NAMESPACE_STR "@std@@SAIXZ"
+      "?hardware_concurrency@thread@" _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE) "@std@@SAIXZ"
 #  else
-// The Itanium mangling of a namespace name is prefixed with its length, which can't be computed by the preprocessor.
-#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___1 3
-#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___2 3
-#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___ndk1 6
-#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH                                                                        \
-      _LIBCPP_CONCAT(_LIBCPP_THREAD_ABI_NAMESPACE_LENGTH_, _LIBCPP_ABI_NAMESPACE)
-#    if _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH == 0
-#      error "Unknown length of _LIBCPP_ABI_NAMESPACE, add it to <__thread/hardware_concurrency.h>"
-#    endif
 #    define _LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL                                                                 \
       _LIBCPP_TOSTRING(__USER_LABEL_PREFIX__)                                                                          \
-      "_ZNSt" _LIBCPP_TOSTRING(_LIBCPP_THREAD_ABI_NAMESPACE_LENGTH) _LIBCPP_THREAD_ABI_NAMESPACE_STR                   \
-          "6thread20hardware_concurrencyEv"
+      "_ZNSt" _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE_LEN)                                                              \
+          _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE) "6thread20hardware_concurrencyEv"
 #  endif
 
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned __thread_hardware_concurrency() _NOEXCEPT
     __asm__(_LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL);
 
-#endif // _LIBCPP_HAS_THREADS
+#endif // _LIBCPP_STD_VER >= 11 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
