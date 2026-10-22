@@ -6,7 +6,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
   )
   _get_common_test_compile_options(compile_options "" "")
   list(REMOVE_ITEM compile_options "-ffreestanding")
-  target_compile_options(libc.utils.MPCWrapper PRIVATE -O3 ${compile_options})
+  target_compile_options(libc.utils.MPCWrapper PRIVATE ${compile_options})
   add_dependencies(
     libc.utils.MPCWrapper
     libc.utils.MPCommon
