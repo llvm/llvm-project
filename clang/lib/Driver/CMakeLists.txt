@@ -25,6 +25,7 @@ endif()
 
 add_clang_library(clangDriver
   Action.cpp
+  ClangCLArgs.cpp
   Compilation.cpp
   CreateASTUnitFromArgs.cpp
   CreateInvocationFromArgs.cpp
