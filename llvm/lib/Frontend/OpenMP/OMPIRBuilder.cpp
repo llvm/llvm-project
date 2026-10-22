@@ -41,7 +41,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -426,11 +425,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -440,11 +440,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -1036,9 +1037,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   // The createTarget functions embeds user written code into
   // the target region which may inject allocas which need to
   // be moved to the entry block of our target or risk malformed
-  // optimisations by later passes, this is only relevant for
-  // the device pass which appears to be a little more delicate
-  // when it comes to optimisations (however, we do not block on
+  // optimisations by later passes (however, we do not block on
   // that here, it's up to the inserter to the list to do so).
   // This notbaly has to occur after the OutlinedInfo candidates
   // have been extracted so we have an end product that will not
@@ -1898,6 +1897,38 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
   unsigned NumCapturedVars = OutlinedFn.arg_size() - /* tid & bounded tid */ 2;
 
   CallInst *CI = cast<CallInst>(OutlinedFn.user_back());
+
+  // CodeExtractor creates an alloca aggregate struct containing pointers to all
+  // the captured values. The address of this struct is then passed as a
+  // parameter to the outlined function. This parameter of the outlined function
+  // can be marked noalias because CodeExractor + this host OpenMP lowering
+  // maintains the following invariants:
+  // - The caller initializes the fields before starting any callbacks.
+  // - Neither the caller, OpenMP runtime, nor callbacks modify the structure
+  //   while callbacks are executing.
+  // - The callbacks only load captured values from the structure; they do not
+  //   use it to write results back to the caller. This is generated code; the
+  //   user has no way to modify the structure directly.
+  //
+  // Multiple callbacks may read the same structure. This is allowed by noalias,
+  // which permits aliasing accesses to memory that is not modified during the
+  // call.
+  //
+  // The synchronous fork keeps the structure alive until all callbacks return,
+  // which justifies nofreeobj. Neither attribute extends to the objects pointed
+  // to by the captured fields.
+  if (NumCapturedVars) {
+    assert(NumCapturedVars == 1 && "Expected an aggregate capture argument");
+    assert(isa<AllocaInst>(CI->getArgOperand(2)) &&
+           cast<AllocaInst>(CI->getArgOperand(2))
+               ->getAllocatedType()
+               ->isStructTy() &&
+           "Expected a stack-allocated capture structure");
+
+    OutlinedFn.addParamAttr(2, Attribute::NoAlias);
+    OutlinedFn.addParamAttr(2, Attribute::NoFreeObj);
+  }
+
   CI->getParent()->setName("omp_parallel");
   Builder.SetInsertPoint(CI);
 
@@ -2023,6 +2054,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   // Create an artificial insertion point that will also ensure the blocks we
   // are about to split are not degenerated.
   auto *UI = new UnreachableInst(Builder.getContext(), InsertBB);
+  UI->setDebugLoc(Loc.DL);
 
   BasicBlock *EntryBB = UI->getParent();
   BasicBlock *PRegEntryBB = EntryBB->splitBasicBlock(UI, "omp.par.entry");
@@ -6136,8 +6168,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
 
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
@@ -6891,8 +6922,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -8229,8 +8259,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   // for conditional creation
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   Instruction *SplitPos = EntryBB->getTerminatorOrNull();
-  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
+  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos)) {
     SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
+    SplitPos->setDebugLoc(Builder.getCurrentDebugLocation());
+  }
   BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
   BasicBlock *FiniBB =
       EntryBB->splitBasicBlock(EntryBB->getTerminator(), "omp_region.finalize");
@@ -9259,11 +9291,9 @@ static void FixupDebugInfoForOutlinedFunction(
     }
   };
 
-  // The location and scope of variable intrinsics and records still point to
+  // The location and scope of variable records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
-           "Unexpected debug intrinsic");
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       UpdateDebugRecord(&DVR);
       MoveDebugRecordToCorrectBlock(&DVR);
@@ -9371,9 +9401,8 @@ static Expected<Function *> createOutlinedFunction(
 
   // As we embed the user code in the middle of our target region after we
   // generate entry code, we must move what allocas we can into the entry
-  // block to avoid possible breaking optimisations for device
-  if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
+  // block to avoid possible breaking optimisations
+  OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   BasicBlock *ExitBB = splitBB(Builder, /*CreateBranch=*/true, "target.exit");
   BasicBlock *OutlinedBodyBB =
@@ -9403,7 +9432,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
-  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
+  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrPseudoProbe());
 
   // Do not include the artificial dyn_ptr argument.
   const auto &ArgRange = make_range(Func->arg_begin(), Func->arg_end() - 1);
@@ -11467,9 +11496,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic update expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
@@ -11497,18 +11523,28 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
     return Builder.CreateOr(Src1, Src2);
   case AtomicRMWInst::Xor:
     return Builder.CreateXor(Src1, Src2);
-  case AtomicRMWInst::Xchg:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::Max:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smax, Src1, Src2);
   case AtomicRMWInst::Min:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, Src1, Src2);
   case AtomicRMWInst::UMax:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, Src1, Src2);
   case AtomicRMWInst::UMin:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umin, Src1, Src2);
+  case AtomicRMWInst::FAdd:
+    return Builder.CreateFAdd(Src1, Src2);
+  case AtomicRMWInst::FSub:
+    return Builder.CreateFSub(Src1, Src2);
   case AtomicRMWInst::FMax:
+    return Builder.CreateMaxNum(Src1, Src2);
   case AtomicRMWInst::FMin:
+    return Builder.CreateMinNum(Src1, Src2);
   case AtomicRMWInst::FMaximum:
+    return Builder.CreateMaximum(Src1, Src2);
   case AtomicRMWInst::FMinimum:
+    return Builder.CreateMinimum(Src1, Src2);
+  case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::FMaximumNum:
   case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
@@ -11549,15 +11585,26 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
   case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
     emitRMWOp = XElemTy;
     break;
   case AtomicRMWInst::Sub:
+  case AtomicRMWInst::FSub:
     emitRMWOp = (IsXBinopExpr && XElemTy);
     break;
   default:
     emitRMWOp = false;
   }
-  emitRMWOp &= XElemTy->isIntegerTy();
+  emitRMWOp &=
+      (XElemTy->isIntegerTy() || XElemTy->isFloatTy() || XElemTy->isDoubleTy());
 
   std::pair<Value *, Value *> Res;
   if (emitRMWOp) {
@@ -11719,8 +11766,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic capture expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',

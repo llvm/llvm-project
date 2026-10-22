@@ -4121,8 +4121,8 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
 bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                    ArrayRef<MachineOperand> Cond,
                                    Register DstReg, Register TrueReg,
-                                   Register FalseReg, int &CondCycles,
-                                   int &TrueCycles, int &FalseCycles) const {
+                                   Register FalseReg,
+                                   SelectExpansion &Exp) const {
   // Not all subtargets have cmov instructions.
   if (!Subtarget.canUseCMOV())
     return false;
@@ -4145,9 +4145,9 @@ bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
       X86::GR64RegClass.hasSubClassEq(RC)) {
     // This latency applies to Pentium M, Merom, Wolfdale, Nehalem, and Sandy
     // Bridge. Probably Ivy Bridge as well.
-    CondCycles = 2;
-    TrueCycles = 2;
-    FalseCycles = 2;
+    Exp.CondCycles = 2;
+    Exp.TrueCycles = 2;
+    Exp.FalseCycles = 2;
     return true;
   }
 
@@ -6192,7 +6192,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   // Build CFI if necessary.
   MachineFunction &MF = *MBB.getParent();
   const X86FrameLowering *TFL = Subtarget.getFrameLowering();
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  bool IsWin64Prologue = MF.usesWindowsUnwindInfo();
   bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
@@ -7781,7 +7781,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (I) {
     unsigned Opcode = I->DstOp;
     if (Alignment <
-        Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
+        Align::fromLog2((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT))
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {

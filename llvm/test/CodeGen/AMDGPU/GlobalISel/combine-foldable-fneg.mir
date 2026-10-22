@@ -143,8 +143,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY]]
-    ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = nsz G_FSUB [[FNEG]], [[COPY1]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG [[COPY1]]
+    ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = nsz G_FSUB [[FNEG]], [[COPY]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FSUB]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

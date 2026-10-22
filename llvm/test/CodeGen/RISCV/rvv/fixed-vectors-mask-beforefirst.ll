@@ -5,16 +5,14 @@
 define <1 x i1> @v1i1(<1 x i1> %m) {
 ; RV32-LABEL: v1i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV32-NEXT:    vmsbf.m v8, v0
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV32-NEXT:    vmnot.m v0, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v1i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV64-NEXT:    vmsbf.m v8, v0
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV64-NEXT:    vmnot.m v0, v0
 ; RV64-NEXT:    ret
   %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
   ret <1 x i1> %x

@@ -35,6 +35,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -627,6 +628,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// True if CodeGen currently emits the argument of
+  /// __builtin_preserve_field_info.
+  bool IsInPreserveFieldInfo = false;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
@@ -650,6 +655,22 @@ public:
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
+
+  /// Records the l-value that ScalarExprEmitter loads from when it emits a
+  /// specific expression. EmitArraySubscriptExpr sets this while emitting the
+  /// base of a 'counted_by' pointer subscript, so that the bounds check can
+  /// locate the count from the pointer field's address without re-emitting
+  /// (and so re-evaluating) the base. Capturing the l-value, instead of
+  /// emitting the load separately, keeps everything else the scalar load path
+  /// does (debug locations, 'align_value' assumptions, pseudo variables for
+  /// -fdebug-info-for-profiling, etc.).
+  struct LoadedLValueCapture {
+    /// The expression whose l-value is recorded.
+    const Expr *E;
+    /// The recorded l-value, set if \c E was loaded by ScalarExprEmitter.
+    std::optional<LValue> LV;
+  };
+  LoadedLValueCapture *CurLoadedLValueCapture = nullptr;
 
   /// Returns true if a function must make progress, which means the
   /// mustprogress attribute can be added.
@@ -3505,9 +3526,6 @@ public:
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
-  /// Get the record field index as represented in debug info.
-  unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
-
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission
   //===--------------------------------------------------------------------===//
@@ -4587,7 +4605,7 @@ public:
   std::pair<LValue, LValue> EmitHLSLOutArgLValues(const HLSLOutArgExpr *E,
                                                   QualType Ty);
   LValue EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
-                            QualType Ty);
+                            QualType Ty, bool IsImplicitObject = false);
 
   Address EmitExtVectorElementLValue(LValue V);
 
@@ -4709,7 +4727,8 @@ public:
                                   const Twine &name = "");
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
-                                  const Twine &name = "");
+                                  const Twine &name = "",
+                                  bool IsConvergent = false);
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                     const Twine &Name = "");
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5563,9 +5582,14 @@ public:
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
 private:
-  // Adds a convergence_ctrl token with |ParentToken| as parent convergence
-  // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+  // Adds a convergencectrl bundle with the current convergence token to
+  // |Bundles|, if convergence tokens are used.
+  void
+  addConvergenceControlBundle(SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  // Marks |Call| convergent if |IsConvergent| and its callee does not already
+  // imply it.
+  void setConvergentCallSite(llvm::CallBase *Call, bool IsConvergent);
 
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
@@ -5648,14 +5672,7 @@ private:
                                                          const VarDecl &D);
 
 public:
-  enum class EvaluationOrder {
-    ///! No language constraints on evaluation order.
-    Default,
-    ///! Language semantics require left-to-right evaluation.
-    ForceLeftToRight,
-    ///! Language semantics require right-to-left evaluation.
-    ForceRightToLeft
-  };
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.

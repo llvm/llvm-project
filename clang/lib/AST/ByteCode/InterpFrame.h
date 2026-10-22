@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
+#include "Block.h"
 #include "Frame.h"
-#include "InterpBlock.h"
 #include "Pointer.h"
 
 namespace clang {
@@ -58,10 +58,9 @@ public:
 
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
-  void initScope(unsigned Idx);
-  void enableLocal(unsigned Idx);
-  bool isLocalEnabled(unsigned Idx) const {
-    return localInlineDesc(Idx)->IsActive;
+  void enableLocal(unsigned Offset);
+  bool isLocalEnabled(unsigned Offset) const {
+    return getLocalBlock(Offset)->getBlockDesc<InlineDescriptor>().IsActive;
   }
 
   /// Describes the frame with arguments for diagnostic purposes.
@@ -91,14 +90,27 @@ public:
 
   /// Mutates a local variable.
   template <typename T> void setLocal(unsigned Offset, const T &Value) {
-    localRef<T>(Offset) = Value;
-    localInlineDesc(Offset)->IsInitialized = true;
-    localInlineDesc(Offset)->LifeState = Lifetime::Started;
+    Block *B = getLocalBlock(Offset);
+
+    B->deref<T>() = Value;
+    auto &LID = B->getBlockDesc<InlineDescriptor>();
+    LID.IsInitialized = true;
+    LID.LifeState = Lifetime::Started;
   }
 
   /// Returns a pointer to a local variables.
-  Pointer getLocalPointer(unsigned Offset) const;
-  Block *getLocalBlock(unsigned Offset) const;
+  Pointer getLocalPointer(unsigned Offset) const {
+    assert(Offset < Func->getFrameSize() && "Invalid local offset.");
+    return Pointer(getLocalBlock(Offset));
+  }
+  Block *getLocalBlock(unsigned Offset) const {
+    Block *B = localBlock(Offset);
+    if (LLVM_UNLIKELY(!B->isInitialized())) {
+      B->invokeCtor();
+      new (localInlineDesc(Offset)) InlineDescriptor(B->getDescriptor());
+    }
+    return B;
+  };
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Index) const {
@@ -150,7 +162,6 @@ public:
   }
   SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
-  unsigned getDepth() const { return Depth; }
   unsigned getArgSize() const { return ArgSize; }
 
   bool isStdFunction() const;
@@ -188,6 +199,7 @@ private:
   }
 
   /// Returns a pointer to a local's block.
+  /// Will NOT initialize the block.
   Block *localBlock(unsigned Offset) const {
     return reinterpret_cast<Block *>(locals() + Offset - sizeof(Block));
   }
@@ -222,8 +234,6 @@ private:
 #endif
   /// The size of all the arguments.
   const unsigned ArgSize;
-  /// Depth of this frame.
-  unsigned Depth;
 
 public:
   unsigned MSVCConstexprAllowed = 0;
