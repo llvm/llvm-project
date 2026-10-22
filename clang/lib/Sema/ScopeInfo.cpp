@@ -27,6 +27,7 @@ void FunctionScopeInfo::Clear() {
   HasIndirectGoto = false;
   HasDroppedStmt = false;
   HasOverflowCheckedOp = false;
+  HasOverflowHandler = false;
   HasOMPDeclareReductionCombiner = false;
   HasFallthroughStmt = false;
   UsesFPIntrin = false;
