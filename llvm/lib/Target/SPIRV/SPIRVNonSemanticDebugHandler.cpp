@@ -330,6 +330,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
 
   CompileUnits.clear();
   DebugTypes.clear();
+  EnumCompileUnits.clear();
   Subprograms.clear();
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
@@ -375,6 +376,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     // versioned. getUnversionedName() would assert on versioned names.
     Info.SpirvSourceLanguage = toNSDISrcLang(CU->getSourceLanguage().getName());
     CompileUnits.push_back(std::move(Info));
+    for (const DICompositeType *ET : CU->getEnumTypes())
+      EnumCompileUnits.try_emplace(ET, CU);
   }
 
   // Collect DWARF version from module flags. For CodeView modules there is no
@@ -879,6 +882,8 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeForCompositeType(
   case dwarf::DW_TAG_union_type:
     return emitDebugTypeComposite(CT, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                                   MAI);
+  case dwarf::DW_TAG_enumeration_type:
+    return emitDebugTypeEnum(CT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   default:
     return EmitResult::unsupported();
   }
@@ -1555,6 +1560,68 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
 }
 
 SPIRVNonSemanticDebugHandler::EmitResult
+SPIRVNonSemanticDebugHandler::emitDebugTypeEnum(
+    const DICompositeType *ET, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  // Skip incomplete enums.
+  uint64_t Size = ET->getSizeInBits();
+  if (Size == 0 || !isUInt<32>(Size))
+    return EmitResult::unsupported();
+
+  // The spec formally requires DebugInfoNone for enum E { A }, but HLSL gives
+  // that enum an implied type (usually int, unless the values need something
+  // wider).
+  MCRegister UnderlyingReg = CachedDebugInfoNoneReg;
+  if (const DIType *BaseTy = ET->getBaseType()) {
+    EmitResult Base = getOrCreateDebugScope(BaseTy);
+    if (!Base)
+      return Base;
+    UnderlyingReg = Base.Reg;
+  }
+
+  EmitResult Parent = resolveScope(ET->getScope(), EnumCompileUnits.lookup(ET));
+  if (!Parent)
+    return Parent;
+
+  MCRegister NameReg = getCachedOpStringReg(ET->getName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      ET->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(ET->getLine()), I32TypeReg, MAI);
+  // DICompositeType carries no column, so emit 0.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+  MCRegister SizeReg =
+      emitOpConstantI32(static_cast<uint32_t>(Size), I32TypeReg, MAI);
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(ET), I32TypeReg, MAI);
+
+  SmallVector<MCRegister> Ops = {NameReg, UnderlyingReg, SrcReg,  LineReg,
+                                 ColReg,  Parent.Reg,    SizeReg, FlagsReg};
+
+  // Each Value is a 32-bit integer constant. Skip the Value and Name pair of an
+  // enumerator whose value needs more bits. Otherwise, the truncation would
+  // show a different value.
+  for (const DINode *Element : ET->getElements()) {
+    const auto *E = dyn_cast<DIEnumerator>(Element);
+    if (!E)
+      continue;
+    const APInt &Value = E->getValue();
+    if (E->isUnsigned() ? !Value.isIntN(32) : !Value.isSignedIntN(32))
+      continue;
+    uint32_t Bits = E->isUnsigned()
+                        ? static_cast<uint32_t>(Value.getZExtValue())
+                        : static_cast<uint32_t>(Value.getSExtValue());
+    Ops.push_back(emitOpConstantI32(Bits, I32TypeReg, MAI));
+    Ops.push_back(getCachedOpStringReg(E->getName()));
+  }
+
+  return EmitResult::emitted(
+      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeEnum, VoidTypeReg,
+                  ExtInstSetReg, Ops, MAI));
+}
+
+SPIRVNonSemanticDebugHandler::EmitResult
 SPIRVNonSemanticDebugHandler::emitDebugTypedef(const DIDerivedType *TD,
                                                MCRegister VoidTypeReg,
                                                MCRegister I32TypeReg,
@@ -1617,6 +1684,16 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
       continue;
     }
     if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
+      // Cache the enum's name, file path and enumerator names as OpStrings for
+      // DebugTypeEnum.
+      if (CT->getTag() == dwarf::DW_TAG_enumeration_type) {
+        emitOpStringIfNew(CT->getName(), MAI);
+        emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
+        for (const DINode *Element : CT->getElements())
+          if (const auto *E = dyn_cast<DIEnumerator>(Element))
+            emitOpStringIfNew(E->getName(), MAI);
+        continue;
+      }
       // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers
       // use: the composite name, identifier (linkage name), and path, plus
       // each member name and path. Arrays and vectors have no such strings.
