@@ -114,6 +114,24 @@ int main(int, char**)
         static_assert(!std::is_constructible<Fn, RValueCallable>::value, "");
     }
 #endif
+    {
+      // P2255R2 made binding to temporary ill-formed since C++23.
+      struct RetPrvalue {
+        int operator()(int) const { return 42; }
+      };
+      typedef std::function<const int&(int)> Fn;
+#if TEST_STD_VER >= 23
+      static_assert(!std::is_constructible_v<Fn, RetPrvalue>);
+      static_assert(!std::is_constructible_v<Fn, RetPrvalue&>);
+      static_assert(!std::is_constructible_v<Fn, const RetPrvalue>);
+      static_assert(!std::is_constructible_v<Fn, const RetPrvalue&>);
+#else
+      static_assert(std::is_constructible<Fn, RetPrvalue>::value, "");
+      static_assert(std::is_constructible<Fn, RetPrvalue&>::value, "");
+      static_assert(std::is_constructible<Fn, const RetPrvalue>::value, "");
+      static_assert(std::is_constructible<Fn, const RetPrvalue&>::value, "");
+#endif
+    }
 
-  return 0;
+    return 0;
 }
