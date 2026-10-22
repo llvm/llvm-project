@@ -575,6 +575,14 @@ llvm::Expected<IncrementalExecutor &> Interpreter::getExecutionEngine() {
   return *IncrExecutor.get();
 }
 
+void Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
+  CodeGenOptions &CGO = getCompilerInstance()->getCodeGenOpts();
+  CGO.OptimizationLevel = OptLevel;
+  CGO.OptimizeSize = OptSize;
+  CGO.setInlining(OptLevel ? CodeGenOptions::NormalInlining
+                           : CodeGenOptions::OnlyAlwaysInlining);
+}
+
 ASTContext &Interpreter::getASTContext() {
   return getCompilerInstance()->getASTContext();
 }
