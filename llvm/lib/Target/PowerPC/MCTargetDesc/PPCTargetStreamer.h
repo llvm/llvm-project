@@ -27,6 +27,7 @@ public:
 
   virtual void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) {}
   virtual void emitMachine(StringRef CPU){};
+  virtual void emitEndianSet(bool little) {};
   virtual void emitAbiVersion(int AbiVersion){};
   virtual void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset){};
 };
