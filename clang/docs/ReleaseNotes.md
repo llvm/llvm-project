@@ -1113,6 +1113,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Bug Fixes
 
+- Fixed a miscompilation of C2y named `break` statements targeting enclosing loops
+  from `switch` cases with optimizations enabled. These breaks now exit the named
+  loop and run required cleanups instead of leaving only the `switch`.
+  (#GH230932)
+
 #### Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
