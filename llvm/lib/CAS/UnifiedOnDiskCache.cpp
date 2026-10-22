@@ -96,6 +96,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <optional>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::cas;
