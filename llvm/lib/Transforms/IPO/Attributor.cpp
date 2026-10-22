@@ -68,6 +68,14 @@ using namespace llvm;
 DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
               "Determine what attributes are manifested in the IR");
 
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
+
+bool llvm::shouldCreateAbstractAttribute() {
+  return DebugCounter::shouldExecute(NumAbstractAttributes);
+}
+
 STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
