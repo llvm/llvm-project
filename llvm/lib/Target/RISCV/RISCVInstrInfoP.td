@@ -2012,6 +2012,9 @@ def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
 def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
 
+// ComplexPattern for instruction that use 8-bit signed shift amounts like SSHL.
+def shiftMask256 : ComplexPattern<XLenVT, 1, "selectShiftMask<256>", [], [], 0>;
+
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPairNoX0, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
@@ -2571,9 +2574,9 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
-  def : PatGprGpr<sshlsat, SSHA>;
-  def : PatGprGpr<ushlsat, SSHL>;
-  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  def : PatGprShiftMask<sshlsat, SSHA, shiftMask256>;
+  def : PatGprShiftMask<ushlsat, SSHL, shiftMask256>;
+  def : PatGprImm<sshlsat, SSLAI, uimm5>;
   // No SSLLI
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
