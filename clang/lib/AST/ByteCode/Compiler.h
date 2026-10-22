@@ -215,6 +215,7 @@ public:
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitOverflowGotoExpr(const OverflowGotoExpr *E);
   bool VisitEmbedExpr(const EmbedExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
