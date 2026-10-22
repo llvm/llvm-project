@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_xattr_unittests)
+add_libc_testsuite(libc-sys-xattr-tests)
 
 add_libc_test(
   fxattr_test
   SUITE
-    libc_sys_xattr_unittests
+    libc-sys-xattr-tests
   SRCS
     fxattr_test.cpp
   DEPENDS
@@ -28,7 +28,7 @@ add_libc_test(
 add_libc_test(
   lxattr_test
   SUITE
-    libc_sys_xattr_unittests
+    libc-sys-xattr-tests
   SRCS
     lxattr_test.cpp
   DEPENDS
@@ -54,7 +54,7 @@ add_libc_test(
 add_libc_test(
   xattr_test
   SUITE
-    libc_sys_xattr_unittests
+    libc-sys-xattr-tests
   SRCS
     xattr_test.cpp
   DEPENDS

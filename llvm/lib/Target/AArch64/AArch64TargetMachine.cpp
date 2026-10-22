@@ -801,7 +801,7 @@ void AArch64PassConfig::addPostBBSections() {
 
 void AArch64PassConfig::addPreEmitPass2() {
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
