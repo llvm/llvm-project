@@ -206,7 +206,9 @@ class ImmXLenAsmOperand<string prefix, string suffix = ""> : AsmOperandClass {
 
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
-  let PredicateMethod = "is" # prefix # "Imm" # width # suffix;
+  let PredicateMethod = !if(!eq(suffix, ""),
+                            "is" # prefix # "Imm<" # width # ">",
+                            "is" # prefix # "Imm" # width # suffix);
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
 }
@@ -247,6 +249,11 @@ class SImmAsmOperand<int width, string suffix = "">
 
 class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
+}
+
+class UImmLsbZeroAsmOperand<int width, int zeros, string suffix>
+    : UImmAsmOperand<width, suffix> {
+  let PredicateMethod = "isUImmShifted<" # !sub(width, zeros) # ", " # zeros # ">";
 }
 
 class BareSImmNLsb0AsmOperand<int width>
@@ -300,7 +307,7 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
   // Create suffix with the appropriate number of 0s to append to all names
   string Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
 
-  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
+  let ParserMatchClass = UImmLsbZeroAsmOperand<width, zeros, "Lsb" # Suffix>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<" # width # ">";
   let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
@@ -318,7 +325,7 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
 class OptionalUImmLsbZeroOp<int width, int zeros>
     : RISCVUImmLsbZeroOp<width, zeros> {
   let ParserMatchClass =
-      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix>>;
+      OptionalMemOffsetAsmOperand<UImmLsbZeroAsmOperand<width, zeros, "Lsb" # Suffix>>;
 }
 
 class RISCVSImmOp<int bitsNum> : RISCVOp {
@@ -609,6 +616,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
+
+// Like AddrRegImm, but only matches a register, or a register plus a
+// simm12 offset. Does not match a FrameIndex or global address, so it is
+// suitable for operands like the target of an indirect branch where those
+// aren't valid.
+def BrindRegImm : ComplexPattern<iPTR, 2, "SelectBrindRegImm">;
 
 class AddrRegRegScale<int N>
     : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
@@ -1063,8 +1076,11 @@ def SFENCE_INVAL_IR : Priv<"sfence.inval.ir", 0b0001100>, Sched<[]> {
   let rs2 = 0b00001;
 }
 def SINVAL_VMA  : Priv_rr<"sinval.vma", 0b0001011>, Sched<[]>;
+
+let append Predicates = [HasStdExtH] in {
 def HINVAL_VVMA : Priv_rr<"hinval.vvma", 0b0010011>, Sched<[]>;
 def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
+} // append Predicates = [HasStdExtH]
 } // Predicates = [HasStdExtSvinval]
 
 def SFENCE_VMA  : Priv_rr<"sfence.vma", 0b0001001>, Sched<[]>;
@@ -1612,6 +1628,10 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
+def GIBrindRegImm :
+  GIComplexOperandMatcher<s32, "selectBrindRegImm">,
+  GIComplexPatternEquiv<BrindRegImm>;
+
 /// Stack probing
 
 let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
@@ -1852,12 +1872,10 @@ def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo_optional:$imm12),
                                          simm12_lo_optional:$imm12)>;
 }
 
-def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
-def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
+def : Pat<(riscv_sw_guarded_brind (BrindRegImm (iPTR GPRX7:$rs1), simm12_lo:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
 
-def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRIND GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
+def : Pat<(brind (BrindRegImm (iPTR GPRJALRNonX7:$rs1), simm12_lo:$imm12)),
           (PseudoBRIND GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
@@ -2517,6 +2535,7 @@ include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmi.td"
 include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXqccmt.td"
 include "RISCVInstrInfoXMips.td"

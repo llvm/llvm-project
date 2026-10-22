@@ -235,7 +235,11 @@ void *strStr(const char *const Haystack, const char *const Needle) {
   return nullptr;
 }
 
-void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
+// Diagnostic helpers allocate a large on-stack scratch buffer. Keep them
+// out of line: if inlined, the buffer is reserved in every caller frame and
+// can overflow small thread stacks even when the report is never emitted.
+__attribute__((noinline)) void reportNumber(const char *Msg, uint64_t Num,
+                                            uint32_t Base) {
 #if !defined(ANDROID_AARCH64)
   char Buf[BufSize];
   char *Ptr = Buf;
@@ -299,10 +303,14 @@ alignas(16) void *__bolt_instr_longjmp_buf[16];
 // Thread that installed the recovery point above, or 0 when there is none.
 uint64_t __bolt_instr_recovery_tid = 0;
 
-bool __bolt_instr_dump_failed = false;
+// Set the first time any runtime operation fails and will never be cleared.
+// Once set, every instrumentation entry point (setup, indirect-call handler,
+// profile dumping, counter clearing) turns into a no-op, so any profiling
+// related runtime error just fails profiling but won't kill the host app.
+bool __bolt_runtime_error = false;
 
 void boltHandleFatalAndRecover() {
-  __atomic_store_n(&__bolt_instr_dump_failed, true, __ATOMIC_RELAXED);
+  __atomic_store_n(&__bolt_runtime_error, true, __ATOMIC_RELAXED);
   if (__atomic_load_n(&__bolt_instr_recovery_tid, __ATOMIC_RELAXED) ==
       __gettid()) {
     __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
@@ -322,9 +330,9 @@ void reportError(const char *Msg, uint64_t Size) {
 #endif
 }
 
-void assert(bool Assertion, const char *Msg) {
-  if (Assertion)
-    return;
+// Failure path of assert() kept out of line so its large on-stack buffer is
+// not reserved in every inlined caller frame (see reportNumber above).
+__attribute__((noinline)) void reportAssertFailure(const char *Msg) {
 #if defined(ANDROID_AARCH64)
   (void)Msg;
   boltHandleFatalAndRecover();
@@ -336,6 +344,11 @@ void assert(bool Assertion, const char *Msg) {
   Ptr = strCopy(Ptr, "\n");
   reportError(Buf, Ptr - Buf);
 #endif
+}
+
+void assert(bool Assertion, const char *Msg) {
+  if (!Assertion)
+    reportAssertFailure(Msg);
 }
 
 #define SIG_BLOCK 0

@@ -101,8 +101,9 @@ static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
 /// lowered SCF op so later SCF to CFG/LLVM lowering can emit !llvm.loop
 /// metadata.
 static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
-  if (Attribute ann = from->getDiscardableAttr(LLVM::LoopAnnotationAttr::name))
-    to->setDiscardableAttr(LLVM::LoopAnnotationAttr::name, ann);
+  if (Attribute ann =
+          from->getDiscardableAttr(LLVM::getLoopAnnotationAttrName()))
+    to->setDiscardableAttr(LLVM::getLoopAnnotationAttrName(), ann);
 }
 
 namespace mlir {

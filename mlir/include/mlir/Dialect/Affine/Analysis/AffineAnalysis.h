@@ -176,6 +176,35 @@ DependenceResult checkMemrefAccessDependence(
     SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr,
     bool allowRAR = false);
 
+/// Builds in `rel` the access relation of an access that reads or writes
+/// `accessValueMap` over the iteration `domain`, relating the iterations of
+/// the domain to the elements they touch. Unlike `MemRefAccess`'s method of
+/// the same name, it takes the access and its domain as they are, rather than
+/// reading them from an operation, so it can describe an access that is going
+/// to exist (for example, one a transformation is deciding whether to create)
+/// as well as one that already does.
+LogicalResult getAccessRelation(const AffineValueMap &accessValueMap,
+                                const FlatAffineValueConstraints &domain,
+                                presburger::IntegerRelation &rel);
+
+/// Checks whether the accesses two relations describe touch the same element,
+/// i.e. whether there is a dependence between them carried at `loopDepth`.
+/// This is `checkMemrefAccessDependence` from the point where it has nothing
+/// but the relations left to work on, so it serves an access built by hand out
+/// of an access map and a domain just as well as one read off an operation.
+///
+/// Returns 'NoDependence' if it can be determined conclusively that the two do
+/// not touch the same element. Note that a caller working from relations it
+/// built itself has to have established what the operation-based entry point
+/// checks on its own account: that the two access the same memref, that at
+/// least one of them writes, and, where `loopDepth` is past the loops they
+/// share, that the source precedes the destination.
+DependenceResult checkAccessDependence(
+    presburger::IntegerRelation srcRel, presburger::IntegerRelation dstRel,
+    unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints = nullptr,
+    SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr);
+
 /// Utility function that returns true if the provided DependenceResult
 /// corresponds to a dependence result.
 inline bool hasDependence(DependenceResult result) {

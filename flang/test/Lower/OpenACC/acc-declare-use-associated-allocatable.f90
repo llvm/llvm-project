@@ -24,7 +24,7 @@ subroutine use_mod()
   deallocate(data)
 end subroutine
 
-! MOD: func.func @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc() attributes {acc.declare_action} {
+! MOD: func.func @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc() attributes {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc>} {
 ! MOD: acc.declare_enter
 
 ! USE: func.func @_QPuse_mod() {

@@ -22,8 +22,10 @@
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
+#include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
 #include <__config>
+#include <__memory/uninitialized_algorithms.h>
 #include <__numeric/transform_reduce.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
@@ -206,6 +208,15 @@ struct __stable_sort<__serial_backend_tag, _ExecutionPolicy> {
 };
 
 template <class _ExecutionPolicy>
+struct __swap_ranges<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) const noexcept {
+    return std::swap_ranges(std::move(__first1), std::move(__last1), std::move(__first2));
+  }
+};
+
+template <class _ExecutionPolicy>
 struct __transform<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
@@ -281,6 +292,24 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation1>(__reduce),
         std::forward<_BinaryOperation2>(__transform));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _ForwardIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+    return std::uninitialized_copy(std::move(__first), std::move(__last), std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _ForwardIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+    return std::uninitialized_move(std::move(__first), std::move(__last), std::move(__result));
   }
 };
 

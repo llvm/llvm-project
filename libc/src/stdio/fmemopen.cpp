@@ -20,6 +20,7 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -112,14 +113,14 @@ class MemoryFile : public File {
 
 public:
   MemoryFile(uint8_t *storage, size_t capacity, bool owns_storage,
-             ModeFlags mode)
+             FileMode mode)
       : File(&memory_write, &memory_read, &memory_seek, &memory_close,
              stream_buffer, sizeof(stream_buffer), _IOFBF, false, mode),
         storage(storage), capacity(capacity), owns_storage(owns_storage),
-        append(mode & static_cast<ModeFlags>(OpenMode::APPEND)) {
-    if (mode & static_cast<ModeFlags>(OpenMode::READ)) {
+        append(mode.is_append()) {
+    if (mode.is_read()) {
       end = capacity;
-    } else if (mode & static_cast<ModeFlags>(OpenMode::WRITE)) {
+    } else if (mode.is_write()) {
       if (capacity != 0)
         storage[0] = '\0';
     } else if (!owns_storage) {
@@ -136,9 +137,9 @@ LLVM_LIBC_FUNCTION(::FILE *, fmemopen,
                    (void *__restrict buf, size_t max_size,
                     const char *__restrict mode)) {
   LIBC_CRASH_ON_NULLPTR(mode);
-  // Use the same mode parser as fopen. Binary mode has no special effect.
-  auto flags = File::mode_flags(mode);
-  if (flags == 0) {
+
+  const FileMode file_mode(mode);
+  if (!file_mode.is_valid()) {
     libc_errno = EINVAL;
     return nullptr;
   }
@@ -155,7 +156,7 @@ LLVM_LIBC_FUNCTION(::FILE *, fmemopen,
   }
 
   AllocChecker ac;
-  auto *file = new (ac) MemoryFile(storage, max_size, owns_storage, flags);
+  auto *file = new (ac) MemoryFile(storage, max_size, owns_storage, file_mode);
   if (!ac) {
     if (owns_storage)
       delete[] storage;

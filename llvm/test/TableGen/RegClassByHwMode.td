@@ -97,39 +97,47 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER-NEXT:   MCK_LAST_REGCLASS_BY_HWMODE = MCK_RegByHwMode_YRegs_EvenIfRequired,
 // ASMMATCHER-NEXT:   MCK_Imm, // user defined class 'ImmAsmOperand'
 
+// ASMMATCHER:      static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
+// ASMMATCHER-NEXT:   { // DefaultMode
+// ASMMATCHER-NEXT:     MCK_PtrRegs32, // MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     MCK_YRegs, // YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // EvenMode
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs_Even, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     MCK_YRegs_Even, // YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // OddMode
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs_Odd, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // Ptr64
+// ASMMATCHER-NEXT:     MCK_PtrRegs64, // MyPtrRC
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT: };
+// ASMMATCHER-EMPTY:
+// ASMMATCHER-NEXT: static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == 3);
+// ASMMATCHER-EMPTY:
+// ASMMATCHER-NEXT: {{\[\[}}maybe_unused{{\]\]}} static inline MatchClassKind
+// ASMMATCHER-NEXT: remapRegClassByHwMode(unsigned Kind, const MCSubtargetInfo &STI) {
+// ASMMATCHER-NEXT:   if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
+// ASMMATCHER-NEXT:     unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+// ASMMATCHER-NEXT:     assert(HwMode < 4 && "Invalid HwMode");
+// ASMMATCHER-NEXT:     return RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER + 1)];
+// ASMMATCHER-NEXT:   }
+// ASMMATCHER-NEXT:   return static_cast<MatchClassKind>(Kind);
+// ASMMATCHER-NEXT: }
+
 // ASMMATCHER: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
 // ASMMATCHER: if (Kind <= MCK_LAST_TOKEN) {
 
 // ASMMATCHER: switch (Kind) {
 
-// ASMMATCHER: if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
-// ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
-// ASMMATCHER-NEXT:      { // DefaultMode
-// ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        MCK_YRegs, // YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // EvenMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs_Even, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        MCK_YRegs_Even, // YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // OddMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs_Odd, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // Ptr64
-// ASMMATCHER-NEXT:        MCK_PtrRegs64, // MyPtrRC
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:    };
-// ASMMATCHER-EMPTY:
-// ASMMATCHER-NEXT:    static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == 3);
-// ASMMATCHER-NEXT:    const unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
-// ASMMATCHER-NEXT:    Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER + 1)];
-// ASMMATCHER-NEXT:  }
+// ASMMATCHER:   Kind = remapRegClassByHwMode(Kind, STI);
 
 // ASMMATCHER: if (Operand.isReg()) {
 

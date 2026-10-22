@@ -58,6 +58,7 @@ declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
 declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
 declare float @llvm.vector.reduce.fminimum.v2f32(<2 x float>)
 declare float @llvm.vector.reduce.fmaximum.v2f32(<2 x float>)
+declare { float, float } @llvm.modf.f32(float)
 
 ; CHECK-LABEL: @fastmath_intr
 define void @fastmath_intr(float %arg1, i32 %arg2, <2 x float> %arg3) {
@@ -77,6 +78,8 @@ define void @fastmath_intr(float %arg1, i32 %arg2, <2 x float> %arg3) {
   %7 = call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> %arg3)
   ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmaximum({{.*}}) fastmath<nnan> : (vector<2xf32>) -> f32
   %8 = call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> %arg3)
+  ; CHECK: llvm.intr.modf(%{{.*}}) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
+  %9 = call ninf { float, float } @llvm.modf.f32(float %arg1)
 
   ret void
 }

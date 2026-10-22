@@ -10,16 +10,18 @@
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
+using LIBC_NAMESPACE::FileMode;
 
 class StringFile : public File {
   static constexpr size_t SIZE = 512;
@@ -40,13 +42,12 @@ class StringFile : public File {
 
 public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                      ModeFlags modeflags)
+                      FileMode mode)
       : LIBC_NAMESPACE::File(&str_write, &str_read, &str_seek, &str_close,
                              reinterpret_cast<uint8_t *>(buffer), buflen,
-                             bufmode, owned, modeflags),
+                             bufmode, owned, mode),
         pos(0), eof_marker(0), write_append(false) {
-    if (modeflags &
-        static_cast<ModeFlags>(LIBC_NAMESPACE::File::OpenMode::APPEND))
+    if (mode.is_append())
       write_append = true;
   }
 
@@ -108,10 +109,10 @@ ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
                             bool owned, const char *mode) {
   LIBC_NAMESPACE::AllocChecker ac;
+  const FileMode file_mode(mode);
   // We will just assume the allocation succeeds. We cannot test anything
   // otherwise.
-  return new (ac) StringFile(buffer, buflen, bufmode, owned,
-                             LIBC_NAMESPACE::File::mode_flags(mode));
+  return new (ac) StringFile(buffer, buflen, bufmode, owned, file_mode);
 }
 
 TEST(LlvmLibcFileTest, WriteOnly) {
@@ -829,10 +830,10 @@ class ShortWriteFile : public File {
 
 public:
   explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                          ModeFlags modeflags, size_t max_write_bytes)
+                          FileMode mode, size_t max_write_bytes)
       : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
                              &short_close, reinterpret_cast<uint8_t *>(buffer),
-                             buflen, bufmode, owned, modeflags),
+                             buflen, bufmode, owned, mode),
         pos(0), max_write(max_write_bytes) {}
 
   void reset() { pos = 0; }
@@ -847,9 +848,9 @@ public:
 TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   LIBC_NAMESPACE::AllocChecker ac;
   // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
-  ShortWriteFile *f = new (ac) ShortWriteFile(
-      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
-      /*max_write_bytes=*/2);
+  ShortWriteFile *f =
+      new (ac) ShortWriteFile(nullptr, 0, _IONBF, true, FileMode("w"),
+                              /*max_write_bytes=*/2);
   ASSERT_FALSE(f == nullptr);
 
   // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.

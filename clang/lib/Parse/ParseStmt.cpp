@@ -584,7 +584,9 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   Token *CurTok = nullptr;
   // If the semicolon is missing at the end of REPL input, we want to print
   // the result. Note we shouldn't eat the token since the callback needs it.
-  if (Tok.is(tok::annot_repl_input_end))
+  // Preserve the data on EOF tokens that delimit cached declarations.
+  if (Tok.is(tok::eof) && getLangOpts().IncrementalExtensions &&
+      !Tok.getEofData())
     CurTok = &Tok;
   else
     // Otherwise, eat the semicolon.
@@ -592,7 +594,7 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
 
   StmtResult R = handleExprStmt(Expr, StmtCtx);
   if (CurTok && !R.isInvalid())
-    CurTok->setAnnotationValue(R.get());
+    CurTok->setEofData(R.get());
 
   return R;
 }
@@ -611,8 +613,7 @@ StmtResult Parser::ParseSEHTryBlock() {
     return TryBlock;
 
   StmtResult Handler;
-  if (Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+  if (isTokenSEHExcept()) {
     SourceLocation Loc = ConsumeToken();
     Handler = ParseSEHExceptBlock(Loc);
   } else if (Tok.is(tok::kw___finally)) {
@@ -2680,16 +2681,13 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
 
   // Borland allows SEH-handlers with 'try'
 
-  if ((Tok.is(tok::identifier) &&
-       Tok.getIdentifierInfo() == getSEHExceptKeyword()) ||
-      Tok.is(tok::kw___finally)) {
+  if (isTokenSEHExcept() || Tok.is(tok::kw___finally)) {
     // TODO: Factor into common return ParseSEHHandlerCommon(...)
     StmtResult Handler;
-    if(Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+    if (isTokenSEHExcept()) {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHExceptBlock(Loc);
-    }
-    else {
+    } else {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHFinallyBlock(Loc);
     }
@@ -2700,8 +2698,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
                                     TryLoc,
                                     TryBlock.get(),
                                     Handler.get());
-  }
-  else {
+  } else {
     StmtVector Handlers;
 
     // C++11 attributes can't appear here, despite this context seeming

@@ -14,6 +14,7 @@
 
 typedef struct {
   int __detachstate;
+  int __inheritsched;
   int __schedpolicy;
   struct sched_param __schedparam;
   void *__stack;

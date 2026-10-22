@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
 declare double @llvm.trunc.f64(double) nounwind readnone
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>) nounwind readnone
@@ -11,13 +11,11 @@ declare <16 x double> @llvm.trunc.v16f64(<16 x double>) nounwind readnone
 
 ; FUNC-LABEL: {{^}}v_ftrunc_f64:
 ; CI: v_trunc_f64
-; SI: s_bfe_u32 {{s[0-9]+}}, {{s[0-9]+}}, 0xb0014
-; SI: s_endpgm
-define amdgpu_kernel void @v_ftrunc_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %x = load double, ptr addrspace(1) %in, align 8
-  %y = call double @llvm.trunc.f64(double %x) nounwind readnone
-  store double %y, ptr addrspace(1) %out, align 8
-  ret void
+; SI: v_bfe_u32 {{v[0-9]+}}, {{v[0-9]+}}, 20, 11
+; SI: s_setpc_b64
+define double @v_ftrunc_f64(double %in) {
+  %y = call double @llvm.trunc.f64(double %in) nounwind readnone
+  ret double %y
 }
 
 ; FUNC-LABEL: {{^}}ftrunc_f64:

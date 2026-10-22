@@ -7,4 +7,10 @@ define amdgpu_kernel void @test_invalid_write_register_i32() nounwind {
   ret void
 }
 
+; CHECK: error: <unknown>:0:0: invalid register "not-a-register" for llvm.write_register
+define amdgpu_kernel void @test_invalid_write_register_i64() nounwind {
+  call void @llvm.write_register.i64(metadata !0, i64 0)
+  ret void
+}
+
 !0 = !{!"not-a-register"}

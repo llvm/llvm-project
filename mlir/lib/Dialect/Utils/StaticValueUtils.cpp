@@ -447,16 +447,16 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
   for (OpFoldResult &ofr : ofrs) {
     if (isa<Attribute>(ofr))
       continue;
-    Attribute attr;
-    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
-      // Note: All ofrs have index type.
-      if (onlyNonNegative && *getConstantIntValue(attr) < 0)
-        continue;
-      if (onlyNonZero && *getConstantIntValue(attr) == 0)
-        continue;
-      ofr = attr;
-      valuesChanged = true;
-    }
+    // Note: All ofrs have index type; the kDynamic sentinel stays dynamic.
+    std::optional<int64_t> intVal = getConstantIntValue(ofr);
+    if (!intVal || *intVal == ShapedType::kDynamic)
+      continue;
+    if (onlyNonNegative && *intVal < 0)
+      continue;
+    if (onlyNonZero && *intVal == 0)
+      continue;
+    ofr = getAsIndexOpFoldResult(cast<Value>(ofr).getContext(), *intVal);
+    valuesChanged = true;
   }
   return success(valuesChanged);
 }
@@ -470,6 +470,25 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes) {
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides) {
   return foldDynamicIndexList(strides, /*onlyNonNegative=*/false,
                               /*onlyNonZero=*/true);
+}
+
+MemRefType updateTypeFromMetadata(MemRefType type, OpFoldResult offset,
+                                  ArrayRef<OpFoldResult> sizes,
+                                  ArrayRef<OpFoldResult> strides) {
+  SmallVector<OpFoldResult> offsets{offset};
+  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
+  SmallVector<int64_t> staticSizes = decomposeMixedValues(sizes).first;
+  SmallVector<int64_t> staticStrides = decomposeMixedValues(strides).first;
+  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
+                                       staticStrides);
+  // Build a MemRefType using the original element type and memory space,
+  // but derive its shape, offset, and strides from the supplied metadata.
+  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
+                                           layout, type.getMemorySpace());
+  if (!type.getLayout().isIdentity())
+    return updatedType;
+  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
+  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
 }
 
 } // namespace mlir
