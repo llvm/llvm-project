@@ -49,7 +49,7 @@ call big
 big:
 ## Keep the body exactly 64 bytes in every configuration.
 .option push
-.option norvc
+.option exact
 .rept 15
   nop
 .endr
@@ -68,7 +68,7 @@ call small
 small:
 ## Keep the body exactly 20 bytes in every configuration.
 .option push
-.option norvc
+.option exact
 .rept 4
   nop
 .endr

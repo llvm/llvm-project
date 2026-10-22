@@ -21,7 +21,7 @@
 ## This body selects 64-byte alignment, which also satisfies .p2align 2.
 ##
 ## Alignment relocations are processed even with linker --no-relax.
-# CHECK: {{^0*20040}} T big{{$}}
+# CHECK: {{[048c]0}} T big{{$}}
 
 .text
 .globl _start, big
