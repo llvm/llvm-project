@@ -739,6 +739,28 @@ gpu.module @test_module_30 {
   }
 }
 
+gpu.module @test_module_30_fallback {
+  // CHECK-LABEL: func @subgroup_reduce_add_f32_fallback
+  gpu.func @subgroup_reduce_add_f32_fallback(%arg0 : f32, %buf : memref<f32>) {
+    // CHECK-NOT: nvvm.redux.sync
+    // CHECK: nvvm.shfl.sync bfly
+    %result = gpu.subgroup_reduce add %arg0 uniform {} : (f32) -> (f32)
+    memref.store %result, %buf[] : memref<f32>
+    gpu.return
+  }
+
+  // CHECK-LABEL: func @subgroup_reduce_clustered_i32_fallback
+  gpu.func @subgroup_reduce_clustered_i32_fallback(%arg0 : i32,
+                                                   %buf : memref<i32>) {
+    // CHECK-NOT: nvvm.redux.sync
+    // CHECK: nvvm.shfl.sync bfly
+    %result = gpu.subgroup_reduce add %arg0 uniform cluster(size = 8) :
+        (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
+    gpu.return
+  }
+}
+
 gpu.module @test_module_31 {
   // CHECK: llvm.func @__nv_fmodf(f32, f32) -> f32
   // CHECK: llvm.func @__nv_fmod(f64, f64) -> f64
