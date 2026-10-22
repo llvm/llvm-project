@@ -1881,6 +1881,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(16);
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    Info.flags |= Flags & MachineMemOperand::MONonTemporal;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
     // flags appropriately.
     Info.order = AtomicOrdering::Monotonic;
