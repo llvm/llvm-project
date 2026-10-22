@@ -2558,7 +2558,8 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
   // Compute the raw string style to use in case this is a raw string literal
   // that can be reformatted.
   auto RawStringStyle = getRawStringStyle(Current, State);
-  if (RawStringStyle && !Current.Finalized) {
+  if (RawStringStyle && !Current.Finalized &&
+      (!Current.MacroCtx || Current.MacroCtx->Role != MR_ExpandedArg)) {
     Penalty = reformatRawStringLiteral(Current, State, *RawStringStyle, DryRun,
                                        Newline);
   } else if (Current.IsMultiline && Current.isNot(TT_BlockComment)) {

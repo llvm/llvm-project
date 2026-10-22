@@ -1942,8 +1942,14 @@ def riscv_pmqrwacc_h
     : RVSDNode<"PMQRWACC_H", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2wadda
     : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wadda_x
+    : RVSDNode<"PM2WADDA_X", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddau
     : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wsuba
+    : RVSDNode<"PM2WSUBA", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wsuba_x
+    : RVSDNode<"PM2WSUBA_X", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddasu
     : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningAcc>;
 
@@ -2063,6 +2069,16 @@ def riscv_pm2sub    : RVSDNode<"PM2SUB", SDT_RISCVHorizontalMul>;
 def riscv_pm2sub_x  : RVSDNode<"PM2SUB_X", SDT_RISCVHorizontalMul>;
 def riscv_pm4addsu  : RVSDNode<"PM4ADDSU", SDT_RISCVHorizontalMul>;
 def riscv_pm2addsu  : RVSDNode<"PM2ADDSU", SDT_RISCVHorizontalMul>;
+
+// Horizontal-multiply-and-accumulate internal helpers, used only to
+// synthesize the public pm2wadda(_x)/au/asu intrinsics on RV64 (never
+// exposed as IR intrinsics themselves).
+def SDT_RISCVHorizontalMulAcc
+    : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisVec<2>,
+                           SDTCisSameAs<2, 3>]>;
+def riscv_pm4adda   : RVSDNode<"PM4ADDA", SDT_RISCVHorizontalMulAcc>;
+def riscv_pm4addau  : RVSDNode<"PM4ADDAU", SDT_RISCVHorizontalMulAcc>;
+def riscv_pm4addasu : RVSDNode<"PM4ADDASU", SDT_RISCVHorizontalMulAcc>;
 
 // "Q-format" multiplication
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
@@ -2209,6 +2225,12 @@ class PatHorizontalMul<SDPatternOperator OpNode, RVInst Inst,
                        ValueType ResultVT, ValueType SrcVT>
     : Pat<(ResultVT (OpNode (SrcVT GPR:$rs1), (SrcVT GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
+
+class PatHorizontalMulAcc<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (OpNode (ResultVT GPR:$rd), (SrcVT GPR:$rs1),
+                            (SrcVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
 class PatPSh1Add<RVInst Inst, ValueType vt>
@@ -2756,9 +2778,18 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (riscv_pm2wadda (v2i32 GPRPair:$rd),
                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wadda_x (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddau (v2i32 GPRPair:$rd),
                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsuba (v2i32 GPRPair:$rd),
+                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUBA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsuba_x (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUBA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
                                      (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
@@ -3454,6 +3485,9 @@ let append Predicates = [IsRV64] in {
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4adda, PM4ADDA_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4addau, PM4ADDAU_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4addasu, PM4ADDASU_H, i64, v4i16>;
 
   // 8/16/32-bit multiply low patterns
   // FIXME custom lower

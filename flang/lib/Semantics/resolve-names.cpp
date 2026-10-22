@@ -172,18 +172,6 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
-    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
-    // recognized as intrinsic names when the enumeration-type feature is
-    // enabled, so that pre-F2023 programs may still use those names for
-    // implicit external procedures.  This gating is removed once the
-    // enumeration-type feature is fully implemented.
-    if (!context_->languageFeatures().IsEnabled(
-            common::LanguageFeature::EnumerationType)) {
-      const std::string nameStr{name.ToString()};
-      if (nameStr == "next" || nameStr == "previous") {
-        return false;
-      }
-    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
@@ -6580,16 +6568,6 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  const auto &source{
-      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
-  // ENUMERATION TYPE is an experimental feature: semantics are partially
-  // implemented.  FIR lowering is not implemented.
-  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
-    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
-    return false;
-  }
-  Say(source,
-      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
   BeginAttrs();
   return true;
 }
@@ -7282,9 +7260,23 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   if (!spec) {
     return;
   }
+  const auto &typeParamSpecs{std::get<std::list<parser::TypeParamSpec>>(x.t)};
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (spec->typeSymbol().get<DerivedTypeDetails>().isEnumerationType()) {
+    if (!typeParamSpecs.empty()) { // F2023 7.6.2
+      Say(typeName.source,
+          "Enumeration type '%s' has no type parameters"_err_en_US);
+    }
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(
+        GetDeclTypeSpecCategory(), std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
   bool seenAnyName{false};
-  for (const auto &typeParamSpec :
-      std::get<std::list<parser::TypeParamSpec>>(x.t)) {
+  for (const auto &typeParamSpec : typeParamSpecs) {
     const auto &optKeyword{
         std::get<std::optional<parser::Keyword>>(typeParamSpec.t)};
     std::optional<SourceName> name;
@@ -7314,17 +7306,6 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
-
-  // Enumeration types are a special case of derived types and are handled
-  // differently.
-  if (dtDetails.isEnumerationType()) {
-    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
-    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
-    SetDeclTypeSpec(type);
-    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
-    return;
-  }
-
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -8787,6 +8768,11 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveExtendsType(
       Say(extendsName->source,
           "Derived type '%s' cannot extend itself"_err_en_US);
     } else if (auto dtSpec{ResolveDerivedType(*extendsName)}) {
+      // Reject now so that no parent component of enumeration type is made.
+      if (IsEnumerationType(dtSpec->typeSymbol())) {
+        Say(extendsName->source, "The parent type is not extensible"_err_en_US);
+        return std::nullopt;
+      }
       if (!dtSpec->IsForwardReferenced()) {
         return dtSpec;
       }
