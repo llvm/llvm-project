@@ -223,7 +223,7 @@ Constant<Type<TypeCategory::Character>>::Constant(
     int kind, Scalar<Result> &&str)
     : kind_{kind}, values_{std::move(str)},
       length_{static_cast<ConstantSubscript>(values_.size())} {
-  CHECK(str.kind() == kind);
+  CHECK(values_.kind() == kind);
 }
 
 Constant<Type<TypeCategory::Character>>::Constant(int kind,

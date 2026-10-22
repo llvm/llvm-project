@@ -361,7 +361,7 @@ template <typename A> struct Extremum : public Operation<Extremum<A>, A, A, A> {
   }
   Extremum(Ordering ord, Expr<Operand> &&x, Expr<Operand> &&y)
       : Base{x.kind(), std::move(x), std::move(y)}, ordering{ord} {
-    CHECK(x.kind() == y.kind());
+    CHECK(this->left().kind() == this->right().kind());
   }
   bool operator==(const Extremum &) const;
   Ordering ordering{Ordering::Greater};
@@ -423,7 +423,7 @@ public:
       : kind_{thenVal.kind()}, condition_{std::move(cond)},
         thenValue_{std::move(thenVal)}, elseValue_{std::move(elseVal)} {
     CHECK_KIND(kind(), Result);
-    CHECK(thenVal.kind() == elseVal.kind());
+    CHECK(thenValue().kind() == elseValue().kind());
   }
   bool operator==(const ConditionalExpr &) const;
   Expr<LogicalResult> &condition() { return condition_.value(); }
@@ -775,7 +775,7 @@ public:
   }
   Relational(RelationalOperator r, Expr<Operand> &&a, Expr<Operand> &&b)
       : Base{LogicalResultKind, std::move(a), std::move(b)}, opr{r} {
-    CHECK(a.kind() == b.kind());
+    CHECK(this->left().kind() == this->right().kind());
   }
   static constexpr std::optional<DynamicType> GetType() {
     return DynamicType{TypeCategory::Logical, LogicalResultKind};

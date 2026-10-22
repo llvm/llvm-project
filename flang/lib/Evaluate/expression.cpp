@@ -395,7 +395,7 @@ LogicalOperation::LogicalOperation(
 LogicalOperation::LogicalOperation(
     LogicalOperator opr, Expr<Operand> &&x, Expr<Operand> &&y)
     : Base{x.kind(), std::move(x), std::move(y)}, logicalOperator{opr} {
-  CHECK(x.kind() == y.kind());
+  CHECK(left().kind() == right().kind());
 }
 
 Concat::Concat(const Expr<Type<TypeCategory::Character>> &x,
