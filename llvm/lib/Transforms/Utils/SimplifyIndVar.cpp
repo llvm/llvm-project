@@ -105,7 +105,7 @@ namespace {
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
-    bool replaceRemWithNumeratorOrZeroUpdateProfiles(SelectInst *SI);
+    bool replaceRemWithNumeratorOrZeroUpdateProfiles(SelectInst &SI);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
     bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
@@ -360,14 +360,14 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
 }
 
 bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
-    SelectInst *SI) {
+    SelectInst &SI) {
   // The select instruction condition is guaranteed to evaluate to true exactly
   // once through the duration of the loop if it is executed on every loop
   // iteration. So we set the branch weights to be {1, LoopIterations - 1}.
 
   // Check that the select instruction does execute every iteration.
   BasicBlock *Latch = L->getLoopLatch();
-  if (L->getExitingBlock() != Latch || !DT->dominates(SI->getParent(), Latch))
+  if (L->getExitingBlock() != Latch || !DT->dominates(SI.getParent(), Latch))
     return false;
 
   // Early exits also invalidate the assumption that the select instruction is
@@ -381,7 +381,7 @@ bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
     TripCount = getLoopEstimatedTripCount(L).value_or(0);
   if (!TripCount)
     return false;
-  setBranchWeights(*SI, {1, TripCount - 1}, /*IsExpected=*/false);
+  setBranchWeights(SI, {1, TripCount - 1}, /*IsExpected=*/false);
   return true;
 }
 
@@ -399,7 +399,7 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   ++NumElimRem;
   Changed = true;
   DeadInsts.emplace_back(Rem);
-  if (!replaceRemWithNumeratorOrZeroUpdateProfiles(Sel))
+  if (!replaceRemWithNumeratorOrZeroUpdateProfiles(*Sel))
     setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE);
 }
 
