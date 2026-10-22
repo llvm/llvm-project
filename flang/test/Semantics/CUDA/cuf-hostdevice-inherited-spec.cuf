@@ -132,7 +132,7 @@ contains
     extent = 1
   end function
   attributes(host,device) subroutine caller(a)
-    !ERROR: 'extent' may not be called in device code
+    !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     integer :: a(extent())
     a = 1
   end subroutine
