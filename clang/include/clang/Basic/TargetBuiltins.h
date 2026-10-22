@@ -486,8 +486,9 @@ namespace clang {
   namespace AVR {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsAVR.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsAVR.inc"
+#undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
   } // namespace AVR
