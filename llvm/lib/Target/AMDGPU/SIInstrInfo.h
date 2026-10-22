@@ -1848,7 +1848,7 @@ public:
 
   void handleCopyToPhysHelper(
       SIInstrWorklist &Worklist, Register DstReg, MachineInstr &Inst,
-      MachineRegisterInfo &MRI,
+      MachineRegisterInfo &MRI, MachineDominatorTree *MDT,
       DenseMap<MachineInstr *, V2PhysSCopyInfo> &WaterFalls,
       DenseMap<MachineInstr *, bool> &V2SPhyCopiesToErase) const;
 

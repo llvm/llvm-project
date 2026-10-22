@@ -438,3 +438,16 @@ def LDSDMAIntrinsicTable : GenericTable {
   let PrimaryKey = ["Intr"];
   let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }
+
+def VLdStIdxOpcodeInfoTable : GenericTable {
+  let FilterClass = "VLdStIdxOpcodeInfo";
+  let CppTypeName = "VLdStIdxOpcodeInfo";
+  let Fields = ["Opcode", "BitWidth", "IsStore", "IsGPRIdx"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVLdStIdxOpcodeInfoByOpcodeImpl";
+}
+
+def getVLdStIdxOpcodeInfoByKeyImpl : SearchIndex {
+  let Table = VLdStIdxOpcodeInfoTable;
+  let Key = ["BitWidth", "IsStore", "IsGPRIdx"];
+}
