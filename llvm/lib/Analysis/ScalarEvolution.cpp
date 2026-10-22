@@ -12261,45 +12261,9 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     return CmpInst::isRelational(P2) &&
            P1 == ICmpInst::getFlippedSignednessPredicate(P2);
   };
-  if (IsSignFlippedPredicate(Pred, FoundPred)) {
-    // Unsigned comparison is the same as signed comparison when both the
-    // operands are non-negative or negative.
-    if (haveSameSign(FoundLHS, FoundRHS) &&
-        isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
-      return true;
-    // Create local copies that we can freely swap and canonicalize our
-    // conditions to "le/lt".
-    CmpPredicate CanonicalPred = Pred, CanonicalFoundPred = FoundPred;
-    const SCEV *CanonicalLHS = LHS, *CanonicalRHS = RHS,
-               *CanonicalFoundLHS = FoundLHS, *CanonicalFoundRHS = FoundRHS;
-    if (ICmpInst::isGT(CanonicalPred) || ICmpInst::isGE(CanonicalPred)) {
-      CanonicalPred = ICmpInst::getSwappedCmpPredicate(CanonicalPred);
-      CanonicalFoundPred = ICmpInst::getSwappedCmpPredicate(CanonicalFoundPred);
-      std::swap(CanonicalLHS, CanonicalRHS);
-      std::swap(CanonicalFoundLHS, CanonicalFoundRHS);
-    }
-    assert((ICmpInst::isLT(CanonicalPred) || ICmpInst::isLE(CanonicalPred)) &&
-           "Must be!");
-    assert((ICmpInst::isLT(CanonicalFoundPred) ||
-            ICmpInst::isLE(CanonicalFoundPred)) &&
-           "Must be!");
-    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS)) {
-      // Use implication:
-      // x <u y && y >=s 0 --> x <s y.
-      // If we can prove the left part, the right part is also proven.
-      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
-                                CanonicalFoundLHS, CanonicalFoundRHS))
-        return true;
-    }
-    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS)) {
-      // Use implication:
-      // x <s y && y <s 0 --> x <u y.
-      // If we can prove the left part, the right part is also proven.
-      if (isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS, CanonicalRHS,
-                                CanonicalFoundLHS, CanonicalFoundRHS))
-        return true;
-    }
-  }
+  if (IsSignFlippedPredicate(Pred, FoundPred) &&
+      isImpliedCondViaSignFlippedPred(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    return true;
 
   // Check if we can make progress by sharpening ranges.
   if (FoundPred == ICmpInst::ICMP_NE &&
@@ -12392,6 +12356,42 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     return true;
 
   // Otherwise assume the worst.
+  return false;
+}
+
+bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
+    CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS, const SCEV *FoundLHS,
+    const SCEV *FoundRHS, const Instruction *CtxI) {
+  CmpPredicate FoundPred = ICmpInst::getFlippedSignednessPredicate(Pred);
+  // Unsigned comparison is the same as signed comparison when both the
+  // operands are non-negative or negative.
+  if (haveSameSign(FoundLHS, FoundRHS) &&
+      isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    return true;
+  // Canonicalize both conditions to "le/lt".
+  if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+    FoundPred = ICmpInst::getSwappedCmpPredicate(FoundPred);
+    std::swap(LHS, RHS);
+    std::swap(FoundLHS, FoundRHS);
+  }
+  assert((ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred)) && "Must be!");
+  assert((ICmpInst::isLT(FoundPred) || ICmpInst::isLE(FoundPred)) &&
+         "Must be!");
+  if (ICmpInst::isSigned(Pred) && isKnownNonNegative(RHS)) {
+    // Use implication:
+    // x <u y && y >=s 0 --> x <s y.
+    // If we can prove the left part, the right part is also proven.
+    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
+      return true;
+  }
+  if (ICmpInst::isUnsigned(Pred) && isKnownNegative(RHS)) {
+    // Use implication:
+    // x <s y && y <s 0 --> x <u y.
+    // If we can prove the left part, the right part is also proven.
+    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
+      return true;
+  }
   return false;
 }
 
