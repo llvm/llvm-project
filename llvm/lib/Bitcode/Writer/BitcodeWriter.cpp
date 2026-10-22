@@ -4595,6 +4595,12 @@ static void writeWholeProgramDevirtResolution(
   NameVals.push_back(StrtabBuilder.add(Wpd.SingleImplName));
   NameVals.push_back(Wpd.SingleImplName.size());
 
+  NameVals.push_back(Wpd.SpeculatedFnNames.size());
+  for (auto &FnName : Wpd.SpeculatedFnNames) {
+    NameVals.push_back(StrtabBuilder.add(FnName));
+    NameVals.push_back(FnName.size());
+  }
+
   NameVals.push_back(Wpd.ResByArg.size());
   for (auto &A : Wpd.ResByArg)
     writeWholeProgramDevirtResolutionByArg(NameVals, A.first, A.second);

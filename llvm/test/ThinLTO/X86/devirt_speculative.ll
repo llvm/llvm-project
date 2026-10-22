@@ -46,7 +46,7 @@
 ; RUN:   -wholeprogramdevirt-read-summary=%t6.o.thinlto.bc -S %t6.o -o - \
 ; RUN:   | FileCheck %s --check-prefix=DIST
 
-; INDEX: wpdRes: (kind: speculative, singleImplName: "_ZN1A1fEv")
+; INDEX: wpdRes: (kind: speculative, speculatedFnNames: ("_ZN1A1fEv"))
 
 ; DIST-LABEL: define i32 @test(
 ; DIST:         [[ICMP:%.*]] = icmp eq ptr [[FPTR:%.*]], @_ZN1A1fEv

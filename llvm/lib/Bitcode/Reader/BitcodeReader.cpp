@@ -7833,7 +7833,8 @@ parseWholeProgramDevirtResolutionByArg(ArrayRef<uint64_t> Record, size_t &Slot,
 
 static void parseWholeProgramDevirtResolution(ArrayRef<uint64_t> Record,
                                               StringRef Strtab, size_t &Slot,
-                                              TypeIdSummary &TypeId) {
+                                              TypeIdSummary &TypeId,
+                                              uint64_t Version) {
   uint64_t Id = Record[Slot++];
   WholeProgramDevirtResolution &Wpd = TypeId.WPDRes[Id];
 
@@ -7842,6 +7843,18 @@ static void parseWholeProgramDevirtResolution(ArrayRef<uint64_t> Record,
                         static_cast<size_t>(Record[Slot + 1])};
   Slot += 2;
 
+  if (Version >= 15) {
+    const uint64_t NumSpeculatedFnNames = Record[Slot++];
+    Wpd.SpeculatedFnNames.reserve(NumSpeculatedFnNames);
+    for (uint64_t I = 0; I < NumSpeculatedFnNames; ++I) {
+      Wpd.SpeculatedFnNames.emplace_back(Strtab.data() + Record[Slot],
+                                         static_cast<size_t>(Record[Slot + 1]));
+      Slot += 2;
+    }
+  } else if (Wpd.TheKind == WholeProgramDevirtResolution::Speculative) {
+    Wpd.SpeculatedFnNames.push_back(Wpd.SingleImplName);
+  }
+
   uint64_t ResByArgNum = Record[Slot++];
   for (uint64_t I = 0; I != ResByArgNum; ++I)
     parseWholeProgramDevirtResolutionByArg(Record, Slot, Wpd);
@@ -7849,7 +7862,8 @@ static void parseWholeProgramDevirtResolution(ArrayRef<uint64_t> Record,
 
 static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
                                      StringRef Strtab,
-                                     ModuleSummaryIndex &TheIndex) {
+                                     ModuleSummaryIndex &TheIndex,
+                                     uint64_t Version) {
   size_t Slot = 0;
   TypeIdSummary &TypeId = TheIndex.getOrInsertTypeIdSummary(
       {Strtab.data() + Record[Slot], static_cast<size_t>(Record[Slot + 1])});
@@ -7863,7 +7877,7 @@ static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
   TypeId.TTRes.InlineBits = Record[Slot++];
 
   while (Slot < Record.size())
-    parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId);
+    parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId, Version);
 }
 
 std::vector<FunctionSummary::ParamAccess>
@@ -8454,7 +8468,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_TYPE_ID:
-      parseTypeIdSummaryRecord(Record, Strtab, TheIndex);
+      parseTypeIdSummaryRecord(Record, Strtab, TheIndex, Version);
       break;
 
     case bitc::FS_TYPE_ID_METADATA:

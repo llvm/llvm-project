@@ -1,0 +1,10 @@
+---
+TypeIdMap:
+  _ZTS1A:
+    WPDRes:
+      0:
+        Kind: Speculative
+        SpeculatedFnNames:
+        - _ZN1A1fEv
+        - _ZN1B1fEv
+...

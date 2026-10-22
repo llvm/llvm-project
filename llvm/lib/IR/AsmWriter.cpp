@@ -3508,11 +3508,21 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl ||
-      WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
     Out << ", singleImplName: \"";
     printEscapedString(WPDRes.SingleImplName, Out);
     Out << "\"";
+  }
+
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
+    Out << ", speculatedFnNames: (";
+    llvm::interleaveComma(WPDRes.SpeculatedFnNames, Out,
+                          [&](const std::string &Name) {
+                            Out << '\"';
+                            printEscapedString(Name, Out);
+                            Out << '\"';
+                          });
+    Out << ')';
   }
 
   if (!WPDRes.ResByArg.empty()) {

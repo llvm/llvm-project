@@ -345,6 +345,10 @@ std::string llvm::computeLTOCacheKey(
       AddUnsigned(WPD.second.TheKind);
       AddString(WPD.second.SingleImplName);
 
+      AddUint64(WPD.second.SpeculatedFnNames.size());
+      for (auto &FnName : WPD.second.SpeculatedFnNames)
+        AddString(FnName);
+
       AddUint64(WPD.second.ResByArg.size());
       for (auto &ByArg : WPD.second.ResByArg) {
         AddUint64(ByArg.first.size());
@@ -2177,7 +2181,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead
   // performing IR-based WPD in hybrid regular/thin LTO mode).
-  std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
+  std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> LocalWPDTargetsMap;
   DenseSet<StringRef> ExternallyVisibleSymbolNames;
 
   // Used by the promotion-time renaming logic. When non-null, this set

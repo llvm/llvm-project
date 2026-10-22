@@ -1376,6 +1376,8 @@ struct WholeProgramDevirtResolution {
 
   std::string SingleImplName;
 
+  SmallVector<std::string, 2> SpeculatedFnNames;
+
   struct ByArg {
     enum Kind {
       Indir,            ///< Just do a regular virtual call
@@ -1667,7 +1669,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 14;
+  static constexpr uint64_t BitcodeSummaryVersion = 15;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
