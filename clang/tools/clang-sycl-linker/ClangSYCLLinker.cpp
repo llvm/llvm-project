@@ -748,7 +748,7 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
-  // FIXME(IGCA): Implement IGCA behavior. 
+  // FIXME(IGCA): Implement AOT compilation for IGCA targets.
   if (OA.isIntelIGCA())
     return createStringError("AOT compilation for IGCA target '" + Arch +
                              "' is not yet implemented");

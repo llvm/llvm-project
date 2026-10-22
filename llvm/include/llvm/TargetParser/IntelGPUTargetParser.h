@@ -38,8 +38,8 @@ enum GPUKind : uint8_t {
 };
 
 /// Represents an IGCA feature set, including whether or not it is exact. The
-/// values are bitfields where the last bit represents exact. See IGCA Target
-/// representation below for more info.
+/// values are bitfields where the lowest bit represents exact. See IGCATarget
+/// for the packed representation.
 enum class IGCAFeatureSet : uint8_t {
   Core = 0b000,
   Compute = 0b010,
@@ -71,7 +71,7 @@ public:
       : V(uint32_t(Target) << TargetShift |
           (llvm::to_underlying(FeatureSet) & FeatureSetMask)) {}
 
-  /// \return an invalid IGCATarget.
+  /// \return an invalid IGCATarget (whose packed representation is 0).
   static constexpr IGCATarget invalid() { return IGCATarget(0); }
 
   /// \return the packed uint32_t representation of the IGCA target.
@@ -128,13 +128,14 @@ LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 /// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
-/// Parse an IGCA target string, such as "igca_20ca". \return an invalid
-/// IGCATarget if \p TargetStr is not a known target in
-/// IntelGPUTargetParser.def
+/// Parse an IGCA target string such as "igca_20ca".
+///
+/// \return an invalid IGCATarget if \p TargetStr is not a known target in
+/// IntelGPUTargetParser.def.
 LLVM_ABI IGCATarget parseIGCATarget(StringRef TargetStr);
 
-/// \return the \p Target as a string, i.e. "igca_20ca". \return an empty string
-/// if \p Target is invalid or not a known target in IntelGPUTargetParser.def.
+/// \return the \p Target as a string, i.e. "igca_20ca", or an empty string if
+/// \p Target is invalid or not a known target in IntelGPUTargetParser.def.
 LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
 /// Append every valid IGCA target spelling to \p Values.

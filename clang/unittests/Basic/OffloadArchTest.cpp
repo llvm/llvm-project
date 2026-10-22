@@ -104,7 +104,7 @@ TEST(OffloadArchTest, AMDGPUSubArchRoundTrip) {
             llvm::Triple::NoSubArch);
 }
 
-// Test Intel IGCA target equal and comparsion operators:
+// Test equality and ordering of Intel IGCA targets.
 TEST(OffloadArchTest, IntelIGCAComparison) {
   // Listed in ascending order: by target level, then by feature set.
   const char *Ordered[] = {"igca_10", "igca_15r", "igca_20c", "igca_20ca",

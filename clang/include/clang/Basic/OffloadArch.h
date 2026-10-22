@@ -42,7 +42,7 @@ public:
     AMDGCNSPIRV, // The 'amdgcnspirv' pseudo target.
     IntelCPU,    // Kind is an IntelArch.
     IntelGPU,    // Kind is an IntelArch.
-    IntelIGCA,   // Kind is an Intel IGCA Target
+    IntelIGCA,   // Kind is an llvm::IntelGPU::IGCATarget.
     Generic,     // The 'generic' processor model.
   };
 
