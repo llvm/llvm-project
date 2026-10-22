@@ -664,10 +664,10 @@ function(lldb_add_rpaths name)
     BUILD_WITH_INSTALL_RPATH OFF
   )
   set_property(TARGET ${name} APPEND PROPERTY
-    BUILD_RPATH "${LIST_BUILD_RPATH}"
+    BUILD_RPATH ${LIST_BUILD_RPATH}
   )
   set_property(TARGET ${name} APPEND PROPERTY
-    INSTALL_RPATH "${LIST_INSTALL_RPATH}"
+    INSTALL_RPATH ${LIST_INSTALL_RPATH}
   )
 endfunction()
 
