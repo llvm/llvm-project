@@ -737,6 +737,16 @@ def uimm6s16 : Operand<i64>, ImmLeaf<i64,
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// uimm8sN predicate - True if the immediate is a multiple of N in the range
+// [0 * N, 255 * N].
+def UImm8s32Operand : UImmScaledMemoryIndexed<8, 32>;
+def uimm8s32 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm < (256*32) && ((Imm % 32) == 0); }]> {
+  let PrintMethod = "printImmScale<32>";
+  let ParserMatchClass = UImm8s32Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 def SImmS2XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N), MVT::i64);
 }]>;

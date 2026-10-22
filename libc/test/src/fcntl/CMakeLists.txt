@@ -35,7 +35,6 @@ add_libc_test(
     libc.hdr.types.struct_flock
     libc.hdr.fcntl_macros
     libc.hdr.stdio_macros
-    libc.hdr.sys_stat_macros
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -66,7 +65,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
-    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.fcntl.posix_fadvise
@@ -87,7 +85,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
-    libc.hdr.sys_stat_macros
     libc.hdr.types.off64_t
     libc.src.errno.errno
     libc.src.fcntl.creat
@@ -109,7 +106,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
-    libc.hdr.sys_stat_macros
     libc.hdr.types.off_t
     libc.hdr.types.struct_stat
     libc.src.__support.CPP.scope

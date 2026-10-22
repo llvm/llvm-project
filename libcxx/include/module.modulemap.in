@@ -186,10 +186,6 @@ module std_core {
       header "__type_traits/is_equality_comparable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_execution_policy {
-      header "__type_traits/is_execution_policy.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_final {
       header "__type_traits/is_final.h"
       export std_core.type_traits.integral_constant
@@ -1271,6 +1267,8 @@ module std {
 
   module execution {
     header "execution"
+    header "__execution/execution_policies.h"
+    header "__execution/is_execution_policy.h"
     export *
   }
 
@@ -1789,11 +1787,6 @@ module std {
   module new {
     header "new"
     module align_val_t          { header "__new/align_val_t.h" }
-    module allocate {
-      header "__new/allocate.h"
-      export std.utility.element_count // used as part of the API
-      export * // TODO: Workaround for https://llvm.org/PR120108
-    }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
@@ -2202,6 +2195,7 @@ module std {
 
   module thread {
     module formatter              { header "__thread/formatter.h" }
+    module hardware_concurrency   { header "__thread/hardware_concurrency.h" }
     module id                     { header "__thread/id.h" }
     module jthread                { header "__thread/jthread.h" }
     module poll_with_backoff      { header "__thread/poll_with_backoff.h" }

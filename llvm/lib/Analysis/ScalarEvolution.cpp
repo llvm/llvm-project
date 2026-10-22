@@ -4501,7 +4501,7 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return {};
-  return SI->second.getArrayRef();
+  return SI->second;
 }
 
 /// Erase Value from ValueExprMap and ExprValueMap. ValueExprMap.erase(V)
@@ -4511,9 +4511,8 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     auto EVIt = ExprValueMap.find(I->second);
-    bool Removed = EVIt->second.remove(V);
-    (void) Removed;
-    assert(Removed && "Value not in ExprValueMap?");
+    assert(is_contained(EVIt->second, V) && "Value not in ExprValueMap?");
+    llvm::erase(EVIt->second, V);
     ValueExprMap.erase(I);
   }
 }
@@ -4522,11 +4521,8 @@ void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
   // A recursive query may have already computed the SCEV. It should be
   // equivalent, but may not necessarily be exactly the same, e.g. due to lazily
   // inferred nowrap flags.
-  auto It = ValueExprMap.find_as(V);
-  if (It == ValueExprMap.end()) {
-    ValueExprMap.insert({SCEVCallbackVH(V, this), S});
-    ExprValueMap[S].insert(V);
-  }
+  if (ValueExprMap.insert({SCEVCallbackVH(V, this), S}).second)
+    ExprValueMap[S].push_back(V);
 }
 
 /// Return an existing SCEV if it exists, otherwise analyze the expression and
@@ -7100,12 +7096,16 @@ ScalarEvolution::getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
 
   // If Step can be both positive and negative, we need to find ranges for the
   // maximum absolute step values in both directions and union them.
-  auto [SR1, NSW1] = getRangeForAffineARHelper(
+  auto [SR, NSW] = getRangeForAffineARHelper(
       StepSRange.getSignedMin(), StartSRange, MaxBECount, /*Signed=*/true);
-  auto [SR2, NSW2] = getRangeForAffineARHelper(StepSRange.getSignedMax(),
-                                               StartSRange, MaxBECount,
-                                               /*Signed=*/true);
-  ConstantRange SR = SR1.unionWith(SR2);
+  // A singleton step has identical signed bounds, so the second computation
+  // would produce the same range and no-wrap result.
+  if (!StepSRange.isSingleElement()) {
+    auto [SRMax, NSWMax] = getRangeForAffineARHelper(
+        StepSRange.getSignedMax(), StartSRange, MaxBECount, /*Signed=*/true);
+    SR = SR.unionWith(SRMax);
+    NSW &= NSWMax;
+  }
 
   // Next, consider step unsigned.
   auto [UR, NUW] = getRangeForAffineARHelper(
@@ -7115,7 +7115,7 @@ ScalarEvolution::getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
   SCEVFlags Flags = SCEV::FlagNone;
   if (NUW)
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
-  if (NSW1 && NSW2)
+  if (NSW)
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
 
   // Finally, intersect signed and unsigned ranges.
@@ -7497,6 +7497,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       // Non-volatile memset / memcpy do not count as side-effect for forward
       // progress.
       if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
+
+      // Droppable intrinsics only model a memory write; they are not progress.
+      if (I->isDroppable())
         return false;
 
       return I->mayWriteToMemory();
@@ -11750,16 +11754,17 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     SCEVFlags XFlagsPresent;
     SCEVFlags YFlagsPresent;
 
+    // Use nullptr for 0, to avoid creating a zero SCEV.
     if (!splitBinaryAdd(X, XConstOp, XNonConstOp, XFlagsPresent)) {
-      XConstOp = getZero(X->getType());
+      XConstOp = nullptr;
       XNonConstOp = X;
       XFlagsPresent = ExpectedFlags;
     }
-    if (!isa<SCEVConstant>(XConstOp))
+    if (XConstOp && !isa<SCEVConstant>(XConstOp))
       return false;
 
     if (!splitBinaryAdd(Y, YConstOp, YNonConstOp, YFlagsPresent)) {
-      YConstOp = getZero(Y->getType());
+      YConstOp = nullptr;
       YNonConstOp = Y;
       YFlagsPresent = ExpectedFlags;
     }
@@ -11767,7 +11772,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     if (YNonConstOp != XNonConstOp)
       return false;
 
-    if (!isa<SCEVConstant>(YConstOp))
+    if (YConstOp && !isa<SCEVConstant>(YConstOp))
       return false;
 
     // When matching ADDs with NUW flags (and unsigned predicates), only the
@@ -11779,8 +11784,10 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       return false;
     }
 
-    OutC1 = cast<SCEVConstant>(XConstOp)->getAPInt();
-    OutC2 = cast<SCEVConstant>(YConstOp)->getAPInt();
+    OutC1 = XConstOp ? cast<SCEVConstant>(XConstOp)->getAPInt()
+                     : APInt::getZero(getTypeSizeInBits(X->getType()));
+    OutC2 = YConstOp ? cast<SCEVConstant>(YConstOp)->getAPInt()
+                     : APInt::getZero(getTypeSizeInBits(Y->getType()));
 
     return true;
   };
@@ -14861,7 +14868,7 @@ void ScalarEvolution::verify() const {
 
     // Check that the value is also part of the reverse map.
     auto It = ExprValueMap.find(KV.second);
-    if (It == ExprValueMap.end() || !It->second.contains(KV.first)) {
+    if (It == ExprValueMap.end() || !is_contained(It->second, KV.first)) {
       dbgs() << "Value " << *KV.first
              << " is in ValueExprMap but not in ExprValueMap\n";
       std::abort();
@@ -15602,9 +15609,7 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   if (Preds->implies(&Pred, SE))
     return;
 
-  SmallVector<const SCEVPredicate *, 4> NewPreds(Preds->getPredicates());
-  NewPreds.push_back(&Pred);
-  Preds = std::make_unique<SCEVUnionPredicate>(NewPreds, SE);
+  Preds = std::make_unique<SCEVUnionPredicate>(Preds->getUnionWith(&Pred, SE));
   updateGeneration();
 }
 
@@ -15651,8 +15656,7 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
 PredicatedScalarEvolution::PredicatedScalarEvolution(
     const PredicatedScalarEvolution &Init)
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
-      Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
-                                                 SE)),
+      Preds(std::make_unique<SCEVUnionPredicate>(*Init.Preds)),
       Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
