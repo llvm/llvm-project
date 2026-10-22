@@ -3515,7 +3515,7 @@ static Value *trySimplifyExpr(Instruction &Expr,
 /// %a stays intact because it is defined outside if.true.
 bool GVNPassImpl::foldOutsideConstExpr(Value *LHS, Value *RHS,
                                        const BasicBlockEdge &Root) {
-  if (!Opts.enable_fold_outside_const_expr)
+  if (!Opts->enable_fold_outside_const_expr)
     return false;
 
   if (!LHS || !RHS || !DT)
