@@ -1,0 +1,107 @@
+## Test that --unwind dumps both .eh_frame and .debug_frame.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --unwind %t | FileCheck %s
+# RUN: llvm-readelf --unwind %t | FileCheck %s
+
+# CHECK:      .eh_frame section at offset 0x40 address 0x0:
+# CHECK-NEXT:   [0x0] CIE length=20
+# CHECK-NEXT:     version: 1
+# CHECK-NEXT:     augmentation: zR
+# CHECK-NEXT:     code_alignment_factor: 1
+# CHECK-NEXT:     data_alignment_factor: -8
+# CHECK-NEXT:     return_address_register: 16
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:       DW_CFA_offset: reg16 -8
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:   [0x18] FDE length=20 cie=[0x0]
+# CHECK-NEXT:     initial_location: 0x20
+# CHECK-NEXT:     address_range: 0x0 (end : 0x20)
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT: .debug_frame section at offset 0x70 address 0x0:
+# CHECK-NEXT:   [0x0] CIE length=20
+# CHECK-NEXT:     version: 4
+# CHECK-NEXT:     augmentation:
+# CHECK-NEXT:     code_alignment_factor: 1
+# CHECK-NEXT:     data_alignment_factor: -8
+# CHECK-NEXT:     return_address_register: 0
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:       DW_CFA_offset: reg16 -8
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:   [0x18] FDE length=24 cie=[0x0]
+# CHECK-NEXT:     initial_location: 0x0
+# CHECK-NEXT:     address_range: 0x0 (end : 0x0)
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_advance_loc: 1 to 0x1
+# CHECK-NEXT:       DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:   [0x34] CIE length=20
+# CHECK-NEXT:     version: 4
+# CHECK-NEXT:     augmentation:
+# CHECK-NEXT:     code_alignment_factor: 1
+# CHECK-NEXT:     data_alignment_factor: -8
+# CHECK-NEXT:     return_address_register: 65
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:       DW_CFA_offset: reg16 -8
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:   [0x4c] FDE length=24 cie=[0x34]
+# CHECK-NEXT:     initial_location: 0x0
+# CHECK-NEXT:     address_range: 0x0 (end : 0x0)
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_advance_loc: 1 to 0x1
+# CHECK-NEXT:       DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:       DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:   [0x68] FDE length=24 cie=[0x34]
+# CHECK-NEXT:     initial_location: 0x0
+# CHECK-NEXT:     address_range: 0x0 (end : 0x0)
+# CHECK-EMPTY:
+# CHECK-NEXT:     Program:
+# CHECK-NEXT:       DW_CFA_advance_loc: 1 to 0x1
+# CHECK-NEXT:       DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:       DW_CFA_nop:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .eh_frame
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 8
+    Content:      1400000000000000017A5200017810011B0C070890010000140000001C00000000000000000000000000000000000000
+  - Name:         .debug_frame
+    Type:         SHT_PROGBITS
+    AddressAlign: 8
+    Content:      14000000FFFFFFFF040008000178000C0708900100000000180000000000000000000000000000000000000000000000410E100014000000FFFFFFFF040008000178410C0708900100000000180000003400000000000000000000000000000000000000410E1000180000003400000000000000000000000000000000000000410E1000
