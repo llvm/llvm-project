@@ -78,10 +78,16 @@ template <class... _Args>
 using __invoke_result_t _LIBCPP_NODEBUG =
     decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
 
+template <class, class... _Args>
+struct __invoke_result_impl {};
+
 template <class... _Args>
-struct _LIBCPP_NO_SPECIALIZATIONS __invoke_result {
-  using type = __invoke_result_t<_Args...>;
+struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...>>, _Args...> {
+  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
 };
+
+template <class... _Args>
+using __invoke_result _LIBCPP_NODEBUG = __invoke_result_impl<void, _Args...>;
 
 template <class _Void, class... _Args>
 inline const bool __is_invocable_impl = false;
