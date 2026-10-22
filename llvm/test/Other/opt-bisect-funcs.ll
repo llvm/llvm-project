@@ -102,8 +102,6 @@ bb.false:
   ret i32 0
 }
 
-; This function is here to verify that opt-bisect can skip all passes for
-; functions that contain lifetime intrinsics.
 define void @f4(i1 %cond) {
 entry:
   %i = alloca i32, align 4
