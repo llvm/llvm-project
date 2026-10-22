@@ -121,22 +121,11 @@ requires gathering finer-grained data (essentially benchmarking between anchor c
 reads JSONL with one object per measurement:
 
 ```
-# Print every measurement of a benchmark on a machine, one page of the query API at a time.
-fetch_series() {
-  local cursor=null page
-  while
-    page=$(jq -n --arg machine "$1" --arg test "$2" --argjson cursor "${cursor}"       \
-                '{metric: "execution_time", machine: $machine, test: [$test],
-                  sort: "commit", limit: 10000, cursor: $cursor}'                      \
-           | curl -sS --fail-with-body -X POST https://lnt.llvm.org/api/suites/libcxx/query \
-                  -H 'Content-Type: application/json' -d @-)
-    jq -c '.items[]' <<< "${page}"
-    cursor=$(jq '.cursor.next' <<< "${page}")
-    [ "${cursor}" != null ]
-  do :; done
-}
-
-fetch_series linux-x86_64-20260812 'rng::find_if_not(vector<bool>)_(process_all)/1024' \
+# Download every measurement of a benchmark on a machine, and find when it changed.
+curl -sS --fail --compressed -G https://lnt.llvm.org/api/suites/libcxx/series                   \
+     --data-urlencode machine=linux-x86_64-2026-10-16 --data-urlencode metric=execution_time    \
+     --data-urlencode 'test=rng::find_if_not(vector<bool>)_(process_all)/1024'                  \
+     --data-urlencode has_ordinal=true                                                          \
   | detect-changepoints --aggregate median
 ```
 

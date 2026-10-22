@@ -6195,6 +6195,18 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
 
+  // Without -vplan-outer-loop-legality-checks, trust the explicit vectorization
+  // pragma that vectorizing the outer loop is safe.
+  if (!IsInnerLoop && Opts.vplan_outer_loop_legality_checks &&
+      !proveOuterLoopMemorySafety(*VPlan0, PSE, *Legal->getAA(), VPDT,
+                                  OrigLoop)) {
+    reportVectorizationFailure(
+        "Cannot prove outer loop memory accesses safe",
+        "cannot prove memory accesses in outer loop are safe to vectorize",
+        "CantProveOuterLoopMemSafety", ORE, OrigLoop);
+    return nullptr;
+  }
+
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
