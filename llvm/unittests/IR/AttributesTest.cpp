@@ -884,7 +884,7 @@ TEST(Attributes, SetAddAttributesArrayUnsorted) {
   Attribute A1 = Attribute::get(C, "a", "1");
   Attribute B1 = Attribute::get(C, "b", "1");
   EXPECT_DEATH((void)AttributeSet().addSortedAttributes(C, {B1, A1}),
-               "Expected attributes sorted by kind");
+               "Expected sorted attributes with distinct kinds");
 }
 #endif
 #endif
