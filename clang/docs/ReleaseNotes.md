@@ -456,6 +456,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
 
+- `[[clang::musttail]]` calls to `[[noreturn]]` functions are no longer
+  rejected, matching GCC and other ways of declaring a function noreturn.
+
 ### Improvements to Clang's diagnostics
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
