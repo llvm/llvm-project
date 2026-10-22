@@ -153,6 +153,23 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
   bool expectedOptionalOperand = operandCount == 0;
   return success(expectedOptionalOperand != optOperand.has_value());
 }
+static ParseResult parseTwoPhaseRegionHeader(OpAsmParser &parser,
+                                             Region &region) {
+  SmallVector<OpAsmParser::Argument> args;
+  if (parser.parseArgumentList(args, OpAsmParser::Delimiter::Paren,
+                               /*allowType=*/true))
+    return failure();
+  parser.stashRegionArguments(region, args);
+  return success();
+}
+static ParseResult parseTwoPhaseRegionBody(OpAsmParser &parser,
+                                           Region &region) {
+  auto args = parser.takeRegionArguments(region);
+  auto result = parser.parseOptionalRegion(region, args);
+  if (result.has_value())
+    return *result;
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // Printing
@@ -233,6 +250,22 @@ static void printCustomDirectiveOptionalOperandRef(OpAsmPrinter &printer,
                                                    Operation *op,
                                                    Value optOperand) {
   printer << (optOperand ? "1" : "0");
+}
+static void printTwoPhaseRegionHeader(OpAsmPrinter &printer, Operation *op,
+                                      Region &region) {
+  printer << '(';
+  if (!region.empty()) {
+    llvm::interleaveComma(
+        region.front().getArguments(), printer,
+        [&](BlockArgument arg) { printer.printRegionArgument(arg); });
+  }
+  printer << ')';
+}
+static void printTwoPhaseRegionBody(OpAsmPrinter &printer, Operation *op,
+                                    Region &region) {
+  if (!region.empty())
+    printer.printRegion(region, /*printEntryBlockArgs=*/false,
+                        /*printBlockTerminators=*/false);
 }
 //===----------------------------------------------------------------------===//
 // Test parser.
