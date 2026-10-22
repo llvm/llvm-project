@@ -181,7 +181,8 @@ public:
   }
 
   Error setContext() override { return Plugin::success(); }
-  Error initImpl(GenericPluginTy &Plugin) override;
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
@@ -571,7 +572,11 @@ public:
                                           void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
-  uint64_t getClockFrequency() const override { return getClockRate(); }
+  /// This is the frequency of the counter read by `__builtin_readsteadycounter`
+  /// in device code, which has no SPIR-V lowering yet. Report zero for now.
+  /// TODO: Return the counter frequency once `readsteadycounter` is
+  /// implemented for SPIR-V.
+  uint64_t getClockFrequency() const override { return 0; }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
   Error getDeviceMemorySize(uint64_t &DSize) override {
     DSize = getGlobalMemorySize();

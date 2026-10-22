@@ -892,12 +892,13 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 
 TEST(ConstantsTest, Float128Test) {
   LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("", C);
   LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
   LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
   LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
   LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
   LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
   LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
@@ -918,6 +919,7 @@ TEST(ConstantsTest, Float128Test) {
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
+  LLVMDisposeModule(M);
   LLVMContextDispose(C);
 }
 
@@ -996,6 +998,34 @@ TEST(ConstantsTest, GetElementPtrDataLayout) {
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
   // Can't represent sext(constexpr).
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
+}
+
+TEST(ConstantsTest, PtrAddCAPI) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+
+  EXPECT_EQ(
+      unwrap(LLVMConstPtrAdd(wrap(Ptr), wrap(I64_1), LLVMGEPFlagNUW)),
+      ConstantExpr::getPtrAdd(Ptr, I64_1, GEPNoWrapFlags::noUnsignedWrap()));
+
+  LLVMValueRef Indices[1] = {wrap(I64_1)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices, 1, LLVMGEPFlagInBounds)),
+            ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_1,
+                                           GEPNoWrapFlags::inBounds()));
+
+  LLVMValueRef Indices2[1] = {wrap(PtrToInt)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices2, 1, 0)),
+            nullptr);
 }
 
 } // end anonymous namespace

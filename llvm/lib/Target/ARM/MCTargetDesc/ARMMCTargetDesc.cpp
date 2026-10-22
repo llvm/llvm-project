@@ -355,10 +355,8 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createARMELFStreamer(
-      Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
-      (T.getArch() == Triple::thumb || T.getArch() == Triple::thumbeb),
-      T.isAndroid());
+  return createARMELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                              std::move(Emitter), T.isThumb(), T.isAndroid());
 }
 
 static MCStreamer *

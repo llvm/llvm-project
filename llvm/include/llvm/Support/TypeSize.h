@@ -371,7 +371,7 @@ public:
   operator ScalarTy() const {
     if (isScalable()) {
       reportFatalInternalError(
-          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "cannot implicitly convert a scalable size to a fixed-width size in "
           "`TypeSize::operator ScalarTy()`");
     }
     return getFixedValue();

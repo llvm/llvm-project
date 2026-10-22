@@ -281,6 +281,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_eventfd_macros
+  HDR
+    sys-eventfd-macros.h
+)
+
+add_macro_header(
   sys_file_macros
   HDR
     sys-file-macros.h
@@ -290,6 +296,12 @@ add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_macro_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
 )
 
 add_macro_header(

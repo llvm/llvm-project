@@ -87,42 +87,29 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "APIs supported by the context with dlopen: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
                   << (LaunchKernelWithArguments.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zexKernelGetArgumentSize: "
-                  << (KernelGetArgumentSize.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
                   << (CommandListAppendHostFunction.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  if (!LaunchKernelWithArguments)
-    LaunchKernelWithArguments.loadExperimental(
-        zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
+  LaunchKernelWithArguments.loadExperimental(
+      zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
 
-  if (!KernelGetArgumentSize)
-    KernelGetArgumentSize.loadExperimental(zeDriver,
-                                           "zexKernelGetArgumentSize");
-
-  if (!CommandListAppendHostFunction)
-    CommandListAppendHostFunction.loadExperimental(
-        zeDriver, "zeCommandListAppendHostFunction");
+  CommandListAppendHostFunction.loadExperimental(
+      zeDriver, "zeCommandListAppendHostFunction");
   if (!CommandListAppendHostFunction)
     // Try again with a name used in compute runtime 25.35 to 25.48
     CommandListAppendHostFunction.loadExperimental(
         zeDriver, "zexCommandListAppendHostFunction");
 
-  if (!DriverGetDefaultContext)
-    DriverGetDefaultContext.loadExperimental(zeDriver,
-                                             "zeDriverGetDefaultContext");
-
-  if (!IntelGetDriverVersionString)
-    IntelGetDriverVersionString.loadExperimental(
-        zeDriver, "zeIntelGetDriverVersionString");
+  DriverGetDefaultContext.loadExperimental(zeDriver,
+                                           "zeDriverGetDefaultContext");
+  IntelGetDriverVersionString.loadExperimental(zeDriver,
+                                               "zeIntelGetDriverVersionString");
 
   ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
                   << (LaunchKernelWithArguments.available() ? "yes" : "no");
-  ODBG(OLDT_Init) << "  zexKernelGetArgumentSize: "
-                  << (KernelGetArgumentSize.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
                   << (CommandListAppendHostFunction.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "

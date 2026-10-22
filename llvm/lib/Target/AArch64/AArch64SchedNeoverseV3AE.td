@@ -928,16 +928,15 @@ def V3AERd_ZBFMAL : SchedReadAdvance<3, [V3AEWr_ZBFMAL]>;
 // Define types with long resource cycles (rc)
 
 def V3AEWrite_6c_1V1_5rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  6; let ReleaseAtCycles = [5]; }
+def V3AEWrite_7c_1M0_7rc    : SchedWriteRes<[V3AEUnitM0]>  { let Latency =  7; let ReleaseAtCycles = [7]; }
 def V3AEWrite_9c_1V1_2rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [2]; }
 def V3AEWrite_9c_1V1_4rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [4]; }
 def V3AEWrite_10c_1V1_9rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 10; let ReleaseAtCycles = [9]; }
 def V3AEWrite_11c_1V1_4rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 11; let ReleaseAtCycles = [4]; }
-def V3AEWrite_12c_1M0_12rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 12; let ReleaseAtCycles = [12]; }
 def V3AEWrite_12c_1V0_11rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 12; let ReleaseAtCycles = [11]; }
 def V3AEWrite_13c_1V1_8rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 13; let ReleaseAtCycles = [8]; }
 def V3AEWrite_14c_1V1_2rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 14; let ReleaseAtCycles = [2]; }
 def V3AEWrite_20c_1V0_20rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
-def V3AEWrite_20c_1M0_20rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -1018,8 +1017,8 @@ def : SchedAlias<WriteImm, V3AEWrite_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V3AEWrite_12c_1M0_12rc>;
-def : SchedAlias<WriteID64,  V3AEWrite_20c_1M0_20rc>;
+def : SchedAlias<WriteID32,  V3AEWrite_7c_1M0_7rc>;
+def : SchedAlias<WriteID64,  V3AEWrite_7c_1M0_7rc>;
 
 def : SchedAlias<WriteIM32, V3AEWrite_2c_1M>;
 def : SchedAlias<WriteIM64, V3AEWrite_2c_1M>;

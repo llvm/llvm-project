@@ -49,8 +49,8 @@
 ; O0-NEXT:     x86-dyn-alloca-expander
 ; O0-NEXT:     x86-fast-pre-tile-config
 ; O0-NEXT:     phi-node-elimination
-; O0-NEXT:     two-address-instruction
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     x86-fast-tile-config
 ; O0-NEXT:     x86-lower-tile-copy
 ; O0-NEXT:     x86-fp-stackifier
 ; O0-NEXT:     remove-redundant-debug-values
@@ -142,6 +142,7 @@
 ; O2-NEXT:     dead-mi-elimination
 ; O2-NEXT:     LiveRangeShrinkPass
 ; O2-NEXT:     x86-fixup-setcc
+; O2-NEXT:     x86-optimize-leas
 ; O2-NEXT:     x86-cf-opt
 ; O2-NEXT:     x86-avoid-sfb
 ; O2-NEXT:     x86-suppress-apx-for-relocation
@@ -151,12 +152,11 @@
 ; O2-NEXT:     x86-pre-tile-config
 ; O2-NEXT:     detect-dead-lanes
 ; O2-NEXT:     init-undef
-; O2-NEXT:     process-imp-defs
+; O2-NEXT:     process-implicit-defs
 ; O2-NEXT:     unreachable-mbb-elimination
-; O2-NEXT:     require<live-vars>
+; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
-; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     two-address-instruction
 ; O2-NEXT:     register-coalescer
 ; O2-NEXT:     rename-independent-subregs
@@ -190,9 +190,10 @@
 ; O2-NEXT:     x86-indirect-branch-tracking
 ; O2-NEXT:     x86-insert-vzeroupper
 ; O2-NEXT:     x86-fixup-bw-insts
+; O2-NEXT:     x86-pad-short-functions
 ; O2-NEXT:     x86-fixup-leas
 ; O2-NEXT:     x86-fixup-inst-tuning
-; O2-NEXT:     x86-fixup-inst-tuning
+; O2-NEXT:     x86-fixup-vector-constants
 ; O2-NEXT:     x86-compress-evex
 ; O2-NEXT:     x86-insert-x87-wait
 ; O2-NEXT:     funclet-layout
@@ -252,8 +253,8 @@
 ; O0-WINDOWS-NEXT:     x86-dyn-alloca-expander
 ; O0-WINDOWS-NEXT:     x86-fast-pre-tile-config
 ; O0-WINDOWS-NEXT:     phi-node-elimination
-; O0-WINDOWS-NEXT:     two-address-instruction
 ; O0-WINDOWS-NEXT:     regallocfast
+; O0-WINDOWS-NEXT:     x86-fast-tile-config
 ; O0-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O0-WINDOWS-NEXT:     x86-fp-stackifier
 ; O0-WINDOWS-NEXT:     remove-redundant-debug-values
@@ -278,6 +279,7 @@
 ; O0-WINDOWS-NEXT:     x86-seses
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O0-WINDOWS-NEXT:     cfguard-longjmp
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
 ; O0-WINDOWS-NEXT:     unpack-mi-bundles
@@ -348,6 +350,7 @@
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
 ; O3-WINDOWS-NEXT:     LiveRangeShrinkPass
 ; O3-WINDOWS-NEXT:     x86-fixup-setcc
+; O3-WINDOWS-NEXT:     x86-optimize-leas
 ; O3-WINDOWS-NEXT:     x86-cf-opt
 ; O3-WINDOWS-NEXT:     x86-avoid-sfb
 ; O3-WINDOWS-NEXT:     x86-suppress-apx-for-relocation
@@ -357,12 +360,11 @@
 ; O3-WINDOWS-NEXT:     x86-pre-tile-config
 ; O3-WINDOWS-NEXT:     detect-dead-lanes
 ; O3-WINDOWS-NEXT:     init-undef
-; O3-WINDOWS-NEXT:     process-imp-defs
+; O3-WINDOWS-NEXT:     process-implicit-defs
 ; O3-WINDOWS-NEXT:     unreachable-mbb-elimination
-; O3-WINDOWS-NEXT:     require<live-vars>
+; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     require<machine-loops>
 ; O3-WINDOWS-NEXT:     phi-node-elimination
-; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     two-address-instruction
 ; O3-WINDOWS-NEXT:     register-coalescer
 ; O3-WINDOWS-NEXT:     rename-independent-subregs
@@ -396,9 +398,10 @@
 ; O3-WINDOWS-NEXT:     x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT:     x86-insert-vzeroupper
 ; O3-WINDOWS-NEXT:     x86-fixup-bw-insts
+; O3-WINDOWS-NEXT:     x86-pad-short-functions
 ; O3-WINDOWS-NEXT:     x86-fixup-leas
 ; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
-; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
+; O3-WINDOWS-NEXT:     x86-fixup-vector-constants
 ; O3-WINDOWS-NEXT:     x86-compress-evex
 ; O3-WINDOWS-NEXT:     x86-insert-x87-wait
 ; O3-WINDOWS-NEXT:     funclet-layout
@@ -410,6 +413,7 @@
 ; O3-WINDOWS-NEXT:     x86-seses
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O3-WINDOWS-NEXT:     cfguard-longjmp
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
 ; O3-WINDOWS-NEXT:     unpack-mi-bundles

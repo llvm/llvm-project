@@ -929,7 +929,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
 
 MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     bool IsIndirect =
         (TargetFlags & ARMII::MO_NONLAZY) && getTM().isGVIndirectSymbol(GV);
