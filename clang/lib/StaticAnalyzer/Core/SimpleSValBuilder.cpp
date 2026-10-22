@@ -336,6 +336,10 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (LSym->getType() != CommonTy || RSym->getType() != CommonTy)
     return std::nullopt;
 
+  APSIntType CommonAPSIntTy = BV.getAPSIntType(CommonTy);
+  if (APSIntType(LInt) != CommonAPSIntTy || APSIntType(RInt) != CommonAPSIntTy)
+    return std::nullopt;
+
   auto InBounds = [State](auto... X) {
     return (... && isWithinConstantOverflowBounds(X, State));
   };
@@ -347,10 +351,6 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
         .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .getAs<NonLoc>();
-
-  APSIntType CommonAPSIntTy = BV.getAPSIntType(CommonTy);
-  CommonAPSIntTy.apply(LInt);
-  CommonAPSIntTy.apply(RInt);
 
   auto MakeSymExprVal = [&SVB, CommonTy](SymbolRef Lhs, BinaryOperatorKind Op,
                                          SymbolRef Rhs) {
