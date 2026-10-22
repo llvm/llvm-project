@@ -114,7 +114,7 @@ int p(std::expected<int, Error> e) {
 
 ## Limitations
 
-The check does not yet model some member functions of `std::expected`. These
+1. The check does not yet model some member functions of `std::expected`. These
 are known, temporary limitations:
 
 - `swap`. For example, the check does not know that after `a.swap(b)`, `a`
@@ -138,5 +138,9 @@ int g(std::expected<int, Error> e) {
 }
 ```
 
-GoogleTest assertions such as `ASSERT_TRUE(e.has_value())` are not recognized
+2. **GoogleTest assertions** such as `ASSERT_TRUE(e.has_value())` are not recognized
 yet; support for them is planned.
+
+3. **Lambdas.** The check does not currently report unsafe expected accesses in lambdas; support for analyzing is planned.
+
+4. **Derived classes.** Classes derived from `std::expected` are not analyzed by this check.
