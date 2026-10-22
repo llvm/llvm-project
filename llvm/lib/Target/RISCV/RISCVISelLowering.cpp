@@ -19427,13 +19427,13 @@ static SDValue combineAddPackedByteDot(SDNode *N, SelectionDAG &DAG,
     if (!sd_match(N->getOperand(I), m_OneUse(m_Node(ISD::BUILD_VECTOR,
                                                     m_Value(Lo), m_Value(Hi)))))
       continue;
-    // Splitting is profitable if at least one dot can fold into its add.
-    if (!Lo.hasOneUse() && !Hi.hasOneUse())
-      continue;
     unsigned Opc = Lo.getOpcode();
     if (Opc != Hi.getOpcode() ||
         (Opc != RISCVISD::PM4ADD && Opc != RISCVISD::PM4ADDU &&
          Opc != RISCVISD::PM4ADDSU))
+      continue;
+    // Splitting is profitable if at least one dot can fold into its add.
+    if (!Lo.hasOneUse() && !Hi.hasOneUse())
       continue;
 
     SDLoc DL(N);

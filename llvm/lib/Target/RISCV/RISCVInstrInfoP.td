@@ -2214,7 +2214,7 @@ class PatHorizontalMulAdd<SDPatternOperator OpNode, RVInst Inst,
                           ValueType ResultVT, ValueType SrcVT>
     : Pat<(ResultVT (add (ResultVT GPR:$rd),
                         (binop_oneuse<OpNode> (SrcVT GPR:$rs1),
-                                             (SrcVT GPR:$rs2)))),
+                                              (SrcVT GPR:$rs2)))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
