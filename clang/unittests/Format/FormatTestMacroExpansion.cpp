@@ -230,8 +230,14 @@ a))",
 TEST_F(FormatTestMacroExpansion, KeepParensWhenExpandingObjectLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("FN=class C { int f");
+  Style.Macros.push_back("FN_ARG(x)=class C { int f(x)");
   verifyFormat("void f() {\n"
                "  FN(a *b);\n"
+               "  };\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  FN_ARG(a *b);\n"
                "  };\n"
                "}",
                Style);
@@ -245,6 +251,7 @@ TEST_F(FormatTestMacroExpansion, ShortFunctionsAndBlocksWithMacroExpansion) {
       "VERY_LONG_MACRO_NAME(x)=x",
       "EXPANDS_LONG(x)=very_long_function_call(x)",
       "IF_ERROR_RETURN(x)=if (x) return x",
+      "ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c",
       "STMTS=f(); g();",
       "STMTS_NO_SEMI=f(); g()",
   };
@@ -264,14 +271,18 @@ TEST_F(FormatTestMacroExpansion, ShortFunctionsAndBlocksWithMacroExpansion) {
                "      c;\n"
                "}",
                Style);
-  verifyFormat("void f() {\n"
-               "  IF_ERROR_RETURN(x);\n"
-               "}",
-               Style);
+  verifyFormat("void f() { IF_ERROR_RETURN(x); }", Style);
   verifyFormat("void f() {\n"
                "  IF_ERROR_RETURN(a * b);\n"
                "}",
                Style);
+  verifyFormat("void f() {\n"
+               "  ASSIGN_OR_RETURN(v, F(), R());\n"
+               "}",
+               Style);
+  FormatStyle Style50 = Style;
+  Style50.ColumnLimit = 50;
+  verifyFormat("void f() { ASSIGN_OR_RETURN(v, F(), R()); }", Style50);
   verifyFormat("void f() {\n"
                "  STMTS\n"
                "}",
@@ -285,8 +296,23 @@ TEST_F(FormatTestMacroExpansion, ShortFunctionsAndBlocksWithMacroExpansion) {
                "  if (a) ID(b *c);\n"
                "  if (a)\n"
                "    VERY_LONG_MACRO_NAME(b *c);\n"
-               "  if (a)\n"
-               "    IF_ERROR_RETURN(b * c);\n"
+               "  if (a) IF_ERROR_RETURN(b * c);\n"
+               "}",
+               Style);
+
+  verifyFormat("void f(int very_long_param_1,\n"
+               "       int very_long_param_2) {}\n"
+               "class SomeVeryLongClassName\n"
+               "    : public BaseClassName {};\n"
+               "void g() { ID(a *b); }",
+               "void f(int very_long_param_1,\n"
+               "       int very_long_param_2) {\n"
+               "}\n"
+               "class SomeVeryLongClassName\n"
+               "    : public BaseClassName {\n"
+               "};\n"
+               "void g() {\n"
+               "  ID(a *b);\n"
                "}",
                Style);
 }
