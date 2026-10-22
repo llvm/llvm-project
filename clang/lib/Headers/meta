@@ -10,15 +10,14 @@
 #ifndef __CLANG_META
 #define __CLANG_META
 
-#if !defined(__cplusplus)
+#if !defined(__clang__)
+#error "this meta header was vendored by clang and only works when compiling with clang"
+#elif !defined(__cplusplus)
 #error "meta header is only available in C++ mode"
-#endif
-
-#if !defined(__cpp_impl_reflection)
+#elif !defined(__CLANG_CXX_REFLECTION__)
 #error "meta header is only available when -freflection is enabled"
-#endif
+#else
 
-#define __cpp_lib_reflection 202506L
 
 namespace std {
 namespace meta {
@@ -31,5 +30,7 @@ consteval bool is_type(info __r) {
 
 } // namespace meta
 } // namespace std
+
+#endif
 
 #endif // __CLANG_META

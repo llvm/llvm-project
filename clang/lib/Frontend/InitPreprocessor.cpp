@@ -768,7 +768,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++26 reflection.
   if (LangOpts.Reflection)
-    Builder.defineMacro("__cpp_impl_reflection", "202506L");
+    Builder.defineMacro("__CLANG_CXX_REFLECTION__");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");

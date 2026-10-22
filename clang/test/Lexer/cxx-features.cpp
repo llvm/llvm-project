@@ -16,7 +16,6 @@
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
 // RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify %s
 // RUN: %clang_cc1 -std=c++2a -fno-char8_t -DNO_EXCEPTIONS -DNO_CHAR8_T -verify %s
-// RUN: %clang_cc1 -std=c++2c -freflection -DNO_EXCEPTIONS -DREFLECTION -verify %s
 
 // expected-no-diagnostics
 
@@ -57,11 +56,6 @@
 
 #if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
 #error "wrong value for __cpp_trivial_relocatability"
-#endif
-
-#if defined(REFLECTION) ? check(impl_reflection, 0, 0, 0, 0, 0, 0, 202506) : \
-                          check(impl_reflection, 0, 0, 0, 0, 0, 0, 0)
-#error "wrong value for __cpp_impl_reflection"
 #endif
 
 // --- C++23 features ---
