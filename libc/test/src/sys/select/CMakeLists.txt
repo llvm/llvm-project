@@ -8,9 +8,6 @@ add_libc_test(
   SRCS
     select_ui_test.cpp
   DEPENDS
-    libc.hdr.sys_select_macros
-    libc.hdr.types.fd_set
-    libc.hdr.types.struct_timeval
     libc.include.unistd
     libc.src.errno.errno
     libc.src.sys.select.select
@@ -26,9 +23,6 @@ add_libc_test(
   SRCS
     select_failure_test.cpp
   DEPENDS
-    libc.hdr.sys_select_macros
-    libc.hdr.types.fd_set
-    libc.hdr.types.struct_timeval
     libc.include.unistd
     libc.src.errno.errno
     libc.src.sys.select.select
