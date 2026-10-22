@@ -2512,17 +2512,15 @@ bool llvm::collectCompressedPtrs(
     const SCEV *PtrSCEV =
         SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
 
-    SCEVUse Step;
+    // Check the pointer is described by an add recurrence with a step matching
+    // the access type size.
+    unsigned AccessSize = DL.getTypeAllocSize(AccessTy).getFixedValue();
     if (!match(PtrSCEV,
-               m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step), m_SpecificLoop(&L))))
+               m_scev_AffineAddRec(m_SCEV(), m_scev_SpecificInt(AccessSize),
+                                   m_SpecificLoop(&L))))
       return nullptr;
 
-    // Check if pointer step equals access size.
-    const SCEVAddRecExpr *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
-    if (Step != SE.getSizeOfExpr(Step->getType(), AccessTy))
-      return nullptr;
-
-    return PtrAddRec;
+    return cast<SCEVAddRecExpr>(PtrSCEV);
   };
 
   SmallPtrSet<Use *, 16> Seen;
