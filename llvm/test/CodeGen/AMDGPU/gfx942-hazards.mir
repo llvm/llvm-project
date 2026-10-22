@@ -117,11 +117,10 @@ body:             |
     $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec
 ...
 
-# GCN-LABEL: name: valu_write_vcc_valu_read_as_constant
+# GCN-LABEL: name: valu_write_vcc_valu_read_as_carry
 # GCN:      V_CMP_NE_U32_e32
-# GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ADDC_U32_e32
-name:            valu_write_vcc_valu_read_as_constant
+name:            valu_write_vcc_valu_read_as_carry
 body:             |
   bb.0:
     V_CMP_NE_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec

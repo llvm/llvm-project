@@ -107,8 +107,6 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  .LBB0_11: ; %._crit_edge2105.i.i.i2330.loopexit
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    v_cmp_nlg_f64_e64 s[6:7], 0, v[26:27]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    v_cndmask_b32_e64 v26, 0, 1, s[6:7]
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[14:15]
 ; CHECK-NEXT:    v_mov_b32_e32 v27, v26
@@ -116,6 +114,8 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cselect_b32 s6, 0, s20
 ; CHECK-NEXT:    s_cselect_b32 s17, s17, 0
 ; CHECK-NEXT:    s_cselect_b32 s16, s16, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[26:27], s[8:9]
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_12: ; %DummyReturnBlock

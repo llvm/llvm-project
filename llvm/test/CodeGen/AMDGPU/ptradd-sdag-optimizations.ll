@@ -196,7 +196,6 @@ define ptr addrspace(1) @shl_neg_offset(ptr addrspace(1) %p, i64 %noffset, i64 %
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshlrev_b64 v[2:3], v4, v[2:3]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %offset = sub i64 0, %noffset
