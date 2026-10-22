@@ -1,5 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-max-loop 4 -analyzer-config widen-loops=true -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -DTEST_NULL_TERM -analyzer-checker=core,unix.Malloc,debug.ExprInspection,alpha.cplusplus.IteratorRange -analyzer-max-loop 4 -analyzer-config widen-loops=true -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-max-loop 4 -analyzer-config widen-loops=true,unroll-loops=false -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -DTEST_NULL_TERM -analyzer-checker=core,unix.Malloc,debug.ExprInspection,alpha.cplusplus.IteratorRange -analyzer-max-loop 4 -analyzer-config widen-loops=true,unroll-loops=false -verify -analyzer-config eagerly-assume=false %s
+// Note: unroll-loops=false is intentional - this test validates loop widening behavior,
+// which is a different technique from loop unrolling. Widening invalidates variables after
+// a certain number of iterations, and this test checks that specific behavior.
 
 void clang_analyzer_eval(int);
 void clang_analyzer_warnIfReached(void);

@@ -660,8 +660,9 @@ void test_if_jumps() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B4.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2: [B5.2].~A() (Implicit destructor)
+// CHECK-NEXT:   1: WhileStmt (LoopExit)
+// CHECK-NEXT:   2: [B4.4].~A() (Implicit destructor)
+// CHECK-NEXT:   3: [B5.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -707,12 +708,13 @@ void test_while_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B10.4].~A() (Implicit destructor)
-// WARNINGS-NEXT:   2:  (CXXConstructExpr, A)
-// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], A)
-// CHECK-NEXT:   3: A e;
-// CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:   1: WhileStmt (LoopExit)
+// CHECK-NEXT:   2: [B10.4].~A() (Implicit destructor)
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
+// CHECK-NEXT:   4: A e;
+// CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B11.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -801,24 +803,28 @@ void test_while_jumps() {
   A e;
 }
 
-// CHECK:      [B4 (ENTRY)]
-// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B5 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B1]
-// CHECK-NEXT:   1: UV
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, _Bool)
-// CHECK-NEXT:   T: do ... while [B1.2]
+// CHECK-NEXT:   1: DoStmt (LoopExit)
 // CHECK-NEXT:   Preds (1): B2
-// CHECK-NEXT:   Succs (2): B3 B0
+// CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
-// WARNINGS-NEXT:   1:  (CXXConstructExpr, A)
-// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B2.2], A)
-// CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
-// CHECK-NEXT:   Preds (2): B3 B4
-// CHECK-NEXT:   Succs (1): B1
+// CHECK-NEXT:   1: UV
+// CHECK-NEXT:   2: [B2.1] (ImplicitCastExpr, LValueToRValue, _Bool)
+// CHECK-NEXT:   T: do ... while [B2.2]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (2): B4 B1
 // CHECK:      [B3]
-// CHECK-NEXT:   Preds (1): B1
+// WARNINGS-NEXT:   1:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
+// CHECK-NEXT:   2: A a;
+// CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
+// CHECK-NEXT:   Preds (2): B4 B5
 // CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B4]
+// CHECK-NEXT:   Preds (1): B2
+// CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
 void test_do_implicit_scope() {
@@ -829,11 +835,12 @@ void test_do_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// WARNINGS-NEXT:   1:  (CXXConstructExpr, A)
-// ANALYZER-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
-// CHECK-NEXT:   2: A d;
-// CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:   1: DoStmt (LoopExit)
+// WARNINGS-NEXT:   2:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:   2:  (CXXConstructExpr, [B1.3], A)
+// CHECK-NEXT:   3: A d;
+// CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B11.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (2): B8 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1035,8 +1042,9 @@ void test_switch_jumps() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B4.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2: [B5.2].~A() (Implicit destructor)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B4.4].~A() (Implicit destructor)
+// CHECK-NEXT:   3: [B5.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1137,13 +1145,14 @@ void test_for_range_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B10.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2: [B11.4].~A() (Implicit destructor)
-// WARNINGS-NEXT:   3:  (CXXConstructExpr, A)
-// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
-// CHECK-NEXT:   4: A f;
-// CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:   6: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B10.4].~A() (Implicit destructor)
+// CHECK-NEXT:   3: [B11.4].~A() (Implicit destructor)
+// WARNINGS-NEXT:   4:  (CXXConstructExpr, A)
+// ANALYZER-NEXT:   4:  (CXXConstructExpr, [B1.5], A)
+// CHECK-NEXT:   5: A f;
+// CHECK-NEXT:   6: [B1.5].~A() (Implicit destructor)
+// CHECK-NEXT:   7: [B11.2].~A() (Implicit destructor)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1238,8 +1247,9 @@ void test_for_jumps() {
 // CHECK:        [B9 (ENTRY)]
 // CHECK-NEXT:     Succs (1): B8
 // CHECK:        [B1]
-// CHECK-NEXT:     1: [B7.4].~A() (Implicit destructor)
-// CHECK-NEXT:     2: [B8.2].~A() (Implicit destructor)
+// CHECK-NEXT:     1: ForStmt (LoopExit)
+// CHECK-NEXT:     2: [B7.4].~A() (Implicit destructor)
+// CHECK-NEXT:     3: [B8.2].~A() (Implicit destructor)
 // CHECK-NEXT:     Preds (1): B7
 // CHECK-NEXT:     Succs (1): B0
 // CHECK:        [B2]
