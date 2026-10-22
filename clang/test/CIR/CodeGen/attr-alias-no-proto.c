@@ -38,7 +38,7 @@ int noproto_used() __attribute__((alias("noproto_used_target")));
 // LLVM-LABEL: define dso_local i32 @noproto_used_target()
 // OGCG-LABEL: define dso_local i32 @noproto_used_target()
 
-// CIR: cir.func no_proto dso_local @noproto_used() -> !s32i alias(@noproto_used_target)
+// CIR: cir.func no_proto @noproto_used() -> !s32i alias(@noproto_used_target)
 // LLVM sorts these at the top of the file.
 
 // Use of a no-prototype function with args, then alias definition sets the type.
@@ -61,7 +61,7 @@ int noproto_args() __attribute__((alias("noproto_args_target")));
 // LLVM-LABEL: define dso_local i32 @noproto_args_target()
 // OGCG-LABEL: define dso_local i32 @noproto_args_target()
 
-// CIR:  cir.func no_proto dso_local @noproto_args() -> !s32i alias(@noproto_args_target)
+// CIR:  cir.func no_proto @noproto_args() -> !s32i alias(@noproto_args_target)
 // LLVM sorts these at the top of the file.
 
 // Use of a no-prototype function with args, alias adds args, type fixed before
@@ -84,5 +84,5 @@ int noproto_args2(int, int, int) __attribute__((alias("noproto_args_target2")));
 // LLVM-LABEL: define dso_local i32 @noproto_args_target2()
 // OGCG-LABEL: define dso_local i32 @noproto_args_target2()
 
-// CIR:  cir.func no_proto dso_local @noproto_args2(!s32i, !s32i, !s32i) -> !s32i alias(@noproto_args_target2)
+// CIR:  cir.func no_proto @noproto_args2(!s32i, !s32i, !s32i) -> !s32i alias(@noproto_args_target2)
 // LLVM sorts these at the top of the file.
