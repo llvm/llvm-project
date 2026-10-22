@@ -905,12 +905,12 @@ unsigned TargetTransformInfo::getCacheLineSize() const {
                                                : TTIImpl->getCacheLineSize();
 }
 
-InstructionCost TargetTransformInfo::getStoreLoadForwardingConflictCost(
-    Type *VecTy, TargetCostKind CostKind) const {
+InstructionCost
+TargetTransformInfo::getStoreLoadForwardingConflictCost() const {
   // A negative override means "unset"; fall back to the target's value.
   if (StoreLoadForwardingConflictCost >= 0)
     return InstructionCost(StoreLoadForwardingConflictCost);
-  return TTIImpl->getStoreLoadForwardingConflictCost(VecTy, CostKind);
+  return TTIImpl->getStoreLoadForwardingConflictCost();
 }
 
 std::optional<unsigned>

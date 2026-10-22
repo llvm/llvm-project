@@ -882,8 +882,7 @@ public:
     return getST()->getCacheLineSize();
   }
 
-  InstructionCost getStoreLoadForwardingConflictCost(
-      Type *VecTy, TTI::TargetCostKind CostKind) const override {
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
     // The per-occurrence STLF stall penalty is a microarchitectural cycle
     // count sourced from the subtarget's scheduling model (0 = not modeled).
     return InstructionCost(getST()->getSchedModel().StoreLoadForwardingPenalty);

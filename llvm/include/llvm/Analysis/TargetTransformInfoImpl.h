@@ -692,8 +692,7 @@ public:
   /// neutral 0; targets with a scheduling model supply the real value through
   /// BasicTTIImpl (defaulting to
   /// MCSchedModel::DefaultStoreLoadForwardingPenalty).
-  virtual InstructionCost getStoreLoadForwardingConflictCost(
-      Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
+  virtual InstructionCost getStoreLoadForwardingConflictCost() const {
     return TTI::TCC_Free;
   }
   virtual std::optional<unsigned>

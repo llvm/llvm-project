@@ -793,10 +793,9 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
-    // Not STLFChargedLoads or CommittedSTLFStores: both are scoped to the
-    // whole function (the lifetime of this BoUpSLP object), not to one
-    // buildTree attempt.
+    // Charged-load and committed-store state lives as long as this object.
     PendingSTLFChargedLoads.clear();
+    PendingSTLFWaivedEntries.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
   }
@@ -3743,6 +3742,12 @@ private:
   /// buildTree attempt in deleteTree().
   SmallVector<std::pair<const TreeEntry *, const LoadInst *>>
       PendingSTLFChargedLoads;
+
+  /// Entries of the tree currently being costed whose penalty was waived
+  /// because STLFChargedLoads already held the load. Counted in
+  /// NumSTLFChargesDeduped only if the entry is still emitted when the tree is
+  /// committed. Cleared per buildTree attempt in deleteTree().
+  SmallPtrSet<const TreeEntry *, 4> PendingSTLFWaivedEntries;
 
   /// Widened stores emitted by trees already committed in this function.
   /// Cleared only when this BoUpSLP is destroyed: a later tree's load must
@@ -17826,12 +17831,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Mirror the store-side model: add the target's modeled STLF penalty
       // instead of rejecting the tree, and only under throughput/latency cost
       // kinds. Use HazardCheckVF (not the reuse-inflated vector factor) for
-      // both the hazard's distance check and the penalty type: the number of
-      // distinct loaded scalars, or, for CompressVectorize, the masked load's
-      // element count (the real span). For an interleaved entry, Scalars
-      // already lists every lane across all streams (buildTreeRec is handed
-      // the full segmented slice, sized InterleaveFactor * per-stream VF), so
-      // it is not rescaled by the interleave factor again here.
+      // the hazard's distance check: the number of distinct loaded scalars,
+      // or, for CompressVectorize, the masked load's element count (the real
+      // span). For an interleaved entry, Scalars already lists every lane
+      // across all streams (buildTreeRec is handed the full segmented slice,
+      // sized InterleaveFactor * per-stream VF), so it is not rescaled by the
+      // interleave factor again here.
       //
       // Covers Vectorize (plain contiguous window) and CompressVectorize
       // (single masked-load window, real span pulled from
@@ -17846,38 +17851,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       //     BlendedLoadVectorize (two candidate bases blended by a select)
       //     have no single contiguous byte window / no single base pointer
       //     compatible with this LoadInst*-keyed hazard model.
-      unsigned HazardCheckVF = E->Scalars.size();
-      // findStoreLoadForwardingHazardForLoad checks its BaseLoad argument
-      // directly (bypassing the general loop scan), so BaseLoad must already
-      // be the widened access's base (lowest-address) lane, or the
-      // IsWidenedBaseLane check inside findStoreLoadForwardingConflict will
-      // (correctly, but uselessly) skip it as an interior lane. For plain
-      // Vectorize entries LI0 (the main op) is that lane, since such entries
-      // are built from address-consecutive loads starting at the base. For
-      // CompressVectorize entries the mask can make the main op any lane, so
-      // find the true base lane explicitly.
-      LoadInst *STLFBaseLoad = LI0;
-      if (E->State == TreeEntry::CompressVectorize) {
-        auto CompressIt = CompressEntryToData.find(E);
-        if (CompressIt != CompressEntryToData.end())
-          HazardCheckVF = cast<FixedVectorType>(std::get<1>(CompressIt->second))
-                              ->getNumElements();
-        for (Value *V : E->Scalars) {
-          auto *OtherLd = dyn_cast<LoadInst>(V);
-          if (!OtherLd || OtherLd == STLFBaseLoad)
-            continue;
-          std::optional<int64_t> Diff = getPointersDiff(
-              STLFBaseLoad->getType(), STLFBaseLoad->getPointerOperand(),
-              OtherLd->getType(), OtherLd->getPointerOperand(), *DL, *SE,
-              /*StrictCheck=*/false, /*CheckType=*/false);
-          if (Diff && *Diff < 0)
-            STLFBaseLoad = OtherLd;
-        }
-      }
-      // STLFBaseLoad is the load that would stall: skip the charge if some
-      // earlier, already-committed tree already paid for it (see
-      // STLFChargedLoads); otherwise stage it so it is only actually charged
-      // to the persistent set if this tree is chosen for vectorization.
       if (EnableSLPStoreLoadForwardCheck &&
           (E->State == TreeEntry::Vectorize ||
            E->State == TreeEntry::CompressVectorize) &&
@@ -17887,12 +17860,41 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // stall is not modeled (a command-line override, or a target that
         // sets the penalty to 0); skip the hazard search in that case. The
         // scheduling-model default is non-zero, so modeled targets still scan.
-        Type *STLFVecTy = getWidenedType(LI0->getType(), HazardCheckVF);
-        InstructionCost STLFCost =
-            TTI->getStoreLoadForwardingConflictCost(STLFVecTy, CostKind);
+        InstructionCost STLFCost = TTI->getStoreLoadForwardingConflictCost();
         if (STLFCost != 0) {
+          unsigned HazardCheckVF = E->Scalars.size();
+          if (E->State == TreeEntry::CompressVectorize) {
+            auto CompressIt = CompressEntryToData.find(E);
+            if (CompressIt != CompressEntryToData.end())
+              HazardCheckVF =
+                  cast<FixedVectorType>(std::get<1>(CompressIt->second))
+                      ->getNumElements();
+          }
+          // findStoreLoadForwardingHazardForLoad checks its BaseLoad argument
+          // directly (bypassing the general loop scan), so BaseLoad must be
+          // the widened access's base (lowest-address) lane, or the
+          // IsWidenedBaseLane check inside findStoreLoadForwardingConflict
+          // skips it as an interior lane. The main op is not always that lane
+          // (a CompressVectorize mask, or reordered scalars), so find it.
+          LoadInst *STLFBaseLoad = LI0;
+          for (Value *V : E->Scalars) {
+            auto *OtherLd = dyn_cast<LoadInst>(V);
+            if (!OtherLd || OtherLd == STLFBaseLoad)
+              continue;
+            std::optional<int64_t> Diff = getPointersDiff(
+                STLFBaseLoad->getType(), STLFBaseLoad->getPointerOperand(),
+                OtherLd->getType(), OtherLd->getPointerOperand(), *DL, *SE,
+                /*StrictCheck=*/false, /*CheckType=*/false);
+            if (Diff && *Diff < 0)
+              STLFBaseLoad = OtherLd;
+          }
+          // STLFBaseLoad is the load that would stall: skip the charge if some
+          // earlier, already-committed tree already paid for it (see
+          // STLFChargedLoads); otherwise stage it so it is only actually
+          // charged to the persistent set if this tree is chosen for
+          // vectorization.
           if (STLFChargedLoads.contains(STLFBaseLoad->getPointerOperand())) {
-            ++NumSTLFChargesDeduped;
+            PendingSTLFWaivedEntries.insert(E);
           } else if (findStoreLoadForwardingHazardForLoad(STLFBaseLoad,
                                                           HazardCheckVF)) {
             VecLdCost += STLFCost;
@@ -18004,8 +18006,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // stall is not modeled (a command-line override, or a target that
         // sets the penalty to 0); skip the conflict search in that case. The
         // scheduling-model default is non-zero, so modeled targets still scan.
-        InstructionCost STLFCost =
-            TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
+        InstructionCost STLFCost = TTI->getStoreLoadForwardingConflictCost();
         if (STLFCost != 0) {
           unsigned StoreSTLFVF = E->Scalars.size();
           std::optional<uint64_t> StoreSizeOverride;
@@ -18059,7 +18060,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             if (NewConflicts)
               VecStCost += NewConflicts * STLFCost;
             else
-              ++NumSTLFChargesDeduped;
+              PendingSTLFWaivedEntries.insert(E);
           }
         }
       }
@@ -26355,6 +26356,10 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     if (!DeletedNodes.contains(TE) && !TransformedToGatherNodes.contains(TE))
       STLFChargedLoads.insert(Ld->getPointerOperand());
   PendingSTLFChargedLoads.clear();
+  for (const TreeEntry *TE : PendingSTLFWaivedEntries)
+    if (!DeletedNodes.contains(TE) && !TransformedToGatherNodes.contains(TE))
+      ++NumSTLFChargesDeduped;
+  PendingSTLFWaivedEntries.clear();
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
