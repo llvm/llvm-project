@@ -2252,6 +2252,23 @@ pointer (``addrspace(0)``). Global pointers select ``global_load``/
 ``global_store`` instructions; flat pointers select ``flat_load``/
 ``flat_store`` instructions. The cache policy bits are the same in both cases.
 
+These intrinsics exist for the following data types:
+
+.. table:: AMDGPU Available/Visible Intrinsics
+   :name: amdgpu-av-intrinsics-table
+
+   ========== ============= ====================================== =======================================
+   Width      Data Type     Load                                   Store
+   ========== ============= ====================================== =======================================
+   8 bits     ``i8``        ``llvm.amdgcn.av.load.b8``             ``llvm.amdgcn.av.store.b8``
+   16 bits    ``i16``       ``llvm.amdgcn.av.load.b16``            ``llvm.amdgcn.av.store.b16``
+   32 bits    ``i32``       ``llvm.amdgcn.av.load.b32``            ``llvm.amdgcn.av.store.b32``
+   64 bits    ``<2 x i32>`` ``llvm.amdgcn.av.load.b64``            ``llvm.amdgcn.av.store.b64``
+   128 bits   ``<4 x i32>`` ``llvm.amdgcn.av.load.b128``           ``llvm.amdgcn.av.store.b128``
+   ========== ============= ====================================== =======================================
+
+Example for 128 bits loads and stores:
+
 .. code-block:: llvm
 
    <4 x i32> @llvm.amdgcn.av.load.b128.p1(
@@ -2279,9 +2296,11 @@ This section is informational and for **internal reference only**. Users should
 not rely on the expansions described below. The only reliable user-level
 guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
 
-The tables below show the cache policy bits for global pointer variants.
-Flat pointer variants use the corresponding ``flat_load``/``flat_store``
-instructions with the same cache policy bits.
+The tables below show the cache policy bits for the 128 bits global pointer
+variants. Other widths use the ``global_load``/``global_store`` instruction of
+the corresponding width with the same cache policy bits. Flat pointer variants
+use the corresponding ``flat_load``/``flat_store`` instructions with the same
+cache policy bits.
 
 **TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
 ``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
