@@ -565,3 +565,8 @@
 // CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mexecute-only'
 // CHECK-UBSAN-FUNCTION-MPURE-CODE-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mpure-code'
 // CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
+
+// RUN: %clang --target=aarch64-nintendo-nn -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NINTENDO-VPTR
+// RUN: not %clang --target=aarch64-nintendo-nn -fsanitize=fuzzer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NINTENDO-FUZZER
+// CHECK-NINTENDO-VPTR: -fsanitize=vptr
+// CHECK-NINTENDO-FUZZER: unsupported option '-fsanitize=fuzzer' for target
