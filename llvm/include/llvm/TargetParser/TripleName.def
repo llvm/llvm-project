@@ -161,6 +161,7 @@ TRIPLE_ENV(PAuthTest, "pauthtest", "")
 TRIPLE_ENV(LLVM, "llvm", "")
 TRIPLE_ENV(Mlibc, "mlibc", "")
 TRIPLE_ENV(MTIA, "mtia", "")
+TRIPLE_ENV(KernelKit, "kernelkit", "")
 
 #undef TRIPLE_ENV
 

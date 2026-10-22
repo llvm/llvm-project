@@ -137,6 +137,13 @@ PLATFORM(WATCHOSSIMULATOR, 9, watchossimulator, watchossimulator, watchos-simula
 PLATFORM(DRIVERKIT, 10, driverkit, driverkit, driverkit, driverkit, DriverKit)
 PLATFORM(XROS, 11, xros, xros, xros, xros, xrOS)
 PLATFORM(XROS_SIMULATOR, 12, xrsimulator, xrsimulator, xrsimulator, xros-simulator, xrOS Simulator)
+// KernelKit platforms (LC_BUILD_VERSION ids 25-30), one per Apple OS.
+PLATFORM(MACOS_KERNELKIT, 25, macos-kernelkit, macOS-kernelKit, macos-kernelkit, macos-kernelkit, macOS KernelKit)
+PLATFORM(IOS_KERNELKIT, 26, ios-kernelkit, iOS-kernelKit, ios-kernelkit, ios-kernelkit, iOS KernelKit)
+PLATFORM(TVOS_KERNELKIT, 27, tvos-kernelkit, tvOS-kernelKit, tvos-kernelkit, tvos-kernelkit, tvOS KernelKit)
+PLATFORM(WATCHOS_KERNELKIT, 28, watchos-kernelkit, watchOS-kernelKit, watchos-kernelkit, watchos-kernelkit, watchOS KernelKit)
+PLATFORM(XROS_KERNELKIT, 29, xros-kernelkit, visionOS-kernelKit, xros-kernelkit, xros-kernelkit, visionOS KernelKit)
+PLATFORM(BRIDGEOS_KERNELKIT, 30, bridgeos-kernelkit, bridgeOS-kernelKit, bridgeos-kernelkit, bridgeos-kernelkit, bridgeOS KernelKit)
 #endif
 
 #undef HANDLE_LOAD_COMMAND

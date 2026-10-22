@@ -1697,6 +1697,25 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
 static MachO::PlatformType
 getMachoBuildVersionPlatformType(const Triple &Target) {
   assert(Target.isOSDarwin() && "expected a darwin OS");
+  if (Target.getEnvironment() == Triple::KernelKit) {
+    switch (Target.getOS()) {
+    case Triple::MacOSX:
+    case Triple::Darwin:
+      return MachO::PLATFORM_MACOS_KERNELKIT;
+    case Triple::IOS:
+      return MachO::PLATFORM_IOS_KERNELKIT;
+    case Triple::TvOS:
+      return MachO::PLATFORM_TVOS_KERNELKIT;
+    case Triple::WatchOS:
+      return MachO::PLATFORM_WATCHOS_KERNELKIT;
+    case Triple::XROS:
+      return MachO::PLATFORM_XROS_KERNELKIT;
+    case Triple::BridgeOS:
+      return MachO::PLATFORM_BRIDGEOS_KERNELKIT;
+    default:
+      break;
+    }
+  }
   switch (Target.getOS()) {
   case Triple::MacOSX:
   case Triple::Darwin:

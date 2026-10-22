@@ -415,7 +415,8 @@ public:
 
     PAuthTest,
     MTIA,
-    LastEnvironmentType = MTIA
+    KernelKit, // Apple in-kernel Swift runtime environment (KernelKit SDK).
+    LastEnvironmentType = KernelKit
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

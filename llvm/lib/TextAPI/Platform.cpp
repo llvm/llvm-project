@@ -32,6 +32,24 @@ PlatformType mapToPlatformType(PlatformType Platform, bool WantSim) {
 }
 
 PlatformType mapToPlatformType(const Triple &Target) {
+  if (Target.getEnvironment() == Triple::KernelKit) {
+    switch (Target.getOS()) {
+    case Triple::MacOSX:
+      return PLATFORM_MACOS_KERNELKIT;
+    case Triple::IOS:
+      return PLATFORM_IOS_KERNELKIT;
+    case Triple::TvOS:
+      return PLATFORM_TVOS_KERNELKIT;
+    case Triple::WatchOS:
+      return PLATFORM_WATCHOS_KERNELKIT;
+    case Triple::XROS:
+      return PLATFORM_XROS_KERNELKIT;
+    case Triple::BridgeOS:
+      return PLATFORM_BRIDGEOS_KERNELKIT;
+    default:
+      return PLATFORM_UNKNOWN;
+    }
+  }
   switch (Target.getOS()) {
   default:
     return PLATFORM_UNKNOWN;
@@ -116,6 +134,18 @@ std::string getOSAndEnvironmentName(PlatformType Platform,
     return "xros" + Version;
   case PLATFORM_XROS_SIMULATOR:
     return "xros" + Version + "-simulator";
+  case PLATFORM_MACOS_KERNELKIT:
+    return "macos" + Version + "-kernelkit";
+  case PLATFORM_IOS_KERNELKIT:
+    return "ios" + Version + "-kernelkit";
+  case PLATFORM_TVOS_KERNELKIT:
+    return "tvos" + Version + "-kernelkit";
+  case PLATFORM_WATCHOS_KERNELKIT:
+    return "watchos" + Version + "-kernelkit";
+  case PLATFORM_XROS_KERNELKIT:
+    return "xros" + Version + "-kernelkit";
+  case PLATFORM_BRIDGEOS_KERNELKIT:
+    return "bridgeos" + Version + "-kernelkit";
   }
   llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }
