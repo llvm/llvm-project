@@ -1133,6 +1133,7 @@ addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV, unsigned Decoration,
                              llvm::hlsl::InterpolationMode InterpMode =
                                  llvm::hlsl::InterpolationMode::Undefined) {
   using llvm::hlsl::InterpolationMode;
+  using llvm::hlsl::SPIRVInterpolationMode;
 
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
@@ -1140,31 +1141,32 @@ addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV, unsigned Decoration,
   Decorations.push_back(
       MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Decoration)),
                         ConstantAsMetadata::get(B.getInt32(Operand))}));
-  auto Add = [&](unsigned InterpolationDecoration) {
-    Decorations.push_back(MDNode::get(
-        Ctx, {ConstantAsMetadata::get(B.getInt32(InterpolationDecoration))}));
+  auto Add = [&](SPIRVInterpolationMode InterpolationDecoration) {
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(
+                             llvm::to_underlying(InterpolationDecoration)))}));
   };
   switch (InterpMode) {
   case InterpolationMode::Undefined:
   case InterpolationMode::Linear:
     break;
   case InterpolationMode::Constant:
-    Add(/* Flat */ 14);
+    Add(SPIRVInterpolationMode::Flat);
     break;
   case InterpolationMode::LinearNoperspective:
-    Add(/* NoPerspective */ 13);
+    Add(SPIRVInterpolationMode::NoPerspective);
     break;
   case InterpolationMode::LinearNoperspectiveCentroid:
-    Add(/* NoPerspective */ 13);
+    Add(SPIRVInterpolationMode::NoPerspective);
     [[fallthrough]];
   case InterpolationMode::LinearCentroid:
-    Add(/* Centroid */ 16);
+    Add(SPIRVInterpolationMode::Centroid);
     break;
   case InterpolationMode::LinearNoperspectiveSample:
-    Add(/* NoPerspective */ 13);
+    Add(SPIRVInterpolationMode::NoPerspective);
     [[fallthrough]];
   case InterpolationMode::LinearSample:
-    Add(/* Sample */ 17);
+    Add(SPIRVInterpolationMode::Sample);
     break;
   default:
     llvm_unreachable("invalid interpolation mode");

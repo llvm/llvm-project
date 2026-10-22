@@ -73,6 +73,15 @@ static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
                       InterpolationModifier::Sample,
               "sampling-location bits must increase in precedence");
 
+// SPIR-V Decoration enumerants that control how a fragment shader input is
+// interpolated. The values match the SPIR-V specification.
+enum class SPIRVInterpolationMode : uint32_t {
+  NoPerspective = 13,
+  Flat = 14,
+  Centroid = 16,
+  Sample = 17,
+};
+
 // Select the highest-precedence sampling-location bit (sample > centroid >
 // center), ignoring other modifiers. Returns None if no location is explicit,
 // keeping it distinct from Center so diagnostics can detect location overrides.
