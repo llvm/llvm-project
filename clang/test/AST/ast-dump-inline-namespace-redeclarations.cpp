@@ -8,21 +8,21 @@ inline namespace v1 {
 // CHECK: NamespaceDecl [[NS:0x[^ ]+]] {{.*}} ns
 namespace ns {
 struct Y;
-}
-}
+} // namespace ns
+} // namespace v1
 // CHECK: NamespaceDecl {{.*}} parent [[V1]] prev [[NS]] {{.*}} ns
 namespace ns {
 struct Y {};
-}
-}
+} // namespace ns
+} // namespace reopen
 
 namespace qualified {
 // CHECK: NamespaceDecl [[QV1:0x[^ ]+]] {{.*}} v1 inline
 inline namespace v1 {
 // CHECK: CXXRecordDecl [[X:0x[^ ]+]] {{.*}} struct X
 struct X;
-}
-}
+} // namespace v1
+} // namespace qualified
 namespace alias = qualified;
 // CHECK: CXXRecordDecl {{.*}} parent [[QV1]] prev [[X]] {{.*}} struct X definition
 struct alias::X {};
@@ -32,8 +32,8 @@ struct alias::X {};
 namespace ordinary {
 // CHECK: NamespaceDecl [[NESTED:0x[^ ]+]] {{.*}} nested
 namespace nested {}
-}
+} // namespace ordinary
 namespace ordinary {
 // CHECK: NamespaceDecl {{0x[^ ]+}} prev [[NESTED]] {{.*}} nested
 namespace nested {}
-}
+} // namespace ordinary

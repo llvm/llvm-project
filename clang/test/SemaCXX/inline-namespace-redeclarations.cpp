@@ -9,11 +9,11 @@ constexpr int value = 0;
 inline namespace v1 {
 constexpr int value = 1;
 namespace ns {}
-}
+} // namespace v1
 namespace ns {
 static_assert(value == 1, "lookup in the inline namespace");
-}
-}
+} // namespace ns
+} // namespace reopen
 
 namespace qualified {
 constexpr int value = 0;
@@ -21,8 +21,8 @@ inline namespace v1 {
 constexpr int value = 1;
 struct X;
 enum class E;
-}
-}
+} // namespace v1
+} // namespace qualified
 namespace alias = qualified;
 struct alias::X {
   static_assert(value == 1, "lookup in the inline namespace");

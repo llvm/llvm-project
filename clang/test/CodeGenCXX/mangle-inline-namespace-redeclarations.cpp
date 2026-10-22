@@ -7,8 +7,8 @@ namespace reopen {
 inline namespace v1 {
 namespace ns {
 struct Y;
-}
-}
+} // namespace ns
+} // namespace v1
 
 // CHECK-DAG: define {{.*}} @_ZN6reopen6beforeEPNS_2v12ns1YE(
 void before(v1::ns::Y *) {}
@@ -21,21 +21,21 @@ struct Y {};
 void f() {}
 // CHECK-DAG: @_ZN6reopen2v12ns5valueE =
 int value;
-}
+} // namespace ns
 
 // CHECK-DAG: define {{.*}} @_ZN6reopen5afterEPNS_2v12ns1YE(
 void after(v1::ns::Y *) {}
 // CHECK-DAG: define {{.*}} @_ZN6reopen4takeEPNS_2v12ns1XE(
 void take(v1::ns::X *) {}
-}
+} // namespace reopen
 
 // A qualified class definition can find its declaration through an inline
 // namespace, as in libstdc++'s filesystem::_Dir definition.
 namespace qualified {
 inline namespace v1 {
 struct X;
-}
-}
+} // namespace v1
+} // namespace qualified
 namespace alias = qualified;
 
 // CHECK-DAG: define {{.*}} @_Z6beforePN9qualified2v11XE(
@@ -52,7 +52,7 @@ void after(alias::X *p) { p->member(); }
 // An ordinary namespace must keep its existing mangling.
 namespace ordinary {
 struct X;
-}
+} // namespace ordinary
 struct ordinary::X {};
 // CHECK-DAG: define {{.*}} @_Z4takePN8ordinary1XE(
 void take(ordinary::X *) {}
