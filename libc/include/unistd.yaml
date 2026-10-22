@@ -222,6 +222,14 @@ functions:
       - type: const char *
       - type: const char *
       - type: '...'
+  - name: execlp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: '...'
   - name: execv
     standards:
       - posix
@@ -244,6 +252,14 @@ functions:
     arguments:
       - type: const char *
       - type: __exec_argv_t
+  - name: execvpe
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: __exec_argv_t
+      - type: __exec_envp_t
   - name: faccessat
     standards:
       - posix
