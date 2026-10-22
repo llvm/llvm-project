@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -D CXX_14_17=1
+// RUN: %check_clang_tidy -std=c++20 %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -D CXX_14_17=1
 
 #include "unique_ptr.h"
 // CHECK-FIXES: #include <memory>
@@ -40,6 +40,13 @@ struct TemplatedChildWithDeletedDestructor: Base {
   ~TemplatedChildWithDeletedDestructor() = delete;
 };
 
+template <class T>
+struct TemplatedWithMultipleDestructors {
+  ~TemplatedWithMultipleDestructors() requires(sizeof(T) > 1) = default;    // selected for TemplatedWithMultipleDestructors<int>
+private:
+  ~TemplatedWithMultipleDestructors() requires(sizeof(T) == 1) = default;   // selected for TemplatedWithMultipleDestructors<char>
+};
+
 void check_reset() {
   std::unique_ptr<Base> p;
   p.reset(new ChildWithPublicDestructor());
@@ -56,4 +63,12 @@ void check_reset() {
   p.reset(new ChildWithDeletedDestructor());
   p.reset(new ChildWithDeletedDestructorAlias());
   p.reset(new TemplatedChildWithDeletedDestructor<int>());
+
+  std::unique_ptr<TemplatedWithMultipleDestructors<int>> t0;
+  t0.reset(new TemplatedWithMultipleDestructors<int>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead
+  // CHECK-FIXES: t0 = std::make_unique<TemplatedWithMultipleDestructors<int>>();
+
+  std::unique_ptr<TemplatedWithMultipleDestructors<char>> t1;
+  t1.reset(new TemplatedWithMultipleDestructors<char>());
 }

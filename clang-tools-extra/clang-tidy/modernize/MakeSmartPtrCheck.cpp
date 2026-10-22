@@ -14,6 +14,18 @@
 
 using namespace clang::ast_matchers;
 
+namespace {
+AST_MATCHER(clang::Decl, hasInaccessibleDtor) {
+  if (const auto *RD = llvm::dyn_cast<clang::CXXRecordDecl>(&Node)) {
+    if (const auto *Destructor = RD->getDestructor()) {
+      return Destructor->isDeleted() ||
+             Destructor->getAccess() != clang::AS_public;
+    }
+  }
+  return false;
+}
+} // namespace
+
 namespace clang::tidy::modernize {
 
 static constexpr char ConstructorCall[] = "constructorCall";
@@ -78,8 +90,7 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // conservative in that case.
   const auto CanCallDtor = unless(hasType(hasUnqualifiedDesugaredType(
       pointerType(pointee(hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(has(cxxDestructorDecl(
-              anyOf(isDeleted(), unless(isPublic()))))))))))));
+          recordType(hasDeclaration(hasInaccessibleDtor()))))))));
 
   auto IsPlacement = hasAnyPlacementArg(anything());
 
