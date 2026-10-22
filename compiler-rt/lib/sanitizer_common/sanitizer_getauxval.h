@@ -54,6 +54,19 @@ static inline decltype(AuxInfo::a_v) getauxval(decltype(AuxInfo::a_type) type) {
   return 0;
 }
 
+#elif SANITIZER_FREEBSD
+
+#  define SANITIZER_USE_GETAUXVAL 1
+#  include <sys/auxv.h>
+static inline size_t getauxval(decltype(Elf_Auxinfo::a_type) type) {
+  for (const Elf_Auxinfo* aux = (const Elf_Auxinfo*)libsys_elf_aux_vec_addr();
+       aux->a_type != AT_NULL; aux++) {
+    if (aux->a_type == type)
+      return aux->a_un.a_val;
+  }
+  return 0;
+}
+
 #endif
 
 #endif // SANITIZER_GETAUXVAL_H
