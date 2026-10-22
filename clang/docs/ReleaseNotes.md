@@ -833,6 +833,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when constant-evaluating `__builtin_object_size`
   or `__builtin_dynamic_object_size` with a type argument that is not an
   integer constant expression. (#GH231108)
+- Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
+  applied to a field of a record marked `preserve_static_offset`.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
