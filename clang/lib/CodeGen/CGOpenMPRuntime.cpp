@@ -419,6 +419,8 @@ class InlinedOpenMPRegionRAII {
   FieldDecl *LambdaThisCaptureField = nullptr;
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   bool NoInheritance = false;
+  /// Checks in the region trap: they cannot leave the structured block.
+  OverflowHandlerScope NoHandler;
 
 public:
   /// Constructs region for combined constructs.
@@ -428,7 +430,8 @@ public:
   InlinedOpenMPRegionRAII(CodeGenFunction &CGF, const RegionCodeGenTy &CodeGen,
                           OpenMPDirectiveKind Kind, bool HasCancel,
                           bool NoInheritance = true)
-      : CGF(CGF), NoInheritance(NoInheritance) {
+      : CGF(CGF), NoInheritance(NoInheritance),
+        NoHandler(CGF.LocalOverflowHandlers, nullptr) {
     // Start emission for the construct.
     CGF.CapturedStmtInfo = new CGOpenMPInlinedRegionInfo(
         CGF.CapturedStmtInfo, CodeGen, Kind, HasCancel);
