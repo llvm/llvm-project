@@ -19335,7 +19335,6 @@ struct uitofp_tbl_match {
   }
 };
 
-
 static auto m_UIToFPTbl(Instruction *&Tbl, Value *&Mask) {
   return uitofp_tbl_match(Tbl, Mask);
 }
