@@ -93,6 +93,12 @@ struct TestTensorTransforms
       *this, "test-tracking-listener",
       llvm::cl::desc("Test tensor TrackingListener for the transform dialect"),
       llvm::cl::init(false)};
+
+  Option<bool> testBubbleUpExtractSliceThroughTilingInterface{
+      *this, "test-bubble-up-extract-slice-through-tiling-interface",
+      llvm::cl::desc("Test bubbling up tensor.extract_slice through operations "
+                     "implementing TilingInterface"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -140,6 +146,13 @@ applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
 static void applyFoldExtractFromCollapseShapePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateFoldCollapseExtractPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
+static void
+applyBubbleUpExtractSliceThroughTilingInterfacePatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateBubbleUpExtractSliceThroughTilingInterfacePatterns(patterns);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
@@ -397,6 +410,8 @@ void TestTensorTransforms::runOnOperation() {
   if (testTrackingListener)
     if (failed(testTrackingListenerReplacements(rootOp)))
       return signalPassFailure();
+  if (testBubbleUpExtractSliceThroughTilingInterface)
+    applyBubbleUpExtractSliceThroughTilingInterfacePatterns(rootOp);
 }
 
 namespace mlir {
