@@ -483,6 +483,12 @@ public:
       return CloneOf;
     }
 
+    const ContextNode *getOrigNode() const {
+      if (!CloneOf)
+        return this;
+      return CloneOf;
+    }
+
     void addOrUpdateCallerEdge(ContextNode *Caller, AllocationType AllocType,
                                unsigned int ContextId);
 
@@ -646,6 +652,16 @@ protected:
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
 
+  const FuncTy *getCallingFunc(const ContextNode *N) const {
+    auto It = NodeToCallingFunc.find(N);
+    return It != NodeToCallingFunc.end() ? It->second : nullptr;
+  }
+
+  /// Functions that are referenced (called directly, or address-taken) in the
+  /// module or summary index (populated when MemProfReportHintedSizes is
+  /// enabled).
+  DenseSet<const FuncTy *> FunctionsWithCallers;
+
   // When exporting to dot, and an allocation id is specified, contains the
   // context ids on that allocation.
   DenseSet<uint32_t> DotAllocContextIds;
@@ -789,6 +805,29 @@ private:
                        unsigned CloneNo) const {
     return static_cast<const DerivedCCG *>(this)->getLabel(Func, Call, CloneNo);
   }
+
+  /// Gets the function name (with optional clone suffix) for reporting.
+  std::string getFuncName(const FuncTy *Func, unsigned CloneNo = 0) const {
+    return static_cast<const DerivedCCG *>(this)->getFuncName(Func, CloneNo);
+  }
+
+  /// Returns true if the given function was marked dead by ThinLTO dead symbol
+  /// analysis.
+  bool isFuncDead(const FuncTy *Func) const {
+    return static_cast<const DerivedCCG *>(this)->isFuncDead(Func);
+  }
+
+  /// Populates FunctionsWithCallers for reporting unreferenced functions.
+  void populateFunctionsWithCallers() {
+    static_cast<DerivedCCG *>(this)->populateFunctionsWithCallers();
+  }
+
+  /// Captures pre-cloning context chains for MemProfReportHintedSizes.
+  void capturePreCloningContextInfo();
+
+  /// Formats the per-context reachability and pruning summary suffix.
+  std::string formatContextReportSuffix(const ContextNode *Node,
+                                        uint32_t Id) const;
 
   // Create and return a new ContextNode.
   ContextNode *createNewNode(bool IsAllocation, const FuncTy *F = nullptr,
@@ -943,6 +982,39 @@ private:
 
   /// Keeps track of the last unique context id assigned.
   unsigned int LastContextId = 0;
+
+  /// Pre-cloning context chain information captured before identifyClones()
+  /// when MemProfReportHintedSizes is enabled.
+  struct PreCloningContextInfo {
+    // Ordered chain of uncloned ContextNodes for this context ID from leaf
+    // allocation (Chain[0]) up to the outermost node in the CCG for this
+    // context.
+    std::vector<const ContextNode *> Chain;
+    // Index in Chain of the outermost matched callsite node, i.e. the
+    // outermost node such that it and all nodes below it
+    // (Chain[1..MaxMatchedFrame]) were matched to a call in the IR/summary
+    // (hasCall() == true). If the whole context matched, this is the
+    // context's outermost frame (possibly where it was pruned); otherwise it
+    // is the last matched node below the first unmatched one. The function
+    // containing it (the "outermost matched caller") is where the reported
+    // post-cloning paths start. 0 if no caller of the allocation matched.
+    unsigned MaxMatchedFrame = 0;
+    // True if the outermost matched node had caller edges for other contexts.
+    bool OutermostMatchedNodeHasOtherCallers = false;
+    // If MaxMatchedFrame + 1 < Chain.size(), why did Chain[MaxMatchedFrame + 1]
+    // not have a call?
+    bool StoppedAtRecursive = false;
+    bool StoppedAtMismatchedCallee = false;
+    uint64_t UnmatchedStackId = 0;
+    const FuncTy *UnmatchedCallingFunc = nullptr;
+  };
+  DenseMap<uint32_t, PreCloningContextInfo> PreCloningContextInfoMap;
+  DenseSet<const ContextNode *> PreCloningAllocHasMatchedCaller;
+  DenseMap<const FuncTy *, unsigned> FuncToNumClones;
+  DenseMap<std::pair<const ContextNode *, unsigned>, unsigned>
+      OrigNodeAndCloneToCalleeClone;
+  DenseMap<std::pair<const ContextNode *, unsigned>, const ContextNode *>
+      OrigAllocAndCloneToNode;
 };
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -994,6 +1066,9 @@ private:
                            unsigned CloneNo);
   std::string getLabel(const Function *Func, const Instruction *Call,
                        unsigned CloneNo) const;
+  std::string getFuncName(const Function *Func, unsigned CloneNo = 0) const;
+  bool isFuncDead(const Function *Func) const { return false; }
+  void populateFunctionsWithCallers();
 
   const Module &Mod;
   llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
@@ -1086,6 +1161,10 @@ private:
                            unsigned CloneNo);
   std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
                        unsigned CloneNo) const;
+  std::string getFuncName(const FunctionSummary *Func,
+                          unsigned CloneNo = 0) const;
+  bool isFuncDead(const FunctionSummary *Func) const;
+  void populateFunctionsWithCallers();
   DenseSet<GlobalValue::GUID> findAliaseeGUIDsPrevailingInDifferentModule();
 
   // Saves mapping from function summaries containing memprof records back to
@@ -2309,6 +2388,66 @@ std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
   }
 }
 
+std::string ModuleCallsiteContextGraph::getFuncName(const Function *Func,
+                                                    unsigned CloneNo) const {
+  if (!Func)
+    return "<unknown>";
+  return getMemProfFuncName(Func->getName(), CloneNo);
+}
+
+void ModuleCallsiteContextGraph::populateFunctionsWithCallers() {
+  // Any use (direct call, address taken, alias, etc.) means the function is
+  // referenced and may be reached by callers above the profiled context.
+  for (const auto &F : Mod)
+    if (!F.use_empty())
+      FunctionsWithCallers.insert(&F);
+}
+
+std::string IndexCallsiteContextGraph::getFuncName(const FunctionSummary *Func,
+                                                   unsigned CloneNo) const {
+  if (!Func)
+    return "<unknown>";
+  auto VI = FSToVIMap.find(Func);
+  if (VI != FSToVIMap.end()) {
+    if (!VI->second.name().empty())
+      return getMemProfFuncName(VI->second.name(), CloneNo);
+    return getMemProfFuncName("GUID:" + std::to_string(VI->second.getGUID()),
+                              CloneNo);
+  }
+  return getMemProfFuncName("<unknown>", CloneNo);
+}
+
+bool IndexCallsiteContextGraph::isFuncDead(const FunctionSummary *Func) const {
+  return Index.withGlobalValueDeadStripping() && Func && !Func->isLive();
+}
+
+void IndexCallsiteContextGraph::populateFunctionsWithCallers() {
+  for (const auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
+    for (const auto &S : VI.getSummaryList()) {
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(VI.getGUID(), S.get()))
+        continue;
+      if (Index.withGlobalValueDeadStripping() && !S->isLive())
+        continue;
+      auto AddReferenced = [&](ValueInfo RefVI) {
+        for (const auto &RefS : RefVI.getSummaryList()) {
+          const GlobalValueSummary *Base = RefS->getBaseObject();
+          if (const auto *RefFS = dyn_cast<FunctionSummary>(Base))
+            FunctionsWithCallers.insert(RefFS);
+        }
+      };
+      // Address-taken references (e.g. from vtables or function pointers).
+      for (const auto &RefVI : S->refs())
+        AddReferenced(RefVI);
+      // Direct calls.
+      if (const auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        for (const auto &CallEdge : FS->calls())
+          AddReferenced(CallEdge.first);
+    }
+  }
+}
+
 std::vector<uint64_t>
 ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
     Instruction *Call) {
@@ -3303,6 +3442,229 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::print(
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy,
+                          CallTy>::capturePreCloningContextInfo() {
+  populateFunctionsWithCallers();
+  for (const auto &Entry : AllocationCallToContextNodeMap) {
+    const ContextNode *AllocNode = Entry.second;
+    for (const auto &Edge : AllocNode->CallerEdges) {
+      if (!Edge->isRemoved() && Edge->Caller->hasCall()) {
+        PreCloningAllocHasMatchedCaller.insert(AllocNode);
+        break;
+      }
+    }
+    DenseSet<uint32_t> ContextIds = AllocNode->getContextIds();
+    for (uint32_t Id : ContextIds) {
+      PreCloningContextInfo Info;
+      Info.Chain.push_back(AllocNode);
+      SmallPtrSet<const ContextNode *, 16> Visited;
+      Visited.insert(AllocNode);
+      const ContextNode *Cur = AllocNode;
+      while (true) {
+        const ContextNode *Next = nullptr;
+        for (const auto &Edge : Cur->CallerEdges) {
+          if (Edge->isRemoved() || Edge->IsBackedge)
+            continue;
+          if (Edge->getContextIds().contains(Id) &&
+              !Visited.contains(Edge->Caller)) {
+            Next = Edge->Caller;
+            break;
+          }
+        }
+        if (!Next) {
+          for (const auto &Edge : Cur->CallerEdges) {
+            if (Edge->isRemoved())
+              continue;
+            if (Edge->getContextIds().contains(Id) &&
+                !Visited.contains(Edge->Caller)) {
+              Next = Edge->Caller;
+              break;
+            }
+          }
+        }
+        if (!Next)
+          break;
+        Visited.insert(Next);
+        Info.Chain.push_back(Next);
+        Cur = Next;
+      }
+
+      Info.MaxMatchedFrame = 0;
+      for (unsigned I = 1; I < Info.Chain.size(); ++I) {
+        if (Info.Chain[I]->hasCall()) {
+          Info.MaxMatchedFrame = I;
+        } else {
+          const ContextNode *Unmatched = Info.Chain[I];
+          Info.UnmatchedStackId = Unmatched->OrigStackOrAllocId;
+          Info.StoppedAtRecursive = Unmatched->Recursive;
+          if (auto It = NodeToCallingFunc.find(Unmatched);
+              It != NodeToCallingFunc.end()) {
+            Info.StoppedAtMismatchedCallee = true;
+            Info.UnmatchedCallingFunc = It->second;
+          }
+          break;
+        }
+      }
+
+      if (Info.MaxMatchedFrame > 0 &&
+          Info.MaxMatchedFrame + 1 == Info.Chain.size()) {
+        const ContextNode *OutermostMatchedNode =
+            Info.Chain[Info.MaxMatchedFrame];
+        for (const auto &Edge : OutermostMatchedNode->CallerEdges) {
+          if (!Edge->isRemoved() && Edge->Caller->hasCall()) {
+            Info.OutermostMatchedNodeHasOtherCallers = true;
+            break;
+          }
+        }
+      }
+
+      PreCloningContextInfoMap[Id] = std::move(Info);
+    }
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+std::string
+CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::formatContextReportSuffix(
+    const ContextNode *Node, uint32_t Id) const {
+  auto InfoIt = PreCloningContextInfoMap.find(Id);
+  if (InfoIt == PreCloningContextInfoMap.end())
+    return "";
+  const PreCloningContextInfo &Info = InfoIt->second;
+
+  const ContextNode *OrigAlloc = Node->getOrigNode();
+  const FuncTy *AllocFunc = getCallingFunc(OrigAlloc);
+  unsigned AllocCloneNo = Node->Call.cloneNo();
+  std::string AllocFuncStr = getFuncName(AllocFunc, AllocCloneNo);
+  if (isFuncDead(AllocFunc)) {
+    AllocFuncStr += " (dead)";
+  } else if (AllocFunc && !FunctionsWithCallers.contains(AllocFunc) &&
+             !PreCloningAllocHasMatchedCaller.contains(OrigAlloc) &&
+             Info.Chain.size() > 1) {
+    AllocFuncStr += " (unreferenced)";
+  } else if (!PreCloningAllocHasMatchedCaller.contains(OrigAlloc) &&
+             Info.Chain.size() > 1) {
+    AllocFuncStr += " (no matched callers)";
+  }
+
+  unsigned TotalFrames = Info.Chain.size() > 0 ? Info.Chain.size() - 1 : 0;
+  unsigned Matched = Info.MaxMatchedFrame;
+  std::string StatusStr;
+  if (TotalFrames == 0) {
+    StatusStr = "inlined into leaf";
+  } else if (Matched < TotalFrames) {
+    if (Info.StoppedAtRecursive) {
+      StatusStr = "unmatched recursive callsite at frame " +
+                  std::to_string(Matched + 1) + "/" +
+                  std::to_string(TotalFrames) + " (stack id " +
+                  std::to_string(Info.UnmatchedStackId) + ")";
+    } else if (Info.StoppedAtMismatchedCallee) {
+      StatusStr = "unmatched callsite (mismatched callee in " +
+                  getFuncName(Info.UnmatchedCallingFunc, 0) + ") at frame " +
+                  std::to_string(Matched + 1) + "/" +
+                  std::to_string(TotalFrames) + " (stack id " +
+                  std::to_string(Info.UnmatchedStackId) + ")";
+    } else {
+      StatusStr = "unmatched callsite at frame " + std::to_string(Matched + 1) +
+                  "/" + std::to_string(TotalFrames) + " (stack id " +
+                  std::to_string(Info.UnmatchedStackId) + ")";
+    }
+  } else {
+    const ContextNode *OutermostMatchedNode = Info.Chain[Matched];
+    const FuncTy *OutermostMatchedFunc = getCallingFunc(OutermostMatchedNode);
+    unsigned NumOutermostMatchedFuncClones =
+        std::max<unsigned>(1, FuncToNumClones.lookup(OutermostMatchedFunc));
+    bool HasCallersAbove =
+        NumOutermostMatchedFuncClones > 1 ||
+        Info.OutermostMatchedNodeHasOtherCallers ||
+        (OutermostMatchedFunc &&
+         FunctionsWithCallers.contains(OutermostMatchedFunc));
+    if (HasCallersAbove) {
+      StatusStr = "pruned at frame " + std::to_string(Matched) + " in " +
+                  getFuncName(OutermostMatchedFunc, 0);
+    } else {
+      StatusStr = "matched " + std::to_string(Matched) + " frames to " +
+                  getFuncName(OutermostMatchedFunc, 0);
+    }
+  }
+
+  std::string ReachesStr;
+  if (Matched >= 1) {
+    const ContextNode *OutermostMatchedNode = Info.Chain[Matched];
+    const FuncTy *OutermostMatchedFunc = getCallingFunc(OutermostMatchedNode);
+    unsigned NumOutermostMatchedFuncClones =
+        std::max<unsigned>(1, FuncToNumClones.lookup(OutermostMatchedFunc));
+    ReachesStr = "; reaches ";
+    SmallSet<unsigned, 4> SeenReachedAllocClone;
+    bool FirstPath = true;
+    for (unsigned OutermostMatchedFuncClone = 0;
+         OutermostMatchedFuncClone < NumOutermostMatchedFuncClones;
+         ++OutermostMatchedFuncClone) {
+      std::vector<const FuncTy *> PathFuncs(Matched + 1);
+      std::vector<unsigned> PathClones(Matched + 1);
+      PathFuncs[0] = OutermostMatchedFunc;
+      PathClones[0] = OutermostMatchedFuncClone;
+      unsigned CurClone = OutermostMatchedFuncClone;
+      for (unsigned Step = 0; Step < Matched; ++Step) {
+        unsigned FrameIdx = Matched - Step;
+        const ContextNode *CallNode = Info.Chain[FrameIdx];
+        unsigned NextClone =
+            OrigNodeAndCloneToCalleeClone.lookup({CallNode, CurClone});
+        const FuncTy *CalleeFunc = getCallingFunc(Info.Chain[FrameIdx - 1]);
+        PathFuncs[Step + 1] = CalleeFunc;
+        PathClones[Step + 1] = NextClone;
+        CurClone = NextClone;
+      }
+
+      if (!SeenReachedAllocClone.insert(CurClone).second)
+        continue;
+      if (!FirstPath)
+        ReachesStr += ", ";
+      FirstPath = false;
+
+      const ContextNode *ReachedAlloc =
+          OrigAllocAndCloneToNode.lookup({OrigAlloc, CurClone});
+      // Report the hint actually applied to the reached allocation clone
+      // (which accounts for allocTypeToUse and MinClonedColdBytePercent),
+      // rather than the graph node's (possibly ambiguous) AllocTypes.
+      std::string ReachedTypeStr;
+      if (ReachedAlloc)
+        ReachedTypeStr = getAllocTypeString(
+            (uint8_t)getAllocationCallType(ReachedAlloc->Call));
+      else if (CurClone == 0)
+        ReachedTypeStr =
+            getAllocTypeString((uint8_t)getAllocationCallType(OrigAlloc->Call));
+      else
+        ReachedTypeStr = "None";
+
+      std::string PathStr;
+      bool SkippedPrev = false;
+      for (unsigned S = 0; S <= Matched; ++S) {
+        bool IsCloned = PathClones[S] > 0;
+        bool PrevCloned = S > 0 ? (PathClones[S - 1] > 0) : IsCloned;
+        bool NextCloned = S + 1 <= Matched ? (PathClones[S + 1] > 0) : IsCloned;
+        bool Include = (Matched <= 6) || (S <= 1) || (S + 1 >= Matched) ||
+                       (IsCloned != PrevCloned) || (IsCloned != NextCloned);
+        if (!Include) {
+          if (!SkippedPrev) {
+            PathStr += " -> ...";
+            SkippedPrev = true;
+          }
+          continue;
+        }
+        SkippedPrev = false;
+        if (!PathStr.empty())
+          PathStr += " -> ";
+        PathStr += getFuncName(PathFuncs[S], PathClones[S]);
+      }
+      ReachesStr += ReachedTypeStr + " via " + PathStr;
+    }
+  }
+
+  return " [alloc in " + AllocFuncStr + "; " + StatusStr + ReachesStr + "]";
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     raw_ostream &OS,
     function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) const {
@@ -3319,6 +3681,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     for (auto Id : SortedIds) {
       auto TypeI = ContextIdToAllocationType.find(Id);
       assert(TypeI != ContextIdToAllocationType.end());
+      std::string Suffix;
+      bool ComputedSuffix = false;
+      auto GetSuffix = [&]() -> const std::string & {
+        if (!ComputedSuffix) {
+          Suffix = MemProfReportHintedSizes
+                       ? formatContextReportSuffix(Node, Id)
+                       : "";
+          ComputedSuffix = true;
+        }
+        return Suffix;
+      };
       auto CSI = ContextIdToContextSizeInfos.find(Id);
       if (CSI != ContextIdToContextSizeInfos.end()) {
         for (auto &Info : CSI->second) {
@@ -3333,7 +3706,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
           // Print the internal context id to aid debugging and visualization.
           Msg += " (internal context id " + std::to_string(Id) + ")";
           if (MemProfReportHintedSizes)
-            OS << Msg << "\n";
+            OS << Msg << GetSuffix() << "\n";
           if (EmitRemark)
             EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
         }
@@ -3349,7 +3722,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
         // Print the internal context id to aid debugging and visualization.
         Msg += " (internal context id " + std::to_string(Id) + ")";
         if (MemProfReportHintedSizes)
-          OS << Msg << "\n";
+          OS << Msg << GetSuffix() << "\n";
         if (EmitRemark)
           EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
       }
@@ -5308,6 +5681,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       }
     }
 
+    if (MemProfReportHintedSizes)
+      FuncToNumClones[Func] = std::max<unsigned>(1, FuncCloneInfos.size());
     if (FuncCloneInfos.size() < 2)
       continue;
 
@@ -5411,6 +5786,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           AT = AllocationType::Cold;
       }
       updateAllocationCall(Node->Call, AT);
+      if (MemProfReportHintedSizes)
+        OrigAllocAndCloneToNode[{Node->getOrigNode(), Node->Call.cloneNo()}] =
+            Node;
       assert(Node->MatchingCalls.empty());
       return;
     }
@@ -5420,6 +5798,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
     auto CalleeFunc = CallsiteToCalleeFuncCloneMap[Node];
     updateCall(Node->Call, CalleeFunc);
+    if (MemProfReportHintedSizes)
+      OrigNodeAndCloneToCalleeClone[{
+          Node->getOrigNode(), Node->Call.cloneNo()}] = CalleeFunc.cloneNo();
     // Update all the matching calls as well.
     for (auto &Call : Node->MatchingCalls)
       updateCall(Call, CalleeFunc);
@@ -5440,8 +5821,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       if (NodeCallClones.contains(CloneNo))
         continue;
       // Use the original Node's CalleeFunc.
-      for (auto &Call : CallVector)
+      for (auto &Call : CallVector) {
         updateCall(Call, CalleeFunc);
+        if (MemProfReportHintedSizes)
+          OrigNodeAndCloneToCalleeClone[{Node->getOrigNode(), Call.cloneNo()}] =
+              CalleeFunc.cloneNo();
+      }
     }
   };
 
@@ -6333,6 +6718,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
   if (VerifyCCG) {
     check();
   }
+
+  // The report suffix is only printed with -memprof-report-hinted-sizes (it is
+  // not included in remarks), so avoid the extra work otherwise.
+  if (MemProfReportHintedSizes)
+    capturePreCloningContextInfo();
 
   identifyClones();
 
