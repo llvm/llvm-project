@@ -7210,6 +7210,9 @@ SCEVFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BinOp);
       PDI && PDI->isDisjoint()) {
     Flags = ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW);
+  } else if (auto *PEO = dyn_cast<PossiblyExactOperator>(BinOp)) {
+    if (PEO->isExact())
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagExact);
   } else {
     if (BinOp->hasNoUnsignedWrap())
       Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
@@ -7812,8 +7815,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     case Instruction::UDiv:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
-      return getUDivExpr(LHS, RHS,
-                         BO->IsExact ? SCEV::FlagExact : SCEV::FlagNone);
+      return getUDivExpr(
+          LHS, RHS, BO->Op ? getNoWrapFlagsFromUB(BO->Op) : SCEV::FlagNone);
     case Instruction::URem:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
