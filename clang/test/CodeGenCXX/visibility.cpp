@@ -83,9 +83,6 @@ namespace test41 {
 }
 
 namespace test48 {
-  // Test that we use the visibility of struct foo when instantiating the
-  // template. Note that is a case where we disagree with gcc, it produces
-  // a default symbol.
   struct HIDDEN foo {
   };
   DEFAULT foo x;
@@ -97,7 +94,7 @@ namespace test48 {
   };
 
   bar::zed<&x> y;
-  // CHECK: _ZN6test481yE = hidden global
+  // CHECK: _ZN6test481yE = global
   // CHECK-HIDDEN: _ZN6test481yE = hidden global
 }
 
@@ -137,22 +134,22 @@ namespace test73 {
   template int HIDDEN var<&hc>;
 
   int use() { return var<&dd> + var<&hd>; }
-  // CHECK:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
-  // CHECK:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr global i32 0
   // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
 
-  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
-  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr global i32 0
   // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
 }
 
@@ -966,10 +963,9 @@ namespace test47 {
 }
 
 namespace test49 {
-  // Test that we use the visibility of struct foo when instantiating the
-  // template. Note that is a case where we disagree with gcc, it produces
-  // a default symbol.
-
+  // When instantiating the template, we constraint the visibility with the
+  // non-type template argument &x. The type of &x does not constraint the
+  // visibility.
   struct HIDDEN foo {
   };
 
@@ -982,15 +978,11 @@ namespace test49 {
   };
 
   template void bar::zed<&x>();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test493bar3zedIXadL_ZNS_1xEEEEEvv
+  // CHECK-LABEL: define weak_odr void @_ZN6test493bar3zedIXadL_ZNS_1xEEEEEvv
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test493bar3zedIXadL_ZNS_1xEEEEEvv
 }
 
 namespace test50 {
-  // Test that we use the visibility of struct foo when instantiating the
-  // template. Note that is a case where we disagree with gcc, it produces
-  // a default symbol.
-
   struct HIDDEN foo {
   };
   DEFAULT foo x;
@@ -1000,15 +992,11 @@ namespace test50 {
     }
   };
   template void bar<&x>::zed();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test503barIXadL_ZNS_1xEEEE3zedEv
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test503barIXadL_ZNS_1xEEEE3zedEv
+  // CHECK-LABEL: define weak_odr void @_ZN6test503barIXadL_ZNS_1xEEEE3zedEv
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test503barIXadL_ZNS_1xEEEE3zedEv
 }
 
 namespace test51 {
-  // Test that we use the visibility of struct foo when instantiating the
-  // template. Note that is a case where we disagree with gcc, it produces
-  // a default symbol.
-
   struct HIDDEN foo {};
   DEFAULT foo da, db, dc, dd, de, df;
   HIDDEN foo ha, hb, hc, hd, he, hf;
@@ -1016,8 +1004,8 @@ namespace test51 {
   void DEFAULT zed() {
   }
   template void zed<&da>();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
 
   template void DEFAULT zed<&db>();
   // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2dbEEEEEvv(
@@ -1044,10 +1032,10 @@ namespace test51 {
   template void zed<&hd>();
   template void DEFAULT zed<&he>();
 #pragma GCC visibility pop
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
   // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
   // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
   // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
 
@@ -1055,17 +1043,13 @@ namespace test51 {
     zed<&df>();
     zed<&hf>();
   }
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
   // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
 }
 
 namespace test52 {
-  // Test that we use the linkage of struct foo when instantiating the
-  // template. Note that is a case where we disagree with gcc, it produces
-  // an external symbol.
-
   namespace {
     struct foo {
     };
