@@ -1,25 +1,26 @@
 ; Test that the CS pre-inliner honors the always_inline and noinline attributes
-; encoded in the pseudo probe descriptors (-preinliner-use-inline-attributes).
+; encoded in the pseudo probe descriptors (-preinliner-use-inline-attributes, on
+; by default).
 ;
 ; main inlines ai (always_inline) and ord, and calls ni (noinline). ai is the
 ; hottest candidate, then ni, then ord; main is 178 bytes and ai 78 (source at
 ; the end).
 ;
-; Without the option all three callees are inlined.
+; With -preinliner-use-inline-attributes=false all three callees are inlined.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes=false
+; RUN: FileCheck %s --input-file %t --check-prefix=NOATTR
+
+; NOATTR:      main:4219:0
+; NOATTR:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
+; NOATTR:        !Attributes: 3
+; NOATTR-NEXT:  7: ni:19
+; NOATTR:        !Attributes: 2
+; NOATTR-NEXT:  10: _ZL3ordi.__uniq.{{[0-9]+}}:6
+; NOATTR:        !Attributes: 3
+
+; By default ni stays a call and its profile is marked noinline (16), and ai is
+; marked always_inline (8 + inlined 3).
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0
-; RUN: FileCheck %s --input-file %t --check-prefix=DEFAULT
-
-; DEFAULT:      main:4219:0
-; DEFAULT:       5: _ZL2aii.__uniq.{{[0-9]+}}:3996
-; DEFAULT:        !Attributes: 3
-; DEFAULT-NEXT:  7: ni:19
-; DEFAULT:        !Attributes: 2
-; DEFAULT-NEXT:  10: _ZL3ordi.__uniq.{{[0-9]+}}:6
-; DEFAULT:        !Attributes: 3
-
-; With the option ni stays a call and its profile is marked noinline (16), and
-; ai is marked always_inline (8 + inlined 3).
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes
 ; RUN: FileCheck %s --input-file %t --check-prefix=ATTR
 
 ; ATTR:      main:4222:0
@@ -35,11 +36,11 @@
 
 ; With no size budget and a size threshold of 1 byte, ai is still inlined, since
 ; the compiler inlines it anyway: neither the exhausted budget nor shouldInline()
-; may stop it. ord is not inlined. Without the option nothing is inlined.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0 --sample-profile-hot-inline-threshold=0 --csspgo-preinliner-multiplier-for-previous-inlining=1
-; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET-ATTR
+; may stop it. ord is not inlined. Without the attributes nothing is inlined.
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0 --sample-profile-hot-inline-threshold=0 --csspgo-preinliner-multiplier-for-previous-inlining=1
-; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET
+; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET-ATTR
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes=false --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0 --sample-profile-hot-inline-threshold=0 --csspgo-preinliner-multiplier-for-previous-inlining=1
+; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET-NOATTR
 
 ; NOBUDGET-ATTR:      main:4222:0
 ; NOBUDGET-ATTR:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
@@ -47,19 +48,19 @@
 ; NOBUDGET-ATTR:        !Attributes: 11
 ; NOBUDGET-ATTR:      _ZL3ordi.__uniq.{{[0-9]+}}:6:6
 
-; NOBUDGET:      _ZL2aii.__uniq.{{[0-9]+}}:3996:34
-; NOBUDGET:      main:260:0
-; NOBUDGET:       5: 34 _ZL2aii.__uniq.{{[0-9]+}}:34
-; NOBUDGET:       7: 22 ni:22
-; NOBUDGET:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
-; NOBUDGET-NOT:  !Attributes: {{[23]}}{{$}}
+; NOBUDGET-NOATTR:      _ZL2aii.__uniq.{{[0-9]+}}:3996:34
+; NOBUDGET-NOATTR:      main:260:0
+; NOBUDGET-NOATTR:       5: 34 _ZL2aii.__uniq.{{[0-9]+}}:34
+; NOBUDGET-NOATTR:       7: 22 ni:22
+; NOBUDGET-NOATTR:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
+; NOBUDGET-NOATTR-NOT:  !Attributes: {{[23]}}{{$}}
 
 ; A 250-byte budget against main's 178 bytes: ai is free by default, so ord
 ; still fits. -preinliner-charge-always-inline-size charges ai's 78 bytes, which
 ; uses the budget up, so ord is no longer inlined.
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250
 ; RUN: FileCheck %s --input-file %t --check-prefix=FREE
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --preinliner-use-inline-attributes --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250 --preinliner-charge-always-inline-size
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-inline-attributes.perfscript --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --sample-profile-inline-limit-min=250 --sample-profile-inline-limit-max=250 --preinliner-charge-always-inline-size
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHARGED
 
 ; FREE:      main:4222:0

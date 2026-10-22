@@ -62,7 +62,7 @@ static cl::opt<int> CSPreinlMultiplierForPrevInl(
         "Multiplier to bump up callsite threshold for previous inlining."));
 
 static cl::opt<bool> CSPreinlUseInlineAttributes(
-    "preinliner-use-inline-attributes", cl::Hidden, cl::init(false),
+    "preinliner-use-inline-attributes", cl::Hidden, cl::init(true),
     cl::desc("Honor always_inline/noinline attributes from pseudo probe "
              "descriptors in the CS pre-inliner."));
 
