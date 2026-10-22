@@ -291,6 +291,61 @@ final:
   ret i32 %result
 }
 
+define i32 @test_choice5(fp128 %a) #0 {
+; LABEL: test_choice5
+; P8-LABEL: test_choice5:
+; P8:       # %bb.0:
+; P8-NEXT:    mflr 0
+; P8-NEXT:    stdu 1, -32(1)
+; P8-NEXT:    std 0, 48(1)
+; P8-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; P8-NEXT:    addi 3, 3, .LCPI4_0@toc@l
+; P8-NEXT:    lxvd2x 0, 0, 3
+; P8-NEXT:    xxswapd 35, 0
+; P8-NEXT:    bl __gtkf2
+; P8-NEXT:    nop
+; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; P8-NEXT:    cmpwi 3, 0
+; P8-NEXT:    bgt 0, .LBB4_2
+; P8-NEXT:    b .LBB4_1
+; P8-NEXT:  .LBB4_1: # %if.true
+; P8-NEXT:    li 3, 1
+; P8-NEXT:    addi 1, 1, 32
+; P8-NEXT:    ld 0, 16(1)
+; P8-NEXT:    mtlr 0
+; P8-NEXT:    blr
+; P8-NEXT:  .LBB4_2: # %if.false
+; P8-NEXT:    li 3, 0
+; P8-NEXT:    addi 1, 1, 32
+; P8-NEXT:    ld 0, 16(1)
+; P8-NEXT:    mtlr 0
+; P8-NEXT:    blr
+;
+; P9-LABEL: test_choice5:
+; P9:       # %bb.0:
+; P9-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; P9-NEXT:    addi 3, 3, .LCPI4_0@toc@l
+; P9-NEXT:    lxv 35, 0(3)
+; P9-NEXT:    xscmpuqp 0, 2, 3
+; P9-NEXT:    bgt 0, .LBB4_2
+; P9-NEXT:    b .LBB4_1
+; P9-NEXT:  .LBB4_1: # %if.true
+; P9-NEXT:    li 3, 1
+; P9-NEXT:    blr
+; P9-NEXT:  .LBB4_2: # %if.false
+; P9-NEXT:    li 3, 0
+; P9-NEXT:    blr
+  %cmp = fcmp ogt fp128 %a, 0xL00000000000000000000000000000000
+  %not = icmp eq i1 %cmp, false
+  br i1 %not, label %if.true, label %if.false
+
+if.true:
+  ret i32 1
+
+if.false:
+  ret i32 0
+}
+
 attributes #0 = { nounwind }
 
 declare i32 @foo()
