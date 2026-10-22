@@ -519,6 +519,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
+  // Register the global before building its body so that a lookup made by
+  // the body builder finds it, as it did when lookups walked the module.
+  fir::registerSymbol(symbolTable, glob);
   // Set default alignment for array globals.
   if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
     glob.setAlignment(fir::defaultArrayGlobalAlignment);
@@ -528,7 +531,6 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPointToStart(&block);
   bodyBuilder(*this);
   restoreInsertionPoint(insertPt);
-  fir::registerSymbol(symbolTable, glob);
   return glob;
 }
 
