@@ -327,13 +327,18 @@ bool IsVariableListItem(
   return false;
 }
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (auto *desg{GetDesignatorFromObj(object)}) {
+std::optional<bool> IsSubstring(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  // Whole objects and other designators cannot be substrings. Analyzing them
+  // as expressions can reject otherwise valid OpenMP list items.
+  if (auto *desg{GetDesignatorFromObj(object)}; desg &&
+      (std::holds_alternative<parser::Substring>(desg->u) ||
+          GetArrayElementFromObj(object))) {
     evaluate::ExpressionAnalyzer ea(*semaCtx);
-    auto restorer{ea.GetContextualMessages().DiscardMessages()};
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
       return ExtractSubstring(*expr).has_value();
     }
+    return std::nullopt;
   }
   return false;
 }
