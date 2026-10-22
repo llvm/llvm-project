@@ -2,14 +2,14 @@
 
 
 // CHECK-LABEL: builtin_frac_half
-// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn half @llvm.dx.frac.f16(half %{{.*}})
+// CHECK: %hlsl.frac = call fast half @llvm.dx.frac.f16(half %{{.*}})
 // CHECK: ret half  %hlsl.frac
 half builtin_frac_half(half p0) {
   return __builtin_hlsl_elementwise_frac(p0);
 }
 
 // CHECK-LABEL: builtin_frac_float
-// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn float @llvm.dx.frac.f32(float %{{.*}})
+// CHECK: %hlsl.frac = call fast float @llvm.dx.frac.f32(float %{{.*}})
 // CHECK: ret float  %hlsl.frac
 float builtin_frac_float (float p0) {
   return __builtin_hlsl_elementwise_frac(p0);

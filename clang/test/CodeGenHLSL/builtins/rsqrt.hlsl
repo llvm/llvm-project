@@ -18,52 +18,52 @@
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
 // NATIVE_HALF: define [[FNATTRS]] half @
-// NATIVE_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].rsqrt.f16(
+// NATIVE_HALF: %hlsl.rsqrt = call fast half @llvm.[[TARGET]].rsqrt.f16(
 // NATIVE_HALF: ret half %hlsl.rsqrt
 // NO_HALF: define [[FNATTRS]] float @
-// NO_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].rsqrt.f32(
+// NO_HALF: %hlsl.rsqrt = call fast float @llvm.[[TARGET]].rsqrt.f32(
 // NO_HALF: ret float %hlsl.rsqrt
 half test_rsqrt_half(half p0) { return rsqrt(p0); }
 // NATIVE_HALF: define [[FNATTRS]] <2 x half> @
-// NATIVE_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].rsqrt.v2f16
+// NATIVE_HALF: %hlsl.rsqrt = call fast <2 x half> @llvm.[[TARGET]].rsqrt.v2f16
 // NATIVE_HALF: ret <2 x half> %hlsl.rsqrt
 // NO_HALF: define [[FNATTRS]] <2 x float> @
-// NO_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].rsqrt.v2f32(
+// NO_HALF: %hlsl.rsqrt = call fast <2 x float> @llvm.[[TARGET]].rsqrt.v2f32(
 // NO_HALF: ret <2 x float> %hlsl.rsqrt
 half2 test_rsqrt_half2(half2 p0) { return rsqrt(p0); }
 // NATIVE_HALF: define [[FNATTRS]] <3 x half> @
-// NATIVE_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.[[TARGET]].rsqrt.v3f16
+// NATIVE_HALF: %hlsl.rsqrt = call fast <3 x half> @llvm.[[TARGET]].rsqrt.v3f16
 // NATIVE_HALF: ret <3 x half> %hlsl.rsqrt
 // NO_HALF: define [[FNATTRS]] <3 x float> @
-// NO_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].rsqrt.v3f32(
+// NO_HALF: %hlsl.rsqrt = call fast <3 x float> @llvm.[[TARGET]].rsqrt.v3f32(
 // NO_HALF: ret <3 x float> %hlsl.rsqrt
 half3 test_rsqrt_half3(half3 p0) { return rsqrt(p0); }
 // NATIVE_HALF: define [[FNATTRS]] <4 x half> @
-// NATIVE_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.[[TARGET]].rsqrt.v4f16
+// NATIVE_HALF: %hlsl.rsqrt = call fast <4 x half> @llvm.[[TARGET]].rsqrt.v4f16
 // NATIVE_HALF: ret <4 x half> %hlsl.rsqrt
 // NO_HALF: define [[FNATTRS]] <4 x float> @
-// NO_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].rsqrt.v4f32(
+// NO_HALF: %hlsl.rsqrt = call fast <4 x float> @llvm.[[TARGET]].rsqrt.v4f32(
 // NO_HALF: ret <4 x float> %hlsl.rsqrt
 half4 test_rsqrt_half4(half4 p0) { return rsqrt(p0); }
 
 // CHECK: define [[FNATTRS]] float @
-// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].rsqrt.f32(
+// CHECK: %hlsl.rsqrt = call fast float @llvm.[[TARGET]].rsqrt.f32(
 // CHECK: ret float %hlsl.rsqrt
 float test_rsqrt_float(float p0) { return rsqrt(p0); }
 // CHECK: define [[FNATTRS]] <2 x float> @
-// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].rsqrt.v2f32
+// CHECK: %hlsl.rsqrt = call fast <2 x float> @llvm.[[TARGET]].rsqrt.v2f32
 // CHECK: ret <2 x float> %hlsl.rsqrt
 float2 test_rsqrt_float2(float2 p0) { return rsqrt(p0); }
 // CHECK: define [[FNATTRS]] <3 x float> @
-// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].rsqrt.v3f32
+// CHECK: %hlsl.rsqrt = call fast <3 x float> @llvm.[[TARGET]].rsqrt.v3f32
 // CHECK: ret <3 x float> %hlsl.rsqrt
 float3 test_rsqrt_float3(float3 p0) { return rsqrt(p0); }
 // CHECK: define [[FNATTRS]] <4 x float> @
-// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].rsqrt.v4f32
+// CHECK: %hlsl.rsqrt = call fast <4 x float> @llvm.[[TARGET]].rsqrt.v4f32
 // CHECK: ret <4 x float> %hlsl.rsqrt
 float4 test_rsqrt_float4(float4 p0) { return rsqrt(p0); }
 
 // CHECK: define [[FNATTRS]] <5 x float> @
-// CHECK: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.[[TARGET]].rsqrt.v5f32
+// CHECK: %hlsl.rsqrt = call fast <5 x float> @llvm.[[TARGET]].rsqrt.v5f32
 // CHECK: ret <5 x float> %hlsl.rsqrt
 vector<float, 5> test_rsqrt_float5(vector<float, 5> p0) { return rsqrt(p0); }

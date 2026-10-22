@@ -2961,7 +2961,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
-                                       const JobAction &JA) {
+                                       const JobAction &JA,
+                                       bool IsHLSL = false) {
   // List of veclibs which when used with -fveclib imply -fno-math-errno.
   constexpr std::array VecLibImpliesNoMathErrno{llvm::StringLiteral("ArmPL"),
                                                 llvm::StringLiteral("SLEEF")};
@@ -3005,7 +3006,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef LastFpContractOverrideOption;
   bool SeenUnsafeMathModeOption = false;
   if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-      !JA.isOffloading(Action::OFK_HIP))
+      !JA.isOffloading(Action::OFK_HIP) && !IsHLSL)
     FPContract = "on";
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
@@ -3053,7 +3054,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         !JA.isOffloading(Action::OFK_HIP)) {
       if (LastSeenFfpContractOption != "")
         FPContract = LastSeenFfpContractOption;
-      else if (SeenUnsafeMathModeOption)
+      else if (SeenUnsafeMathModeOption || IsHLSL)
         FPContract = "on";
     }
     // In this case, we're reverting to the last explicit fp-contract option
@@ -6302,7 +6303,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_protect_parens, false))
     CmdArgs.push_back("-fprotect-parens");
 
-  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
+  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA,
+                             types::isHLSL(Input.getType()));
 
   Args.addOptInFlag(CmdArgs, options::OPT_fatomic_remote_memory,
                     options::OPT_fno_atomic_remote_memory);
