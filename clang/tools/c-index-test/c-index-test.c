@@ -1245,13 +1245,13 @@ static CXString GetCursorSource(CXCursor Cursor) {
     return createCXString("<invalid loc>");
   }
 #ifdef __MVS__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored                                                 \
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored                                                 \
     "-Wincompatible-pointer-types-discards-qualifiers"
 #endif
   b = basename(clang_getCString(source));
 #ifdef __MVS__
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 #endif
   result = duplicateCXString(b);
   clang_disposeString(source);
