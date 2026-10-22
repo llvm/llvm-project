@@ -23,8 +23,11 @@ stubs that always return `AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT`; they remain
 declared and exported for binary compatibility and will be removed outright in a
 future major release, along with `amd_comgr_hotswap_rewrite_flag_t` and
 `amd_comgr_hotswap_rewrite_options_t`. The `AMD_COMGR_HOTSWAP_ENTRY_STUB_SYMBOLS`
-environment variable is gone. The cross-generation IR transpiler under
-`src/transpiler` (opt-in via `COMGR_ENABLE_TRANSPILER`) is unaffected.
+environment variable is gone.
+
+- Removed the experimental cross-generation IR transpiler, its tests and tools,
+and the `COMGR_ENABLE_TRANSPILER` build option. The experiment had no public
+Comgr C API.
 
 
 New Features

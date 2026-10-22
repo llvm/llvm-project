@@ -104,31 +104,14 @@ set(SOURCES
   src/comgr-hotswap-stubs.cpp
   src/comgr-libcxx-headers.cpp
   src/comgr-logger.cpp
+  src/comgr-metadata.cpp
   src/comgr-signal.cpp
   src/comgr-spirv-command.cpp
+  src/comgr-symbol.cpp
   src/comgr-symbolizer.cpp
   src/comgr-unbundle-command.cpp
   src/comgr-unpackage-command.cpp
   src/time-stat/time-stat.cpp)
-
-# Code-object metadata and symbol helpers, built once as an internal OBJECT
-# library so amd_comgr and the transpiler test drivers link the same objects
-# instead of recompiling these sources with divergent flags. The drivers need
-# the buffer-facing getMetadataRoot / getElfIsaName / lookupSymbolByName entry
-# points without the amd_comgr C API; sharing the objects keeps a single
-# definition and a single set of compile flags.
-set(COMGR_OBJECT_UTILS_SOURCES
-  src/comgr-metadata.cpp
-  src/comgr-symbol.cpp)
-
-# Transpiler IR transpiler (raiser), opt-in. The raiser lives under
-# amd/comgr/src/transpiler/raiser as a private COMGR subproject. When enabled, we
-# link the transpiler::raiser OBJECT library into amd_comgr (its TUs land directly
-# in amd_comgr.so so transpiler files can call comgr-metadata helpers
-# without a layering inversion) and compile the transpile entry point. When
-# disabled, the amd_comgr_transpile API is simply not provided.
-option(COMGR_ENABLE_TRANSPILER
-  "Build the transpiler-raiser-backed amd_comgr_transpile entry point" OFF)
 
 # Add Windows resource file for version info
 if(WIN32)
@@ -198,16 +181,6 @@ endif()
 target_include_directories(amd_comgr
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-# The transpiler subdirectory is entered below (around the
-# add_subdirectory(src/transpiler) line), which builds the transpile-path OBJECT
-# libraries only under this option; here we opt amd_comgr into exposing the
-# `amd_comgr_transpile` entry point. The transpiler link edges are
-# added after the curated LLVM/LLD link block below (see "transpiler link
-# edges"), not here.
-if(COMGR_ENABLE_TRANSPILER)
-  target_compile_definitions(amd_comgr PRIVATE COMGR_ENABLE_TRANSPILER=1)
-endif()
 
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
@@ -441,46 +414,6 @@ target_include_directories(amd_comgr
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-# Internal OBJECT library for the shared metadata / symbol helpers. Compiled
-# once with the same flags and include roots as amd_comgr, then linked into both
-# amd_comgr and the transpiler test drivers, so the drivers reuse the exact same
-# objects (and the buffer-facing getMetadataRoot / getElfIsaName /
-# lookupSymbolByName entry points) instead of recompiling the sources with
-# divergent flags. Per-function/data sections let a standalone driver drop the
-# parts of these translation units it does not reference (the amd_comgr build
-# keeps them); the GCC/Clang spelling is -ffunction-sections/-fdata-sections,
-# the MSVC equivalent is /Gy plus /Gw.
-add_library(comgr-object-utils OBJECT ${COMGR_OBJECT_UTILS_SOURCES})
-# These sources include LLVM headers that pull in TableGen-generated .inc files.
-# amd_comgr is ordered after those generators by its LLVM link libraries, but an
-# OBJECT library that links nothing needs the dependency spelled out. The
-# generator targets only exist in an in-tree build.
-foreach(comgr_tablegen_target intrinsics_gen target_parser_gen)
-  if(TARGET ${comgr_tablegen_target})
-    add_dependencies(comgr-object-utils ${comgr_tablegen_target})
-  endif()
-endforeach()
-set_target_properties(comgr-object-utils PROPERTIES
-  CXX_STANDARD 17
-  CXX_STANDARD_REQUIRED ON
-  CXX_EXTENSIONS No
-  POSITION_INDEPENDENT_CODE ON)
-target_include_directories(comgr-object-utils
-  PRIVATE
-    ${LLVM_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>)
-if(MSVC)
-  target_compile_options(comgr-object-utils
-    PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}" /Gy /Gw)
-else()
-  target_compile_options(comgr-object-utils
-    PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}" -ffunction-sections -fdata-sections)
-endif()
-target_compile_definitions(comgr-object-utils
-  PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS}")
-target_link_libraries(amd_comgr PRIVATE comgr-object-utils)
-
 configure_file(
   include/amd_comgr.h.in
   include/amd_comgr.h @ONLY)
@@ -673,14 +606,6 @@ if (NOT WIN32)
       ${CMAKE_DL_LIBS})
 endif()
 
-# Transpiler subproject. Under COMGR_ENABLE_TRANSPILER, builds the
-# transpile-path OBJECT libraries and exports the set amd_comgr links as
-# COMGR_TRANSPILER_LIBS (empty otherwise). These OBJECT libraries keep their LLVM
-# deps PRIVATE, so they contribute only their objects and leave the curated LLVM
-# set linked above unchanged.
-add_subdirectory(src/transpiler)
-target_link_libraries(amd_comgr PRIVATE ${COMGR_TRANSPILER_LIBS})
-
 include(CTest)
 
 if(BUILD_TESTING)
@@ -698,7 +623,6 @@ if(BUILD_TESTING)
   if (NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-comgr)
   endif()
-  add_subdirectory(test-support)
   add_subdirectory(test)
   add_subdirectory(test-lit)
   add_subdirectory(test-unit)

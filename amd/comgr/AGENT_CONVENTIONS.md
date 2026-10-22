@@ -8,10 +8,6 @@ conventions. The agent-tool wrappers (`amd/comgr/CLAUDE.md`,
 `.cursor/rules/comgr.mdc`) point here so updates only need to be made
 once.
 
-For transpiler-subsystem-specific conventions (code-object input
-validation, instruction recognition, the transpiler test driver), see
-[`src/transpiler/TRANSPILER_CONVENTIONS.md`](src/transpiler/TRANSPILER_CONVENTIONS.md).
-
 ## 1. Code reuse — Comgr first, LLVM second, custom never
 
 **Reuse existing Comgr APIs before writing new ones.** Notable hits:

@@ -285,13 +285,6 @@ amd_comgr_status_t getMetadataRoot(DataObject *DataP, DataMeta *MetaP) {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-llvm::Error getMetadataRoot(MemoryBufferRef MB, DataMeta *MetaP) {
-  auto ObjOrErr = getELFObjectFileBase(MB);
-  if (!ObjOrErr)
-    return ObjOrErr.takeError();
-  return getMetadataRoot(ObjOrErr->get(), MetaP);
-}
-
 namespace {
 struct IsaInfo {
   std::string IsaName;
@@ -419,7 +412,7 @@ amd_comgr_status_t getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
 }
 } // namespace
 
-Expected<std::string> getElfIsaName(MemoryBufferRef MB) {
+static Expected<std::string> getElfIsaName(MemoryBufferRef MB) {
   auto ObjOrErr = getELFObjectFileBase(MB);
   if (!ObjOrErr)
     return ObjOrErr.takeError();

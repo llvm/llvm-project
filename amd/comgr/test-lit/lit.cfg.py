@@ -8,7 +8,7 @@ import tempfile
 import lit.formats
 
 config.name = "Comgr"
-config.suffixes = {".hip", ".cl", ".c", ".cpp", ".s"}
+config.suffixes = {".hip", ".cl", ".c", ".cpp"}
 config.test_format = lit.formats.ShTest(
     execute_external=True, force_execute_external=True
 )
@@ -24,15 +24,6 @@ if config.comgr_spirv_translator_available:
     config.available_features.add("comgr-has-spirv-translator")
 if config.comgr_amdgpu_target_available:
     config.available_features.add("comgr-has-amdgpu-target")
-if config.comgr_transpiler_available:
-    config.available_features.add("comgr-has-transpiler")
-if os.path.exists(
-    os.path.join(
-        config.llvm_tools_dir,
-        "llc.exe" if platform.system() == "Windows" else "llc",
-    )
-):
-    config.available_features.add("comgr-has-llc")
 
 # The AMDGPU device AddressSanitizer runtime (libclang_rt.asan.a for
 # amdgcn-amd-amdhsa) is a separately built artifact. The asan tests link it,
@@ -134,9 +125,6 @@ def _fwd(*parts):
 config.substitutions.append(("%clang", _fwd(config.llvm_tools_dir, "clang")))
 config.substitutions.append(("%llvm-as", _fwd(config.llvm_tools_dir, "llvm-as")))
 config.substitutions.append(("%llvm-dis", _fwd(config.llvm_tools_dir, "llvm-dis")))
-config.substitutions.append(("%llvm-mc", _fwd(config.llvm_tools_dir, "llvm-mc")))
-config.substitutions.append(("%llc", _fwd(config.llvm_tools_dir, "llc")))
-config.substitutions.append(("%opt", _fwd(config.llvm_tools_dir, "opt")))
 config.substitutions.append(
     ("%llvm-objcopy", _fwd(config.llvm_tools_dir, "llvm-objcopy"))
 )
@@ -158,38 +146,3 @@ config.substitutions.append(
 
 # Interpreter used to run Python test helpers (e.g. enumerate-isa-check.py).
 config.substitutions.append(("%python", _fwd(sys.executable)))
-config.substitutions.append(
-    ("%transpile_cli", _fwd(config.comgr_obj_dir, "transpile_cli"))
-)
-
-
-# Executing translated code requires a matching device and the HIP runtime.
-_rocm_path = os.environ.get("ROCM_PATH", "/opt/rocm")
-
-
-def _has_gfx942_device():
-    enumerator = _fwd(_rocm_path, "bin", "rocm_agent_enumerator")
-    if not os.path.exists(enumerator):
-        return False
-    try:
-        out = subprocess.run(
-            [enumerator], stdout=subprocess.PIPE, check=True, timeout=30
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return b"gfx942" in out.stdout.split()
-
-
-_hip_include = _fwd(_rocm_path, "include")
-_hip_lib = _fwd(_rocm_path, "lib")
-if (
-    platform.system() == "Linux"
-    and os.path.exists(_fwd(_hip_include, "hip", "hip_runtime_api.h"))
-    and os.path.exists(_fwd(_hip_lib, "libamdhip64.so"))
-    and _has_gfx942_device()
-):
-    config.available_features.add("comgr-has-hip-gfx942")
-    config.substitutions.append(("%hip_cflags", "-I" + _hip_include))
-    config.substitutions.append(
-        ("%hip_ldflags", "-L{0} -lamdhip64 -Wl,-rpath,{0}".format(_hip_lib))
-    )

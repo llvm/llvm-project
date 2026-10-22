@@ -47,9 +47,7 @@ else()
 endif()
 
 # Pin C++17 and mirror LLVM's RTTI setting (avoids type_info link errors
-# against LLVM libs built with RTTI off, including transpiler::raiser
-# which carries its own non-RTTI / non-exceptions compile flags via
-# llvm_update_compile_flags()).
+# against LLVM libs built with RTTI off).
 function(comgr_configure_test_target target)
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 17
@@ -63,11 +61,6 @@ function(comgr_configure_test_target target)
     endif()
   endif()
 endfunction()
-
-# Transpiler unit tests live in their own subtree mirroring src/transpiler:
-# transpiler/raiser (IR transpiler) and transpiler/decoder. The gtest discovery above
-# and comgr_configure_test_target() are inherited by the subdirectories.
-add_subdirectory(transpiler)
 
 # -- DemangleSymbolNameTest ---------------------------------------------------
 
@@ -237,14 +230,4 @@ add_dependencies(test-unit
   DemangleSymbolNameTest LoggerTests MetadataCacheTest SymbolIndexTest
   IncludeMaterializationTest)
 
-# The transpile-path test binaries, exported by transpiler/CMakeLists.txt in
-# COMGR_TRANSPILER_TEST_TARGETS (empty unless COMGR_ENABLE_TRANSPILER is on).
-# Adding a transpiler test updates that list, not this file.
-foreach(TranspilerTest ${COMGR_TRANSPILER_TEST_TARGETS})
-  add_custom_command(TARGET test-unit POST_BUILD
-    COMMAND $<TARGET_FILE:${TranspilerTest}>)
-endforeach()
-if(COMGR_TRANSPILER_TEST_TARGETS)
-  add_dependencies(test-unit ${COMGR_TRANSPILER_TEST_TARGETS})
-endif()
 add_dependencies(check-comgr test-unit)

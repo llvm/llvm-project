@@ -3,15 +3,6 @@ comgr:
     - any-glob-to-any-file:
       - amd/comgr/**
 
-transpiler:
-  - changed-files:
-    - any-glob-to-any-file:
-      - amd/comgr/src/transpiler/**
-      - amd/comgr/test-lit/transpiler/**
-      - amd/comgr/test-unit/transpiler/**
-      - amd/comgr/test-lit/comgr-sources/transpile_cli.cpp
-      - amd/comgr/utils/transpiler/**
-
 device-libs:
   - changed-files:
     - any-glob-to-any-file:

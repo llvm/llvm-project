@@ -57,14 +57,6 @@ public:
 
 }; // SymbolHelper
 
-// Look up a symbol by name in an already-parsed `ObjectFile`. Walks
-// `Obj.symbols()`, which for AMDGPU executables covers the kernel and `.kd`
-// symbols the asm printer emits. Returns an error when the symbol is missing
-// or its name accessor fails; callers that need the symbol address / size go
-// on to call `getAddress()` / `ELFSymbolRef::getSize()` on the returned ref.
-llvm::Expected<llvm::object::SymbolRef>
-lookupSymbolByName(llvm::object::ObjectFile &Obj, llvm::StringRef Name);
-
 } // namespace COMGR
 
 #endif

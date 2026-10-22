@@ -183,18 +183,6 @@ SymbolContext *SymbolHelper::createBinary(DataObject *DataP, const char *Name) {
   return Symp.release();
 }
 
-Expected<SymbolRef> COMGR::lookupSymbolByName(ObjectFile &Obj, StringRef Name) {
-  for (const SymbolRef &Sym : Obj.symbols()) {
-    Expected<StringRef> NameOrErr = Sym.getName();
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-    if (*NameOrErr == Name)
-      return Sym;
-  }
-  return createStringError(inconvertibleErrorCode(),
-                           "symbol '" + Name + "' not found");
-}
-
 amd_comgr_status_t SymbolHelper::iterateTable(
     DataObject *DataP,
     amd_comgr_status_t (*Callback)(amd_comgr_symbol_t, void *),

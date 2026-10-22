@@ -17,11 +17,6 @@
 /amd/hipcc/ @david-salinas @lamb-j
 /amd/docs/ @ROCm/rocm-documentation
 
-# Transpiler specific
-/amd/comgr/src/transpiler/ @harsh-amd @ftynse
-/amd/comgr/test-unit/transpiler/ @harsh-amd @ftynse
-/amd/comgr/test-lit/transpiler/ @harsh-amd @ftynse
-
 /libc/ @llbm/reviewers-libc
 /bolt/ @llvm/reviewers-bolt
 /libc/ @llvm/reviewers-libc
