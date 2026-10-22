@@ -321,15 +321,16 @@ public:
     mlir::Value columnIdx = cgf.emitScalarExpr(e->getColumnIdx());
     mlir::Value matrix = Visit(e->getBase());
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
-      assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
     return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
   mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: matrix singel subscript");
-    return {};
+    mlir::Value rowIdx = cgf.emitScalarExpr(e->getRowIdx());
+    assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    mlir::Value matrix = Visit(e->getBase());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    return builder.createMatrixExtractRow(loc, matrix, rowIdx);
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -2657,7 +2658,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::Value src = Visit(const_cast<Expr *>(subExpr));
     mlir::Type dstTy = cgf.convertType(destTy);
 
-    assert(!cir::MissingFeatures::addressSpace());
+    // Function and object pointers may differ in address space.
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(src.getType());
+    auto dstPtrTy = mlir::dyn_cast<cir::PointerType>(dstTy);
+    if (srcPtrTy && dstPtrTy &&
+        srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace())
+      src = cgf.performAddrSpaceCast(
+          src,
+          builder.getPointerTo(srcPtrTy.getPointee(), dstPtrTy.getAddrSpace()));
 
     if (cgf.sanOpts.has(SanitizerKind::CFIUnrelatedCast))
       cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),

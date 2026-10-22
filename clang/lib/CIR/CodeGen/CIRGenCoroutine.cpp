@@ -818,9 +818,15 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           // await_resume().
           awaitRes.rv = RValue::getIgnored();
         } else if (forLValue) {
-          // FIXME(cir): the alloca for the resume expr should be placed in the
-          // enclosing cir.scope instead.
           awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
+          assert(awaitRes.lv.isSimple() &&
+                 "expected simple lvalue for coroutine resume");
+          mlir::Value ptr = awaitRes.lv.getPointer();
+          llvm::StringRef tmpName = "__coyield_resume_lval";
+          tmpResumeRValAddr = cgf.emitAlloca(
+              tmpName, ptr.getType(), loc, cgf.getPointerAlign(),
+              builder.getBestAllocaInsertPoint(scopeParentBlock));
+          builder.CIRBaseBuilderTy::createStore(loc, ptr, tmpResumeRValAddr);
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
@@ -910,6 +916,39 @@ RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
                                        bool ignoreResult) {
   return emitSuspendExpr(*this, e, cir::AwaitKind::Yield, aggSlot,
                          ignoreResult);
+}
+
+#ifndef NDEBUG
+static QualType
+getCoroutineSuspendExprReturnType(const ASTContext &ctx,
+                                  const CoroutineSuspendExpr *e) {
+  const auto *re = e->getResumeExpr();
+  assert(isa<CallExpr>(re) && "unexpected suspend expression type");
+  return cast<CallExpr>(re)->getCallReturnType(ctx);
+}
+#endif
+
+LValue CIRGenFunction::emitCoyieldLValue(const CoyieldExpr *e) {
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
+  mlir::Location scopeLoc = getLoc(e->getSourceRange());
+  mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
+  mlir::Value tmpResumeLValAddr;
+  LValue lv =
+      emitSuspendExpression(*this, *curCoro.data, *e, cir::AwaitKind::Yield,
+                            AggValueSlot::ignored(),
+                            /*ignoreResult=*/false, currEntryBlock,
+                            tmpResumeLValAddr, /*forLValue=*/true)
+          .lv;
+  if (tmpResumeLValAddr) {
+    Address addr = lv.getAddress();
+    mlir::Value loadedPtr = cir::LoadOp::create(
+        getBuilder(), scopeLoc, addr.getPointer().getType(), tmpResumeLValAddr);
+    lv.setAddress(addr.withPointer(loadedPtr));
+  }
+  return lv;
 }
 
 mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {

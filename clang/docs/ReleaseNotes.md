@@ -171,6 +171,14 @@ features cannot lower the translation-unit ABI level;
 
 ## What's New in Clang {{env.config.release}}?
 
+- The experimental ClangIR code generator is now built into Clang by default, so
+`-fclangir` can be used without any additional CMake options. While ClangIR will
+work for many workloads in some narrow configurations (ie, Itanium only), it
+should prove useful for MLIR experimentation in Clang. This does however have a
+measureable and significant impact on the build-time of clang itself. It can be
+disabled with the CMake option `-DCLANG_ENABLE_CIR=OFF`. See [the CIR
+documentation](CIR/index.md) for more information regarding ClangIR's status and design.
+
 ### C++ Language Changes
 - Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
 
@@ -526,6 +534,16 @@ features cannot lower the translation-unit ABI level;
     DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
   };
   ```
+
+- Added `-Wlifetime-safety-experimental` to group experimental lifetime safety
+  warnings. It is not part of `-Wlifetime-safety-all`. It contains:
+
+  - `-Wlifetime-safety-experimental-invalidation`, renamed from
+    `-Wlifetime-safety-invalidation` and no longer enabled by
+    `-Wlifetime-safety` or `-Wlifetime-safety-strict`.
+  - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
+    member function returns a value derived from a pointer, reference, or view
+    field rather than from `*this`.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -1065,6 +1083,7 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
   source file. (#GH222310)
@@ -1150,6 +1169,10 @@ features cannot lower the translation-unit ABI level;
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
 
+- Added support for the `aarch64-unknown-uefi` target triple. Like
+  `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
+  Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
@@ -1232,6 +1255,10 @@ features cannot lower the translation-unit ABI level;
   fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 - External CUDA kernel declarations now use the correct calling convention. (#GH118212)
+
+- Fixed `__dp4a`, `__dp2a_lo` and `__dp2a_hi` producing unresolved extern
+  functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
+  `__nvvm_idp2a_*` builtins. (#GH233434)
 
 #### AIX Support
 
@@ -1369,6 +1396,17 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Loop-transforming constructs such as `tile` and `unroll` are now allowed
+  inside a `simd` region for OpenMP 6.0 or later, which classifies them as
+  simdizable.
+- The `loop` construct without a `bind` clause or with `bind(thread)` is now
+  allowed inside a `simd` region for OpenMP 5.0 or later, as the OpenMP
+  specification permits.
+- Constructs nested inside a loop-transforming construct are now checked
+  against the restrictions of an enclosing `simd` region or of a loop with an
+  `order(concurrent)` clause. Previously, such constructs (e.g. `parallel`
+  inside `tile` inside `simd`, or `critical` inside `tile` inside a loop with
+  `order(concurrent)`) were incorrectly accepted.
 
 - Added support for capturing structured bindings in OpenMP regions
   (a C++20 extension; warned as an extension in C++17). Individual bindings
@@ -1385,9 +1423,18 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
 
+- Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
+  offload target was configured, which accepted `try`/`throw` with exceptions disabled
+  and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+
 ### SYCL Support
 
 #### Improvements
+
+### Clang IR Improvements
+
+- Clang builds now build ClangIR support by default. Clang IR is expected to work with most Linux/X86-64 workloads. Normal builds are unchanged, however those who wish to test out the experimental `-fclangir` flag can now do so with a Clang build.
+
 
 ## Additional Information
 

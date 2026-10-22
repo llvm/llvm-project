@@ -47,6 +47,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setSchedulingPreference(Sched::RegPressure);
   setStackPointerRegisterToSaveRestore(AVR::SP);
   setSupportsUnalignedAtomics(true);
+  setMaxAtomicSizeInBitsSupported(16);
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
