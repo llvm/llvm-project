@@ -25,8 +25,8 @@
 #ifndef LLVM_IR_LEGACYPASSNAMEPARSER_H
 #define LLVM_IR_LEGACYPASSNAMEPARSER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -88,7 +88,7 @@ public:
 
 private:
   // The arguments of the passes added so far.
-  StringSet<> PassArguments;
+  DenseSet<StringRef> PassArguments;
 
   // ValCompare - Provide a sorting comparator for Values elements...
   static int ValCompare(const PassNameParser::OptionInfo *VT1,
