@@ -6,13 +6,12 @@
 //
 //===-------------------------------------------------------------------------===//
 
-// All metafunctions should be consteval. 
-class CXXMetaBuiltin<string prototype, list<Attribute> Attrs = []>
+// All metafunctions should be consteval.
+class CXXMetaBuiltin<string name, string prototype, list<Attribute> Attrs = []>
     : LangBuiltin<"CXX_LANG"> {
+  let Spellings = [!strconcat("__builtin_meta_", name)];
   let Prototype = prototype;
   let Attributes = !listconcat([Consteval], Attrs);
 }
 
-def MetaIsType : CXXMetaBuiltin<"bool(std::meta::info)", [NoThrow]> {
-  let Spellings = ["__builtin_meta_is_type"];
-}
+def MetaIsType : CXXMetaBuiltin<"is_type", "bool(std::meta::info)", [NoThrow]>;

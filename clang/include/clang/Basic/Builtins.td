@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 include "clang/Basic/BuiltinsBase.td"
-include "clang/Basic/BuiltinsMeta.td"
 
 class FPMathTemplate : Template<["float", "double", "long double"],
                                 ["f",     "",       "l"]>;
@@ -6048,3 +6047,8 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+//===----------------------------------------------------------------------===//
+// C++26 reflection metafunctions.
+//===----------------------------------------------------------------------===//
+include "clang/Basic/BuiltinsMeta.td"
