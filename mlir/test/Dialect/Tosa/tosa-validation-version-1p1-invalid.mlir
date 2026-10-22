@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_fp" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_fp extensions=mx_common,mx_fp4e2m1" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 
@@ -32,3 +32,14 @@ module {
   // expected-error@+1 {{'tosa.variable' op is not profile-aligned: element type 'f64' is not legal}}
   tosa.variable @dynamic_var : tensor<2x?xf64>
 }
+
+// -----
+
+func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %start = tosa.const_shape values(dense<[0, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
+  %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+

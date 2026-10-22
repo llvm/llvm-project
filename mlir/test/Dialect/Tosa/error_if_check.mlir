@@ -356,3 +356,23 @@ func.func @test_matmul_rank3_rhs_broadcast_dynamic_lhs(%arg0: tensor<?x4x7xf32>,
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x4x7xf32>, tensor<1x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
   return %0 : tensor<2x4x5xf32>
 }
+
+// -----
+
+func.func @test_slice_invalid_start_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape values(dense<[-2, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op start values must be non-negative, got [-2, 0, 0]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_size_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape values(dense<[0, 0, 0]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op size values must be > 0, got [1, 0, 1]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x?x?xf32>
+  return
+}
