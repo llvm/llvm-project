@@ -81,12 +81,6 @@ jobs:
           "${COMPILER}" --version
           python3 --version
 
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install -r libcxx/utils/ci/lnt/requirements.txt
-
       # Build the library.
       #
       # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
@@ -114,7 +108,11 @@ jobs:
           FILTER: ${{ inputs.filter }}
           LIBRARY_BUILD: ${{ steps.build.outcome }}
         run: |
-          source .venv/bin/activate
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the benchmarks..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
           filter_arg=()
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
@@ -134,11 +132,14 @@ jobs:
           fi
 
           libcxx/utils/ci/lnt/run-benchmarks                            \
+            --verbose                                                   \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
             --test-config "${TEST_CONFIG}"                              \
+            --run-parameter "library_build=${LIBRARY_BUILD}"            \
+            --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
             -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"

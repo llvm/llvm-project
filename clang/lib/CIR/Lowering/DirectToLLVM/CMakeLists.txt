@@ -14,6 +14,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   CIRLowering
   MLIRCIREnumsGen
   MLIRCIROpsIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
 
   LINK_LIBS
@@ -28,7 +30,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
   MLIRIR

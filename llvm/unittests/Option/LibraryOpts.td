@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
+def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-", perContext = false>;
 
 defm : BoolField<"lib-enable", "false", "A bool">;
 def InBuild : BuildCondition<"__cplusplus">;

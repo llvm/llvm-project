@@ -753,7 +753,7 @@ genArrayLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ConstantSubscript size =
       Fortran::evaluate::GetSize(con.shape());
-  if (size > std::numeric_limits<std::uint32_t>::max())
+  if (size > Fortran::common::numeric_limits<std::uint32_t>::max())
     // llvm::SmallVector has limited size
     TODO(loc, "Creation of very large array constants");
   fir::SequenceType::Shape shape(con.shape().begin(), con.shape().end());

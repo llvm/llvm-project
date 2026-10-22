@@ -168,7 +168,7 @@ class TypePromotionTransaction;
 
 class CodeGenPrepare {
   friend class CodeGenPrepareLegacyPass;
-  const CodeGenOptions &Opts = CodeGenOptions::Global;
+  const CodeGenOptions &Opts;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -229,8 +229,10 @@ class CodeGenPrepare {
   const DataLayout *DL = nullptr;
 
 public:
-  CodeGenPrepare() = default;
-  CodeGenPrepare(const TargetMachine *TM) : TM(TM){};
+  CodeGenPrepare(const TargetMachine *TM)
+      : Opts(cl::LibraryOptionsContext::get<CodeGenOptions>(
+            TM->Options.MCOptions.LibraryOptions)),
+        TM(TM) {}
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
 
@@ -866,7 +868,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                  isa<IndirectBrInst>(Pred->getTerminator())))
     return true;
 
-  if (BB->getTerminator() != &*BB->getFirstNonPHIOrDbg())
+  if (BB->getTerminator() != &*BB->getFirstNonPHIOrPseudoProbe())
     return true;
 
   // We use a simple cost heuristic which determine skipping merging is
@@ -2872,9 +2874,6 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 /// @endcode
 bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
                                                 ModifyDT &ModifiedDT) {
-  if (!BB->getTerminator())
-    return false;
-
   ReturnInst *RetI = dyn_cast<ReturnInst>(BB->getTerminator());
   if (!RetI)
     return false;
@@ -4582,6 +4581,8 @@ static bool MightBeFoldableInst(Instruction *I) {
     return true;
   case Instruction::Add:
     return true;
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(I)->isDisjoint();
   case Instruction::Mul:
   case Instruction::Shl:
     // Can only handle X*C and X << C.
@@ -5092,6 +5093,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(AddrInst)->isDisjoint())
+      return false;
+    [[fallthrough]];
   case Instruction::Add: {
     // Check to see if we can merge in one operand, then the other.  If so, we
     // win.
@@ -5132,9 +5137,6 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TPT.rollback(LastKnownGood);
     break;
   }
-  // case Instruction::Or:
-  //  TODO: We can handle "Or Val, Imm" iff this OR is equivalent to an ADD.
-  // break;
   case Instruction::Mul:
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
@@ -7613,7 +7615,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     return false;
 
   // If the SelectOptimize pass is enabled, selects have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
+  if (!Opts.disable_select_optimize)
     return false;
 
   // Find all consecutive select instructions that share the same condition.

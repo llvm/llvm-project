@@ -8523,6 +8523,10 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
     if (!SrcVT.isSimple() || !VT.isSimple())
       return SDValue();
 
+    // [x]vffint.s.l needs LSX and at least one full 128-bit source register.
+    if (!Subtarget.hasExtLSX() || SrcVT.getSizeInBits() < 128)
+      return SDValue();
+
     // Combine [x]vffint.s.l for vector si64 to float conversion.
     return MergeBlocksConvert(N, DAG, LoongArchISD::VFFINT, BlockBits);
   }
@@ -11929,6 +11933,15 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   case LoongArchISD::VANYNONZERO:
   case LoongArchISD::VALLZERO: {
     // MOVCF2GR zero-extend the i1 cond to GPR.
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
+  case LoongArchISD::VALL_ZERO:
+  case LoongArchISD::VANY_ZERO:
+  case LoongArchISD::VALL_NONZERO:
+  case LoongArchISD::VANY_NONZERO: {
+    // Materialized as literal 0/1 by the Pseudo{,X}VB{Z,NZ}_[BHWD]'s custom
+    // inserter, emitVecCondBranchPseudo().
     Known.Zero.setBitsFrom(1);
     break;
   }

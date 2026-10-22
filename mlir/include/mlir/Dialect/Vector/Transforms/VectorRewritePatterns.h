@@ -330,6 +330,12 @@ SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
 
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand.
+void populateVectorContractUnrollPatterns(RewritePatternSet &patterns,
+                                          const UnrollVectorOptions &options,
+                                          PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
 void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 1);
 
