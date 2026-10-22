@@ -3,7 +3,6 @@
 ; RUN: opt < %s -passes=vector-combine -verify-each -S -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=CHECK,SSE
 ; RUN: opt < %s -passes=vector-combine -verify-each -S -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=CHECK,AVX2
 ; RUN: opt < %s -passes=vector-combine -verify-each -S -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=CHECK,AVX512
-; REQUIRES: x86-registered-target
 
 target datalayout = "e-m:e-p:64:64-i64:64-n8:16:32:64-S128"
 
