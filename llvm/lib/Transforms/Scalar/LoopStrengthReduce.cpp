@@ -2503,12 +2503,10 @@ ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
   auto *NewCond = new ICmpInst(TermBr->getIterator(), Pred, IV,
                                ExitValue->getValue(), "lsr.exitcond");
   NewCond->setDebugLoc(Cond->getDebugLoc());
-  bool ReplacesAllUses = Cond->hasOneUse();
   TermBr->setCondition(NewCond);
 
-  if (ReplacesAllUses) {
+  if (Cond->use_empty()) {
     CondUse->setUser(NewCond);
-    SE.forgetValue(Cond);
     Cond->eraseFromParent();
   } else {
     CondUse = &IU.AddUser(NewCond, IV);

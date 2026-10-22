@@ -942,4 +942,71 @@ exit:
   ret void
 }
 
+; The IV has period 8 and the exact exit count is also 8. Its exit value was
+; already visited on the first iteration, so an equality exit would exit early.
+define void @exit_count_reaches_recurrence_period(ptr %p) {
+; BASE-LABEL: define void @exit_count_reaches_recurrence_period(
+; BASE-SAME: ptr [[P:%.*]]) {
+; BASE-NEXT:  [[ENTRY:.*]]:
+; BASE-NEXT:    br label %[[LOOP:.*]]
+; BASE:       [[LOOP]]:
+; BASE-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ -536870912, %[[ENTRY]] ]
+; BASE-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; BASE-NEXT:    [[LIMIT:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[LIMIT_NEXT:%.*]], %[[LOOP]] ]
+; BASE-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; BASE-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 536870912
+; BASE-NEXT:    [[LIMIT_NEXT]] = add nuw i32 [[LIMIT]], -1
+; BASE-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 536870912
+; BASE-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[LSR_IV_NEXT]], [[LIMIT]]
+; BASE-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT:.*]]
+; BASE:       [[EXIT]]:
+; BASE-NEXT:    ret void
+;
+; ZIBI-LABEL: define void @exit_count_reaches_recurrence_period(
+; ZIBI-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; ZIBI-NEXT:  [[ENTRY:.*]]:
+; ZIBI-NEXT:    br label %[[LOOP:.*]]
+; ZIBI:       [[LOOP]]:
+; ZIBI-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ -536870912, %[[ENTRY]] ]
+; ZIBI-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    [[LIMIT:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[LIMIT_NEXT:%.*]], %[[LOOP]] ]
+; ZIBI-NEXT:    store volatile i32 [[IV]], ptr [[P]], align 4
+; ZIBI-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 536870912
+; ZIBI-NEXT:    [[LIMIT_NEXT]] = add nuw i32 [[LIMIT]], -1
+; ZIBI-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 536870912
+; ZIBI-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[LSR_IV_NEXT]], [[LIMIT]]
+; ZIBI-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZIBI:       [[EXIT]]:
+; ZIBI-NEXT:    ret void
+;
+; ASM-LABEL: exit_count_reaches_recurrence_period:
+; ASM:       # %bb.0: # %entry
+; ASM-NEXT:    li a1, 0
+; ASM-NEXT:    li a2, -1
+; ASM-NEXT:    lui a3, 917504
+; ASM-NEXT:    lui a4, 131072
+; ASM-NEXT:  .LBB15_1: # %loop
+; ASM-NEXT:    # =>This Inner Loop Header: Depth=1
+; ASM-NEXT:    addw a3, a3, a4
+; ASM-NEXT:    sw a1, 0(a0)
+; ASM-NEXT:    add a1, a1, a4
+; ASM-NEXT:    bltu a3, a2, .LBB15_1
+; ASM-NEXT:  # %bb.2: # %exit
+; ASM-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %limit = phi i32 [ -1, %entry ], [ %limit.next, %loop ]
+  store volatile i32 %iv, ptr %p
+  %iv.next = add nuw i32 %iv, 536870912
+  %limit.next = add nuw i32 %limit, -1
+  %continue = icmp ult i32 %iv, %limit
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @use_condition(i1)
