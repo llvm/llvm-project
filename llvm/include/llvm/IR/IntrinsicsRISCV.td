@@ -2327,6 +2327,19 @@ class RVPBinaryIntrinsic
   def int_riscv_pm2wsub_x  : RVPHorizontalMulIntrinsic;
   def int_riscv_pm2waddsu  : RVPHorizontalMulIntrinsic;
 
+  // Packed Multiplication with Widening Horizontal Addition and Accumulate.
+  class RVPHorizontalMulAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm2wadda   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wadda_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddau  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddasu : RVPHorizontalMulAccIntrinsic;
+
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.
   class RVPPackedMulPartsIntrinsic
