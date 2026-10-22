@@ -88,6 +88,56 @@ using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
 
+/// Fold a vector reduction that packs bytes into a scalar integer.
+///
+///   vector.reduce.or(shl(zext(Vec), ShiftAmounts))
+///
+/// If every vector lane is shifted into its corresponding byte position, this
+/// is a bitcast of Vec to the result type. If the byte positions are reversed,
+/// this is a bswap of that bitcast. The mapping between vector lanes and scalar
+/// byte positions depends on the target endianness.
+static Value *foldBytePackVectorReduction(IntrinsicInst &II,
+                                          IRBuilderBase &Builder,
+                                          const DataLayout &DL) {
+  assert(II.getIntrinsicID() == Intrinsic::vector_reduce_or &&
+         "Expected an or reduction");
+
+  Value *Vec;
+  Constant *ShiftAmounts;
+  if (!match(II.getArgOperand(0), m_OneUse(m_Shl(m_OneUse(m_ZExt(m_Value(Vec))),
+                                                 m_Constant(ShiftAmounts)))))
+    return nullptr;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  auto *ResultTy = dyn_cast<IntegerType>(II.getType());
+  if (!VecTy || !ResultTy || !VecTy->getElementType()->isIntegerTy(8))
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  unsigned ResultBitWidth = ResultTy->getBitWidth();
+  if (NumElts * 8 != ResultBitWidth)
+    return nullptr;
+
+  bool IsBitCast = true;
+  bool IsBSwap = true;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    auto *Shift =
+        dyn_cast_or_null<ConstantInt>(ShiftAmounts->getAggregateElement(I));
+    if (!Shift)
+      return nullptr;
+
+    unsigned BitCastShift = (DL.isLittleEndian() ? I : NumElts - I - 1) * 8;
+    IsBitCast &= Shift->getValue() == BitCastShift;
+    IsBSwap &= Shift->getValue() == ResultBitWidth - BitCastShift - 8;
+  }
+  if (!IsBitCast && (!IsBSwap || ResultBitWidth % 16 != 0))
+    return nullptr;
+
+  Value *Packed = Builder.CreateBitCast(Vec, ResultTy);
+  return IsBitCast ? Packed
+                   : Builder.CreateUnaryIntrinsic(Intrinsic::bswap, Packed);
+}
+
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
 static Type *getPromotedType(Type *Ty) {
@@ -4273,6 +4323,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // %res = cmp eq iReduxWidth %val, 11111
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
+
+    if (IID == Intrinsic::vector_reduce_or)
+      if (Value *V = foldBytePackVectorReduction(*II, Builder, DL))
+        return replaceInstUsesWith(CI, V);
 
     if (Value *NewOp =
             simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
