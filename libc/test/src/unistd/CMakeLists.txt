@@ -156,7 +156,6 @@ add_libc_test(
   SRCS
     faccessat_test.cpp
   DEPENDS
-    libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
@@ -249,7 +248,7 @@ add_libc_test(
 add_libc_test(
   execlp_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     execlp_test.cpp
   DEPENDS
