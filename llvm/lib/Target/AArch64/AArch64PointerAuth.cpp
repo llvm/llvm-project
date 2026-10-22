@@ -252,7 +252,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   // instruction on Windows.
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
     if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO())
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITPAUTH))
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITNONHINTED))
           .setMIFlag(MachineInstr::FrameSetup);
 
     decoratePACWithCFI(MBB, MBBI, EmitCFI, [&]() {

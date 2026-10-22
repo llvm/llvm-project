@@ -168,7 +168,7 @@ void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
   // Skip meta/CFI/etc. (and EMITBKEY) to reach the first executable insn.
   for (; MBBI != MBB.end() &&
          (MBBI->isMetaInstruction() || MBBI->getOpcode() == AArch64::EMITBKEY ||
-          MBBI->getOpcode() == AArch64::EMITPAUTH);
+          MBBI->getOpcode() == AArch64::EMITNONHINTED);
        ++MBBI)
     ;
 

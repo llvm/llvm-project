@@ -3589,7 +3589,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::EMITBKEY:
-  case AArch64::EMITPAUTH: {
+  case AArch64::EMITNONHINTED: {
     ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)

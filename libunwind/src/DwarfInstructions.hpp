@@ -368,11 +368,15 @@ int DwarfInstructions<A, R>::stepWithDwarf(
                                           cieInfo.addressesSignedWithBKey);
           else {
             if (cieInfo.addressesSignedWithBKey) {
-              asm("hint 0x27\n\t");                             // pacm
-              asm("hint 0xe" : "+r"(x17) : "r"(x16), "r"(x15)); // autib1716
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xe"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autib1716
             } else {
-              asm("hint 0x27\n\t");                             // pacm
-              asm("hint 0xc" : "+r"(x17) : "r"(x16), "r"(x15)); // autia1716
+              asm("hint 0x27\n\t" // pacm
+                  "hint 0xc"
+                  : "+r"(x17)
+                  : "r"(x16), "r"(x15)); // autia1716
             }
           }
         } else {
