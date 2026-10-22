@@ -1195,7 +1195,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
         [&](mlir::OpBuilder &b, mlir::Location) {
           if (builtinID == MSVCIntrin::_BitScanForward) {
             mlir::Value zeroCount =
-                cir::BitCtzOp::create(builder, loc, argValue, true).getResult();
+                cir::BitCtzOp::create(builder, loc, argValue, true);
             mlir::Value castCount = builder.createCast(
                 loc, cir::CastKind::integral, zeroCount, indexType);
             builder.createStore(loc, castCount, indexAddress, false);
@@ -1205,7 +1205,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
                 builder.getConstantInt(loc, indexType, argWidth - 1);
 
             mlir::Value zeroCount =
-                cir::BitClzOp::create(builder, loc, argValue, true).getResult();
+                cir::BitClzOp::create(builder, loc, argValue, true);
             mlir::Value castCount = builder.createCast(
                 loc, cir::CastKind::integral, zeroCount, indexType);
             mlir::Value index =
@@ -1217,7 +1217,44 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
     return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
                               resultType);
   }
-  default:
+  case MSVCIntrin::_InterlockedAnd:
+  case MSVCIntrin::_InterlockedExchange:
+  case MSVCIntrin::_InterlockedExchangeAdd:
+  case MSVCIntrin::_InterlockedExchangeSub:
+  case MSVCIntrin::_InterlockedOr:
+  case MSVCIntrin::_InterlockedXor:
+  case MSVCIntrin::_InterlockedExchangeAdd_acq:
+  case MSVCIntrin::_InterlockedExchangeAdd_rel:
+  case MSVCIntrin::_InterlockedExchangeAdd_nf:
+  case MSVCIntrin::_InterlockedExchange_acq:
+  case MSVCIntrin::_InterlockedExchange_rel:
+  case MSVCIntrin::_InterlockedExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange:
+  case MSVCIntrin::_InterlockedCompareExchange_acq:
+  case MSVCIntrin::_InterlockedCompareExchange_rel:
+  case MSVCIntrin::_InterlockedCompareExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange128:
+  case MSVCIntrin::_InterlockedCompareExchange128_acq:
+  case MSVCIntrin::_InterlockedCompareExchange128_rel:
+  case MSVCIntrin::_InterlockedCompareExchange128_nf:
+  case MSVCIntrin::_InterlockedOr_acq:
+  case MSVCIntrin::_InterlockedOr_rel:
+  case MSVCIntrin::_InterlockedOr_nf:
+  case MSVCIntrin::_InterlockedXor_acq:
+  case MSVCIntrin::_InterlockedXor_rel:
+  case MSVCIntrin::_InterlockedXor_nf:
+  case MSVCIntrin::_InterlockedAnd_acq:
+  case MSVCIntrin::_InterlockedAnd_rel:
+  case MSVCIntrin::_InterlockedAnd_nf:
+  case MSVCIntrin::_InterlockedIncrement_acq:
+  case MSVCIntrin::_InterlockedIncrement_rel:
+  case MSVCIntrin::_InterlockedIncrement_nf:
+  case MSVCIntrin::_InterlockedDecrement_acq:
+  case MSVCIntrin::_InterlockedDecrement_rel:
+  case MSVCIntrin::_InterlockedDecrement_nf:
+  case MSVCIntrin::_InterlockedDecrement:
+  case MSVCIntrin::_InterlockedIncrement:
+  case MSVCIntrin::__fastfail:
     cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
     return {};
   }
