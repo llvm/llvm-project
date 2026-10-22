@@ -342,9 +342,9 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
   return json::Object{{"threadFlows", createThreadFlows(ThreadFlows)}};
 }
 
-void SarifDocumentWriter::createRun(StringRef ShortToolName,
-                                    StringRef LongToolName,
-                                    StringRef ToolVersion) {
+void SarifDocumentWriter::createRun(std::string ShortToolName,
+                                    std::string LongToolName,
+                                    std::string ToolVersion) {
   // Clear resources associated with a previous run.
   endRun();
 
@@ -353,10 +353,10 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
 
   json::Object Tool{
       {"driver",
-       json::Object{{"name", ShortToolName},
-                    {"fullName", LongToolName},
+       json::Object{{"name", std::move(ShortToolName)},
+                    {"fullName", std::move(LongToolName)},
                     {"language", "en-US"},
-                    {"version", ToolVersion},
+                    {"version", std::move(ToolVersion)},
                     {"informationUri",
                      "https://clang.llvm.org/docs/UsersManual.html"}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
@@ -439,10 +439,27 @@ json::Object SarifDocumentWriter::createDocument() {
   endRun();
 
   json::Object Doc{
-      {"$schema", SchemaURI},
-      {"version", SchemaVersion},
+      {"$schema", Version.SchemaURI},
+      {"version", Version.SchemaVersion},
   };
   if (!Runs.empty())
     Doc["runs"] = json::Array(Runs);
   return Doc;
+}
+
+ArrayRef<SarifVersion> SarifDocumentWriter::getSupportedVersions() {
+  static const SarifVersion Versions[] = {
+      {"2.1.0", "2.1",
+       "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/"
+       "sarif-schema-2.1.0.json",
+       true}};
+
+  assert(llvm::count_if(Versions, std::mem_fn(&SarifVersion::IsDefault)) == 1);
+
+  return Versions;
+}
+
+const SarifVersion &SarifDocumentWriter::getDefaultVersion() {
+  return *llvm::find_if(getSupportedVersions(),
+                        std::mem_fn(&SarifVersion::IsDefault));
 }
