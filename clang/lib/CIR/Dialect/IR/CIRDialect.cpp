@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
 
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
@@ -133,10 +134,14 @@ static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
 
 static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
                                         cir::OpenCLVersionAttr cxxVersion) {
-  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
-         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+  return (openCLVersion.getMajorVersion() == 2 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 1 &&
+          cxxVersion.getMinorVersion() == 0) ||
+         (openCLVersion.getMajorVersion() == 3 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 2021 &&
+          cxxVersion.getMinorVersion() == 0);
 }
 
 static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
@@ -286,6 +291,31 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   llvm::StringRef attrName = attr.getName().getValue();
   if (isOpenCLVersionAttrName(attrName))
     return verifyOpenCLVersionAttr(op, attr);
+
+  if (attrName == getCXXABIAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCXXABIAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto abi = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!abi)
+      return op->emitOpError()
+             << "expects '" << getCXXABIAttrName() << "' to be a string";
+
+    StringRef abival = abi.getValue();
+    if (!clang::TargetCXXABI::isABI(abival))
+      return op->emitOpError() << "unknown C++ ABI '" << abi.getValue() << "'";
+
+    clang::TargetCXXABI::Kind kind = clang::TargetCXXABI::getKind(abival);
+    if (auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName()))
+      if (!clang::TargetCXXABI::isSupportedCXXABI(
+              llvm::Triple(triple.getValue()), kind))
+        return op->emitOpError()
+               << "C++ ABI '" << abi.getValue()
+               << "' is not supported on target '" << triple.getValue() << "'";
+
+    return success();
+  }
 
   if (attrName == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
@@ -4212,10 +4242,13 @@ LogicalResult cir::VecCreateOp::verify() {
   // vector, and that the type of all the arguments matches the type of the
   // elements in the vector.
   const cir::VectorType vecTy = getType();
-  if (getElements().size() != vecTy.getSize()) {
+  if (vecTy.isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
+  if (getElements().size() != vecTy.getFixedSize()) {
     return emitOpError() << "operand count of " << getElements().size()
                          << " doesn't match vector type " << vecTy
-                         << " element count of " << vecTy.getSize();
+                         << " element count of " << vecTy.getFixedSize();
   }
 
   const mlir::Type elementType = vecTy.getElementType();
@@ -4452,9 +4485,13 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
+  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
+      getResult().getType().isScalable())
+    return emitOpError() << "scalable vectors are not supported";
+
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getSize()) {
+  if (getIndices().size() != getResult().getType().getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
                          << " and " << getResult().getType() << " don't match";
   }
@@ -4467,8 +4504,8 @@ LogicalResult cir::VecShuffleOp::verify() {
                          << " and " << getResult().getType() << " don't match";
   }
 
-  const uint64_t maxValidIndex =
-      getVec1().getType().getSize() + getVec2().getType().getSize() - 1;
+  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
+                                 getVec2().getType().getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;

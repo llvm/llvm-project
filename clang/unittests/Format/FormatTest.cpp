@@ -8307,6 +8307,13 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "             3};\n"
                "}",
                Style);
+  verifyFormat("int main() {\n"
+               "  MyFunc(&a,\n"
+               "         &b,\n"
+               "         (uint8_t *)c,\n"
+               "         d);\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
@@ -12322,6 +12329,36 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "{\n"
                "  p->delete ();\n"
                "}");
+
+  verifyFormat("x = new a *[]{nullptr};");
+  verifyFormat("x = new (a) a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a::a *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a) a<a> *[]{\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
+  verifyFormat("x = new (a)(a<a> *[]){\n"
+               "    nullptr, //\n"
+               "    nullptr,\n"
+               "};");
 
   FormatStyle AfterPlacementOperator = getLLVMStyle();
   AfterPlacementOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
@@ -16691,6 +16728,18 @@ TEST_F(FormatTest, CountsCharactersInMultilineRawStringLiterals) {
   verifyFormat("fffffffffff(R\"(single line raw string)\" + bbbbbb);",
                "fffffffffff(\n"
                " R\"(single line raw string)\" + bbbbbb);");
+}
+
+TEST_F(FormatTest, MultilineRawStringWidthWithCRLF) {
+  auto Style = getLLVMStyleWithColumns(23);
+
+  // The raw string's first line reaches ColumnLimit; CR must not add a column.
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\n"
+                 ")\");",
+                 Style);
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\r\n"
+                 ")\");",
+                 Style);
 }
 
 TEST_F(FormatTest, SkipsUnknownStringLiterals) {

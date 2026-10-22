@@ -1905,6 +1905,9 @@ def CIR_BrOp : CIR_Op<"br",[
     Note that for source level `goto`'s crossing scope boundaries, those are
     usually represented with the "symbolic" `cir.goto` operation.
 
+    When a loop is flattened, the optional `loop_hints` attribute is placed on
+    the branches that form the loop's back edge (see `cir.brcond`).
+
     Example:
 
     ```
@@ -1923,10 +1926,12 @@ def CIR_BrOp : CIR_Op<"br",[
     }]>
   ];
 
-  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
-    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -2238,6 +2243,10 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
     it branches to 'bb1'.
 
+    The optional `loop_hints` attribute is attached by CFG flattening to
+    branches that target a loop header (i.e. the loop's back edge), carrying
+    the `#cir.loop_hint` of the original loop op.
+
     Example:
 
     ```
@@ -2255,20 +2264,21 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
                CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
                CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
       build($_builder, $_state, cond, destOperandsTrue,
-            destOperandsFalse, destTrue, destFalse);
+            destOperandsFalse, /*loop_hints=*/nullptr, destTrue, destFalse);
     }]>
   ];
 
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
-                       Variadic<CIR_AnyType>:$destOperandsFalse);
+                       Variadic<CIR_AnyType>:$destOperandsFalse,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
     $cond
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
-    attr-dict
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 }
 
@@ -3568,7 +3578,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    void setupRegionInitializedLLVMGlobalOp(
+    mlir::LogicalResult setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
@@ -6684,6 +6694,47 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
   let assemblyFormat = [{
     $matrix
     `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixExtractRowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixExtractRowOp : CIR_Op<"matrix.extract_row", [
+  Pure,
+  TypesMatchWith<
+    "type of 'result' matches vector type with same element type of 'matrix' "
+    "and size equals to num columns",
+    "matrix", "result",
+    "cir::VectorType::getFixed("
+      "mlir::cast<cir::MatrixType>($_self).getElementType(),"
+      "mlir::cast<cir::MatrixType>($_self).getNumColumns()"
+    ")">
+]> {
+  let summary = "Extract a row from a matrix object";
+  let description = [{
+    The `cir.matrix.extract_row` operation extracts a row from from a matrix
+    object using a row index.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %row = cir.matrix.extract_row %matrix[%rowIdx : !u64i]
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins 
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx
+  );
+
+  let results = (outs CIR_AnyVectorType:$result);
+
+  let assemblyFormat = [{
+    $matrix
+    `[` $rowIdx `:` type($rowIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];
 }
