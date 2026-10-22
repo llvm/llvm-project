@@ -4,8 +4,8 @@
 define i32 @sub_sbfx(i32 %a, i32 %b) {
 ; CHECK-LABEL: sub_sbfx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #26
-; CHECK-NEXT:    sub w0, w1, w8, asr #29
+; CHECK-NEXT:    sbfx w8, w0, #3, #3
+; CHECK-NEXT:    sub w0, w1, w8
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 26
   %shr = ashr i32 %shl, 29
@@ -16,8 +16,8 @@ define i32 @sub_sbfx(i32 %a, i32 %b) {
 define i32 @add_ubfx(i32 %a, i32 %b) {
 ; CHECK-LABEL: add_ubfx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #26
-; CHECK-NEXT:    add w0, w1, w8, lsr #29
+; CHECK-NEXT:    ubfx w8, w0, #3, #3
+; CHECK-NEXT:    add w0, w1, w8
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 26
   %shr = lshr i32 %shl, 29
@@ -28,8 +28,8 @@ define i32 @add_ubfx(i32 %a, i32 %b) {
 define i64 @sub_sbfx_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: sub_sbfx_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x0, #58
-; CHECK-NEXT:    sub x0, x1, x8, asr #61
+; CHECK-NEXT:    sbfx x8, x0, #3, #3
+; CHECK-NEXT:    sub x0, x1, x8
 ; CHECK-NEXT:    ret
   %shl = shl i64 %a, 58
   %shr = ashr i64 %shl, 61
@@ -40,8 +40,8 @@ define i64 @sub_sbfx_i64(i64 %a, i64 %b) {
 define i32 @add_sbfiz(i32 %a, i32 %b) {
 ; CHECK-LABEL: add_sbfiz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #29
-; CHECK-NEXT:    add w0, w1, w8, asr #26
+; CHECK-NEXT:    sbfiz w8, w0, #3, #3
+; CHECK-NEXT:    add w0, w1, w8
 ; CHECK-NEXT:    ret
   %shl = shl i32 %a, 29
   %shr = ashr i32 %shl, 26
