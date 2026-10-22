@@ -21,8 +21,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // This function should never be called directly from the code -- it should only be called through
 // the _LIBCPP_VERBOSE_ABORT macro.
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-[[__noreturn__]] _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_ATTRIBUTE_FORMAT(
-    __printf__, 1, 2) void __libcpp_verbose_abort(const char* __format, ...) _NOEXCEPT;
+[[__noreturn__]] _LIBCPP_AVAILABILITY_VERBOSE_ABORT _LIBCPP_OVERRIDABLE_FUNC_VIS
+_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) void __libcpp_verbose_abort(const char* __format, ...) _NOEXCEPT;
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // _LIBCPP_VERBOSE_ABORT(format, args...)
@@ -42,9 +42,13 @@ _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #  if !_LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT
 // The decltype is there to suppress -Wunused warnings in this configuration.
 void __use(const char*, ...);
-#    define _LIBCPP_VERBOSE_ABORT(...) (decltype(::std::__use(__VA_ARGS__))(), __builtin_abort())
+#    define _LIBCPP_VERBOSE_ABORT(...)                                                                                 \
+      ({                                                                                                               \
+        decltype(::std::__use(__VA_ARGS__))();                                                                         \
+        [[clang::__nomerge__]] __builtin_abort();                                                                      \
+      })
 #  else
-#    define _LIBCPP_VERBOSE_ABORT(...) ::std::__libcpp_verbose_abort(__VA_ARGS__)
+#    define _LIBCPP_VERBOSE_ABORT(...) ({ [[clang::__nomerge__]] ::std::__libcpp_verbose_abort(__VA_ARGS__); })
 #  endif
 
 #endif // !defined(_LIBCPP_VERBOSE_ABORT)
