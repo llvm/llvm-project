@@ -462,6 +462,16 @@ parseLibraryOption(LibraryOptions &L, void *Opts, ArrayRef<const char *> Args,
   return Error::success();
 }
 
+// Parses the library option spelled by Args[0] into Context if L is
+// per-context, and into L's global() otherwise.
+static Error parseLibraryArg(LibraryOptionsContext *Context, LibraryOptions &L,
+                             ArrayRef<const char *> Args, unsigned &Consumed) {
+  if (Context && L.isPerContext())
+    return Context->parse(L, Args, Consumed);
+  return parseLibraryOption(L, L.global(), Args, Consumed,
+                            globalParser().LibraryArgAlloc);
+}
+
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
   // ProvideOption passes a null Arg for a bare -flag (treated as true) and an
@@ -1692,10 +1702,7 @@ bool CommandLineParser::ParseCommandLineOptions(
         if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
           ArrayRef<const char *> Rest(argv + i, argc - i);
           unsigned N;
-          if (Error E = Context && L->isPerContext()
-                            ? Context->parse(*L, Rest, N)
-                            : parseLibraryOption(*L, L->global(), Rest, N,
-                                                 LibraryArgAlloc)) {
+          if (Error E = parseLibraryArg(Context, *L, Rest, N)) {
             *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
             ErrorParsing = true;
           }
@@ -2943,11 +2950,9 @@ void cl::addLibraryOptions(LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
-  assert(this != &Other);
-  Values.clear();
-  SavedArgs.clear();
-  ArrayRef<const char *> Args = Other.SavedArgs;
+// Parses the library options that a LibraryOptionsContext recorded in Args.
+static void replayLibraryArgs(ArrayRef<const char *> Args,
+                              LibraryOptionsContext *Context) {
   for (size_t I = 0, E = Args.size(); I != E;) {
     StringRef Name = Args[I];
     Name.consume_front("-");
@@ -2955,9 +2960,16 @@ void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
     LibraryOptions *L =
         globalParser().lookupLibraryOption(Name.split('=').first);
     unsigned N;
-    cantFail(parse(*L, Args.drop_front(I), N));
+    cantFail(parseLibraryArg(Context, *L, Args.drop_front(I), N));
     I += N;
   }
+}
+
+void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
+  assert(this != &Other);
+  Values.clear();
+  SavedArgs.clear();
+  replayLibraryArgs(Other.SavedArgs, this);
 }
 
 Error LibraryOptionsContext::parse(LibraryOptions &L,
@@ -2973,8 +2985,18 @@ void cl::ResetAllOptionOccurrences() {
   globalParser().ResetAllOptionOccurrences();
 }
 
+LibraryOptionsContext &cl::getCAPILibraryOptions() {
+  static LibraryOptionsContext C;
+  return C;
+}
+
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
-                                    &llvm::nulls());
+  LibraryOptionsContext &C = getCAPILibraryOptions();
+  size_t Begin = C.args().size();
+  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &errs());
+
+  // Code without a context, such as a target machine created through the C
+  // API, reads the global values.
+  replayLibraryArgs(C.args().drop_front(Begin), nullptr);
 }

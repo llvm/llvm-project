@@ -419,6 +419,8 @@ Makes programs 10x faster by doing Special New Thing.
   `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
   `LLVMContextRef`.
 
+* `LLVMParseCommandLineOptions()` now prints errors instead of ignoring them.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
