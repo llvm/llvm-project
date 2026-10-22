@@ -668,6 +668,7 @@ public:
     if (name.symbol) {
       const auto *subp{
           name.symbol->GetUltimate().detailsIf<SubprogramDetails>()};
+      const bool isOpenACCRoutine{subp && !subp->openACCRoutineInfos().empty()};
       if (subp && subp->moduleInterface()) {
         subp = subp->moduleInterface()
                    ->GetUltimate()
@@ -679,8 +680,9 @@ public:
       if (subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) ==
           common::CUDASubprogramAttrs::Host) {
-        // OpenACC routine bodies may also execute on the device.
-        if (subp->openACCRoutineInfos().empty()) {
+        // OpenACC routine bodies may also execute on the device. The directive
+        // can appear on either the implementation or its module interface.
+        if (!isOpenACCRoutine && subp->openACCRoutineInfos().empty()) {
           HostCallVisitor visitor{context_};
           parser::Walk(header, visitor);
           parser::Walk(spec, visitor);
