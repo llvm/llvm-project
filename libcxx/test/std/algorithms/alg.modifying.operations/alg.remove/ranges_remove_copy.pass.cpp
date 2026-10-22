@@ -216,7 +216,6 @@ constexpr bool test() {
   }
 
   // Complexity: Exactly last - first applications of the corresponding predicate and any projection.
-
   {
     std::array in{4, 4, 5, 6};
     std::array expected{5, 6};
@@ -245,6 +244,35 @@ constexpr bool test() {
           in, out.begin(), 4, counting_projection(numberOfProj));
       assert(numberOfProj == static_cast<int>(in.size()));
       assert(std::ranges::equal(out, expected));
+    }
+  }
+
+  { // check that we don't overconstrain the algorithm (see https://github.com/llvm/llvm-project/issues/100726)
+    struct Bad {
+      int value;
+      constexpr operator int() const { return value; } // ensure a common type with Stored
+    };
+
+    struct Stored {
+      int value;
+      constexpr bool operator==(Bad const&) const; // purposefully not defined to make the program fail
+      constexpr bool operator==(Bad const& v) /* non const */ { return value == v.value; }
+      constexpr operator int() const { return value; } // ensure a common type with Bad
+    };
+
+    std::array<Stored, 3> a = {Stored{0}, Stored{1}, Stored{2}};
+    Bad val                 = {1};
+    {
+      std::array<Stored, 2> result;
+      std::ranges::remove_copy(a.begin(), a.end(), result.begin(), val);
+      assert(result[0].value == 0);
+      assert(result[1].value == 2);
+    }
+    {
+      std::array<Stored, 2> result;
+      std::ranges::remove_copy(a, result.begin(), val);
+      assert(result[0].value == 0);
+      assert(result[1].value == 2);
     }
   }
 
