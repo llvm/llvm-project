@@ -154,14 +154,20 @@ struct __sanitizer_iovec {
   uptr iov_len;
 };
 
+struct __sanitizer_sockaddr {
+  unsigned char sa_len;
+  unsigned char sa_family;
+  char sa_data[14];
+};
+
 struct __sanitizer_ifaddrs {
   struct __sanitizer_ifaddrs *ifa_next;
   char *ifa_name;
   unsigned int ifa_flags;
-  void *ifa_addr;     // (struct sockaddr *)
-  void *ifa_netmask;  // (struct sockaddr *)
+  __sanitizer_sockaddr *ifa_addr;
+  __sanitizer_sockaddr *ifa_netmask;
 #  undef ifa_dstaddr
-  void *ifa_dstaddr;  // (struct sockaddr *)
+  __sanitizer_sockaddr *ifa_dstaddr;  // (struct sockaddr *)
   void *ifa_data;
 };
 
@@ -367,7 +373,7 @@ struct __sanitizer_addrinfo {
   int ai_protocol;
   unsigned ai_addrlen;
   char *ai_canonname;
-  void *ai_addr;
+  __sanitizer_sockaddr *ai_addr;
   struct __sanitizer_addrinfo *ai_next;
 };
 
