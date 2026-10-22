@@ -123,7 +123,7 @@ LIBC_INLINE int set_env(const fenv_t *env) {
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen) &&       \
     !defined(LIBC_USE_CONSTEXPR)
 #include "riscv/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON) && !defined(LIBC_USE_CONSTEXPR)
 #include "hexagon/FEnvImpl.h"
 #else
 
