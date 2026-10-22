@@ -48,8 +48,8 @@ static cl::opt<unsigned> MaxAssumesPerValue(
 
 SmallVector<AssumptionCache::ResultElem, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
-  // Try using find_as first to avoid creating extra value handles just for the
-  // purpose of doing the lookup.
+  // Attempting to use find_as first to avoid creating extra value handles just
+  // for the purpose of doing the lookup.
   auto AVI = AffectedValues.find_as(V);
   if (AVI != AffectedValues.end())
     return AVI->second;
