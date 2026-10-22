@@ -6218,20 +6218,16 @@ multiclass FPComparison<bit signalAllNans, string asm,
 }
 
 multiclass FPTotalOrderComparison<bit magnitude, string asm> {
-  let Predicates = [HasFPv2] in {
   def Hrr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR16, asm, []> {
     let Inst{23-22} = 0b11;
   }
-  }
 
-  let Predicates = [HasFPv2] in {
   def Srr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR32, asm, []> {
     let Inst{23-22} = 0b00;
   }
 
   def Drr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR64, asm, []> {
     let Inst{23-22} = 0b01;
-  }
   }
 }
 

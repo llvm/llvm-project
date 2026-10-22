@@ -6361,8 +6361,8 @@ class sve_fp_2op_p_zds_minmax<bits<2> sz, bits<1> op, bits<2> opc, string asm,
   let Inst{31-24} = 0b01100100;
   let Inst{23-22} = sz;
   let Inst{21-20} = 0b00;
-  let Inst{19} = op;
-  let Inst{18} = 0b0;
+  let Inst{19}    = op;
+  let Inst{18}    = 0b0;
   let Inst{17-16} = opc;
   let Inst{15-13} = 0b111;
   let Inst{12-10} = Pg;
