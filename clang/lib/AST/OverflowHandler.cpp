@@ -193,6 +193,8 @@ std::optional<LabelDecl *>
 clang::getOverflowHandlerIntroducedBy(ASTContext &Ctx, const Stmt *S) {
   if (!Ctx.hasTrapOverflowBehaviorType())
     return std::nullopt;
+  if (const auto *OGE = dyn_cast<OverflowGotoExpr>(S))
+    return OGE->getLabel();
   if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
     if (LabelDecl *LD = findLocalOverflowHandler(Ctx, CS))
       return LD;

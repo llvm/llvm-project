@@ -1418,6 +1418,15 @@ void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
   E->setLabel(readDeclAs<LabelDecl>());
 }
 
+void ASTStmtReader::VisitOverflowGotoExpr(OverflowGotoExpr *E) {
+  VisitExpr(E);
+  E->setSubExpr(Record.readSubExpr());
+  E->setLabel(readDeclAs<LabelDecl>());
+  E->setBuiltinLoc(readSourceLocation());
+  E->setLabelLoc(readSourceLocation());
+  E->setRParenLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitStmtExpr(StmtExpr *E) {
   VisitExpr(E);
   E->setLParenLoc(readSourceLocation());
@@ -3535,6 +3544,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_ADDR_LABEL:
       S = new (Context) AddrLabelExpr(Empty);
+      break;
+
+    case EXPR_OVERFLOW_GOTO:
+      S = new (Context) OverflowGotoExpr(Empty);
       break;
 
     case EXPR_STMT:
