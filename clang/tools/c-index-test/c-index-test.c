@@ -1246,7 +1246,7 @@ static CXString GetCursorSource(CXCursor Cursor) {
   }
 #ifdef __MVS__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored                                                 \
+#pragma clang diagnostic ignored                                               \
     "-Wincompatible-pointer-types-discards-qualifiers"
 #endif
   b = basename(clang_getCString(source));
