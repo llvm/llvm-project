@@ -3,9 +3,9 @@
 
 ; Auxiliary instruction %nc in the middle of the select group is used as a
 ; select value, so it must dominate the true/false edges.
-define i1 @aux_used_as_select_value(i32 %n, i1 %c, i1 %a, i1 %b) {
+define i1 @aux_used_as_select_value(i32 %n, i1 %c, i1 %a, i1 %b) !prof !0 {
 ; CHECK-LABEL: define i1 @aux_used_as_select_value(
-; CHECK-SAME: i32 [[N:%.*]], i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]], i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
@@ -15,11 +15,11 @@ define i1 @aux_used_as_select_value(i32 %n, i1 %c, i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[IC:%.*]] = icmp slt i32 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[IC]], label %[[INNER]], label %[[LATCH:.*]]
+; CHECK-NEXT:    br i1 [[IC]], label %[[INNER]], label %[[LATCH:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[NC:%.*]] = xor i1 [[C]], true
 ; CHECK-NEXT:    [[C_FROZEN:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    br i1 [[C_FROZEN]], label %[[SELECT_END]], label %[[SELECT_FALSE:.*]]
+; CHECK-NEXT:    br i1 [[C_FROZEN]], label %[[SELECT_END]], label %[[SELECT_FALSE:.*]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       [[SELECT_FALSE]]:
 ; CHECK-NEXT:    br label %[[SELECT_END]]
 ; CHECK:       [[SELECT_END]]:
@@ -28,7 +28,7 @@ define i1 @aux_used_as_select_value(i32 %n, i1 %c, i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[S2:%.*]] = phi i1 [ [[A]], %[[LATCH]] ], [ [[NC]], %[[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[OC:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OC]], label %[[OUTER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[OC]], label %[[OUTER]], label %[[EXIT:.*]], !prof [[PROF1]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[R0:%.*]] = and i1 [[S0]], [[S2]]
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[R0]], [[NC]]
@@ -45,16 +45,16 @@ inner:
   %j = phi i32 [ 0, %outer ], [ %j.next, %inner ]
   %j.next = add i32 %j, 1
   %ic = icmp slt i32 %j.next, %n
-  br i1 %ic, label %inner, label %latch
+  br i1 %ic, label %inner, label %latch, !prof !1
 
 latch:
-  %s0 = select i1 %c, i1 %a, i1 %b
+  %s0 = select i1 %c, i1 %a, i1 %b, !prof !2
   %nc = xor i1 %c, true
-  %s1 = select i1 %c, i1 %b, i1 %nc
-  %s2 = select i1 %c, i1 %a, i1 %s1
+  %s1 = select i1 %c, i1 %b, i1 %nc, !prof !2
+  %s2 = select i1 %c, i1 %a, i1 %s1, !prof !2
   %i.next = add i32 %i, 1
   %oc = icmp slt i32 %i.next, %n
-  br i1 %oc, label %outer, label %exit
+  br i1 %oc, label %outer, label %exit, !prof !1
 
 exit:
   %r0 = and i1 %s0, %s2
@@ -64,9 +64,9 @@ exit:
 
 ; The false value of %s2 is the select-like %or, whose operands must not be
 ; sunk into the false block, since the true-side clone of %or uses %z2.
-define i32 @select_like_in_slice(i32 %n, i1 %c, i32 %a, i32 %b) {
+define i32 @select_like_in_slice(i32 %n, i1 %c, i32 %a, i32 %b) !prof !0 {
 ; CHECK-LABEL: define i32 @select_like_in_slice(
-; CHECK-SAME: i32 [[N:%.*]], i1 [[C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]], i1 [[C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
@@ -76,12 +76,12 @@ define i32 @select_like_in_slice(i32 %n, i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[IC:%.*]] = icmp slt i32 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[IC]], label %[[INNER]], label %[[LATCH:.*]]
+; CHECK-NEXT:    br i1 [[IC]], label %[[INNER]], label %[[LATCH:.*]], !prof [[PROF1]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[C]] to i32
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i1 [[C]] to i32
 ; CHECK-NEXT:    [[C_FROZEN:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    br i1 [[C_FROZEN]], label %[[SELECT_TRUE_SINK:.*]], label %[[SELECT_END]]
+; CHECK-NEXT:    br i1 [[C_FROZEN]], label %[[SELECT_TRUE_SINK:.*]], label %[[SELECT_END]], !prof [[PROF2]]
 ; CHECK:       [[SELECT_TRUE_SINK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i32 1, [[Z2]]
 ; CHECK-NEXT:    br label %[[SELECT_END]]
@@ -91,7 +91,7 @@ define i32 @select_like_in_slice(i32 %n, i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[S2:%.*]] = phi i32 [ [[A]], %[[SELECT_TRUE_SINK]] ], [ [[Z2]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[OC:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OC]], label %[[OUTER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[OC]], label %[[OUTER]], label %[[EXIT:.*]], !prof [[PROF1]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[S0]], [[S2]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -107,19 +107,28 @@ inner:
   %j = phi i32 [ 0, %outer ], [ %j.next, %inner ]
   %j.next = add i32 %j, 1
   %ic = icmp slt i32 %j.next, %n
-  br i1 %ic, label %inner, label %latch
+  br i1 %ic, label %inner, label %latch, !prof !1
 
 latch:
-  %s0 = select i1 %c, i32 %a, i32 %b
+  %s0 = select i1 %c, i32 %a, i32 %b, !prof !2
   %z1 = zext i1 %c to i32
   %z2 = zext i1 %c to i32
   %or = or i32 %z1, %z2
-  %s2 = select i1 %c, i32 %a, i32 %or
+  %s2 = select i1 %c, i32 %a, i32 %or, !prof !2
   %i.next = add i32 %i, 1
   %oc = icmp slt i32 %i.next, %n
-  br i1 %oc, label %outer, label %exit
+  br i1 %oc, label %outer, label %exit, !prof !1
 
 exit:
   %r = add i32 %s0, %s2
   ret i32 %r
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 100, i32 1}
+!2 = !{!"branch_weights", i32 1, i32 100}
+;.
+; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 100, i32 1}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 100}
+;.
