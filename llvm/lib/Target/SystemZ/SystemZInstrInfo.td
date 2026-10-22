@@ -441,6 +441,9 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTGR : UnaryRRE<"ltgr", 0xB902, null_frag, GR64, GR64>;
 }
 
+def : Pat<(z_pair128 GR64:$hi, GR64:$lo),
+          (REG_SEQUENCE GR128Bit, GR64:$hi, subreg_h64, GR64:$lo, subreg_l64)>;
+
 // Immediate moves.
 let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   // 16-bit sign-extended immediates.  LHIMux expands to LHI or IIHF,
@@ -828,9 +831,6 @@ let Predicates = [FeatureLoadAndTrap], hasSideEffects = 1 in {
   def LLGFAT : UnaryRXY<"llgfat", 0xE39D, null_frag, GR64, 4>;
   def LLGTAT : UnaryRXY<"llgtat", 0xE39C, null_frag, GR64, 4>;
 }
-
-def : Pat<(z_pair128 GR64:$hi, GR64:$lo),
-          (REG_SEQUENCE GR128Bit, GR64:$hi, subreg_h64, GR64:$lo, subreg_l64)>;
 
 // Extend a GR64 to a GR128.
 def zext128 : OutPatFrag<(ops node:$op),
