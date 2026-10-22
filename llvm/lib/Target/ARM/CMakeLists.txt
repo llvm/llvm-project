@@ -17,6 +17,7 @@ tablegen(LLVM ARMGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARMGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM ARMGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ARMGenSystemRegister.inc -gen-searchable-tables)
+tablegen(LLVM ARMGenTargetDef.inc -gen-arm-target-def)
 
 add_public_tablegen_target(ARMCommonTableGen)
 

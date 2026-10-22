@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -start-before=postrapseudos %s -o - \
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -start-before=post-ra-pseudos %s -o - \
 # RUN:   | FileCheck %s
 #
 # Test shortening of fused fp operations.

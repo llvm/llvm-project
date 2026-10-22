@@ -198,11 +198,27 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_eventfd_macros
+  HDRS
+    sys_eventfd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_eventfd_macros
+)
+
+add_proxy_header_library(
   sys_file_macros
   HDRS
     sys_file_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_file_macros
+)
+
+add_proxy_header_library(
+  sys_inotify_macros
+  HDRS
+    sys_inotify_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_inotify_macros
 )
 
 add_proxy_header_library(
@@ -312,6 +328,7 @@ add_proxy_header_library(
   DEPENDS
     .unistd_overlay
   FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.file_seek_macros
     libc.include.llvm-libc-macros.unistd_macros
 )
 

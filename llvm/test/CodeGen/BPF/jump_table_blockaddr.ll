@@ -59,14 +59,14 @@ llc -march=bpf -mcpu=v4 < test.ll \
 ; CHECK: 	.cfi_startproc
 ; CHECK: # %bb.0:                                # %entry
 ; CHECK: 	r2 = BPF.JT.0.0 ll
+; CHECK: 	r3 = *(u64 *)(r2 + 0)
+; CHECK: 	r2 = BPF.JT.0.1 ll
 ; CHECK: 	r2 = *(u64 *)(r2 + 0)
-; CHECK: 	r3 = BPF.JT.0.1 ll
-; CHECK: 	r3 = *(u64 *)(r3 + 0)
 ; CHECK: 	if w1 == 0 goto .LBB0_2
 ; CHECK: # %bb.1:                                # %entry
-; CHECK: 	r3 = r2
+; CHECK: 	r2 = r3
 ; CHECK: .LBB0_2:                                # %entry
-; CHECK: 	*(u64 *)(r10 - 8) = r3
+; CHECK: 	*(u64 *)(r10 - 8) = r2
 ; CHECK: 	r1 = *(u64 *)(r10 - 8)
 ; CHECK: 	gotox r1
 ; CHECK: .Ltmp0:                                 # Block address taken

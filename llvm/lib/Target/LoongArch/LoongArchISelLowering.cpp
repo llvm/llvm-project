@@ -2030,6 +2030,7 @@ static SDValue lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(const SDLoc &DL,
       SDValue Ext =
           AnyExt ? DAG.getFreeze(InputV) : DAG.getConstant(0, DL, InputVT);
       InputV = DAG.getBitcast(InputVT, InputV);
+      Ext = DAG.getBitcast(InputVT, Ext);
       InputV = DAG.getNode(VilVLoHi, DL, InputVT, Ext, InputV);
       Scale /= 2;
       EltBits *= 2;
@@ -2788,6 +2789,23 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVREPLVE0 (if possible).
+///
+/// It is a XVREPLVE0 when the VECTOR_SHUFFLE is a broadcast of element 0,
+/// i.e. the mask is:
+///   <0, 0, 0, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above form.
+static SDValue lowerVECTOR_SHUFFLE_XVREPLVE0(const SDLoc &DL,
+                                             ArrayRef<int> Mask, MVT VT,
+                                             SDValue V1, SelectionDAG &DAG) {
+  if (!ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::XVREPLVE0, DL, VT, V1);
+}
+
 /// Lower VECTOR_SHUFFLE into XVPERMI (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -3404,6 +3422,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVE0(DL, Mask, VT, V1, DAG)))
       return Result;
     // Try to widen vectors to gain more optimization opportunities.
     if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
@@ -8503,6 +8523,10 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
     if (!SrcVT.isSimple() || !VT.isSimple())
       return SDValue();
 
+    // [x]vffint.s.l needs LSX and at least one full 128-bit source register.
+    if (!Subtarget.hasExtLSX() || SrcVT.getSizeInBits() < 128)
+      return SDValue();
+
     // Combine [x]vffint.s.l for vector si64 to float conversion.
     return MergeBlocksConvert(N, DAG, LoongArchISD::VFFINT, BlockBits);
   }
@@ -9324,8 +9348,8 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
     Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
     BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
-        .addReg(Tmp, RegState::Kill)
-        .addReg(Tmp, RegState::Kill);
+        .addReg(Tmp)
+        .addReg(Tmp);
   } else {
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
   }
@@ -9337,19 +9361,19 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
         .addReg(Msk)
         .addImm(0);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(4);
     BuildMI(*BB, MI, DL,
             TII->get(Subtarget.is64Bit() ? LoongArch::BSTRINS_D
                                          : LoongArch::BSTRINS_W),
             Dst)
-        .addReg(Lo, RegState::Kill)
-        .addReg(Hi, RegState::Kill)
+        .addReg(Lo)
+        .addReg(Hi)
         .addImm(256 / EleBits - 1)
         .addImm(128 / EleBits);
   } else {
     BuildMI(*BB, MI, DL, TII->get(LoongArch::VPICKVE2GR_HU), Dst)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(0);
   }
 
@@ -9395,7 +9419,7 @@ emitBuildPairF64Pseudo(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FR_W_64), TmpReg)
       .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()));
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FRH_W), DstReg)
-      .addReg(TmpReg, RegState::Kill)
+      .addReg(TmpReg)
       .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()));
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -11909,6 +11933,15 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   case LoongArchISD::VANYNONZERO:
   case LoongArchISD::VALLZERO: {
     // MOVCF2GR zero-extend the i1 cond to GPR.
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
+  case LoongArchISD::VALL_ZERO:
+  case LoongArchISD::VANY_ZERO:
+  case LoongArchISD::VALL_NONZERO:
+  case LoongArchISD::VANY_NONZERO: {
+    // Materialized as literal 0/1 by the Pseudo{,X}VB{Z,NZ}_[BHWD]'s custom
+    // inserter, emitVecCondBranchPseudo().
     Known.Zero.setBitsFrom(1);
     break;
   }

@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -145,6 +146,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Don't handle overlapping loads for now.
   if (!Stride.uge(EltSize.getFixedValue()))
+    return nullptr;
+
+  // With nusw (implied by inbounds), Idx * Stride does not wrap as a signed
+  // quantity, and the following enumeration over ArrayElementCount is valid so
+  // long as the stride is positive. Conversely, without nusw, Idx * Stride is
+  // computed modulo 2^N (see MaskIdx below), and the masking in MaskIdx below
+  // is only exact when the stride is a power of two.
+  bool StrideIsValid = Expr.Flags.hasNoUnsignedSignedWrap()
+                           ? !Stride.isNegative()
+                           : Stride.isPowerOf2();
+  if (!StrideIsValid)
     return nullptr;
 
   // Don't blow up on huge arrays.
@@ -538,7 +550,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
           PHINode::Create(IndexType, PHI->getNumIncomingValues(),
                           PHI->getName() + ".idx", PHI->getIterator());
   }
-  IRBuilder<> Builder(Base->getContext());
+  IRBuilder<> Builder(IC.getModule());
 
   // Create all the other instructions.
   for (Value *Val : Explored) {
@@ -3575,6 +3587,22 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         }
       }
     }
+  }
+
+  // Fold the canonicalized form of vector_reduce_or if the arg is
+  // get_active_lane mask.
+  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp ult l, h
+  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp uge l, h
+  Value *Upper, *Lower;
+  if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                         m_Value(Lower), m_Value(Upper))) &&
+      match(Op1, m_Zero()) && DstType->isIntegerTy()) {
+    if (Pred == ICmpInst::ICMP_NE)
+      return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
+    if (Pred == ICmpInst::ICMP_EQ)
+      return new ICmpInst(ICmpInst::ICMP_UGE, Lower, Upper);
   }
 
   const APInt *C;
@@ -7052,7 +7080,7 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
@@ -8227,6 +8255,24 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   // TODO: Hoist this above the min/max bailout.
   if (Instruction *R = foldICmpWithCastOp(I))
     return R;
+
+  // icmp (zext X), (and (trunc Y), Mask) -> icmp X, trunc Y IFF Mask exactly
+  // covers the bits of X
+  {
+    Value *Y;
+    const APInt *Mask;
+    if (match(I.getOperand(1), m_ZExt(m_Value(X))) &&
+        match(I.getOperand(0),
+              m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+      Type *SmallType = X->getType();
+      unsigned SmallWidth = SmallType->getScalarSizeInBits();
+      if (Mask->isMask(SmallWidth) &&
+          shouldChangeType(I.getOperand(0)->getType(), SmallType)) {
+        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+        return new ICmpInst(I.getUnsignedPredicate(), NewTrunc, X);
+      }
+    }
+  }
 
   {
     Value *X, *Y;

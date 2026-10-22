@@ -183,6 +183,8 @@ defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of 
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
 defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
+defm implicit_module_prefix : OptInFC1FFlag<"implicit-module-prefix",
+  "Treat a submodule procedure as if it had a missing MODULE prefix when it matches an ancestor interface">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
@@ -275,6 +277,10 @@ defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
+
+defm loop_tripcount_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-trip-count",
+  PosFlag<SetTrue, [], [], "Create constant-trip-count versions of array section loops">,
+   NegFlag<SetFalse, [], [], "Do not create constant-trip-count loops (default)">>;
 
 defm stack_repack_arrays
     : BoolOptionWithoutMarshalling<

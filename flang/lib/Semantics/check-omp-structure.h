@@ -58,6 +58,7 @@ struct LoopSequence;
 template <typename ElemTy, typename SetsSetTy> struct AppliedElement {
   parser::omp::WithSource<ElemTy> id;
   SetsSetTy sets;
+  llvm::omp::Version version{};
 };
 
 template <typename ElemTy, typename SetsSetTy> struct AppliedElementInfo {
@@ -268,7 +269,8 @@ private:
 
   // check-omp-atomic.cpp
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
-      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
+      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock,
+      bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
       std::string_view name, bool checkTypeOnPointer = true);
@@ -504,6 +506,7 @@ private:
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
+  void CheckArraySectionStrides(const parser::DataRef &, llvm::omp::Clause);
   void CheckLastPartRefForArraySection(
       const parser::Designator &designator, llvm::omp::Clause clauseId);
   void CheckSharedBindingInOuterContext(
