@@ -24,6 +24,7 @@
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -85,6 +86,9 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -95,10 +99,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1088,6 +1094,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
+
+  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
 
   // Use the default implementation.
   setOperationAction(ISD::VASTART,            MVT::Other, Custom);
@@ -6011,6 +6020,118 @@ SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   return FrameAddr;
 }
 
+SDValue ARMTargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  // The Thumb-2 trampoline must be entered in Thumb state, so set the low bit
+  // of its address. See LowerINIT_TRAMPOLINE.
+  SDValue Trmp = Op.getOperand(0);
+  if (!Subtarget->isThumb2())
+    return Trmp;
+
+  SDLoc dl(Op);
+  return DAG.getNode(ISD::OR, dl, MVT::i32, Trmp,
+                     DAG.getConstant(1, dl, MVT::i32));
+}
+
+SDValue ARMTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Trmp = Op.getOperand(1); // trampoline, >= 16 bytes
+  SDValue FPtr = Op.getOperand(2); // nested function
+  SDValue Nest = Op.getOperand(3); // 'nest' parameter value
+  const Value *TrmpAddr = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+  SDLoc dl(Op);
+
+  // These are the same sequences GCC uses. Both load the static chain into
+  // r12, the register the calling convention assigns to 'nest' parameters,
+  // and then load the nested function's address into pc. From ARMv5T on,
+  // loading pc interworks, so either sequence can reach an ARM or a Thumb
+  // function.
+  //
+  // ARM, where pc reads as the instruction's address + 8:
+  //   ldr r12, [pc]          @ loads .nest
+  //   ldr pc, [pc]           @ loads .fptr
+  //   .nest: .word nest
+  //   .fptr: .word fptr
+  //
+  // Thumb-2, where pc reads as the instruction's address + 4:
+  //   ldr.w r12, [pc, #4]    @ loads .nest
+  //   ldr.w pc, [pc, #4]     @ loads .fptr
+  //   .nest: .word nest
+  //   .fptr: .word fptr
+  //
+  // Thumb-1 has no load to pc, so a Thumb-1-only target, which also can't
+  // fall back to ARM, would need a longer sequence. That isn't implemented.
+  unsigned LoadOpc, PCOffset;
+  if (Subtarget->isThumb2()) {
+    LoadOpc = ARM::t2LDRi12;
+    PCOffset = 4;
+  } else if (Subtarget->hasARMOps()) {
+    LoadOpc = ARM::LDRi12;
+    PCOffset = 0;
+  } else {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "trampolines are not supported on Thumb-1-only targets",
+        dl.getDebugLoc()));
+    return Chain;
+  }
+
+  // Encode the instructions with the MC layer, as RISC-V does. Instructions
+  // are little-endian on ARMv6 and later (BE-8), even when data is big-endian,
+  // and big-endian before that (BE-32). Reading the encoded bytes back in data
+  // order gives words that, stored as data, reproduce the instruction stream.
+  const TargetMachine &TM = getTargetMachine();
+  MCContext &MCCtx = TM.getObjFileLowering()->getContext();
+  bool BigEndianInsts = !Subtarget->isLittle() && !Subtarget->hasV6Ops();
+  std::unique_ptr<MCCodeEmitter> CodeEmitter(
+      BigEndianInsts ? createARMBEMCCodeEmitter(*TM.getMCInstrInfo(), MCCtx)
+                     : createARMLEMCCodeEmitter(*TM.getMCInstrInfo(), MCCtx));
+
+  // The code emitter takes the instruction set from the subtarget, so Thumb-1
+  // code that uses the ARM sequence must be encoded in ARM mode.
+  MCSubtargetInfo EncodeSTI(*Subtarget);
+  if (EncodeSTI.hasFeature(ARM::ModeThumb) != (LoadOpc == ARM::t2LDRi12))
+    EncodeSTI.ToggleFeature(ARM::ModeThumb);
+
+  auto EncodeLoadFromPC = [&](MCRegister Rt) {
+    MCInst Inst = MCInstBuilder(LoadOpc)
+                      .addReg(Rt)
+                      .addReg(ARM::PC)
+                      .addImm(PCOffset)
+                      .addImm(ARMCC::AL)
+                      .addReg(MCRegister());
+    SmallVector<char, 4> Bytes;
+    SmallVector<MCFixup> Fixups;
+    CodeEmitter->encodeInstruction(Inst, Bytes, Fixups, EncodeSTI);
+    assert(Bytes.size() == 4 && Fixups.empty() && "unexpected encoding");
+    return support::endian::read32(Bytes.data(), Subtarget->isLittle()
+                                                     ? llvm::endianness::little
+                                                     : llvm::endianness::big);
+  };
+  uint32_t Insts[2] = {EncodeLoadFromPC(ARM::R12), EncodeLoadFromPC(ARM::PC)};
+
+  auto AddrAt = [&](unsigned Offset) {
+    return DAG.getNode(ISD::ADD, dl, MVT::i32, Trmp,
+                       DAG.getConstant(Offset, dl, MVT::i32));
+  };
+
+  SDValue OutChains[4] = {
+      DAG.getStore(Chain, dl, DAG.getConstant(Insts[0], dl, MVT::i32), Trmp,
+                   MachinePointerInfo(TrmpAddr)),
+      DAG.getStore(Chain, dl, DAG.getConstant(Insts[1], dl, MVT::i32),
+                   AddrAt(4), MachinePointerInfo(TrmpAddr, 4)),
+      DAG.getStore(Chain, dl, Nest, AddrAt(8), MachinePointerInfo(TrmpAddr, 8)),
+      DAG.getStore(Chain, dl, FPtr, AddrAt(12),
+                   MachinePointerInfo(TrmpAddr, 12)),
+  };
+  SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+
+  // Make the new instructions visible to instruction fetch.
+  return DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken, Trmp,
+                     AddrAt(8));
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register ARMTargetLowering::getRegisterByName(const char* RegName, LLT VT,
@@ -10337,6 +10458,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
+  case ISD::INIT_TRAMPOLINE:
+    return LowerINIT_TRAMPOLINE(Op, DAG);
+  case ISD::ADJUST_TRAMPOLINE:
+    return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
   case ISD::EH_SJLJ_SETUP_DISPATCH: return LowerEH_SJLJ_SETUP_DISPATCH(Op, DAG);

@@ -580,6 +580,8 @@ class VectorType;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
