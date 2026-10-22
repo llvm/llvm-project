@@ -177,6 +177,10 @@ void call_atexit_callbacks();
 
 } // namespace internal
 
+using AtExitCallback = void(void *);
+
+int add_thread_atexit_callback(AtExitCallback *callback, void *obj);
+
 LIBC_INLINE Thread current_thread() {
   return Thread(get_current_thread_attrib());
 }

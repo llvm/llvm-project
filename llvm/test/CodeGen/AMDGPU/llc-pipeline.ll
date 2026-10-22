@@ -13,18 +13,7 @@
 
 ; REQUIRES: asserts
 
-; GCN-O0:Target Library Information
-; GCN-O0-NEXT:Runtime Library Function Analysis
-; GCN-O0-NEXT:Target Pass Configuration
-; GCN-O0-NEXT:Machine Module Information
-; GCN-O0-NEXT:Target Transform Information
-; GCN-O0-NEXT:Library Function Lowering Analysis
-; GCN-O0-NEXT:Assumption Cache Tracker
-; GCN-O0-NEXT:Profile summary info
-; GCN-O0-NEXT:Create Garbage Collector Module Metadata
-; GCN-O0-NEXT:Register Usage Information Storage
-; GCN-O0-NEXT:Machine Branch Probability Analysis
-; GCN-O0-NEXT:  ModulePass Manager
+; GCN-O0:  ModulePass Manager
 ; GCN-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand IR instructions
@@ -81,8 +70,7 @@
 ; GCN-O0-NEXT:      Post-Dominator Tree Construction
 ; GCN-O0-NEXT:      Dominance Frontier Construction
 ; GCN-O0-NEXT:      Detect single entry single exit regions
-; GCN-O0-NEXT:      Region Pass Manager
-; GCN-O0-NEXT:        Structurize control flow
+; GCN-O0-NEXT:      Structurize control flow
 ; GCN-O0-NEXT:      Cycle Info Analysis
 ; GCN-O0-NEXT:      Uniformity Analysis
 ; GCN-O0-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -168,25 +156,22 @@
 ; GCN-O0-NEXT:        Function register usage analysis
 ; GCN-O0-NEXT:        AMDGPU Assembly Printer
 ; GCN-O0-NEXT:        Free MachineFunction
+; GCN-O0-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -basic-aa -aa
+; GCN-O0-NEXT:Assumption Cache Tracker
+; GCN-O0-NEXT:Target Library Information
+; GCN-O0-NEXT:  FunctionPass Manager
+; GCN-O0-NEXT:    Dominator Tree Construction
+; GCN-O0-NEXT:    Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:    Function Alias Analysis Results
+; GCN-O0-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution
+; GCN-O0-NEXT:Assumption Cache Tracker
+; GCN-O0-NEXT:Target Library Information
+; GCN-O0-NEXT:  FunctionPass Manager
+; GCN-O0-NEXT:    Dominator Tree Construction
+; GCN-O0-NEXT:    Natural Loop Information
+; GCN-O0-NEXT:    Scalar Evolution Analysis
 
-; GCN-O1:Target Library Information
-; GCN-O1-NEXT:Runtime Library Function Analysis
-; GCN-O1-NEXT:Target Pass Configuration
-; GCN-O1-NEXT:Machine Module Information
-; GCN-O1-NEXT:Target Transform Information
-; GCN-O1-NEXT:Assumption Cache Tracker
-; GCN-O1-NEXT:Library Function Lowering Analysis
-; GCN-O1-NEXT:Profile summary info
-; GCN-O1-NEXT:AMDGPU Address space based Alias Analysis
-; GCN-O1-NEXT:External Alias Analysis
-; GCN-O1-NEXT:Type-Based Alias Analysis
-; GCN-O1-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-NEXT:Create Garbage Collector Module Metadata
-; GCN-O1-NEXT:Machine Branch Probability Analysis
-; GCN-O1-NEXT:Register Usage Information Storage
-; GCN-O1-NEXT:Default Regalloc Eviction Advisor
-; GCN-O1-NEXT:Default Regalloc Priority Advisor
-; GCN-O1-NEXT:  ModulePass Manager
+; GCN-O1:  ModulePass Manager
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -293,8 +278,7 @@
 ; GCN-O1-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-NEXT:      Dominance Frontier Construction
 ; GCN-O1-NEXT:      Detect single entry single exit regions
-; GCN-O1-NEXT:      Region Pass Manager
-; GCN-O1-NEXT:        Structurize control flow
+; GCN-O1-NEXT:      Structurize control flow
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -364,7 +348,6 @@
 ; GCN-O1-NEXT:        Init Undef Pass
 ; GCN-O1-NEXT:        Process Implicit Definitions
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
-; GCN-O1-NEXT:        Live Variable Analysis
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
@@ -471,25 +454,22 @@
 ; GCN-O1-NEXT:        Function register usage analysis
 ; GCN-O1-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-NEXT:        Free MachineFunction
+; GCN-O1-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -basic-aa -aa
+; GCN-O1-NEXT:Assumption Cache Tracker
+; GCN-O1-NEXT:Target Library Information
+; GCN-O1-NEXT:  FunctionPass Manager
+; GCN-O1-NEXT:    Dominator Tree Construction
+; GCN-O1-NEXT:    Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:    Function Alias Analysis Results
+; GCN-O1-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution
+; GCN-O1-NEXT:Assumption Cache Tracker
+; GCN-O1-NEXT:Target Library Information
+; GCN-O1-NEXT:  FunctionPass Manager
+; GCN-O1-NEXT:    Dominator Tree Construction
+; GCN-O1-NEXT:    Natural Loop Information
+; GCN-O1-NEXT:    Scalar Evolution Analysis
 
-; GCN-O1-OPTS:Target Library Information
-; GCN-O1-OPTS-NEXT:Runtime Library Function Analysis
-; GCN-O1-OPTS-NEXT:Target Pass Configuration
-; GCN-O1-OPTS-NEXT:Machine Module Information
-; GCN-O1-OPTS-NEXT:Target Transform Information
-; GCN-O1-OPTS-NEXT:Assumption Cache Tracker
-; GCN-O1-OPTS-NEXT:Library Function Lowering Analysis
-; GCN-O1-OPTS-NEXT:Profile summary info
-; GCN-O1-OPTS-NEXT:AMDGPU Address space based Alias Analysis
-; GCN-O1-OPTS-NEXT:External Alias Analysis
-; GCN-O1-OPTS-NEXT:Type-Based Alias Analysis
-; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-OPTS-NEXT:Create Garbage Collector Module Metadata
-; GCN-O1-OPTS-NEXT:Machine Branch Probability Analysis
-; GCN-O1-OPTS-NEXT:Register Usage Information Storage
-; GCN-O1-OPTS-NEXT:Default Regalloc Eviction Advisor
-; GCN-O1-OPTS-NEXT:Default Regalloc Priority Advisor
-; GCN-O1-OPTS-NEXT:  ModulePass Manager
+; GCN-O1-OPTS:  ModulePass Manager
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -617,8 +597,7 @@
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Dominance Frontier Construction
 ; GCN-O1-OPTS-NEXT:      Detect single entry single exit regions
-; GCN-O1-OPTS-NEXT:      Region Pass Manager
-; GCN-O1-OPTS-NEXT:        Structurize control flow
+; GCN-O1-OPTS-NEXT:      Structurize control flow
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -696,7 +675,6 @@
 ; GCN-O1-OPTS-NEXT:        Init Undef Pass
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
 ; GCN-O1-OPTS-NEXT:        Remove unreachable machine basic blocks
-; GCN-O1-OPTS-NEXT:        Live Variable Analysis
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
 ; GCN-O1-OPTS-NEXT:        SI Optimize VGPR LiveRange
@@ -803,25 +781,22 @@
 ; GCN-O1-OPTS-NEXT:        Function register usage analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:        Free MachineFunction
+; GCN-O1-OPTS-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -basic-aa -aa
+; GCN-O1-OPTS-NEXT:Assumption Cache Tracker
+; GCN-O1-OPTS-NEXT:Target Library Information
+; GCN-O1-OPTS-NEXT:  FunctionPass Manager
+; GCN-O1-OPTS-NEXT:    Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:    Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:    Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution
+; GCN-O1-OPTS-NEXT:Assumption Cache Tracker
+; GCN-O1-OPTS-NEXT:Target Library Information
+; GCN-O1-OPTS-NEXT:  FunctionPass Manager
+; GCN-O1-OPTS-NEXT:    Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:    Natural Loop Information
+; GCN-O1-OPTS-NEXT:    Scalar Evolution Analysis
 
-; GCN-O2:Target Library Information
-; GCN-O2-NEXT:Runtime Library Function Analysis
-; GCN-O2-NEXT:Target Pass Configuration
-; GCN-O2-NEXT:Machine Module Information
-; GCN-O2-NEXT:Target Transform Information
-; GCN-O2-NEXT:Assumption Cache Tracker
-; GCN-O2-NEXT:Library Function Lowering Analysis
-; GCN-O2-NEXT:Profile summary info
-; GCN-O2-NEXT:AMDGPU Address space based Alias Analysis
-; GCN-O2-NEXT:External Alias Analysis
-; GCN-O2-NEXT:Type-Based Alias Analysis
-; GCN-O2-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O2-NEXT:Create Garbage Collector Module Metadata
-; GCN-O2-NEXT:Machine Branch Probability Analysis
-; GCN-O2-NEXT:Register Usage Information Storage
-; GCN-O2-NEXT:Default Regalloc Eviction Advisor
-; GCN-O2-NEXT:Default Regalloc Priority Advisor
-; GCN-O2-NEXT:  ModulePass Manager
+; GCN-O2:  ModulePass Manager
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -952,8 +927,7 @@
 ; GCN-O2-NEXT:      Post-Dominator Tree Construction
 ; GCN-O2-NEXT:      Dominance Frontier Construction
 ; GCN-O2-NEXT:      Detect single entry single exit regions
-; GCN-O2-NEXT:      Region Pass Manager
-; GCN-O2-NEXT:        Structurize control flow
+; GCN-O2-NEXT:      Structurize control flow
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1032,7 +1006,6 @@
 ; GCN-O2-NEXT:        Init Undef Pass
 ; GCN-O2-NEXT:        Process Implicit Definitions
 ; GCN-O2-NEXT:        Remove unreachable machine basic blocks
-; GCN-O2-NEXT:        Live Variable Analysis
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
 ; GCN-O2-NEXT:        SI Optimize VGPR LiveRange
@@ -1140,25 +1113,22 @@
 ; GCN-O2-NEXT:        Function register usage analysis
 ; GCN-O2-NEXT:        AMDGPU Assembly Printer
 ; GCN-O2-NEXT:        Free MachineFunction
+; GCN-O2-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -basic-aa -aa
+; GCN-O2-NEXT:Assumption Cache Tracker
+; GCN-O2-NEXT:Target Library Information
+; GCN-O2-NEXT:  FunctionPass Manager
+; GCN-O2-NEXT:    Dominator Tree Construction
+; GCN-O2-NEXT:    Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:    Function Alias Analysis Results
+; GCN-O2-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution
+; GCN-O2-NEXT:Assumption Cache Tracker
+; GCN-O2-NEXT:Target Library Information
+; GCN-O2-NEXT:  FunctionPass Manager
+; GCN-O2-NEXT:    Dominator Tree Construction
+; GCN-O2-NEXT:    Natural Loop Information
+; GCN-O2-NEXT:    Scalar Evolution Analysis
 
-; GCN-O3:Target Library Information
-; GCN-O3-NEXT:Runtime Library Function Analysis
-; GCN-O3-NEXT:Target Pass Configuration
-; GCN-O3-NEXT:Machine Module Information
-; GCN-O3-NEXT:Target Transform Information
-; GCN-O3-NEXT:Assumption Cache Tracker
-; GCN-O3-NEXT:Library Function Lowering Analysis
-; GCN-O3-NEXT:Profile summary info
-; GCN-O3-NEXT:AMDGPU Address space based Alias Analysis
-; GCN-O3-NEXT:External Alias Analysis
-; GCN-O3-NEXT:Type-Based Alias Analysis
-; GCN-O3-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O3-NEXT:Create Garbage Collector Module Metadata
-; GCN-O3-NEXT:Machine Branch Probability Analysis
-; GCN-O3-NEXT:Register Usage Information Storage
-; GCN-O3-NEXT:Default Regalloc Eviction Advisor
-; GCN-O3-NEXT:Default Regalloc Priority Advisor
-; GCN-O3-NEXT:  ModulePass Manager
+; GCN-O3:  ModulePass Manager
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1304,8 +1274,7 @@
 ; GCN-O3-NEXT:      Post-Dominator Tree Construction
 ; GCN-O3-NEXT:      Dominance Frontier Construction
 ; GCN-O3-NEXT:      Detect single entry single exit regions
-; GCN-O3-NEXT:      Region Pass Manager
-; GCN-O3-NEXT:        Structurize control flow
+; GCN-O3-NEXT:      Structurize control flow
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1384,7 +1353,6 @@
 ; GCN-O3-NEXT:        Init Undef Pass
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
-; GCN-O3-NEXT:        Live Variable Analysis
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        SI Optimize VGPR LiveRange
@@ -1492,6 +1460,20 @@
 ; GCN-O3-NEXT:        Function register usage analysis
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
+; GCN-O3-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -basic-aa -aa
+; GCN-O3-NEXT:Assumption Cache Tracker
+; GCN-O3-NEXT:Target Library Information
+; GCN-O3-NEXT:  FunctionPass Manager
+; GCN-O3-NEXT:    Dominator Tree Construction
+; GCN-O3-NEXT:    Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:    Function Alias Analysis Results
+; GCN-O3-NEXT:Pass Arguments:  -assumption-cache-tracker -targetlibinfo -domtree -loops -scalar-evolution
+; GCN-O3-NEXT:Assumption Cache Tracker
+; GCN-O3-NEXT:Target Library Information
+; GCN-O3-NEXT:  FunctionPass Manager
+; GCN-O3-NEXT:    Dominator Tree Construction
+; GCN-O3-NEXT:    Natural Loop Information
+; GCN-O3-NEXT:    Scalar Evolution Analysis
 
 define void @empty() {
   ret void

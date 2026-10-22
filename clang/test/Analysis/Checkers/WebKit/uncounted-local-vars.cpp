@@ -214,6 +214,28 @@ void foo9(RefCountable& o) {
   }
 }
 
+bool operator==(const Ref<RefCountable>&, const Ref<RefCountable>&);
+void consumeConstRef(const Ref<RefCountable>&);
+
+void guardian_const_operator_call(RefCountable& o, Ref<RefCountable>& other) {
+  Ref<RefCountable> guardian(o);
+  {
+    RefCountable *bar = guardian.ptr();
+    guardian->method();
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    if (guardian == other)
+      bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    consumeConstRef(guardian);
+    bar->method();
+  }
+}
+
 RefCountable* provide();
 
 struct Derived : public RefCountable {
@@ -945,3 +967,110 @@ void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
 }
 
 } // namespace short_lived_temporaries
+
+namespace call_returning_reference_to_smart_pointer {
+
+template <typename T> struct Vector {
+  T& operator[](unsigned);
+  T* m_buffer;
+};
+
+class Owner {
+public:
+  const RefPtr<RefCountable>& referenceGetter() const { return m_obj; }
+
+  void localFromReferenceGetter() {
+    RefCountable *obj = referenceGetter().get();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+  void localFromVectorElement() {
+    RefCountable *obj = m_items[0].ptr();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+private:
+  RefPtr<RefCountable> m_obj;
+  Vector<Ref<RefCountable>> m_items;
+};
+
+} // namespace call_returning_reference_to_smart_pointer
+
+namespace hash_table_empty_value {
+
+template <typename T> struct HashTraits {
+  static T emptyValue() { return T(); }
+  static T peek(const T& value) { return value; }
+};
+
+template <typename P> struct HashTraits<Ref<P>> {
+  static Ref<P> emptyValue() { return HashTableEmptyValue; }
+  static P* peek(const Ref<P>& value) { return value.ptr(); }
+};
+
+template <typename KeyType, typename MappedType> struct SingleEntryHashMap {
+  using KeyTraits = HashTraits<KeyType>;
+  using MappedTraits = HashTraits<MappedType>;
+
+  auto get(const KeyType& key) const {
+    if (key == KeyTraits::emptyValue() || key != m_key)
+      return MappedTraits::peek(MappedTraits::emptyValue());
+    return MappedTraits::peek(*m_value);
+  }
+
+  KeyType m_key;
+  MappedType* m_value;
+};
+
+void get_in_trivial_context(const SingleEntryHashMap<int, Ref<RefCountable>>& map) {
+  {
+    auto* obj = map.get(1); // no-warning
+    obj->trivial();
+  }
+}
+
+Ref<RefCountable> makeEmptyRef() { return HashTableEmptyValue; }
+
+void null_temporary_from_free_function() {
+  {
+    auto* foo = HashTraits<Ref<RefCountable>>::peek(makeEmptyRef()); // no-warning
+    foo->trivial();
+  }
+}
+
+Ref<RefCountable> makeRef(RefCountable& obj) { return obj; }
+
+void non_null_temporary(RefCountable& obj) {
+  {
+    auto* bar = HashTraits<Ref<RefCountable>>::peek(makeRef(obj));
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    bar->trivial();
+  }
+}
+
+void null_temporary_swapped_with_guardian(RefCountable& src) {
+  RefPtr<RefCountable> obj = &src;
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    RefPtr<RefCountable>().swap(obj);
+    foo->trivial();
+  }
+}
+
+void moveInto(RefPtr<RefCountable>&& dst, RefPtr<RefCountable>& src) { dst.swap(src); }
+
+void null_temporary_filled_by_callee(RefPtr<RefCountable> obj) {
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    moveInto(RefPtr<RefCountable>(), obj);
+    foo->trivial();
+  }
+}
+
+} // namespace hash_table_empty_value

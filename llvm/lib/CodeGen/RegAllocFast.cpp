@@ -279,6 +279,9 @@ private:
   uint32_t InstrGen;
   SmallVector<unsigned, 0> UsedInInstr;
 
+  /// Physical registers with a non-dead def on the current instruction.
+  SmallVector<MCRegister, 4> LiveDefRegs;
+
   SmallVector<unsigned, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
@@ -330,6 +333,14 @@ private:
   void unmarkRegUsedInInstr(MCRegister PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
       UsedInInstr[static_cast<unsigned>(Unit)] = 0;
+  }
+
+  /// Check if \p PhysReg or a super-register has a non-dead def on the current
+  /// instruction.
+  bool hasLiveDefOfSuperReg(MCRegister PhysReg) const {
+    return any_of(LiveDefRegs, [&](MCRegister LiveReg) {
+      return TRI->isSuperRegisterEq(PhysReg, LiveReg);
+    });
   }
 
   enum : unsigned {
@@ -1624,6 +1635,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     InstrGen = 2;
   }
   RegMasks.clear();
+  LiveDefRegs.clear();
   BundleVirtRegsMap.clear();
 
   // Scan for special cases; Apply pre-assigned register defs to state.
@@ -1632,6 +1644,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool HasVRegDef = false;
   bool HasDef = false;
   bool HasEarlyClobber = false;
+  bool HasTiedDef = false;
   bool NeedToAssignLiveThroughs = false;
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
@@ -1644,6 +1657,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
           HasVRegDef = true;
           if (MO.isEarlyClobber())
             HasEarlyClobber = true;
+          if (LowerTiedOps && MO.isTied())
+            HasTiedDef = true;
           if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
         }
@@ -1656,6 +1671,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
               HasEarlyClobber = true;
             if (!displacedAny)
               MO.setIsDead(true);
+            if (!MO.isDead())
+              LiveDefRegs.push_back(Reg.asMCReg());
           }
           if (MO.readsReg())
             HasPhysRegUse = true;
@@ -1722,6 +1739,12 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     for (MachineOperand &MO : reverse(MI.all_defs())) {
       Register Reg = MO.getReg();
 
+      // A dead def is kept alive by a non-dead def of the same register or a
+      // super-register, so clear the inconsistent dead flag.
+      if (Reg.isPhysical() && MO.isDead() &&
+          hasLiveDefOfSuperReg(Reg.asMCReg()))
+        MO.setIsDead(false);
+
       // subreg defs don't free the full register. We left the subreg number
       // around as a marker in setPhysReg() to recognize this case here.
       if (Reg.isPhysical() && MO.getSubReg() != 0) {
@@ -1783,6 +1806,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Implicit MOs can get moved/removed by useVirtReg(), so loop multiple
   // times to ensure no operand is missed.
   bool HasUndefUse = false;
+  bool TiedOnly = HasTiedDef;
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
@@ -1790,7 +1814,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
-      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
+      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg) ||
+          (TiedOnly && !MO.isTied()))
         continue;
 
       if (MO.isUndef()) {
@@ -1807,6 +1832,13 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       ReArrangedImplicitMOs = useVirtReg(MI, MO, Reg);
       if (ReArrangedImplicitMOs)
         break;
+    }
+    // Given %1 = OP %0, %0(tied-def 0), allocate tied %0 first, so that %0
+    // takes %1's register. In operand order, the untied %0 would take another
+    // register and the tied use would need a copy.
+    if (TiedOnly && !ReArrangedImplicitMOs) {
+      TiedOnly = false;
+      ReArrangedImplicitMOs = true;
     }
   }
 
