@@ -73,6 +73,13 @@ static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
                       InterpolationModifier::Sample,
               "sampling-location bits must increase in precedence");
 
+// SPIR-V Decoration enumerants that bind an interface variable to a builtin or
+// a user location. The values match the SPIR-V specification.
+enum class SPIRVInterfaceDecoration : uint32_t {
+  BuiltIn = 11,
+  Location = 30,
+};
+
 // SPIR-V Decoration enumerants that control how a fragment shader input is
 // interpolated. The values match the SPIR-V specification.
 enum class SPIRVInterpolationMode : uint32_t {

@@ -1128,7 +1128,8 @@ getSPIRVInterpolationMode(llvm::hlsl::InterpolationMode InterpMode,
 }
 
 static void
-addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV, unsigned Decoration,
+addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV,
+                             llvm::hlsl::SPIRVInterfaceDecoration Decoration,
                              unsigned Operand,
                              llvm::hlsl::InterpolationMode InterpMode =
                                  llvm::hlsl::InterpolationMode::Undefined) {
@@ -1138,9 +1139,10 @@ addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV, unsigned Decoration,
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
   SmallVector<Metadata *, 3> Decorations;
-  Decorations.push_back(
-      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Decoration)),
-                        ConstantAsMetadata::get(B.getInt32(Operand))}));
+  Decorations.push_back(MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Decoration))),
+       ConstantAsMetadata::get(B.getInt32(Operand))}));
   auto Add = [&](SPIRVInterpolationMode InterpolationDecoration) {
     Decorations.push_back(
         MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(
@@ -1186,7 +1188,8 @@ createSPIRVInputLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  unsigned Decoration = IsBuiltIn ? /* BuiltIn */ 11 : /* Location */ 30;
+  auto Decoration = IsBuiltIn ? llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn
+                              : llvm::hlsl::SPIRVInterfaceDecoration::Location;
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   return B.CreateLoad(Ty, GV);
 }
@@ -1223,7 +1226,8 @@ static void createSPIRVOutputStore(IRBuilder<> &B, llvm::Module &M,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  unsigned Decoration = IsBuiltIn ? /* BuiltIn */ 11 : /* Location */ 30;
+  auto Decoration = IsBuiltIn ? llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn
+                              : llvm::hlsl::SPIRVInterfaceDecoration::Location;
   addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   B.CreateStore(Source, GV);
 }
@@ -2091,9 +2095,11 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
-    addSPIRVInterfaceDecorations(GV, /* BuiltIn */ 11, Attr->getBuiltIn());
+    addSPIRVInterfaceDecorations(
+        GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, Attr->getBuiltIn());
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
-    addSPIRVInterfaceDecorations(GV, /* BuiltIn */ 11, Attr->getBuiltIn());
+    addSPIRVInterfaceDecorations(
+        GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, Attr->getBuiltIn());
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
