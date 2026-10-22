@@ -10,45 +10,28 @@
 
 
 import lldb
+from lldb.plugins.scripted_synthetic_children import ScriptedSyntheticChildren
 
 
-def get_data_pointer(root):
-    """Get the data pointer from a vector, handling compressed pair layout."""
-    # Try new layout
-    cap_sp = root.GetChildMemberWithName("__cap_")
-    if cap_sp:
-        return cap_sp
-
-    # Try old compressed pair layout
-    end_cap_sp = root.GetChildMemberWithName("__end_cap_")
-    if not end_cap_sp:
-        return None
-
-    # Get first value of compressed pair
-    value_sp = end_cap_sp.GetChildMemberWithName("__value_")
-    if value_sp:
-        return value_sp
-
-    first_sp = end_cap_sp.GetChildMemberWithName("__first_")
-    if first_sp:
-        return first_sp
-
-    return None
-
-
-class LibCxxStdVectorSyntheticFrontEnd:
+class LibCxxStdVectorSyntheticFrontEnd(ScriptedSyntheticChildren):
     """Synthetic children frontend for libc++ std::vector."""
 
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        super().__init__(valobj)
         self.m_start = None
+        # Either the `__end_` pointer or the `__size_` integer, depending on
+        # which layout libc++ was built with. See `m_size_based`.
         self.m_finish = None
+        self.m_size_based = False
         self.m_element_type = None
         self.m_element_size = 0
 
     def num_children(self):
         if not self.m_start or not self.m_finish:
             return 0
+
+        if self.m_size_based:
+            return self.m_finish.GetValueAsUnsigned(0)
 
         start_val = self.m_start.GetValueAsUnsigned(0)
         finish_val = self.m_finish.GetValueAsUnsigned(0)
@@ -73,48 +56,56 @@ class LibCxxStdVectorSyntheticFrontEnd:
         offset = offset + self.m_start.GetValueAsUnsigned(0)
 
         name = f"[{index}]"
-        target = self.valobj.GetTarget()
-        if not target:
-            return None
-
-        addr = lldb.SBAddress(offset, target)
-        return target.CreateValueFromAddress(name, addr, self.m_element_type)
+        # Create the child from the vector's SBValue rather than the SBTarget:
+        # LLDB caches synthetic children, and only children created this way
+        # are kept alive by the parent once Python drops its reference.
+        return self.valobj.CreateValueFromAddress(name, offset, self.m_element_type)
 
     def update(self):
         self.m_start = None
         self.m_finish = None
 
-        data_sp = get_data_pointer(self.valobj)
-        if not data_sp:
+        # Newer libc++ versions keep the vector's members in a `__layout_`
+        # subobject rather than directly in the vector.
+        members = self.valobj.GetChildMemberWithName("__layout_")
+        if not members:
+            members = self.valobj
+
+        begin_sp = members.GetChildMemberWithName("__begin_")
+        if not begin_sp:
             return False
 
-        self.m_element_type = data_sp.GetType().GetPointeeType()
+        self.m_element_type = begin_sp.GetType().GetPointeeType()
         if not self.m_element_type:
             return False
 
         size = self.m_element_type.GetByteSize()
-        if not size or size == 0:
+        if not size:
             return False
 
         self.m_element_size = size
+        self.m_start = begin_sp
 
-        begin_sp = self.valobj.GetChildMemberWithName("__begin_")
-        end_sp = self.valobj.GetChildMemberWithName("__end_")
-
-        if not begin_sp:
+        end_sp = members.GetChildMemberWithName("__end_")
+        if end_sp:
+            self.m_finish = end_sp
+            self.m_size_based = False
             return False
 
-        self.m_start = begin_sp
-        self.m_finish = end_sp
+        size_sp = members.GetChildMemberWithName("__size_")
+        if not size_sp:
+            return False
 
+        self.m_finish = size_sp
+        self.m_size_based = True
         return False
 
 
-class LibCxxVectorBoolSyntheticFrontEnd:
+class LibCxxVectorBoolSyntheticFrontEnd(ScriptedSyntheticChildren):
     """Synthetic children frontend for libc++ std::vector<bool>."""
 
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        super().__init__(valobj)
         self.m_bool_type = None
         self.m_count = 0
         self.m_base_data_address = 0
@@ -175,11 +166,7 @@ class LibCxxVectorBoolSyntheticFrontEnd:
         )
 
         name = "[%d]" % index
-        target = self.valobj.GetTarget()
-        if not target:
-            return None
-
-        retval_sp = target.CreateValueFromData(name, data, self.m_bool_type)
+        retval_sp = self.valobj.CreateValueFromData(name, data, self.m_bool_type)
         if retval_sp:
             self.m_children[index] = retval_sp
 

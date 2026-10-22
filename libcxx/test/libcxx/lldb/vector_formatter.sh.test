@@ -6,12 +6,6 @@
 #
 # ===----------------------------------------------------------------------===##
 
-# REQUIRES: host-has-lldb-with-python
-# REQUIRES: has-filecheck
-# REQUIRES: has-splitfile
-# REQUIRES: optimization=none
-# UNSUPPORTED: c++03
-
 # RUN: split-file %s %{temp}
 # RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
 
@@ -50,7 +44,7 @@
 
 # CHECK: (lldb) continue
 # CHECK: (lldb) frame var vi[0]
-# CHECK-NEXT: array index 0 is not valid
+# CHECK: array index 0 is not valid
 
 # CHECK: (lldb) frame var vi
 # CHECK-NEXT: (std::vector<int>) vi = size=0 {}
@@ -70,15 +64,17 @@
 # CHECK-NEXT:   [1] = 11
 # CHECK-NEXT: }
 
+# Clang only names std::string by its preferred name in the debug info when
+# tuning for LLDB, which is the default on some platforms but not others.
 # CHECK: (lldb) continue
 # CHECK: (lldb) frame var vs
-# CHECK-NEXT: (std::vector<std::string>) vs = size=2 {
+# CHECK-NEXT: (std::vector<{{std::string|std::basic_string<char> }}>) vs = size=2 {
 # CHECK-NEXT:   [0] = "Foo"
 # CHECK-NEXT:   [1] = "Bar"
 # CHECK-NEXT: }
 
 # CHECK: (lldb) frame var vs[1]
-# CHECK-NEXT: (std::string) vs[1] = "Bar"
+# CHECK-NEXT: ({{std::string|std::basic_string<char>}}) vs[1] = "Bar"
 
 # CHECK: (lldb) continue
 # CHECK: (lldb) frame var vec_ref
@@ -93,8 +89,8 @@
 # CHECK: (lldb) frame var vec_ptr
 # CHECK-NEXT: (const std::vector<int> *) vec_ptr = 0x{{.*}} size=2
 
-# CHECK: (lldb) frame var vec_ptr[1]
-# CHECK-NEXT: (int) vec_ptr[1] = 11
+# CHECK: (lldb) frame var (*vec_ptr)[1]
+# CHECK-NEXT: (int) (*vec_ptr)[1] = 11
 
 #--- main.cpp
 
@@ -171,4 +167,4 @@ continue
 frame var vec_ref
 frame var vec_ref[1]
 frame var vec_ptr
-frame var vec_ptr[1]
+frame var (*vec_ptr)[1]

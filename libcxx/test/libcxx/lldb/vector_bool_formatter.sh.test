@@ -6,12 +6,6 @@
 #
 # ===----------------------------------------------------------------------===##
 
-# REQUIRES: host-has-lldb-with-python
-# REQUIRES: has-filecheck
-# REQUIRES: has-splitfile
-# REQUIRES: optimization=none
-# UNSUPPORTED: c++03
-
 # RUN: split-file %s %{temp}
 # RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
 

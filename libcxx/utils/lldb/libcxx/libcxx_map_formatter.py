@@ -9,6 +9,7 @@
 # LLDB data formatters for libc++ std::(multi)map and std::(multi)set
 
 import lldb
+from lldb.plugins.scripted_synthetic_children import ScriptedSyntheticChildren
 
 
 class MapEntry:
@@ -197,11 +198,11 @@ def _get_value_or_old_compressed_pair(tree, value_name, pair_name):
     return (None, False)
 
 
-class LibcxxStdMapSyntheticProvider:
+class LibcxxStdMapSyntheticProvider(ScriptedSyntheticChildren):
     """Synthetic children provider for libc++ std::map."""
 
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        super().__init__(valobj)
         self.m_tree = None
         self.m_root_node = None
         self.m_node_ptr_type = None
@@ -298,10 +299,6 @@ class LibcxxStdMapSyntheticProvider:
 
         return False
 
-    def has_children(self):
-        """Check if this object has children."""
-        return True
-
     def _get_key_value_pair(self, idx, max_depth):
         """
         Returns the ValueObject for the __tree_node type that
@@ -341,11 +338,11 @@ class LibcxxStdMapSyntheticProvider:
         return value_type_sp
 
 
-class LibCxxMapIteratorSyntheticProvider:
+class LibCxxMapIteratorSyntheticProvider(ScriptedSyntheticChildren):
     """Synthetic children provider for libc++ std::map::iterator."""
 
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        super().__init__(valobj)
         self.m_pair_sp = None
 
     def num_children(self):
@@ -418,6 +415,3 @@ class LibCxxMapIteratorSyntheticProvider:
 
         self.m_pair_sp = key_value_sp
         return False
-
-    def has_children(self):
-        return True
