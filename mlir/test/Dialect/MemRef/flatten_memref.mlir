@@ -110,7 +110,7 @@ func.func @load_vector_from_memref_dynamic(%input: memref<3x7xi2>, %row: index, 
 // CHECK: func @load_vector_from_memref_dynamic
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast
-// CHECK: vector.load %[[REINT]][%[[IDX]]] : memref<21xi2, strided<[1]>>, vector<3xi2>
+// CHECK: vector.load %[[REINT]][%[[IDX]]] : memref<21xi2>, vector<3xi2>
 
 // -----
 
@@ -124,7 +124,7 @@ func.func @store_vector_to_memref_odd(%input: memref<3x7xi2>, %value: vector<3xi
 // CHECK-SAME: (%[[ARG0:.*]]: memref<3x7xi2>, %[[ARG1:.*]]: vector<3xi2>)
 // CHECK: %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast
-// CHECK-NEXT: vector.store %[[ARG1]], %[[REINT]][%[[C10]]] : memref<21xi2, strided<[1]>
+// CHECK-NEXT: vector.store %[[ARG1]], %[[REINT]][%[[C10]]] : memref<21xi2
 
 // -----
 
@@ -281,8 +281,8 @@ func.func @alloc() -> memref<4x8xf32> {
 
 // CHECK-LABEL: func @alloc
 // CHECK-SAME: () -> memref<4x8xf32>
-// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
-// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32>
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32>
+// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32> to memref<4x8xf32>
 
 // -----
 
@@ -292,8 +292,8 @@ func.func @alloca() -> memref<4x8xf32> {
 }
 
 // CHECK-LABEL: func.func @alloca() -> memref<4x8xf32>
-// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<32xf32, strided<[1]>>
-// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32, strided<[1]>> to memref<4x8xf32>
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<32xf32>
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [4, 8], strides: [8, 1] : memref<32xf32> to memref<4x8xf32>
 
 // -----
 
@@ -381,8 +381,8 @@ func.func @chained_alloc_load() -> vector<8xf32> {
 // CHECK-LABEL: func @chained_alloc_load
 // CHECK-SAME: () -> vector<8xf32>
 // CHECK-NEXT: %[[C30:.*]] = arith.constant 30 : index
-// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32, strided<[1]>>
-// CHECK-NEXT: vector.load %[[ALLOC]][%[[C30]]] : memref<32xf32, strided<[1]>>, vector<8xf32>
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<32xf32>
+// CHECK-NEXT: vector.load %[[ALLOC]][%[[C30]]] : memref<32xf32>, vector<8xf32>
 
 // -----
 
