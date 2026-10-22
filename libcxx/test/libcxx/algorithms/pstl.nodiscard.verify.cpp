@@ -20,6 +20,7 @@
 void test() {
   int a[]    = {1};
   int b[]    = {1};
+  int c[]    = {1};
   auto pred  = [](auto) { return false; };
   auto pred2 = [](auto, auto) { return false; };
 
@@ -119,4 +120,6 @@ void test() {
   std::partition(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::stable_partition(std::execution::par, std::begin(a), std::end(a), pred);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::partition_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::begin(c), pred);
 }

@@ -314,6 +314,15 @@ struct __partition;
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __partition_copy;
+// template <class _Policy, class _ForwardIterator,
+//           class _ForwardOutIterator1, class _ForwardOutIterator2, class _Predicate>
+// optional<pair<_ForwardOutIterator1, _ForwardOutIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
+//                                _ForwardOutIterator1 __out_true, _ForwardOutIterator2 __out_false,
+//                                _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __reduce;
 // template <class _Policy, class _ForwardIterator, class _Tp, class _BinaryOperation>
 // optional<_Tp>
