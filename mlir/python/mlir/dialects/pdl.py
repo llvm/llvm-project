@@ -223,8 +223,6 @@ class TypesOp(TypesOp):
         loc=None,
         ip=None,
     ):
-        if constantTypes is None:
-            constantTypes = []
         result = pdl.RangeType.get(pdl.TypeType.get())
         super().__init__(result, constantTypes=constantTypes, loc=loc, ip=ip)
 
