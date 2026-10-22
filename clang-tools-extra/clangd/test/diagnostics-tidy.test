@@ -11,7 +11,7 @@
 # CHECK-NEXT:        "codeDescription": {
 # CHECK-NEXT:          "href": "https://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html"
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "message": "Suspicious usage of 'sizeof(K)'; did you mean 'K'?",
+# CHECK-NEXT:        "message": "Suspicious usage of 'sizeof(K)'; did you mean 'K'? (fixes available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 16,
@@ -29,6 +29,82 @@
 # CHECK-NEXT:    "uri": "file://{{.*}}/foo.c",
 # CHECK-NEXT:    "version": 0
 # CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":1,"character":6},"end":{"line":1,"character":16}},"context":{"diagnostics":[{"range":{"start":{"line":1,"character":6},"end":{"line":1,"character":16}},"severity":2,"message":"Suspicious usage of 'sizeof(K)'; did you mean 'K'? (fixes available)","code":"bugprone-sizeof-expression","source":"clang-tidy"}]}}}
+#      CHECK: {
+#      CHECK:   "result": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "arguments": [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           "changes": {
+# CHECK-NEXT:             "file:///{{.*}}/foo.c": [
+# CHECK-NEXT:               {
+# CHECK-NEXT:                 "newText": " // NOLINT(bugprone-sizeof-expression)",
+# CHECK-NEXT:                 "range": {
+# CHECK-NEXT:                   "end": {
+# CHECK-NEXT:                     "character": 17,
+# CHECK-NEXT:                     "line": 1
+# CHECK-NEXT:                   },
+# CHECK-NEXT:                   "start": {
+# CHECK-NEXT:                     "character": 17,
+# CHECK-NEXT:                     "line": 1
+# CHECK-NEXT:                   }
+# CHECK-NEXT:                 }
+# CHECK-NEXT:               }
+# CHECK-NEXT:             ]
+# CHECK-NEXT:           }
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "command": "clangd.applyFix",
+# CHECK-NEXT:       "title": "Apply fix: suppress this warning with NOLINT"
+# CHECK-NEXT:     },
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "arguments": [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           "changes": {
+# CHECK-NEXT:             "file:///{{.*}}/foo.c": [
+# CHECK-NEXT:               {
+# CHECK-NEXT:                 "newText": "// NOLINTNEXTLINE(bugprone-sizeof-expression)\n",
+# CHECK-NEXT:                 "range": {
+# CHECK-NEXT:                   "end": {
+# CHECK-NEXT:                     "character": 0,
+# CHECK-NEXT:                     "line": 1
+# CHECK-NEXT:                   },
+# CHECK-NEXT:                   "start": {
+# CHECK-NEXT:                     "character": 0,
+# CHECK-NEXT:                     "line": 1
+# CHECK-NEXT:                   }
+# CHECK-NEXT:                 }
+# CHECK-NEXT:               }
+# CHECK-NEXT:             ]
+# CHECK-NEXT:           }
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "command": "clangd.applyFix",
+# CHECK-NEXT:       "title": "Apply fix: suppress this warning with NOLINTNEXTLINE"
+# CHECK-NEXT:     },
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "arguments": [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           "file": "file:///{{.*}}/foo.c",
+# CHECK-NEXT:           "selection": {
+# CHECK-NEXT:             "end": {
+# CHECK-NEXT:               "character": 16,
+# CHECK-NEXT:               "line": 1
+# CHECK-NEXT:             },
+# CHECK-NEXT:             "start": {
+# CHECK-NEXT:               "character": 6,
+# CHECK-NEXT:               "line": 1
+# CHECK-NEXT:             }
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "tweakID": "ExtractVariable"
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "command": "clangd.applyTweak",
+# CHECK-NEXT:       "title": "Extract subexpression to variable"
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
 ---
 {"jsonrpc":"2.0","id":2,"method":"sync","params":null}
 ---
