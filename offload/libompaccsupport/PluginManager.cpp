@@ -277,6 +277,12 @@ bool PluginManager::registerImageOnDevice(
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   RTLsMtx.lock();
 
+  // There are no devices to register with if liboffload was not initialized.
+  if (!LibOffloadInitialized) {
+    RTLsMtx.unlock();
+    return;
+  }
+
   // Upgrade the entries from the legacy implementation if necessary.
   Desc = upgradeLegacyEntries(Desc);
 
@@ -291,10 +297,9 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
-  // Register the images with the RTLs that understand them, if any. There are
-  // no devices to register with if liboffload was not initialized.
+  // Register the images with the RTLs that understand them, if any.
   llvm::SmallVector<ol_device_handle_t> UsedDevices;
-  for (int32_t i = 0; LibOffloadInitialized && i < Desc->NumDeviceImages; ++i) {
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &Desc->DeviceImages[i];
 
@@ -656,9 +661,9 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
 }
 
 int PluginManager::getNumActivePlugins() const {
-  int count = 0;
   if (!LibOffloadInitialized)
-    return count;
+    return 0;
+  int count = 0;
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
             bool Active = false;
