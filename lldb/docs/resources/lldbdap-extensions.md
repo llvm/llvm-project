@@ -234,5 +234,13 @@ interface StackFrame {
    * @format uint32
    */
   compileUnitId?: number;
+
+  /**
+   * Language specific data about the frame, as returned by
+   * `SBFrame::GetLanguageSpecificData`, for example `Objective-C runtime
+   * version`. Each language runtime defines its keys and clients must ignore
+   * keys they do not know. Omitted if the runtime reports nothing.
+   */
+  $__lldb_languageSpecificData?: any;
 }
 ```

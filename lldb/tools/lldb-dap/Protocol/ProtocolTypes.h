@@ -1132,6 +1132,11 @@ struct StackFrame {
   /// The compile unit associated with this frame, if any.
   std::optional<uint32_t> compileUnitId;
 
+  /// What the language runtime of the frame's compile unit reports about the
+  /// frame, as returned by `SBFrame::GetLanguageSpecificData`. The keys are
+  /// defined by each runtime. Omitted if the runtime reports nothing.
+  std::optional<llvm::json::Value> languageSpecificData;
+
   /// A hint for how to present this frame in the UI. A value of `label` can be
   /// used to indicate that the frame is an artificial frame that is used as a
   /// visual label or separator. A value of `subtle` can be used to change the
