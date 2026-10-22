@@ -670,6 +670,10 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
           // Because it is theoretically possible that some earlier MI pass or
           // other lowering transformation could induce this to happen, we do
           // a hard check even in non-debug builds here.
+          //
+          // A block unreachable from the entry is dominated by every block, so
+          // its uses are always rewritten, even if the condition register
+          // isn't defined along every path into it. That block never executes.
           if (SuccMBB == TestMBB || !MDT->dominates(TestMBB, SuccMBB)) {
             LLVM_DEBUG({
               dbgs()
