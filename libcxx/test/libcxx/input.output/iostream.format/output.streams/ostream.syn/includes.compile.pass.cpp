@@ -10,8 +10,6 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// XFAIL: availability-fp_to_chars-missing
-
 // <ostream>
 
 // The Standard does indirectly require that <ostream> includes <format>.
