@@ -908,6 +908,15 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+// Enable CSR first-use cost 1 with PPX (used by Novalake). PPX push/pop still
+// execute; a non-zero cost lets RAGreedy move CSR saves off hot paths by
+// splitting/spilling in cold blocks.
+def TuningPPXCSRFirstUseCost1
+    : SubtargetFeature<"ppx-csr-first-use-cost-1",
+                       "HasPPXCSRFirstUseCost1", "true",
+                       "Use CSR first-use cost 1 instead of 0 with PPX",
+                       [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1489,7 +1498,8 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
-  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC,
+                                                TuningPPXCSRFirstUseCost1];
   list<SubtargetFeature> NVLTuning = !listconcat(ADLTuning, NVLAdditionalTuning);
 
   // Clearwaterforest
