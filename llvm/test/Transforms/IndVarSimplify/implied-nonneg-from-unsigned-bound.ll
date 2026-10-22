@@ -4,8 +4,6 @@
 ; If x <u y and y <=u INT_MIN, then x >=s 0.
 ; If x <=u y and y <=u INT_MAX, then x >=s 0.
 ; The guards and the exit conditions are written with different predicates.
-;
-; FIXME: SCEV cannot prove this yet, fold the exits to constants where possible.
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
@@ -21,8 +19,7 @@ define void @ult(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -62,8 +59,7 @@ define void @ult_smin(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -103,8 +99,7 @@ define void @ule(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -144,8 +139,7 @@ define void @ugt(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -185,8 +179,7 @@ define void @ugt_smin(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -226,8 +219,7 @@ define void @uge(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -267,8 +259,7 @@ define void @ult_query_sle(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 [[X]], -1
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -308,8 +299,7 @@ define void @ult_query_sgt_swapped(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sgt i32 0, [[X]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -349,8 +339,7 @@ define void @ult_query_sge(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sge i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -390,8 +379,7 @@ define void @ult_query_sgt(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -431,8 +419,7 @@ define void @ult_query_slt_swapped(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 -1, [[X]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -472,8 +459,7 @@ define void @ult_query_sle_swapped(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sle i32 0, [[X]]
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -513,8 +499,7 @@ define void @ugt_query_sge(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sge i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -554,8 +539,7 @@ define void @uge_query_sgt(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -585,6 +569,8 @@ exit:
 
 ; If x <u y and y <u INT_MAX, then x >=s 0, which implies x >=s z
 ; for any z <=s 0.
+; TODO: fold the exit. This needs x >=s z to be proven from x >=s 0 and
+; z <=s 0, where z may be INT_MIN.
 define void @ult_query_nonpos(i32 %x, ptr %p, ptr %pz) {
 ; CHECK-LABEL: define void @ult_query_nonpos(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]], ptr [[PZ:%.*]]) {
@@ -639,8 +625,7 @@ define void @ult_query_const(i32 %x, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[X]], -5
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -670,6 +655,8 @@ exit:
 
 ; If x <u y and y <u 1000, then x >=s 0. Here y <u 1000 is known only from
 ; a dominating guard.
+; TODO: fold the exit. This needs the bound on y to be proven from the guard,
+; not only from the range of y.
 define void @ult_y_guarded(i32 %x, i32 %y) {
 ; CHECK-LABEL: define void @ult_y_guarded(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
@@ -715,6 +702,8 @@ exit:
 }
 
 ; If x <u y and y <u INT_MAX, then x >=s 0, which implies x + 1 >=s 1.
+; TODO: fold the exit. This needs x + 1 >=s 1 to be proven from x >=s 0 for
+; the nsw add.
 define void @ult_query_offset(i32 %x, ptr %p) {
 ; CHECK-LABEL: define void @ult_query_offset(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
@@ -769,9 +758,7 @@ define void @ugt_smin_query_smax(i32 %x, i32 %w, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[W]])
-; CHECK-NEXT:    [[Q:%.*]] = icmp slt i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[Q]], label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    call void @side()
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
