@@ -109,6 +109,17 @@ STATISTIC(NumImportantContextIds, "Number of important context ids");
 STATISTIC(NumFixupEdgeIdsInserted, "Number of fixup edge ids inserted");
 STATISTIC(NumFixupEdgesAdded, "Number of fixup edges added");
 STATISTIC(NumFixedContexts, "Number of contexts with fixed edges");
+STATISTIC(NumImplicitCallersAssigned,
+          "Number of callsite clones without an edge to a callee's clones "
+          "assigned the callee function clone of their original node");
+STATISTIC(NumImplicitCallersSourced,
+          "Number of calls in function clones whose callee was taken from a "
+          "callsite clone an implicit caller requires");
+STATISTIC(NumTrimmedContextIds,
+          "Number of context ids with call stacks trimmed at a callsite");
+STATISTIC(NumImplicitCallersUnresolved,
+          "Number of callsite clones without an edge to a callee's clones "
+          "left in a function clone calling a conflicting callee clone");
 STATISTIC(AliaseesPrevailingInDiffModuleFromAlias,
           "Number of aliasees prevailing in a different module than its alias");
 
@@ -453,6 +464,19 @@ public:
           return false;
       }
       return true;
+    }
+
+    // Whether the given context id is among this node's context ids.
+    bool hasContextId(uint32_t Id) const {
+      auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
+      for (const auto &Edge : Edges) {
+        if (Edge->getContextIds().contains(Id))
+          return true;
+      }
+      return false;
     }
 
     // List of clones of this ContextNode, initially empty.
@@ -871,6 +895,40 @@ private:
   /// processed are given in AllocContextIds.
   void identifyClones(ContextNode *Node, DenseSet<const ContextNode *> &Visited,
                       const DenseSet<uint32_t> &AllocContextIds);
+
+  /// Records which clone of a callsite node an implicit caller requires (see
+  /// assignImplicitCallers). The call to that callsite in a given function
+  /// clone (the map key below) must call the same callee version as Source.
+  struct ImplicitSource {
+    /// The required clone of the callsite node.
+    const ContextNode *Source;
+    /// One of the trimmed context ids that made Source required. If Source is
+    /// later emptied by further cloning, this id is used to find the clone
+    /// that now carries the trimmed contexts (see resolveImplicitSource).
+    uint32_t ContextId;
+  };
+  /// Map from (original callsite node, function clone number) to the clone of
+  /// that callsite node that the call in that function clone must follow.
+  using ImplicitSourceMap =
+      DenseMap<std::pair<const ContextNode *, unsigned>, ImplicitSource>;
+
+  /// Assign the implicit callers of the clones of Node (callsite clones without
+  /// an edge to any clone of Node which contexts trimmed at Node's frame would
+  /// have reached) the function clone called by the caller carrying those
+  /// contexts, and record the clone of Node their calls must follow. See
+  /// assignFunctions for the maps.
+  void assignImplicitCallers(
+      ContextNode *Node, const DenseSet<uint32_t> &TrimmedContextIds,
+      DenseMap<ContextNode *, FuncInfo> &CallsiteToCalleeFuncCloneMap,
+      const std::map<FuncInfo, ContextNode *> &FuncCloneToCurNodeCloneMap,
+      ImplicitSourceMap &ImplicitSources);
+
+  /// Returns the clone of Node (the original callsite node) that the implicit
+  /// source Src refers to: Src.Source unless it has since been emptied, in
+  /// which case the clone that now carries Src.ContextId (null if none does,
+  /// which is not expected).
+  static const ContextNode *resolveImplicitSource(const ContextNode *Node,
+                                                  const ImplicitSource &Src);
 
   /// Map from each context ID to the AllocationType assigned to that context.
   DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
@@ -4768,6 +4826,287 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   }
 }
 
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+const typename CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode *
+CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::resolveImplicitSource(
+    const ContextNode *Node, const ImplicitSource &Src) {
+  if (!Src.Source->emptyContextIds())
+    return Src.Source;
+  // Src.Source lost its contexts to another clone (e.g. its last caller was
+  // moved to a new clone when specializing a function clone further). The
+  // trimmed contexts stay together, so the clone carrying one of them is the
+  // version the implicit caller requires.
+  if (Node->hasContextId(Src.ContextId))
+    return Node;
+  for (const ContextNode *C : Node->Clones)
+    if (C->hasContextId(Src.ContextId))
+      return C;
+  // Context ids only move between the clones of a node during function
+  // assignment, so the id should still be on one of them. Return null, which
+  // makes the call follow the original node, rather than an emptied clone.
+  assert(false && "trimmed context id on no clone of its callsite node");
+  return nullptr;
+}
+
+// Contexts whose call stacks were trimmed at a callsite node's frame are on
+// its callee edges but on none of its caller edges. When that node, or one
+// below it on the path of such a context, is cloned for the contexts of
+// another allocation reaching it through a caller edge, the trimmed contexts
+// stay with the node that was cloned, and the clone gets no edge to the callee
+// nodes the trimmed contexts flow through. The clone is therefore not a caller
+// of any clone of such a callee node, and would otherwise be assigned a
+// function clone of the callee without regard to it, possibly one calling the
+// wrong version of the callee for the trimmed contexts, which are agnostic to
+// the callers of the node they were trimmed at and apply to the clone equally.
+//
+// This is called once the clones of callsite Node have been assigned to
+// function clones. For each caller Y of a clone of Node whose edge carries
+// trimmed contexts, each clone K of Y's original node that has no edge to any
+// clone of Node, and which some of those trimmed contexts would reach (see
+// ImpliesContextIds), is an implicit caller of Node. For example, with a
+// context t trimmed at the frame of Y's callsite:
+//
+//        (callers of Y)   (callers of K)
+//               |               |
+//               Y               K        clones of the same callsite node
+//               |                \
+//             t |                 \      K has no edge to any clone of Node
+//               v                  v
+//           Required          (other callsites in Node's function)
+//      (clone of Node called
+//       by Y, assigned to
+//       Y's function clone)
+//
+// Had t not been trimmed, it would also be on an edge from K, so K should get
+// the same version of Node's function as Y:
+// - If K was not yet assigned a function clone, assign it Y's, so that the
+//   assignment of the callsites it does have edges to takes it into account
+//   (creating further function clones derived from it if needed).
+// - If K was already assigned to a function clone without a clone of Node,
+//   record that the Node call in that function clone should follow Required.
+// - Otherwise K's function clone calls a conflicting clone of Node, which is
+//   left as is (and counted).
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignImplicitCallers(
+    ContextNode *Node, const DenseSet<uint32_t> &TrimmedContextIds,
+    DenseMap<ContextNode *, FuncInfo> &CallsiteToCalleeFuncCloneMap,
+    const std::map<FuncInfo, ContextNode *> &FuncCloneToCurNodeCloneMap,
+    ImplicitSourceMap &ImplicitSources) {
+  auto HasEdgeToNodeFamily = [&](const ContextNode *N) {
+    return llvm::any_of(N->CalleeEdges,
+                        [&](const std::shared_ptr<ContextEdge> &E) {
+                          return E->Callee->getOrigNode() == Node;
+                        });
+  };
+  // Returns true if any of the trimmed context ids Ids, which are on (the
+  // clone) Y but not on K, a clone of the same callsite node, would reach K had
+  // they not been trimmed:
+  // - An id terminating at Y applies to all clones of Y's original node (see
+  //   the example above assignImplicitCallers).
+  // - An id reaching Y from a caller Z applies to K only if it would equally
+  //   apply to some caller C of K that is a clone of Z's original node, i.e.
+  //   it is not on C (if it were, C explicitly directs it to a callee other
+  //   than K) and, recursively, it applies to C the way it applies to Z (e.g.
+  //   because it terminates at Z, so it applies to all clones of Z's original
+  //   node). The id would then flow from C to K just as it flows from Z to Y,
+  //   had it not been trimmed:
+  //
+  //        ...             ...      t terminates at Z or one of its callers
+  //         |
+  //         Z               C       clones of the same callsite node
+  //         |               :
+  //       t |               : (t)   t is not on C or K; it applies to them
+  //         v               v       because it was trimmed above
+  //         Y               K       clones of the same callsite node
+  //         |
+  //       t v
+  //      Required
+  //
+  //   This is checked recursively on (C, Z) with the ids not on C. If C == Z,
+  //   Z explicitly directs the ids to Y rather than K, so they don't apply to
+  //   K.
+  //
+  // Visited records the ids already examined for each (K, Y) pair, which
+  // guards against cycles from recursion while still examining ids first seen
+  // for the pair on a reconverging caller chain.
+  auto ImpliesContextIds =
+      [&](ContextNode *K, ContextNode *Y, const DenseSet<uint32_t> &Ids,
+          DenseMap<std::pair<ContextNode *, ContextNode *>, DenseSet<uint32_t>>
+              &Visited,
+          auto &&ImpliesContextIds) -> bool {
+    assert(K->getOrigNode() == Y->getOrigNode());
+    DenseSet<uint32_t> &VisitedIds = Visited[{K, Y}];
+    DenseSet<uint32_t> NewIds;
+    for (auto Id : Ids)
+      if (VisitedIds.insert(Id).second)
+        NewIds.insert(Id);
+    if (NewIds.empty())
+      return false;
+    // The ids found on each caller edge of Y, with that edge's caller Z, and
+    // their union (a set rather than a count, as a recursive context can put
+    // the same id on several caller edges).
+    SmallVector<std::pair<ContextNode *, DenseSet<uint32_t>>> IdsFromCallers;
+    DenseSet<uint32_t> IdsOnCallerEdges;
+    for (auto &YEdge : Y->CallerEdges) {
+      DenseSet<uint32_t> IdsFromZ =
+          set_intersection(NewIds, YEdge->getContextIds());
+      if (IdsFromZ.empty())
+        continue;
+      set_union(IdsOnCallerEdges, IdsFromZ);
+      IdsFromCallers.push_back({YEdge->Caller, std::move(IdsFromZ)});
+    }
+    // Any ids on none of Y's caller edges terminate at Y, and so apply to all
+    // clones of Y's original node, including K.
+    if (IdsOnCallerEdges.size() < NewIds.size())
+      return true;
+    // Otherwise check whether the ids reaching Y from a caller Z also apply to
+    // K through a caller C of K that is a clone of Z's original node.
+    for (auto &[Z, IdsFromZ] : IdsFromCallers) {
+      for (auto &KEdge : K->CallerEdges) {
+        ContextNode *C = KEdge->Caller;
+        if (C == Z || C->getOrigNode() != Z->getOrigNode())
+          continue;
+        // Only the ids not on C can apply to C implicitly (C directs the ones
+        // it has elsewhere); recursively check whether they do.
+        DenseSet<uint32_t> IdsNotOnC;
+        for (auto Id : IdsFromZ)
+          if (!C->hasContextId(Id))
+            IdsNotOnC.insert(Id);
+        if (!IdsNotOnC.empty() &&
+            ImpliesContextIds(C, Z, IdsNotOnC, Visited, ImpliesContextIds))
+          return true;
+      }
+    }
+    return false;
+  };
+  // Returns true if the given clones of Node are interchangeable for an
+  // implicit caller: the same clone, allocations with the same hint, or
+  // callsites already assigned to call the same function clone.
+  auto SameVersion = [&](const ContextNode *A, const ContextNode *B) {
+    if (A == B)
+      return true;
+    if (Node->IsAllocation)
+      return allocTypeToUse(A->AllocTypes) == allocTypeToUse(B->AllocTypes);
+    auto AIt = CallsiteToCalleeFuncCloneMap.find(A);
+    auto BIt = CallsiteToCalleeFuncCloneMap.find(B);
+    return AIt != CallsiteToCalleeFuncCloneMap.end() &&
+           BIt != CallsiteToCalleeFuncCloneMap.end() &&
+           AIt->second == BIt->second;
+  };
+  // The clones already identified as implicit callers of Node, so that each is
+  // handled once (for the first caller edge whose trimmed contexts reach it).
+  DenseSet<const ContextNode *> ImplicitCallers;
+  // Handles the caller edge Edge of a clone of Node (or of Node itself): finds
+  // the implicit callers among the clones of its caller Y's original node, and
+  // assigns them, or records the clone of Node their calls must follow, as
+  // described above.
+  auto ProcessCaller = [&](const std::shared_ptr<ContextEdge> &Edge) {
+    ContextNode *Y = Edge->Caller;
+    ContextNode *Orig = Y->getOrigNode();
+    if (!Y->hasCall() || Orig->Clones.empty())
+      return;
+    DenseSet<uint32_t> TrimmedIds =
+        set_intersection(Edge->getContextIds(), TrimmedContextIds);
+    if (TrimmedIds.empty())
+      return;
+    auto YIt = CallsiteToCalleeFuncCloneMap.find(Y);
+    if (YIt == CallsiteToCalleeFuncCloneMap.end())
+      return;
+    // Copy, as recording assignments below may grow the map.
+    const FuncInfo YFuncClone = YIt->second;
+    // The clone of Node called by Y, which must be assigned to the same
+    // function clone.
+    auto RequiredIt = FuncCloneToCurNodeCloneMap.find(YFuncClone);
+    assert(RequiredIt != FuncCloneToCurNodeCloneMap.end());
+    const ContextNode *Required = RequiredIt->second;
+    // Record in ImplicitSources that the Node call in function clone F must
+    // follow the callsite clone Src. This is consulted when the calls in
+    // function clones without their own clone of Node are collected (see
+    // UnassignedCallClones in assignFunctions), and makes the requirement
+    // survive if Src is later moved to another function clone derived from F
+    // (when one of its callers conflicts at another callsite), after which the
+    // call in F would otherwise follow the function clone F was derived from.
+    auto RecordImplicitSource = [&](const FuncInfo &F, const ContextNode *Src) {
+      // The calls in the original function (clone 0) are not collected there,
+      // so nothing can be recorded for it.
+      if (F.cloneNo() != 0)
+        ImplicitSources.try_emplace({Node, F.cloneNo()},
+                                    ImplicitSource{Src, *TrimmedIds.begin()});
+    };
+    // Check each clone of Y's original node (and the original itself) without
+    // an edge to any clone of Node.
+    for (ContextNode *K : llvm::concat<ContextNode *const>(
+             Orig->Clones, ArrayRef<ContextNode *>(Orig))) {
+      if (K == Y || !K->hasCall() || K->emptyContextIds() ||
+          HasEdgeToNodeFamily(K) || ImplicitCallers.contains(K))
+        continue;
+      DenseMap<std::pair<ContextNode *, ContextNode *>, DenseSet<uint32_t>>
+          Visited;
+      if (!ImpliesContextIds(K, Y, TrimmedIds, Visited, ImpliesContextIds))
+        continue;
+      // K is an implicit caller of Node.
+      ImplicitCallers.insert(K);
+      auto KIt = CallsiteToCalleeFuncCloneMap.find(K);
+      if (KIt == CallsiteToCalleeFuncCloneMap.end()) {
+        // Not yet assigned: give it Y's function clone, in which the Node call
+        // then follows Required.
+        CallsiteToCalleeFuncCloneMap[K] = YFuncClone;
+        RecordImplicitSource(YFuncClone, Required);
+        NumImplicitCallersAssigned++;
+        continue;
+      }
+      const FuncInfo KFuncClone = KIt->second;
+      if (KFuncClone == YFuncClone) {
+        // Already in Y's function clone.
+        RecordImplicitSource(YFuncClone, Required);
+        continue;
+      }
+      unsigned KCloneNo = KFuncClone.cloneNo();
+      auto KNodeCloneIt = FuncCloneToCurNodeCloneMap.find(KFuncClone);
+      if (KNodeCloneIt == FuncCloneToCurNodeCloneMap.end()) {
+        // K's function clone has no clone of Node.
+        if (KCloneNo == 0) {
+          // The call in the original function keeps calling the original
+          // callee function, or stays unhinted for an allocation. That
+          // satisfies the requirement only if Required is that version.
+          if (Node->IsAllocation) {
+            if (allocTypeToUse(Required->AllocTypes) == AllocationType::NotCold)
+              continue;
+          } else if (auto It = CallsiteToCalleeFuncCloneMap.find(Required);
+                     It != CallsiteToCalleeFuncCloneMap.end() &&
+                     It->second.cloneNo() == 0)
+            continue;
+        } else {
+          // Record that the Node call in K's function clone must follow
+          // Required, unless an earlier implicit caller already recorded a
+          // conflicting clone.
+          auto [It, Inserted] = ImplicitSources.try_emplace(
+              {Node, KCloneNo}, ImplicitSource{Required, *TrimmedIds.begin()});
+          if (Inserted)
+            NumImplicitCallersSourced++;
+          if (SameVersion(It->second.Source, Required))
+            continue;
+        }
+      } else if (SameVersion(KNodeCloneIt->second, Required)) {
+        // K's function clone has a clone of Node interchangeable with
+        // Required.
+        RecordImplicitSource(KFuncClone, KNodeCloneIt->second);
+        continue;
+      }
+      // K's function clone calls a conflicting clone of Node.
+      NumImplicitCallersUnresolved++;
+    }
+  };
+  // Process the caller edges of Node itself and of each of its clones: any of
+  // them may carry trimmed contexts (a trimmed context stays with the clone
+  // that was cloned, which may be Node or a clone made earlier).
+  for (auto &Edge : Node->CallerEdges)
+    ProcessCaller(Edge);
+  for (auto *Clone : Node->Clones)
+    for (auto &Edge : Clone->CallerEdges)
+      ProcessCaller(Edge);
+}
+
 // This method assigns cloned callsites to functions, cloning the functions as
 // needed. The assignment is greedy and proceeds roughly as follows:
 //
@@ -4815,6 +5154,28 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
   mergeClones();
 
+  // Context ids terminating at a non-allocation node which has or had callers
+  // (i.e. is not a root), meaning their call stacks were trimmed there. Used
+  // to identify implicit callers (see assignImplicitCallers).
+  DenseSet<uint32_t> TrimmedContextIds;
+  for (auto &NodePtr : NodeOwner) {
+    ContextNode *N = NodePtr.get();
+    if (N->IsAllocation || N->CalleeEdges.empty() ||
+        (N->CallerEdges.empty() && N->Clones.empty() && !N->CloneOf))
+      continue;
+    // A context id trimmed at N is on a callee edge but on no caller edge.
+    // Compare distinct ids rather than edge sizes: a recursive context can put
+    // the same id on several callee and caller edges of N.
+    DenseSet<uint32_t> CallerIds;
+    for (auto &E : N->CallerEdges)
+      set_union(CallerIds, E->getContextIds());
+    for (auto &CalleeEdge : N->CalleeEdges)
+      for (auto Id : CalleeEdge->getContextIds())
+        if (!CallerIds.contains(Id))
+          TrimmedContextIds.insert(Id);
+  }
+  NumTrimmedContextIds += TrimmedContextIds.size();
+
   // Keep track of the assignment of nodes (callsites) to function clones they
   // call.
   DenseMap<ContextNode *, FuncInfo> CallsiteToCalleeFuncCloneMap;
@@ -4859,9 +5220,21 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
   // The alternative is creating new callsite clone nodes below as we clone the
   // function, but that is tricker to get right and likely more overhead.
   //
+  // Each entry also records the callsite node whose callee assignment the
+  // calls should follow (Source). By default that is the callsite clone (if
+  // any) in the function clone the function clone was derived from, following
+  // the chain of derivations to the original function, since a function clone
+  // created to specialize another one should otherwise behave like it. It can
+  // also be the callsite clone required by an implicit caller (see
+  // assignImplicitCallers). A null Source means the original node.
+  //
   // Inner map is a std::map so sorted by key (clone number), in order to get
   // ordered remarks in the full LTO case.
-  DenseMap<const ContextNode *, std::map<unsigned, SmallVector<CallInfo, 0>>>
+  struct UnassignedCallCloneInfo {
+    SmallVector<CallInfo, 0> Calls;
+    const ContextNode *Source = nullptr;
+  };
+  DenseMap<const ContextNode *, std::map<unsigned, UnassignedCallCloneInfo>>
       UnassignedCallClones;
 
   // Walk all functions for which we saw calls with memprof metadata, and handle
@@ -4873,6 +5246,28 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // the vector is the clone number, as function clones are created and
     // numbered sequentially.
     std::vector<FuncCloneInfo> FuncCloneInfos;
+    // For each function clone number, the clone number of the function clone
+    // it was derived from (created to further specialize, when a caller
+    // already assigned to it needed a different clone of some callsite), or 0
+    // for clones created from the original function. Used to decide which
+    // callsite clone the calls not themselves cloned for a function clone
+    // should follow (see UnassignedCallClones).
+    std::vector<unsigned> FuncCloneParent;
+    // Callsite clones required for calls in specific function clones by
+    // implicit callers (see assignImplicitCallers).
+    ImplicitSourceMap ImplicitSources;
+    // Map from each original callsite node in this function to its original
+    // call (clone 0). The Call recorded on an original node is updated to the
+    // call in a function clone if that node is assigned to a function clone,
+    // after which it can no longer be used to index the function clone CallMaps
+    // (which are keyed by the original calls). No node in this function has
+    // been assigned yet at this point.
+    DenseMap<const ContextNode *, CallInfo> OrigNodeToOrigCall;
+    for (auto &Call : CallsWithMetadata) {
+      ContextNode *Node = getNodeForInst(Call);
+      if (Node && Node->Call == Call)
+        OrigNodeToOrigCall[Node] = Call;
+    }
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
@@ -4970,6 +5365,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
             // and its callers, and skip to the next clone.
             FuncCloneInfos.push_back(
                 {OrigFunc, DenseMap<CallInfo, CallInfo>()});
+            FuncCloneParent.push_back(0);
             AssignCallsiteCloneToFuncClone(
                 OrigFunc, Call, Clone,
                 AllocationCallToContextNodeMap.count(Call));
@@ -5009,6 +5405,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           FuncInfo NewFuncClone = cloneFunctionForCallsite(
               OrigFunc, Call, NewCallMap, CallsWithMetadata, CloneNo);
           FuncCloneInfos.push_back({NewFuncClone, std::move(NewCallMap)});
+          // Record the function clone it is derived from (if any), whose
+          // callers it will take over below.
+          FuncCloneParent.push_back(CallerAssignedToCloneOfFunc
+                                        ? PreviousAssignedFuncClone.cloneNo()
+                                        : 0);
           FunctionClonesAnalysis++;
           Changed = true;
 
@@ -5099,9 +5500,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // that each caller can only call callsites within the same
               // function, so we are guaranteed that Callee Call is in the
               // current OrigFunc.
-              // CallMap is set up as indexed by original Call at clone 0.
-              CallInfo OrigCall(Callee->getOrigNode()->Call);
-              OrigCall.setCloneNo(0);
+              // CallMap is set up as indexed by original Call at clone 0. Note
+              // that we cannot simply use the Call of Callee's original node,
+              // as that is updated to the call in a function clone if the
+              // original node was itself assigned to a function clone.
+              assert(OrigNodeToOrigCall.count(Callee->getOrigNode()));
+              CallInfo OrigCall = OrigNodeToOrigCall[Callee->getOrigNode()];
               DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
               assert(CallMap.count(OrigCall));
@@ -5292,6 +5696,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               /*IsAlloc=*/AllocationCallToContextNodeMap.contains(Call));
         }
       }
+      assignImplicitCallers(Node, TrimmedContextIds,
+                            CallsiteToCalleeFuncCloneMap,
+                            FuncCloneToCurNodeCloneMap, ImplicitSources);
       if (VerifyCCG) {
         checkNode<DerivedCCG, FuncTy, CallTy>(Node);
         for (const auto &PE : Node->CalleeEdges)
@@ -5318,28 +5725,55 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       ContextNode *Node = getNodeForInst(Call);
       if (!Node || !Node->hasCall() || Node->emptyContextIds())
         continue;
-      // If Node has enough clones already to cover all function clones, we can
-      // skip it. Need to add one for the original copy.
-      // Use >= in case there were clones that were skipped due to having empty
-      // context ids
-      if (Node->Clones.size() + 1 >= FuncCloneInfos.size())
-        continue;
-      // First collect all function clones we cloned this callsite node for.
-      // They may not be sequential due to empty clones e.g.
-      DenseSet<unsigned> NodeCallClones;
+      // First collect the function clones that have a clone of this callsite
+      // node (or the node itself). They may not be sequential due to empty
+      // clones e.g.
+      DenseMap<unsigned, const ContextNode *> FuncCloneToNodeClone;
+      FuncCloneToNodeClone[Node->Call.cloneNo()] = Node;
+      // A clone left without context ids (its callers were all moved to other
+      // clones while assigning function clones) has no edges and is not
+      // reached by the call updates below, so the call in its function clone
+      // keeps the original callee. If an implicit caller recorded the callsite
+      // clone that call must follow, treat the function clone as having no
+      // clone of this node, so that the call follows the recorded source like
+      // any other call not cloned for its function clone.
       for (auto *C : Node->Clones)
-        NodeCallClones.insert(C->Call.cloneNo());
+        if (!C->emptyContextIds() ||
+            !ImplicitSources.contains({Node, C->Call.cloneNo()}))
+          FuncCloneToNodeClone[C->Call.cloneNo()] = C;
+      // If Node has enough clones already to cover all function clones, we can
+      // skip it.
+      if (FuncCloneToNodeClone.size() >= FuncCloneInfos.size())
+        continue;
       // Now check all the function clones.
       for (auto &FC : FuncCloneInfos) {
         unsigned I = FC.FuncClone.cloneNo();
         // Skip the first clone which got the original call.
         // Also skip any other clones created for this Node.
-        if (I == 0 || NodeCallClones.contains(I)) {
+        if (I == 0 || FuncCloneToNodeClone.contains(I)) {
           continue;
         }
         // Record the call clones created for this callsite in this function
-        // clone.
-        auto &CallVector = UnassignedCallClones[Node][I];
+        // clone, and the callsite node whose callee they should follow: the
+        // one required by an implicit caller, if any, else the clone of this
+        // callsite node in the nearest function clone in the chain of function
+        // clones this one was derived from (null for the original node).
+        auto &Info = UnassignedCallClones[Node][I];
+        auto &CallVector = Info.Calls;
+        for (unsigned P = I;; P = FuncCloneParent[P]) {
+          if (auto It = ImplicitSources.find({Node, P});
+              It != ImplicitSources.end()) {
+            Info.Source = resolveImplicitSource(Node, It->second);
+            break;
+          }
+          if (auto It = FuncCloneToNodeClone.find(P);
+              It != FuncCloneToNodeClone.end()) {
+            Info.Source = It->second;
+            break;
+          }
+          if (P == 0)
+            break;
+        }
         DenseMap<CallInfo, CallInfo> &CallMap = FC.CallMap;
         if (auto It = CallMap.find(Call); It != CallMap.end()) {
           CallInfo CallClone = It->second;
@@ -5385,63 +5819,91 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     if (!Node->hasCall() || Node->emptyContextIds())
       return;
 
+    // Returns the recorded call clones in function clones which don't have a
+    // clone of this callsite node, along with the node whose decision each
+    // should follow (the Source recorded earlier, falling back to Node).
+    auto GetUnassignedCallClones = [&](ContextNode *Node) {
+      SmallVector<std::pair<const ContextNode *, MutableArrayRef<CallInfo>>>
+          Unassigned;
+      auto UnassignedIt = UnassignedCallClones.find(Node);
+      if (UnassignedIt == UnassignedCallClones.end())
+        return Unassigned;
+      DenseSet<unsigned> NodeCallClones;
+      for (auto *C : Node->Clones)
+        if (!C->emptyContextIds())
+          NodeCallClones.insert(C->Call.cloneNo());
+      for (auto &[CloneNo, Info] : UnassignedIt->second) {
+        // Should start at 1 as we never create an entry for original node.
+        assert(CloneNo > 0);
+        // If we subsequently created a clone, skip this one.
+        if (NodeCallClones.contains(CloneNo))
+          continue;
+        Unassigned.push_back({Info.Source ? Info.Source : Node, Info.Calls});
+      }
+      return Unassigned;
+    };
+
     if (Node->IsAllocation) {
-      auto AT = allocTypeToUse(Node->AllocTypes);
-      // If the allocation type is ambiguous, and more aggressive hinting
-      // has been enabled via the MinClonedColdBytePercent flag, see if this
-      // allocation should be hinted cold anyway because its fraction cold bytes
-      // allocated is at least the given threshold.
-      if (Node->AllocTypes == BothTypes && MinClonedColdBytePercent < 100 &&
-          !ContextIdToContextSizeInfos.empty()) {
-        uint64_t TotalCold = 0;
-        uint64_t Total = 0;
-        for (auto Id : Node->getContextIds()) {
-          auto TypeI = ContextIdToAllocationType.find(Id);
-          assert(TypeI != ContextIdToAllocationType.end());
-          auto CSI = ContextIdToContextSizeInfos.find(Id);
-          if (CSI != ContextIdToContextSizeInfos.end()) {
-            for (auto &Info : CSI->second) {
-              Total += Info.TotalSize;
-              if (TypeI->second == AllocationType::Cold)
-                TotalCold += Info.TotalSize;
+      auto GetAllocTypeToUse = [&](const ContextNode *Node) {
+        auto AT = allocTypeToUse(Node->AllocTypes);
+        // If the allocation type is ambiguous, and more aggressive hinting
+        // has been enabled via the MinClonedColdBytePercent flag, see if this
+        // allocation should be hinted cold anyway because its fraction cold
+        // bytes allocated is at least the given threshold.
+        if (Node->AllocTypes == BothTypes && MinClonedColdBytePercent < 100 &&
+            !ContextIdToContextSizeInfos.empty()) {
+          uint64_t TotalCold = 0;
+          uint64_t Total = 0;
+          for (auto Id : Node->getContextIds()) {
+            auto TypeI = ContextIdToAllocationType.find(Id);
+            assert(TypeI != ContextIdToAllocationType.end());
+            auto CSI = ContextIdToContextSizeInfos.find(Id);
+            if (CSI != ContextIdToContextSizeInfos.end()) {
+              for (auto &Info : CSI->second) {
+                Total += Info.TotalSize;
+                if (TypeI->second == AllocationType::Cold)
+                  TotalCold += Info.TotalSize;
+              }
             }
           }
+          if (TotalCold * 100 >= Total * MinClonedColdBytePercent)
+            AT = AllocationType::Cold;
         }
-        if (TotalCold * 100 >= Total * MinClonedColdBytePercent)
-          AT = AllocationType::Cold;
-      }
-      updateAllocationCall(Node->Call, AT);
+        return AT;
+      };
+      updateAllocationCall(Node->Call, GetAllocTypeToUse(Node));
       assert(Node->MatchingCalls.empty());
+      // Update the allocation calls in function clones without a clone of this
+      // node the same way as the node they should follow.
+      for (auto &[Source, Calls] : GetUnassignedCallClones(Node)) {
+        auto AT = GetAllocTypeToUse(Source);
+        for (auto &Call : Calls)
+          updateAllocationCall(Call, AT);
+      }
       return;
     }
 
-    if (!CallsiteToCalleeFuncCloneMap.count(Node))
-      return;
-
-    auto CalleeFunc = CallsiteToCalleeFuncCloneMap[Node];
-    updateCall(Node->Call, CalleeFunc);
-    // Update all the matching calls as well.
-    for (auto &Call : Node->MatchingCalls)
-      updateCall(Call, CalleeFunc);
+    auto CalleeFuncIt = CallsiteToCalleeFuncCloneMap.find(Node);
+    if (CalleeFuncIt != CallsiteToCalleeFuncCloneMap.end()) {
+      auto &CalleeFunc = CalleeFuncIt->second;
+      updateCall(Node->Call, CalleeFunc);
+      // Update all the matching calls as well.
+      for (auto &Call : Node->MatchingCalls)
+        updateCall(Call, CalleeFunc);
+    }
 
     // Now update all calls recorded earlier that are still in function clones
-    // which don't have a clone of this callsite node.
-    if (!UnassignedCallClones.contains(Node))
-      return;
-    DenseSet<unsigned> NodeCallClones;
-    for (auto *C : Node->Clones)
-      NodeCallClones.insert(C->Call.cloneNo());
-    // Note that we already confirmed Node is in this map a few lines above.
-    auto &ClonedCalls = UnassignedCallClones[Node];
-    for (auto &[CloneNo, CallVector] : ClonedCalls) {
-      // Should start at 1 as we never create an entry for original node.
-      assert(CloneNo > 0);
-      // If we subsequently created a clone, skip this one.
-      if (NodeCallClones.contains(CloneNo))
+    // which don't have a clone of this callsite node, the same way as the
+    // node they should follow.
+    for (auto &[Source, Calls] : GetUnassignedCallClones(Node)) {
+      auto It = CallsiteToCalleeFuncCloneMap.find(Source);
+      // Fall back to the original Node's callee function.
+      if (It == CallsiteToCalleeFuncCloneMap.end())
+        It = CalleeFuncIt;
+      if (It == CallsiteToCalleeFuncCloneMap.end())
         continue;
-      // Use the original Node's CalleeFunc.
-      for (auto &Call : CallVector)
-        updateCall(Call, CalleeFunc);
+      for (auto &Call : Calls)
+        updateCall(Call, It->second);
     }
   };
 

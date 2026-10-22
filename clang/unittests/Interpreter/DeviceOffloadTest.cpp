@@ -123,6 +123,33 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
                               "supported. Pass a single --offload-arch"));
 }
 
+TEST(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+  std::string Err;
+  if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("amdgcn-amd-amdhsa"),
+                                          Err))
+    GTEST_SKIP() << Err;
+
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // FIXME: Replace this with a check of the embedded bundle once the offload
+  // binary is generated.
+  auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
+  EXPECT_THAT_EXPECTED(
+      PTU, llvm::FailedWithMessage("HIP offload binary generation is not "
+                                   "supported yet."));
+}
+
 // A bitcode library with one float(float) function that doubles its argument,
 // or an empty one when Name is empty.
 static void writeLibrary(int FD, llvm::StringRef Name) {
