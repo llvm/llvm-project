@@ -20,6 +20,7 @@
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
+#include <__utility/checked_int.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -189,7 +190,9 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int
             if (__i < __digits - 1)
               __x = __x * __b + __c.__val;
             else {
-              if (!__itoa::__mul_overflowed(__x, __b, __x))
+              auto __res = __checked_int<_Tp>(__x) * static_cast<unsigned char>(__b);
+              __x        = __res.__value();
+              if (!__res.__overflowed())
                 ++__p;
               __y = __c.__val;
               break;
