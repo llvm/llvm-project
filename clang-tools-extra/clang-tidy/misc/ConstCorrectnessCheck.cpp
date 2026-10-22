@@ -351,7 +351,10 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
         assert(AT->getElementType()->isPointerType());
-        if (!AT->getElementType()->getPointeeType().isConstQualified())
+        // A pointer hidden by an alias cannot have its pointee qualified by
+        // adding const to the variable declaration.
+        if (const auto *PT = dyn_cast<PointerType>(AT->getElementType());
+            PT && !PT->getPointeeType().isConstQualified())
           CheckPointee();
       }
     }

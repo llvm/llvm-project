@@ -29,6 +29,39 @@ void array_of_pointer_to_const() {
   p_local0[0] = &a[1];
 }
 
+typedef void *PVOID;
+typedef PVOID HANDLE;
+using PointerAlias = void *;
+
+void array_of_pointer_alias(void *value) {
+  // Adding const to a pointer alias qualifies the pointer, not its pointee.
+  PVOID direct[3]{};
+  // CHECK-FIXES: PVOID direct[3]{};
+  direct[0] = value;
+
+  HANDLE chained[3]{};
+  // CHECK-FIXES: HANDLE chained[3]{};
+  chained[0] = value;
+
+  PointerAlias alias[3]{};
+  // CHECK-FIXES: PointerAlias alias[3]{};
+  alias[0] = value;
+}
+
+using ScalarAlias = int;
+
+void array_of_pointer_to_alias(ScalarAlias *value, PVOID *pointer) {
+  ScalarAlias *scalar[3]{};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'scalar' of type 'ScalarAlias *[3]' (aka 'int *[3]') can be declared 'const'
+  // CHECK-FIXES: ScalarAlias  const*scalar[3]{};
+  scalar[0] = value;
+
+  PVOID *outer[3]{};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'outer' of type 'PVOID *[3]' (aka 'void **[3]') can be declared 'const'
+  // CHECK-FIXES: PVOID  const*outer[3]{};
+  outer[0] = pointer;
+}
+
 template<class T>
 void template_fn() {
   T a[] = {1, 2};
