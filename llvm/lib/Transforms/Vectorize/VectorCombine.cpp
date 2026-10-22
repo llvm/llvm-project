@@ -7023,38 +7023,21 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   // 1. Check all users of both loads are shuffles.
   // 2. Check that both loads feed exactly the same set of shuffles.
   SmallPtrSet<ShuffleVectorInst *, 4> Shuffles;
-  auto AreShufflesOnlyUsersOfLoads = [LowLoad, HighLoad, &Shuffles]() -> bool {
-    // Step 1: collect every user of LowLoad, requiring each to be a shuffle.
-    for (User *U : LowLoad->users()) {
-      auto *SV = dyn_cast<ShuffleVectorInst>(U);
-      if (!SV)
+  if (!std::is_permutation(LowLoad->user_begin(), LowLoad->user_end(),
+                           HighLoad->user_begin(), HighLoad->user_end()) ||
+      !all_of(LowLoad->users(), [&Shuffles](User *U) {
+        if (auto *SVI = dyn_cast<ShuffleVectorInst>(U)) {
+          Shuffles.insert(SVI);
+          return true;
+        }
         return false;
-      Shuffles.insert(SV);
-    }
-
-    // Step 2: every user of HighLoad must be a shuffle already collected from
-    // LowLoad, counting them as we go.
-    unsigned HighLoadUsers = 0;
-    for (User *U : HighLoad->users()) {
-      auto *SV = dyn_cast<ShuffleVectorInst>(U);
-      if (!SV || !Shuffles.contains(SV))
-        return false;
-      ++HighLoadUsers;
-    }
-
-    // Step 3: both loads must feed exactly the same set of shuffles. Combined
-    // with step 2, this guarantees every shuffle uses both LowLoad and
-    // HighLoad, so their operands are exactly {LowLoad, HighLoad}.
-    return HighLoadUsers == Shuffles.size();
-  };
-  if (!AreShufflesOnlyUsersOfLoads())
+      }))
     return false;
 
   // The value loaded by either load must not be clobbered in between the loads.
   auto *WideTy = FixedVectorType::get(LoadTy->getElementType(), NumElts * 2);
   LoadInst *FirstLoad = LowLoad, *LastLoad = HighLoad;
-  bool LowComesFirst = LowLoad->comesBefore(HighLoad);
-  if (!LowComesFirst)
+  if (HighLoad->comesBefore(LowLoad))
     std::swap(FirstLoad, LastLoad);
   MemoryLocation FirstLoc = MemoryLocation::get(FirstLoad);
   if (isMemModifiedBetween(std::next(FirstLoad->getIterator()),
@@ -7075,7 +7058,7 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
             (SVOp0 == HighLoad && SV->getOperand(1) == LowLoad)) &&
            "Shuffle operands must be exactly {LowLoad, HighLoad} or {HighLoad, "
            "LowLoad}");
-    NewMask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
+    SV->getShuffleMask(NewMask);
     if (SVOp0 == HighLoad)
       ShuffleVectorInst::commuteShuffleMask(NewMask, NumElts);
   };
