@@ -393,10 +393,10 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
 
   llvm::scope_exit CloseSourceFile([&]() { sys::fs::closeFile(*SourceFile); });
 
-  uint64_t Size;
+  ErrorOr<uint64_t> SourceSize = sys::fs::file_size(*SourceFile);
   // If we can't get the the source size, fail.
-  if (std::error_code EC = sys::fs::file_size(*SourceFile, Size))
-    return convertToOutputError(Source, EC);
+  if (!SourceSize)
+    return convertToOutputError(Source, SourceSize.getError());
 
   Expected<sys::fs::file_t> DestFile =
       sys::fs::openNativeFileForRead(Destination);
@@ -408,36 +408,38 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
 
   llvm::scope_exit CloseDestFile([&]() { sys::fs::closeFile(*DestFile); });
 
-  uint64_t DestSize;
+  ErrorOr<uint64_t> DestSize = sys::fs::file_size(*DestFile);
   // If we can't get the destination size, report different.
-  if (std::error_code EC = sys::fs::file_size(*DestFile, DestSize))
+  if (!DestSize)
     return FileDifference::DifferentContents;
 
   // If the files are different sizes, they must be different.
-  if (Size != DestSize)
+  if (*SourceSize != *DestSize)
     return FileDifference::DifferentContents;
 
   // If both files are zero size, they must be the same.
-  if (Size == 0)
+  if (*SourceSize == 0)
     return FileDifference::SameContents;
 
   // The two files match in size, so we have to compare the bytes to determine
   // if they're the same.
   std::error_code SourceRegionErr;
   sys::fs::mapped_file_region SourceRegion(
-      *SourceFile, sys::fs::mapped_file_region::readonly, Size, 0,
+      *SourceFile, sys::fs::mapped_file_region::readonly, *SourceSize, 0,
       SourceRegionErr);
   if (SourceRegionErr)
     return convertToOutputError(Source, SourceRegionErr);
 
   std::error_code DestRegionErr;
-  sys::fs::mapped_file_region DestRegion(
-      *DestFile, sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
+  sys::fs::mapped_file_region DestRegion(*DestFile,
+                                         sys::fs::mapped_file_region::readonly,
+                                         *DestSize, 0, DestRegionErr);
 
   if (DestRegionErr)
     return FileDifference::DifferentContents;
 
-  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), Size) != 0)
+  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), *SourceSize) !=
+      0)
     return FileDifference::DifferentContents;
 
   return FileDifference::SameContents;

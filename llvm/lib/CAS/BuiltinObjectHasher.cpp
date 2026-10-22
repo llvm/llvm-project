@@ -24,11 +24,10 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
 
   llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
 
-  uint64_t FileSize;
-  std::error_code EC = sys::fs::file_size(FD, FileSize);
-  if (EC)
-    return createFileError(FilePath, EC);
-  H.updateSize(FileSize);
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(FD);
+  if (!FileSize)
+    return createFileError(FilePath, FileSize.getError());
+  H.updateSize(*FileSize);
 
   size_t ChunkSize = sys::fs::DefaultReadChunkSize;
   SmallVector<char, 0> Buffer;

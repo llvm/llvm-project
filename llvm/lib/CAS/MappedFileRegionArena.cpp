@@ -442,9 +442,9 @@ ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
 #else
   // Fallback: assume the file is fully allocated. Note: this may result in
   // data loss on out-of-space.
-  uint64_t FileSize;
-  if (std::error_code EC = sys::fs::file_size(File, FileSize))
-    return EC;
-  return FileSizeInfo{FileSize, FileSize};
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(File);
+  if (!FileSize)
+    return FileSize.getError();
+  return FileSizeInfo{*FileSize, *FileSize};
 #endif
 }

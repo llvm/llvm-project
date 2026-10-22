@@ -705,19 +705,16 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
 /// Get file size.
 ///
 /// @param FileHandle Input File
-/// @param Result Set to the size of the file in \a FileHandle.
-/// @returns errc::success if result has been successfully set, otherwise a
-///          platform-specific error_code.
+/// @returns The size of the file in \a FileHandle, if successful, otherwise a
+///          std::error_code.
 #ifdef _WIN32
-LLVM_ABI std::error_code file_size(file_t FileHandle, uint64_t &Result);
+LLVM_ABI ErrorOr<uint64_t> file_size(file_t FileHandle);
 #else
-inline std::error_code file_size(file_t FileHandle, uint64_t &Result) {
+inline ErrorOr<uint64_t> file_size(file_t FileHandle) {
   file_status Status;
-  std::error_code EC = status(FileHandle, Status);
-  if (EC)
+  if (std::error_code EC = status(FileHandle, Status))
     return EC;
-  Result = Status.getSize();
-  return std::error_code();
+  return Status.getSize();
 }
 #endif
 
