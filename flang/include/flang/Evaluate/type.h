@@ -511,7 +511,7 @@ bool AreSameDerivedTypeIgnoringLengthParameters(
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
-/// Check that KIND is consistent with thew type. That is, for a type category
+/// Check that KIND is consistent with the type. That is, for a type category
 /// that has a kind as part of its type, it must be non-zero, and otherwise
 /// zero.
 #define CHECK_KIND(KIND, TY) \
@@ -528,7 +528,7 @@ bool AreSameDerivedTypeIgnoringSequence(
         std::is_same_v<TY, Type<TypeCategory::Character>>) { \
       CHECK((KIND) != 0 && "Type must come with a kind"); \
     } else { \
-      static_assert(false, "Don't know whether TY should have a kind"); \
+      static_assert(!sizeof(TY), "Don't know whether TY should have a kind"); \
     } \
   }
 
