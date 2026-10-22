@@ -593,16 +593,16 @@ CALL-MISSING-ARGUMENT-MSG-NEXT: {{C}}ALL-MISSING-ARGUMENT-NEXT: {{\[\[#add\(NUMV
 CALL-MISSING-ARGUMENT-MSG-NEXT:      {{^}}                                          ^{{$}}
 
 RUN: %ProtectFileCheckOutput \
-RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-WRONG-ARGUMENT-COUNT --input-file %s %s 2>&1 \
-RUN:   | FileCheck --strict-whitespace --check-prefix CALL-WRONG-ARGUMENT-COUNT-MSG %s
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-WRONG-ARGUMENT-NUM --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-WRONG-ARGUMENT-NUM-MSG %s
 
-CALL WRONG ARGUMENT COUNT
+CALL WRONG ARGUMENT NUM
 30
-CALL-WRONG-ARGUMENT-COUNT-LABEL: CALL WRONG ARGUMENT COUNT
-CALL-WRONG-ARGUMENT-COUNT-NEXT: [[#add(NUMVAR)]]
-CALL-WRONG-ARGUMENT-COUNT-MSG: numeric-expression.txt:[[#@LINE-1]]:36: error: function 'add' takes 2 arguments but 1 given
-CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT: {{C}}ALL-WRONG-ARGUMENT-COUNT-NEXT: {{\[\[#add\(NUMVAR\)\]\]}}
-CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT:    {{^}}                                   ^{{$}}
+CALL-WRONG-ARGUMENT-NUM-LABEL: CALL WRONG ARGUMENT NUM
+CALL-WRONG-ARGUMENT-NUM-NEXT: [[#add(NUMVAR)]]
+CALL-WRONG-ARGUMENT-NUM-MSG: numeric-expression.txt:[[#@LINE-1]]:34: error: function 'add' takes 2 arguments but 1 given
+CALL-WRONG-ARGUMENT-NUM-MSG-NEXT: {{C}}ALL-WRONG-ARGUMENT-NUM-NEXT: {{\[\[#add\(NUMVAR\)\]\]}}
+CALL-WRONG-ARGUMENT-NUM-MSG-NEXT:    {{^}}                                 ^{{$}}
 
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-UNDEFINED-FUNCTION --input-file %s %s 2>&1 \
