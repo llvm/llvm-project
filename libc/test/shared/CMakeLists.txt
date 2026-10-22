@@ -1,4 +1,4 @@
-add_custom_target(libc-shared-tests)
+add_libc_testsuite(libc-shared-tests)
 
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated

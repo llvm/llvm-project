@@ -145,13 +145,6 @@ const Symbol *FindUserReductionSymbol(const Scope &scope,
 const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
     const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
 
-// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
-// an intrinsic-operator user reduction under, produced by the same
-// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
-// lookup matches byte-for-byte.
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
-
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
@@ -279,7 +272,7 @@ struct MetadirectiveCandidate {
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
-  /// Null represents either an explicit NOTHING fallback or no fallback.
+  /// Null represents either a clause-free NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
 
@@ -313,7 +306,7 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
-/// candidates after a dynamic condition. Null represents NOTHING.
+/// candidates after a dynamic condition. Null represents clause-free NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
 GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);

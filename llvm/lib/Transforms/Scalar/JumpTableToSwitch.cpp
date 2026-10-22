@@ -218,7 +218,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         if (!L || !L->isSimple())
           continue;
         auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
-        if (!GEP)
+        if (!GEP ||
+            (!GEP->hasNoUnsignedWrap() && !GEP->hasNoUnsignedSignedWrap()))
           continue;
         auto *PtrTy = dyn_cast<PointerType>(L->getType());
         assert(PtrTy && "call operand must be a pointer");

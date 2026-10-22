@@ -4581,6 +4581,8 @@ static bool MightBeFoldableInst(Instruction *I) {
     return true;
   case Instruction::Add:
     return true;
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(I)->isDisjoint();
   case Instruction::Mul:
   case Instruction::Shl:
     // Can only handle X*C and X << C.
@@ -5091,6 +5093,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(AddrInst)->isDisjoint())
+      return false;
+    [[fallthrough]];
   case Instruction::Add: {
     // Check to see if we can merge in one operand, then the other.  If so, we
     // win.
@@ -5131,9 +5137,6 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TPT.rollback(LastKnownGood);
     break;
   }
-  // case Instruction::Or:
-  //  TODO: We can handle "Or Val, Imm" iff this OR is equivalent to an ADD.
-  // break;
   case Instruction::Mul:
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
@@ -7275,6 +7278,12 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     MadeChange = true;
   }
 
+  // The uses rewritten above read trunc(I), which equals Src only where I isn't
+  // poison. A poison-generating flag such as zext nneg can only hold under a
+  // guard, such as a sign check of Src, that itself is one of those uses.
+  if (MadeChange)
+    I->dropPoisonGeneratingFlags();
+
   return MadeChange;
 }
 
@@ -8953,6 +8962,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     }
     return AnyChange;
   }
+
+  // Try to fold some cross-lane vector operations if in a loop.
+  if (I->getType()->isVectorTy() &&
+      TLI->optimizeVectorCrossLaneOperation(I, LI->getLoopFor(I->getParent())))
+    return true;
 
   if (tryToSinkFreeOperands(I))
     return true;

@@ -1,4 +1,4 @@
-add_custom_target(libc-stdlib-tests)
+add_libc_testsuite(libc-stdlib-tests)
 
 add_libc_test(
   atof_test
