@@ -5,7 +5,7 @@ define <4 x i1> @select_or(<4 x i1> %m) {
 ; CHECK-LABEL: define <4 x i1> @select_or(
 ; CHECK-SAME: <4 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[M]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[R]], <4 x i1> splat (i1 true), <4 x i1> [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i1> [[R]], [[M]]
 ; CHECK-NEXT:    ret <4 x i1> [[SEL]]
 ;
   %r = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
@@ -17,7 +17,7 @@ define <4 x i1> @select_and(<4 x i1> %m) {
 ; CHECK-LABEL: define <4 x i1> @select_and(
 ; CHECK-SAME: <4 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[M]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[R]], <4 x i1> [[M]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = and <4 x i1> [[R]], [[M]]
 ; CHECK-NEXT:    ret <4 x i1> [[SEL]]
 ;
   %r = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
