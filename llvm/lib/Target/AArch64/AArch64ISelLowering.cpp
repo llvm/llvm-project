@@ -25442,13 +25442,14 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
-static SDValue performSVEAndUIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
-  SDValue Pg = N->getOperand(1);
+static SDValue performSVEAndUCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Pg = N->getOperand(0);
+  SDValue A = N->getOperand(1);
+  SDValue B = N->getOperand(2);
 
   // Preserve matching predicates so TableGen can select:
   //   and_u(pg, a, not(inactive, pg, b)) -> BIC(a, b)
-  for (unsigned I = 2; I != 4; ++I) {
-    SDValue Not = N->getOperand(I);
+  for (SDValue Not : {A, B}) {
     if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not)
       continue;
 
@@ -25470,8 +25471,7 @@ static SDValue performSVEAndUIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
   // Otherwise expose an ordinary AND so generic DAG combines can simplify
   // it, for example:
   //   and_u(pg, and_u(pg, a, 255), 15) -> and(a, 15)
-  return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                     N->getOperand(3));
+  return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), A, B);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
@@ -25693,7 +25693,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return performSVEAndUIntrinsicCombine(N, DAG);
+    return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
@@ -32020,6 +32021,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DCI);
   case ISD::AND:
     return performANDCombine(N, DCI);
+  case AArch64ISD::AND_U:
+    return performSVEAndUCombine(N, DAG);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
   case AArch64ISD::FADD_PRED:

@@ -251,6 +251,7 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
 ]>;
 
 // Predicated operations with the result of inactive lanes being unspecified.
+def AArch64and_u  : SDNode<"AArch64ISD::AND_U", SDT_AArch64Arith>;
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
@@ -559,10 +560,10 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
-// AND_U permits either operand order.
+// Match AND_U with either data operand order, keeping the predicate unchanged.
 def SVEAndU : PatFrags<(ops node:$pg, node:$a, node:$b),
-                      [(int_aarch64_sve_and_u node:$pg, node:$a, node:$b),
-                       (int_aarch64_sve_and_u node:$pg, node:$b, node:$a)]>;
+                      [(AArch64and_u node:$pg, node:$a, node:$b),
+                       (AArch64and_u node:$pg, node:$b, node:$a)]>;
 
 def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                              [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
