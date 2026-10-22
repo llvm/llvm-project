@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
-#include "ClangCLArgs.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
@@ -460,14 +459,9 @@ Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
   return A;
 }
 
-DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
-                                           const llvm::Triple &Triple) const {
+DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
   const llvm::opt::OptTable &Opts = getOpts();
   DerivedArgList *DAL = new DerivedArgList(Args);
-
-  std::optional<ClangCLArgs> CLArgs;
-  if (IsCLMode())
-    CLArgs.emplace(Args, Triple);
 
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
@@ -483,21 +477,6 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
     }
     if (A->getOption().matches(options::OPT_end_no_unused_arguments)) {
       IgnoreUnused = false;
-      continue;
-    }
-
-    if (CLArgs && CLArgs->translateArg(A, *DAL))
-      continue;
-
-    // Preserve MSVC macro syntax for Clang's other driver modes as well.
-    if ((CLArgs || Triple.isWindowsMSVCEnvironment()) &&
-        A->getOption().matches(options::OPT_D)) {
-      const char *Value =
-          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
-      if (Value == A->getValue())
-        DAL->append(A);
-      else
-        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_D), Value);
       continue;
     }
 
@@ -1806,7 +1785,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   }
 
   // Perform the default argument translations.
-  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs, TC.getTriple());
+  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
