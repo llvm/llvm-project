@@ -1087,6 +1087,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw___builtin_choose_expr:
   case tok::kw___builtin_astype: // primary-expression: [OCL] as_type()
   case tok::kw___builtin_convertvector:
+  case tok::kw___builtin_overflow_goto:
   case tok::kw___builtin_COLUMN:
   case tok::kw___builtin_FILE:
   case tok::kw___builtin_FILE_NAME:
@@ -2580,6 +2581,47 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
 
     Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
                                          ConsumeParen());
+    break;
+  }
+  case tok::kw___builtin_overflow_goto: {
+    // The first argument is the expression whose overflow checks branch to
+    // the label named by the second argument.
+    ExprResult Expr(ParseAssignmentExpression());
+    if (Expr.isInvalid()) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    if (ExpectAndConsume(tok::comma)) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    if (!getCurScope()->getFnParent()) {
+      Diag(Tok, diag::err_overflow_goto_outside_fn);
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    SourceLocation LabelLoc = Tok.getLocation();
+    LabelDecl *LD =
+        Actions.LookupOrCreateLabel(Tok.getIdentifierInfo(), LabelLoc);
+    ConsumeToken();
+
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    Res = Actions.ActOnOverflowGotoExpr(StartLoc, Expr.get(), LD, LabelLoc,
+                                        ConsumeParen());
     break;
   }
   case tok::kw___builtin_COLUMN:

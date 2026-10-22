@@ -104,6 +104,32 @@ class JumpScopeChecker {
 
   bool bypassesInitialization(const InitializerScopes &I, unsigned LabelScope);
 
+  /// Code whose checks trap and that no overflow jump may leave: the scopes
+  /// in [Start, End). Matches note_overflow_handler_exits_context.
+  enum NoHandlerKind {
+    NH_VLASize,
+    NH_StaticInit,
+    NH_CtorInit,
+    NH_NewInit,
+    NH_ThrowOperand,
+    NH_Finally,
+    NH_Filter
+  };
+  struct NoHandlerContext {
+    unsigned Start, End;
+    NoHandlerKind Kind;
+    SourceLocation Loc;
+  };
+  std::deque<NoHandlerContext> NoHandlerContexts;
+  NoHandlerContext *CurNoHandlerContext = nullptr;
+  /// The innermost such context that contains each overflow-checked
+  /// operation. Only __builtin_overflow_goto can branch from one.
+  llvm::DenseMap<Stmt *, const NoHandlerContext *> OverflowJumpContexts;
+
+  void BuildNoHandlerScopeInformation(Stmt *S, unsigned &ParentScope,
+                                      NoHandlerKind Kind, unsigned Start);
+  bool isWithin(unsigned Start, unsigned End, unsigned Scope);
+
 public:
   JumpScopeChecker(Stmt *Body, Sema &S);
 private:
@@ -138,6 +164,16 @@ JumpScopeChecker::JumpScopeChecker(Stmt *Body, Sema &s)
 
   OverflowHandlers.push_back(findFunctionOverflowHandler(
       S.Context, Decl::castFromDeclContext(S.CurContext)));
+
+  // Constructor initializers run before the body's handler is in scope.
+  if (auto *Ctor = dyn_cast<CXXConstructorDecl>(S.CurContext);
+      Ctor && S.getLangOpts().OverflowBehaviorTypes) {
+    unsigned InitParentScope = 0;
+    for (CXXCtorInitializer *Init : Ctor->inits())
+      if (Init->isWritten() && Init->getInit())
+        BuildNoHandlerScopeInformation(Init->getInit(), InitParentScope,
+                                       NH_CtorInit, Scopes.size());
+  }
 
   // Build information for the top level compound statement, so that we have a
   // defined scope record for every "goto" and label.
@@ -291,11 +327,20 @@ void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
     CurInitializer = &Initializers.emplace_back(
         InitializerScopes{OuterScope, ParentScope, 0});
 
+  // Checks in variable length array sizes trap.
+  for (const VariableArrayType *VAT =
+           S.Context.getAsVariableArrayType(VD->getType());
+       VAT; VAT = S.Context.getAsVariableArrayType(VAT->getElementType()))
+    if (Expr *Size = VAT->getSizeExpr())
+      BuildNoHandlerScopeInformation(Size, ParentScope, NH_VLASize,
+                                     Scopes.size());
+
   if (Expr *Init = VD->getInit()) {
-    std::optional<OverflowHandlerScope> NoHandler;
     if (initializerIgnoresOverflowHandler(VD))
-      NoHandler.emplace(OverflowHandlers, nullptr);
-    BuildScopeInformation(Init, ParentScope);
+      BuildNoHandlerScopeInformation(Init, ParentScope, NH_StaticInit,
+                                     Scopes.size());
+    else
+      BuildScopeInformation(Init, ParentScope);
   }
 
   if (Outermost)
@@ -380,6 +425,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     OverflowJumpTargets[S] = OverflowHandlers.back();
     if (CurInitializer)
       OverflowJumpInitializers[S] = CurInitializer;
+    if (CurNoHandlerContext)
+      OverflowJumpContexts[S] = CurNoHandlerContext;
   }
   OverflowHandlerScope HandlerScope(OverflowHandlers, this->S.Context, S);
 
@@ -520,16 +567,19 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
                                  diag::note_exits_seh_except,
                                  Except->getSourceRange().getBegin()));
       BuildScopeInformation(Except->getBlock(), NewParentScope);
+      // The filter is emitted apart from the function body.
+      if (this->S.getLangOpts().OverflowBehaviorTypes)
+        BuildNoHandlerScopeInformation(Except->getFilterExpr(), ParentScope,
+                                       NH_Filter, Scopes.size());
     } else if (SEHFinallyStmt *Finally = TS->getFinallyHandler()) {
       unsigned NewParentScope = Scopes.size();
       Scopes.push_back(GotoScope(ParentScope,
                                  diag::note_protected_by_seh_finally,
                                  diag::note_exits_seh_finally,
                                  Finally->getSourceRange().getBegin()));
-      // The block may be emitted apart from the function body; its checks
-      // trap.
-      OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
-      BuildScopeInformation(Finally->getBlock(), NewParentScope);
+      // The block may be emitted apart from the function body.
+      BuildNoHandlerScopeInformation(Finally->getBlock(), NewParentScope,
+                                     NH_Finally, NewParentScope);
     }
 
     return;
@@ -785,13 +835,38 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // Recursively walk the AST.
     bool Unevaluated =
         isOverflowHandlerUnevaluatedChild(this->S.Context, S, SubStmt);
-    std::optional<OverflowHandlerScope> NoHandler;
-    if (childIgnoresOverflowHandler(S, SubStmt))
-      NoHandler.emplace(OverflowHandlers, nullptr);
     UnevaluatedDepth += Unevaluated;
-    BuildScopeInformation(SubStmt, ParentScope);
+    if (childIgnoresOverflowHandler(S, SubStmt))
+      BuildNoHandlerScopeInformation(
+          SubStmt, ParentScope,
+          isa<CXXNewExpr>(S) ? NH_NewInit : NH_ThrowOperand, Scopes.size());
+    else
+      BuildScopeInformation(SubStmt, ParentScope);
     UnevaluatedDepth -= Unevaluated;
   }
+}
+
+/// Walks \p S as code whose checks trap and that no overflow jump may leave.
+/// Scopes created from \p Start on belong to it.
+void JumpScopeChecker::BuildNoHandlerScopeInformation(Stmt *S,
+                                                      unsigned &ParentScope,
+                                                      NoHandlerKind Kind,
+                                                      unsigned Start) {
+  OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
+  SaveAndRestore SaveContext(CurNoHandlerContext,
+                             &NoHandlerContexts.emplace_back(NoHandlerContext{
+                                 Start, 0, Kind, S->getBeginLoc()}));
+  BuildScopeInformation(S, ParentScope);
+  CurNoHandlerContext->End = Scopes.size();
+}
+
+/// Returns true if \p Scope is one of the scopes in [Start, End) or nested in
+/// one.
+bool JumpScopeChecker::isWithin(unsigned Start, unsigned End, unsigned Scope) {
+  for (; Scope != ~0U && Scope >= Start; Scope = Scopes[Scope].ParentScope)
+    if (Scope < End)
+      return true;
+  return false;
 }
 
 /// Returns true if \p LabelScope is in the scope of the variable that \p I
@@ -821,6 +896,15 @@ void JumpScopeChecker::VerifyJumps() {
       // An undefined label has already been diagnosed.
       if (!It->second->getStmt())
         continue;
+      // A jump may not leave code whose checks trap.
+      if (const NoHandlerContext *C = OverflowJumpContexts.lookup(Jump);
+          C && !isWithin(C->Start, C->End,
+                         LabelAndGotoScopes[It->second->getStmt()])) {
+        S.Diag(cast<Expr>(Jump)->getExprLoc(),
+               diag::err_overflow_handler_into_protected_scope);
+        S.Diag(C->Loc, diag::note_overflow_handler_exits_context) << C->Kind;
+        continue;
+      }
       // A jump from an initializer to a label later in the variable's scope
       // bypasses the initialization.
       if (const InitializerScopes *I = OverflowJumpInitializers.lookup(Jump);
