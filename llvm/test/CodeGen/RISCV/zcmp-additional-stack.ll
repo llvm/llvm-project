@@ -11,8 +11,8 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    .cfi_offset ra, -12
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    .cfi_offset s1, -4
-; RV32-NEXT:    addi sp, sp, -8
-; RV32-NEXT:    .cfi_def_cfa_offset 24
+; RV32-NEXT:    addi sp, sp, -4
+; RV32-NEXT:    .cfi_def_cfa_offset 20
 ; RV32-NEXT:    sw a4, 4(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw a2, 0(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a2, a1
@@ -37,7 +37,7 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    sw a1, 0(zero)
 ; RV32-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sb a1, 0(s0)
-; RV32-NEXT:    addi sp, sp, 8
+; RV32-NEXT:    addi sp, sp, 4
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    cm.popret {ra, s0-s1}, 16
 entry:

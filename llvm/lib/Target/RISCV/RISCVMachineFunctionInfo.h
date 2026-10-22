@@ -80,8 +80,10 @@ private:
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
-  /// Size of stack frame for Zcmp PUSH/POP
-  unsigned RVPushStackSize = 0;
+  /// Bytes occupied by registers stored by Zcmp/Xqccmp PUSH/POP.
+  unsigned RVPushSpillSize = 0;
+  /// Padding included in the Zcmp/Xqccmp PUSH/POP stack adjustment.
+  unsigned RVPushPaddingSize = 0;
   unsigned RVPushRegs = 0;
 
   /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
@@ -127,7 +129,7 @@ public:
   }
 
   unsigned getReservedSpillsSize() const {
-    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize;
+    return LibCallStackSize + getRVPushStackSize() + QCIInterruptStackSize;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -181,8 +183,15 @@ public:
   unsigned getRVPushRegs() const { return RVPushRegs; }
   void setRVPushRegs(unsigned Regs) { RVPushRegs = Regs; }
 
-  unsigned getRVPushStackSize() const { return RVPushStackSize; }
-  void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
+  unsigned getRVPushStackSize() const {
+    return RVPushSpillSize + RVPushPaddingSize;
+  }
+
+  unsigned getRVPushSpillSize() const { return RVPushSpillSize; }
+  void setRVPushSpillSize(unsigned Size) { RVPushSpillSize = Size; }
+
+  unsigned getRVPushPaddingSize() const { return RVPushPaddingSize; }
+  void setRVPushPaddingSize(unsigned Size) { RVPushPaddingSize = Size; }
 
   enum class InterruptStackKind {
     None = 0,
