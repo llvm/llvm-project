@@ -2774,42 +2774,50 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
 static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
                                                        const Expr *E,
                                                        APFloat::opStatus St) {
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
+  // In a constant context (including C++/C23 constexpr and C initializers for
+  // objects with static or thread storage duration), assume that any dynamic
+  // rounding mode or FP exception state matches the default floating-point
+  // environment (C23 F.8.2, F.8.4, F.8.5).
   if (Info.InConstantContext)
     return true;
 
+  // The output result is exact and no exceptions are raised, so it is safe to
+  // perform compile-time evaluation.
+  if (St == APFloat::opOK)
+    return true;
+
   FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
-  if ((St & APFloat::opInexact) &&
+
+  // If the result is inexact, it depends on the rounding mode. If the requested
+  // mode is dynamic, compile-time evaluation cannot be performed.
+  // Floating-point exceptions other than "inexact" (e.g. exact infinities from
+  // division by zero) do not depend on the rounding mode and are not suppressed
+  // here.
+  if ((St & APFloat::opStatus::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
-    // Inexact result means that it depends on rounding mode. If the requested
-    // mode is dynamic, the evaluation cannot be made in compile time.
     Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
     return false;
   }
 
-  if ((St != APFloat::opOK) &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
-       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
-       FPO.getAllowFEnvAccess())) {
-    Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
-    return false;
-  }
+  // Note: We do not check MathErrno here. This function is called for all
+  // floating-point operations, including basic arithmetic operators
+  // (+, -, *, /) and casts, which never set errno. In addition, -fmath-errno
+  // is enabled by default on POSIX systems, so checking MathErrno here would
+  // incorrectly prevent constant folding of basic arithmetic expressions.
+  // Setting errno is specific to C standard library math functions (and varies
+  // by function: range errors, pole errors, domain errors), so MathErrno
+  // checks are handled by the math builtin evaluators directly.
 
-  if ((St & APFloat::opStatus::opInvalidOp) &&
-      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
-    // There is no usefully definable result.
-    Info.FFDiag(E);
-    return false;
-  }
+  // No fenv access and floating point exceptions are ignored, so it is safe to
+  // perform compile-time evaluation.
+  if (!FPO.getAllowFEnvAccess() &&
+      FPO.getExceptionMode() == LangOptions::FPE_Ignore)
+    return true;
 
-  // FIXME: if:
-  // - evaluation triggered other FP exception, and
-  // - exception mode is not "ignore", and
-  // - the expression being evaluated is not a part of global variable
-  //   initializer,
-  // the evaluation probably need to be rejected.
-  return true;
+  // Some floating point exception is raised and the FP mode is strict,
+  // exceptions may be trapped, or FENV access is enabled.
+  Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+  return false;
 }
 
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
@@ -20834,6 +20842,65 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
   return true;
 }
 
+/// Evaluate a unary math function (such as exp/expf) for compile-time constant
+/// evaluation or opportunistic constant folding.
+template <typename MathFn>
+static bool evaluateUnaryMathBuiltin(EvalInfo &Info, const CallExpr *E,
+                                     const APFloat &Input, APFloat &Result,
+                                     MathFn &&Func) {
+  llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+  APFloat::opStatus Status = APFloat::opStatus::opOK;
+  std::optional<APFloat> r = Func(Input, RM, &Status);
+  if (!r.has_value()) {
+    if (Info.InConstantContext)
+      Info.FFDiag(E, diag::note_constexpr_unsupported_rounding)
+          << E->getDirectCallee() << llvm::spell(RM);
+    return false;
+  }
+
+  if (Info.InConstantContext) {
+    // [library.c]p3: A call to a math function is not a core constant
+    // expression if an exception other than FE_INEXACT is raised.
+    // Emit a CCEDiag and noteUndefinedBehavior() so that C++ constexpr /
+    // C23 constexpr contexts reject the call, while C static/thread-storage
+    // initializers (which are evaluated at translation time in ConstantFold
+    // mode per C23 F.8.2, F.8.4, F.8.5) still fold to the IEEE 754 result.
+    if (Status & (~APFloat::opStatus::opInexact)) {
+      const FunctionDecl *FD = E->getDirectCallee();
+      if (Status & APFloat::opStatus::opUnderflow)
+        Info.CCEDiag(E, diag::note_constexpr_float_underflow) << FD;
+      else if (Status & APFloat::opStatus::opOverflow)
+        Info.CCEDiag(E, diag::note_constexpr_float_overflow) << FD;
+      else if (Status & APFloat::opStatus::opDivByZero)
+        Info.CCEDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
+      else
+        Info.CCEDiag(E, diag::note_constexpr_float_invalid_op) << FD;
+      if (!Info.noteUndefinedBehavior())
+        return false;
+    }
+    Result = *r;
+    return true;
+  }
+
+  // Under -fmath-errno, any error condition that sets errno at runtime
+  // (domain error EDOM via opInvalidOp, pole error ERANGE via opDivByZero,
+  // or range error ERANGE via opOverflow/opUnderflow) cannot be folded.
+  // This check is performed here rather than in
+  // checkFloatingPointResultForConstantFolding because errno is specific to
+  // math functions (and not set by core language operators).
+  if (Info.getLangOpts().MathErrno &&
+      (Status & (~APFloat::opStatus::opInexact))) {
+    Info.FFDiag(E, diag::note_constexpr_math_errno) << E->getDirectCallee();
+    return false;
+  }
+
+  if (!checkFloatingPointResultForConstantFolding(Info, E, Status))
+    return false;
+
+  Result = *r;
+  return true;
+}
+
 bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -20917,6 +20984,22 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Result.copySign(RHS);
     return true;
   }
+
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf: {
+    APFloat Input(0.);
+    if (!EvaluateFloat(E->getArg(0), Input, Info))
+      return false;
+    return evaluateUnaryMathBuiltin(
+        Info, E, Input, Result,
+        [](const APFloat &X, llvm::RoundingMode RM, APFloat::opStatus *Status) {
+          return exp(X, RM, Status);
+        });
+  }
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
 
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
@@ -22553,11 +22636,11 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     return Name;
   });
 
-  EvaluationMode EvalMode =
-      (IsConstantInitialization &&
-       (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
-          ? EvaluationMode::ConstantExpression
-          : EvaluationMode::ConstantFold;
+  EvaluationMode EvalMode = (IsConstantInitialization &&
+                             (Ctx.getLangOpts().CPlusPlus ||
+                              (VD->isConstexpr() && Ctx.getLangOpts().C23)))
+                                ? EvaluationMode::ConstantExpression
+                                : EvaluationMode::ConstantFold;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvalMode, EStatus);
