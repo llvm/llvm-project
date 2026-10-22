@@ -88,13 +88,13 @@ body:             |
     RET_ReallyLR implicit $x0
 ...
 
-# Same, but the register class of %lo forces a COPY. The debug use moves to the
-# COPY together with the other uses.
+# Same, but the register class of %lo forces a COPY, which now defines %lo, so
+# its debug use stays valid.
 # CHECK-LABEL: name: copied_merge
 # CHECK-NOT:   G_MERGE_VALUES
-# CHECK:       [[COPY:%[0-9]+]]:gpr64(i64) = COPY %a(i64)
-# CHECK-NEXT:  DBG_VALUE [[COPY]](i64), $noreg
-# CHECK-NEXT:  $x0 = COPY [[COPY]](i64)
+# CHECK:       %lo:gpr64(i64) = COPY %a(i64)
+# CHECK-NEXT:  DBG_VALUE %lo(i64), $noreg
+# CHECK-NEXT:  $x0 = COPY %lo(i64)
 ---
 name:            copied_merge
 tracksRegLiveness: true
