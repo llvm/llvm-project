@@ -18,29 +18,11 @@ entry:
 }
 
 define void @load_store_v2i128(ptr %res, ptr %a) nounwind {
-; LA32-LABEL: load_store_v2i128:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    ld.w $a2, $a1, 24
-; LA32-NEXT:    ld.w $a3, $a1, 28
-; LA32-NEXT:    ld.w $a4, $a1, 16
-; LA32-NEXT:    ld.w $a1, $a1, 20
-; LA32-NEXT:    st.w $a2, $a0, 24
-; LA32-NEXT:    st.w $a3, $a0, 28
-; LA32-NEXT:    st.w $a4, $a0, 16
-; LA32-NEXT:    st.w $a1, $a0, 20
-; LA32-NEXT:    vst $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: load_store_v2i128:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a2, $a1, 16
-; LA64-NEXT:    ld.d $a3, $a1, 24
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    st.d $a2, $a0, 16
-; LA64-NEXT:    st.d $a3, $a0, 24
-; LA64-NEXT:    vst $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: load_store_v2i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %v = load <2 x i128>, ptr %a
   store <2 x i128> %v, ptr %res
@@ -50,73 +32,79 @@ entry:
 define void @select_v1i128(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32-LABEL: select_v1i128:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a3, $a1, 0
-; LA32-NEXT:    ld.w $a4, $a1, 4
-; LA32-NEXT:    ld.w $a5, $a1, 8
-; LA32-NEXT:    ld.w $a1, $a1, 12
-; LA32-NEXT:    ld.w $a6, $a2, 12
-; LA32-NEXT:    ld.w $a7, $a2, 0
-; LA32-NEXT:    ld.w $t0, $a2, 4
-; LA32-NEXT:    ld.w $a2, $a2, 8
-; LA32-NEXT:    sltu $t1, $a1, $a6
-; LA32-NEXT:    xor $t2, $a1, $a6
-; LA32-NEXT:    sltui $t3, $t2, 1
-; LA32-NEXT:    masknez $t1, $t1, $t3
-; LA32-NEXT:    sltu $t4, $a5, $a2
-; LA32-NEXT:    maskeqz $t3, $t4, $t3
-; LA32-NEXT:    or $t1, $t3, $t1
-; LA32-NEXT:    xor $t3, $a5, $a2
-; LA32-NEXT:    or $t2, $t3, $t2
+; LA32-NEXT:    vld $vr0, $a2, 0
+; LA32-NEXT:    vld $vr1, $a1, 0
+; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 3
+; LA32-NEXT:    vpickve2gr.w $a2, $vr1, 3
+; LA32-NEXT:    sltu $a3, $a2, $a1
+; LA32-NEXT:    xor $a4, $a2, $a1
+; LA32-NEXT:    sltui $a5, $a4, 1
+; LA32-NEXT:    masknez $a3, $a3, $a5
+; LA32-NEXT:    vpickve2gr.w $a6, $vr0, 2
+; LA32-NEXT:    vpickve2gr.w $a7, $vr1, 2
+; LA32-NEXT:    sltu $t0, $a7, $a6
+; LA32-NEXT:    maskeqz $a5, $t0, $a5
+; LA32-NEXT:    or $a3, $a5, $a3
+; LA32-NEXT:    xor $a5, $a7, $a6
+; LA32-NEXT:    or $a4, $a5, $a4
+; LA32-NEXT:    sltui $a4, $a4, 1
+; LA32-NEXT:    masknez $a3, $a3, $a4
+; LA32-NEXT:    vpickve2gr.w $a5, $vr0, 1
+; LA32-NEXT:    vpickve2gr.w $t0, $vr1, 1
+; LA32-NEXT:    sltu $t1, $t0, $a5
+; LA32-NEXT:    xor $t2, $t0, $a5
 ; LA32-NEXT:    sltui $t2, $t2, 1
 ; LA32-NEXT:    masknez $t1, $t1, $t2
-; LA32-NEXT:    sltu $t3, $a4, $t0
-; LA32-NEXT:    xor $t4, $a4, $t0
-; LA32-NEXT:    sltui $t4, $t4, 1
-; LA32-NEXT:    masknez $t3, $t3, $t4
-; LA32-NEXT:    sltu $t5, $a3, $a7
-; LA32-NEXT:    maskeqz $t4, $t5, $t4
-; LA32-NEXT:    or $t3, $t4, $t3
-; LA32-NEXT:    maskeqz $t2, $t3, $t2
+; LA32-NEXT:    vpickve2gr.w $t3, $vr0, 0
+; LA32-NEXT:    vpickve2gr.w $t4, $vr1, 0
+; LA32-NEXT:    sltu $t5, $t4, $t3
+; LA32-NEXT:    maskeqz $t2, $t5, $t2
 ; LA32-NEXT:    or $t1, $t2, $t1
-; LA32-NEXT:    masknez $t0, $t0, $t1
-; LA32-NEXT:    maskeqz $a4, $a4, $t1
-; LA32-NEXT:    or $a4, $a4, $t0
-; LA32-NEXT:    masknez $a7, $a7, $t1
-; LA32-NEXT:    maskeqz $a3, $a3, $t1
-; LA32-NEXT:    or $a3, $a3, $a7
-; LA32-NEXT:    masknez $a6, $a6, $t1
-; LA32-NEXT:    maskeqz $a1, $a1, $t1
-; LA32-NEXT:    or $a1, $a1, $a6
-; LA32-NEXT:    masknez $a2, $a2, $t1
-; LA32-NEXT:    maskeqz $a5, $a5, $t1
-; LA32-NEXT:    or $a2, $a5, $a2
-; LA32-NEXT:    st.w $a2, $a0, 8
-; LA32-NEXT:    st.w $a1, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 0
-; LA32-NEXT:    st.w $a4, $a0, 4
+; LA32-NEXT:    maskeqz $a4, $t1, $a4
+; LA32-NEXT:    or $a3, $a4, $a3
+; LA32-NEXT:    masknez $a4, $a5, $a3
+; LA32-NEXT:    maskeqz $a5, $t0, $a3
+; LA32-NEXT:    or $a4, $a5, $a4
+; LA32-NEXT:    masknez $a5, $t3, $a3
+; LA32-NEXT:    maskeqz $t0, $t4, $a3
+; LA32-NEXT:    or $a5, $t0, $a5
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
+; LA32-NEXT:    masknez $a4, $a6, $a3
+; LA32-NEXT:    maskeqz $a5, $a7, $a3
+; LA32-NEXT:    or $a4, $a5, $a4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 2
+; LA32-NEXT:    masknez $a1, $a1, $a3
+; LA32-NEXT:    maskeqz $a2, $a2, $a3
+; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 3
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_v1i128:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a3, $a1, 8
-; LA64-NEXT:    ld.d $a4, $a2, 8
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    ld.d $a2, $a2, 0
-; LA64-NEXT:    sltu $a5, $a3, $a4
-; LA64-NEXT:    xor $a6, $a3, $a4
-; LA64-NEXT:    sltui $a6, $a6, 1
-; LA64-NEXT:    masknez $a5, $a5, $a6
-; LA64-NEXT:    sltu $a7, $a1, $a2
-; LA64-NEXT:    maskeqz $a6, $a7, $a6
-; LA64-NEXT:    or $a5, $a6, $a5
-; LA64-NEXT:    masknez $a4, $a4, $a5
-; LA64-NEXT:    maskeqz $a3, $a3, $a5
-; LA64-NEXT:    or $a3, $a3, $a4
-; LA64-NEXT:    masknez $a2, $a2, $a5
-; LA64-NEXT:    maskeqz $a1, $a1, $a5
-; LA64-NEXT:    or $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a3, $a0, 8
+; LA64-NEXT:    vld $vr0, $a2, 0
+; LA64-NEXT:    vld $vr1, $a1, 0
+; LA64-NEXT:    vpickve2gr.d $a1, $vr0, 1
+; LA64-NEXT:    vpickve2gr.d $a2, $vr1, 1
+; LA64-NEXT:    sltu $a3, $a2, $a1
+; LA64-NEXT:    xor $a4, $a2, $a1
+; LA64-NEXT:    sltui $a4, $a4, 1
+; LA64-NEXT:    masknez $a3, $a3, $a4
+; LA64-NEXT:    vpickve2gr.d $a5, $vr0, 0
+; LA64-NEXT:    vpickve2gr.d $a6, $vr1, 0
+; LA64-NEXT:    sltu $a7, $a6, $a5
+; LA64-NEXT:    maskeqz $a4, $a7, $a4
+; LA64-NEXT:    or $a3, $a4, $a3
+; LA64-NEXT:    masknez $a1, $a1, $a3
+; LA64-NEXT:    maskeqz $a2, $a2, $a3
+; LA64-NEXT:    or $a1, $a2, $a1
+; LA64-NEXT:    masknez $a2, $a5, $a3
+; LA64-NEXT:    maskeqz $a3, $a6, $a3
+; LA64-NEXT:    or $a2, $a3, $a2
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a2, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %v0 = load <1 x i128>, ptr %a0
@@ -130,116 +118,86 @@ entry:
 define void @select_v2i128(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32-LABEL: select_v2i128:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $fp, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s0, $sp, 8 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s1, $sp, 4 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $s2, $sp, 0 # 4-byte Folded Spill
-; LA32-NEXT:    ld.w $a3, $a1, 0
-; LA32-NEXT:    ld.w $a4, $a1, 8
-; LA32-NEXT:    ld.w $a5, $a1, 4
-; LA32-NEXT:    ld.w $a6, $a1, 12
-; LA32-NEXT:    ld.w $a7, $a1, 16
-; LA32-NEXT:    ld.w $t0, $a1, 24
-; LA32-NEXT:    ld.w $t1, $a1, 20
-; LA32-NEXT:    ld.w $a1, $a1, 28
-; LA32-NEXT:    ld.w $t2, $a2, 0
-; LA32-NEXT:    ld.w $t3, $a2, 8
-; LA32-NEXT:    ld.w $t4, $a2, 4
-; LA32-NEXT:    ld.w $t5, $a2, 12
-; LA32-NEXT:    ld.w $t6, $a2, 28
-; LA32-NEXT:    ld.w $t7, $a2, 20
-; LA32-NEXT:    ld.w $t8, $a2, 16
-; LA32-NEXT:    ld.w $a2, $a2, 24
-; LA32-NEXT:    xor $fp, $a1, $t6
-; LA32-NEXT:    xor $s0, $t1, $t7
-; LA32-NEXT:    or $fp, $s0, $fp
-; LA32-NEXT:    xor $s0, $t0, $a2
-; LA32-NEXT:    xor $s1, $a7, $t8
-; LA32-NEXT:    or $s0, $s1, $s0
-; LA32-NEXT:    or $fp, $s0, $fp
-; LA32-NEXT:    sltui $fp, $fp, 1
-; LA32-NEXT:    xor $s0, $a6, $t5
-; LA32-NEXT:    xor $s1, $a5, $t4
-; LA32-NEXT:    or $s0, $s1, $s0
-; LA32-NEXT:    xor $s1, $a4, $t3
-; LA32-NEXT:    xor $s2, $a3, $t2
-; LA32-NEXT:    or $s1, $s2, $s1
-; LA32-NEXT:    or $s0, $s1, $s0
-; LA32-NEXT:    sltui $s0, $s0, 1
-; LA32-NEXT:    masknez $t4, $t4, $s0
-; LA32-NEXT:    maskeqz $a5, $a5, $s0
-; LA32-NEXT:    or $a5, $a5, $t4
-; LA32-NEXT:    masknez $t2, $t2, $s0
-; LA32-NEXT:    maskeqz $a3, $a3, $s0
-; LA32-NEXT:    or $a3, $a3, $t2
-; LA32-NEXT:    masknez $t2, $t5, $s0
-; LA32-NEXT:    maskeqz $a6, $a6, $s0
-; LA32-NEXT:    or $a6, $a6, $t2
-; LA32-NEXT:    masknez $t2, $t3, $s0
-; LA32-NEXT:    maskeqz $a4, $a4, $s0
-; LA32-NEXT:    or $a4, $a4, $t2
-; LA32-NEXT:    masknez $t2, $t7, $fp
-; LA32-NEXT:    maskeqz $t1, $t1, $fp
-; LA32-NEXT:    or $t1, $t1, $t2
-; LA32-NEXT:    masknez $t2, $t8, $fp
-; LA32-NEXT:    maskeqz $a7, $a7, $fp
-; LA32-NEXT:    or $a7, $a7, $t2
-; LA32-NEXT:    masknez $t2, $t6, $fp
-; LA32-NEXT:    maskeqz $a1, $a1, $fp
-; LA32-NEXT:    or $a1, $a1, $t2
-; LA32-NEXT:    masknez $a2, $a2, $fp
-; LA32-NEXT:    maskeqz $t0, $t0, $fp
-; LA32-NEXT:    or $a2, $t0, $a2
-; LA32-NEXT:    st.w $a2, $a0, 24
-; LA32-NEXT:    st.w $a1, $a0, 28
-; LA32-NEXT:    st.w $a7, $a0, 16
-; LA32-NEXT:    st.w $t1, $a0, 20
-; LA32-NEXT:    st.w $a4, $a0, 8
-; LA32-NEXT:    st.w $a6, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 0
-; LA32-NEXT:    st.w $a5, $a0, 4
-; LA32-NEXT:    ld.w $s2, $sp, 0 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s1, $sp, 4 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $s0, $sp, 8 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $fp, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    xvld $xr0, $a2, 0
+; LA32-NEXT:    xvld $xr1, $a1, 0
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 7
+; LA32-NEXT:    xvpickve2gr.w $a2, $xr1, 7
+; LA32-NEXT:    xor $a1, $a2, $a1
+; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 5
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr1, 5
+; LA32-NEXT:    xor $a2, $a3, $a2
+; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 6
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr1, 6
+; LA32-NEXT:    xor $a2, $a3, $a2
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 4
+; LA32-NEXT:    xvpickve2gr.w $a4, $xr1, 4
+; LA32-NEXT:    xor $a3, $a4, $a3
+; LA32-NEXT:    or $a2, $a3, $a2
+; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    sltui $a1, $a1, 1
+; LA32-NEXT:    addi.w $a2, $zero, -1
+; LA32-NEXT:    maskeqz $a1, $a2, $a1
+; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 1
+; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 2
+; LA32-NEXT:    vinsgr2vr.w $vr2, $a1, 3
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 3
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr1, 3
+; LA32-NEXT:    xor $a1, $a3, $a1
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 1
+; LA32-NEXT:    xvpickve2gr.w $a4, $xr1, 1
+; LA32-NEXT:    xor $a3, $a4, $a3
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 2
+; LA32-NEXT:    xvpickve2gr.w $a4, $xr1, 2
+; LA32-NEXT:    xor $a3, $a4, $a3
+; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 0
+; LA32-NEXT:    xvpickve2gr.w $a5, $xr1, 0
+; LA32-NEXT:    xor $a4, $a5, $a4
+; LA32-NEXT:    or $a3, $a4, $a3
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    sltui $a1, $a1, 1
+; LA32-NEXT:    maskeqz $a1, $a2, $a1
+; LA32-NEXT:    vinsgr2vr.w $vr3, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr3, $a1, 1
+; LA32-NEXT:    vinsgr2vr.w $vr3, $a1, 2
+; LA32-NEXT:    vinsgr2vr.w $vr3, $a1, 3
+; LA32-NEXT:    xvpermi.q $xr3, $xr2, 2
+; LA32-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr3
+; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_v2i128:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a3, $a1, 0
-; LA64-NEXT:    ld.d $a4, $a1, 8
-; LA64-NEXT:    ld.d $a5, $a1, 16
-; LA64-NEXT:    ld.d $a1, $a1, 24
-; LA64-NEXT:    ld.d $a6, $a2, 24
-; LA64-NEXT:    ld.d $a7, $a2, 16
-; LA64-NEXT:    ld.d $t0, $a2, 0
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    xor $t1, $a1, $a6
-; LA64-NEXT:    xor $t2, $a5, $a7
-; LA64-NEXT:    or $t1, $t2, $t1
-; LA64-NEXT:    sltui $t1, $t1, 1
-; LA64-NEXT:    xor $t2, $a4, $a2
-; LA64-NEXT:    xor $t3, $a3, $t0
-; LA64-NEXT:    or $t2, $t3, $t2
-; LA64-NEXT:    sltui $t2, $t2, 1
-; LA64-NEXT:    masknez $a2, $a2, $t2
-; LA64-NEXT:    maskeqz $a4, $a4, $t2
-; LA64-NEXT:    or $a2, $a4, $a2
-; LA64-NEXT:    masknez $a4, $t0, $t2
-; LA64-NEXT:    maskeqz $a3, $a3, $t2
-; LA64-NEXT:    or $a3, $a3, $a4
-; LA64-NEXT:    masknez $a4, $a6, $t1
-; LA64-NEXT:    maskeqz $a1, $a1, $t1
-; LA64-NEXT:    or $a1, $a1, $a4
-; LA64-NEXT:    masknez $a4, $a7, $t1
-; LA64-NEXT:    maskeqz $a5, $a5, $t1
-; LA64-NEXT:    or $a4, $a5, $a4
-; LA64-NEXT:    st.d $a4, $a0, 16
-; LA64-NEXT:    st.d $a1, $a0, 24
-; LA64-NEXT:    st.d $a3, $a0, 0
-; LA64-NEXT:    st.d $a2, $a0, 8
+; LA64-NEXT:    xvld $xr0, $a2, 0
+; LA64-NEXT:    xvld $xr1, $a1, 0
+; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 3
+; LA64-NEXT:    xvpickve2gr.d $a2, $xr1, 3
+; LA64-NEXT:    xor $a1, $a2, $a1
+; LA64-NEXT:    xvpickve2gr.d $a2, $xr0, 2
+; LA64-NEXT:    xvpickve2gr.d $a3, $xr1, 2
+; LA64-NEXT:    xor $a2, $a3, $a2
+; LA64-NEXT:    or $a1, $a2, $a1
+; LA64-NEXT:    sltui $a1, $a1, 1
+; LA64-NEXT:    addi.w $a2, $zero, -1
+; LA64-NEXT:    maskeqz $a1, $a2, $a1
+; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr2, $a1, 1
+; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 1
+; LA64-NEXT:    xvpickve2gr.d $a3, $xr1, 1
+; LA64-NEXT:    xor $a1, $a3, $a1
+; LA64-NEXT:    xvpickve2gr.d $a3, $xr0, 0
+; LA64-NEXT:    xvpickve2gr.d $a4, $xr1, 0
+; LA64-NEXT:    xor $a3, $a4, $a3
+; LA64-NEXT:    or $a1, $a3, $a1
+; LA64-NEXT:    sltui $a1, $a1, 1
+; LA64-NEXT:    maskeqz $a1, $a2, $a1
+; LA64-NEXT:    vinsgr2vr.d $vr3, $a1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr3, $a1, 1
+; LA64-NEXT:    xvpermi.q $xr3, $xr2, 2
+; LA64-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr3
+; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %v0 = load <2 x i128>, ptr %a0
@@ -251,23 +209,17 @@ entry:
 }
 
 define void @shuffle_v2i128(ptr %res, ptr %a0, ptr %a1) nounwind {
-; LA32-LABEL: shuffle_v2i128:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vst $vr0, $a0, 16
-; LA32-NEXT:    vst $vr1, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: shuffle_v2i128:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    ld.d $a1, $a2, 0
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    vst $vr0, $a0, 16
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a2, $a0, 8
-; LA64-NEXT:    ret
+; CHECK-LABEL: shuffle_v2i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr2, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %v0 = load <2 x i128>, ptr %a0
   %v1 = load <2 x i128>, ptr %a1

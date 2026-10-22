@@ -94,13 +94,21 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   static const MVT::SimpleValueType LASXVTs[] = {
       MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v8f32, MVT::v4f64};
 
-  if (Subtarget.hasExtLSX())
+  if (Subtarget.hasExtLSX()) {
     for (MVT VT : LSXVTs)
       addRegisterClass(VT, &LoongArch::LSX128RegClass);
+    // v1i128 is only legal for a small set of operations (see below), so it
+    // is intentionally kept out of LSXVTs.
+    addRegisterClass(MVT::v1i128, &LoongArch::LSX128RegClass);
+  }
 
-  if (Subtarget.hasExtLASX())
+  if (Subtarget.hasExtLASX()) {
     for (MVT VT : LASXVTs)
       addRegisterClass(VT, &LoongArch::LASX256RegClass);
+    // v2i128 is only legal for a small set of operations (see below), so it
+    // is intentionally kept out of LASXVTs.
+    addRegisterClass(MVT::v2i128, &LoongArch::LASX256RegClass);
+  }
 
   // Set operations for LA32 and LA64.
 
@@ -411,6 +419,14 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v16i32, MVT::v8i64,
                    MVT::v16i64})
       setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
+
+    // Only a minimal set of operations is legal on v1i128. Everything else
+    // keeps the default Expand action set above.
+    setOperationAction({ISD::LOAD, ISD::STORE}, MVT::v1i128, Legal);
+    setOperationAction({ISD::BITCAST, ISD::UNDEF}, MVT::v1i128, Legal);
+    setOperationAction(ISD::VSELECT, MVT::v1i128, Legal);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v1i128, Custom);
+    setOperationAction({ISD::ADD, ISD::SUB}, MVT::v1i128, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -500,6 +516,14 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::TRUNCATE, VT, Legal);
+
+    // Only a minimal set of operations is legal on v2i128. Everything else
+    // keeps the default Expand action set above.
+    setOperationAction({ISD::LOAD, ISD::STORE}, MVT::v2i128, Legal);
+    setOperationAction({ISD::BITCAST, ISD::UNDEF}, MVT::v2i128, Legal);
+    setOperationAction(ISD::VSELECT, MVT::v2i128, Legal);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i128, Custom);
+    setOperationAction({ISD::ADD, ISD::SUB}, MVT::v2i128, Legal);
   }
 
   // Set DAG combine for LA32 and LA64.
@@ -3537,6 +3561,18 @@ SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   assert(llvm::all_of(OrigMask,
                       [&](int M) { return -1 <= M && M < MaskUpperLimit; }) &&
          "Out of bounds shuffle index");
+
+  // There are no shuffle instructions on i128 elements, so perform the
+  // shuffle on the equivalent i64 vector type instead.
+  if (VT.getVectorElementType() == MVT::i128) {
+    MVT NewVT = MVT::getVectorVT(MVT::i64, NumElements * 2);
+    SmallVector<int, 8> NewMask;
+    narrowShuffleMaskElts(2, OrigMask, NewMask);
+    SDValue NewShuffle =
+        DAG.getVectorShuffle(NewVT, DL, DAG.getBitcast(NewVT, V1),
+                             DAG.getBitcast(NewVT, V2), NewMask);
+    return DAG.getBitcast(VT, NewShuffle);
+  }
 
   // For each vector width, delegate to a specialized lowering routine.
   if (VT.is128BitVector())
