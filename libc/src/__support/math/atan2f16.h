@@ -96,6 +96,16 @@ LIBC_INLINE float16 atan2f16(float16 y, float16 x) {
   double p = atan_eval(q_d, static_cast<unsigned>(idx));
   double r = final_sign *
              fputil::multiply_add(q_d, p, const_term + ATAN_K_OVER_16[idx]);
+
+  double abs_r = r > 0 ? r : -r;
+  double min_normal = 0x1.0p-14;
+  double half_ulp = 0x1.0p-25;
+  if (LIBC_UNLIKELY(abs_r > (min_normal - half_ulp) && abs_r < min_normal)) {
+    if (fputil::fenv_is_round_to_nearest()) {
+      r = r > 0 ? min_normal : -min_normal;
+    }
+  }
+
   return fputil::cast<float16>(r);
 }
 
