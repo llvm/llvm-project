@@ -2781,6 +2781,73 @@ func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, 
 
 // -----
 
+// A non-constant mul shift or negate zero point is a single-element tensor: it
+// does not take part in broadcasting and every iteration reads its element 0.
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<() -> (0)>
+// CHECK-LABEL: @mul_non_const_shift_rank0
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<i32>, %[[SHIFT:[0-9a-zA-Z_]*]]: tensor<1xi8>
+func.func @mul_non_const_shift_rank0(%arg0: tensor<i32>, %shift: tensor<1xi8>) -> tensor<i32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]], #[[$MAP0]]], iterator_types = []} ins(%[[ARG0]], %[[ARG0]], %[[SHIFT]] : tensor<i32>, tensor<i32>, tensor<1xi8>)
+  // CHECK: tosa.apply_scale
+  %0 = tosa.mul %arg0, %arg0, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_size1_dim
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<1x1xf32>, %[[ZP:[0-9a-zA-Z_]*]]: tensor<1xf32>
+func.func @negate_non_const_zp_size1_dim(%arg0: tensor<1x1xf32>, %zp: tensor<1xf32>) -> tensor<1x1xf32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]], %[[ZP]], %[[ZP]] : tensor<1x1xf32>, tensor<1xf32>, tensor<1xf32>)
+  // CHECK: arith.negf
+  %0 = tosa.negate %arg0, %zp, %zp : (tensor<1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1xf32>
+  return %0 : tensor<1x1xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_dynamic
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<?xi8>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi8>, %[[OUT_ZP:[0-9a-zA-Z_]*]]: tensor<1xi8>
+func.func @negate_non_const_zp_dynamic(%arg0: tensor<?xi8>, %in_zp: tensor<1xi8>, %out_zp: tensor<1xi8>) -> tensor<?xi8> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<?xi8>, tensor<1xi8>, tensor<1xi8>)
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<?xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?xi8>
+  return %0 : tensor<?xi8>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<() -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_rank0
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<i32>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>, %[[OUT_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>
+func.func @negate_non_const_zp_rank0(%arg0: tensor<i32>, %in_zp: tensor<1xi32>, %out_zp: tensor<1xi32>) -> tensor<i32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = []} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<i32>, tensor<1xi32>, tensor<1xi32>)
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<i32>, tensor<1xi32>, tensor<1xi32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (0)>
+// CHECK-LABEL: @negate_mixed_const_zp
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<1xi32>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>
+func.func @negate_mixed_const_zp(%arg0: tensor<1xi32>, %in_zp: tensor<1xi32>) -> tensor<1xi32> {
+  // CHECK: %[[OUT_ZP:.*]] = tosa.const
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<1xi32>, tensor<1xi32>, tensor<1xi32>)
+  %out_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<1xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  return %0 : tensor<1xi32>
+}
+
+// -----
+
 // The TOSA identity for a float REDUCE_MIN is maximum_s<in_out_t>(), which
 // Table 5 of the specification gives as +infinity for fp16_t/bf16_t/fp32_t.
 // CHECK-LABEL: @reduce_min_f16

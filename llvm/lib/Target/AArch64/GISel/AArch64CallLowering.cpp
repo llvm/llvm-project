@@ -653,7 +653,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
 
   auto OptLevel = MF.getTarget().getOptLevel();
   bool IsGlobalISelPreferred =
-      getCGPassBuilderOption().EnableGlobalISelOption ==
+      getCGPassBuilderOption(TM).EnableGlobalISelOption ==
           cl::boolOrDefault::BOU_TRUE ||
       static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
       F.hasOptNone();
@@ -1099,7 +1099,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     const GlobalValue *GV = Info.Callee.getGlobal();
     const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
       LLVM_DEBUG(dbgs() << "... Cannot tail call externally-defined function "
                            "with weak linkage for this OS.\n");

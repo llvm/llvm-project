@@ -474,7 +474,7 @@ static bool isSpvAggrPlaceholder(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -584,6 +584,15 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
   return Ty;
 }
 
+// Return the pointee type of the pointer member of AggrTy selected by Indices.
+// Untyped pointer members are lowered as pointers to i8.
+static Type *getMemberPointeeType(Type *AggrTy, ArrayRef<unsigned> Indices) {
+  Type *MemberTy = ExtractValueInst::getIndexedType(AggrTy, Indices);
+  if (Type *ElemTy = getPointeeType(MemberTy))
+    return ElemTy;
+  return IntegerType::getInt8Ty(AggrTy->getContext());
+}
+
 // Reconstruct type with nested element types according to deduced type info.
 // Return nullptr if no detailed type info is available.
 Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
@@ -626,7 +635,7 @@ CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
     B.SetInsertPointPastAllocas(OpA->getParent());
     B.SetCurrentDebugLocation(DebugLoc());
   } else {
-    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrAlloca());
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
@@ -761,8 +770,12 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
-  if (OpIdx == 0 && SPIRV::lookupBuiltinNameHelper(DemangledName) == "printf")
-    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpenCL get_fence only has void* overloads.
+  if (OpIdx == 0) {
+    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
+    if (Name == "printf" || Name == "get_fence")
+      return IntegerType::getInt8Ty(CalledF->getContext());
+  }
   return nullptr;
 }
 
@@ -1022,6 +1035,12 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         isPointerTy(Src) && isPointerTy(Dest))
       Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
                                    UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<ExtractValueInst>(I)) {
+    // An extracted pointer has the type of its aggregate member.
+    if (isPointerTy(I->getType()))
+      Ty = getMemberPointeeType(
+          reconstructType(Ref->getAggregateOperand(), false, false),
+          Ref->getIndices());
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
     Value *Op = Ref->getNewValOperand();
     if (isPointerTy(Op->getType()))
@@ -2361,6 +2380,16 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
     return;
   }
 
+  // An inserted pointer must have the type of its aggregate member.
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    Value *Op = IVI->getInsertedValueOperand();
+    if (isPointerTy(Op->getType()))
+      replacePointerOperandWithPtrCast(
+          I, Op, getMemberPointeeType(IVI->getType(), IVI->getIndices()),
+          InsertValueInst::getInsertedValueOperandIndex(), B);
+    return;
+  }
+
   // TODO: review and merge with existing logics:
   // Handle calls to builtins (non-intrinsics):
   CallInst *CI = dyn_cast<CallInst>(I);
@@ -3661,7 +3690,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
           B.SetInsertPoint(CI->getParent()
                                ->getParent()
                                ->getEntryBlock()
-                               .getFirstNonPHIOrDbgOrAlloca());
+                               .getFirstNonPHIOrAlloca());
           GR->buildAssignPtr(B, ElemTy, Param);
         }
         CallInst *Ref = dyn_cast<CallInst>(Param);

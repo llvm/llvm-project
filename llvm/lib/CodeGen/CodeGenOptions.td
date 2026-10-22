@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def CodeGenOptions : OptionsStruct<perContext = false>;
+def CodeGenOptions : OptionsStruct;
 
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
