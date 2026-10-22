@@ -469,6 +469,21 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
   unsigned MinWidth = -1U;
   unsigned MaxWidth = 8;
   const DataLayout &DL = F.getDataLayout();
+
+  auto UpdateSmallestAndWidestSizes = [&](Type *T) {
+    // Skip `i1` types. i1 can be a legal (predicate) element type, but should
+    // not influence the VF chosen for a loop. Especially with maximize
+    // vector bandwidth enabled, where it could result in VFs much wider than
+    // a target's legal vectors being picked.
+    if (!T || T->isIntegerTy(1))
+      return;
+
+    MinWidth = std::min<unsigned>(
+        MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+    MaxWidth = std::max<unsigned>(
+        MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+  };
+
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
@@ -477,20 +492,13 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
          Legal->getReductionVars().values()) {
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
-      MinWidth = std::min(
-          MinWidth,
-          std::min(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
-                   RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
-      MaxWidth = std::max(MaxWidth,
-                          RdxDesc.getRecurrenceType()->getScalarSizeInBits());
+      for (Type *T : {RdxDesc.getRecurrenceType(),
+                      RdxDesc.getMinWidthCastToRecurrenceType()})
+        UpdateSmallestAndWidestSizes(T);
     }
   } else {
-    for (Type *T : ElementTypesInLoop) {
-      MinWidth = std::min<unsigned>(
-          MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
-    }
+    for (Type *T : ElementTypesInLoop)
+      UpdateSmallestAndWidestSizes(T);
   }
 
   // If the loop has no loads/stores or reductions (e.g. a search loop with an
