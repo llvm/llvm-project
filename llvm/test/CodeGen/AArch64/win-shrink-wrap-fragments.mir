@@ -104,6 +104,26 @@
 # CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
 # CHECK-NEXT: 0x01                ; add sp, #16
 # CHECK-NEXT: 0xe4                ; end
+
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: epilogue_suffix +0x4
+# CHECK: FunctionLength: 20
+# CHECK: EpilogueScopes: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 3
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: epilogue_suffix +0x24
+# CHECK: FunctionLength: 12
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
 # CHECK-NOT: RuntimeFunction {
 
 # ASM-LABEL: frame_before_prologue:
@@ -115,6 +135,21 @@
 # ASM: DEBUG_LABEL: frame_before_prologue:before_branch
 # ASM-NEXT: .pseudoprobe 1234 2 0 0 frame_before_prologue
 # ASM-NEXT: b
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM-LABEL: epilogue_suffix:
+# ASM: .seh_endepilogue
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM-NEXT: DEBUG_LABEL: epilogue_suffix:after_epilogue
+# ASM-NEXT: .pseudoprobe 5678 1 0 0 epilogue_suffix
+# ASM-NEXT: add w0, w0, #1
+# ASM-NEXT: add w0, w0, #2
+# ASM-NEXT: b
+# ASM: .seh_proc epilogue_suffix
+# ASM: .seh_end_c
+# ASM: .seh_endepilogue
+# ASM-NEXT: ret
 # ASM-NEXT: .seh_endfunclet
 # ASM-NEXT: .seh_endproc
 # ASM: .section .pseudo_probe_desc
@@ -134,11 +169,14 @@
   define void @adjacent_epilogues(i32 %skip, i32 %which) uwtable {
     ret void
   }
+  define void @epilogue_suffix(i32 %skip, i32 %which) uwtable !dbg !11 {
+    ret void
+  }
   declare void @work(i32)
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
-  !llvm.pseudo_probe_desc = !{!10}
+  !llvm.pseudo_probe_desc = !{!10, !14}
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
   !1 = !DIFile(filename: "win-shrink-wrap-fragments.c", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -150,6 +188,10 @@
   !8 = !DILabel(scope: !4, name: "before_branch", file: !1, line: 3)
   !9 = !DILocation(line: 3, column: 1, scope: !4)
   !10 = !{i64 1234, i64 0, !"frame_before_prologue"}
+  !11 = distinct !DISubprogram(name: "epilogue_suffix", scope: !1, file: !1, line: 4, type: !3, scopeLine: 4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !12 = !DILabel(scope: !11, name: "after_epilogue", file: !1, line: 5)
+  !13 = !DILocation(line: 5, column: 1, scope: !11)
+  !14 = !{i64 5678, i64 0, !"epilogue_suffix"}
 ...
 ---
 # A leaf-style block separating blocks with the prologue in effect in layout
@@ -393,7 +435,8 @@ body:             |
 ---
 # Completing an epilogue changes outgoing CFG frame state, not layout coverage.
 # Adjacent epilogue blocks reached with the same frame must share one record,
-# ending only before the shared frameless return block.
+# ending only before the shared frameless return block. Metadata before the
+# first epilogue's lone terminator must not cause a spurious split.
 name:            adjacent_epilogues
 alignment:       4
 hasWinCFI:       true
@@ -415,6 +458,10 @@ body:             |
   ; MIR-NOT: SEH_StartProc
   ; MIR-NOT: SEH_EndProc
   ; MIR-NOT: SEH_EndC
+  ; MIR: frame-destroy SEH_EpilogEnd
+  ; MIR-NEXT: FAKE_USE $w0
+  ; MIR-NEXT: RET undef $lr
+  ; MIR-NOT: SEH_EndProc
   ; MIR: bb.3:
   ; MIR-NOT: SEH_StartProc
   ; MIR-NOT: SEH_EndProc
@@ -449,6 +496,7 @@ body:             |
     $sp = frame-destroy ADDXri $sp, 16, 0
     frame-destroy SEH_StackAlloc 16
     frame-destroy SEH_EpilogEnd
+    FAKE_USE $w0
     RET undef $lr
 
   bb.3:
@@ -460,6 +508,81 @@ body:             |
     frame-destroy SEH_StackAlloc 16
     frame-destroy SEH_EpilogEnd
     B %bb.4
+
+  bb.4:
+    RET undef $lr
+...
+---
+# Real instructions after an epilogue must be uncovered even within the same
+# block. End the record before the suffix without bundling its instructions or
+# debug/probe pseudos. The next framed block still needs a phantom recipe.
+name:            epilogue_suffix
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    16
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: epilogue_suffix
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR: bb.2:
+  ; MIR: frame-destroy SEH_EpilogEnd
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 5678, 1, 0, 0
+  ; MIR-NEXT: $w0 = ADDWri $w0, 1, 0
+  ; MIR-NEXT: $w0 = ADDWri $w0, 2, 0
+  ; MIR-NEXT: B %bb.4
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR: SEH_EndC
+  ; MIR: RET undef $lr {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.4:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR: RET
+  bb.0:
+    successors: %bb.1, %bb.4
+    CBZW $w0, %bb.4
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    CBZW $w1, %bb.3
+
+  bb.2:
+    successors: %bb.4
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    DBG_LABEL !12, debug-location !13
+    PSEUDO_PROBE 5678, 1, 0, 0
+    $w0 = ADDWri $w0, 1, 0
+    $w0 = ADDWri $w0, 2, 0
+    B %bb.4
+
+  bb.3:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
 
   bb.4:
     RET undef $lr

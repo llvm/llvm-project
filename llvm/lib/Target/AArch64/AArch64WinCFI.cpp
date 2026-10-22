@@ -52,10 +52,10 @@ char AArch64WinCFILegacy::ID = 0;
 INITIALIZE_PASS(AArch64WinCFILegacy, DEBUG_TYPE,
                 "AArch64 Windows unwind range insertion", false, false)
 
-static void endWinCFIRange(MachineBasicBlock &MBB,
-                           const AArch64InstrInfo &TII) {
+static void endWinCFIRange(MachineBasicBlock &MBB, const AArch64InstrInfo &TII,
+                           MachineBasicBlock::iterator InsertPt) {
   MachineInstr *End =
-      BuildMI(MBB, MBB.end(), DebugLoc(), TII.get(AArch64::SEH_EndProc));
+      BuildMI(MBB, InsertPt, DebugLoc(), TII.get(AArch64::SEH_EndProc));
   // Cover the final terminator too. Bundling the zero-size end marker with
   // it preserves the terminator's CFG properties and keeps the MIR valid.
   if (End->getPrevNode() && End->getPrevNode()->isTerminator())
@@ -167,7 +167,7 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
     // boundaries and frameless gaps separate adjacent framed blocks.
     if (RangeStarted &&
         (MBB.isBeginSection() || !IsFramed || IsPhysicalPrologue)) {
-      endWinCFIRange(*PreviousLayoutBlock, TII);
+      endWinCFIRange(*PreviousLayoutBlock, TII, PreviousLayoutBlock->end());
       RangeStarted = false;
     }
 
@@ -188,10 +188,35 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
       RangeStarted = true;
     }
 
+    // Late transformations can append frameless code after an epilogue in the
+    // same block. End the record before such a suffix; otherwise PCs beyond the
+    // encoded epilogue would be treated as function body, causing the unwinder
+    // to apply the prologue recipe to an already-restored frame.
+    if (RangeStarted && EpilogueBlocks.contains(&MBB)) {
+      auto EpilogueEnd = llvm::find_if(MBB, [](const MachineInstr &MI) {
+        return MI.getOpcode() == AArch64::SEH_EpilogEnd;
+      });
+      auto Suffix = make_range(std::next(EpilogueEnd), MBB.end());
+      auto IsRealInstruction = [](const MachineInstr &MI) {
+        return !MI.isMetaInstruction() &&
+               !AArch64InstrInfo::isSEHInstruction(MI);
+      };
+      auto FirstInstrAfterEpilog = llvm::find_if(Suffix, IsRealInstruction);
+      // A lone terminator is covered by the epilogue's implicit final
+      // instruction. Any other suffix executes without a frame.
+      if (FirstInstrAfterEpilog != MBB.end() &&
+          (!FirstInstrAfterEpilog->isTerminator() ||
+           llvm::any_of(make_range(std::next(FirstInstrAfterEpilog), MBB.end()),
+                        IsRealInstruction))) {
+        endWinCFIRange(MBB, TII, Suffix.begin());
+        RangeStarted = false;
+      }
+    }
+
     // Close the record while emission is still in its text section, before a
     // section switch or the end-of-function machinery runs.
     if (RangeStarted && (MBB.isEndSection() || &MBB == &MF.back())) {
-      endWinCFIRange(MBB, TII);
+      endWinCFIRange(MBB, TII, MBB.end());
       RangeStarted = false;
     }
     PreviousLayoutBlock = &MBB;
