@@ -873,6 +873,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
+- `#pragma weak X = Y` no longer drops an explicit visibility on the declaration
+  of `X`; as in GCC, the alias takes `X`'s visibility rather than `Y`'s.
+
 #### Bug Fixes to C++ Support
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 

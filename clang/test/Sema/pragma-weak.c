@@ -36,3 +36,15 @@ void pragma_ifunc_on_redecl(void) __attribute__((ifunc("resolver")));
 // A weak alias of an ifunc does not make the ifunc itself weak.
 #pragma weak pragma_alias = ifunc_alias_target
 void ifunc_alias_target(void) __attribute__((ifunc("resolver")));
+
+// A visibility given after the pragma must still match an earlier one.
+int vis_target(void);
+int vis_alias(void) __attribute__((visibility("hidden"))); // expected-note {{previous attribute is here}}
+#pragma weak vis_alias = vis_target
+int vis_alias(void) __attribute__((visibility("default"))); // expected-error {{visibility does not match previous declaration}}
+
+// Only the alias created by #pragma weak accepts a visibility after it is
+// defined.
+int explicit_alias_target(void) { return 0; }
+int explicit_alias(void) __attribute__((alias("explicit_alias_target"))); // expected-note {{previous definition}}
+int explicit_alias(void) __attribute__((visibility("default"))); // expected-warning {{attribute declaration must precede definition}}
