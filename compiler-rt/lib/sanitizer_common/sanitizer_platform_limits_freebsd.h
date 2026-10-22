@@ -728,8 +728,15 @@ struct __sanitizer_cpuset {
 #endif
 };
 
+struct __sanitizer_domainset {
+  long __bits[(256 + (sizeof(long) * 8) - 1) / (sizeof(long) * 8)];
+};
+
 typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
 extern unsigned struct_cpuset_sz;
+
+typedef struct __sanitizer_domainset __sanitizer_domainset_t;
+extern unsigned struct_domainset_sz;
 
 typedef unsigned long long __sanitizer_eventfd_t;
 }  // namespace __sanitizer
