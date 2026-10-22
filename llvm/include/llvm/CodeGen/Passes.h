@@ -558,7 +558,7 @@ LLVM_ABI FunctionPass *createCFIInstrInserterLegacy();
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
-LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
+LLVM_ABI FunctionPass *createCFGuardLongjmpLegacyPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp

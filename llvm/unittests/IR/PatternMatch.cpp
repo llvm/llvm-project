@@ -1618,6 +1618,15 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(VectorZero, m_Zero()));
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
 
+  EXPECT_FALSE(match(ScalarUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(ScalarPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(ScalarZero, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(VectorZero, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroPoison, m_ZeroForbidPoison()));
+
   const APInt *C;
   // Regardless of whether poison is allowed,
   // a fully undef/poison constant does not match.
