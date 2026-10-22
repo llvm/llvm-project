@@ -88,7 +88,7 @@ define void @unreachable_exit_with_nounwind_call_pr53800(ptr noalias %ptr, i1 %c
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
@@ -114,7 +114,7 @@ define void @unreachable_exit_and_call_may_read(ptr %ptr, i1 %c.1) {
 ; CHECK-NEXT:    store i64 1, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR1]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    store i64 0, ptr [[PTR]], align 8
@@ -167,7 +167,7 @@ define void @unreachable_exit_but_another_exit(ptr noalias %ptr, i1 %c.1, i32 %s
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[E_0:%.*]], label [[E_1:%.*]]
 ; CHECK:       e.0:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR1]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       e.1:
 ; CHECK-NEXT:    ret void
@@ -192,4 +192,189 @@ e.1:
 if.end:
   store i64 0, ptr %ptr, align 8
   ret void
+}
+
+declare void @noret() nounwind noreturn
+
+define void @unreachable_exit_with_reachable_instrs(ptr noalias %ptr, i8 %a, i1 %c) {
+; CHECK-LABEL: @unreachable_exit_with_reachable_instrs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SUCCESS:%.*]], label [[FAILURE:%.*]]
+; CHECK:       success:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       failure:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @noret()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  store i8 0, ptr %ptr
+  br i1 %c, label %success, label %failure
+
+success:
+  br label %exit
+
+failure:
+  store i8 %a, ptr %ptr
+  br label %exit
+
+exit:
+  call void @noret()
+  unreachable
+}
+
+define void @unreachable_exit_post_dominates_reachable_paths(ptr noalias %ptr, i8 %a, i1 %c) {
+; CHECK-LABEL: @unreachable_exit_post_dominates_reachable_paths(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SUCCESS:%.*]], label [[FAILURE:%.*]]
+; CHECK:       success:
+; CHECK-NEXT:    call void @noret()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       failure:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    call void @noret()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  store i8 0, ptr %ptr
+  br i1 %c, label %success, label %failure
+
+success:
+  call void @noret()
+  br label %exit
+
+failure:
+  store i8 %a, ptr %ptr
+  call void @noret()
+  br label %exit
+
+exit:
+  unreachable
+}
+
+
+define void @unreachable_exit_interior_exit_with_multiple_successors(ptr noalias %ptr, i1 %c, i8 %a) {
+; CHECK-LABEL: @unreachable_exit_interior_exit_with_multiple_successors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    call void @exit()
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SUCCESS:%.*]], label [[FAILURE:%.*]]
+; CHECK:       success:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR]], align 1
+; CHECK-NEXT:    unreachable
+; CHECK:       failure:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  store i8 0, ptr %ptr
+  call void @exit()
+  br i1 %c, label %success, label %failure
+
+success:
+  store i8 %a, ptr %ptr
+  unreachable
+
+failure:
+  br label %exit
+
+exit:
+  unreachable
+}
+
+define void @unreachable_exit_simple_loop(ptr noalias %ptr, i1 %c, i8 %a) {
+; CHECK-LABEL: @unreachable_exit_simple_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @exit() #[[ATTR1]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i8 [[A:%.*]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    call void @noret()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  store i8 0, ptr %ptr
+  br label %loop
+
+loop:
+  call void @exit() nounwind
+  br i1 %c, label %loop, label %exit
+
+exit:
+  store i8 %a, ptr %ptr
+  call void @noret()
+  unreachable
+}
+
+define void @unreachable_exit_multiple_successors(ptr noalias %ptr, i32 %s) {
+; CHECK-LABEL: @unreachable_exit_multiple_successors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[S:%.*]], label [[U_0:%.*]] [
+; CHECK-NEXT:      i32 1, label [[LIVE:%.*]]
+; CHECK-NEXT:      i32 2, label [[U_1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       u.0:
+; CHECK-NEXT:    unreachable
+; CHECK:       u.1:
+; CHECK-NEXT:    unreachable
+; CHECK:       live:
+; CHECK-NEXT:    store i8 1, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i8 0, ptr %ptr
+  switch i32 %s, label %u.0 [
+  i32 1, label %live
+  i32 2, label %u.1
+  ]
+
+u.0:
+  unreachable
+
+u.1:
+  unreachable
+
+live:
+  store i8 1, ptr %ptr
+  ret void
+}
+
+define void @unreachable_exit_infinite_loop(ptr noalias %ptr, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @unreachable_exit_infinite_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP:%.*]], label [[OTHER:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       other:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[KILL:%.*]], label [[DEAD:%.*]]
+; CHECK:       kill:
+; CHECK-NEXT:    store i8 1, ptr [[PTR]], align 1
+; CHECK-NEXT:    ret void
+; CHECK:       dead:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  store i8 0, ptr %ptr
+  br i1 %c.1, label %loop, label %other
+
+loop:
+  br label %loop
+
+other:
+  br i1 %c.2, label %kill, label %dead
+
+kill:
+  store i8 1, ptr %ptr
+  ret void
+
+dead:
+  unreachable
 }
