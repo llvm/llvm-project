@@ -38,14 +38,15 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___1 3
 #    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___2 3
 #    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH___ndk1 6
-#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH _LIBCPP_CONCAT(_LIBCPP_THREAD_ABI_NAMESPACE_LENGTH_, _LIBCPP_ABI_NAMESPACE)
+#    define _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH                                                                        \
+      _LIBCPP_CONCAT(_LIBCPP_THREAD_ABI_NAMESPACE_LENGTH_, _LIBCPP_ABI_NAMESPACE)
 #    if _LIBCPP_THREAD_ABI_NAMESPACE_LENGTH == 0
 #      error "Unknown length of _LIBCPP_ABI_NAMESPACE, add it to <__thread/hardware_concurrency.h>"
 #    endif
 #    define _LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL                                                                 \
       _LIBCPP_TOSTRING(__USER_LABEL_PREFIX__)                                                                          \
       "_ZNSt" _LIBCPP_TOSTRING(_LIBCPP_THREAD_ABI_NAMESPACE_LENGTH) _LIBCPP_THREAD_ABI_NAMESPACE_STR                   \
-      "6thread20hardware_concurrencyEv"
+          "6thread20hardware_concurrencyEv"
 #  endif
 
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned __thread_hardware_concurrency() _NOEXCEPT
