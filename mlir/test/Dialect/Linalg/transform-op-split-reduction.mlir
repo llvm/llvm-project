@@ -499,3 +499,134 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+// The reduction loop `k` (position 1) is split into a parallel loop inserted
+// at position 0 and the remaining reduction loop, now at position 2. In the
+// body, `linalg.index 1` (`k`) must become `p * 2 + r` and `linalg.index 0`
+// (`i`) must shift to `linalg.index 1`.
+func.func @generic_split_index_shifted(%in: tensor<2x8xi32>, %out: tensor<2xi32>) -> tensor<2xi32> {
+  %r = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                        affine_map<(d0, d1) -> (d0)>],
+                       iterator_types = ["parallel", "reduction"]}
+    ins(%in : tensor<2x8xi32>) outs(%out : tensor<2xi32>) {
+  ^bb0(%a: i32, %acc: i32):
+    %i = linalg.index 0 : index
+    %k = linalg.index 1 : index
+    %ik = arith.addi %i, %k : index
+    %c = arith.index_cast %ik : index to i32
+    %s = arith.addi %acc, %c : i32
+    linalg.yield %s : i32
+  } -> tensor<2xi32>
+  return %r : tensor<2xi32>
+}
+
+//  CHECK-DAG: #[[$MAP_K:.*]] = affine_map<()[s0, s1] -> (s0 * 2 + s1)>
+// CHECK-LABEL: func @generic_split_index_shifted
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
+//      CHECK: ^bb0
+//  CHECK-DAG:   %[[I:.*]] = linalg.index 1 : index
+//  CHECK-DAG:   %[[P:.*]] = linalg.index 0 : index
+//  CHECK-DAG:   %[[R:.*]] = linalg.index 2 : index
+//      CHECK:   %[[K:.*]] = affine.apply #[[$MAP_K]]()[%[[P]], %[[R]]]
+//      CHECK:   arith.addi %[[I]], %[[K]] : index
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["reduction", "parallel"]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0 <split_factor = 4, insert_split_dimension = 0>
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+
+// Same op, but the parallel loop is inserted at position 1, after `i`. Then
+// `linalg.index 0` (`i`) must stay as it is, and `k` becomes `p * 2 + r` with
+// `p` at position 1 and `r` at position 2.
+func.func @generic_split_index_unshifted(%in: tensor<2x8xi32>, %out: tensor<2xi32>) -> tensor<2xi32> {
+  %r = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                        affine_map<(d0, d1) -> (d0)>],
+                       iterator_types = ["parallel", "reduction"]}
+    ins(%in : tensor<2x8xi32>) outs(%out : tensor<2xi32>) {
+  ^bb0(%a: i32, %acc: i32):
+    %i = linalg.index 0 : index
+    %k = linalg.index 1 : index
+    %ik = arith.addi %i, %k : index
+    %c = arith.index_cast %ik : index to i32
+    %s = arith.addi %acc, %c : i32
+    linalg.yield %s : i32
+  } -> tensor<2xi32>
+  return %r : tensor<2xi32>
+}
+
+//  CHECK-DAG: #[[$MAP_K:.*]] = affine_map<()[s0, s1] -> (s0 * 2 + s1)>
+// CHECK-LABEL: func @generic_split_index_unshifted
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
+//      CHECK: ^bb0
+//  CHECK-DAG:   %[[I:.*]] = linalg.index 0 : index
+//  CHECK-DAG:   %[[P:.*]] = linalg.index 1 : index
+//  CHECK-DAG:   %[[R:.*]] = linalg.index 2 : index
+//      CHECK:   %[[K:.*]] = affine.apply #[[$MAP_K]]()[%[[P]], %[[R]]]
+//      CHECK:   arith.addi %[[I]], %[[K]] : index
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["parallel", "reduction"]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0 <split_factor = 4, insert_split_dimension = 1>
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+
+// With `inner_parallel`, the reduction loop `k` (position 1) keeps its position
+// with extent 8 / 4 = 2 and the parallel loop of extent 4 is inserted right
+// after it, at position 2. In the body, `linalg.index 1` (`k`) must become
+// `r * 4 + p` and `linalg.index 0` (`i`) must stay as it is.
+func.func @generic_split_index_inner_parallel(%in: tensor<2x8xi32>, %out: tensor<2xi32>) -> tensor<2xi32> {
+  %r = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                        affine_map<(d0, d1) -> (d0)>],
+                       iterator_types = ["parallel", "reduction"]}
+    ins(%in : tensor<2x8xi32>) outs(%out : tensor<2xi32>) {
+  ^bb0(%a: i32, %acc: i32):
+    %i = linalg.index 0 : index
+    %k = linalg.index 1 : index
+    %ik = arith.addi %i, %k : index
+    %c = arith.index_cast %ik : index to i32
+    %s = arith.addi %acc, %c : i32
+    linalg.yield %s : i32
+  } -> tensor<2xi32>
+  return %r : tensor<2xi32>
+}
+
+//  CHECK-DAG: #[[$MAP_K:.*]] = affine_map<()[s0, s1] -> (s0 * 4 + s1)>
+// CHECK-LABEL: func @generic_split_index_inner_parallel
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel"]
+//      CHECK: ^bb0
+//  CHECK-DAG:   %[[I:.*]] = linalg.index 0 : index
+//  CHECK-DAG:   %[[R:.*]] = linalg.index 1 : index
+//  CHECK-DAG:   %[[P:.*]] = linalg.index 2 : index
+//      CHECK:   %[[K:.*]] = affine.apply #[[$MAP_K]]()[%[[R]], %[[P]]]
+//      CHECK:   arith.addi %[[I]], %[[K]] : index
+//      CHECK: linalg.generic
+// CHECK-SAME:   iterator_types = ["parallel", "reduction"]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.split_reduction %0 <split_factor = 4, insert_split_dimension = 1, inner_parallel>
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}

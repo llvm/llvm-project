@@ -15,7 +15,9 @@
 #include <utility>
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -26,6 +28,54 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+/// Rewrite the `linalg.index` ops of `genericOp`, whose body was moved from
+/// the original op, to the loops of `genericOp`. Splitting inserted a new
+/// parallel loop at `insertedDim`, so every original loop `d >= insertedDim`
+/// is now loop `d + 1`, and replaced the original reduction loop
+/// `reductionDim` by the pair (new parallel loop, remaining reduction loop),
+/// with the parallel loop outermost iff `parallelIsOuter` and the inner loop
+/// of extent `innerSize`. The original reduction index is
+/// `outerIndex * innerSize + innerIndex`.
+static void remapSplitReductionIndexOps(RewriterBase &b, LinalgOp genericOp,
+                                        unsigned reductionDim,
+                                        unsigned insertedDim,
+                                        bool parallelIsOuter,
+                                        int64_t innerSize) {
+  if (!genericOp.hasIndexSemantics())
+    return;
+
+  unsigned newReductionDim =
+      reductionDim < insertedDim ? reductionDim : reductionDim + 1;
+  unsigned outerDim = parallelIsOuter ? insertedDim : newReductionDim;
+  unsigned innerDim = parallelIsOuter ? newReductionDim : insertedDim;
+
+  // Collect first: the loop inserts new `linalg.index` ops into this block.
+  SmallVector<IndexOp> indexOps =
+      llvm::to_vector(genericOp.getBlock()->getOps<IndexOp>());
+  for (IndexOp indexOp : indexOps) {
+    unsigned dim = indexOp.getDim();
+    if (dim < insertedDim && dim != reductionDim)
+      continue;
+
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPoint(indexOp);
+    Location loc = indexOp.getLoc();
+    if (dim != reductionDim) {
+      // A loop was inserted at `insertedDim`, so later loops shift up by one.
+      b.replaceOp(indexOp, IndexOp::create(b, loc, dim + 1).getResult());
+      continue;
+    }
+
+    Value outerIndex = IndexOp::create(b, loc, outerDim).getResult();
+    Value innerIndex = IndexOp::create(b, loc, innerDim).getResult();
+    AffineExpr d0, d1;
+    bindDims(b.getContext(), d0, d1);
+    OpFoldResult newIndex = affine::makeComposedFoldedAffineApply(
+        b, loc, d0 * innerSize + d1, {outerIndex, innerIndex});
+    b.replaceOp(indexOp, getValueOrCreateConstantIndexOp(b, loc, newIndex));
+  }
+}
 
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     RewriterBase &b, LinalgOp op,
@@ -173,6 +223,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
       ValueRange({identityTensor}), newMaps, newIteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
                        genericOp.getRegion().begin());
+
+  // The body still refers to the loops of `op`; rewrite its `linalg.index`
+  // ops to the loops of `genericOp`.
+  remapSplitReductionIndexOps(
+      b, genericOp, reductionDim, insertSplitDimension,
+      /*parallelIsOuter=*/!control.innerParallel,
+      /*innerSize=*/control.innerParallel ? ratio : reductionDimSize / ratio);
 
   // Then create a new reduction that only reduce the newly added dimension
   // from the previous op.
@@ -371,6 +428,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
                        genericOp.getRegion().begin());
   genericOp.getRegion().front().insertArgument(reductionDimPos,
                                                b.getIntegerType(1), loc);
+
+  // The body still refers to the loops of `op`; rewrite its `linalg.index`
+  // ops to the loops of `genericOp`.
+  remapSplitReductionIndexOps(b, genericOp, reductionDimPos,
+                              /*insertedDim=*/reductionDimPos,
+                              /*parallelIsOuter=*/true,
+                              /*innerSize=*/splitFactor);
 
   // Step 5. Create new reduction ops that only reduce the newly added
   // dimensions from the previous op.
