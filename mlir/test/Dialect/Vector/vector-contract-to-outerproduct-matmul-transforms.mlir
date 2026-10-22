@@ -67,6 +67,88 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
+// N from LHS, M from RHS (result = {m, n})
+#matmat_accesses_5 = [
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_5 = {
+  indexing_maps = #matmat_accesses_5,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_6 = [
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_6 = {
+  indexing_maps = #matmat_accesses_6,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_7 = [
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_7 = {
+  indexing_maps = #matmat_accesses_7,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_8 = [
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (m, n)>
+]
+#matmat_trait_8 = {
+  indexing_maps = #matmat_accesses_8,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// N from LHS, M from RHS (transposed output: result = {n, m})
+#matmat_accesses_9 = [
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_9 = {
+  indexing_maps = #matmat_accesses_9,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_10 = [
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_10 = {
+  indexing_maps = #matmat_accesses_10,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_11 = [
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_11 = {
+  indexing_maps = #matmat_accesses_11,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+#matmat_accesses_12 = [
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (k, m)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#matmat_trait_12 = {
+  indexing_maps = #matmat_accesses_12,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
 // ============================================================================
 //  Matmul 0 (plain + masked + mixed types)
 // ============================================================================
@@ -387,6 +469,354 @@ func.func @matmul_4_scalable(%A: vector<[2]x1xf32>,
 {
   %0 = vector.contract #matmat_trait_4 %A, %B, %C
     : vector<[2]x1xf32>, vector<1x3xf32> into vector<3x[2]xf32>
+  return %0 : vector<3x[2]xf32>
+}
+
+// ============================================================================
+//  Matmul 5 (plain + scalable) - N from LHS, M from RHS: (k,n)x(m,k)->(m,n)
+// ============================================================================
+// CHECK-LABEL: func @matmul_5
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<4x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x4xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+// CHECK-SAME:  : vector<2x4xf32> to vector<4x2xf32>
+//
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<4x3xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+// CHECK-SAME:  : vector<2xf32>, vector<3xf32>
+//
+//      CHECK: %[[b1:.*]] = vector.extract %[[Bt]][1] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a1:.*]] = vector.extract %[[A]][1] : vector<3xf32> from vector<4x3xf32>
+//      CHECK: %[[c1:.*]] = vector.outerproduct %[[b1]], %[[a1]], %[[c0]]
+// CHECK-SAME:  : vector<2xf32>, vector<3xf32>
+//
+//      CHECK: %[[b2:.*]] = vector.extract %[[Bt]][2] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a2:.*]] = vector.extract %[[A]][2] : vector<3xf32> from vector<4x3xf32>
+//      CHECK: %[[c2:.*]] = vector.outerproduct %[[b2]], %[[a2]], %[[c1]]
+// CHECK-SAME:  : vector<2xf32>, vector<3xf32>
+//
+//      CHECK: %[[b3:.*]] = vector.extract %[[Bt]][3] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a3:.*]] = vector.extract %[[A]][3] : vector<3xf32> from vector<4x3xf32>
+//      CHECK: %[[c3:.*]] = vector.outerproduct %[[b3]], %[[a3]], %[[c2]]
+// CHECK-SAME:  : vector<2xf32>, vector<3xf32>
+//
+//      CHECK: return %[[c3]] : vector<2x3xf32>
+func.func @matmul_5(%A: vector<4x3xf32>,
+                    %B: vector<2x4xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32> {
+  %0 = vector.contract #matmat_trait_5 %A, %B, %C
+    : vector<4x3xf32>, vector<2x4xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @matmul_5_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<4x[3]xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x4xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x[3]xf32>
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+// CHECK-SAME:  : vector<2x4xf32> to vector<4x2xf32>
+//
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<[3]xf32> from vector<4x[3]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+// CHECK-SAME:  : vector<2xf32>, vector<[3]xf32>
+//
+//      CHECK: %[[b1:.*]] = vector.extract %[[Bt]][1] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a1:.*]] = vector.extract %[[A]][1] : vector<[3]xf32> from vector<4x[3]xf32>
+//      CHECK: %[[c1:.*]] = vector.outerproduct %[[b1]], %[[a1]], %[[c0]]
+// CHECK-SAME:  : vector<2xf32>, vector<[3]xf32>
+//
+//      CHECK: %[[b2:.*]] = vector.extract %[[Bt]][2] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a2:.*]] = vector.extract %[[A]][2] : vector<[3]xf32> from vector<4x[3]xf32>
+//      CHECK: %[[c2:.*]] = vector.outerproduct %[[b2]], %[[a2]], %[[c1]]
+// CHECK-SAME:  : vector<2xf32>, vector<[3]xf32>
+//
+//      CHECK: %[[b3:.*]] = vector.extract %[[Bt]][3] : vector<2xf32> from vector<4x2xf32>
+//      CHECK: %[[a3:.*]] = vector.extract %[[A]][3] : vector<[3]xf32> from vector<4x[3]xf32>
+//      CHECK: %[[c3:.*]] = vector.outerproduct %[[b3]], %[[a3]], %[[c2]]
+// CHECK-SAME:  : vector<2xf32>, vector<[3]xf32>
+//
+//      CHECK: return %[[c3]] : vector<2x[3]xf32>
+func.func @matmul_5_scalable(%A: vector<4x[3]xf32>,
+                             %B: vector<2x4xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+  %0 = vector.contract #matmat_trait_5 %A, %B, %C
+    : vector<4x[3]xf32>, vector<2x4xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
+}
+
+// ============================================================================
+//  Matmul 6 (plain + scalable) - (n,k)x(m,k)->(m,n)
+// ============================================================================
+// CHECK-LABEL: func @matmul_6
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x3xf32>
+func.func @matmul_6(%A: vector<3x1xf32>,
+                    %B: vector<2x1xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_6 %A, %B, %C
+    : vector<3x1xf32>, vector<2x1xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @matmul_6_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<[3]x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x[3]xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<[3]xf32> from vector<1x[3]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x[3]xf32>
+func.func @matmul_6_scalable(%A: vector<[3]x1xf32>,
+                             %B: vector<2x1xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+{
+  %0 = vector.contract #matmat_trait_6 %A, %B, %C
+    : vector<[3]x1xf32>, vector<2x1xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
+}
+
+// ============================================================================
+//  Matmul 7 (plain + scalable) - (k,n)x(k,m)->(m,n)
+// ============================================================================
+// CHECK-LABEL: func @matmul_7
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x3xf32>
+func.func @matmul_7(%A: vector<1x3xf32>,
+                    %B: vector<1x2xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_7 %A, %B, %C
+    : vector<1x3xf32>, vector<1x2xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @matmul_7_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x[3]xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x[3]xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<[3]xf32> from vector<1x[3]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x[3]xf32>
+func.func @matmul_7_scalable(%A: vector<1x[3]xf32>,
+                             %B: vector<1x2xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+{
+  %0 = vector.contract #matmat_trait_7 %A, %B, %C
+    : vector<1x[3]xf32>, vector<1x2xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
+}
+
+// ============================================================================
+//  Matmul 8 (plain + scalable) - (n,k)x(k,m)->(m,n)
+// ============================================================================
+// CHECK-LABEL: func @matmul_8
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x3xf32>
+func.func @matmul_8(%A: vector<3x1xf32>,
+                    %B: vector<1x2xf32>,
+                    %C: vector<2x3xf32>) -> vector<2x3xf32>
+{
+  %0 = vector.contract #matmat_trait_8 %A, %B, %C
+    : vector<3x1xf32>, vector<1x2xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @matmul_8_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<[3]x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x[3]xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<[3]xf32> from vector<1x[3]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[b0]], %[[a0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<2x[3]xf32>
+func.func @matmul_8_scalable(%A: vector<[3]x1xf32>,
+                             %B: vector<1x2xf32>,
+                             %C: vector<2x[3]xf32>) -> vector<2x[3]xf32>
+{
+  %0 = vector.contract #matmat_trait_8 %A, %B, %C
+    : vector<[3]x1xf32>, vector<1x2xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
+}
+
+// ============================================================================
+//  Matmul 9 (plain + scalable) - (k,n)x(m,k)->(n,m) transposed output
+// ============================================================================
+// CHECK-LABEL: func @matmul_9
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x2xf32>
+func.func @matmul_9(%A: vector<1x3xf32>,
+                    %B: vector<2x1xf32>,
+                    %C: vector<3x2xf32>) -> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_9 %A, %B, %C
+    : vector<1x3xf32>, vector<2x1xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+// CHECK-LABEL: func @matmul_9_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<[2]x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x[2]xf32>
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<[2]xf32> from vector<1x[2]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x[2]xf32>
+func.func @matmul_9_scalable(%A: vector<1x3xf32>,
+                             %B: vector<[2]x1xf32>,
+                             %C: vector<3x[2]xf32>) -> vector<3x[2]xf32>
+{
+  %0 = vector.contract #matmat_trait_9 %A, %B, %C
+    : vector<1x3xf32>, vector<[2]x1xf32> into vector<3x[2]xf32>
+  return %0 : vector<3x[2]xf32>
+}
+
+// ============================================================================
+//  Matmul 10 (plain + scalable) - (n,k)x(m,k)->(n,m) transposed output
+// ============================================================================
+// CHECK-LABEL: func @matmul_10
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<2x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x2xf32>
+func.func @matmul_10(%A: vector<3x1xf32>,
+                     %B: vector<2x1xf32>,
+                     %C: vector<3x2xf32>) -> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_10 %A, %B, %C
+    : vector<3x1xf32>, vector<2x1xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+// CHECK-LABEL: func @matmul_10_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<[2]x1xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x[2]xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[Bt:.*]] = vector.transpose %[[B]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[Bt]][0] : vector<[2]xf32> from vector<1x[2]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x[2]xf32>
+func.func @matmul_10_scalable(%A: vector<3x1xf32>,
+                              %B: vector<[2]x1xf32>,
+                              %C: vector<3x[2]xf32>) -> vector<3x[2]xf32>
+{
+  %0 = vector.contract #matmat_trait_10 %A, %B, %C
+    : vector<3x1xf32>, vector<[2]x1xf32> into vector<3x[2]xf32>
+  return %0 : vector<3x[2]xf32>
+}
+
+// ============================================================================
+//  Matmul 11 (plain + scalable) - (k,n)x(k,m)->(n,m) transposed output
+// ============================================================================
+// CHECK-LABEL: func @matmul_11
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x2xf32>
+func.func @matmul_11(%A: vector<1x3xf32>,
+                     %B: vector<1x2xf32>,
+                     %C: vector<3x2xf32>) -> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_11 %A, %B, %C
+    : vector<1x3xf32>, vector<1x2xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+// CHECK-LABEL: func @matmul_11_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<1x3xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x[2]xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x[2]xf32>
+//      CHECK: %[[a0:.*]] = vector.extract %[[A]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<[2]xf32> from vector<1x[2]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x[2]xf32>
+func.func @matmul_11_scalable(%A: vector<1x3xf32>,
+                              %B: vector<1x[2]xf32>,
+                              %C: vector<3x[2]xf32>) -> vector<3x[2]xf32>
+{
+  %0 = vector.contract #matmat_trait_11 %A, %B, %C
+    : vector<1x3xf32>, vector<1x[2]xf32> into vector<3x[2]xf32>
+  return %0 : vector<3x[2]xf32>
+}
+
+// ============================================================================
+//  Matmul 12 (plain + scalable) - (n,k)x(k,m)->(n,m) transposed output
+// ============================================================================
+// CHECK-LABEL: func @matmul_12
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x2xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x2xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<2xf32> from vector<1x2xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x2xf32>
+func.func @matmul_12(%A: vector<3x1xf32>,
+                     %B: vector<1x2xf32>,
+                     %C: vector<3x2xf32>) -> vector<3x2xf32>
+{
+  %0 = vector.contract #matmat_trait_12 %A, %B, %C
+    : vector<3x1xf32>, vector<1x2xf32> into vector<3x2xf32>
+  return %0 : vector<3x2xf32>
+}
+
+// CHECK-LABEL: func @matmul_12_scalable
+// CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x1xf32>,
+// CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<1x[2]xf32>,
+// CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x[2]xf32>
+//      CHECK: %[[At:.*]] = vector.transpose %[[A]], [1, 0]
+//      CHECK: %[[a0:.*]] = vector.extract %[[At]][0] : vector<3xf32> from vector<1x3xf32>
+//      CHECK: %[[b0:.*]] = vector.extract %[[B]][0] : vector<[2]xf32> from vector<1x[2]xf32>
+//      CHECK: %[[c0:.*]] = vector.outerproduct %[[a0]], %[[b0]], %[[C]]
+//      CHECK: return %[[c0]] : vector<3x[2]xf32>
+func.func @matmul_12_scalable(%A: vector<3x1xf32>,
+                              %B: vector<1x[2]xf32>,
+                              %C: vector<3x[2]xf32>) -> vector<3x[2]xf32>
+{
+  %0 = vector.contract #matmat_trait_12 %A, %B, %C
+    : vector<3x1xf32>, vector<1x[2]xf32> into vector<3x[2]xf32>
   return %0 : vector<3x[2]xf32>
 }
 
