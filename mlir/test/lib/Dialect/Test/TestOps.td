@@ -4884,7 +4884,7 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
       return ::mlir::CallInterfaceCallable();
     }
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+      if (auto sym = dyn_cast<::mlir::SymbolRefAttr>(callee))
         (*this)->setDiscardableAttr("callee", sym);
       else
         (*this)->removeDiscardableAttr("callee");
