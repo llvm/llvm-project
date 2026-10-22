@@ -773,12 +773,6 @@ let Predicates = [HasSVE_or_SME] in {
                     (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
               (BIC_ZZZ $a, $b)>;
 
-    // AND_U: NOT's undefined inactive lanes may take the value ~b,
-    // even when the predicates differ.
-    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
-                    (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b)))),
-              (BIC_ZZZ $a, $b)>;
-
     // AND_U: an all-active NOT produces ~b regardless of AND_U's predicate.
     def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
                     (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
