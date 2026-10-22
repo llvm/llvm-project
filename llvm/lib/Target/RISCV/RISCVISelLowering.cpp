@@ -21341,6 +21341,22 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return DAG.getNode(ISD::ADD, DL, VT, Src.getOperand(0),
                        DAG.getAllOnesConstant(DL, VT));
 
+  // Fold (sext_inreg (bitcast (ppaire X, Y)), SrcVT) ->
+  // (sext_inreg (bitcast (freeze X)), SrcVT).
+  // ppaire only replaces the odd narrow elements, which are above the bits that
+  // sext_inreg reads.
+  if (VT.isFixedLengthVector() && Opc == ISD::BITCAST && Src.hasOneUse()) {
+    SDValue Pair = Src.getOperand(0);
+    if (Pair.getOpcode() == RISCVISD::PPAIRE && Pair.hasOneUse() &&
+        VT.getScalarSizeInBits() == 2 * Pair.getScalarValueSizeInBits() &&
+        SrcVT.getScalarSizeInBits() <= Pair.getScalarValueSizeInBits())
+      // The odd elements of X were ignored by the ppaire, but would now be
+      // seen through the bitcast so we need to freeze X.
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
+                         DAG.getBitcast(VT, DAG.getFreeze(Pair.getOperand(0))),
+                         N->getOperand(1));
+  }
+
   return SDValue();
 }
 

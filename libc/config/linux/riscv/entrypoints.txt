@@ -1658,6 +1658,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.execl
     libc.src.unistd.execv
     libc.src.unistd.execvp
+    libc.src.unistd.execvpe
     libc.src.unistd.fork
     libc.src.unistd.getopt
     libc.src.unistd.optarg

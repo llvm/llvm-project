@@ -585,7 +585,6 @@ define <2 x i32> @test_paadd_h_ext_no_trunc(<2 x i32> %x, <2 x i32> %y) {
 ; RV64-LABEL: test_paadd_h_ext_no_trunc:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    paadd.h a0, a0, a1
-; RV64-NEXT:    pzext.w.h a0, a0
 ; RV64-NEXT:    psext.w.h a0, a0
 ; RV64-NEXT:    ret
   %a = shl <2 x i32> %x, splat (i32 16)
@@ -668,7 +667,6 @@ define <4 x i16> @test_paadd_b_ext_no_trunc(<4 x i16> %x, <4 x i16> %y) {
 ; RV64-LABEL: test_paadd_b_ext_no_trunc:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    paadd.b a0, a0, a1
-; RV64-NEXT:    pzext.h.b a0, a0
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    ret
   %a = shl <4 x i16> %x, splat (i16 8)

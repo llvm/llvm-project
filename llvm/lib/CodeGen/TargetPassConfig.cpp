@@ -1286,9 +1286,6 @@ bool TargetPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(createRegAllocPass(false));
 
-  // Allow targets to change the register assignments after
-  // fast register allocation.
-  addPostFastRegAllocRewrite();
   return true;
 }
 
