@@ -1131,6 +1131,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
 - Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
+- Fixed a stack overflow when declarations read from modules queued many ODR
+  merge checks at once, such as the members of many class template
+  specializations whose definitions were merged from several modules.
 
 ### OpenACC Specific Changes
 
