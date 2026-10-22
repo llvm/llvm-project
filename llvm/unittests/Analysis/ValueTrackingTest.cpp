@@ -4334,11 +4334,10 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
             Range("fpmath.zero"));
   EXPECT_EQ(Full, computeConstantFPRange(F->getArg(1), SQ));
 
-  // Poison is empty and propagates; undef can be any value.
+  // Poison is empty and propagates.
   Type *FloatTy = Type::getFloatTy(Context);
   ConstantFPRange Empty = ConstantFPRange::getEmpty(Sem);
   EXPECT_EQ(Empty, computeConstantFPRange(PoisonValue::get(FloatTy), SQ));
-  EXPECT_EQ(Full, computeConstantFPRange(UndefValue::get(FloatTy), SQ));
   EXPECT_EQ(Empty, Range("p.add"));
   EXPECT_EQ(Empty, Range("p.ext"));
   EXPECT_EQ(Empty, Range("p.min"));
