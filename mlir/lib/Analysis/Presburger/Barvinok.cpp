@@ -15,6 +15,99 @@ using namespace mlir;
 using namespace presburger;
 using namespace mlir::presburger::detail;
 
+ParticularSolution
+mlir::presburger::detail::findParticularSolution(const IntMatrix &eqs,
+                                                 const IntMatrix &constants) {
+  auto [u, d, v] = eqs.computeSmithNormalForm();
+
+  // We are solving Ax = Bp + C. Now we've obtained UAV = D, where D is the
+  // Smith Normal Form. Hence Ax = (U^{-1} D V^{-1}) x = Bp + C, which means
+  // D(V^{-1}x) = U(Bp + C). We denote y = V^{-1}x, and we solve for y first.
+  //
+  // As D is diagonal, i.e. D = diag(s_1, ..., s_n, 0, ..., 0),
+  // it is obvious that the equation is reduced to the following equalities:
+  //   -  s_1 y_1 = (UBp + UC)_1
+  //   -  s_2 y_2 = (UBp + UC)_2
+  //   -  ...
+  //
+  // So y_n = (UBp + UC)_n / s_n for every s_n != 0. For those s_n = 0, we can
+  // simply set y_n = 0, as we are only finding *a* solution rather than all
+  // solutions. Note that it is not guaranteed that the values will always be
+  // divisible. If it is not, then the parameters are constrained into a
+  // sublattice. These constraints on p are collected in an IntegerRelation and
+  // are also returned.
+
+  unsigned numRows = eqs.getNumRows();
+  unsigned numCols = eqs.getNumColumns();
+  assert(numRows == constants.getNumRows());
+  unsigned numRhsCols = constants.getNumColumns();
+
+  // Bp + C is stored as [B | C]. Hence to calculate UBp + UC, simply do a
+  // matmul.
+  IntMatrix rhs = u.postMultiply(constants);
+
+  // The result, in a form [y_B | y_C] that represents y_B p + y_C.
+  FracMatrix y(numCols, numRhsCols);
+  SmallVector<unsigned> modIndex, eqIndex;
+  for (unsigned i = 0; i < numRows; i++) {
+    MutableArrayRef row = rhs.getRow(i);
+    // It is possible that there are more rows than columns. But by Smith Normal
+    // Form, the extra rows are all zero.
+    auto s = i >= numCols ? DynamicAPInt() : d(i, i);
+
+    // (UBp + UC)_i is essentially (UB)[i, :] \cdot p + (UC)_i.
+    if (s == 0 && std::any_of(row.begin(), row.end(),
+                              [](const DynamicAPInt &x) { return x != 0; }))
+      // This is an equality constraint, e.g. 0x + 3N - 6 == 0 implies N == 2.
+      eqIndex.push_back(i);
+
+    if (s != 0 &&
+        std::any_of(row.begin(), row.end(),
+                    [&](const DynamicAPInt &x) { return x % s != 0; }))
+      // This is a modular constraint, e.g. 2x + 3N - 5 == 0 implies (3N - 5) %
+      // 2 == 0.
+      modIndex.push_back(i);
+
+    // A constraint s_i y_i = (UB)[i, :] p + (UC)_i is found and must be
+    // enforced.
+    if (s != 0) {
+      for (unsigned j = 0; j < numRhsCols; j++)
+        y(i, j) = Fraction(rhs(i, j), s);
+    }
+  }
+
+  // For modular constraints, we use div-locals to capture them.
+  unsigned numParams = numRhsCols - 1;
+  unsigned numLocals = modIndex.size();
+  unsigned dims = numParams + numLocals;
+  auto space = PresburgerSpace::getSetSpace(numParams, 0, numLocals);
+  IntegerRelation constraints(space);
+
+  // First, we'll create the constraints of `p`.
+  for (auto i : eqIndex) {
+    // These means the RHS must be equal to zero, so we can directly add them
+    // as constraints, modulo the locals.
+    auto row = rhs.getRow(i);
+    SmallVector<DynamicAPInt> eq(dims + 1);
+    std::copy(row.begin(), row.end() - 1, eq.begin());
+    eq.back() = row.back();
+    constraints.addEquality(eq);
+  }
+
+  for (auto [j, i] : llvm::enumerate(modIndex)) {
+    // These will use the j'th local variable to express a modulus constraint.
+    auto row = rhs.getRow(i);
+    SmallVector<DynamicAPInt> eq(dims + 1);
+    std::copy(row.begin(), row.end() - 1, eq.begin());
+    // This is the divisor.
+    eq[numParams + j] = -d(i, i);
+    eq.back() = row.back();
+    constraints.addEquality(eq);
+  }
+
+  return {constraints, v.asFracMatrix().postMultiply(y)};
+}
+
 /// Assuming that the input cone is pointed at the origin,
 /// converts it to its dual in V-representation.
 /// Essentially we just remove the all-zeroes constant column.

@@ -48,6 +48,22 @@ using PolyhedronV = IntMatrix;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
+/// An integer particular solution of equation system Ax = Bp + C.
+struct ParticularSolution {
+  // The constraints that p must satisfy for the system to have an integer
+  // solution.
+  IntegerRelation constraint;
+  // Row i is an affine expression for the i'th variable in vector x, in p.
+  FracMatrix solution;
+};
+
+/// Find particular solution of equation system Ax = Bp + C.
+/// The first argument `eqs` corresponds to matrix A,
+/// and the second argument `constants` corresponds to B and C,
+/// where C is the final column.
+ParticularSolution findParticularSolution(const IntMatrix &eqs,
+                                          const IntMatrix &constants);
+
 inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
