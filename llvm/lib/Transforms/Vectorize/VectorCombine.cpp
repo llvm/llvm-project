@@ -2115,7 +2115,6 @@ bool VectorCombine::concatStores(StoreInst &First, StoreInst &Second,
   auto *NewStore =
       Builder.CreateAlignedStore(Packed, First.getPointerOperand(), Alignment);
   propagateMetadata(NewStore, {&First, &Second});
-  Worklist.pushValue(Packed);
   if (NextInst == &Second)
     NextInst = Second.getNextNode();
   eraseInstruction(First);
