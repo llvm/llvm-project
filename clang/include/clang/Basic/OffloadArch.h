@@ -90,10 +90,7 @@ public:
   bool isAMDGCNSPIRV() const { return V == TargetArch::AMDGCNSPIRV; }
   bool isIntelCPU() const { return V == TargetArch::IntelCPU; }
   bool isIntelGPU() const { return V == TargetArch::IntelGPU; }
-  // TODO: Decide whether IntelIGCA counts as Intel here. clang-sycl-linker
-  // uses isIntel() to decide on AOT compilation, and runAOTCompile would then
-  // need an IntelIGCA dispatch.
-  bool isIntel() const { return isIntelCPU() || isIntelGPU(); }
+  bool isIntel() const { return isIntelCPU() || isIntelGPU() || isIntelIGCA(); }
   bool isGeneric() const { return V == TargetArch::Generic; }
   bool isUnused() const { return V == TargetArch::Unused; }
   bool isUnknown() const { return V == TargetArch::Unknown; }
@@ -116,8 +113,6 @@ public:
   bool operator<(const OffloadArch &Other) const {
     return std::tie(V, Kind) < std::tie(Other.V, Other.Kind);
   }
-  // TODO test cases for whether or not IntelIGCA functions properly for these
-  // comparisons
 };
 
 const char *OffloadArchToString(OffloadArch A);
