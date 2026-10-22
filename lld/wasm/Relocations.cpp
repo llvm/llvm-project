@@ -102,13 +102,24 @@ void scanRelocations(InputChunk *chunk) {
     switch (reloc.Type) {
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_TABLE_INDEX_I64:
+      // These relocations target the data section and are handled
+      // by `generateRelocationCode`. GOT accesses are handled below.
+      if (requiresGOTAccess(sym))
+        break;
+      out.elemSec->addEntry(cast<FunctionSymbol>(sym));
+      break;
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_SLEB64:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB64:
+      // These relocations target the code section.
       if (requiresGOTAccess(sym))
-        break;
-      out.elemSec->addEntry(cast<FunctionSymbol>(sym));
+        addGOTEntry(sym);
+      // The indirect call needs a table element that can only be added
+      // for defined functions.
+      if (sym->isDefined())
+        out.elemSec->addEntry(cast<FunctionSymbol>(sym));
+      // Undefined symbols are handled below.
       break;
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_GLOBAL_INDEX_I32:
