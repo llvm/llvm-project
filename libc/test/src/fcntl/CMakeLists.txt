@@ -1,11 +1,11 @@
-add_custom_target(libc_fcntl_unittests)
+add_libc_testsuite(libc-fcntl-tests)
 
 add_subdirectory(testdata)
 
 add_libc_test(
   creat_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     creat_test.cpp
   DEPENDS
@@ -22,7 +22,7 @@ add_libc_test(
 add_libc_test(
   fcntl_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     fcntl_test.cpp
   DEPENDS
@@ -42,7 +42,7 @@ add_libc_test(
 add_libc_test(
   openat_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     openat_test.cpp
   DEPENDS
@@ -59,7 +59,7 @@ add_libc_test(
 add_libc_test(
   posix_fadvise_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     posix_fadvise_test.cpp
   DEPENDS
@@ -79,7 +79,7 @@ add_libc_test(
 add_libc_test(
   posix_fadvise64_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     posix_fadvise64_test.cpp
   DEPENDS
@@ -100,7 +100,7 @@ add_libc_test(
 add_libc_test(
   posix_fallocate_test
   SUITE
-    libc_fcntl_unittests
+    libc-fcntl-tests
   SRCS
     posix_fallocate_test.cpp
   DEPENDS

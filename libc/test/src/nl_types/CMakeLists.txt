@@ -1,4 +1,4 @@
-add_custom_target(libc-nl-types-tests)
+add_libc_testsuite(libc-nl-types-tests)
 
 add_libc_test(
   nl_types_test

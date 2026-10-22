@@ -317,28 +317,42 @@ if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
 endif()
 
 # Rule to add a test suite in the hierarchy.
-# Automatically creates <suite_name> (run target) and <suite_name>-build (build target).
-# Connects them to libc-tests and libc-tests-build.
+# Usage:
+#   add_libc_testsuite(
+#     <suite_name>
+#     [PARENT <parent_suite> | ROOT]
+#     [BUILD_ONLY]
+#   )
+# Automatically creates <suite_name> (run target) and <suite_name>-build (build target),
+# and connects them to <parent_suite> (defaulting to libc-tests unless ROOT is specified).
 function(add_libc_testsuite suite_name)
-  if(NOT TARGET ${suite_name})
-    add_custom_target(${suite_name})
+  llvm_libc_parse_arguments(SUITE ${ARGN})
+
+  if(SUITE_ROOT AND SUITE_PARENT)
+    message(FATAL_ERROR
+      "Cannot specify both ROOT and PARENT for test suite ${suite_name}.")
   endif()
 
-  if(NOT TARGET ${suite_name}-build)
-    add_custom_target(${suite_name}-build)
-    add_dependencies(libc-tests ${suite_name})
-    add_dependencies(libc-tests-build ${suite_name}-build)
+  add_custom_target(${suite_name})
+  add_custom_target(${suite_name}-build)
+
+  if(SUITE_BUILD_ONLY)
+    set_target_properties(${suite_name} PROPERTIES BUILD_ONLY TRUE)
   endif()
-endfunction()
 
-function(add_libc_exhaustive_testsuite suite_name)
-  add_libc_testsuite(${suite_name})
-  add_dependencies(exhaustive-check-libc ${suite_name})
-endfunction()
-
-function(add_libc_long_running_testsuite suite_name)
-  add_libc_testsuite(${suite_name})
-  add_dependencies(libc-long-running-tests ${suite_name})
+  if(NOT SUITE_ROOT)
+    if(SUITE_PARENT)
+      set(parent_suite ${SUITE_PARENT})
+    else()
+      set(parent_suite libc-tests)
+    endif()
+    if(SUITE_BUILD_ONLY)
+      add_dependencies(${parent_suite} ${suite_name}-build)
+    else()
+      add_dependencies(${parent_suite} ${suite_name})
+    endif()
+    add_dependencies(${parent_suite}-build ${suite_name}-build)
+  endif()
 endfunction()
 
 # Helper function for create_libc_test: returns the list of libc entrypoints
@@ -630,16 +644,14 @@ function(_add_libc_test_runner fq_target_name fq_build_target_name test_args loa
 endfunction()
 
 # Helper function for create_libc_test: registers the test and its build target
-# with the appropriate test suite (or libc-tests / libc-tests-build).
-function(_register_libc_test_with_suite fq_target_name fq_build_target_name suite)
-  if(suite)
-    add_libc_testsuite(${suite})
-    add_dependencies(${suite} ${fq_target_name})
-    add_dependencies(${suite}-build ${fq_build_target_name})
+# with the appropriate test suite.
+function(_register_libc_test_with_suite fq_target_name fq_build_target_name suite build_only)
+  if(build_only)
+    add_dependencies(${suite} ${fq_build_target_name})
   else()
-    add_dependencies(libc-tests ${fq_target_name})
-    add_dependencies(libc-tests-build ${fq_build_target_name})
+    add_dependencies(${suite} ${fq_target_name})
   endif()
+  add_dependencies(${suite}-build ${fq_build_target_name})
 endfunction()
 
 # Core rule to create a libc test executable and runner (overlay or hermetic).
@@ -649,6 +661,11 @@ function(create_libc_test fq_target_name)
   endif()
 
   llvm_libc_parse_arguments(TEST ${ARGN})
+
+  if(NOT TEST_SUITE)
+    message(FATAL_ERROR "SUITE not specified for ${fq_target_name}.")
+  endif()
+  get_target_property(suite_build_only ${TEST_SUITE} BUILD_ONLY)
 
   # 1. Validate build mode, target platform, and external library requirements
   if(TEST_NEED_MPC)
@@ -768,8 +785,8 @@ function(create_libc_test fq_target_name)
   endif()
 
   # 3. Create the test executable
-  if(TEST_NO_RUN_POSTBUILD)
-    set(fq_build_target_name ${fq_target_name})
+  if(TEST_BUILD_ONLY OR suite_build_only)
+    set(fq_build_target_name ${fq_target_name}.__build_only__)
   else()
     set(fq_build_target_name ${fq_target_name}.__build__)
   endif()
@@ -827,25 +844,22 @@ function(create_libc_test fq_target_name)
     ${fq_deps_list}
   )
 
-  # 5. Add test runner target if post-build run is enabled
-  if(NOT TEST_NO_RUN_POSTBUILD)
-    _add_libc_test_runner(
-      ${fq_target_name}
-      ${fq_build_target_name}
-      "${TEST_ARGS}"
-      "${TEST_LOADER_ARGS}"
-      "${TEST_ENV}"
-    )
-  endif()
+  # 5. Add test runner target
+  _add_libc_test_runner(
+    ${fq_target_name}
+    ${fq_build_target_name}
+    "${TEST_ARGS}"
+    "${TEST_LOADER_ARGS}"
+    "${TEST_ENV}"
+  )
 
   # 6. Register with test suite
-  if(TEST_IS_GPU_BENCHMARK)
-    if(TEST_SUITE)
-      add_dependencies(${TEST_SUITE} ${fq_target_name})
-    endif()
-  else()
-    _register_libc_test_with_suite(${fq_target_name} ${fq_build_target_name} "${TEST_SUITE}")
-  endif()
+  _register_libc_test_with_suite(
+    ${fq_target_name}
+    ${fq_build_target_name}
+    "${TEST_SUITE}"
+    "${TEST_BUILD_ONLY}"
+  )
 endfunction()
 
 
@@ -1091,60 +1105,19 @@ function(add_integration_test test_name)
     libc.test.IntegrationTest.test
     ${INTEGRATION_TEST_DEPENDS})
 
-  # We have to use a separate var to store the command as a list because
-  # the COMMAND option of `add_custom_target` cannot handle empty vars in the
-  # command. For example, if INTEGRATION_TEST_ENV is empty, the actual
-  # command also will not run. So, we use this list and tell `add_custom_target`
-  # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
-  # makes `add_custom_target` construct the correct command and execute it.
-  set(test_cmd
-    ${INTEGRATION_TEST_ENV}
-    $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-    ${CMAKE_CROSSCOMPILING_EMULATOR}
-    ${INTEGRATION_TEST_LOADER_ARGS}
-    $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
-  # Generate a sidecar .params file alongside the executable for any test that
-  # requires specific command-line arguments or environment variables.  The
-  # LibcTest lit format reads this file at test time.  Format: one arg per line,
-  # a "---" separator, then one KEY=VALUE env entry per line.
-  set(_params_content "")
-  foreach(_arg IN LISTS INTEGRATION_TEST_LOADER_ARGS)
-    string(APPEND _params_content "${_arg}\n")
-  endforeach()
-  string(APPEND _params_content "---\n")
-  foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
-    string(APPEND _params_content "${_arg}\n")
-  endforeach()
-  string(APPEND _params_content "---\n")
-  foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
-    string(APPEND _params_content "${_env_entry}\n")
-  endforeach()
-
-  if(INTEGRATION_TEST_LOADER_ARGS OR INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
-    file(GENERATE
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
-      CONTENT "${_params_content}"
-    )
-  endif()
-
-  add_custom_target(
+  _add_libc_test_runner(
     ${fq_target_name}
-    COMMAND ${test_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Running integration test ${fq_target_name}"
+    ${fq_build_target_name}
+    "${INTEGRATION_TEST_ARGS}"
+    "${INTEGRATION_TEST_LOADER_ARGS}"
+    "${INTEGRATION_TEST_ENV}"
   )
-  if(INTEGRATION_TEST_SUITE)
-    add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
-    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the
-    # test executable to it as a dependency. This allows building the
-    # test binaries for Lit without triggering their execution.
-    if(TARGET ${INTEGRATION_TEST_SUITE}-build)
-      add_dependencies(${INTEGRATION_TEST_SUITE}-build ${fq_build_target_name})
-    endif()
-  endif()
-  if(TARGET libc-integration-tests-build)
-    add_dependencies(libc-integration-tests-build ${fq_build_target_name})
-  endif()
+  _register_libc_test_with_suite(
+    ${fq_target_name}
+    ${fq_build_target_name}
+    "${INTEGRATION_TEST_SUITE}"
+    FALSE
+  )
 endfunction()
 
 # A unified function to add a libc test.
