@@ -42,7 +42,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -881,34 +880,13 @@ static bool isIsolatedCallerStorage(Argument &Arg) {
   return true;
 }
 
-/// Return true if A and B are rooted in known, non-overlapping objects. This
-/// supplements an imprecise MayAlias result while walking MemorySSA.
-static bool haveDistinctIdentifiedUnderlyingObjects(const Value *A,
-                                                    const Value *B,
-                                                    const LoopInfo &LI) {
-  SmallVector<const Value *, 4> AObjects;
-  SmallVector<const Value *, 4> BObjects;
-  getUnderlyingObjects(A, AObjects, &LI);
-  getUnderlyingObjects(B, BObjects, &LI);
-  if (AObjects.empty() || BObjects.empty())
-    return false;
-  for (const Value *AObject : AObjects) {
-    if (!isIdentifiedObject(AObject))
-      return false;
-    for (const Value *BObject : BObjects)
-      if (AObject == BObject || !isIdentifiedObject(BObject))
-        return false;
-  }
-  return true;
-}
-
 // Tracks constant and alloca values while walking MemorySSA.
 struct UnanimousValueState {
   Constant *UnanimousValue = nullptr;
   // True while all relevant stores yield the same constant.
   bool IsUnanimousConstant = true;
   // True while all relevant stores contain alloca pointers.
-  bool IsUnanimousAlloca;
+  bool IsUnanimousAlloca = true;
   // True if we encounter a relevant store.
   bool SawStore = false;
 };
@@ -925,8 +903,7 @@ struct UnanimousValueState {
 static bool findNextMemoryDefAndGetUnanimousValue(
     MemoryAccess *Access, const MemoryLocation &Loc, Type *LoadTy,
     const DataLayout &DL, MemorySSA &MSSA, BatchAAResults &BAA,
-    const LoopInfo &LI, SmallPtrSetImpl<MemoryAccess *> &Visited,
-    UnanimousValueState &State) {
+    SmallPtrSetImpl<MemoryAccess *> &Visited, UnanimousValueState &State) {
 
   // Limit compile time for large memory graphs.
   constexpr unsigned MaxMemoryAccesses = 1000;
@@ -942,7 +919,7 @@ static bool findNextMemoryDefAndGetUnanimousValue(
       MemoryAccess *Clobber =
           MSSA.getWalker()->getClobberingMemoryAccess(Incoming, Loc, BAA);
       if (!findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
-                                                 BAA, LI, Visited, State))
+                                                 BAA, Visited, State))
         return false;
     }
     return true;
@@ -959,13 +936,11 @@ static bool findNextMemoryDefAndGetUnanimousValue(
   MemoryLocation StoreLoc = MemoryLocation::get(Store);
   AliasResult AR = BAA.alias(StoreLoc, Loc);
   // If this store writes to some other object or field, keep looking.
-  if (AR == AliasResult::NoAlias ||
-      (AR == AliasResult::MayAlias &&
-       haveDistinctIdentifiedUnderlyingObjects(StoreLoc.Ptr, Loc.Ptr, LI))) {
+  if (AR == AliasResult::NoAlias) {
     MemoryAccess *Clobber = MSSA.getWalker()->getClobberingMemoryAccess(
         Def->getDefiningAccess(), Loc, BAA);
     return findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
-                                                 BAA, LI, Visited, State);
+                                                 BAA, Visited, State);
   }
 
   // This is a store to Loc. Determine whether it stores the unanimous
@@ -1024,12 +999,11 @@ static std::optional<UnanimousValueState>
 findUnanimousConstantsFromMemoryAccess(MemoryAccess *Access,
                                        const MemoryLocation &Loc, Type *LoadTy,
                                        const DataLayout &DL, MemorySSA &MSSA,
-                                       BatchAAResults &BAA,
-                                       const LoopInfo &LI) {
+                                       BatchAAResults &BAA) {
   SmallPtrSet<MemoryAccess *, 32> Visited;
   UnanimousValueState State{nullptr, true, LoadTy->isPointerTy(), false};
   if (!findNextMemoryDefAndGetUnanimousValue(Access, Loc, LoadTy, DL, MSSA, BAA,
-                                             LI, Visited, State) ||
+                                             Visited, State) ||
       !State.SawStore)
     return std::nullopt;
   return State;
@@ -1059,7 +1033,6 @@ static bool findUnanimousConstantsFromArg(
       Function &Caller = *Call->getFunction();
       AAResults &AA = FAM.getResult<AAManager>(Caller);
       BatchAAResults BAA(AA);
-      const LoopInfo &LI = FAM.getResult<LoopAnalysis>(Caller);
       MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(Caller).getMSSA();
 
       // Walk backwards through the memory state immediately before the call
@@ -1080,7 +1053,7 @@ static bool findUnanimousConstantsFromArg(
           MSSA.getWalker()->getClobberingMemoryAccess(Start, Loc, BAA);
       std::optional<UnanimousValueState> Value =
           findUnanimousConstantsFromMemoryAccess(Clobber, Loc, Part.Ty, DL,
-                                                 MSSA, BAA, LI);
+                                                 MSSA, BAA);
       Constant *CallConstant =
           Value && Value->IsUnanimousConstant ? Value->UnanimousValue : nullptr;
       if (!CallConstant || (UnanimousValue && UnanimousValue != CallConstant))
@@ -1108,10 +1081,11 @@ static bool findUnanimousConstantsFromArg(
   return true;
 }
 
-static void propagateConstantParts(Argument &Arg,
+static bool propagateConstantParts(Argument &Arg,
                                    ArrayRef<OffsetAndArgPart> Parts) {
   const DataLayout &DL = Arg.getParent()->getDataLayout();
 
+  SmallVector<std::pair<LoadInst *, Constant *>, 16> LoadsToReplace;
   SmallVector<WeakTrackingVH, 16> DeadLoads;
   for (BasicBlock &BB : *Arg.getParent()) {
     for (Instruction &I : BB) {
@@ -1136,11 +1110,38 @@ static void propagateConstantParts(Argument &Arg,
         continue;
       assert(C->getType() == Load->getType() &&
              "constant type does not match promotable load");
-      Load->replaceAllUsesWith(C);
-      DeadLoads.push_back(Load);
+
+      // Do not turn an indirect call into a direct call because this pass does
+      // not update the lazy call graph. Also handle pointer casts by adding
+      // them to the worklist.
+      if (isa<Function>(C->stripPointerCasts())) {
+        SmallVector<Value *, 4> Worklist;
+        SmallPtrSet<Value *, 4> Visited;
+        Worklist.push_back(Load);
+        while (!Worklist.empty()) {
+          Value *V = Worklist.pop_back_val();
+          if (!Visited.insert(V).second)
+            continue;
+          for (Use &U : V->uses()) {
+            if (auto *Call = dyn_cast<CallBase>(U.getUser());
+                Call && Call->isCallee(&U))
+              return false;
+            Value *UserV = U.getUser();
+            if (UserV->stripPointerCasts() == Load)
+              Worklist.push_back(UserV);
+          }
+        }
+      }
+      LoadsToReplace.emplace_back(Load, C);
     }
   }
+
+  for (auto [Load, C] : LoadsToReplace) {
+    Load->replaceAllUsesWith(C);
+    DeadLoads.push_back(Load);
+  }
   RecursivelyDeleteTriviallyDeadInstructions(DeadLoads);
+  return true;
 }
 
 /// PromoteArguments - This method checks the specified function to see if there
@@ -1258,11 +1259,10 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     }
   }
   if (!ConstantAggregates.empty()) {
-    for (auto &[Arg, Parts] : ConstantAggregates) {
-      propagateConstantParts(*Arg, Parts);
-    }
-    CopiedConstants = true;
-    return nullptr;
+    for (auto &[Arg, Parts] : ConstantAggregates)
+      CopiedConstants |= propagateConstantParts(*Arg, Parts);
+    if (CopiedConstants)
+      return nullptr;
   }
 
   // Check to see which arguments are promotable.  If an argument is promotable,
