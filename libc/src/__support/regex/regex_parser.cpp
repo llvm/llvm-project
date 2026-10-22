@@ -61,7 +61,7 @@ constexpr bool is_unimplemented_ere_escape(char c) {
 
 } // namespace
 
-ErrorOr<ExprId> parse_ere(cpp::string_view pattern, [[maybe_unused]] int cflags,
+ErrorOr<ExprId> parse_ere(cpp::string_view pattern, int cflags,
                           ExprPool &pool) {
   ErrorOr<ExprId> cur = pool.empty_str();
   if (!cur.has_value())
@@ -71,6 +71,7 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, [[maybe_unused]] int cflags,
   while (!rem.empty()) {
     char c = rem.front();
     rem.remove_prefix(1);
+    ErrorOr<ExprId> atom = INVALID_EXPR_ID;
     switch (c) {
     case '\\': {
       if (rem.empty())
@@ -79,13 +80,28 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, [[maybe_unused]] int cflags,
       rem.remove_prefix(1);
       if (is_unimplemented_ere_escape(c))
         return Error(REG_BADPAT);
+      atom = pool.make_lit(c);
       break;
     }
+    case '.': {
+      ByteSet bs;
+      if (cflags & REG_NEWLINE) {
+        bs.set_range(0, '\n' - 1);
+        bs.set_range('\n' + 1, BYTE_SET_BITS - 1);
+      } else {
+        bs.flip();
+      }
+      atom = pool.make_byte_set(bs);
+      break;
+    }
+    case '^':
+      atom = pool.make_anchor(ANCHOR_BOL);
+      break;
+    case '$':
+      atom = pool.make_anchor(ANCHOR_EOL);
+      break;
     // TODO: Wire ERE metacharacters as each operator is implemented in
     // subsequent patches.
-    case '.':
-    case '^':
-    case '$':
     case '*':
     case '+':
     case '?':
@@ -96,13 +112,13 @@ ErrorOr<ExprId> parse_ere(cpp::string_view pattern, [[maybe_unused]] int cflags,
     case '|':
       return Error(REG_BADPAT);
     default:
+      atom = pool.make_lit(c);
       break;
     }
 
-    ErrorOr<ExprId> lit = pool.make_lit(c);
-    if (!lit.has_value())
-      return lit;
-    cur = pool.make_concat(*cur, *lit);
+    if (!atom.has_value())
+      return atom;
+    cur = pool.make_concat(*cur, *atom);
     if (!cur.has_value())
       return cur;
   }

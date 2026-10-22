@@ -291,7 +291,7 @@
 "[LWG4453](https://wg21.link/LWG4453)","`atomic_ref<cv T>::required_alignment` should be the same as for `T`","2026-03 (Croydon)","","","[#189833](https://github.com/llvm/llvm-project/issues/189833)",""
 "[LWG4454](https://wg21.link/LWG4454)","`assert` should forbid `co_await` and `co_yield`","2026-03 (Croydon)","","","[#189834](https://github.com/llvm/llvm-project/issues/189834)",""
 "[LWG4457](https://wg21.link/LWG4457)","freestanding for `stable_sort`, `stable_partition` and `inplace_merge`","2026-03 (Croydon)","","","[#189835](https://github.com/llvm/llvm-project/issues/189835)",""
-"[LWG4460](https://wg21.link/LWG4460)","Missing *Throws:* for last `variant` constructor","2026-03 (Croydon)","","","[#189836](https://github.com/llvm/llvm-project/issues/189836)",""
+"[LWG4460](https://wg21.link/LWG4460)","Missing *Throws:* for last `variant` constructor","2026-03 (Croydon)","{{NothingToDo}}","","[#189836](https://github.com/llvm/llvm-project/issues/189836)",""
 "[LWG4467](https://wg21.link/LWG4467)","`hive::splice` can throw `bad_alloc`","2026-03 (Croydon)","","","[#189837](https://github.com/llvm/llvm-project/issues/189837)",""
 "[LWG4468](https://wg21.link/LWG4468)","§[const.wrap.class] ""`operator decltype(auto)`"" is ill-formed","2026-03 (Croydon)","{{Complete}}","23","[#189838](https://github.com/llvm/llvm-project/issues/189838)",""
 "[LWG4469](https://wg21.link/LWG4469)","Names of parameters of addressable function shall remain unspecified","2026-03 (Croydon)","","","[#189839](https://github.com/llvm/llvm-project/issues/189839)",""

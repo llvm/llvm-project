@@ -1017,12 +1017,10 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
     return true;
   }
   if (Attr.isStringAttribute()) {
-    StringRef Kind = Attr.getKindAsString();
-    if (AttrSet.hasAttribute(Kind)) {
-      if (!ForceReplace)
-        return false;
-    }
-    AB.addAttribute(Kind, Attr.getValueAsString());
+    Attribute Existing = AttrSet.getAttribute(Attr.getKindAsString());
+    if (Existing.isValid() && (!ForceReplace || Existing == Attr))
+      return false;
+    AB.addAttribute(Attr);
     return true;
   }
   if (Attr.isIntAttribute()) {
@@ -1204,7 +1202,8 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
   if (HasChanged == ChangeStatus::UNCHANGED)
     return ChangeStatus::UNCHANGED;
 
-  AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
+  if (!AM.empty())
+    AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
 
   Iter->second = AL;

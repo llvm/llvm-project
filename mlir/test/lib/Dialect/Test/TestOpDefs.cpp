@@ -1778,7 +1778,6 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
     const auto *version =
         reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
     if ((version->major_ < 2)) {
-      llvm::outs() << "downgrading op properties...\n";
       return;
     }
   }
@@ -1819,6 +1818,10 @@ void TestOpWithVersionedProperties::writeToMlirBytecode(
     mlir::DialectBytecodeWriter &writer,
     const test::VersionedProperties &prop) {
   writer.writeVarInt(prop.value1);
+  auto version = writer.getDialectVersion<test::TestDialect>();
+  if (succeeded(version) &&
+      static_cast<const TestDialectVersion *>(*version)->major_ < 2)
+    return;
   writer.writeVarInt(prop.value2);
 }
 

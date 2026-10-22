@@ -1686,15 +1686,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
-      // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
-      // MULH[SU]. The custom lowering unrolls to scalar i64 [SU]MUL_LOHI,
-      // which is only legalizable when i64 is a legal type.
-      if (Subtarget.is64Bit()) {
-        setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
-        setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
-      } else {
-        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
-      }
+      setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
+
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -2750,7 +2743,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
-  if (Subtarget.isTargetWin64()) {
+  // The Win64 C ABI passes i128 by reference and returns it in XMM0. The
+  // libcalls for i128 division, remainder and floating point conversions are
+  // compiled with that ABI wherever it is the default C convention (Windows and
+  // UEFI), so lower them accordingly there.
+  if (Subtarget.isCallingConvWin64(CallingConv::C)) {
     setOperationAction(ISD::SDIV, MVT::i128, Custom);
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
@@ -20621,7 +20618,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if (Subtarget.isCallingConvWin64(CallingConv::C) && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -21128,7 +21125,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if (Subtarget.isCallingConvWin64(CallingConv::C) && SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -30730,8 +30727,16 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     return splitVectorIntBinary(Op, DAG, dl);
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i64) {
-    SDValue Lo, Hi;
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    // Scalarize if i64 MUL support is better than vXi64.
+    if ((VT == MVT::v2i64 || VT == MVT::v4i64) &&
+        TLI.isOperationLegal(ISD::MUL, MVT::i64) &&
+        !TLI.isOperationLegal(ISD::MUL, VT)) {
+      if (IsSigned || !(A.hasOneUse() || B.hasOneUse()))
+        return DAG.UnrollVectorOp(Op.getNode());
+    }
+
+    SDValue Lo, Hi;
     TLI.forceExpandMultiply(DAG, dl, IsSigned, Lo, Hi, A, B);
     return Hi;
   }
@@ -30959,7 +30964,7 @@ static SDValue LowerMULO(SDValue Op, const X86Subtarget &Subtarget,
 }
 
 SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && VT.getSizeInBits() == 128 &&
          "Unexpected return type for lowering");
@@ -31023,7 +31028,7 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
 SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
                                                    SelectionDAG &DAG,
                                                    SDValue &Chain) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -31056,7 +31061,7 @@ SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
 
 SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -34974,8 +34979,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MUL:                return LowerMUL(Op, Subtarget, DAG);
   case ISD::MULHS:
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
-  case ISD::SMUL_LOHI:
-  case ISD::UMUL_LOHI:          return DAG.UnrollVectorOp(Op.getNode());
   case ISD::ROTL:
   case ISD::ROTR:               return LowerRotate(Op, Subtarget, DAG);
   case ISD::SRA:
@@ -36125,7 +36128,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT == MVT::i128 && Subtarget.isTargetWin64()) {
+    if (VT == MVT::i128 && Subtarget.isCallingConvWin64(CallingConv::C)) {
       SDValue Chain;
       SDValue V = LowerWin64_FP_TO_INT128(SDValue(N, 0), DAG, Chain);
       Results.push_back(V);
@@ -58252,14 +58255,15 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  EVT ExtraVT = cast<VTSDNode>(N1)->getVT();
+  EVT ExtVT = cast<VTSDNode>(N1)->getVT();
+  unsigned ExtVTBits = ExtVT.getScalarSizeInBits();
   SDLoc dl(N);
 
   // The SIGN_EXTEND_INREG to v4i64 is expensive operation on the
   // both SSE and AVX2 since there is no sign-extended shift right
   // operation on a vector with 64-bit elements.
-  //(sext_in_reg (v4i64 anyext (v4i32 x )), ExtraVT) ->
-  // (v4i64 sext (v4i32 sext_in_reg (v4i32 x , ExtraVT)))
+  //(sext_in_reg (v4i64 anyext (v4i32 x )), ExtVT) ->
+  // (v4i64 sext (v4i32 sext_in_reg (v4i32 x , ExtVT)))
   if (VT == MVT::v4i64 && (N0.getOpcode() == ISD::ANY_EXTEND ||
                            N0.getOpcode() == ISD::SIGN_EXTEND)) {
     SDValue N00 = N0.getOperand(0);
@@ -58275,12 +58279,27 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
     if (SDValue Promote = PromoteMaskArithmetic(N0, dl, DAG, Subtarget))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Promote, N1);
 
-    if (N00.getValueType() == MVT::v4i32 && ExtraVT.getSizeInBits() < 128) {
+    if (N00.getValueType() == MVT::v4i32 && ExtVT.getSizeInBits() < 128) {
       SDValue Tmp =
           DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::v4i32, N00, N1);
       return DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i64, Tmp);
     }
   }
+
+  // fold (sext_in_reg (logic x, y)) -> (logic x, (sext_in_reg y))
+  // iff x (or y) is already sign extended.
+  if (VT.isVector() && isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0.getOperand(0)))
+      return DAG.getNode(
+          N0.getOpcode(), dl, VT, N0.getOperand(0),
+          DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, N0.getOperand(1), N1));
+    if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0.getOperand(1)))
+      return DAG.getNode(
+          N0.getOpcode(), dl, VT,
+          DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, N0.getOperand(0), N1),
+          N0.getOperand(1));
+  }
+
   return SDValue();
 }
 
