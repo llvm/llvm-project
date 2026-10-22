@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
@@ -19,13 +20,11 @@ package(
 
 licenses(["notice"])
 
-# TODO: Actually compute version info
-write_file(
+expand_template(
     name = "config_version_gen",
     out = "include/lld/Common/Version.inc",
-    content = [
-        "#define LLD_VERSION_STRING \"{}\"".format(LLVM_VERSION),
-    ],
+    substitutions = {"@LLD_VERSION@": LLVM_VERSION},
+    template = "include/lld/Common/Version.inc.in",
 )
 
 write_file(

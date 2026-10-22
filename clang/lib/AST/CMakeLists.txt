@@ -70,6 +70,7 @@ add_clang_library(clangAST
   InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp
+  ByteCode/Block.cpp
   ByteCode/ByteCodeEmitter.cpp
   ByteCode/Compiler.cpp
   ByteCode/Context.cpp
@@ -79,12 +80,12 @@ add_clang_library(clangAST
   ByteCode/Function.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
+  ByteCode/InterpBuiltinObjectSize.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
   ByteCode/InitMap.cpp
   ByteCode/Interp.cpp
-  ByteCode/InterpBlock.cpp
   ByteCode/InterpFrame.cpp
   ByteCode/InterpStack.cpp
   ByteCode/InterpState.cpp

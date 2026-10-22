@@ -576,7 +576,8 @@ def Shard_AllReduceOp : Shard_CollectiveCommunicationOpBase<"all_reduce", [
     AnyTypeOf<[AnyMemRef, AnyRankedTensor]>:$result
   );
   let assemblyFormat = [{
-    $input `on` $grid (`grid_axes` `=` $grid_axes^)? (`reduction` `=` $reduction^)?
+    $input `on` $grid (`grid_axes` `=` $grid_axes^)?
+    (`reduction` `=` enum($reduction)^)?
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasCanonicalizer = 1;
@@ -888,7 +889,7 @@ def Shard_ReduceOp : Shard_CollectiveCommunicationOpBase<"reduce", [
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
-    (`reduction` `=` $reduction^)?
+    (`reduction` `=` enum($reduction)^)?
     `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
     attr-dict `:` functional-type(operands, results)
   }];
@@ -952,7 +953,7 @@ def Shard_ReduceScatterOp : Shard_CollectiveCommunicationOpBase<"reduce_scatter"
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
-    (`reduction` `=` $reduction^)?
+    (`reduction` `=` enum($reduction)^)?
     `scatter_dim` `=` $scatter_dim
     attr-dict `:` type($input) `->` type($result)
   }];

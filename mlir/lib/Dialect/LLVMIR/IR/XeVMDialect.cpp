@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
@@ -358,30 +359,143 @@ LogicalResult MMAMxOp::verify() {
   return success();
 }
 
+/// Number of bits one narrow float value occupies. The narrow values of a
+/// `xevm.truncf` destination, or a `xevm.extf` source, are packed into whole
+/// bytes, so a sub-byte format fits several values per byte.
+static int64_t getNarrowFloatBitWidth(TruncfDstElemTypes etype) {
+  return etype == TruncfDstElemTypes::E2M1 ? 4 : 8;
+}
+static int64_t getNarrowFloatBitWidth(ExtfSrcElemTypes etype) {
+  return etype == ExtfSrcElemTypes::E2M1 ? 4 : 8;
+}
+
+/// Number of values `ty` holds: its length if it is a vector, and one
+/// otherwise. SPIR-V has no vector of length one and uses a scalar instead, so
+/// a conversion of two fp4 values, which pack into a single byte, has a scalar
+/// on its packed side.
+static int64_t getNumValues(Type ty) {
+  if (auto vecTy = dyn_cast<VectorType>(ty))
+    return vecTy.getNumElements();
+  return 1;
+}
+
+/// Total bit width of `ty`, which is a scalar or a vector of a scalar.
+static int64_t getPackedBitWidth(Type ty) {
+  if (auto vecTy = dyn_cast<VectorType>(ty))
+    return vecTy.getNumElements() * vecTy.getElementTypeBitWidth();
+  return ty.getIntOrFloatBitWidth();
+}
+
+/// Verifies that `packedTy` is exactly wide enough to hold `numValues` values
+/// of `narrowBits` bits each, rounded up to whole bytes.
+static LogicalResult verifyPackedWidth(Operation *op, StringRef packedName,
+                                       Type packedTy, int64_t numValues,
+                                       int64_t narrowBits) {
+  int64_t expected = llvm::alignTo(numValues * narrowBits, 8);
+  int64_t actual = getPackedBitWidth(packedTy);
+  if (actual != expected)
+    return op->emitOpError()
+           << packedName << " should be " << expected << " bits wide to hold "
+           << numValues << " value(s) of " << narrowBits << " bits, but it is "
+           << actual;
+  return success();
+}
+
 LogicalResult TruncfOp::verify() {
   Type srcTy = getSrc().getType();
   Type dstTy = getDst().getType();
-  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
-    return emitOpError("both src and dst should be vector types or both should "
-                       "be scalar types");
   if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() <=
       getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
     return emitError(
         "dst element bitwidth should be less than src element bitwidth");
-  return success();
+  return verifyPackedWidth(*this, "dst", dstTy, getNumValues(srcTy),
+                           getNarrowFloatBitWidth(getDstEtype().getEtype()));
 }
 
 LogicalResult ExtfOp::verify() {
   Type srcTy = getSrc().getType();
   Type dstTy = getDst().getType();
-  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
-    return emitOpError("both src and dst should be vector types or both should "
-                       "be scalar types");
   if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() >=
       getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
     return emitError(
         "dst element bitwidth should be greater than src element bitwidth");
-  return success();
+  return verifyPackedWidth(*this, "src", srcTy, getNumValues(dstTy),
+                           getNarrowFloatBitWidth(getSrcEtype().getEtype()));
+}
+
+/// Float semantics the element type attributes of `xevm.truncf` and `xevm.extf`
+/// stand for. The narrow formats are the OCP FP8 and FP4 ones: `bf8` is
+/// E5M2, `f8` is E4M3 and `e2m1` is FP4.
+static const llvm::fltSemantics *getFloatSemantics(TruncfSrcElemTypes etype) {
+  switch (etype) {
+  case TruncfSrcElemTypes::F16:
+    return &llvm::APFloat::IEEEhalf();
+  case TruncfSrcElemTypes::BF16:
+    return &llvm::APFloat::BFloat();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(ExtfDstElemTypes etype) {
+  switch (etype) {
+  case ExtfDstElemTypes::F16:
+    return &llvm::APFloat::IEEEhalf();
+  case ExtfDstElemTypes::BF16:
+    return &llvm::APFloat::BFloat();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(TruncfDstElemTypes etype) {
+  switch (etype) {
+  case TruncfDstElemTypes::BF8:
+    return &llvm::APFloat::Float8E5M2();
+  case TruncfDstElemTypes::F8:
+    return &llvm::APFloat::Float8E4M3FN();
+  case TruncfDstElemTypes::E2M1:
+    return &llvm::APFloat::Float4E2M1FN();
+  }
+  return nullptr;
+}
+
+static const llvm::fltSemantics *getFloatSemantics(ExtfSrcElemTypes etype) {
+  switch (etype) {
+  case ExtfSrcElemTypes::BF8:
+    return &llvm::APFloat::Float8E5M2();
+  case ExtfSrcElemTypes::F8:
+    return &llvm::APFloat::Float8E4M3FN();
+  case ExtfSrcElemTypes::E2M1:
+    return &llvm::APFloat::Float4E2M1FN();
+  }
+  return nullptr;
+}
+
+/// truncf(extf(a)) -> a, when the two ops convert through the same pair of
+/// formats and every narrow value survives the round trip. `bf8` does not
+/// qualify: it is IEEE-like, and extending a signaling NaN quiets it, so the
+/// original value cannot be recovered. This mirrors `arith.truncf`, which gates
+/// the same fold on `APFloatBase::isLosslesslyConvertibleTo`.
+OpFoldResult TruncfOp::fold(FoldAdaptor) {
+  auto extfOp = getSrc().getDefiningOp<ExtfOp>();
+  if (!extfOp)
+    return {};
+
+  const llvm::fltSemantics *narrowSem =
+      getFloatSemantics(getDstEtype().getEtype());
+  const llvm::fltSemantics *wideSem =
+      getFloatSemantics(getSrcEtype().getEtype());
+  if (narrowSem != getFloatSemantics(extfOp.getSrcEtype().getEtype()) ||
+      wideSem != getFloatSemantics(extfOp.getDstEtype().getEtype()))
+    return {};
+
+  Value narrowSrc = extfOp.getSrc();
+  if (narrowSrc.getType() != getDst().getType())
+    return {};
+
+  if (!llvm::APFloatBase::isLosslesslyConvertibleTo(*narrowSem, *wideSem))
+    return {};
+
+  return narrowSrc;
 }
 
 LogicalResult BitcastShuffleOp::verify() {

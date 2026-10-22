@@ -65,11 +65,14 @@ protected:
   void printU4ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printS8ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU8ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printX8ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU12ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printX16ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printS32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printX32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU48ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPCRelOperand(const MCInst *MI, uint64_t Address, int OpNum,
                          raw_ostream &O);

@@ -225,6 +225,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
+  case Intrinsic::dx_isfinite:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_sdot:
@@ -714,8 +715,7 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
 
   IRBuilder<> Builder(Orig);
 
-  unsigned BitWidth = Ty->getScalarSizeInBits();
-  assert(llvm::isPowerOf2_32(BitWidth) &&
+  assert(llvm::isPowerOf2_32(Ty->getScalarSizeInBits()) &&
          "Can't use Mask to compute modulo and inverse");
 
   // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
@@ -814,7 +814,11 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       LoadIntrinsic = Intrinsic::dx_resource_load_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base * 2);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
@@ -970,7 +974,11 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       StoreIntrinsic = Intrinsic::dx_resource_store_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     SmallVector<int, 4> Mask;
@@ -1323,6 +1331,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::dx_isfinite:
+    Result = expand16BitIsFinite(Orig);
     break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);

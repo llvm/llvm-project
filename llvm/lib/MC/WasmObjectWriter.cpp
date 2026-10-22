@@ -1223,6 +1223,10 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
     endSection(SubSection);
   }
 
+  startSection(SubSection, wasm::WASM_TARGET_ARCH);
+  writeString(TargetObjectWriter->is64Bit() ? "wasm64" : "wasm32");
+  endSection(SubSection);
+
   endSection(Section);
 }
 
@@ -1420,6 +1424,10 @@ void WasmObjectWriter::prepareImports(
   }
 
   // Add imports for GOT globals
+  wasm::WasmGlobalType AddrType = {
+      static_cast<uint8_t>(is64Bit() ? wasm::WASM_TYPE_I64
+                                     : wasm::WASM_TYPE_I32),
+      true};
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (WS.isUsedInGOT()) {
@@ -1430,7 +1438,7 @@ void WasmObjectWriter::prepareImports(
         Import.Module = "GOT.mem";
       Import.Field = WS.getName();
       Import.Kind = wasm::WASM_EXTERNAL_GLOBAL;
-      Import.Global = {wasm::WASM_TYPE_I32, true};
+      Import.Global = AddrType;
       Imports.push_back(Import);
       assert(!GOTIndices.contains(&WS));
       GOTIndices[&WS] = NumGlobalImports++;
@@ -1680,6 +1688,14 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           assert(!WasmIndices.contains(&WS));
           WasmIndices[&WS] = Global.Index;
           Globals.push_back(Global);
+
+          if (WS.hasExportName()) {
+            wasm::WasmExport Export;
+            Export.Name = WS.getExportName();
+            Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
+            Export.Index = Global.Index;
+            Exports.push_back(Export);
+          }
         } else {
           // An import; the index was assigned above
           LLVM_DEBUG(dbgs() << "  -> global index: "

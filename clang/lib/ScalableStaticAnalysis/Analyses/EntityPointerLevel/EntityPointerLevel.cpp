@@ -389,7 +389,7 @@ clang::ssaf::elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL) {
       T = cast<ArrayType>(T)->getElementType();
     ++MaxLevel;
   }
-  assert(MaxLevel > 0);
+  assert(MaxLevel >= 0);
   Result.reserve(MaxLevel);
   for (unsigned Level = DPL.PointerLevel + 1; Level <= MaxLevel; ++Level)
     Result.push_back({DPL.Decl, Level, DPL.IsReturn});

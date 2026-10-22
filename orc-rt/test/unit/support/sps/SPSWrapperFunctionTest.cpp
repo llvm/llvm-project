@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
@@ -28,10 +29,11 @@ static void add_via_function(orc_rt::move_only_function<void(int32_t)> Return,
 // Note: This macro use has been deliberately moved above the
 // "using namespace orc_rt;" statement below to check that its expansion works
 // from other namespaces.
-ORC_RT_SPS_WRAPPER(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
-                   add_via_function);
+ORC_RT_SPS_WRAPPER_IMPL(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
+                        add_via_function);
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static void void_noop_sps_wrapper(orc_rt_SessionRef S,
                                   orc_rt_WrapperFunctionBuffer ArgBytes,
@@ -44,11 +46,11 @@ static void void_noop_sps_wrapper(orc_rt_SessionRef S,
 
 TEST(SPSWrapperFunctionUtilsTest, VoidNoop) {
   bool Ran = false;
-  SPSWrapperFunction<void()>::call(DirectCaller(nullptr, void_noop_sps_wrapper),
-                                   [&](Error Err) {
-                                     cantFail(std::move(Err));
-                                     Ran = true;
-                                   });
+  SPSWrapperFunction<void()>::call(
+      DirectCaller(nullptr, void_noop_sps_wrapper), [&](Error Err) {
+        EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+        Ran = true;
+      });
   EXPECT_TRUE(Ran);
 }
 
@@ -67,7 +69,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaLambda) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       DirectCaller(nullptr, add_via_lambda_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
   EXPECT_EQ(Result, 42);
 }
 
@@ -75,7 +81,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunction) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       DirectCaller(nullptr, add_via_function_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
   EXPECT_EQ(Result, 42);
 }
 
@@ -90,7 +100,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       DirectCaller(nullptr, add_via_function_pointer_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
   EXPECT_EQ(Result, 42);
 }
 
@@ -111,7 +125,10 @@ TEST(SPSWrapperFunctionUtilsTest, RoundTripStringViaSpan) {
   std::string Result;
   SPSWrapperFunction<SPSString(SPSString)>::call(
       DirectCaller(nullptr, round_trip_string_via_span_sps_wrapper),
-      [&](Expected<std::string> R) { Result = cantFail(std::move(R)); },
+      [&](Expected<std::string> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = std::move(*R);
+      },
       std::string_view("hello, world!"));
   EXPECT_EQ(Result, "hello, world!");
 }
@@ -136,7 +153,8 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionErrorSuccessCase) {
       DirectCaller(nullptr, improbable_feat_sps_wrapper),
       [&](Expected<Error> E) {
         DidRun = true;
-        cantFail(cantFail(std::move(E)));
+        ASSERT_THAT_EXPECTED(E, Succeeded());
+        EXPECT_THAT_ERROR(std::move(*E), Succeeded());
       },
       true);
 
@@ -147,7 +165,10 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionErrorFailureCase) {
   std::string ErrMsg;
   SPSWrapperFunction<SPSError(bool)>::call(
       DirectCaller(nullptr, improbable_feat_sps_wrapper),
-      [&](Expected<Error> E) { ErrMsg = toString(cantFail(std::move(E))); },
+      [&](Expected<Error> E) {
+        ASSERT_THAT_EXPECTED(E, Succeeded());
+        ErrMsg = toString(std::move(*E));
+      },
       false);
 
   EXPECT_EQ(ErrMsg, "crushed by boulder");
@@ -172,7 +193,9 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedSuccessCase) {
   SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::call(
       DirectCaller(nullptr, halve_number_sps_wrapper),
       [&](Expected<Expected<int32_t>> R) {
-        Result = cantFail(cantFail(std::move(R)));
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        ASSERT_THAT_EXPECTED(*R, Succeeded());
+        Result = **R;
       },
       2);
 
@@ -184,7 +207,8 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedFailureCase) {
   SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::call(
       DirectCaller(nullptr, halve_number_sps_wrapper),
       [&](Expected<Expected<int32_t>> R) {
-        ErrMsg = toString(cantFail(std::move(R)).takeError());
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        ErrMsg = toString(R->takeError());
       },
       3);
 
@@ -231,7 +255,7 @@ TEST(SPSWrapperFunctionUtilsTest, HandlerWithReferences) {
       call(
           DirectCaller(nullptr, handle_with_reference_types_sps_wrapper),
           [&](Error R) {
-            cantFail(std::move(R));
+            EXPECT_THAT_ERROR(std::move(R), Succeeded());
             DidRun = true;
           },
           OpCounter<0>(), OpCounter<1>(), OpCounter<2>(), OpCounter<3>());
@@ -291,7 +315,10 @@ TEST(SPSWrapperFunctionUtilsTest, HandleWtihAsyncMethod) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::call(
       DirectCaller(nullptr, adder_add_async_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); },
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
       ExecutorAddr::fromPtr(A.get()), 41, 1);
 
   EXPECT_EQ(Result, 42);
@@ -311,7 +338,10 @@ TEST(SPSWrapperFunctionUtilsTest, HandleWithSyncMethod) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::call(
       DirectCaller(nullptr, adder_add_sync_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); },
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
       ExecutorAddr::fromPtr(A.get()), 41, 1);
 
   EXPECT_EQ(Result, 42);

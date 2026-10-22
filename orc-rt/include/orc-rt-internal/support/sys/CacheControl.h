@@ -8,17 +8,12 @@
 //
 // Host cache management APIs.
 //
-// Unlike the rest of sys/, where the build compiles one implementation .cpp per
-// system, these operations want to inline: on targets where they lower to
-// cache-maintenance instructions rather than a call, a cross-TU call would cost
-// more than the operation itself. So the declarations live here and the
-// definitions come from a per-system header selected below. The conditionals
-// are confined to this file; each implementation header is unconditional.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef ORC_RT_INTERNAL_SUPPORT_SYS_CACHECONTROL_H
 #define ORC_RT_INTERNAL_SUPPORT_SYS_CACHECONTROL_H
+
+#include "orc-rt/support/Compiler.h"
 
 #include <cstddef>
 
@@ -33,12 +28,29 @@ inline void clear_icache(void *Addr, size_t Size);
 
 } // namespace orc_rt::sys
 
-// Definition of the above. Selected here rather than by the build system so
-// that a reader of this header can see which implementation applies.
+// Definition of the above.
+
 #if defined(__APPLE__)
-#include "orc-rt-internal/support/sys/darwin/CacheControl.h"
+
+// Use libSystem's implementation, which knows the cache geometry of the running
+// CPU. Preferred over __builtin___clear_cache on Darwin.
+extern "C" void sys_icache_invalidate(const void *Addr, size_t Size);
+inline void orc_rt::sys::clear_icache(void *Addr, size_t Size) {
+  sys_icache_invalidate(Addr, Size);
+}
+
+#elif ORC_RT_HAS_BUILTIN(__builtin___clear_cache) || defined(__GNUC__)
+
+// For systems supporting __builtin___clear_cache, use that.
+inline void orc_rt::sys::clear_icache(void *Addr, size_t Size) {
+  char *Start = static_cast<char *>(Addr);
+  __builtin___clear_cache(Start, Start + Size);
+}
+
 #else
-#include "orc-rt-internal/support/sys/posix/CacheControl.h"
+
+#error "No clear_icache implementation for this target"
+
 #endif
 
 #endif // ORC_RT_INTERNAL_SUPPORT_SYS_CACHECONTROL_H

@@ -57,23 +57,31 @@
 ; RUN:  --check-prefix=STATS --check-prefix=REMARKS --check-prefix=SIZES
 
 ; REMARKS: created clone _Z1Ab.memprof.1
+; REMARKS: created clone _Z1Ab.memprof.2
 ; REMARKS: created clone _Z2XZv.memprof.1
 ; REMARKS: created clone _Z1Mv.memprof.1
+; REMARKS: call in clone main assigned to call function clone _Z1Mv.memprof.1
+; REMARKS: call in clone _Z1Mv.memprof.1 assigned to call function clone _Z2XZv.memprof.1
+;; The clone of _Z2XZv for the cold context through the second call to _Z1Mv in
+;; main has no context reaching the first allocation in _Z1Ab, since the trimmed
+;; cold context (6, 2, 8) that the inlined callsite matching also attributed to
+;; _Z2XZv's call ended at that call, and stays with the original _Z2XZv node.
+;; That trimmed context applies to the clone as well, so it needs a version of
+;; _Z1Ab with both allocations cold.
+; REMARKS: call in clone _Z2XZv.memprof.1 assigned to call function clone _Z1Ab.memprof.2
+; REMARKS: call in clone main assigned to call function clone _Z1Mv
+; REMARKS: call in clone _Z1Mv assigned to call function clone _Z2XZv
+; REMARKS: call in clone _Z2XZv assigned to call function clone _Z1Ab.memprof.1
 ;; Make sure the inlined context in _Z3XZNv, which partially overlaps
 ;; trimmed cold context, and also partially overlaps completely
 ;; unrelated contexts, correctly calls a cloned version of Z1Ab,
 ;; which will call the cold annotated allocation.
 ; REMARKS: call in clone _Z3XZNv assigned to call function clone _Z1Ab.memprof.1
-; REMARKS: call in clone main assigned to call function clone _Z1Mv.memprof.1
-; REMARKS: call in clone _Z1Mv.memprof.1 assigned to call function clone _Z2XZv.memprof.1
-; REMARKS: call in clone _Z2XZv.memprof.1 assigned to call function clone _Z1Ab
-; REMARKS: call in clone main assigned to call function clone _Z1Mv
-; REMARKS: call in clone _Z1Mv assigned to call function clone _Z2XZv
-; REMARKS: call in clone _Z2XZv assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Yv assigned to call function clone _Z1Ab
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold
-; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute notcold
 
 ;; Cold context 234 is cloned, and only the cloned context is Cold hinted
@@ -176,7 +184,7 @@ attributes #7 = { builtin }
 
 ; IR: define {{.*}} @_Z1Ab(i1 noundef zeroext %b)
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[DEFAULT:[0-9]+]]
 ; IR: define {{.*}} @_Z2XZv()
 ; IR:   call {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext false)
 ; IR: define {{.*}} @_Z1Mv()
@@ -195,16 +203,23 @@ attributes #7 = { builtin }
 ; IR:   call {{.*}} @_Z3XZNv()
 ; IR:   call {{.*}} @_Z1Yv()
 ; IR: define {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext %b)
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+;; Both allocations are cold in the version of _Z1Ab called by the clone of
+;; _Z2XZv (see above).
+; IR: define {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext %b)
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
 ; IR: define {{.*}} @_Z2XZv.memprof.1()
-; IR:   call {{.*}} @_Z1Ab(i1 noundef zeroext false)
+; IR:   call {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext false)
 ; IR: define {{.*}} @_Z1Mv.memprof.1()
 ; IR:   call {{.*}} @_Z2XZv.memprof.1()
 
 ; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[DEFAULT]] = { builtin }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS: 4 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS: 1 memprof-context-disambiguation - Number of callsite clones without an edge to a callee's clones assigned the callee function clone of their original node

@@ -1345,9 +1345,11 @@ defm MUL : SIMDBinaryFP<fmul, "mul", 230>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 231>;
 
 // NaN-propagating minimum: min
+let isCommutable = 1 in
 defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 
 // NaN-propagating maximum: max
+let isCommutable = 1 in
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
@@ -1764,6 +1766,16 @@ defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_signed_zero,
                          "relaxed_trunc_f64x2_s_zero", 0x103>;
 defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero,
                          "relaxed_trunc_f64x2_u_zero", 0x104>;
+
+// Prefer relaxed truncation for generic fp_to_sint/fp_to_uint when relaxed
+// SIMD is available. fptosi/fptoui produce poison for NaN or unrepresentable
+// inputs, while relaxed truncation agrees with them for representable inputs.
+let Predicates = [HasRelaxedSIMD], AddedComplexity = 1 in {
+  def : Pat<(v4i32 (fp_to_sint (v4f32 V128:$vec))),
+            (int_wasm_relaxed_trunc_signed_I32x4 $vec)>;
+  def : Pat<(v4i32 (fp_to_uint (v4f32 V128:$vec))),
+            (int_wasm_relaxed_trunc_unsigned_I32x4 $vec)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Relaxed (Negative) Multiply-Add  (madd/nmadd)

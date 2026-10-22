@@ -23,12 +23,10 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <string>
 
@@ -86,6 +84,19 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
   }
   U->getLocationTable().dumpLocationList(
       &Offset, OS, U->getBaseAddress(), Ctx.getDWARFObj(), U, DumpOpts, Indent);
+}
+
+static void dumpDWARFAddressSpace(raw_ostream &OS,
+                                  const DWARFFormValue &FormValue,
+                                  const DIDumpOptions &DumpOpts) {
+  FormValue.dump(OS, DumpOpts);
+
+  std::optional<uint64_t> AddressSpace = FormValue.getAsUnsignedConstant();
+  if (AddressSpace) {
+    StringRef ASName = DumpOpts.getNameForDWARFAddressSpace(*AddressSpace);
+    if (!ASName.empty())
+      OS << " \"" << ASName << "\"";
+  }
 }
 
 static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
@@ -236,6 +247,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             FormValue.isFormClass(DWARFFormValue::FC_Block)))
     dumpLocationExpr(OS, FormValue, U, sizeof(BaseIndent) + Indent + 4,
                      DumpOpts);
+  else if (Attr == dwarf::DW_AT_LLVM_address_space)
+    dumpDWARFAddressSpace(OS, FormValue, DumpOpts);
   else
     FormValue.dump(OS, DumpOpts);
 
