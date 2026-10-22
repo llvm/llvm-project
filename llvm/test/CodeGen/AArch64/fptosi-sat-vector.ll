@@ -644,9 +644,8 @@ define <2 x i32> @test_signed_v2f128_v2i32(<2 x fp128> %f) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_1
 ; CHECK-GI-NEXT:    str q1, [sp, #48] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI15_1]
-; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    str q2, [sp, #16] // 16-byte Spill
+; CHECK-GI-NEXT:    stp q2, q0, [sp, #16] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
@@ -811,10 +810,9 @@ define <3 x i32> @test_signed_v3f128_v3i32(<3 x fp128> %f) {
 ; CHECK-GI-NEXT:    .cfi_offset w23, -40
 ; CHECK-GI-NEXT:    .cfi_offset w30, -48
 ; CHECK-GI-NEXT:    adrp x8, .LCPI16_1
-; CHECK-GI-NEXT:    str q1, [sp, #48] // 16-byte Spill
+; CHECK-GI-NEXT:    stp q1, q2, [sp, #48] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI16_1]
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    str q2, [sp, #64] // 16-byte Spill
 ; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -921,11 +919,10 @@ define <4 x i32> @test_signed_v4f128_v4i32(<4 x fp128> %f) {
 ; CHECK-SD-NEXT:    stp q2, q3, [sp, #64] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v2.16b, v1.16b
 ; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
-; CHECK-SD-NEXT:    str q0, [sp, #48] // 16-byte Spill
 ; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
+; CHECK-SD-NEXT:    stp q1, q0, [sp, #32] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w19, w0
@@ -5140,9 +5137,8 @@ define <2 x i64> @test_signed_v2f128_v2i64(<2 x fp128> %f) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI86_1
 ; CHECK-GI-NEXT:    str q1, [sp, #48] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI86_1]
-; CHECK-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    str q2, [sp, #16] // 16-byte Spill
+; CHECK-GI-NEXT:    stp q2, q0, [sp, #16] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
