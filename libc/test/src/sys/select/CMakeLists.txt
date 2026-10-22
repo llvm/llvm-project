@@ -1,16 +1,13 @@
-add_custom_target(libc_sys_select_unittests)
+add_libc_testsuite(libc-sys-select-tests)
 
 add_libc_test(
   select_ui_test
-  NO_RUN_POSTBUILD
+  BUILD_ONLY
   SUITE
-    libc_sys_select_unittests
+    libc-sys-select-tests
   SRCS
     select_ui_test.cpp
   DEPENDS
-    libc.hdr.sys_select_macros
-    libc.hdr.types.fd_set
-    libc.hdr.types.struct_timeval
     libc.include.unistd
     libc.src.errno.errno
     libc.src.sys.select.select
@@ -22,13 +19,10 @@ add_libc_test(
 add_libc_test(
   select_failure_test
   SUITE
-    libc_sys_select_unittests
+    libc-sys-select-tests
   SRCS
     select_failure_test.cpp
   DEPENDS
-    libc.hdr.sys_select_macros
-    libc.hdr.types.fd_set
-    libc.hdr.types.struct_timeval
     libc.include.unistd
     libc.src.errno.errno
     libc.src.sys.select.select
@@ -40,7 +34,7 @@ add_libc_test(
 add_libc_test(
   pselect_test
   SUITE
-    libc_sys_select_unittests
+    libc-sys-select-tests
   SRCS
     pselect_test.cpp
   DEPENDS

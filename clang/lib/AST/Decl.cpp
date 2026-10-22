@@ -4585,12 +4585,13 @@ bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                        FunctionTemplateSpecializationInfo*>())
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getPointOfInstantiation();
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();
