@@ -185,8 +185,8 @@ public:
   using SubRegMap =
       std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>;
 
-  // The final sub-registers, sorted by sub-register index.
-  using SubRegList =
+  // A reference to the final sub-registers, sorted by sub-register index.
+  using SubRegArrayRef =
       ArrayRef<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>>;
 
   CodeGenRegister(const Record *R, unsigned Enum);
@@ -216,7 +216,7 @@ public:
   // silently corrupts sub-register liveness and spilling). See the definition.
   void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
-  SubRegList getSubRegs() const {
+  SubRegArrayRef getSubRegs() const {
     assert(SuperRegsComplete && "Must precompute super-registers");
     return FinalSubRegs;
   }

@@ -1533,7 +1533,7 @@ void CodeGenRegBank::computeComposites() {
   // side subregister.
   std::map<const CodeGenSubRegIndex *, RegMap> SubRegAction;
   for (const CodeGenRegister &R : Registers) {
-    CodeGenRegister::SubRegList SM = R.getSubRegs();
+    CodeGenRegister::SubRegArrayRef SM = R.getSubRegs();
     for (auto [SRI, SubReg] : SM)
       SubRegAction[SRI].try_emplace(&R, SubReg);
   }
@@ -1585,12 +1585,12 @@ void CodeGenRegBank::computeComposites() {
       continue;
     TopoSigs.set(Reg1.getTopoSig());
 
-    CodeGenRegister::SubRegList SRM1 = Reg1.getSubRegs();
+    CodeGenRegister::SubRegArrayRef SRM1 = Reg1.getSubRegs();
     for (auto [Idx1, Reg2] : SRM1) {
       // Ignore identity compositions.
       if (&Reg1 == Reg2)
         continue;
-      CodeGenRegister::SubRegList SRM2 = Reg2->getSubRegs();
+      CodeGenRegister::SubRegArrayRef SRM2 = Reg2->getSubRegs();
       // Try composing Idx1 with another SubRegIndex.
       for (auto I2 : SRM2) {
         CodeGenSubRegIndex *Idx2 = I2.first;
@@ -1985,7 +1985,7 @@ static bool normalizeWeight(CodeGenRegister *Reg,
   NormalRegs.set(Reg->EnumValue);
 
   bool Changed = false;
-  CodeGenRegister::SubRegList SRM = Reg->getSubRegs();
+  CodeGenRegister::SubRegArrayRef SRM = Reg->getSubRegs();
   for (auto SRI : SRM) {
     if (SRI.second == Reg)
       continue; // self-cycles happen
@@ -2393,8 +2393,8 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    using SubRegList = CodeGenRegister::SubRegList;
-    SubRegList SubRegs = Register.getSubRegs();
+    using SubRegArrayRef = CodeGenRegister::SubRegArrayRef;
+    SubRegArrayRef SubRegs = Register.getSubRegs();
 
     auto UnitMaskIdx = [&](unsigned SUI) {
       unsigned U = 0;
@@ -2548,7 +2548,7 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   for (const CodeGenRegister *R : RC->getMembers()) {
     if (R->Artificial)
       continue;
-    CodeGenRegister::SubRegList SRM = R->getSubRegs();
+    CodeGenRegister::SubRegArrayRef SRM = R->getSubRegs();
     for (auto [I, _] : SRM)
       SRSets[I].push_back(R);
   }
@@ -2933,7 +2933,7 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
         continue;
       // This new super-register is covered by its sub-registers.
       bool AllSubsInSet = true;
-      CodeGenRegister::SubRegList SRM = Super->getSubRegs();
+      CodeGenRegister::SubRegArrayRef SRM = Super->getSubRegs();
       for (auto [_, SR] : SRM)
         if (!Set.contains(SR)) {
           AllSubsInSet = false;
