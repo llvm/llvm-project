@@ -1836,8 +1836,12 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
                 result, allocType, result.getAlignment(), SkippedChecks,
                 numElements);
 
-  EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
-                     allocSizeWithoutCookie);
+  {
+    // Checks in the initializer trap: a branch would leak the allocation.
+    OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
+    EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
+                       allocSizeWithoutCookie);
+  }
   llvm::Value *resultPtr = result.emitRawPointer(*this);
 
   // Deactivate the 'operator delete' cleanup if we finished

@@ -26,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
@@ -1893,13 +1894,15 @@ public:
   };
 
   /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
-  /// is overridden to be the object under construction.
+  /// is overridden to be the object under construction, and checks trap: the
+  /// initializer is not written in the enclosing function.
   class CXXDefaultInitExprScope {
   public:
     CXXDefaultInitExprScope(CodeGenFunction &CGF, const CXXDefaultInitExpr *E)
         : CGF(CGF), OldCXXThisValue(CGF.CXXThisValue),
           OldCXXThisAlignment(CGF.CXXThisAlignment),
-          SourceLocScope(E, CGF.CurSourceLocExprScope) {
+          SourceLocScope(E, CGF.CurSourceLocExprScope),
+          NoHandler(CGF.LocalOverflowHandlers, nullptr) {
       CGF.CXXThisValue = CGF.CXXDefaultInitExprThis.getBasePointer();
       CGF.CXXThisAlignment = CGF.CXXDefaultInitExprThis.getAlignment();
     }
@@ -1913,11 +1916,16 @@ public:
     llvm::Value *OldCXXThisValue;
     CharUnits OldCXXThisAlignment;
     SourceLocExprScopeGuard SourceLocScope;
+    OverflowHandlerScope NoHandler;
   };
 
+  /// The scope of a CXXDefaultArgExpr. Checks within it trap: the argument
+  /// is not written in the calling function.
   struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
     CXXDefaultArgExprScope(CodeGenFunction &CGF, const CXXDefaultArgExpr *E)
-        : SourceLocExprScopeGuard(E, CGF.CurSourceLocExprScope) {}
+        : SourceLocExprScopeGuard(E, CGF.CurSourceLocExprScope),
+          NoHandler(CGF.LocalOverflowHandlers, nullptr) {}
+    OverflowHandlerScope NoHandler;
   };
 
   /// The scope of an ArrayInitLoopExpr. Within this scope, the value of the
@@ -2756,6 +2764,27 @@ public:
   /// getBasicBlockForLabel - Return the LLVM basicblock that the specified
   /// label maps to.
   JumpDest getJumpDestForLabel(const LabelDecl *S);
+
+  /// Overflow handler labels introduced by enclosing statements (see
+  /// OverflowHandlerScope), innermost last.
+  SmallVector<LabelDecl *, 2> LocalOverflowHandlers;
+
+  /// Cached function-level overflow handler label, if computed.
+  std::optional<const LabelDecl *> FunctionOverflowHandler;
+
+  /// Returns the label that a failed trap overflow behavior type check in the
+  /// current context branches to, or nullptr to trap as usual.
+  const LabelDecl *getOverflowHandler();
+
+  /// Emits a branch, through cleanups, to the overflow handler \p Handler,
+  /// taken when \p Failed is true. Continues emission on the other edge.
+  void EmitOverflowHandlerBranch(llvm::Value *Failed, const LabelDecl *Handler);
+
+  /// Returns true if a check of kind \p Kind that branches to an overflow
+  /// handler should first be reported by the sanitizer runtime. Trapping
+  /// sanitizer checks are replaced by the branch.
+  bool
+  shouldReportBeforeOverflowHandler(SanitizerKind::SanitizerOrdinal Kind) const;
 
   /// SimplifyForwardingBlocks - If the given basic block is only a branch to
   /// another basic block, simplify it. This assumes that no other code could
@@ -4297,6 +4326,7 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
+    OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
     if (S.getStructuredBlock())
       EmitStmt(S.getStructuredBlock());
   }
@@ -4313,6 +4343,7 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
+    OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
     if (S.getLoop())
       EmitStmt(S.getLoop());
   }

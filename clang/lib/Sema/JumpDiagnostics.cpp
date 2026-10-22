@@ -14,6 +14,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
@@ -22,6 +23,8 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/SaveAndRestore.h"
+#include <deque>
 using namespace clang;
 
 namespace {
@@ -77,6 +80,30 @@ class JumpScopeChecker {
   SmallVector<LabelDecl *, 4> IndirectJumpTargets;
   SmallVector<AttributedStmt *, 4> MustTailStmts;
 
+  /// Overflow handler labels in scope, innermost last. The first entry is the
+  /// function-level handler and may be null.
+  SmallVector<LabelDecl *, 2> OverflowHandlers;
+  /// Handler label targeted by each overflow-checked operation in Jumps.
+  llvm::DenseMap<Stmt *, LabelDecl *> OverflowJumpTargets;
+  /// Nonzero while walking the body of a lambda nested in the function. Such
+  /// a body has its own handler and is checked on its own.
+  unsigned NestedBodyDepth = 0;
+  /// Nonzero while walking an operand that is not evaluated.
+  unsigned UnevaluatedDepth = 0;
+  /// The scopes around the initializer of a variable that opens a scope: the
+  /// scope outside the variable, the variable's scope, and the end of the
+  /// scopes created within the initializer.
+  struct InitializerScopes {
+    unsigned Outer, Var, End;
+  };
+  std::deque<InitializerScopes> Initializers;
+  /// The outermost such initializer being walked.
+  InitializerScopes *CurInitializer = nullptr;
+  /// The initializer, if any, that contains each overflow-checked operation.
+  llvm::DenseMap<Stmt *, const InitializerScopes *> OverflowJumpInitializers;
+
+  bool bypassesInitialization(const InitializerScopes &I, unsigned LabelScope);
+
 public:
   JumpScopeChecker(Stmt *Body, Sema &S);
 private:
@@ -108,6 +135,9 @@ JumpScopeChecker::JumpScopeChecker(Stmt *Body, Sema &s)
     : S(s), Permissive(s.hasAnyUnrecoverableErrorsInThisFunction()) {
   // Add a scope entry for function scope.
   Scopes.push_back(GotoScope(~0U, ~0U, ~0U, SourceLocation()));
+
+  OverflowHandlers.push_back(findFunctionOverflowHandler(
+      S.Context, Decl::castFromDeclContext(S.CurContext)));
 
   // Build information for the top level compound statement, so that we have a
   // defined scope record for every "goto" and label.
@@ -234,6 +264,7 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
 /// Build scope information for a declaration that is part of a DeclStmt.
 void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
   // If this decl causes a new scope, push and switch to it.
+  unsigned OuterScope = ParentScope;
   std::pair<unsigned,unsigned> Diags = GetDiagForGotoScopeDecl(S, D);
   if (Diags.first || Diags.second) {
     Scopes.push_back(GotoScope(ParentScope, Diags.first, Diags.second,
@@ -243,9 +274,32 @@ void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
 
   // If the decl has an initializer, walk it with the potentially new
   // scope we just installed.
-  if (VarDecl *VD = dyn_cast<VarDecl>(D))
-    if (Expr *Init = VD->getInit())
-      BuildScopeInformation(Init, ParentScope);
+  auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return;
+
+  // A failed check in the variable length array sizes or the initializer
+  // leaves before the variable is initialized. That matters when leaving the
+  // variable's scope runs code that relies on the initialization: a
+  // destructor, a cleanup, or the release of the array.
+  SaveAndRestore SaveInitializer(CurInitializer);
+  bool Outermost =
+      ParentScope != OuterScope && !CurInitializer &&
+      (VD->needsDestruction(S.Context) || VD->hasAttr<CleanupAttr>() ||
+       VD->getType()->isVariablyModifiedType());
+  if (Outermost)
+    CurInitializer = &Initializers.emplace_back(
+        InitializerScopes{OuterScope, ParentScope, 0});
+
+  if (Expr *Init = VD->getInit()) {
+    std::optional<OverflowHandlerScope> NoHandler;
+    if (initializerIgnoresOverflowHandler(VD))
+      NoHandler.emplace(OverflowHandlers, nullptr);
+    BuildScopeInformation(Init, ParentScope);
+  }
+
+  if (Outermost)
+    CurInitializer->End = Scopes.size();
 }
 
 /// Build scope information for a captured block literal variables.
@@ -315,6 +369,19 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
                             ? origParentScope : independentParentScope);
 
   unsigned StmtsToSkip = 0u;
+
+  // A failed overflow behavior type check on this operation branches to the
+  // innermost overflow handler label, so treat it as a jump to that label.
+  if (auto *E = dyn_cast<Expr>(S);
+      E && !NestedBodyDepth && !UnevaluatedDepth && OverflowHandlers.back() &&
+      isOverflowHandlerCheckedOp(this->S.Context, E)) {
+    LabelAndGotoScopes[S] = ParentScope;
+    Jumps.push_back(S);
+    OverflowJumpTargets[S] = OverflowHandlers.back();
+    if (CurInitializer)
+      OverflowJumpInitializers[S] = CurInitializer;
+  }
+  OverflowHandlerScope HandlerScope(OverflowHandlers, this->S.Context, S);
 
   // If we found a label, remember that it is in ParentScope scope.
   switch (S->getStmtClass()) {
@@ -459,6 +526,9 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
                                  diag::note_protected_by_seh_finally,
                                  diag::note_exits_seh_finally,
                                  Finally->getSourceRange().getBegin()));
+      // The block may be emitted apart from the function body; its checks
+      // trap.
+      OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
       BuildScopeInformation(Finally->getBlock(), NewParentScope);
     }
 
@@ -626,6 +696,19 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     LabelAndGotoScopes[S] = ParentScope;
     break;
 
+  case Stmt::LambdaExprClass: {
+    // Capture initializers belong to the enclosing function; the body is a
+    // separate function with its own overflow handler.
+    auto *LE = cast<LambdaExpr>(S);
+    for (Expr *Init : LE->capture_inits())
+      if (Init)
+        BuildScopeInformation(Init, ParentScope);
+    ++NestedBodyDepth;
+    BuildScopeInformation(LE->getBody(), ParentScope);
+    --NestedBodyDepth;
+    return;
+  }
+
   case Stmt::OpenACCComputeConstructClass: {
     unsigned NewParentScope = Scopes.size();
     OpenACCComputeConstruct *CC = cast<OpenACCComputeConstruct>(S);
@@ -660,6 +743,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
                             diag::note_omp_protected_structured_block,
                             diag::note_omp_exits_structured_block,
                             ED->getStructuredBlock()->getBeginLoc());
+        // Checks in the region trap; see getOverflowHandlerIntroducedBy.
+        OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
         BuildScopeInformation(ED->getStructuredBlock(), NewParentScope);
         return;
       }
@@ -698,8 +783,30 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     }
 
     // Recursively walk the AST.
+    bool Unevaluated =
+        isOverflowHandlerUnevaluatedChild(this->S.Context, S, SubStmt);
+    std::optional<OverflowHandlerScope> NoHandler;
+    if (childIgnoresOverflowHandler(S, SubStmt))
+      NoHandler.emplace(OverflowHandlers, nullptr);
+    UnevaluatedDepth += Unevaluated;
     BuildScopeInformation(SubStmt, ParentScope);
+    UnevaluatedDepth -= Unevaluated;
   }
+}
+
+/// Returns true if \p LabelScope is in the scope of the variable that \p I
+/// initializes but not within the initializer itself. Scopes are numbered in
+/// creation order, so every ancestor of a scope has a smaller number.
+bool JumpScopeChecker::bypassesInitialization(const InitializerScopes &I,
+                                              unsigned LabelScope) {
+  for (unsigned Scope = LabelScope; Scope != ~0U && Scope >= I.Var;
+       Scope = Scopes[Scope].ParentScope) {
+    if (Scope == I.Var)
+      return true;
+    if (Scope < I.End)
+      return false;
+  }
+  return false;
 }
 
 /// VerifyJumps - Verify each element of the Jumps array to see if they are
@@ -707,6 +814,27 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 void JumpScopeChecker::VerifyJumps() {
   while (!Jumps.empty()) {
     Stmt *Jump = Jumps.pop_back_val();
+
+    // An overflow-checked operation branching to its overflow handler.
+    if (auto It = OverflowJumpTargets.find(Jump);
+        It != OverflowJumpTargets.end()) {
+      // An undefined label has already been diagnosed.
+      if (!It->second->getStmt())
+        continue;
+      // A jump from an initializer to a label later in the variable's scope
+      // bypasses the initialization.
+      if (const InitializerScopes *I = OverflowJumpInitializers.lookup(Jump);
+          I &&
+          bypassesInitialization(*I, LabelAndGotoScopes[It->second->getStmt()]))
+        LabelAndGotoScopes[Jump] = I->Outer;
+      CheckJump(
+          Jump, It->second->getStmt(), cast<Expr>(Jump)->getExprLoc(),
+          diag::err_overflow_handler_into_protected_scope, 0,
+          S.getLangOpts().CPlusPlus
+              ? diag::warn_cxx98_compat_overflow_handler_into_protected_scope
+              : diag::warn_cpp_compat_overflow_handler_into_protected_scope);
+      continue;
+    }
 
     // With a goto,
     if (GotoStmt *GS = dyn_cast<GotoStmt>(Jump)) {
@@ -1002,8 +1130,13 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   // Common case: exactly the same scope, which is fine.
   if (FromScope == ToScope) return;
 
-  // Warn on gotos out of __finally blocks and defer statements.
-  if (isa<GotoStmt>(From) || isa<IndirectGotoStmt>(From)) {
+  // Warn on gotos out of __finally blocks and defer statements. A jump to an
+  // overflow handler may not leave them either.
+  bool IsOverflowJump = OverflowJumpTargets.count(From);
+  if (isa<GotoStmt>(From) || isa<IndirectGotoStmt>(From) || IsOverflowJump) {
+    unsigned ExitError =
+        IsOverflowJump ? JumpDiagError : diag::err_goto_into_protected_scope;
+    SourceLocation ExitLoc = IsOverflowJump ? DiagLoc : From->getBeginLoc();
     // If FromScope > ToScope, FromScope is more nested and the jump goes to a
     // less nested scope.  Check if it crosses a __finally along the way.
     for (unsigned I = FromScope; I > ToScope; I = Scopes[I].ParentScope) {
@@ -1012,16 +1145,16 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
         break;
       } else if (Scopes[I].InDiag ==
                  diag::note_omp_protected_structured_block) {
-        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(ExitLoc, ExitError);
         S.Diag(To->getBeginLoc(), diag::note_omp_exits_structured_block);
         break;
       } else if (Scopes[I].InDiag ==
                  diag::note_acc_branch_into_compute_construct) {
-        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(ExitLoc, ExitError);
         S.Diag(Scopes[I].Loc, diag::note_acc_branch_out_of_compute_construct);
         return;
       } else if (Scopes[I].OutDiag == diag::note_exits_defer_stmt) {
-        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(ExitLoc, ExitError);
         S.Diag(Scopes[I].Loc, diag::note_exits_defer_stmt);
         return;
       }

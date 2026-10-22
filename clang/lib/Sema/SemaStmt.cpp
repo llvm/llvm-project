@@ -21,6 +21,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/TypeLoc.h"
@@ -650,6 +651,27 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   return DS;
 }
 
+void Sema::NoteOverflowCheckedOps(Expr *E) {
+  FunctionScopeInfo *FSI = getCurFunction();
+  if (!FSI || !E || !Context.hasTrapOverflowBehaviorType())
+    return;
+  LabelDecl *Handler =
+      getCurScope() ? LookupExistingLabel(getOverflowHandlerName(Context),
+                                          E->getExprLoc())
+                    : nullptr;
+  // Nothing left to record.
+  if (FSI->HasOverflowCheckedOp && (!Handler || Handler->isReferenced()))
+    return;
+  // The statements of a statement expression are full-expressions of their
+  // own and have been noted already.
+  if (!containsOverflowHandlerCheckedOp(Context, E, /*SearchStmtExprs=*/false))
+    return;
+
+  FSI->HasOverflowCheckedOp = true;
+  if (Handler)
+    Handler->setReferenced();
+}
+
 StmtResult
 Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
                      SourceLocation ColonLoc, Stmt *SubStmt) {
@@ -678,6 +700,15 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   if (isa<OpenACCUpdateConstruct>(SubStmt)) {
     Diag(SubStmt->getBeginLoc(), diag::err_acc_update_as_body) << /*Label*/ 4;
     SubStmt = new (Context) NullStmt(SubStmt->getBeginLoc());
+  }
+
+  // An overflow handler label is an implicit jump target for failed overflow
+  // behavior type checks, so jumps into protected scopes must be checked.
+  if (getLangOpts().OverflowBehaviorTypes &&
+      TheDecl->getIdentifier() == getOverflowHandlerName(Context)) {
+    setFunctionHasBranchIntoScope();
+    if (getCurFunction()->HasOverflowCheckedOp)
+      TheDecl->setReferenced();
   }
 
   // Otherwise, things are good.  Fill in the declaration and return it.
