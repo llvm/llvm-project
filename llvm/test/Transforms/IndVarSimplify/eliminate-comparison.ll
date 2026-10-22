@@ -569,6 +569,8 @@ leave:
   ret void
 }
 
+; The entry condition implies %len is negative, so the loop exits on its first
+; iteration.
 define void @func_17(ptr %len.ptr) {
 ; CHECK-LABEL: @func_17(
 ; CHECK-NEXT:  entry:
@@ -579,18 +581,13 @@ define void @func_17(ptr %len.ptr) {
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = and i1 [[ENTRY_COND_0]], [[ENTRY_COND_1]]
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LEN]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX]], -5
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_INC:%.*]], [[BE:%.*]] ], [ -6, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BE:%.*]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       be:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE_LOOPEXIT]]
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LEAVE_LOOPEXIT]]
 ; CHECK:       leave.loopexit:
 ; CHECK-NEXT:    br label [[LEAVE]]
 ; CHECK:       leave:
@@ -611,9 +608,59 @@ loop:
   %iv.inc = add i32 %iv, 1
   %iv.2.inc = add i32 %iv.2, 1
   %iv.cmp = icmp slt i32 %iv, %len.add.5
+  br i1 %iv.cmp, label %be, label %leave
 
-; Deduces {-5,+,1} s< (-5 + %len) from {0,+,1} < %len
-; since %len s< INT_MIN - (-5) from the entry condition
+be:
+  call void @side_effect()
+  %be.cond = icmp slt i32 %iv.2, %len
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+; %iv + 1 s< %len.add.5 follows from %iv.2 s< %len, since %len s< INT_MIN - (-5)
+; from the entry condition. Unlike @func_17, the loop can iterate.
+define void @func_17_iterating(ptr %len.ptr) {
+; CHECK-LABEL: @func_17_iterating(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_PTR:%.*]], align 4
+; CHECK-NEXT:    [[LEN_ADD_5:%.*]] = add i32 [[LEN]], -5
+; CHECK-NEXT:    [[ENTRY_COND_0:%.*]] = icmp slt i32 [[LEN]], -2147483643
+; CHECK-NEXT:    [[ENTRY_COND_1:%.*]] = icmp slt i32 2147483642, [[LEN_ADD_5]]
+; CHECK-NEXT:    [[ENTRY_COND:%.*]] = and i1 [[ENTRY_COND_0]], [[ENTRY_COND_1]]
+; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_INC:%.*]], [[BE:%.*]] ], [ 2147483642, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[IV_INC]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
+; CHECK:       be:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[LEN_ADD_5]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE_LOOPEXIT]]
+; CHECK:       leave.loopexit:
+; CHECK-NEXT:    br label [[LEAVE]]
+; CHECK:       leave:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = load i32, ptr %len.ptr
+  %len.add.5 = add i32 %len, -5
+  %entry.cond.0 = icmp slt i32 %len, 2147483653 ;; 2147483653 == INT_MIN - (-5)
+  %entry.cond.1 = icmp slt i32 2147483642, %len.add.5
+  %entry.cond = and i1 %entry.cond.0, %entry.cond.1
+  br i1 %entry.cond, label %loop, label %leave
+
+loop:
+  %iv.2 = phi i32 [ -2147483648, %entry ], [ %iv.2.inc, %be ]
+  %iv = phi i32 [ 2147483642, %entry ], [ %iv.inc, %be ]
+  call void @side_effect()
+  %iv.inc = add i32 %iv, 1
+  %iv.2.inc = add i32 %iv.2, 1
+  %iv.cmp = icmp slt i32 %iv, %len.add.5
   br i1 %iv.cmp, label %be, label %leave
 
 be:
