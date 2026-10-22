@@ -1057,24 +1057,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
 
-  // If libcalls are used to spill and restore callee-saved registers, the frame
-  // has two sections; the opaque section managed by the libcalls, and the
-  // section managed by MachineFrameInfo which can also hold callee saved
-  // registers in fixed stack slots, both of which have negative frame indices.
-  // This gets even more complicated when incoming arguments are passed via the
-  // stack, as these too have negative frame indices. An example is detailed
-  // below:
-  //
-  //  | incoming arg | <- FI[-3]
-  //  | libcallspill |
-  //  | calleespill  | <- FI[-2]
-  //  | calleespill  | <- FI[-1]
-  //  | this_frame   | <- FI[0]
-  //
-  // For negative frame indices, the offset from the frame pointer will differ
-  // depending on which of these groups the frame index applies to.
-  // The following calculates the correct offset knowing the number of callee
-  // saved registers spilt by the two methods.
   if (unsigned LibCallFrameSize = RVFI->getLibCallStackSize()) {
     if (NeedsDwarfCFI) {
       CFIBuilder.buildDefCFAOffset(LibCallFrameSize);
@@ -2474,9 +2456,28 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     if (int64_t PushSize = RVFI->getRVPushStackSize())
       MFI.CreateFixedSpillStackObject(PushSize, -PushSize - QCIOffset);
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
+    // If libcalls are used to spill and restore callee-saved registers, the
+    // frame has two sections; the opaque section managed by the libcalls, and
+    // the section managed by MachineFrameInfo which can also hold callee saved
+    // registers in fixed stack slots, both of which have negative frame
+    // indices. This gets even more complicated when incoming arguments are
+    // passed via the stack, as these too have negative frame indices. An
+    // example is detailed below:
+    //
+    //  | incoming arg | <- FI[-3]
+    //  | libcallspill |
+    //  | calleespill  | <- FI[-2]
+    //  | calleespill  | <- FI[-1]
+    //  | this_frame   | <- FI[0]
+    //
+    // For negative frame indices, the offset from the frame pointer will differ
+    // depending on which of these groups the frame index applies to.
+    // The following calculates the correct offset knowing the number of callee
+    // saved registers spilt by the two methods.
     unsigned LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     RVFI->setLibCallStackSize(LibCallFrameSize);
+    // Allocate a fixed object that covers the entire libcall area.
     MFI.CreateFixedSpillStackObject(LibCallFrameSize,
                                     -static_cast<int64_t>(LibCallFrameSize));
   }
