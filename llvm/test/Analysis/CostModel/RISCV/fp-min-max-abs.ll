@@ -319,7 +319,7 @@ define void @minimum() {
 
 define void @minimum_f16() {
 ; ZVFH-LABEL: 'minimum_f16'
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call half @llvm.minimum.f16(half undef, half undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call half @llvm.minimum.f16(half undef, half undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
@@ -332,7 +332,7 @@ define void @minimum_f16() {
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZVFHMIN-LABEL: 'minimum_f16'
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call half @llvm.minimum.f16(half undef, half undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call half @llvm.minimum.f16(half undef, half undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x half> @llvm.minimum.v8f16(<8 x half> undef, <8 x half> undef)
@@ -404,7 +404,7 @@ define void @maximum() {
 
 define void @maximum_f16() {
 ; ZVFH-LABEL: 'maximum_f16'
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call half @llvm.maximum.f16(half undef, half undef)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call half @llvm.maximum.f16(half undef, half undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)
@@ -417,7 +417,7 @@ define void @maximum_f16() {
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZVFHMIN-LABEL: 'maximum_f16'
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call half @llvm.maximum.f16(half undef, half undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %1 = call half @llvm.maximum.f16(half undef, half undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x half> @llvm.maximum.v2f16(<2 x half> undef, <2 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x half> @llvm.maximum.v4f16(<4 x half> undef, <4 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x half> @llvm.maximum.v8f16(<8 x half> undef, <8 x half> undef)

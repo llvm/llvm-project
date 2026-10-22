@@ -385,8 +385,6 @@ foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fmaxnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<fminimumnum, FMIN_H, Ext>;
   defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
-  defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
-  defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
   let Predicates = Ext.Predicates in {
     def : Pat<(f16 (fcanonicalize Ext.PrimaryTy:$rs1)),
               (!cast<Instruction>("FMIN_H"#Ext.Suffix) $rs1, $rs1)>;
