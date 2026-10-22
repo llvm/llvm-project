@@ -1290,6 +1290,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (!LRange.getUnsignedMax().ule(*RHS))
     return false;
 
+  salvageDebugInfo(*BinOp);
   BinOp->replaceAllUsesWith(LHS);
   BinOp->eraseFromParent();
   NumAnd++;
