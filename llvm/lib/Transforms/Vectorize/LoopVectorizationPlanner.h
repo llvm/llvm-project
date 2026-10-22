@@ -795,9 +795,9 @@ public:
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
 
-  /// \return The size (in bits) of the smallest and widest types in the code
-  /// that need to be vectorized. We ignore values that remain scalar such as
-  /// 64 bit loop indices.
+  /// \return The size (in bits) of the smallest and widest (non-predicate)
+  /// types in the code that need to be vectorized. We ignore values that remain
+  /// scalar such as 64 bit loop indices.
   std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
 
   /// \return An upper bound for the vectorization factors for both

@@ -147,12 +147,12 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
 static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
                               Type *RecurrenceType,
                               SmallPtrSetImpl<Instruction *> &Casts,
-                              unsigned &MinWidthCastToRecurTy) {
+                              Type *&MinWidthCastToRecurTy) {
 
   SmallVector<Instruction *, 8> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   Worklist.push_back(Exit);
-  MinWidthCastToRecurTy = -1U;
+  MinWidthCastToRecurTy = nullptr;
 
   while (!Worklist.empty()) {
     Instruction *Val = Worklist.pop_back_val();
@@ -170,8 +170,11 @@ static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
         // casts on its operands. The minimum width is used by the vectorizer
         // when finding the widest type for in-loop reductions without any
         // loads/stores.
-        MinWidthCastToRecurTy = std::min<unsigned>(
-            MinWidthCastToRecurTy, Cast->getSrcTy()->getScalarSizeInBits());
+        Type *SrcTy = Cast->getSrcTy()->getScalarType();
+        if (!MinWidthCastToRecurTy ||
+            SrcTy->getScalarSizeInBits() <
+                MinWidthCastToRecurTy->getScalarSizeInBits())
+          MinWidthCastToRecurTy = SrcTy;
         continue;
       }
     }
@@ -491,7 +494,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
-  unsigned MinWidthCastToRecurrenceType;
+  Type *MinWidthCastToRecurrenceType = nullptr;
   Instruction *Start = Phi;
   bool IsSigned = false;
 
