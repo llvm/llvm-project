@@ -117,8 +117,8 @@
     "https://bcr.bazel.build/modules/libpfm/4.13.0/source.json": "d77a2fd45f92dcebdd864a3c2a05f28506a4f2f71ce15f85333d9ce5b9e29742",
     "https://bcr.bazel.build/modules/libxml2/2.15.3/MODULE.bazel": "a6bffafd8aa8b0c13eaa4bf25d55be188ec8548549395f03e98c39bab264adaa",
     "https://bcr.bazel.build/modules/libxml2/2.15.3/source.json": "fd7c420cb14981416c9fadd0db555bd1e249355e0e5b63b2ce15b92996b5fbfb",
-    "https://bcr.bazel.build/modules/llvm/0.8.20/MODULE.bazel": "2c0fa2fb60ab1f3a8a7b46a6c60b67fd78bffcfaf7958477e74a971c0a1f1915",
-    "https://bcr.bazel.build/modules/llvm/0.8.20/source.json": "21ef6b5c124a1a39341752e8458de9acd6fb4abc9ad73e6e3147b374d95e5e8c",
+    "https://bcr.bazel.build/modules/llvm/0.8.24/MODULE.bazel": "e03e030b1d0b44bb05c52665c2f43de9260af9152f666262e11e25f6c072aae3",
+    "https://bcr.bazel.build/modules/llvm/0.8.24/source.json": "924ed48858c1c081698f1992c7b489434375de901c47b7046e203459840cb544",
     "https://bcr.bazel.build/modules/m4/1.4.21.bcr.1/MODULE.bazel": "d89395ff2ea032b3aaf0a6c08bbddbccdbbfd6644dbafd946f65c487cdf060b3",
     "https://bcr.bazel.build/modules/m4/1.4.21.bcr.1/source.json": "6693ed9c3380e29bbe5200c0e2fa4635b38b2b7cf8c1cb527fc3109456d3ca69",
     "https://bcr.bazel.build/modules/mpc/1.4.1.bcr.2/MODULE.bazel": "46a2d6db71e0791520548cf9f91ec526749659cd87ef0ab6a4eafe0b82ac7a06",
@@ -1051,7 +1051,7 @@
     "@@windows_support+//windows:extensions.bzl%msvc_runtime": {
       "general": {
         "bzlTransitiveDigest": "yv3gSwY6QneXA6YvHLn9tSmuOkNp2EPN5NFXHC48mdE=",
-        "usagesDigest": "sibUu27t6285kBq1cUUY3O32hxq+4jp9K9t/1h8UrbQ=",
+        "usagesDigest": "fe0w49qOZpnzoEX7GmAfDXDCO0BbgNb1z0LOhMxLrgo=",
         "recordedInputs": [
           "REPO_MAPPING:windows_support+,bazel_tools bazel_tools"
         ],
@@ -1082,7 +1082,7 @@
     "@@windows_support+//windows:extensions.bzl%windows_sdk": {
       "general": {
         "bzlTransitiveDigest": "yv3gSwY6QneXA6YvHLn9tSmuOkNp2EPN5NFXHC48mdE=",
-        "usagesDigest": "RMERMDJDslnQ5nIGMcekp2rAqEdHaL4OBq2Ddq7qc+I=",
+        "usagesDigest": "dSf/ZB7rdHRJw0y/SOPpQL1YYGpndOvmCQnHWzuEhvY=",
         "recordedInputs": [
           "REPO_MAPPING:windows_support+,bazel_tools bazel_tools"
         ],

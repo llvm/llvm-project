@@ -78,7 +78,7 @@ export float TestLoadWithStatus() {
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
 // CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @ROSB1, i32 noundef 10, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %tmp3) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %tmp2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: ret
 
 // CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)

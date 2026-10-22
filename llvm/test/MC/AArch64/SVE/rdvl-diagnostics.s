@@ -8,6 +8,6 @@ rdvl x9, #32
 
 // rdvl requires an immediate, not a register.
 rdvl x9, x10
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: rdvl x9, x10
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

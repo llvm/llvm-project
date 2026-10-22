@@ -1426,8 +1426,9 @@ static uint64_t getEncodedGVarFlags(GlobalVarSummary::GVarFlags Flags) {
 static uint64_t getEncodedHotnessCallEdgeInfo(const CalleeInfo &CI) {
   uint64_t RawFlags = 0;
 
-  RawFlags |= CI.Hotness;            // 3 bits
-  RawFlags |= (CI.HasTailCall << 3); // 1 bit
+  RawFlags |= CI.Hotness;                // 3 bits
+  RawFlags |= (CI.HasTailCall << 3);     // 1 bit
+  RawFlags |= (CI.HasIndirectCall << 4); // 1 bit
 
   return RawFlags;
 }
@@ -4954,7 +4955,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid, hotness+tailcall flags)
+  // numrefs x valueid, n x (valueid, hotness+tailcall+indirectcall flags)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSCallsProfileAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -5126,18 +5127,15 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 }
 
 void ModuleBitcodeWriterBase::writeGUIDList() {
-  const ValueEnumerator::ValueList &Vals = VE.getValues();
-  const size_t Max = Vals.size();
-
-  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  SmallVector<GlobalValue::GUID> GUIDs;
   for (const GlobalValue &GV : M.global_values()) {
     auto MaybeGUID = GV.getGUIDIfAssigned();
-    if (!MaybeGUID)
+    if (!MaybeGUID || *MaybeGUID == 0)
       continue;
-    auto GUID = *MaybeGUID;
-
     const auto ValueID = VE.getValueID(&GV);
-    GUIDs[ValueID] = GUID;
+    if (ValueID >= GUIDs.size())
+      GUIDs.resize(ValueID + 1);
+    GUIDs[ValueID] = *MaybeGUID;
   }
 
   auto Abbv = std::make_shared<BitCodeAbbrev>();
@@ -5147,7 +5145,7 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
   unsigned GUIDListAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   SmallVector<uint32_t> RecordVals;
-  RecordVals.reserve(Max * 2);
+  RecordVals.reserve(GUIDs.size() * 2);
   for (auto GUID : GUIDs) {
     RecordVals.push_back(static_cast<uint32_t>(GUID >> 32));
     RecordVals.push_back(static_cast<uint32_t>(GUID));
@@ -5214,7 +5212,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid, hotness+tailcall flags)
+  // numrefs x valueid, n x (valueid, hotness+tailcall+indirectcall flags)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSCallsProfileAbbrev = Stream.EmitAbbrev(std::move(Abbv));

@@ -25,16 +25,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_i32
     ; MIPS32: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-    ; MIPS32: $a0 = COPY [[DEF]]
-    ; MIPS32: JAL @f_i32, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
+    ; MIPS32: $r4 = COPY [[DEF]]
+    ; MIPS32: JAL @f_i32, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: RetRA
     %0:gprb(s32) = G_IMPLICIT_DEF
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-    $a0 = COPY %0(s32)
-    JAL @f_i32, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
+    $r4 = COPY %0(s32)
+    JAL @f_i32, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     RetRA
 
 ...
@@ -49,19 +49,19 @@ body:             |
     ; MIPS32-LABEL: name: g_i64
     ; MIPS32: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; MIPS32: [[DEF1:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-    ; MIPS32: $a0 = COPY [[DEF]]
-    ; MIPS32: $a1 = COPY [[DEF1]]
-    ; MIPS32: JAL @f_i64, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
+    ; MIPS32: $r4 = COPY [[DEF]]
+    ; MIPS32: $r5 = COPY [[DEF1]]
+    ; MIPS32: JAL @f_i64, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: RetRA
     %3:gprb(s32) = G_IMPLICIT_DEF
     %4:gprb(s32) = G_IMPLICIT_DEF
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-    $a0 = COPY %3(s32)
-    $a1 = COPY %4(s32)
-    JAL @f_i64, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
+    $r4 = COPY %3(s32)
+    $r5 = COPY %4(s32)
+    JAL @f_i64, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     RetRA
 
 ...
@@ -75,16 +75,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_float
     ; MIPS32: [[DEF:%[0-9]+]]:fgr32 = IMPLICIT_DEF
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: $f12 = COPY [[DEF]]
-    ; MIPS32: JAL @f_float, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: JAL @f_float, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $f12
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: RetRA
     %0:fprb(s32) = G_IMPLICIT_DEF
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     $f12 = COPY %0(s32)
-    JAL @f_float, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    JAL @f_float, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $f12
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     RetRA
 
 ...
@@ -98,16 +98,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_double
     ; MIPS32: [[DEF:%[0-9]+]]:afgr64 = IMPLICIT_DEF
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: $d6 = COPY [[DEF]]
-    ; MIPS32: JAL @f_double, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: JAL @f_double, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $d6
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: RetRA
     %0:fprb(s64) = G_IMPLICIT_DEF
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     $d6 = COPY %0(s64)
-    JAL @f_double, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    JAL @f_double, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $d6
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     RetRA
 
 ...

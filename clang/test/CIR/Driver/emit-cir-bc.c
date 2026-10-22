@@ -20,9 +20,9 @@
 // REJECT: unknown argument '-emit-cir-bc'
 
 // The driver accepts .cirbc inputs, so bytecode round-trips through it.
-// RUN: %clang -fclangir -emit-cir -c %s -o %t.cirbc
-// RUN: %clang -fclangir -x cir-bc -emit-cir %t.cirbc -o - | FileCheck %s --check-prefix=ROUNDTRIP
-// RUN: %clang -fclangir -emit-cir %t.cirbc -o - | FileCheck %s --check-prefix=ROUNDTRIP
+// RUN: %clang --target=x86_64-linux-gnu -fclangir -emit-cir -c %s -o %t.cirbc
+// RUN: %clang --target=x86_64-linux-gnu -fclangir -x cir-bc -emit-cir %t.cirbc -o - | FileCheck %s --check-prefix=ROUNDTRIP
+// RUN: %clang --target=x86_64-linux-gnu -fclangir -emit-cir %t.cirbc -o - | FileCheck %s --check-prefix=ROUNDTRIP
 // ROUNDTRIP: cir.func {{.*}}@foo()
 
 void foo() {}

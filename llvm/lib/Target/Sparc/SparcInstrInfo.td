@@ -22,7 +22,7 @@ include "SparcInstrFormats.td"
 
 // True when generating 32-bit code.
 def Is32Bit : Predicate<"!Subtarget->is64Bit()">,
-              AssemblerPredicate<(all_of (not Feature64Bit))>;
+              AssemblerPredicate<(none_of Feature64Bit)>;
 
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">,

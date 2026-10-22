@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 union Wide { char text[12]; unsigned d[3]; };
 union Word { char text[4]; unsigned d; };
@@ -30,20 +30,24 @@ union Odd odd[2] = { { .c = "ab" }, { .c = "cd" } };
 
 union Wide same[2] = { { .text = "abc" }, { .text = "xyz" } };
 // CIR: cir.global external @same = #cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide, #cir.const_record<{#cir.const_array<[#cir.int<120> : !s8i, #cir.int<121> : !s8i, #cir.int<122> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide]> : !cir.array<!rec_Wide x 2> 
-// LLVM: @same = global [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"xyz\00\00\00\00\00\00\00\00\00" }]
+// LLVMCIR: @same = global [2 x { <{ i8, i8, i8, [9 x i8] }> }] [{ <{ i8, i8, i8, [9 x i8] }> } { <{ i8, i8, i8, [9 x i8] }> <{ i8 97, i8 98, i8 99, [9 x i8] zeroinitializer }> }, { <{ i8, i8, i8, [9 x i8] }> } { <{ i8, i8, i8, [9 x i8] }> <{ i8 120, i8 121, i8 122, [9 x i8] zeroinitializer }> }]
+// OGCG:    @same = global [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"xyz\00\00\00\00\00\00\00\00\00" }]
 
 union Wide mixed[2] = { { .text = "abc" }, { .d = { 1, 2, 3 } } };
 // CIR: cir.global external @mixed = #cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide, #cir.const_record<{#cir.const_array<[#cir.int<1> : !u32i, #cir.int<2> : !u32i, #cir.int<3> : !u32i]> : !cir.array<!u32i x 3>}> : !rec_Wide]> : !cir.array<!rec_Wide x 2> 
-// LLVM: @mixed = global <{ { [12 x i8] }, %union.Wide }> <{ { [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, %union.Wide { [3 x i32] [i32 1, i32 2, i32 3] } }>
+// LLVMCIR: @mixed = global <{ { <{ i8, i8, i8, [9 x i8] }> }, %union.Wide }> <{ { <{ i8, i8, i8, [9 x i8] }> } { <{ i8, i8, i8, [9 x i8] }> <{ i8 97, i8 98, i8 99, [9 x i8] zeroinitializer }> }, %union.Wide { [3 x i32] [i32 1, i32 2, i32 3] } }>
+// OGCG:    @mixed = global <{ { [12 x i8] }, %union.Wide }> <{ { [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, %union.Wide { [3 x i32] [i32 1, i32 2, i32 3] } }>
 
 union Wide tail[2] = { { .text = "abc" } };
 // CIR: cir.global external @tail = #cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide], trailing_zeros> : !cir.array<!rec_Wide x 2> 
-// LLVM: @tail = global <{ { [12 x i8] }, %union.Wide }> <{ { [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, %union.Wide zeroinitializer }>
+// LLVMCIR: @tail = global <{ { <{ i8, i8, i8, [9 x i8] }> }, %union.Wide }> <{ { <{ i8, i8, i8, [9 x i8] }> } { <{ i8, i8, i8, [9 x i8] }> <{ i8 97, i8 98, i8 99, [9 x i8] zeroinitializer }> }, %union.Wide zeroinitializer }>
+// OGCG:    @tail = global <{ { [12 x i8] }, %union.Wide }> <{ { [12 x i8] } { [12 x i8] c"abc\00\00\00\00\00\00\00\00\00" }, %union.Wide zeroinitializer }>
 
 union Wide grid[2][2] = { { { .text = "a" }, { .text = "b" } },
                           { { .text = "c" }, { .text = "d" } } };
 // CIR: cir.global external @grid = #cir.const_array<[#cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<97> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide, #cir.const_record<{#cir.const_array<[#cir.int<98> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide]> : !cir.array<!rec_Wide x 2>, #cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<99> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide, #cir.const_record<{#cir.const_array<[#cir.int<100> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide]> : !cir.array<!rec_Wide x 2>]> : !cir.array<!cir.array<!rec_Wide x 2> x 2> 
-// LLVM: @grid = global [2 x [2 x { [12 x i8] }]] {{\[\[}}2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"a\00\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"b\00\00\00\00\00\00\00\00\00\00\00" }], [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"c\00\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"d\00\00\00\00\00\00\00\00\00\00\00" }]]
+// LLVMCIR: @grid = global [2 x [2 x { <{ i8, [11 x i8] }> }]] {{\[\[}}2 x { <{ i8, [11 x i8] }> }] [{ <{ i8, [11 x i8] }> } { <{ i8, [11 x i8] }> <{ i8 97, [11 x i8] zeroinitializer }> }, { <{ i8, [11 x i8] }> } { <{ i8, [11 x i8] }> <{ i8 98, [11 x i8] zeroinitializer }> }], [2 x { <{ i8, [11 x i8] }> }] [{ <{ i8, [11 x i8] }> } { <{ i8, [11 x i8] }> <{ i8 99, [11 x i8] zeroinitializer }> }, { <{ i8, [11 x i8] }> } { <{ i8, [11 x i8] }> <{ i8 100, [11 x i8] zeroinitializer }> }]]
+// OGCG:    @grid = global [2 x [2 x { [12 x i8] }]] {{\[\[}}2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"a\00\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"b\00\00\00\00\00\00\00\00\00\00\00" }], [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"c\00\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"d\00\00\00\00\00\00\00\00\00\00\00" }]]
 
 struct PadElem { int info; union Str u; };
 struct PadElem pad_elems[2] = { { 1, { 2 } }, { 3, { 4 } } };
@@ -58,7 +62,8 @@ struct PadHolder pad_holder = { 1, { { 2 }, { 3 } } };
 struct Holder { int a; union Wide arr[2]; int b; };
 struct Holder holder = { 1, { { .text = "xy" }, { .text = "zw" } }, 2 };
 // CIR: cir.global external @holder = #cir.const_record<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_record<{#cir.const_array<[#cir.int<120> : !s8i, #cir.int<121> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide, #cir.const_record<{#cir.const_array<[#cir.int<122> : !s8i, #cir.int<119> : !s8i], trailing_zeros> : !cir.array<!s8i x 12>}> : !rec_Wide]> : !cir.array<!rec_Wide x 2>, #cir.int<2> : !s32i}> : !rec_Holder 
-// LLVM: @holder = global { i32, [2 x { [12 x i8] }], i32 } { i32 1, [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"xy\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"zw\00\00\00\00\00\00\00\00\00\00" }], i32 2 }
+// LLVMCIR: @holder = global { i32, [2 x { <{ i8, i8, [10 x i8] }> }], i32 } { i32 1, [2 x { <{ i8, i8, [10 x i8] }> }] [{ <{ i8, i8, [10 x i8] }> } { <{ i8, i8, [10 x i8] }> <{ i8 120, i8 121, [10 x i8] zeroinitializer }> }, { <{ i8, i8, [10 x i8] }> } { <{ i8, i8, [10 x i8] }> <{ i8 122, i8 119, [10 x i8] zeroinitializer }> }], i32 2 }
+// OGCG:    @holder = global { i32, [2 x { [12 x i8] }], i32 } { i32 1, [2 x { [12 x i8] }] [{ [12 x i8] } { [12 x i8] c"xy\00\00\00\00\00\00\00\00\00\00" }, { [12 x i8] } { [12 x i8] c"zw\00\00\00\00\00\00\00\00\00\00" }], i32 2 }
 
 extern int ext[4];
 union Ptr relocs[2] = { { .p = &ext[1] }, { .p = &ext[2] } };

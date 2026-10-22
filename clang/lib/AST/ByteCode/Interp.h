@@ -64,11 +64,6 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                     CheckSubobjectKind CSK);
 
-/// Checks if the dowcast using the given offset is possible with the given
-/// pointer.
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset);
-
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -1348,7 +1343,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
     if (!A || !B)
-      return Invalid(S, OpPC);
+      return false;
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
@@ -2105,8 +2100,8 @@ bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType);
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
@@ -2856,11 +2851,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     return handleOverflow(S, OpPC, R64);
 
   S.Stk.push<T>(T::from(R64));
-  return true;
-}
-
-inline bool InitScope(InterpState &S, uint32_t I) {
-  S.Current->initScope(I);
   return true;
 }
 

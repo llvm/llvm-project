@@ -390,13 +390,152 @@ computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
   return toHalfOpenFileRange(SM, LangOpts, EnclosingFunction->getSourceRange());
 }
 
+// Whether D would need to become a forwarded parameter of the extracted
+// function if referenced from inside the extraction zone: a name (a
+// parameter, local variable, or structured-binding) declared inside the
+// enclosing function. Such a name is only visible within that function,
+// regardless of storage duration -- unlike hasLocalStorage(), this is
+// also true of a function-scope `static` or `thread_local` variable,
+// which (unlike a namespace-scope global or a static data member, both
+// reachable via a qualified name from anywhere) isn't visible wherever
+// the extracted function ends up.
+bool mustBeForwarded(const Decl *D) {
+  if (!isa<VarDecl, BindingDecl>(D))
+    return false;
+  return D->getDeclContext()->isFunctionOrMethod();
+}
+
+// Whether E, as an operand of a call being considered by isTrivialExtraction,
+// is a bare (parenthesized/implicitly cast) reference to a Decl that would
+// need to become a parameter, forwarded unchanged -- and if so, that Decl.
+// Returns null otherwise: a literal, a reference to an already-visible
+// global, or any non-bare expression all mean this operand alone justifies
+// offering the extraction, since it hardcodes or computes something a
+// plain rename wouldn't.
+const Decl *bareForwardedDecl(const Expr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
+  if (!DRE || !mustBeForwarded(DRE->getDecl()))
+    return nullptr;
+  return DRE->getDecl();
+}
+
+// The operands of Call relevant to isTrivialExtraction: the receiver of
+// a method call, a non-method callee that isn't a plain reference to a
+// fixed function (e.g. a function-pointer variable instead), and every
+// explicit argument. An operator call's operands are already included in
+// its own arguments() (clang models e.g. `a + b` as `operator+(a, b)`),
+// so its callee -- always a reference to the operator function/overload
+// itself, never itself customizable -- is always excluded.
+llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
+  llvm::SmallVector<const Expr *, 4> Operands;
+  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+    // getImplicitObjectArgument() can itself be null (its FIXME notes
+    // this isn't fully handled for all cases); other clang analyses
+    // (e.g. LiveVariables, dataflow's Environment::pushCall) guard it
+    // the same way rather than assume it's always present.
+    if (const Expr *ImplicitObject = MCE->getImplicitObjectArgument()) {
+      // `this` (implicit or explicit) always refers to the same object
+      // -- the extracted function becomes a sibling member itself, so
+      // `this` stays implicit there too, never becoming a parameter --
+      // so, like an ordinary function name, it's excluded rather than
+      // required to be "bare".
+      if (!isa<CXXThisExpr>(ImplicitObject->IgnoreParenImpCasts()))
+        Operands.push_back(ImplicitObject);
+    }
+    // A pointer-to-member call (`(s.*pmf)(x)`) has no statically known
+    // method to exclude the way an ordinary method call's name is
+    // excluded below: which member is invoked is itself a real,
+    // customizable operand here (e.g. the `pmf` it's called through),
+    // not inherent to what the wrapper does.
+    if (!MCE->getMethodDecl())
+      Operands.push_back(MCE->getCallee());
+  } else if (!isa<CXXOperatorCallExpr>(Call)) {
+    const Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
+    if (!(isa<DeclRefExpr>(Callee) &&
+          isa<FunctionDecl>(cast<DeclRefExpr>(Callee)->getDecl())))
+      Operands.push_back(Call->getCallee());
+  }
+  // An omitted argument filled in from the callee's own default isn't
+  // something this call site wrote or hardcoded: it's inherent to
+  // calling the function at all, same as the function's name, so it's
+  // excluded rather than required to be "bare". Default arguments are
+  // always trailing, so the first one found marks the end of the
+  // explicitly-written ones.
+  auto Args = Call->arguments();
+  auto FirstDefault = llvm::find_if(
+      Args, [](const Expr *Arg) { return isa<CXXDefaultArgExpr>(Arg); });
+  Operands.append(Args.begin(), FirstDefault);
+  return Operands;
+}
+
+// Whether extracting S on its own, as a single root statement, would add
+// no real abstraction over leaving it where it is:
+// - A value-less `return;` has nothing to abstract over at all.
+// - A call (to a function, method, or operator), or a return of one, is
+//   a pure 1:1 forwarding wrapper if every relevant operand (see
+//   relevantCallOperands) is already exactly the parameter value it
+//   would become, unchanged (or there are none). Extracting e.g.
+//   `foo();`, `foo(x)` (x a local), or `return foo(x);` this way would
+//   just rename the call; `foo(100)`, `foo(globalVar)`, or `foo(x + y)`
+//   would not, since each does something a plain rename wouldn't
+//   (hardcode a value/global, or compute one). For the return case, the
+//   returned value may be parenthesized and/or need an implicit
+//   conversion to the enclosing function's own return type (e.g. foo
+//   returns int, the enclosing function long); IgnoreParenImpCasts()
+//   looks through both -- neither changes the verdict, since the
+//   extracted function would perform the exact same conversion
+//   internally.
+// - Using the same captured Decl in more than one operand (e.g.
+//   `foo(A, A)`) is, despite every individual operand being bare,
+//   *not* pure forwarding: it constrains a relationship (both slots
+//   must hold the same value) that a plain rename wouldn't, the same
+//   kind of real specialization as hardcoding a literal.
+// - createParameters orders the extracted function's own parameters by
+//   each captured Decl's declaration order in the *enclosing* function,
+//   not by how they're used in this call. So if a later operand here
+//   refers to a Decl declared *earlier* than an operand before it (e.g.
+//   `foo(B, A)` inside `bar(int A, int B)`), the parameters end up
+//   reordered relative to this call: `extracted(int A, int B) { foo(B,
+//   A); }`. That's not a transparent pass-through either, even though
+//   this one call site still behaves the same after the compensating
+//   reorder at the call site (`extracted(A, B)`) -- `extracted`'s own
+//   signature no longer predicts its behavior the way a plain rename's
+//   would, since it silently permutes its own parameters internally.
+bool isTrivialExtraction(const Stmt *S, const SourceManager &SM) {
+  if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
+    if (!RS->getRetValue())
+      return true;
+    S = RS->getRetValue()->IgnoreParenImpCasts();
+  }
+  const auto *Call = dyn_cast<CallExpr>(S);
+  if (!Call)
+    return false;
+  llvm::SmallPtrSet<const Decl *, 4> SeenDecls;
+  SourceLocation LastDeclLoc;
+  for (const Expr *Operand : relevantCallOperands(Call)) {
+    const Decl *D = bareForwardedDecl(Operand);
+    if (!D || !SeenDecls.insert(D).second)
+      return false;
+    SourceLocation DeclLoc = D->getLocation();
+    if (LastDeclLoc.isValid() &&
+        !SM.isBeforeInTranslationUnit(LastDeclLoc, DeclLoc))
+      return false;
+    LastDeclLoc = DeclLoc;
+  }
+  return true;
+}
+
 // returns true if Child can be a single RootStmt being extracted from
 // EnclosingFunc.
-bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
+bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc,
+                      const SourceManager &SM) {
   // Extracting the body of EnclosingFunc would remove it's definition.
   assert(EnclosingFunc->hasBody() &&
          "We should always be extracting from a function body.");
-  if (Child->ASTNode.get<Stmt>() == EnclosingFunc->getBody())
+  const Stmt *S = Child->ASTNode.get<Stmt>();
+  if (S == EnclosingFunc->getBody())
+    return false;
+  if (isTrivialExtraction(S, SM))
     return false;
   return true;
 }
@@ -414,7 +553,8 @@ std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
   // When there is a single RootStmt, we must check if it's valid for
   // extraction.
   if (ExtZone.Parent->Children.size() == 1 &&
-      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction))
+      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction,
+                        SM))
     return std::nullopt;
   if (auto FuncRange =
           computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))
@@ -438,7 +578,7 @@ struct NewFunction {
     QualType TypeInfo;
     ParamPassKind Kind;
     unsigned OrderPriority; // Lower value parameters are preferred first.
-    std::string render(const DeclContext *Context) const;
+    std::string render(const DeclContext &Context) const;
     bool operator<(const Parameter &Other) const {
       return OrderPriority < Other.OrderPriority;
     }
@@ -510,7 +650,7 @@ std::string NewFunction::renderParametersForDeclaration(
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
-    Result += P.render(&Enclosing);
+    Result += P.render(Enclosing);
   }
   return Result;
 }
@@ -641,9 +781,27 @@ NewFunction::getFuncBody(const SourceManager &SM) const {
   return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
-std::string NewFunction::Parameter::render(const DeclContext *Context) const {
-  return printType(TypeInfo, *Context) +
-         (Kind == ParamPassKind::Reference ? " &" : " ") + Name;
+std::string NewFunction::Parameter::render(const DeclContext &Context) const {
+  // Passing Name as printType()'s declarator placeholder (rather than just
+  // appending it after the printed type) lets clang's own type printer
+  // place it correctly for declarator syntax that doesn't simply put the
+  // name after the type, e.g. a function pointer (`void (*name)(int)`, not
+  // `void (*)(int) name`). This only threads correctly through an outer
+  // pointer or reference, though, not through a bare array type on its
+  // own (confirmed empirically: it prints as `int[5] name`, not the
+  // intended `int name[5]`) -- harmless here, since createParameters
+  // never leaves TypeInfo as a bare array: it's always either decayed
+  // to a pointer (in C) or wrapped in the reference built just below
+  // (in C++). For that reference case, building the actual reference
+  // QualType (rather than just prepending "&" to the placeholder
+  // string) is what lets the printer correctly parenthesize a
+  // reference-to-array (`int (&name)[5]`, not the invalid
+  // `int &name[5]`).
+  QualType RenderedType =
+      Kind == ParamPassKind::Reference
+          ? Context.getParentASTContext().getLValueReferenceType(TypeInfo)
+          : TypeInfo;
+  return printType(RenderedType, Context, Name);
 }
 
 // Stores captured information about Extraction Zone.
@@ -1163,6 +1321,20 @@ bool createParameters(NewFunction &ExtractedFunc,
     // Parameter qualifiers are same as the Decl's qualifiers.
     QualType FullTypeInfo = VD->getType();
     QualType TypeInfo = FullTypeInfo.getNonReferenceType();
+
+    // A variably-modified type is rejected outright unless it's a plain
+    // array being extracted in C: a reference's (or any other wrapping,
+    // e.g. a further pointer indirection's) declared type still spells
+    // out the bound at every level, so it keeps mentioning a name
+    // (typically some other variable's) that isn't in scope in the
+    // extracted function's declaration. A plain array in C is the one
+    // case this doesn't apply to as-is, since its outer dimension is
+    // specifically not a problem once decayed to a pointer -- that
+    // gets a narrower, more precise check further down instead.
+    if (TypeInfo->isVariablyModifiedType() &&
+        (LangOpts.CPlusPlus || !TypeInfo->isArrayType()))
+      return false;
+
     // FIXME: check if parameter will be a non l-value reference.
     ParamPassKind Kind = ParamPassKind::Reference;
     if (!DeclInfo.IsPossiblyMutated) {
@@ -1173,12 +1345,15 @@ bool createParameters(NewFunction &ExtractedFunc,
           !FullTypeInfo->isReferenceType() &&
           Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
         Kind = ParamPassKind::Value;
-      } else if (!TypeInfo->isArrayType()) {
+      } else if (!TypeInfo->isArrayType() && !TypeInfo->isFunctionType()) {
         // Still passed by reference to avoid a copy, but the reference
         // doesn't need to be mutable. Array types are never made const:
         // mutating array elements through a non-const-ref loop variable
         // or a decayed pointer argument is common and easy to miss
-        // conservatively, so we don't try.
+        // conservatively, so we don't try. A (non-pointer) function type
+        // can't be cv-qualified at all -- doing so anyway produces
+        // unparseable output, e.g. `void (const &F)(int)` for a
+        // captured function reference.
         TypeInfo.addConst();
       }
     }
@@ -1190,9 +1365,10 @@ bool createParameters(NewFunction &ExtractedFunc,
     // NewFunction::getFuncBody). Array types are the exception: they decay
     // to a pointer on their own wherever they're used, so no rewriting or
     // address-of is needed for them at all -- except that TypeInfo itself
-    // must be decayed too (NewFunction::Parameter::render() has no special
-    // case for array declarator syntax, so leaving it as an array type
-    // would print as the uncompilable `int[5] name`).
+    // must still be decayed explicitly (confirmed empirically): unlike a
+    // pointer or reference, printType()'s declarator placeholder doesn't
+    // thread correctly through a *bare* array type on its own, printing
+    // the uncompilable `int[5] name` instead of `int name[5]`.
     if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
       if (TypeInfo->isArrayType()) {
         // A decayed pointer no longer reports the array's own size,
@@ -1200,7 +1376,23 @@ bool createParameters(NewFunction &ExtractedFunc,
         // sizeof/alignof/typeof (or similar) on it.
         if (DeclInfo.HasUnsafeTypeQueryUseInZone)
           return false;
-        TypeInfo = Context.getArrayDecayedType(TypeInfo);
+        QualType Decayed = Context.getArrayDecayedType(TypeInfo);
+        // The array's own outermost dimension is never a problem, VLA
+        // or not: once decayed, it no longer appears in the type at
+        // all (`int A[N]` decays to plain `int *A`). An inner
+        // dimension that's still variable-length (e.g. the `N` in
+        // `int A[2][N]`, which decays to `int (*A)[N]`) is the actual
+        // hazard: its bound is an arbitrary expression, typically just
+        // some other variable's name, that isn't necessarily (and
+        // often isn't) also a parameter of the extracted function, and
+        // even if it is, a mutated one would itself have been turned
+        // into a pointer, which the bound expression can't account for
+        // either way. Bail out rather than risk printing a parameter
+        // type that references a name meaningless (or absent) in the
+        // new scope.
+        if (Decayed->getPointeeType()->isVariablyModifiedType())
+          return false;
+        TypeInfo = Decayed;
         Kind = ParamPassKind::Value;
       } else {
         // Bail out rather than rewrite a use whose location (or, for a

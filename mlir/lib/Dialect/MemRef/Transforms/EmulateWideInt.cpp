@@ -32,7 +32,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefAlloc final : OpConversionPattern<memref::AllocOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AllocOp op, OpAdaptor adaptor,
@@ -55,7 +55,7 @@ struct ConvertMemRefAlloc final : OpConversionPattern<memref::AllocOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
@@ -78,7 +78,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefStore final : OpConversionPattern<memref::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,

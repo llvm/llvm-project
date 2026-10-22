@@ -138,12 +138,12 @@ define void @call_f_va() nounwind {
 ; GISEL-LABEL: call_f_va:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; GISEL-NEXT:    fmov s0, #1.00000000
-; GISEL-NEXT:    fmov w0, s0
+; GISEL-NEXT:    fmov s1, #1.00000000
 ; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
-; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    mov w3, #4 // =0x4
+; GISEL-NEXT:    fmov w0, s1
+; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    bl other_f_va_fn
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret
@@ -180,12 +180,12 @@ define void @call_d_va() nounwind {
 ; GISEL-LABEL: call_d_va:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; GISEL-NEXT:    fmov d0, #1.00000000
-; GISEL-NEXT:    fmov x0, d0
+; GISEL-NEXT:    fmov d1, #1.00000000
 ; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
-; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    mov w3, #4 // =0x4
+; GISEL-NEXT:    fmov x0, d1
+; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    bl other_d_va_fn
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret

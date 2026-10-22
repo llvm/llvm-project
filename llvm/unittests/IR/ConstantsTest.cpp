@@ -892,12 +892,13 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 
 TEST(ConstantsTest, Float128Test) {
   LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("", C);
   LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
   LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
   LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
   LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
   LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
   LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
@@ -918,6 +919,7 @@ TEST(ConstantsTest, Float128Test) {
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
+  LLVMDisposeModule(M);
   LLVMContextDispose(C);
 }
 

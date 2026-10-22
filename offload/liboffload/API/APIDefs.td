@@ -118,7 +118,8 @@ class AddHandleChecksToReturns<list<Param> Params, list<Return> Returns> {
 
   list<Return> returns_out = !if(returns_has_inv_handle,
         AppendConditionsToReturn<Returns, PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>])
+        !if(!empty(handle_param_conds), Returns,
+            !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>]))
     );
 }
 
@@ -136,13 +137,30 @@ class AddPointerChecksToReturns<list<Param> Params, list<Return> Returns> {
       !or(HasErr, !eq(Ret.value, PREFIX#"_ERRC_INVALID_NULL_POINTER")));
   list<Return> returns_out = !if(returns_has_inv_ptr,
         AppendConditionsToReturn<Returns, PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>])
+        !if(!empty(ptr_param_conds), Returns,
+            !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_POINTER", ptr_param_conds>]))
     );
 }
 
-defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
-                         Return<PREFIX#"_ERRC_UNINITIALIZED">,
-                         Return<PREFIX#"_ERRC_DEVICE_LOST">];
+// Returns every function has. A function may list one of these itself to
+// replace the generic conditions with its own.
+defvar DefaultReturns = [
+    Return<PREFIX#"_SUCCESS", ["The call succeeded"]>,
+    Return<PREFIX#"_ERRC_UNINITIALIZED", [
+      "`olInit` has not been called, or the library has been shut down"
+    ]>];
+
+// Conditions that Returns lists for the return code Value.
+class ConditionsFor<string Value, list<Return> Returns> {
+  list<string> ret = !foldl([]<string>, Returns, Acc, R,
+                            !if(!eq(R.value, Value),
+                                !listconcat(Acc, R.conditions), Acc));
+}
+
+// Whether Returns contains the return code Value.
+class HasReturn<string Value, list<Return> Returns> {
+  bit ret = !foldl(0, Returns, Acc, R, !or(Acc, !eq(R.value, Value)));
+}
 
 class APIObject {
   string desc;
@@ -158,7 +176,12 @@ class Function : APIObject {
   // so the compiler warns if the returned result is ignored.
   bit nodiscard = 0;
 
-  list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
+  list<Return> defaults_merged = !foreach(D, DefaultReturns,
+      Return<D.value, !if(!empty(ConditionsFor<D.value, returns>.ret),
+                          D.conditions, ConditionsFor<D.value, returns>.ret)>);
+  list<Return> returns_own = !filter(R, returns,
+      !not(HasReturn<R.value, DefaultReturns>.ret));
+  list<Return> returns_with_def = !listconcat(defaults_merged, returns_own);
   list<Return> all_returns = AddPointerChecksToReturns<params,
         AddHandleChecksToReturns<params, returns_with_def>.returns_out>.returns_out;
 }

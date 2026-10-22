@@ -2322,7 +2322,7 @@ xegpu::completeDpasLaneLayoutFromInstData(xegpu::DistributeLayoutAttr aLayout,
   SmallVector<int64_t> instDataB = bLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataCD = cdLayout.getEffectiveInstDataAsInt();
 
-  if (isa<xegpu::uArch::Xe2, xegpu::uArch::Xe3>(uArch)) {
+  if (isa<xegpu::uArch::Xe2, xegpu::uArch::Xe3p>(uArch)) {
     std::tie(laneLayoutA, laneDataA, orderA) =
         compute2DBlockIOLaneLayout(aTy.getShape(), subgroupSize,
                                    aTy.getElementType().getIntOrFloatBitWidth(),

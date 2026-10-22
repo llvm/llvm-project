@@ -522,8 +522,8 @@ public:
     };
     if (auto &name{std::get<parser::ObjectName>(x.var.t)}; name.symbol) {
       if (auto found{map.find(name.ToString())}; found != map.end()) {
-        ResolveOmp(name, found->second,
-            const_cast<Scope &>(DEREF(name.symbol).owner()));
+        ResolveOmp(*name.symbol, found->second,
+            const_cast<Scope &>(name.symbol->owner()));
       }
     }
     return false;
@@ -2673,6 +2673,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     Symbol::Flags dsa;
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
+    // Skip constructs that enclose the symbol declaration (e.g. in a nested
+    // BLOCK).
+    if (IsLocalInsideScope(symbol->GetUltimate(), scope)) {
+      continue;
+    }
 
     auto initSymbolDSA = [&](const Symbol *sym, Symbol::Flags &dsa) {
       auto it{scope.find(sym->name())};

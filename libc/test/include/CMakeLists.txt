@@ -1,5 +1,4 @@
-add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests-build)
+add_libc_testsuite(libc_include_tests)
 
 add_libc_test(
   alloca_test
@@ -245,6 +244,8 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.netinet_in_macros
 )
+
+add_subdirectory(net)
 
 add_libc_test(
   signbit_test

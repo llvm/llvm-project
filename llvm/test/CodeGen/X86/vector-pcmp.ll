@@ -1949,12 +1949,10 @@ define <4 x i64> @PR52504(<4 x i16> %t3) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq

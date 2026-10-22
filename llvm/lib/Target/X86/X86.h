@@ -107,7 +107,14 @@ FunctionPass *createX86IndirectBranchTrackingLegacyPass();
 
 /// Return a pass that pads short functions with NOOPs.
 /// This will prevent a stall when returning on the Atom.
-FunctionPass *createX86PadShortFunctions();
+class X86PadShortFunctionsPass
+    : public OptionalPassInfoMixin<X86PadShortFunctionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PadShortFunctionsLegacyPass();
 
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA

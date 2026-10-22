@@ -61,9 +61,15 @@ add_clang_library(clangCIR
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp
 
+  DISABLE_PCH_REUSE # PCH contains private headers
+  PRECOMPILE_HEADERS
+  [["pch.h"]]
+
   DEPENDS
   MLIRCIR
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS
   clangAST

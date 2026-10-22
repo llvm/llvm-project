@@ -958,6 +958,19 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
                                            data_dir_exception.vmsize);
 }
 
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  if (m_binary->is64()) {
+    if (m_binary->getTLSDirectory64())
+      addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
+  } else if (m_binary->getTLSDirectory32())
+    addr = m_binary->getTLSDirectory32()->AddressOfIndex.value();
+
+  if (addr == 0)
+    addr = LLDB_INVALID_ADDRESS;
+  return addr;
+}
+
 bool ObjectFilePECOFF::IsStripped() {
   // TODO: determine this for COFF
   return false;
@@ -1041,8 +1054,6 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   m_sections_up = std::make_unique<SectionList>();
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-
     SectionSP header_sp = std::make_shared<Section>(
         module_sp, this, ~user_id_t(0), "PECOFF header", eSectionTypeOther,
         m_coff_header_opt.image_base, m_coff_header_opt.header_size,

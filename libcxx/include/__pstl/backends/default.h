@@ -465,7 +465,7 @@ struct __destroy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size>
-  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+  optional<_ForwardIterator> operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
     return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) {
@@ -477,16 +477,19 @@ struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __for_each_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Function>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __size, _Function __func) const noexcept {
     if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using _ForEach          = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
       _ForwardIterator __last = __first + __size;
-      return _ForEach()(__policy, std::move(__first), std::move(__last), std::move(__func));
+      auto __res              = _ForEach()(__policy, std::move(__first), __last, std::move(__func));
+      if (!__res) {
+        return nullopt; // Failed to run the algorithm, propagate the error.
+      }
+      return __last;
     } else {
       // Otherwise, use the serial algorithm to avoid doing two passes over the input
-      std::for_each_n(std::move(__first), __size, std::move(__func));
-      return __empty{};
+      return std::for_each_n(std::move(__first), __size, std::move(__func));
     }
   }
 };
@@ -505,16 +508,15 @@ struct __fill<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __fill_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _Tp const& __value) const noexcept {
     if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      using _Fill             = __dispatch<__fill, __current_configuration, _ExecutionPolicy>;
-      _ForwardIterator __last = __first + __n;
-      return _Fill()(__policy, std::move(__first), std::move(__last), __value);
+      using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+      using _Ref      = __iterator_reference<_ForwardIterator>;
+      return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) { __element = __value; });
     } else {
       // Otherwise, use the serial algorithm to avoid doing two passes over the input
-      std::fill_n(std::move(__first), __n, __value);
-      return optional<__empty>{__empty{}};
+      return std::fill_n(std::move(__first), __n, __value);
     }
   }
 };
@@ -561,7 +563,7 @@ struct __generate<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Generator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _Generator&& __gen) const noexcept {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
@@ -586,7 +588,7 @@ struct __uninitialized_default_construct<__default_backend_tag, _ExecutionPolicy
 template <class _ExecutionPolicy>
 struct __uninitialized_default_construct_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -614,7 +616,7 @@ struct __uninitialized_value_construct<__default_backend_tag, _ExecutionPolicy> 
 template <class _ExecutionPolicy>
 struct __uninitialized_value_construct_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -642,7 +644,7 @@ struct __uninitialized_fill<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __uninitialized_fill_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp& __value) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;

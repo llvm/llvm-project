@@ -104,6 +104,34 @@ When compiled, the PTX kernel functions are callable by host-side code.
   of the number of thread blocks. This attribute is only allowed for kernel
   functions and requires `nvvm.reqntid` and `nvvm.cluster_dim` attributes.
 
+`"nvvm.abi_preserve"="<n>"`
+
+: This attribute specifies the number of general purpose registers that the
+  callers of this function are responsible for preserving. The backend bounds
+  the number of live data variables the callers may keep in callee-save
+  registers accordingly. It is lowered to the PTX
+  [`.abi_preserve`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+`"nvvm.abi_preserve_control"="<n>"`
+
+: This attribute specifies the number of control registers that the callers of
+  this function are responsible for preserving, corresponding to the number of
+  divergent program points in the call tree leading to this call. It is lowered
+  to the PTX
+  [`.abi_preserve_control`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve-control)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+Both `nvvm.abi_preserve*` attributes are valid on function definitions,
+declarations and call sites. PTX permits these directives only on device
+functions, between the `.func` directive and the function body. On a call site
+they are appended to the generated `.callprototype`; this is how an indirect
+call, which has no callee to consult, states the contract. A call site is never
+given the contract of its callee: the attributes are looked up on the call site
+only.
+
 (address-spaces)=
 
 ### Address Spaces

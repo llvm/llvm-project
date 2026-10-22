@@ -146,8 +146,6 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
-def err_fe_cir_input_unsupported : Error<
-    "support for ClangIR input is not yet implemented">;
 def err_invalid_cir : Error<"invalid ClangIR input">;
 def err_cir_input_missing_triple : Error<
     "missing target triple in ClangIR input">;
@@ -504,6 +502,13 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+def err_hlsl_signature_packing : Error<
+  "failed to pack %select{input|output}0 signature: %1">;
+def warn_hlsl_signature_packing_ignored : Warning<
+  "semantic signature packing mode '%0' is ignored as "
+  "%select{vertex shader inputs|pixel shader outputs}1 always use "
+  "%select{stacked|indexed}1 packing">,
+  InGroup<HLSLSemanticSignatures>;
 def warn_hlsl_failed_to_embed_source
     : Warning<"failed to embed source for '%0' into dx.source.contents">,
       InGroup<HLSLDXCCompat>;

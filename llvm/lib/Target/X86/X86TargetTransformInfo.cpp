@@ -71,6 +71,7 @@ using namespace llvm;
 
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
+namespace {
 struct CostKindCosts {
   unsigned RecipThroughputCost = ~0U;
   unsigned LatencyCost = ~0U;
@@ -99,6 +100,7 @@ struct CostKindCosts {
     return Cost;
   }
 };
+} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
@@ -377,6 +379,27 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // UREM
     return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+  }
+
+  // A rem paired with a div on the same operands in the same block is free:
+  // the pair costs the div alone. Power-of-two divisors are handled above.
+  if ((ISD == ISD::UREM || ISD == ISD::SREM) && CostKind != TTI::TCK_Latency &&
+      CtxI && CtxI->getOpcode() == Opcode) {
+    using namespace PatternMatch;
+    // Same use limit as SLP, bounds the walk over the operand users.
+    constexpr unsigned MaxUses = 64;
+    unsigned DivOpcode =
+        ISD == ISD::SREM ? Instruction::SDiv : Instruction::UDiv;
+    const Value *X = CtxI->getOperand(0);
+    const Value *Y = CtxI->getOperand(1);
+    // Constants have context-wide use lists, walk the variable operand.
+    const Value *V = isa<Constant>(Y) ? X : Y;
+    if (!isa<Constant>(V) && !V->hasNUsesOrMore(MaxUses) &&
+        any_of(V->users(), [&](const User *U) {
+          return match(U, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
+                 cast<Instruction>(U)->getParent() == CtxI->getParent();
+        }))
+      return TTI::TCC_Free;
   }
 
   // A scalar integer divide/remainder by a constant is not a hardware divide;
@@ -4165,18 +4188,21 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
-/// Returns true if the square root is divided into with the reciprocal
-/// allowed and the target replaces the pair with the rsqrt* based estimate.
-static bool isFoldedIntoRsqrtEstimate(const IntrinsicCostAttributes &ICA,
-                                      const X86TargetLowering &TLI,
-                                      const DataLayout &DL) {
+/// Returns true if \p V is the square root, divided into with the reciprocal
+/// allowed, and the target replaces the pair with the rsqrt* based estimate,
+/// costed with the division. The estimate is formed for the legalized type
+/// \p VT.
+static bool isFoldedIntoRsqrtEstimate(const Value *V,
+                                      const X86TargetLowering &TLI, MVT VT,
+                                      TTI::TargetCostKind CostKind) {
   using namespace PatternMatch;
-  const IntrinsicInst *II = ICA.getInst();
-  if (!II || !II->hasOneUse() ||
+  if (CostKind != TTI::TCK_RecipThroughput && CostKind != TTI::TCK_Latency)
+    return false;
+  const auto *II = dyn_cast_if_present<IntrinsicInst>(V);
+  if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
       !match(II->user_back(), m_FDiv(m_Value(), m_Specific(II))) ||
       !cast<FPMathOperator>(II->user_back())->hasAllowReciprocal())
     return false;
-  EVT VT = TLI.getValueType(DL, ICA.getReturnType());
   return TLI.hasSqrtEstimate(VT, /*Reciprocal=*/true) &&
          TLI.getRecipEstimateSqrtEnabled(VT, *II->getFunction()) !=
              TargetLoweringBase::ReciprocalEstimate::Disabled;
@@ -5170,9 +5196,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::sqrt:
     // The estimate sequence is costed with the division it is folded into.
-    if ((CostKind == TTI::TCK_RecipThroughput ||
-         CostKind == TTI::TCK_Latency) &&
-        isFoldedIntoRsqrtEstimate(ICA, *TLI, DL))
+    if (isFoldedIntoRsqrtEstimate(ICA.getInst(), *TLI,
+                                  getTypeLegalizationCost(RetTy).second,
+                                  CostKind))
       return TTI::TCC_Free;
     ISD = ISD::FSQRT;
     break;
@@ -5572,6 +5598,16 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   MVT MScalarTy = LT.second.getScalarType();
   unsigned LegalVectorBitWidth = LT.second.getSizeInBits();
   InstructionCost Cost = 0;
+  // The square roots, folded with the divisions into the estimate, are
+  // computed separately to be inserted.
+  if (Insert && !VL.empty())
+    for (unsigned I : seq(DemandedElts.getBitWidth()))
+      if (DemandedElts[I] &&
+          isFoldedIntoRsqrtEstimate(VL[I], *TLI, MScalarTy, CostKind))
+        Cost += getIntrinsicInstrCost(
+            IntrinsicCostAttributes(Intrinsic::sqrt, VL[I]->getType(),
+                                    {VL[I]->getType()}),
+            CostKind);
 
   constexpr unsigned LaneBitWidth = 128;
   assert((LegalVectorBitWidth < LaneBitWidth ||
@@ -7313,10 +7349,7 @@ static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
 
-  if (ScalarTy->isHalfTy() && ST->hasBWI())
-    return true;
-
-  if (ScalarTy->isBFloatTy() && ST->hasBF16())
+  if ((ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()) && ST->hasBWI())
     return true;
 
   if (!ScalarTy->isIntegerTy())

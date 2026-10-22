@@ -16,8 +16,10 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/clone.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
@@ -41,12 +43,11 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sched_macros.h" // For CLONE_* flags.
-#include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include <linux/param.h>         // For EXEC_PAGESIZE.
-#include <linux/prctl.h>         // For PR_SET_NAME
-#include <sys/syscall.h>         // For syscall numbers.
+#include <linux/param.h> // For EXEC_PAGESIZE.
+#include <linux/prctl.h> // For PR_SET_NAME
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -504,6 +505,10 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   if (!attrib->detach_state.compare_exchange_strong(
           joinable_state, uint32_t(DetachState::EXITING))) {
     // Thread is detached so cleanup the resources.
+    // Signals must be blocked before unmapping the stack to prevent any signal
+    // handler from running without a stack.
+    (void)signals::block_all();
+
     cleanup_thread_resources(attrib);
 
     // Set the CLEAR_TID address to nullptr to prevent the kernel
@@ -512,15 +517,14 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     // Return value for detached thread should be unused. We need to avoid
     // referencing `style` or `retval.*` because they may be stored on the stack
     // and we have deallocated our stack!
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 0);
-    __builtin_unreachable();
+    linux_syscalls::exit(0);
   }
 
   if (style == ThreadStyle::POSIX)
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, retval.posix_retval);
+    linux_syscalls::exit(
+        static_cast<int>(reinterpret_cast<uintptr_t>(retval.posix_retval)));
   else
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, retval.stdc_retval);
-  __builtin_unreachable();
+    linux_syscalls::exit(retval.stdc_retval);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -25,7 +25,8 @@
 using namespace llvm;
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), CLOpts(RISCVMCOptions::Global) {}
+    : MCTargetStreamer(S),
+      CLOpts(RISCV_MC::getCLOpts(S.getContext().getTargetOptions())) {}
 
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}

@@ -1338,6 +1338,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   for (const Record *R : RCs) {
     RegClasses.emplace_back(*this, R);
     CodeGenRegisterClass &RC = RegClasses.back();
+    RegClassNames.insert(RC.getName());
     if (!RC.Artificial)
       addToMaps(&RC);
   }
@@ -1415,6 +1416,7 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
 
   // Sub-class doesn't exist, create a new one.
   RegClasses.emplace_back(*this, Name, K);
+  RegClassNames.insert(Name);
   addToMaps(&RegClasses.back());
   return {&RegClasses.back(), true};
 }
@@ -2680,12 +2682,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
                          "_in_" + CompositeSubRC->getName();
 
-      const bool HasRegClassNamed =
-          llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
-            return RC.getName() == Name;
-          });
-
-      if (HasRegClassNamed)
+      if (RegClassNames.contains(Name))
         Name = RC->getName() + "_with_" + SubIdx->getName() + "_in_" +
                SubRC.getName();
 

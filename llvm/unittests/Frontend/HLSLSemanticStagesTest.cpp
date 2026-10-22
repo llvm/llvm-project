@@ -64,7 +64,8 @@ constexpr SemanticKind SupportedKinds[] = {
     SemanticKind::CullDistance,     SemanticKind::TessFactor,
     SemanticKind::InsideTessFactor, SemanticKind::DispatchThreadID,
     SemanticKind::GroupID,          SemanticKind::GroupIndex,
-    SemanticKind::GroupThreadID,    SemanticKind::InstanceID};
+    SemanticKind::GroupThreadID,    SemanticKind::InstanceID,
+    SemanticKind::ShadingRate};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -97,6 +98,59 @@ TEST(HLSLSemanticStagesTest, StageIOTypesAreDisjoint) {
       }
     }
   }
+}
+
+// Per-semantic signature point tests.
+//
+// To cover a semantic, add a test named `<Semantic>SignaturePoints` that lists
+// every point the semantic is valid at and passes the list to
+// expectOnlySignaturePoints. List valid points only: every other
+// stage/IOType combination is checked to be Invalid, so a point that becomes
+// available by accident fails the test.
+
+// A stage and IOType at which a semantic is valid, and how it is interpreted.
+struct SignaturePoint {
+  Triple::EnvironmentType Stage;
+  IOType IO;
+  SemanticInterpretation Interpretation;
+};
+
+// Checks that Kind is valid at exactly the points in Valid, with the listed
+// interpretations, across every stage and IOType.
+static void expectOnlySignaturePoints(SemanticKind Kind,
+                                      ArrayRef<SignaturePoint> Valid) {
+  constexpr IOType AllIOTypes[] = {IOType::In, IOType::Out,
+                                   IOType::PatchConstantOrPrimitive};
+  for (Triple::EnvironmentType Stage : AllStages) {
+    for (IOType IO : AllIOTypes) {
+      SemanticInterpretation Want = SemanticInterpretation::Invalid;
+      for (const SignaturePoint &P : Valid)
+        if (P.Stage == Stage && P.IO == IO)
+          Want = P.Interpretation;
+      EXPECT_EQ(getInterpretationKind(Kind, Stage, IO), Want)
+          << "stage " << Triple::getEnvironmentTypeName(Stage).str()
+          << ", IOType " << static_cast<unsigned>(IO);
+    }
+  }
+}
+
+// SV_ShadingRate is written per vertex/primitive by the geometry-producing
+// stages and read by the pixel shader. Valid only on vertex, geometry, and mesh
+// outputs, on hull, domain and geometry per-vertex data, and on pixel inputs.
+TEST(HLSLSemanticStagesTest, ShadingRateSignaturePoints) {
+  constexpr SemanticInterpretation SV = SemanticInterpretation::SV;
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::Out, SV},
+      {Triple::Hull, IOType::In, SV},
+      {Triple::Hull, IOType::Out, SV},
+      {Triple::Domain, IOType::In, SV},
+      {Triple::Domain, IOType::Out, SV},
+      {Triple::Geometry, IOType::In, SV},
+      {Triple::Geometry, IOType::Out, SV},
+      {Triple::Pixel, IOType::In, SV},
+      {Triple::Mesh, IOType::PatchConstantOrPrimitive, SV},
+  };
+  expectOnlySignaturePoints(SemanticKind::ShadingRate, Valid);
 }
 
 } // namespace

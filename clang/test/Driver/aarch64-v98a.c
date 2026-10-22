@@ -25,3 +25,7 @@
 // RUN: %clang -target aarch64 -march=armv9.8a+lsc64b -### -c %s 2>&1 | FileCheck -check-prefix=V98A-LSC64B %s
 // RUN: %clang -target aarch64 -march=armv9.8-a+lsc64b -### -c %s 2>&1 | FileCheck -check-prefix=V98A-LSC64B %s
 // V98A-LSC64B: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+lsc64b"
+//
+// RUN: %clang -target aarch64 -march=armv9.8a+sve-lrcpc -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-LRCPC %s
+// RUN: %clang -target aarch64 -march=armv9.8-a+sve-lrcpc -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-LRCPC %s
+// V98A-SVE-LRCPC: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+sve-lrcpc"

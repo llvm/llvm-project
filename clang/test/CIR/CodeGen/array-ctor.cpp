@@ -319,8 +319,8 @@ void Temp2InArray() {
 
 
 // LLVM-LABEL: define {{.*}}void @_Z12Temp2InArrayv()
-// LLVM:       %[[DTOR_ITR:.*]] = alloca ptr
 // LLVM:       %[[TMP:.*]] = alloca %struct.Temp2
+// LLVM:       %[[DTOR_ITR:.*]] = alloca ptr
 // LLVM:       %[[ITER:.*]] = alloca ptr
 // LLVM:       br label %[[DO_BR:.*]]
 // LLVM:       [[DO_BR]]:

@@ -54,8 +54,6 @@
 #include <thread>
 #include <vector>
 
-#define NO_TYPENAME "<no-type>"
-
 namespace lldb_dap {
 
 typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>

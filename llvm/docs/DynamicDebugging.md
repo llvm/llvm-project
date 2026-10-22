@@ -18,7 +18,6 @@ Important info:
 
 * Currently the feature is only supported with the ELF file format. Non-x86 targets are not supported yet; although they should work the feature has only been tested on x86 platforms.
 * LLDB does not support Dynamic Debugging.
-* LLD does not support `--wrap=<symbol>` with Dynamic Debugging.
 * Dynamic Debugging with LTO is not supported.
 
 When adding support for additional targets, `prepareForDynamicDebugging` needs to be taught the correct `tail-pad-to-size` and `tail-pad-value` attribute values, which would otherwise be omitted.
@@ -98,6 +97,5 @@ Linking of output with dynamic debugging has a significant impact on memory usag
 # Future work
 
 * LLD support for `--gc-sections` is limited and therefore has reduced output size savings.
-* LLD support for `--wrap=<symbol>`.
 * LTO isn't supported with the feature.
 * An inline instance of a function may have its instructions completely optimized away which also removes the debug metadata specifying that there's an inline scope. In this situation a debugger wouldn't be able to patch the parent function when a breakpoint is set on the inlinee. It could be possible for LLVM to preserve the inline scope metadata in order to emit an empty inline scope in DWARF (inline subroutine without any PC ranges), which would be a useful signal to the debugger that this has happened.

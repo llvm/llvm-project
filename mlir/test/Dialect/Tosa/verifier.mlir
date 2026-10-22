@@ -347,6 +347,26 @@ func.func @test_depthwise_conv2d_invalid_bias_size(%arg0: tensor<1x4x4x4xf32>, %
 
 // -----
 
+func.func @test_conv3d_mxfp_input_zp_type(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf16>) : () -> tensor<1xf16>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled input to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32xf32>, tensor<8xf32>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_weight_zp_type(%input: tensor<1x4x4x4x32xf32>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf16>) : () -> tensor<1xf16>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled weight to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32xf32>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf16>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
 func.func @test_conv3d_invalid_padding(%arg0: tensor<1x4x8x21x17xf32>, %arg1: tensor<34x1x1x1x17xf32>, %arg2: tensor<21xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x8x21x34xf32> {
   // expected-error@+1 {{'tosa.conv3d' op expect all padding values to be >= 0, got 0, -1, 0, -1, 0, 0}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, -1, 0, -1, 0, 0]) stride([1, 1, 1]) dilation([1, 2, 1]) acc_type(f32)
@@ -668,19 +688,11 @@ func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>) {
 }
 
 // -----
-func.func @test_pad_output_mismatch(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi8>) -> tensor<13x21x3xi8> {
-  %0 = tosa.const_shape values(dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>) : () -> !tosa.shape<6>
-  // expected-error@+1 {{mismatch in output shape at dimension 1: expected 21 + 0 + 1 = 22, but got 21}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xi8>, !tosa.shape<6>, tensor<1xi8>) -> tensor<13x21x3xi8>
-  return %1 : tensor<13x21x3xi8>
-}
-
-// -----
-func.func @test_pad_invalid_padding_value(%arg0: tensor<10xi8>, %arg1: tensor<1xi8>) -> tensor<10xi8> {
-  %0 = tosa.const_shape values(dense<[-2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{invalid padding values at dimension 0: values must be non-negative or -1 for dynamic padding, got [-2, 2]}}
-  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<10xi8>, !tosa.shape<2>, tensor<1xi8>) -> tensor<10xi8>
-  return %1 : tensor<10xi8>
+func.func @test_pad_computed_padding_rank(%arg0: tensor<13x21x3xf32>, %arg1: tensor<1xf32>) {
+  %0 = tosa.dim %arg0 axis(0) : (tensor<13x21x3xf32>) -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.pad' op padding tensor must have 3 * 2 = 6 elements, but got 1}}
+  %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xf32>, !tosa.shape<1>, tensor<1xf32>) -> tensor<13x21x3xf32>
+  return
 }
 
 // -----

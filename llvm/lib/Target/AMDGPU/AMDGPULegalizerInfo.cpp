@@ -472,6 +472,9 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (MemSize != RegSize && RegSize != 32)
     return false;
 
+  if (IsLoad && RegSize == 16 && !ST.d16PreservesUnusedBits())
+    return false;
+
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
                                     Query.MMODescrs[0].Ordering !=
                                         AtomicOrdering::NotAtomic))
@@ -1664,13 +1667,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
          {V4S32, ConstantPtr, V4S32, GlobalAlign32},
          {S64, ConstantPtr, S64, GlobalAlign32}});
 
-    Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
-                                     {{S16, GlobalPtr, S8, GlobalAlign8},
-                                      {S16, GlobalPtr, S16, GlobalAlign16},
-                                      {S16, LocalPtr, S8, 8},
-                                      {S16, LocalPtr, S16, 16},
-                                      {S16, PrivatePtr, S8, 8},
-                                      {S16, PrivatePtr, S16, 16}});
+    if (IsStore || ST.d16PreservesUnusedBits()) {
+      Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
+                                       {{S16, GlobalPtr, S8, GlobalAlign8},
+                                        {S16, GlobalPtr, S16, GlobalAlign16},
+                                        {S16, LocalPtr, S8, 8},
+                                        {S16, LocalPtr, S16, 16},
+                                        {S16, PrivatePtr, S8, 8},
+                                        {S16, PrivatePtr, S16, 16}});
+    }
 
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
@@ -7888,8 +7893,8 @@ bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(Helper, MI);
 
-  return ST.supportsGetDoorbellID() ?
-         legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
+  return ST.supportsGetDoorbellID() ? legalizeTrapHsa(Helper, MI)
+                                    : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
 bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
@@ -7994,14 +7999,28 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapHsa(LegalizerHelper &Helper,
+                                          MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   // We need to simulate the 's_trap 2' instruction on targets that run in
   // PRIV=1 (where it is treated as a nop).
   if (ST.hasPrivEnabledTrap2NopBug()) {
-    ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI,
-                                           MI.getDebugLoc());
+    // insertSimulatedTrap may split the block after MI. An instruction's
+    // parent block is part of its CSE profile, so notify observers about the
+    // instructions that may be moved by the split.
+    GISelChangeObserver &Observer = Helper.Observer;
+    MachineBasicBlock &MBB = B.getMBB();
+    SmallVector<MachineInstr *, 8> MovedInstrs;
+    for (MachineInstr &I :
+         make_range(std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+      Observer.changingInstr(I);
+      MovedInstrs.push_back(&I);
+    }
+    ST.getInstrInfo()->insertSimulatedTrap(MRI, MBB, MI, MI.getDebugLoc());
+    for (MachineInstr *MovedMI : MovedInstrs)
+      Observer.changedInstr(*MovedMI);
     MI.eraseFromParent();
     return true;
   }

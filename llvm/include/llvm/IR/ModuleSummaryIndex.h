@@ -79,11 +79,18 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasTailCall : 1;
 
+  // True if at least one of the calls to the callee is an indirect call, i.e.
+  // the edge was added for a profiled indirect call target (from value profile
+  // metadata) or for a possible target from !callees metadata.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t HasIndirectCall : 1;
+
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false) {}
-  explicit CalleeInfo(HotnessType Hotness, bool HasTC)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC) {}
+        HasTailCall(false), HasIndirectCall(false) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, bool HasIC = false)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        HasIndirectCall(HasIC) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -92,6 +99,10 @@ struct CalleeInfo {
   bool hasTailCall() const { return HasTailCall; }
 
   void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
+
+  bool hasIndirectCall() const { return HasIndirectCall; }
+
+  void setHasIndirectCall(const bool HasIC) { HasIndirectCall = HasIC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 };

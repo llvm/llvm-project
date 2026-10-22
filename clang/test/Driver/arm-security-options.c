@@ -75,6 +75,23 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv7-r -c %s -### -mbranch-protection=bti 2>&1 | \
 // RUN: FileCheck %s --check-prefix=INCOMPATIBLE-ARCH
 
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8m.main -c %s -### -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=bti -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+bti -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+leaf -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -msign-return-address=all -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+// RUN: not %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -msign-return-address=non-leaf -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-HARDEN-INCOMPATIBLE-ARCH
+
 // RA-OFF: "-msign-return-address=none"
 // RA-NON-LEAF: "-msign-return-address=non-leaf"
 // RA-ALL: "-msign-return-address=all"
@@ -91,3 +108,5 @@
 // BAD-LEAF-COMBINATION: unsupported argument 'leaf' to option '-mbranch-protection='
 
 // INCOMPATIBLE-ARCH: '-mbranch-protection=' option is incompatible with the '{{.*}}' architecture
+
+// RA-HARDEN-INCOMPATIBLE-ARCH: unsupported option '-mharden-pac-ret=' for target 'arm-arm-none-eabi'

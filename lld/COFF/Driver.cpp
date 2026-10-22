@@ -1642,7 +1642,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
     cl::ResetAllOptionOccurrences();
-    cl::ParseCommandLineOptions(v.size(), v.data());
+    cl::parseCommandLineOptions(config->libraryOptions, v);
   }
 
   // Handle /errorlimit early, because error() depends on it.

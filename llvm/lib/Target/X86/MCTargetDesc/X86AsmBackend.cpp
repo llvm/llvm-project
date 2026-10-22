@@ -97,9 +97,10 @@ class X86AsmBackend : public MCAsmBackend {
   void emitInstructionEndBundle(MCObjectStreamer &OS);
 
 public:
-  X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(llvm::endianness::little), CLOpts(X86MCOptions::Global),
-        STI(STI), MCII(T.createMCInstrInfo()) {
+  X86AsmBackend(const X86MCOptions &CLOpts, const Target &T,
+                const MCSubtargetInfo &STI)
+      : MCAsmBackend(llvm::endianness::little), CLOpts(CLOpts), STI(STI),
+        MCII(T.createMCInstrInfo()) {
     if (CLOpts.branches_within_32B_boundaries) {
       // At the moment, this defaults to aligning fused branches, unconditional
       // jumps, and (unfused) conditional jumps with nops.  Both the
@@ -124,6 +125,8 @@ public:
         AllowAutoPadding && TargetPrefixMax != 0 && CLOpts.pad_for_branch_align;
     AllowBundling = true;
   }
+
+  const X86MCOptions &getCLOpts() const { return CLOpts; }
 
   // The streamer frees the fragments these point into.
   void reset() override {
@@ -424,8 +427,9 @@ bool X86AsmBackend::needAlign(const MCInst &Inst) const {
 
 void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
                              const MCSubtargetInfo &STI) {
+  auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
   bool AutoPadding = S.getAllowAutoPadding();
-  if (LLVM_LIKELY(!AutoPadding && !X86MCOptions::Global.pad_for_align)) {
+  if (LLVM_LIKELY(!AutoPadding && !Backend.getCLOpts().pad_for_align)) {
     S.MCObjectStreamer::emitInstruction(Inst, STI);
     return;
   }
@@ -436,7 +440,6 @@ void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
   if (S.getLFIRewriter() && S.getLFIRewriter()->rewriteInst(Inst, S, STI))
     return;
 
-  auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
   Backend.emitInstructionBegin(S, Inst, STI);
   S.MCObjectStreamer::emitInstruction(Inst, STI);
   Backend.emitInstructionEnd(S, Inst);
@@ -1186,15 +1189,14 @@ namespace {
 class ELFX86AsmBackend : public X86AsmBackend {
 public:
   uint8_t OSABI;
-  ELFX86AsmBackend(const Target &T, uint8_t OSABI, const MCSubtargetInfo &STI)
-      : X86AsmBackend(T, STI), OSABI(OSABI) {}
+  ELFX86AsmBackend(const X86MCOptions &CLOpts, const Target &T, uint8_t OSABI,
+                   const MCSubtargetInfo &STI)
+      : X86AsmBackend(CLOpts, T, STI), OSABI(OSABI) {}
 };
 
 class ELFX86_32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_32AsmBackend(const Target &T, uint8_t OSABI,
-                      const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1204,9 +1206,7 @@ public:
 
 class ELFX86_X32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_X32AsmBackend(const Target &T, uint8_t OSABI,
-                       const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1217,9 +1217,7 @@ public:
 
 class ELFX86_IAMCUAsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_IAMCUAsmBackend(const Target &T, uint8_t OSABI,
-                         const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1230,9 +1228,7 @@ public:
 
 class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_64AsmBackend(const Target &T, uint8_t OSABI,
-                      const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {}
+  using ELFX86AsmBackend::ELFX86AsmBackend;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -1244,11 +1240,9 @@ class WindowsX86AsmBackend : public X86AsmBackend {
   bool Is64Bit;
 
 public:
-  WindowsX86AsmBackend(const Target &T, bool is64Bit,
-                       const MCSubtargetInfo &STI)
-    : X86AsmBackend(T, STI)
-    , Is64Bit(is64Bit) {
-  }
+  WindowsX86AsmBackend(const X86MCOptions &CLOpts, const Target &T,
+                       bool is64Bit, const MCSubtargetInfo &STI)
+      : X86AsmBackend(CLOpts, T, STI), Is64Bit(is64Bit) {}
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
     return StringSwitch<std::optional<MCFixupKind>>(Name)
@@ -1438,9 +1432,9 @@ private:
   }
 
 public:
-  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                      const MCSubtargetInfo &STI)
-      : X86AsmBackend(T, STI), MRI(MRI), TT(STI.getTargetTriple()),
+  DarwinX86AsmBackend(const X86MCOptions &CLOpts, const Target &T,
+                      const MCRegisterInfo &MRI, const MCSubtargetInfo &STI)
+      : X86AsmBackend(CLOpts, T, STI), MRI(MRI), TT(STI.getTargetTriple()),
         Is64Bit(TT.isX86_64()) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
@@ -1632,18 +1626,19 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
+  const X86MCOptions &CLOpts = X86_MC::getCLOpts(Options);
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinX86AsmBackend(T, MRI, STI);
+    return new DarwinX86AsmBackend(CLOpts, T, MRI, STI);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, false, STI);
+    return new WindowsX86AsmBackend(CLOpts, T, false, STI);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.isOSIAMCU())
-    return new ELFX86_IAMCUAsmBackend(T, OSABI, STI);
+    return new ELFX86_IAMCUAsmBackend(CLOpts, T, OSABI, STI);
 
-  return new ELFX86_32AsmBackend(T, OSABI, STI);
+  return new ELFX86_32AsmBackend(CLOpts, T, OSABI, STI);
 }
 
 MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
@@ -1651,23 +1646,24 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
+  const X86MCOptions &CLOpts = X86_MC::getCLOpts(Options);
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinX86AsmBackend(T, MRI, STI);
+    return new DarwinX86AsmBackend(CLOpts, T, MRI, STI);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, true, STI);
+    return new WindowsX86AsmBackend(CLOpts, T, true, STI);
 
   if (TheTriple.isUEFI()) {
     assert(TheTriple.isOSBinFormatCOFF() &&
          "Only COFF format is supported in UEFI environment.");
-    return new WindowsX86AsmBackend(T, true, STI);
+    return new WindowsX86AsmBackend(CLOpts, T, true, STI);
   }
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.isX32())
-    return new ELFX86_X32AsmBackend(T, OSABI, STI);
-  return new ELFX86_64AsmBackend(T, OSABI, STI);
+    return new ELFX86_X32AsmBackend(CLOpts, T, OSABI, STI);
+  return new ELFX86_64AsmBackend(CLOpts, T, OSABI, STI);
 }
 
 namespace {

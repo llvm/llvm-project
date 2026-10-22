@@ -49,6 +49,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -68,7 +69,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool hasAccDeclareGlobals(ModuleOp mod) {
   for (Operation &op : mod.getBody()->getOperations())
     if (op.getDiscardableAttr(acc::getDeclareAttrName()))
@@ -93,6 +93,12 @@ class ACCDeclareGPUModuleInsertion
 public:
   using acc::impl::ACCDeclareGPUModuleInsertionBase<
       ACCDeclareGPUModuleInsertion>::ACCDeclareGPUModuleInsertionBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCDeclareGPUModuleInsertionBase<
+        ACCDeclareGPUModuleInsertion>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   LogicalResult copyGlobalsToGPUModule(gpu::GPUModuleOp gpuMod, ModuleOp mod,
                                        acc::OpenACCSupport &accSupport) const {
@@ -188,5 +194,4 @@ public:
       return;
   }
 };
-
 } // namespace

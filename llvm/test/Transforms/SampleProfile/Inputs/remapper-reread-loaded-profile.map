@@ -1,0 +1,3 @@
+# The remapping rule below matches nothing in the test; the remapper only has
+# to be present to enable the remapper lookup path in the extbinary reader.
+name 3baz 3qux

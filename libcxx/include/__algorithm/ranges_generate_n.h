@@ -37,8 +37,7 @@ namespace ranges {
 struct __generate_n {
   template <input_or_output_iterator _OutIter, copy_constructible _Func>
     requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
-  _LIBCPP_HIDE_FROM_ABI constexpr _OutIter
-  operator()(_OutIter __first, iter_difference_t<_OutIter> __n, _Func __gen) const {
+  constexpr _OutIter operator()(_OutIter __first, iter_difference_t<_OutIter> __n, _Func __gen) const {
     return std::__generate_n(std::move(__first), __n, __gen);
   }
 };

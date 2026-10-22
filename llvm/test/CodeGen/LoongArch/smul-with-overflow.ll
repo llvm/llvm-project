@@ -145,13 +145,13 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    add.w $t4, $t4, $t7
 ; LA32-NEXT:    add.w $t4, $t2, $t4
 ; LA32-NEXT:    mul.w $t5, $a7, $a3
-; LA32-NEXT:    add.w $t6, $t5, $t6
-; LA32-NEXT:    sltu $t5, $t6, $t5
-; LA32-NEXT:    add.w $t7, $t4, $t5
+; LA32-NEXT:    add.w $t7, $t5, $t6
+; LA32-NEXT:    sltu $t5, $t7, $t5
+; LA32-NEXT:    add.w $t6, $t4, $t5
 ; LA32-NEXT:    add.w $t4, $t8, $fp
-; LA32-NEXT:    beq $t7, $t2, .LBB1_2
+; LA32-NEXT:    beq $t6, $t2, .LBB1_2
 ; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    sltu $t5, $t7, $t2
+; LA32-NEXT:    sltu $t5, $t6, $t2
 ; LA32-NEXT:  .LBB1_2:
 ; LA32-NEXT:    add.w $t5, $t3, $t5
 ; LA32-NEXT:    sltu $t2, $t5, $t3
@@ -184,11 +184,11 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    add.w $t1, $s0, $t1
 ; LA32-NEXT:    add.w $t1, $t1, $s3
 ; LA32-NEXT:    add.w $s0, $t2, $t1
+; LA32-NEXT:    mul.w $t2, $a4, $a6
+; LA32-NEXT:    add.w $t1, $t2, $t7
+; LA32-NEXT:    sltu $t7, $t1, $t2
 ; LA32-NEXT:    add.w $t2, $t8, $t7
-; LA32-NEXT:    mul.w $t7, $a4, $a6
-; LA32-NEXT:    add.w $t1, $t7, $t6
-; LA32-NEXT:    sltu $t7, $t1, $t7
-; LA32-NEXT:    add.w $t2, $t2, $t7
+; LA32-NEXT:    add.w $t2, $t2, $t6
 ; LA32-NEXT:    add.w $t6, $s0, $s4
 ; LA32-NEXT:    beq $t2, $t8, .LBB1_4
 ; LA32-NEXT:  # %bb.3:
@@ -206,11 +206,11 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    add.w $s3, $s1, $t5
 ; LA32-NEXT:    mul.w $fp, $a7, $a5
 ; LA32-NEXT:    add.w $s2, $fp, $s3
-; LA32-NEXT:    add.w $t6, $s2, $s4
-; LA32-NEXT:    mul.w $s5, $a7, $a6
-; LA32-NEXT:    add.w $t5, $s5, $t7
-; LA32-NEXT:    sltu $t7, $t5, $s5
-; LA32-NEXT:    add.w $t6, $t6, $t7
+; LA32-NEXT:    mul.w $t6, $a7, $a6
+; LA32-NEXT:    add.w $t5, $t6, $t7
+; LA32-NEXT:    sltu $t7, $t5, $t6
+; LA32-NEXT:    add.w $t6, $s2, $t7
+; LA32-NEXT:    add.w $t6, $t6, $s4
 ; LA32-NEXT:    beq $t6, $s2, .LBB1_6
 ; LA32-NEXT:  # %bb.5:
 ; LA32-NEXT:    sltu $t7, $t6, $s2

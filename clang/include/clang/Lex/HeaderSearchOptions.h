@@ -315,7 +315,7 @@ public:
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
         ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
-        AllowModuleMapSubdirectorySearch(true), LazyLoadModuleMaps(false) {}
+        AllowModuleMapSubdirectorySearch(false), LazyLoadModuleMaps(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

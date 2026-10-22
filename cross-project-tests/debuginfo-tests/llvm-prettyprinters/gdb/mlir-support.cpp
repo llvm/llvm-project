@@ -26,7 +26,8 @@ mlir::Value Value(&Result);
 
 auto UnknownLoc = mlir::UnknownLoc::get(&Context);
 auto FileLineColLoc = mlir::FileLineColLoc::get(&Context, "file", 7, 8);
-auto OpaqueLoc = mlir::OpaqueLoc::get<uintptr_t>(9, &Context);
+auto OpaqueLoc =
+    mlir::OpaqueLoc::get(9, mlir::TypeID::get<uintptr_t>(), UnknownLoc);
 auto NameLoc = mlir::NameLoc::get(Identifier);
 auto CallSiteLoc = mlir::CallSiteLoc::get(FileLineColLoc, OpaqueLoc);
 auto FusedLoc = mlir::FusedLoc::get(&Context, {FileLineColLoc, NameLoc});

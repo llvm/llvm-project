@@ -190,6 +190,12 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+# Standalone builds don't inherit this flag from the llvm/CMakeLists, so set it
+# here.
+if(CLANG_BUILT_STANDALONE)
+  option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" OFF)
+endif()
+
 if(CLANG_ENABLE_CIR)
   if (CLANG_BUILT_STANDALONE)
     message(FATAL_ERROR

@@ -8580,7 +8580,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity) &&
+          !CurInit.get()->containsErrors()) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 

@@ -1564,3 +1564,37 @@ namespace FailInTrivialCopy {
   static_assert(foo(), ""); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to}}
 }
+
+namespace DiscardedConstevalStruct {
+  struct S { int x; };
+  consteval S make() { return S{42}; }
+
+  void discard_cast() {
+    (void)make();
+  }
+
+  int discard_comma() {
+    return (make(), 0); // both-warning {{left operand of comma operator has no effect}}
+  }
+}
+
+namespace ConditionalOperatorInBORHS {
+  struct S { int x; };
+
+  struct a {
+    int c = 12;
+
+    constexpr int e() {
+
+      0 && (0 ? 0 : 0); // both-warning {{use of logical '&&' with constant operand}} \
+                        // both-note {{use '&' for a bitwise operation}} \
+                        // both-note {{remove constant to silence this warning}} \
+                        // both-warning {{expression result unused}}
+
+      int f = c;
+
+      return (f);
+    }
+  };
+  static_assert(a{}.e() == 12);
+}

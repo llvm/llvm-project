@@ -717,12 +717,17 @@ apple-system|apple-system-hardened)
 ;;
 aarch64)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
+    # The ARM builders' preinstalled toolchains do not provide a discoverable
+    # clang-scan-deps. Disable automatic module scanning for these jobs.
+    # See https://github.com/llvm/llvm-project/issues/232946.
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 aarch64-no-exceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     check-runtimes
@@ -730,32 +735,38 @@ aarch64-no-exceptions)
 # Aka Armv8 32 bit
 armv8)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv8-no-exceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-no-exceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-no-exceptions.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv7-no-exceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv7m-picolibc)
     test-armv7m-picolibc \
-        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
 ;;
 armv7m-picolibc-no-exceptions)
     test-armv7m-picolibc \
         -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
         -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
         -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
         -DLIBCXX_ENABLE_EXCEPTIONS=OFF \

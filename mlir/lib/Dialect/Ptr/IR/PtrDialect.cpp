@@ -346,7 +346,8 @@ void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
 /// Fold: ptradd ptr + 0 ->  ptr
 OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   Attribute attr = adaptor.getOffset();
-  if (!attr)
+  // A shaped offset can broadcast a scalar base to a shaped result.
+  if (!attr || getBase().getType() != getType())
     return nullptr;
   if (llvm::APInt value; m_ConstantInt(&value).match(attr) && value.isZero())
     return getBase();

@@ -206,6 +206,7 @@ struct AArch64ABIOptions {
   bool IsAndroidOrOHOS = false;
   bool IsWindowsArm64EC = false;
   bool IsMicrosoftCXXABI = false;
+  bool IsBigEndian = false;
   ABICompatInfo CompatInfo;
 
   AArch64ABIOptions() = default;

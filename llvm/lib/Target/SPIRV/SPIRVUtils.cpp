@@ -227,16 +227,6 @@ void buildOpName(Register Target, StringRef Name,
   }
 }
 
-void buildOpName(Register Target, StringRef Name, MachineInstr &I,
-                 const SPIRVInstrInfo &TII) {
-  if (!Name.empty()) {
-    auto MIB =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
-            .addUse(Target);
-    addStringImm(Name, MIB);
-  }
-}
-
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
@@ -474,9 +464,9 @@ SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
   auto ScopeID = [&](AtomicScope Scope) {
     return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
   };
-  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
-  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
-  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
+  const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;

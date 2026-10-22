@@ -2067,6 +2067,31 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
                             Ops);
 }
 
+static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
+                                     Instruction *Atomic, unsigned PtrOperand) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  Expr::EvalResult Result;
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGF.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic operation with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+
+  auto MemoryHint = toAArch64MemoryHint(HintArg);
+  if (MemoryHint == AArch64MemoryHint::NONE ||
+      (isa<AtomicRMWInst>(Atomic) && MemoryHint != AArch64MemoryHint::SHUH &&
+       MemoryHint != AArch64MemoryHint::SHUH_PH))
+    return;
+
+  MDNode *MemHint = MDNode::get(
+      Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
+            llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+  MDNode *HintNode = MDNode::get(
+      Ctx,
+      {llvm::ConstantAsMetadata::get(Builder.getInt32(PtrOperand)), MemHint});
+  Atomic->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+}
+
 static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
                                              unsigned BuiltinID,
                                              const CallExpr *E) {
@@ -2106,26 +2131,53 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
     break;
   }
   Store->setAtomic(Ordering);
+  AttachAtomicHintMetadata(CGF, E, Store, 1);
+  return Store;
+}
 
-  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
+static Value *EmitAtomicFetchWithHintBuiltin(CodeGenFunction &CGF,
+                                             const CallExpr *E,
+                                             AtomicRMWInst::BinOp Op) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGF.getContext()))
     llvm_unreachable(
-        "Expected integer hint argument to atomic store with hint.");
-  unsigned HintArg = Result.Val.getInt().getExtValue();
+        "Expected integer policy argument to atomic fetch with hint.");
 
-  // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
-    LLVMContext &Ctx = CGM.getLLVMContext();
-    MDNode *MemHint = MDNode::get(
-        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
-              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
-    MDNode *HintNode = MDNode::get(
-        CGM.getLLVMContext(),
-        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
 
-    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::consume:
+  case AtomicOrderingCABI::acquire:
+    Ordering = AtomicOrdering::Acquire;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::acq_rel:
+    Ordering = AtomicOrdering::AcquireRelease;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
   }
 
-  return Store;
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
+
+  AtomicRMWInst *RMW = Builder.CreateAtomicRMW(Op, Addr, DataVal, Ordering);
+  RMW->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
+  AttachAtomicHintMetadata(CGF, E, RMW, 0);
+  return CGF.EmitFromMemory(RMW, E->getType());
 }
 
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
@@ -4871,8 +4923,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
 
-  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+  switch (BuiltinID) {
+  default:
+    break;
+  case AArch64::BI__builtin_arm_atomic_store_with_hint:
     return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
+  case AArch64::BI__builtin_arm_atomic_fetch_add_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Add);
+  case AArch64::BI__builtin_arm_atomic_fetch_sub_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Sub);
+  case AArch64::BI__builtin_arm_atomic_fetch_and_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::And);
+  case AArch64::BI__builtin_arm_atomic_fetch_xor_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Xor);
+  case AArch64::BI__builtin_arm_atomic_fetch_or_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Or);
+  }
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;

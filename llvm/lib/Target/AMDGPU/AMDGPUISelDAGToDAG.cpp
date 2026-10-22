@@ -355,13 +355,12 @@ bool AMDGPUDAGToDAGISel::widenRegionLoad16(SDNode *N) const {
   if (ExtType == ISD::NON_EXTLOAD)
     ExtType = ISD::EXTLOAD;
 
+  EVT MemVT = Mem->getMemoryVT().changeTypeToInteger();
   SDValue NewLoad =
       Ld ? CurDAG->getExtLoad(ExtType, SL, MVT::i32, Mem->getChain(),
-                              Mem->getBasePtr(), Mem->getMemoryVT(),
-                              Mem->getMemOperand())
-         : CurDAG->getAtomicLoad(ExtType, SL, Mem->getMemoryVT(), MVT::i32,
-                                 Mem->getChain(), Mem->getBasePtr(),
-                                 Mem->getMemOperand());
+                              Mem->getBasePtr(), MemVT, Mem->getMemOperand())
+         : CurDAG->getAtomicLoad(ExtType, SL, MemVT, MVT::i32, Mem->getChain(),
+                                 Mem->getBasePtr(), Mem->getMemOperand());
 
   SDValue Trunc = CurDAG->getNode(ISD::TRUNCATE, SL, MVT::i16, NewLoad);
   SDValue Ops[] = {CurDAG->getBitcast(VT, Trunc), NewLoad.getValue(1)};

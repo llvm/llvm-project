@@ -1,0 +1,58 @@
+// RUN: tblgen-lsp-server -input-style=delimited < %s | FileCheck %s
+// Check find-references for template arguments and fields. The input is:
+//
+//   0: class Foo<int arg> {
+//   1:   int x = arg;
+//   2:   int y = x;
+//   3: }
+//   4: def Bar : Foo<1>;
+//   5: def Baz {
+//   6:   int z = Bar.x;
+//   7: }
+//
+// The server ignores includeDeclaration, so the results always start with the
+// declaration.
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"tablegen","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.td",
+  "languageId":"tablegen",
+  "version":1,
+  "text":"class Foo<int arg> {\n  int x = arg;\n  int y = x;\n}\ndef Bar : Foo<1>;\ndef Baz {\n  int z = Bar.x;\n}\n"
+}}}
+// -----
+// Template argument 'arg': its declaration and the use in 'x'.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":0,"character":14},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":1,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":17,"line":0},"start":{"character":14,"line":0}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":13,"line":1},"start":{"character":10,"line":1}},"uri":"test:///foo.td"}]}
+// -----
+// Field 'x' of Foo: its declaration and the use in 'y', but not 'Bar.x'.
+{"jsonrpc":"2.0","id":2,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":1,"character":6},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":2,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":7,"line":1},"start":{"character":6,"line":1}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":11,"line":2},"start":{"character":10,"line":2}},"uri":"test:///foo.td"}]}
+// -----
+// 'x' through 'Bar.x': Bar's copy of the field has the references inherited
+// from Foo plus 'Bar.x' itself.
+{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":6,"character":14},
+  "context":{"includeDeclaration": false}
+}}
+// CHECK: {"id":3,"jsonrpc":"2.0","result":[
+// CHECK-SAME: {"range":{"end":{"character":7,"line":1},"start":{"character":6,"line":1}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":11,"line":2},"start":{"character":10,"line":2}},"uri":"test:///foo.td"},
+// CHECK-SAME: {"range":{"end":{"character":15,"line":6},"start":{"character":14,"line":6}},"uri":"test:///foo.td"}]}
+// -----
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

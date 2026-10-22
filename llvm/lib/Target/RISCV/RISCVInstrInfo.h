@@ -228,16 +228,14 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  // Return true if the function can safely be outlined from.
-  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
-                                   bool OutlineFromLinkOnceODRs) const override;
-
   // Return true if MBB is safe to outline from, and return any target-specific
   // information in Flags.
   bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                               unsigned &Flags) const override;
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+
+  bool supportsSectionAwareOutlining() const override { return true; }
 
   // Return true if the candidate should be discarded from outlining.
   bool analyzeCandidate(outliner::Candidate &C) const;

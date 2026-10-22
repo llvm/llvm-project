@@ -123,7 +123,7 @@ canonicalizeDwarfOperations(ArrayRef<uint64_t> WorkingOps) {
       break;
     auto OpRaw = Op->getOp();
 
-    if (OpRaw >= dwarf::DW_OP_lit0 && OpRaw <= dwarf::DW_OP_lit31) {
+    if (DIExpression::isLitOp(OpRaw)) {
       ResultOps.push_back(dwarf::DW_OP_constu);
       ResultOps.push_back(OpRaw - dwarf::DW_OP_lit0);
       consumeOneOperator(Cursor, Loc, *Cursor.peek());

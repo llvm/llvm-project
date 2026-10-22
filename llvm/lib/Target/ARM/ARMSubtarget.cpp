@@ -602,7 +602,6 @@ void ARMSubtarget::getCSRAllocationOrderMask(const MachineFunction &MF,
 
 ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
@@ -621,8 +620,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // This stack unwinding cannot be expressed with SEH unwind opcodes when done
   // with a single push, making it necessary to split the push into r4-r10, and
   // another containing r11+lr.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-      F.needsUnwindTableEntry() &&
+  if (MF.needsWinCFI() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;
 

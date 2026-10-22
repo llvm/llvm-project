@@ -165,6 +165,58 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @set_anchor_layout_packed_sg_layout
+func.func @set_anchor_layout_packed_sg_layout(%arg0: memref<4096x4096xf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  // CHECK: = xegpu.load_nd %0[0, 0]
+  // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], inst_data = [8, 16]>}>
+  %1 = xegpu.load_nd %0[0, 0]  : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["xegpu.load_nd"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c4 = transform.param.constant 4 : i64 -> !transform.any_param
+    %sg_layout = transform.merge_handles %c8, %c4 : !transform.any_param
+    // CHECK: transform.xegpu.set_anchor_layout %{{.*}} sg_layout = *(%{{.*}})
+    transform.xegpu.set_anchor_layout %0 index = 0 sg_layout = *(%sg_layout) sg_data = [32, 32] inst_data = [8, 16] : !transform.any_op, !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @set_anchor_layout_packed_all
+func.func @set_anchor_layout_packed_all(%arg0: memref<4096x4096xf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  // CHECK: = xegpu.load_nd %0[0, 0]
+  // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], inst_data = [8, 16]>}>
+  %1 = xegpu.load_nd %0[0, 0]  : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["xegpu.load_nd"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c4 = transform.param.constant 4 : i64 -> !transform.any_param
+    %sg_layout = transform.merge_handles %c8, %c4 : !transform.any_param
+    %c32 = transform.param.constant 32 : i64 -> !transform.any_param
+    %c32_1 = transform.param.constant 32 : i64 -> !transform.any_param
+    %sg_data = transform.merge_handles %c32, %c32_1 : !transform.any_param
+    %c8_1 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c16 = transform.param.constant 16 : i64 -> !transform.any_param
+    %inst_data = transform.merge_handles %c8_1, %c16 : !transform.any_param
+    // CHECK: transform.xegpu.set_anchor_layout %{{.*}} sg_layout = *(%{{.*}}) sg_data = *(%{{.*}}) inst_data = *(%{{.*}})
+    transform.xegpu.set_anchor_layout %0 index = 0 sg_layout = *(%sg_layout) sg_data = *(%sg_data) inst_data = *(%inst_data) : !transform.any_op, !transform.any_param, !transform.any_param, !transform.any_param
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @set_anchor_layout_slice
 func.func @set_anchor_layout_slice(%arg0: memref<4096xf32>) {
   // CHECK: = xegpu.load %1[%0]

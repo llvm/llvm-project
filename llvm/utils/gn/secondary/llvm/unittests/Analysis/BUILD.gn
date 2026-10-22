@@ -25,6 +25,7 @@ unittest("AnalysisTests") {
     "CaptureTrackingTest.cpp",
     "ConstraintSystemTest.cpp",
     "CtxProfAnalysisTest.cpp",
+    "CycleInfoTest.cpp",
     "DDGTest.cpp",
     "DXILResourceTest.cpp",
     "DomTreeUpdaterTest.cpp",

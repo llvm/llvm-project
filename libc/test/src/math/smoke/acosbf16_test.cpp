@@ -49,3 +49,28 @@ public:
   }
 };
 TEST_F(LlvmLibcAcosBf16Test, SpecialNumbers) { test_special_numbers(); }
+
+TEST_F(LlvmLibcAcosBf16Test, SmallInputs) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
+  auto acos_without_underflow = [](bfloat16 x) {
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+    bfloat16 result = LIBC_NAMESPACE::acosbf16(x);
+    EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_UNDERFLOW), 0);
+    EXPECT_MATH_ERRNO(0);
+    return result;
+  };
+
+  // Include subnormals, an input that caused an intermediate underflow in
+  // the float polynomial without FMA, and the small-input branch boundary.
+  const uint16_t inputs[] = {0x0001, 0x007f, 0x0080, 0x209d,
+                             0x397f, 0x3980, 0x3981};
+  const bfloat16 pi_2_lo = FPBits(uint16_t(0x3fc9)).get_val();
+  const bfloat16 pi_2_hi = FPBits(uint16_t(0x3fca)).get_val();
+  for (uint16_t bits : inputs) {
+    bfloat16 x = FPBits(bits).get_val();
+    EXPECT_FP_EQ_ALL_ROUNDING(pi_2_lo, pi_2_hi, pi_2_lo, pi_2_lo,
+                              acos_without_underflow(x));
+    EXPECT_FP_EQ_ALL_ROUNDING(pi_2_lo, pi_2_hi, pi_2_lo, pi_2_lo,
+                              acos_without_underflow(-x));
+  }
+}

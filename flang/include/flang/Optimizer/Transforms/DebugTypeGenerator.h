@@ -97,12 +97,17 @@ private:
 class DebugTypeGenerator {
 public:
   DebugTypeGenerator(mlir::ModuleOp module, mlir::SymbolTable *symbolTable,
-                     const mlir::DataLayout &dl);
+                     const mlir::DataLayout &dl,
+                     bool boundsInStackSlots = false);
 
   mlir::LLVM::DITypeAttr convertType(mlir::Type Ty,
                                      mlir::LLVM::DIFileAttr fileAttr,
                                      mlir::LLVM::DIScopeAttr scope,
                                      fir::cg::XDeclareOp declOp);
+
+  /// Whether \p val is held in a stack slot for the variable declared by
+  /// \p declOp, which makes a fake use of it unnecessary.
+  bool hasBoundSlot(mlir::Value val, fir::cg::XDeclareOp declOp) const;
 
 private:
   mlir::LLVM::DITypeAttr convertRecordType(fir::RecordType Ty,
@@ -154,6 +159,16 @@ private:
   mlir::ModuleOp module;
   mlir::SymbolTable *symbolTable;
   const mlir::DataLayout *dataLayout;
+  bool boundsInStackSlots;
+  struct ArtificialVar {
+    /// Null unless the value is held in a stack slot.
+    fir::AllocaOp slot;
+    mlir::LLVM::DILocalVariableAttr var;
+  };
+  /// For a bound and the declaration it belongs to, the artificial variable
+  /// made to describe that bound and the slot that holds its value.
+  llvm::DenseMap<std::pair<mlir::Value, mlir::Operation *>, ArtificialVar>
+      artificialVars;
   KindMapping kindMapping;
   fir::LLVMTypeConverter llvmTypeConverter;
   std::uint64_t dimsSize;

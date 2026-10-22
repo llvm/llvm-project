@@ -58,7 +58,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPBuilder Builder(WideCanIV);
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-        nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
+        CanIVTy, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
         WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
@@ -119,9 +119,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 // the loop terminator with a branch-on-cond recipe with the negated
 // wide-active-lane-mask as operand. Note that this turns the loop into an
 // uncountable one. Only the existing terminator is replaced, all other existing
-// recipes/users remain unchanged, except for poison-generating flags being
-// dropped from the canonical IV increment. Return the created
-// VPActiveLaneMaskPHIRecipe.
+// recipes/users remain unchanged. Return the created VPActiveLaneMaskPHIRecipe.
 //
 // The function adds the following recipes:
 //
@@ -147,8 +145,6 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
   auto *CanonicalIVIncrement = TopRegion->getOrCreateCanonicalIVIncrement();
-  // TODO: Check if dropping the flags is needed.
-  TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
@@ -171,13 +167,25 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  // If the canonical IV increment could overflow, adjust the trip count (TC)
+  // to TC - VF * UF.
+  VPValue *IncrementValue = CanonicalIVIncrement;
+  if (!TopRegion->hasCanonicalIVNUW() &&
+      !vputils::findIncomingAliasMask(Plan)) {
+    IncrementValue = TopRegion->getCanonicalIV();
+    VPValue &VFxUF = Plan.getVFxUF();
+    TC = Builder.createScalarIntrinsic(Intrinsic::usub_sat, {TC, &VFxUF},
+                                       TC->getScalarType(), DL,
+                                       "trip.count.minus.vf");
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {CanonicalIVIncrement, TC, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {IncrementValue, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");
@@ -748,8 +756,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
-    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser &U) {
-      return Broadcast != &U && !U.usesScalars(VPV);
+    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser *U) {
+      return Broadcast != U && !U->usesScalars(VPV);
     });
   }
 }
@@ -838,7 +846,7 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
         else
           Unpack->insertAfter(&R);
         Def->replaceUsesWithIf(
-            Unpack, [&Def](VPUser &U) { return U.usesFirstLaneOnly(Def); });
+            Unpack, [&Def](VPUser *U) { return U->usesFirstLaneOnly(Def); });
       }
     }
   }
@@ -943,7 +951,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
   if (!vputils::onlyScalarValuesUsed(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
-    VF.replaceUsesWithIf(BC, [&VF](VPUser &U) { return !U.usesScalars(&VF); });
+    VF.replaceUsesWithIf(BC, [&VF](VPUser *U) { return !U->usesScalars(&VF); });
   }
   VF.replaceAllUsesWith(RuntimeVF);
 

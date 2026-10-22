@@ -576,6 +576,10 @@ llvm::TypeSize mlir::DataLayout::getTypeSizeInBits(Type t) const {
   });
 }
 
+llvm::TypeSize mlir::DataLayout::getTypeAllocSize(Type t) const {
+  return llvm::alignTo(getTypeSize(t), getTypeABIAlignment(t));
+}
+
 uint64_t mlir::DataLayout::getTypeABIAlignment(Type t) const {
   checkValid();
   return cachedLookup<uint64_t>(t, abiAlignments, [&](Type ty) {

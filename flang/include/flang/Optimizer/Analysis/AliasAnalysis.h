@@ -185,9 +185,13 @@ struct AliasAnalysis {
       /// attribute or fir.coordinate_of's field_indices (mapped through the
       /// record type). Null for non-Component steps.
       mlir::StringAttr component;
+      /// For Component steps: the record type that `component` is a field
+      /// of. Null for non-Component steps.
+      mlir::Type recordType;
 
       bool operator==(const PathStep &o) const {
-        return kind == o.kind && component == o.component;
+        return kind == o.kind && component == o.component &&
+               recordType == o.recordType;
       }
       bool operator!=(const PathStep &o) const { return !(*this == o); }
     };
@@ -211,6 +215,12 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
+      /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
+      /// the path, if any. Objects of the same type may partially overlap
+      /// only through storage association, so component steps are only
+      /// compared between paths crossing the same such declaration.
+      mlir::Operation *storageDecl{nullptr};
+
       /// Return true if any step is a PointerDeref.
       bool hasPointerDeref() const {
         return llvm::any_of(steps, [](const PathStep &s) {
@@ -219,7 +229,8 @@ struct AliasAnalysis {
       }
 
       bool operator==(const AccessPath &o) const {
-        return isApproximate == o.isApproximate && steps == o.steps;
+        return isApproximate == o.isApproximate &&
+               storageDecl == o.storageDecl && steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 

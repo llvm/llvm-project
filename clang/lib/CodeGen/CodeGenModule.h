@@ -654,9 +654,6 @@ private:
   void createHLSLRuntime();
 
   bool shouldEmitFunction(GlobalDecl GD);
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
@@ -1541,6 +1538,8 @@ public:
   void addDefaultFunctionDefinitionAttributes(llvm::AttrBuilder &attrs);
 
   StringRef getMangledName(GlobalDecl GD);
+  std::string getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                             const NamedDecl *ND);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
   const GlobalDecl getMangledNameDecl(StringRef);
 

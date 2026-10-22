@@ -821,7 +821,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;

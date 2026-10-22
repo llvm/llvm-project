@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIROpenMPTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRFunctionInterfaces
   MLIRIR
   MLIRLLVMDialect

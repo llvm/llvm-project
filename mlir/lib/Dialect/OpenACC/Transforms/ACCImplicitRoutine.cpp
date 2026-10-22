@@ -49,6 +49,7 @@
 //    should pre-register the `acc::OpenACCSupport` analysis.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -73,7 +74,6 @@ namespace acc {
 } // namespace mlir
 
 namespace {
-
 using namespace mlir;
 
 class ACCImplicitRoutine
@@ -85,18 +85,6 @@ private:
   // Count existing routine operations and update counter
   void initRoutineCounter(ModuleOp module) {
     module.walk([&](acc::RoutineOp routineOp) { routineCounter++; });
-  }
-
-  // Check if routine has a default bind clause or a device-type specific bind
-  // clause. Returns true if `acc routine` has a default bind clause or
-  // a device-type specific bind clause.
-  bool isACCRoutineBindDefaultOrDeviceType(acc::RoutineOp op,
-                                           acc::DeviceType deviceType) {
-    // Fast check to avoid device-type specific lookups.
-    if (!op.getBindIdName() && !op.getBindStrName())
-      return false;
-    return op.getBindNameValue().has_value() ||
-           op.getBindNameValue(deviceType).has_value();
   }
 
   // Generate a unique name for the routine and create the routine operation
@@ -190,7 +178,7 @@ private:
     // function to which the `acc routine` is used with. Skip this case to
     // avoid implicitly recursively marking calls that would not end up on
     // device.
-    if (isACCRoutineBindDefaultOrDeviceType(routineOp, targetDeviceType))
+    if (routineOp.getEffectiveBindName(targetDeviceType))
       return success();
 
     SymbolTable symTab(routineOp->getParentOfType<ModuleOp>());
@@ -246,6 +234,11 @@ private:
 public:
   using ACCImplicitRoutineBase<ACCImplicitRoutine>::ACCImplicitRoutineBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCImplicitRoutineBase<ACCImplicitRoutine>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     auto module = getOperation();
     mlir::OpBuilder builder(module.getContext());
@@ -278,5 +271,4 @@ public:
       return signalPassFailure();
   }
 };
-
 } // namespace

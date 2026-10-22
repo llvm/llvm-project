@@ -58,6 +58,7 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   auto Ctx = std::make_unique<LLVMContext>();
   auto Mod = std::make_unique<Module>("orc-rt-lite-reoptimize.ll", *Ctx);
   Mod->setDataLayout(DL);
+  Mod->setTargetTriple(ES.getTargetTriple());
 
   IRBuilder<> Builder(*Mod);
 

@@ -109,7 +109,7 @@ define i32 @oob_wider_vec_two_vecs(ptr %pc, <8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    [[CP2:%.*]] = getelementptr i32, ptr [[PC]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[CP2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> [[A]], <4 x i32> <i32 1, i32 8, i32 8, i32 9>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 undef, i32 0, i32 0, i32 1>, <4 x i32> [[TMP2]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 poison, i32 0, i32 0, i32 1>, <4 x i32> [[TMP2]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret i32 [[OP_RDX3]]

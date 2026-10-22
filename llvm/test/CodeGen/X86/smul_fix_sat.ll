@@ -478,11 +478,13 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; X64-NEXT:    psrad $31, %xmm3
-; X64-NEXT:    pcmpeqd %xmm5, %xmm3
 ; X64-NEXT:    movdqa %xmm3, %xmm0
-; X64-NEXT:    pandn %xmm2, %xmm0
-; X64-NEXT:    por %xmm3, %xmm0
+; X64-NEXT:    psrad $31, %xmm0
+; X64-NEXT:    pcmpeqd %xmm5, %xmm0
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pandn %xmm2, %xmm1
+; X64-NEXT:    pand %xmm3, %xmm0
+; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: vec2:

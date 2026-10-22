@@ -25,9 +25,9 @@ def X86System : SystemRuntimeLibrary<isX86, (add Libc, Libm)>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK:   if (TT.isX86()) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable("libm"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libm))
 // CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;

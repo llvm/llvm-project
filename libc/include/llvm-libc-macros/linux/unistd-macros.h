@@ -20,6 +20,12 @@
 #define W_OK 2
 #define R_OK 4
 
+// Values for command argument to the lockf(...) function.
+#define F_ULOCK 0
+#define F_LOCK 1
+#define F_TLOCK 2
+#define F_TEST 3
+
 #define _SC_ARG_MAX 0
 #define _SC_CLK_TCK 2
 #define _SC_OPEN_MAX 4

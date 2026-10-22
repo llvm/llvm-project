@@ -777,6 +777,59 @@ exit:
   ret void
 }
 
+; Duplicate loads separated by a reverse load.
+define void @dup_load_across_reverse_load(ptr noalias %a, ptr noalias %b, ptr noalias %out) {
+; CHECK-LABEL: VPlan for loop in 'dup_load_across_reverse_load'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<1024> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a>
+; CHECK-NEXT:    CLONE ir<%rev.iv> = sub ir<1023>, vp<%index>
+; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%rev.iv>
+; CHECK-NEXT:    vp<[[VP1:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.b>, ir<4>, ir<-3>
+; CHECK-NEXT:    WIDEN ir<%r> = load vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reverse ir<%r>
+; CHECK-NEXT:    WIDEN ir<%s1> = add ir<%x>, vp<[[VP2]]>
+; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%s1>, ir<%x>
+; CHECK-NEXT:    CLONE ir<%gep.out> = getelementptr inbounds ir<%out>, vp<%index>
+; CHECK-NEXT:    WIDEN store ir<%gep.out>, ir<%sum>
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp eq vp<%index.next>, ir<1024>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %x = load i32, ptr %gep.a, align 4
+  %rev.iv = sub i64 1023, %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %rev.iv
+  %r = load i32, ptr %gep.b, align 4
+  %y = load i32, ptr %gep.a, align 4
+  %s1 = add i32 %x, %r
+  %sum = add i32 %s1, %y
+  %gep.out = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %sum, ptr %gep.out, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"scope_a"}
 !2 = distinct !{!2, i1 false, !"domain"}

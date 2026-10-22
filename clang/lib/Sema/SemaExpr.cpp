@@ -2920,7 +2920,14 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // This specially handles arguments of attributes appertains to a type of C
   // struct field such that the name lookup within a struct finds the member
   // name, which is not the case for other contexts in C.
-  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+  // A late-parsed attribute on a function pointer field has the pointee's
+  // parameters in the struct's scope too; as when the attribute was written, a
+  // parameter shadows a field of the same name.
+  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope() &&
+      llvm::none_of(S->decls(), [&](Decl *D) {
+        return isa<ParmVarDecl>(D) &&
+               cast<ParmVarDecl>(D)->getDeclName() == NameInfo.getName();
+      })) {
     // See if this is reference to a field of struct.
     LookupResult R(*this, NameInfo, LookupMemberName);
     // LookupName handles a name lookup from within anonymous struct.
@@ -5900,6 +5907,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Param, Init ? Init : Param->getDefaultArg(),
+                                  CallLoc);
+
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
                                    Init, InitializationContext->Context);
 }
@@ -5968,6 +5979,9 @@ ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
       Field->setInvalidDecl();
     return ExprError();
   }
+
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Field, InClassInit, Loc);
 
   // CWG2631
   // An immediate invocation that is not evaluated where it appears is
@@ -7090,7 +7104,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         NDecl = FDecl;
         Fn = DeclRefExpr::Create(
             Context, DRE->getQualifierLoc(), SourceLocation(), FDecl, false,
-            SourceLocation(), Fn->getType() /* BuiltinFnTy */,
+            DRE->getLocation(), Fn->getType() /* BuiltinFnTy */,
             Fn->getValueKind(), FDecl, nullptr, DRE->isNonOdrUse());
       }
     }
@@ -18539,11 +18553,10 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
-          FD->isConsteval() ||
-          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
+    if (isLambdaMethod(FD) && !isLambdaCallOperator(FD))
+      Current.InImmediateFunctionContext = FD->isConsteval() ||
+                                           Parent.isConstantEvaluated() ||
+                                           Parent.isImmediateFunctionContext();
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }

@@ -259,6 +259,10 @@ defm : BoolField<"loop-flatten-widen-iv", "true",
 // LoopFuse.cpp
 defm : ValueField<"loop-fusion-peel-max-count", "uint32_t", "0",
   "Max number of iterations to be peeled from a loop, such that fusion can take place">;
+defm : ValueField<"loop-fusion-min-reused-values", "unsigned", "1",
+  "Minimum number of distinct values reused across fused loops">;
+defm : BoolField<"loop-fusion-disable-cost-model", "false",
+  "Do not apply cost model when deciding whether to fuse loops">;
 let Condition = AssertsOnly in
 defm : BoolField<"loop-fusion-verbose-debug", "false",
   "Enable verbose debugging for Loop Fusion">;
@@ -581,8 +585,6 @@ defm : BoolField<"enable-poison-reuse-guard", "true",
   "Enable poison-reuse guard">;
 
 // StructurizeCFG.cpp
-defm : BoolField<"structurizecfg-relaxed-uniform-regions", "true",
-  "Allow relaxed uniform region checks">;
 defm : OptionalBoolField<"structurizecfg-skip-uniform-regions",
   "Force whether the StructurizeCFG pass skips uniform regions">;
 

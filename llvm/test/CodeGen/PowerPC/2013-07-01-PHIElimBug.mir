@@ -1,5 +1,5 @@
-# RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple powerpc64-unknown-linux-gnu --passes='require<live-vars>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
+# RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass liveintervals -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple powerpc64-unknown-linux-gnu --passes='require<live-intervals>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
 
 # This test case was originally known as
 #   test/CodeGen/PowerPC/2013-07-01-PHIElimBug.ll
@@ -64,16 +64,16 @@ body:             |
 #
 # CHECK:       bb.0:
 # CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
-# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load (s64))
+# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, %0, implicit $x2 :: (load (s64))
 # CHECK-NEXT:    %2:gprc = LI 0
-# CHECK-NEXT:    %3:crrc = CMPLWI killed %2, 0
-# CHECK-NEXT:    BCC 76, killed %3, %bb.2
+# CHECK-NEXT:    %3:crrc = CMPLWI %2, 0
+# CHECK-NEXT:    BCC 76, %3, %bb.2
 # CHECK:       bb.1:
-# CHECK:         %4:g8rc = ADDI8 killed %1, 24
+# CHECK:         %4:g8rc = ADDI8 %1, 24
 # CHECK-NEXT:    %16:g8rc_and_g8rc_nox0 = COPY %4
 # CHECK-NEXT:    B %bb.4
 # CHECK:       bb.2:
-# CHECK:         %5:g8rc = ADDI8 killed %1, 24
+# CHECK:         %5:g8rc = ADDI8 %1, 24
 # CHECK-NEXT:    %6:g8rc = LI8 0
 # CHECK-NEXT:    %7:crrc = CMPLWI undef %8:gprc, 20
 # CHECK-NEXT:    %14:g8rc = COPY %5
@@ -89,5 +89,5 @@ body:             |
 # CHECK:       bb.4:
 # CHECK:         %12:g8rc_and_g8rc_nox0 = COPY %16
 # CHECK-NEXT:    %13:g8rc = LI8 0
-# CHECK-NEXT:    STW8 killed %13, 0, killed %12 :: (store (s32))
+# CHECK-NEXT:    STW8 %13, 0, %12 :: (store (s32))
 # CHECK-NEXT:    BLR8 implicit $lr8, implicit $rm

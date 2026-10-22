@@ -1,5 +1,7 @@
 add_custom_target(libc_netinet_unittests)
 
+add_subdirectory(ether)
+
 add_libc_test(
   in_test
   SUITE

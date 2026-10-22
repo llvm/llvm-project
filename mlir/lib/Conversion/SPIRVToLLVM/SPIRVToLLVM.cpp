@@ -741,6 +741,51 @@ public:
   }
 };
 
+/// Converts `spirv.SMulExtended` and `spirv.UMulExtended` by multiplying
+/// operands extended to twice the width and packing the low and high halves
+/// into the SPIR-V result struct.
+template <typename SPIRVOp, typename LLVMExtOp>
+class MulExtendedPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Type operandType = adaptor.getOperand1().getType();
+    unsigned bitwidth = getLLVMTypeBitWidth(operandType);
+    IntegerType wideElemType = rewriter.getIntegerType(bitwidth * 2);
+    Type wideType = wideElemType;
+    if (auto vecType = dyn_cast<VectorType>(operandType))
+      wideType = VectorType::get(vecType.getShape(), wideElemType);
+
+    Value lhs =
+        LLVMExtOp::create(rewriter, loc, wideType, adaptor.getOperand1());
+    Value rhs =
+        LLVMExtOp::create(rewriter, loc, wideType, adaptor.getOperand2());
+    Value mul = LLVM::MulOp::create(rewriter, loc, wideType, lhs, rhs);
+    Value low = LLVM::TruncOp::create(rewriter, loc, operandType, mul);
+    Value shift =
+        createIntegerConstant(loc, wideType, wideType, rewriter,
+                              rewriter.getIntegerAttr(wideElemType, bitwidth));
+    Value high = LLVM::LShrOp::create(rewriter, loc, mul, shift);
+    high = LLVM::TruncOp::create(rewriter, loc, operandType, high);
+
+    Value result = LLVM::PoisonOp::create(rewriter, loc, dstType);
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, low,
+                                         ArrayRef<int64_t>{0});
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, high,
+                                         ArrayRef<int64_t>{1});
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Converts `spirv.ExecutionMode` into a global struct constant that holds
 /// execution mode information.
 class ExecutionModePattern
@@ -2206,6 +2251,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
                                     LLVM::UAddWithOverflowOp>,
       ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
                                     LLVM::USubWithOverflowOp>,
+      MulExtendedPattern<spirv::SMulExtendedOp, LLVM::SExtOp>,
+      MulExtendedPattern<spirv::UMulExtendedOp, LLVM::ZExtOp>,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,

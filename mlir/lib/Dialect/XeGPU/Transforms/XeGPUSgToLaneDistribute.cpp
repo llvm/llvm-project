@@ -2723,7 +2723,14 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
-    if (failed(applyPartialConversion(root, target, std::move(patterns))))
+    // Fold only after the patterns. A fold builds new ops without the
+    // temporary layout attribute, so they are never distributed. For example,
+    // an all-ones vector.constant_mask folds to an arith.constant that stays
+    // at subgroup size behind an unrealized cast.
+    ConversionConfig config;
+    config.foldingMode = DialectConversionFoldingMode::AfterPatterns;
+    if (failed(
+            applyPartialConversion(root, target, std::move(patterns), config)))
       return signalPassFailure();
   }
   // Fold cancelling cast chains and erase dead casts.

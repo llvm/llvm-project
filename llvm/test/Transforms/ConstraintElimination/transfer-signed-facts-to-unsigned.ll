@@ -156,7 +156,8 @@ define i1 @cnt_positive_sgt_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CNT:%.*]], -1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -166,7 +167,8 @@ define i1 @cnt_positive_sgt_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp sgt i32 %cnt, -1
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -182,7 +184,8 @@ define i1 @cnt_not_known_positive_sgt_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CNT:%.*]], -2
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -193,7 +196,8 @@ define i1 @cnt_not_known_positive_sgt_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp sgt i32 %cnt, -2
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -209,7 +213,8 @@ define i1 @cnt_not_known_positive_uge_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CNT:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -220,7 +225,8 @@ define i1 @cnt_not_known_positive_uge_against_base(ptr %p, i32 %cnt) {
 entry:
   %cmp = icmp ugt i32 %cnt, 0
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -350,7 +356,8 @@ define i1 @cnt_not_signed_positive_uge_against_base_with_zext(ptr %p, i32 %cnt) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[CNT:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i32 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -361,7 +368,8 @@ define i1 @cnt_not_signed_positive_uge_against_base_with_zext(ptr %p, i32 %cnt) 
 entry:
   %cmp = icmp uge i32 %cnt, 0
   tail call void @llvm.assume(i1 %cmp)
-  %add.ptr = getelementptr inbounds i32, ptr %p, i32 %cnt
+  %add.ptr.idx = sext i32 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %cmp.1 = icmp uge ptr %add.ptr, %p
   br i1 %cmp.1, label %then, label %else
 
@@ -502,7 +510,8 @@ define i32 @sge_2_gep(i32 %idx, ptr %src, i32 %idx.2) {
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[IDX]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IDX_2:%.*]]
+; CHECK-NEXT:    [[ADD_PTR_2_IDX:%.*]] = sext i32 [[IDX_2:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[ADD_PTR_2_IDX]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[SRC]], [[ADD_PTR_2]]
 ; CHECK-NEXT:    [[X_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    [[X_2:%.*]] = xor i1 [[X_1]], false
@@ -517,7 +526,8 @@ entry:
   %add.ptr = getelementptr inbounds i32, ptr %src, i64 %idx.ext
   %cmp = icmp sge i32 %idx, 2
   call void @llvm.assume(i1 %cmp)
-  %add.ptr.2 = getelementptr inbounds i32, ptr %src, i32 %idx.2
+  %add.ptr.2.idx = sext i32 %idx.2 to i64
+  %add.ptr.2 = getelementptr inbounds i32, ptr %src, i64 %add.ptr.2.idx
   %t.1 = icmp ult ptr %src, %add.ptr
   %c.1 = icmp ult ptr %src, %add.ptr.2
   %x.1 = xor i1 %t.1, %c.1

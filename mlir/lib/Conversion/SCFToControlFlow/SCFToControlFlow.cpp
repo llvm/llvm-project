@@ -358,7 +358,14 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   Operation *terminator = lastBodyBlock->getTerminator();
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.getStep();
-  auto stepped = arith::AddIOp::create(rewriter, loc, iv, step).getResult();
+  // `scf.for` requires `LB + n*Step` to be representable in the induction
+  // variable type, so the increment cannot wrap in the signed (or, with
+  // `unsignedCmp`, unsigned) interpretation of the bounds.
+  arith::IntegerOverflowFlags overflowFlags =
+      forOp.getUnsignedCmp() ? arith::IntegerOverflowFlags::nuw
+                             : arith::IntegerOverflowFlags::nsw;
+  auto stepped =
+      arith::AddIOp::create(rewriter, loc, iv, step, overflowFlags).getResult();
   if (!stepped)
     return failure();
 

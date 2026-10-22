@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [expos.only.func]
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr auto __synth_three_way = []<class _Tp, class _Up>(const _Tp& __t, const _Up& __u)
+inline constexpr auto __synth_three_way = []<class _Tp, class _Up>(const _Tp& __t, const _Up& __u)
   requires requires {
     { __t < __u } -> __boolean_testable;
     { __u < __t } -> __boolean_testable;

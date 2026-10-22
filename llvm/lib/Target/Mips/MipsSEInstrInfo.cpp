@@ -73,70 +73,6 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
-                                                      Register Reg) {
-  bool Reads = false;
-  bool Writes = false;
-  int Idx = -1;
-  Register RegF32 = getFloatRegFromFReg(Reg);
-  assert(RegF32 != Mips::NoRegister && "Reg is not a Float Register");
-  for (llvm::MachineOperand &MO : MI.operands()) {
-    Idx++;
-    if (!MO.isReg())
-      continue;
-    Register MORegF32 = getFloatRegFromFReg(MO.getReg());
-    if (MORegF32 == Mips::NoRegister)
-      continue;
-    if (MORegF32 == RegF32) {
-      if (Idx == 0)
-        Writes = true;
-      else
-        Reads = true;
-    }
-  }
-  return std::make_pair(Reads, Writes);
-}
-
-static bool isWritedByFCMP(MachineBasicBlock::iterator I, Register Reg) {
-  MachineBasicBlock *MBB = I->getParent();
-  if (I == MBB->begin())
-    return false;
-  MachineBasicBlock::reverse_iterator RevI = std::prev(I)->getReverseIterator();
-  for (; RevI != MBB->rend(); RevI++) {
-    bool Reads, Writes;
-    std::tie(Reads, Writes) = readsWritesFloatRegister(*RevI, Reg);
-    unsigned Opcode = RevI->getOpcode();
-    if (Writes) {
-      if (Opcode >= Mips::CMP_AF_D_MMR6 && Opcode <= Mips::CMP_UN_S_MMR6)
-        return true;
-      return false;
-    }
-  }
-  return false;
-}
-
-static bool isOnlyReadsBySEL(MachineBasicBlock::iterator I, Register Reg) {
-  MachineBasicBlock *MBB = I->getParent();
-  MachineBasicBlock::iterator NextI = std::next(I);
-  bool MaybeOK = false;
-  for (; NextI != MBB->end(); NextI++) {
-    bool Reads, Writes;
-    std::tie(Reads, Writes) = readsWritesFloatRegister(*NextI, Reg);
-    unsigned Opcode = NextI->getOpcode();
-    if (Reads) {
-      if (Opcode < Mips::SEL_D || Opcode > Mips::SEL_S_MMR6)
-        return false;
-      else if (I->getOperand(1).isKill())
-        return true;
-      else
-        MaybeOK = true;
-    }
-    if (Writes)
-      return MaybeOK;
-  }
-  return false;
-}
-
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
                                   const DebugLoc &DL, Register DestReg,
@@ -150,7 +86,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (isMicroMips)
         Opc = Mips::MOVE16_MM;
       else
-        Opc = Mips::OR, ZeroReg = Mips::ZERO;
+        Opc = Mips::OR, ZeroReg = Mips::R0;
     } else if (Mips::CCRRegClass.contains(SrcReg))
       Opc = Mips::CFC1;
     else if (Mips::FGR32RegClass.contains(SrcReg))
@@ -171,10 +107,6 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     } else if (Mips::MSACtrlRegClass.contains(SrcReg)) {
       Opc = Mips::CFCMSA;
-    } else if (Mips::FGR64RegClass.contains(SrcReg) &&
-               (I->getFlag(MachineInstr::MIFlag::NoSWrap) ||
-                isWritedByFCMP(I, SrcReg))) {
-      Opc = Mips::MFC1_D64;
     }
   }
   else if (Mips::GPR32RegClass.contains(SrcReg)) { // Copy from CPU Reg.
@@ -200,9 +132,6 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
       return;
-    } else if (Mips::FGR64RegClass.contains(DestReg) &&
-               isOnlyReadsBySEL(I, DestReg)) {
-      Opc = Mips::MTC1_D64;
     }
   }
   else if (Mips::FGR32RegClass.contains(DestReg, SrcReg))
@@ -213,7 +142,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = Mips::FMOV_D64;
   else if (Mips::GPR64RegClass.contains(DestReg)) { // Copy to CPU64 Reg.
     if (Mips::GPR64RegClass.contains(SrcReg))
-      Opc = Mips::OR64, ZeroReg = Mips::ZERO_64;
+      Opc = Mips::OR64, ZeroReg = Mips::R0_64;
     else if (Mips::HI64RegClass.contains(SrcReg))
       Opc = Mips::MFHI64, SrcReg = 0;
     else if (Mips::LO64RegClass.contains(SrcReg))
@@ -233,31 +162,6 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::MOVE_V;
   }
 
-  // FCMP + FSEL for MIPSr6 may emit
-  // $d0_64 = COPY killed renamable $f0
-  if (Opc == 0 && Mips::FGR32RegClass.contains(SrcReg) &&
-      Mips::FGR64RegClass.contains(DestReg) && I != MBB.begin()) {
-    // Who produces SrcReg? If SrcReg is produced by CMP_*, then it's OK.
-    // Who uses DestReg? If DestReg is only used by SEL_*, then it's OK.
-    if (isWritedByFCMP(I, SrcReg) || isOnlyReadsBySEL(I, DestReg)) {
-      Opc = Mips::FMOV_D64;
-      unsigned DestRegOff = DestReg.id() - Mips::D0_64;
-      unsigned SrcRegOff = SrcReg.id() - Mips::F0;
-      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
-        return;
-    }
-  } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
-             Mips::FGR64RegClass.contains(SrcReg) && I != MBB.begin()) {
-    // Who produces SrcReg? If SrcReg is produced by CMP_*, then it's OK.
-    // Who uses DestReg? If DestReg is only used by SEL_*, then it's OK.
-    if (isWritedByFCMP(I, SrcReg) || isOnlyReadsBySEL(I, DestReg)) {
-      Opc = Mips::FMOV_D32;
-      unsigned DestRegOff = DestReg.id() - Mips::F0;
-      unsigned SrcRegOff = SrcReg.id() - Mips::D0_64;
-      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
-        return;
-    }
-  }
   assert(Opc && "Cannot copy registers");
 
   MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opc));
@@ -278,11 +182,11 @@ static bool isORCopyInst(const MachineInstr &MI) {
     break;
   case Mips::OR_MM:
   case Mips::OR:
-    if (MI.getOperand(2).getReg() == Mips::ZERO)
+    if (MI.getOperand(2).getReg() == Mips::R0)
       return true;
     break;
   case Mips::OR64:
-    if (MI.getOperand(2).getReg() == Mips::ZERO_64)
+    if (MI.getOperand(2).getReg() == Mips::R0_64)
       return true;
     break;
   }
@@ -356,17 +260,17 @@ void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
   const Function &Func = MBB.getParent()->getFunction();
   if (Func.hasFnAttribute("interrupt")) {
     if (Mips::HI32RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFHI), Mips::K0);
-      SrcReg = Mips::K0;
+      BuildMI(MBB, I, DL, get(Mips::MFHI), Mips::R26);
+      SrcReg = Mips::R26;
     } else if (Mips::HI64RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFHI64), Mips::K0_64);
-      SrcReg = Mips::K0_64;
+      BuildMI(MBB, I, DL, get(Mips::MFHI64), Mips::R26_64);
+      SrcReg = Mips::R26_64;
     } else if (Mips::LO32RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFLO), Mips::K0);
-      SrcReg = Mips::K0;
+      BuildMI(MBB, I, DL, get(Mips::MFLO), Mips::R26);
+      SrcReg = Mips::R26;
     } else if (Mips::LO64RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFLO64), Mips::K0_64);
-      SrcReg = Mips::K0_64;
+      BuildMI(MBB, I, DL, get(Mips::MFLO64), Mips::R26_64);
+      SrcReg = Mips::R26_64;
     }
   }
 
@@ -441,13 +345,13 @@ void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
   else {
     // Load HI/LO through K0. Notably the DestReg is encoded into the
     // instruction itself.
-    unsigned Reg = Mips::K0;
+    unsigned Reg = Mips::R26;
     unsigned LdOp = Mips::MTLO;
     if (DestReg == Mips::HI0)
       LdOp = Mips::MTHI;
 
     if (Subtarget.getABI().ArePtrs64bit()) {
-      Reg = Mips::K0_64;
+      Reg = Mips::R26_64;
       if (DestReg == Mips::HI0_64)
         LdOp = Mips::MTHI64;
       else
@@ -688,7 +592,7 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
   unsigned Size = STI.isABI_N64() ? 64 : 32;
   unsigned LUi = STI.isABI_N64() ? Mips::LUi64 : Mips::LUi;
-  unsigned ZEROReg = STI.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO;
+  unsigned ZEROReg = STI.isABI_N64() ? Mips::R0_64 : Mips::R0;
   const TargetRegisterClass *RC = STI.isABI_N64() ?
     &Mips::GPR64RegClass : &Mips::GPR32RegClass;
   bool LastInstrIsADDiu = NewImm;
@@ -722,30 +626,34 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
 }
 
 unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
-  return (Opc == Mips::BEQ    || Opc == Mips::BEQ_MM || Opc == Mips::BNE    ||
-          Opc == Mips::BNE_MM || Opc == Mips::BGTZ   || Opc == Mips::BGEZ   ||
-          Opc == Mips::BLTZ   || Opc == Mips::BLEZ   || Opc == Mips::BEQ64  ||
-          Opc == Mips::BNE64  || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
-          Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T   ||
-          Opc == Mips::BC1F   || Opc == Mips::B      || Opc == Mips::J      ||
-          Opc == Mips::J_MM   || Opc == Mips::B_MM   || Opc == Mips::BEQZC_MM ||
-          Opc == Mips::BNEZC_MM || Opc == Mips::BEQC || Opc == Mips::BNEC   ||
-          Opc == Mips::BLTC   || Opc == Mips::BGEC   || Opc == Mips::BLTUC  ||
-          Opc == Mips::BGEUC  || Opc == Mips::BGTZC  || Opc == Mips::BLEZC  ||
-          Opc == Mips::BGEZC  || Opc == Mips::BLTZC  || Opc == Mips::BEQZC  ||
-          Opc == Mips::BNEZC  || Opc == Mips::BEQZC64 || Opc == Mips::BNEZC64 ||
+  return (Opc == Mips::BEQ || Opc == Mips::BEQ_MM || Opc == Mips::BNE ||
+          Opc == Mips::BNE_MM || Opc == Mips::BGTZ || Opc == Mips::BGEZ ||
+          Opc == Mips::BLTZ || Opc == Mips::BLEZ || Opc == Mips::BEQ64 ||
+          Opc == Mips::BNE64 || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
+          Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T ||
+          Opc == Mips::BC1F || Opc == Mips::B || Opc == Mips::J ||
+          Opc == Mips::J_MM || Opc == Mips::B_MM || Opc == Mips::BEQZC_MM ||
+          Opc == Mips::BNEZC_MM || Opc == Mips::BEQC || Opc == Mips::BNEC ||
+          Opc == Mips::BLTC || Opc == Mips::BGEC || Opc == Mips::BLTUC ||
+          Opc == Mips::BGEUC || Opc == Mips::BGTZC || Opc == Mips::BLEZC ||
+          Opc == Mips::BGEZC || Opc == Mips::BLTZC || Opc == Mips::BEQZC ||
+          Opc == Mips::BNEZC || Opc == Mips::BEQZC64 || Opc == Mips::BNEZC64 ||
           Opc == Mips::BEQC64 || Opc == Mips::BNEC64 || Opc == Mips::BGEC64 ||
           Opc == Mips::BGEUC64 || Opc == Mips::BLTC64 || Opc == Mips::BLTUC64 ||
           Opc == Mips::BGTZC64 || Opc == Mips::BGEZC64 ||
           Opc == Mips::BLTZC64 || Opc == Mips::BLEZC64 || Opc == Mips::BC ||
-          Opc == Mips::BBIT0 || Opc == Mips::BBIT1 || Opc == Mips::BBIT032 ||
-          Opc == Mips::BBIT132 ||  Opc == Mips::BC_MMR6 ||
-          Opc == Mips::BEQC_MMR6 || Opc == Mips::BNEC_MMR6 ||
-          Opc == Mips::BLTC_MMR6 || Opc == Mips::BGEC_MMR6 ||
-          Opc == Mips::BLTUC_MMR6 || Opc == Mips::BGEUC_MMR6 ||
-          Opc == Mips::BGTZC_MMR6 || Opc == Mips::BLEZC_MMR6 ||
-          Opc == Mips::BGEZC_MMR6 || Opc == Mips::BLTZC_MMR6 ||
-          Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6) ? Opc : 0;
+          Opc == Mips::BC1EQZ || Opc == Mips::BC1NEZ || Opc == Mips::BBIT0 ||
+          Opc == Mips::BBIT1 || Opc == Mips::BBIT032 || Opc == Mips::BBIT132 ||
+          Opc == Mips::BC_MMR6 || Opc == Mips::BEQC_MMR6 ||
+          Opc == Mips::BNEC_MMR6 || Opc == Mips::BLTC_MMR6 ||
+          Opc == Mips::BGEC_MMR6 || Opc == Mips::BLTUC_MMR6 ||
+          Opc == Mips::BGEUC_MMR6 || Opc == Mips::BGTZC_MMR6 ||
+          Opc == Mips::BLEZC_MMR6 || Opc == Mips::BGEZC_MMR6 ||
+          Opc == Mips::BLTZC_MMR6 || Opc == Mips::BEQZC_MMR6 ||
+          Opc == Mips::BNEZC_MMR6 || Opc == Mips::BC1EQZC_MMR6 ||
+          Opc == Mips::BC1NEZC_MMR6)
+             ? Opc
+             : 0;
 }
 
 void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
@@ -956,7 +864,7 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   unsigned SP = Subtarget.isGP64bit() ? Mips::SP_64 : Mips::SP;
   unsigned RA = Subtarget.isGP64bit() ? Mips::RA_64 : Mips::RA;
   unsigned T9 = ABI.getTempReg(9, Subtarget.isGP64bit());
-  unsigned ZERO = Subtarget.isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  unsigned ZERO = Subtarget.isGP64bit() ? Mips::R0_64 : Mips::R0;
   Register OffsetReg = I->getOperand(0).getReg();
   Register TargetReg = I->getOperand(1).getReg();
 

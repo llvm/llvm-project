@@ -1621,4 +1621,48 @@ define amdgpu_kernel void @s_and_inline_high_imm_f32_neg_4.0_i64(ptr addrspace(1
   store i64 %and, ptr addrspace(1) %out, align 8
   ret void
 }
+
+; Propagate demanded bits from the LHS to simplify the RHS.
+
+define i32 @s_and_hidden_bits_rhs(i32 inreg %x, i32 inreg %y) {
+; GFX6-LABEL: s_and_hidden_bits_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_lshr_b32 s4, s17, 24
+; GFX6-NEXT:    s_and_b32 s4, s4, s16
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: s_and_hidden_bits_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_lshr_b32 s4, s17, 24
+; GFX8-NEXT:    s_and_b32 s4, s4, s16
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %bounded = lshr i32 %y, 24
+  %inner = or i32 %x, 65280
+  %result = and i32 %bounded, %inner
+  ret i32 %result
+}
+
+define i32 @v_and_hidden_bits_rhs(i32 %x, i32 %y) {
+; GFX6-LABEL: v_and_hidden_bits_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_and_hidden_bits_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_and_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %bounded = lshr i32 %y, 24
+  %inner = or i32 %x, 65280
+  %result = and i32 %bounded, %inner
+  ret i32 %result
+}
+
 attributes #0 = { nounwind readnone }

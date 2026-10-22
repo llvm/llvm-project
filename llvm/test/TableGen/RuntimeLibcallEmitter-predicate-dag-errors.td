@@ -25,7 +25,7 @@ def badpred : RuntimeLibcallAvailability<(all_of NotAnAtom)>;
 
 #ifdef ERR_BAD_OP
 // A defined record that isn't all_of/any_of/not used as the dag operator.
-// BAD-OP: error: unknown predicate dag operator 'IsA'; expected all_of/any_of/not
+// BAD-OP: error: unknown predicate dag operator 'IsA'; expected all_of/any_of/none_of/not
 def badpred : RuntimeLibcallAvailability<(IsA IsB)>;
 #endif
 

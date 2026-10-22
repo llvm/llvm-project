@@ -123,6 +123,7 @@ class TimelineView : public InstructionView {
   unsigned CurrentCycle;
   unsigned MaxCycle;
   unsigned LastCycle;
+  float ReservationStationScaleFactor;
 
   struct TimelineViewEntry {
     int CycleDispatched; // A negative value is an "invalid cycle".
@@ -164,7 +165,7 @@ class TimelineView : public InstructionView {
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
                llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
-               unsigned Cycles);
+               unsigned Cycles, float ReservationStationScaleFactor);
 
   // Event handlers.
   void onCycleEnd() override { ++CurrentCycle; }

@@ -22,8 +22,7 @@ define i32 @bcnt064_inverse_for_vregs(i64 %val0) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_bcnt_u32_b32 v0, v0, 0
 ; CHECK-NEXT:    v_bcnt_u32_b32 v0, v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 64, v[0:1]
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 64, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.ctpop.i64(i64 %val0)

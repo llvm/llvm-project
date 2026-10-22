@@ -596,16 +596,18 @@ inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
   return cst_pred_ty<is_non_zero_int>();
 }
 
-struct is_zero {
+template <bool AllowPoison> struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
     // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    return C && (C->isNullValue() ||
+                 cst_pred_ty<is_zero_int, AllowPoison>().match(C));
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
-inline is_zero m_Zero() { return is_zero(); }
+inline is_zero<true> m_Zero() { return is_zero<true>(); }
+inline is_zero<false> m_ZeroForbidPoison() { return is_zero<false>(); }
 
 inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 

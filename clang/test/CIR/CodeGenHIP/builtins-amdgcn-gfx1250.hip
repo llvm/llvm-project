@@ -151,3 +151,30 @@ __device__ void test_permlane_xor(unsigned int* out, unsigned int src0,
                                   unsigned int src1, unsigned int src2) {
   *out = __builtin_amdgcn_permlane_xor(src0, src1, src2);
 }
+
+typedef int v2i __attribute__((ext_vector_type(2)));
+typedef int v4i __attribute__((ext_vector_type(4)));
+
+// CIR-LABEL: @_Z21test_cluster_load_b32PiPU3AS1ii
+// CIR: cir.call_llvm_intrinsic "amdgcn.cluster.load.b32" {{.*}} : (!cir.ptr<!s32i, target_address_space(1)>, !s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z21test_cluster_load_b32PiPU3AS1ii
+// LLVM: call{{.*}} i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) %{{.+}}, i32 10, i32 %{{.+}})
+__device__ void test_cluster_load_b32(int* out, global int* inptr, int mask) {
+  *out = __builtin_amdgcn_cluster_load_b32(inptr, 10, mask);
+}
+
+// CIR-LABEL: @_Z21test_cluster_load_b64PDv2_iPU3AS1S_i
+// CIR: cir.call_llvm_intrinsic "amdgcn.cluster.load.b64" {{.*}} : (!cir.ptr<!cir.vector<2 x !s32i>, target_address_space(1)>, !s32i, !s32i) -> !cir.vector<2 x !s32i>
+// LLVM: define{{.*}} void @_Z21test_cluster_load_b64PDv2_iPU3AS1S_i
+// LLVM: call{{.*}} <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) %{{.+}}, i32 22, i32 %{{.+}})
+__device__ void test_cluster_load_b64(v2i* out, global v2i* inptr, int mask) {
+  *out = __builtin_amdgcn_cluster_load_b64(inptr, 22, mask);
+}
+
+// CIR-LABEL: @_Z22test_cluster_load_b128PDv4_iPU3AS1S_i
+// CIR: cir.call_llvm_intrinsic "amdgcn.cluster.load.b128" {{.*}} : (!cir.ptr<!cir.vector<4 x !s32i>, target_address_space(1)>, !s32i, !s32i) -> !cir.vector<4 x !s32i>
+// LLVM: define{{.*}} void @_Z22test_cluster_load_b128PDv4_iPU3AS1S_i
+// LLVM: call{{.*}} <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32(ptr addrspace(1) %{{.+}}, i32 27, i32 %{{.+}})
+__device__ void test_cluster_load_b128(v4i* out, global v4i* inptr, int mask) {
+  *out = __builtin_amdgcn_cluster_load_b128(inptr, 27, mask);
+}

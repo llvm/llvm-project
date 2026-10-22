@@ -548,8 +548,9 @@ private:
   void CodeGenAndEmitDAG();
 
   /// Generate instructions for lowering the incoming arguments of the
-  /// given function.
-  void LowerArguments(const Function &F);
+  /// given function. \p FastISel is true if fast-isel may select other
+  /// instructions in the function.
+  void LowerArguments(const Function &F, bool FastISel);
 
   void ComputeLiveOutVRegInfo();
 

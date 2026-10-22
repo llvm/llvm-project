@@ -111,27 +111,27 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:       Entry = DefaultCC;
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
-// CHECK-NEXT:     if (isLibraryAvailable("compiler-rt"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
 // CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable("compiler-rt"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
 // CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable("compiler-rt"))
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
 // CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-EMPTY:
 // CHECK-NEXT:     return;

@@ -25,6 +25,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
@@ -673,6 +674,7 @@ class CodeGenRegBank {
 
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
+  StringSet<> RegClassNames;
   DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
   using RCKeyMap = std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *>;
   RCKeyMap Key2RC;

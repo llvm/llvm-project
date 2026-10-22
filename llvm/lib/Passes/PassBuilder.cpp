@@ -570,8 +570,11 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : Opts(PassesOptions::Global), TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC),
-      FS(std::move(FS)) {
+    : LibraryOptions(PTO.LibraryOptions ? PTO.LibraryOptions
+                     : TM               ? TM->Options.MCOptions.LibraryOptions
+                                        : nullptr),
+      Opts(cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions)),
+      TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

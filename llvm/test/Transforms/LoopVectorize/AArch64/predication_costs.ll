@@ -272,3 +272,37 @@ for.inc:
 for.end:
   ret void
 }
+
+; CHECK-LABEL: predicated_store_trunc_iv
+; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i8 %iv.trunc, ptr %gep.dst, align 1
+; CHECK-NOT: profitable to scalarize   %iv.trunc = trunc i64 %iv to i8
+; CHECK: Precomputed costs for VF 2: 6
+; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp<[[IV_TRUNC:%[0-9]+]]> = trunc vp<[[CAN_IV:%[0-9]+]]> to i8
+; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<{{.+}}>
+; CHECK: Cost of 0.5 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<[[IV_TRUNC]]>, ir<1>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 2: EMIT branch-on-count
+; CHECK: Cost of 1 for VF 2: canonical IV increment
+; CHECK: Cost for VF 2: 9
+;
+define void @predicated_store_trunc_iv(ptr %dst, i1 %c, i64 %n) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %iv.trunc = trunc i64 %iv to i8
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %iv.trunc, ptr %gep.dst
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

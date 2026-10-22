@@ -61,6 +61,20 @@ public:
     return LibcallImpls[Call];
   }
 
+  /// Return the implementation for \p Call, or for its masked variant if \p
+  /// Call has no implementation.
+  ///
+  /// FIXME: Callers should explicitly try the masked variant and track whether
+  /// a mask argument is needed, instead of re-deriving it from the result with
+  /// hasVectorMaskArgument.
+  RTLIB::LibcallImpl getVectorLibcallImplOrMasked(RTLIB::Libcall Call) const {
+    RTLIB::LibcallImpl Impl = getLibcallImpl(Call);
+    if (Impl != RTLIB::Unsupported)
+      return Impl;
+    return getLibcallImpl(
+        RTLIB::RuntimeLibcallsInfo::getMaskedVectorLibcall(Call));
+  }
+
   /// Remap the default libcall routine name for the specified libcall.
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     LibcallImpls[Call] = Impl;

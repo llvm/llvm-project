@@ -155,13 +155,16 @@ class Scheduler : public HardwareUnit {
   bool promoteToPendingSet(SmallVectorImpl<InstRef> &Pending);
 
 public:
-  Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu)
-      : Scheduler(Model, Lsu, nullptr) {}
+  Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu,
+            float ReservationStationScaleFactor)
+      : Scheduler(Model, Lsu, ReservationStationScaleFactor, nullptr) {}
 
   Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu,
+            float ReservationStationScaleFactor,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : Scheduler(std::make_unique<ResourceManager>(Model), Lsu,
-                  std::move(SelectStrategy)) {}
+      : Scheduler(std::make_unique<ResourceManager>(
+                      Model, ReservationStationScaleFactor),
+                  Lsu, std::move(SelectStrategy)) {}
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnitBase &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)

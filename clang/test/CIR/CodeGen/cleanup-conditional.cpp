@@ -277,8 +277,8 @@ int test_return_ternary(bool c) {
 // CIR:   cir.return %[[RET]] : !s32i
 
 // LLVMCIR-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
-// LLVMCIR:         %{{.*}} = alloca i8
 // LLVMCIR:         %[[RETVAL:.*]] = alloca i32
+// LLVMCIR:         %{{.*}} = alloca i8
 // LLVMCIR:         %[[TMPA:.*]] = alloca %struct.A
 // LLVMCIR:         %[[ACTA:.*]] = alloca i8
 // LLVMCIR:         %[[TMPB:.*]] = alloca %struct.B
@@ -1057,9 +1057,9 @@ void test_flag_cleared_before_cond_cleanup() {
 // CIR:   }
 
 // LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
-// LLVMCIR:      %[[AGG_TMP:.*]] = alloca %struct.Payload
 // LLVMCIR:      %[[REF_TMP:.*]] = alloca %struct.Guard
 // LLVMCIR:      %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:      %[[AGG_TMP:.*]] = alloca %struct.Payload
 // OGCG:         %[[REF_TMP:.*]] = alloca %struct.Guard
 // OGCG:         %[[AGG_TMP:.*]] = alloca %struct.Payload
 // OGCG:         %[[ACTIVE:.*]] = alloca i1

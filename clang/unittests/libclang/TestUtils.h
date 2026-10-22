@@ -82,9 +82,10 @@ public:
         fixed_addr_string(new std::string(Filename)),
         fixed_addr_string(new std::string(Contents))));
     UnsavedFiles.push_back({
-        it.first->first->c_str(),   // filename
-        it.first->second->c_str(),  // contents
-        it.first->second->size()    // length
+        it.first->first->c_str(),  // filename
+        it.first->second->c_str(), // contents
+        // Length is unsigned long: 32 bits on 64-bit Windows, so this narrows.
+        static_cast<unsigned long>(it.first->second->size()) // length
     });
   }
   template <typename F>

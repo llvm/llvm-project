@@ -49,9 +49,7 @@ class AArch64MCLFIRewriter : public MCLFIRewriter {
 
 public:
   AArch64MCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RI,
-                       std::unique_ptr<MCInstrInfo> &&II)
-      : MCLFIRewriter(Ctx, std::move(RI), std::move(II)),
-        CLOpts(AArch64MCOptions::Global) {}
+                       std::unique_ptr<MCInstrInfo> &&II);
 
   bool rewriteInst(const MCInst &Inst, MCStreamer &Out,
                    const MCSubtargetInfo &STI) override;

@@ -70,6 +70,13 @@ private:
   llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
 };
 
+/// Returns the attribute name for specifying function parameter alignment.
+StringRef getFuncParamAlignmentAttrName();
+
+/// Returns the attribute name for specifying function parameter and result
+/// attributes.
+StringRef getFuncParamAttrName();
+
 /// Returns the attribute name for specifying argument ABI information.
 StringRef getInterfaceVarABIAttrName();
 

@@ -422,15 +422,14 @@ class SYNC_FM : StdArch {
 }
 
 class SYNCI_FM : StdArch {
-  // Produced by the mem_simm16 address as reg << 16 | imm (see getMemEncoding).
-  bits<21> addr;
-  bits<5> rs = addr{20-16};
-  bits<16> offset = addr{15-0};
+  // Base register and signed displacement are encoded separately.
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
   let Inst{31-26} = 0b000001;
-  let Inst{25-21} = rs;
+  let Inst{25-21} = base;
   let Inst{20-16} = 0b11111;
   let Inst{15-0}  = offset;
 }
@@ -718,14 +717,15 @@ class MFC1_FM<bits<5> funct> : StdArch {
 
 class LW_FM<bits<6> op> : StdArch {
   bits<5> rt;
-  bits<21> addr;
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 
   let Inst{31-26} = op;
-  let Inst{25-21} = addr{20-16};
+  let Inst{25-21} = base;
   let Inst{20-16} = rt;
-  let Inst{15-0}  = addr{15-0};
+  let Inst{15-0}  = offset;
 }
 
 class MADDS_FM<bits<3> funct, bits<3> fmt> : StdArch {
@@ -918,10 +918,9 @@ class COP0_TLB_FM<bits<6> op> : StdArch {
 }
 
 class CACHEOP_FM<bits<6> op> : StdArch {
-  bits<21> addr;
   bits<5> hint;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
+  bits<5> base;
+  bits<16> offset;
 
   bits<32> Inst;
 

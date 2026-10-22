@@ -358,7 +358,7 @@ bb3:
 ; CHECK64-NEXT: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
-; CHECK64-NEXT: jhe L#BB7_2
+; CHECK64-NEXT: jnl L#BB7_2
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7
@@ -378,7 +378,7 @@ define void @large_stack0() {
 ; CHECK64-NEXT: lgr 0,3
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
-; CHECK64-NEXT: jhe L#BB8_2
+; CHECK64-NEXT: jnl L#BB8_2
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7
@@ -403,7 +403,7 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK64-NEXT: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
-; CHECK64-NEXT: jhe L#BB9_2
+; CHECK64-NEXT: jnl L#BB9_2
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7

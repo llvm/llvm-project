@@ -4580,18 +4580,18 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
   return Def;
 }
 
-MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
+MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
+    if (MCRegister Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
-      return Super;
+  if (MCRegister Super =
+          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass)) {
+    return Super;
   }
 
   return AMDGPU::NoRegister;

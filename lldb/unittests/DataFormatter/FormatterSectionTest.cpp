@@ -411,8 +411,7 @@ TEST_F(FormatterSectionTest, LoadsVersion2SyntheticChildren) {
   EXPECT_EQ(widget_fe->Update(), lldb::ChildCacheState::eReuse);
   EXPECT_THAT_EXPECTED(widget_fe->CalculateNumChildren(), llvm::HasValue(5u));
   // Without @get_child_index, looking up a child by name is an error.
-  EXPECT_THAT_EXPECTED(widget_fe->GetIndexOfChildWithName(ConstString("x")),
-                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(widget_fe->GetIndexOfChildWithName("x"), llvm::Failed());
 
   // @update's modification of self is visible to @get_num_children.
   auto gadget_fe = GetFrontEnd("Gadget");
@@ -431,7 +430,7 @@ TEST_F(FormatterSectionTest, LoadsVersion2SyntheticChildren) {
   indexed_fe->Update();
   indexed_fe->GetChildAtIndex(3);
   EXPECT_THAT_EXPECTED(indexed_fe->CalculateNumChildren(), llvm::HasValue(3u));
-  EXPECT_THAT_EXPECTED(indexed_fe->GetIndexOfChildWithName(ConstString("x")),
+  EXPECT_THAT_EXPECTED(indexed_fe->GetIndexOfChildWithName("x"),
                        llvm::HasValue(2u));
 
   // Zero is a valid number of children, and a valid child index.
@@ -439,7 +438,7 @@ TEST_F(FormatterSectionTest, LoadsVersion2SyntheticChildren) {
   ASSERT_TRUE(empty_fe != nullptr);
   empty_fe->Update();
   EXPECT_THAT_EXPECTED(empty_fe->CalculateNumChildren(), llvm::HasValue(0u));
-  EXPECT_THAT_EXPECTED(empty_fe->GetIndexOfChildWithName(ConstString("x")),
+  EXPECT_THAT_EXPECTED(empty_fe->GetIndexOfChildWithName("x"),
                        llvm::HasValue(0u));
 
   // Without @init, self["valobj"] is set to the (non-null) Object.

@@ -286,12 +286,10 @@ _Complex float complex_float(_Complex float c) { return c; }
 // LLVM: define dso_local <2 x float> @complex_float(<2 x float> noundef %{{.+}})
 
 // _Complex double needs two SSE eightbytes, so it flattens into a pair.
-// Flattening drops the parameter's noundef, which classic keeps on each half.
 _Complex double complex_double(_Complex double c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double{{.*}}, %arg1: !cir.double{{.*}}) -> ![[F64PAIR]]
-// LLVM-CIR: define dso_local { double, double } @complex_double(double %{{[^,)]+}}, double %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double {llvm.noundef} loc({{.+}}), %arg1: !cir.double {llvm.noundef} loc({{.+}})) -> ![[F64PAIR]]
+// LLVM: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
 
 // A _Complex of integers packs both halves into one INTEGER eightbyte.
 _Complex int complex_int(_Complex int c) { return c; }
@@ -316,9 +314,8 @@ _Complex _Float16 complex_half(_Complex _Float16 c) { return c; }
 // into a register pair instead of coercing to one value.
 _Complex long long complex_longlong(_Complex long long c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> ![[I64PAIR]]
-// LLVM-CIR: define dso_local { i64, i64 } @complex_longlong(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {llvm.noundef} loc({{.+}}), %arg1: !u64i {llvm.noundef} loc({{.+}})) -> ![[I64PAIR]]
+// LLVM: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
 
 // A 128-bit vector fills one xmm register and passes in its own type.
 typedef float v4f __attribute__((vector_size(16)));

@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // no match.
 
 template <class _SegmentedIterator, class _Pred>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 

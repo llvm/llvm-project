@@ -1819,7 +1819,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1865,7 +1865,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX1200_1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200_1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200_1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200_1250-NEXT: {{  $}}
   ; GFX1200_1250-NEXT: bb.3:
   ; GFX1200_1250-NEXT:   successors: %bb.4, %bb.2
@@ -1916,7 +1916,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1962,7 +1962,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -2010,7 +2010,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -2064,7 +2064,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2110,7 +2110,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -2158,7 +2158,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -2210,7 +2210,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2255,7 +2255,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX1200_1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200_1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200_1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200_1250-NEXT: {{  $}}
   ; GFX1200_1250-NEXT: bb.3:
   ; GFX1200_1250-NEXT:   successors: %bb.4, %bb.2
@@ -2306,7 +2306,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2351,7 +2351,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX1200_1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200_1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200_1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200_1250-NEXT: {{  $}}
   ; GFX1200_1250-NEXT: bb.3:
   ; GFX1200_1250-NEXT:   successors: %bb.4, %bb.2
@@ -2403,7 +2403,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2458,7 +2458,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -2515,7 +2515,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -2579,7 +2579,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2634,7 +2634,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -2691,7 +2691,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -2753,7 +2753,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2808,7 +2808,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -2865,7 +2865,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -2926,7 +2926,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -2983,7 +2983,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -3040,7 +3040,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -3101,7 +3101,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -3158,7 +3158,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -3215,7 +3215,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -3276,7 +3276,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -3333,7 +3333,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX1200-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4, %bb.2
@@ -3390,7 +3390,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4, %bb.2
@@ -3449,7 +3449,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -3503,7 +3503,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX1200_1250-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; GFX1200_1250-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; GFX1200_1250-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_32_xm0_xexec(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200_1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[INTRINSIC_CONVERGENT4]](i32), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX1200_1250-NEXT: {{  $}}
   ; GFX1200_1250-NEXT: bb.3:
   ; GFX1200_1250-NEXT:   successors: %bb.4, %bb.2

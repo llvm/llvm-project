@@ -291,7 +291,7 @@ int llvm_test_dibuilder(void) {
   // currently "trailing", meaning that they're associated with a block
   // but no particular instruction, which is only valid as a transient state.
   LLVMContextRef Ctx = LLVMGetModuleContext(M);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   LLVMPositionBuilderAtEnd(Builder, FooEntryBlock);
   // Build `br label %vars` in entry.
   LLVMBuildBr(Builder, FooVarBlock);
