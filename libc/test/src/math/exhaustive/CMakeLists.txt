@@ -256,8 +256,11 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     .exhaustive_test
+    .exhaustive_test_static_rounding
     libc.src.math.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
+    libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -334,8 +337,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     fmabf16_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.fmabf16
@@ -417,8 +418,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     hypotbf16_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotbf16
@@ -435,8 +434,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     hypotf_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotf
@@ -453,8 +450,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     hypotf16_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotf16
@@ -770,8 +765,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     bfloat16_add_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.__support.FPUtil.bfloat16
@@ -788,8 +781,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     bfloat16_div_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.__support.FPUtil.bfloat16
@@ -806,8 +797,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     bfloat16_mul_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.__support.FPUtil.bfloat16
@@ -824,8 +813,6 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     bfloat16_sub_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.__support.FPUtil.bfloat16

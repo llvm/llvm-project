@@ -40,6 +40,7 @@
 
 namespace clang {
   class ASTContext;
+  class BoundsAttributedType;
   class CXXRecordDecl;
   class TypeLoc;
   class LangOptions;
@@ -1281,6 +1282,27 @@ private:
   bool ParseSoon; // Are we planning to parse these shortly after creation?
   bool LateAttrParseExperimentalExtOnly;
   bool LateAttrParseTypeAttrOnly;
+};
+
+/// The part of a late-parsed type attribute that Sema reads and fills in during
+/// type construction. The parser owns the attribute and its cached tokens and
+/// embeds this, so Sema never needs to see the parser's type.
+struct LateParsedTypeAttrInfo {
+  ParsedAttr::Kind Kind;
+  SourceLocation NameLoc;
+
+  /// The type built for this attribute during type construction, still missing
+  /// the argument that hasn't been parsed yet. Filled in by
+  /// `Sema::ProcessLateParsedTypeAttr` and completed once the enclosing scope
+  /// makes the argument parseable. Null if type construction rejected the
+  /// attribute.
+  ///
+  /// Held as the base class so the parser stays agnostic about which bounds
+  /// attribute this is; Sema dispatches on the concrete kind when completing.
+  BoundsAttributedType *TypeToComplete = nullptr;
+
+  LateParsedTypeAttrInfo(ParsedAttr::Kind Kind, SourceLocation NameLoc)
+      : Kind(Kind), NameLoc(NameLoc) {}
 };
 
 /// One instance of this struct is used for each type in a

@@ -772,12 +772,15 @@ func.func @brgemm_bf16_loop(%arg0: memref<16x64x64x2xbf16>, %arg1: memref<16x64x
 }
 
 // CHECK-LABEL: @brgemm_bf16_loop
-// CHECK-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) { 
-// CHECK-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
-// CHECK-4: x86.amx.tile_load
-// CHECK-4: x86.amx.tile_mulf
+// CHECK-COUNT-2: scf.for
+// CHECK-COUNT-4: x86.amx.tile_load {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>> into !x86.amx.tile<16x16xf32>
+// CHECK-COUNT-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
+// CHECK-DAG: x86.amx.tile_load
+// CHECK-DAG: x86.amx.tile_mulf
 // CHECK: scf.yield {{.*}} : !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>
-// CHECK-NOT: scf.for {{.*}} vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>
+// CHECK-NOT: x86.amx.tile_zero
+// CHECK-COUNT-4: x86.amx.tile_store {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>>, !x86.amx.tile<16x16xf32>
+// CHECK-NOT: vector.transfer_write
 // CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {

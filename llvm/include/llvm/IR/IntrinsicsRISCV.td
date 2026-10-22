@@ -2122,6 +2122,14 @@ class RVPBinaryIntrinsic
   def int_riscv_psati  : RVPSaturationIntrinsic;
   def int_riscv_pusati : RVPSaturationIntrinsic;
 
+  // Scalar Saturation.
+  class RVPScalarSaturationIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_sati  : RVPScalarSaturationIntrinsic;
+  def int_riscv_usati : RVPScalarSaturationIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
@@ -2310,6 +2318,27 @@ class RVPBinaryIntrinsic
   def int_riscv_pm2sub_x   : RVPHorizontalMulIntrinsic;
   def int_riscv_pm4addsu   : RVPHorizontalMulIntrinsic;
   def int_riscv_pm2addsu   : RVPHorizontalMulIntrinsic;
+
+  // Packed Multiplication with Widening Horizontal Addition.
+  def int_riscv_pm2wadd    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2wadd_x  : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2waddu   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2wsub    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2wsub_x  : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2waddsu  : RVPHorizontalMulIntrinsic;
+
+  // Packed Multiplication with Widening Horizontal Addition and Accumulate.
+  class RVPHorizontalMulAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm2wadda   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wadda_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddau  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddasu : RVPHorizontalMulAccIntrinsic;
 
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.

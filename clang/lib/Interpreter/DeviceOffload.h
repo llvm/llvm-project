@@ -45,6 +45,11 @@ protected:
 };
 
 class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
+  CompilerInstance &DeviceCI;
+  llvm::SmallVector<char, 0> ObjectContent;
+
+  // Generate the AMDGPU object file for the last PTU.
+  llvm::Expected<llvm::StringRef> GenerateDeviceObject();
 
 public:
   IncrementalHIPDeviceParser(
