@@ -2028,7 +2028,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                       m_Ctlz(m_Deferred(A), m_One())))),
                                   m_APInt(XorC))))))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
-      *XorC == A->getType()->getScalarSizeInBits() - 1) {
+      *XorC == A->getType()->getScalarSizeInBits() - 1 &&
+      isPowerOf2_32(A->getType()->getScalarSizeInBits())) {
     Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
     Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
                                           {Sub, Builder.getFalse()});
@@ -3112,6 +3113,13 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         return replaceInstUsesWith(I, Sub);
       }
     }
+  }
+
+  // ((X + C) & ~C) - X -> X & C where C is a power of 2.
+  if (match(Op0,
+            m_And(m_Add(m_Specific(Op1), m_Power2(AddC)), m_APInt(AndC))) &&
+      *AddC == ~*AndC) {
+    return BinaryOperator::CreateAnd(Op1, ConstantInt::get(Ty, *AddC));
   }
 
   return TryToNarrowDeduceFlags();

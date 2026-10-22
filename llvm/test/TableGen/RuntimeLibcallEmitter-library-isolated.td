@@ -70,5 +70,5 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 
 // CHECK-LABEL: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
 // CHECK: if (TT.isSPIRV()) {
-// CHECK: if (isLibraryAvailable("libc"))
+// CHECK: if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT: setAvailableLibFuncs_SPIRVLibc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);

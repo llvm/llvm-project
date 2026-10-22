@@ -168,6 +168,9 @@ static void eraseDeadBBsAndChildren(const Container &BBs) {
 }
 
 bool WasmEHPrepareImpl::runOnFunction(Function &F) {
+  if (F.getParent()->getExceptionModel() != ExceptionHandling::Wasm)
+    return false;
+
   bool Changed = false;
   Changed |= prepareThrows(F);
   Changed |= prepareEHPads(F);

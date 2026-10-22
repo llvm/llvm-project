@@ -20,6 +20,7 @@
 #include "orc-rt/bedrock/TaskGroup.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/LockedAccess.h"
+#include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
 
@@ -401,6 +402,36 @@ public:
     this->OnDisconnect = std::move(OnDisconnect);
   }
 
+  /// Add instance symbols to the Session.
+  ///
+  /// Instance symbols name objects created at runtime (e.g. service
+  /// instances). Such objects have no symbols under the standard object
+  /// models, so instance symbols give them names that can be looked up (see
+  /// lookupInstanceSymbols) and linked against.
+  ///
+  /// NewSymbols may be a range of (SymbolNameSpec, address) pairs, or an
+  /// rvalue SimpleSymbolTable. Names are mangled as they're added (see
+  /// SymbolNameSpec), so lookups must use the resulting linker-level names.
+  ///
+  /// Duplicate handling follows SimpleSymbolTable::addUnique: re-adding an
+  /// existing (name, address) pair is allowed, but if any name in NewSymbols
+  /// is already registered with a different address then an error is
+  /// returned and none of NewSymbols are added.
+  template <typename SymbolRangeT>
+  Error addInstanceSymbols(SymbolRangeT &&NewSymbols) noexcept {
+    std::scoped_lock<std::mutex> Lock(M);
+    return InstanceSymbols.addUnique(std::forward<SymbolRangeT>(NewSymbols));
+  }
+
+  /// Look up instance symbols, returning one result per element of LS, in
+  /// the same order. Names are linker-level and used as written.
+  ///
+  /// Missing symbols are reported as described by SymbolLookupResult: a missing
+  /// weakly referenced symbol yields a null address, and a missing required
+  /// symbol yields an empty optional.
+  SymbolLookupResult
+  lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept;
+
   /// Add a Service to the session.
   template <typename ServiceT>
   ServiceT &addService(std::unique_ptr<ServiceT> Srv) {
@@ -764,6 +795,7 @@ private:
   std::condition_variable CV;
   State CurrentState = State::Start;
   State TargetState = State::None;
+  SimpleSymbolTable InstanceSymbols;
   std::vector<std::unique_ptr<Service>> Services;
   NotificationService &Notifiers;
 };

@@ -344,6 +344,35 @@ LLVM libc uses layered `.clang-tidy` configuration files:
   `readability-identifier-naming` and `llvm-header-guard`. Diagnostics from
   `llvmlibc-*` checks are treated as errors.
 
+### Running the checks
+
+Configure with `-DLLVM_LIBC_ENABLE_LINTING=ON` and build the `libc-lint`
+target. CMake looks for `clang-tidy` in the LLVM tools directory first (the
+build tree in a bootstrapping build, so the freshly built `clang-tidy` wins)
+and then on `PATH`. The `clang-tidy` it finds must have the same major
+version as the compiler, because `clang-tidy` carries its own clang front end
+and a mismatch shows up as spurious diagnostics. To use a specific binary,
+pass `-DLLVM_LIBC_CLANG_TIDY=<path>`; this also turns linting on, and a
+version mismatch is then reported as a warning rather than an error.
+
+The `.clang-tidy` files and the `llvmlibc-*` checks live in the same
+repository and change together, so the configuration is written for the
+`clang-tidy` built from the same revision as the libc sources, not for the
+latest release. An older `clang-tidy` does not fail loudly on a newer
+configuration: it ignores checks and check options it does not know, and
+releases up to at least 21 react to an unknown top-level key by discarding
+the file and running their default checks, exiting 0 either way. Results
+from an older `clang-tidy` are therefore not comparable with a build at the
+same revision. To match, add `clang-tools-extra` to a bootstrapping build
+and point `LLVM_LIBC_CLANG_TIDY` at the `clang-tidy` it produces;
+`clang-tidy --verify-config --config-file=libc/src/.clang-tidy` reports
+anything your `clang-tidy` would silently skip.
+
+A configuration that asks for linting but cannot run it (no `clang-tidy`, a
+non-clang compiler, or a discovered `clang-tidy` of the wrong major version)
+fails to configure. There is no mode in which `libc-lint` exists but does
+nothing, so a green `libc-lint` build always means the checks ran.
+
 ### LLVM-libc checks
 
 ### restrict-system-libc-headers
