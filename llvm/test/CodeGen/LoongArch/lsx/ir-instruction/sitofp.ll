@@ -178,10 +178,9 @@ define <4 x float> @sitofp_v4i64_v4f32(<4 x i64> %a) {
 define <4 x double> @sitofp_v4i32_v4f64(<4 x i32> %a) {
 ; LSX-LABEL: sitofp_v4i32_v4f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.w $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.w $vr2, $vr1, $vr0
-; LSX-NEXT:    vffint.d.l $vr2, $vr2
-; LSX-NEXT:    vilvh.w $vr0, $vr1, $vr0
+; LSX-NEXT:    vsllwil.d.w $vr1, $vr0, 0
+; LSX-NEXT:    vffint.d.l $vr2, $vr1
+; LSX-NEXT:    vexth.d.w $vr0, $vr0
 ; LSX-NEXT:    vffint.d.l $vr1, $vr0
 ; LSX-NEXT:    vori.b $vr0, $vr2, 0
 ; LSX-NEXT:    ret
@@ -229,8 +228,7 @@ define <2 x float> @sitofp_v2i32_v2f32(<2 x i32> %a) {
 define <2 x double> @sitofp_v4i32_v2f64(<4 x i32> %a) {
 ; LSX-LABEL: sitofp_v4i32_v2f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.w $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
 ; LSX-NEXT:    ret
 ;
@@ -251,8 +249,8 @@ define <2 x double> @sitofp_v4i32_v2f64(<4 x i32> %a) {
 define <2 x double> @sitofp_v2i16_v2f64(<8 x i16> %a) {
 ; LSX-LABEL: sitofp_v2i16_v2f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vextrins.h $vr0, $vr0, 65
-; LSX-NEXT:    vslli.d $vr0, $vr0, 48
+; LSX-NEXT:    vilvl.h $vr0, $vr0, $vr0
+; LSX-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; LSX-NEXT:    vsrai.d $vr0, $vr0, 48
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
 ; LSX-NEXT:    ret
@@ -274,10 +272,8 @@ define <2 x double> @sitofp_v2i16_v2f64(<8 x i16> %a) {
 define <2 x double> @sitofp_v8i16_v2f64(<8 x i16> %a) {
 ; LSX-LABEL: sitofp_v8i16_v2f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.h $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; LSX-NEXT:    vslti.w $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LSX-NEXT:    vsllwil.w.h $vr0, $vr0, 0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
 ; LSX-NEXT:    ret
 ;
@@ -321,12 +317,9 @@ define <2 x double> @sitofp_v2i8_v2f64(<16 x i8> %a) {
 define <2 x double> @sitofp_v16i8_v2f64(<16 x i8> %a) {
 ; LSX-LABEL: sitofp_v16i8_v2f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.b $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LSX-NEXT:    vslti.h $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; LSX-NEXT:    vslti.w $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; LSX-NEXT:    vsllwil.h.b $vr0, $vr0, 0
+; LSX-NEXT:    vsllwil.w.h $vr0, $vr0, 0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
 ; LSX-NEXT:    ret
 ;
@@ -347,12 +340,10 @@ define <2 x double> @sitofp_v16i8_v2f64(<16 x i8> %a) {
 define <4 x double> @sitofp_v4i16_v4f64(<8 x i16> %a) {
 ; LSX-LABEL: sitofp_v4i16_v4f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.h $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.h $vr1, $vr1, $vr0
-; LSX-NEXT:    vslti.w $vr2, $vr1, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; LSX-NEXT:    vsllwil.w.h $vr1, $vr0, 0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr1, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
-; LSX-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LSX-NEXT:    vexth.d.w $vr1, $vr1
 ; LSX-NEXT:    vffint.d.l $vr1, $vr1
 ; LSX-NEXT:    ret
 ;
@@ -383,12 +374,10 @@ define <4 x double> @sitofp_v4i16_v4f64(<8 x i16> %a) {
 define <4 x double> @sitofp_v8i16_v4f64(<8 x i16> %a) {
 ; LSX-LABEL: sitofp_v8i16_v4f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.h $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.h $vr1, $vr1, $vr0
-; LSX-NEXT:    vslti.w $vr2, $vr1, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; LSX-NEXT:    vsllwil.w.h $vr1, $vr0, 0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr1, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
-; LSX-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LSX-NEXT:    vexth.d.w $vr1, $vr1
 ; LSX-NEXT:    vffint.d.l $vr1, $vr1
 ; LSX-NEXT:    ret
 ;
@@ -421,12 +410,10 @@ define <4 x double> @sitofp_v4i8_v4f64(<16 x i8> %a) {
 ; LSX:       # %bb.0:
 ; LSX-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; LSX-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; LSX-NEXT:    vslli.w $vr0, $vr0, 24
 ; LSX-NEXT:    vsrai.w $vr1, $vr0, 24
-; LSX-NEXT:    vslti.w $vr2, $vr1, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr1, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
-; LSX-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LSX-NEXT:    vexth.d.w $vr1, $vr1
 ; LSX-NEXT:    vffint.d.l $vr1, $vr1
 ; LSX-NEXT:    ret
 ;
@@ -457,14 +444,11 @@ define <4 x double> @sitofp_v4i8_v4f64(<16 x i8> %a) {
 define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
 ; LSX-LABEL: sitofp_v16i8_v4f64:
 ; LSX:       # %bb.0:
-; LSX-NEXT:    vslti.b $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; LSX-NEXT:    vslti.h $vr1, $vr0, 0
-; LSX-NEXT:    vilvl.h $vr1, $vr1, $vr0
-; LSX-NEXT:    vslti.w $vr2, $vr1, 0
-; LSX-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; LSX-NEXT:    vsllwil.h.b $vr0, $vr0, 0
+; LSX-NEXT:    vsllwil.w.h $vr1, $vr0, 0
+; LSX-NEXT:    vsllwil.d.w $vr0, $vr1, 0
 ; LSX-NEXT:    vffint.d.l $vr0, $vr0
-; LSX-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LSX-NEXT:    vexth.d.w $vr1, $vr1
 ; LSX-NEXT:    vffint.d.l $vr1, $vr1
 ; LSX-NEXT:    ret
 ;
@@ -505,17 +489,15 @@ define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 2
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    vslti.w $vr2, $vr1, 0
-; LA32-NEXT:    vilvl.w $vr3, $vr2, $vr1
-; LA32-NEXT:    vffint.d.l $vr3, $vr3
-; LA32-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LA32-NEXT:    vsllwil.d.w $vr2, $vr1, 0
+; LA32-NEXT:    vffint.d.l $vr2, $vr2
+; LA32-NEXT:    vexth.d.w $vr1, $vr1
 ; LA32-NEXT:    vffint.d.l $vr1, $vr1
-; LA32-NEXT:    vslti.w $vr2, $vr0, 0
-; LA32-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA32-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LA32-NEXT:    vffint.d.l $vr0, $vr0
 ; LA32-NEXT:    vstelm.d $vr0, $a0, 32, 0
 ; LA32-NEXT:    vst $vr1, $a0, 16
-; LA32-NEXT:    vst $vr3, $a0, 0
+; LA32-NEXT:    vst $vr2, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sitofp_v5i32_v5f64:
@@ -530,17 +512,15 @@ define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA64-NEXT:    vinsgr2vr.w $vr1, $a3, 1
 ; LA64-NEXT:    vinsgr2vr.w $vr1, $a4, 2
 ; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    vslti.w $vr2, $vr1, 0
-; LA64-NEXT:    vilvl.w $vr3, $vr2, $vr1
-; LA64-NEXT:    vffint.d.l $vr3, $vr3
-; LA64-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; LA64-NEXT:    vsllwil.d.w $vr2, $vr1, 0
+; LA64-NEXT:    vffint.d.l $vr2, $vr2
+; LA64-NEXT:    vexth.d.w $vr1, $vr1
 ; LA64-NEXT:    vffint.d.l $vr1, $vr1
-; LA64-NEXT:    vslti.w $vr2, $vr0, 0
-; LA64-NEXT:    vilvl.w $vr0, $vr2, $vr0
+; LA64-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LA64-NEXT:    vffint.d.l $vr0, $vr0
 ; LA64-NEXT:    vstelm.d $vr0, $a0, 32, 0
 ; LA64-NEXT:    vst $vr1, $a0, 16
-; LA64-NEXT:    vst $vr3, $a0, 0
+; LA64-NEXT:    vst $vr2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-NO-LSX-LABEL: sitofp_v5i32_v5f64:
