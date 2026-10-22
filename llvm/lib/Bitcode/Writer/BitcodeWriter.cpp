@@ -487,10 +487,10 @@ class IndexBitcodeWriter : public BitcodeWriterBase {
   /// provides a map of modules to the corresponding GUIDs/summaries to write.
   const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex;
 
-  /// The summaries in ModuleToSummariesForIndex, sorted by GUID within each
-  /// module. The per-module maps are DenseMaps whose iteration order depends on
-  /// insertion order, which can change with unrelated modules in the link.
-  /// Writing in this order makes logically identical indexes byte-identical.
+  /// The summaries in ModuleToSummariesForIndex, sorted by GUID. The
+  /// per-module maps are DenseMaps whose iteration order depends on insertion
+  /// order, which can change with unrelated modules in the link. Writing in
+  /// this order makes logically identical indexes byte-identical.
   SmallVector<std::pair<GlobalValue::GUID, GlobalValueSummary *>, 0>
       SortedSummariesForIndex;
 
@@ -530,13 +530,13 @@ public:
         DecSummaries(DecSummaries),
         ModuleToSummariesForIndex(ModuleToSummariesForIndex) {
     if (ModuleToSummariesForIndex) {
-      for (const auto &[ModPath, Summaries] : *ModuleToSummariesForIndex) {
-        size_t Begin = SortedSummariesForIndex.size();
+      for (const auto &[ModPath, Summaries] : *ModuleToSummariesForIndex)
         llvm::append_range(SortedSummariesForIndex, Summaries);
-        // GUIDs are unique within a module's map, so this order is total.
-        llvm::sort(drop_begin(SortedSummariesForIndex, Begin),
-                   llvm::less_first());
-      }
+      // Each module's summaries are in DenseMap order, which depends on
+      // insertion order. Sort by GUID for byte-identical output. A GUID may
+      // appear under more than one module; the stable sort keeps those in the
+      // std::map's module path order.
+      llvm::stable_sort(SortedSummariesForIndex, llvm::less_first());
     }
 
     // See if the StackIdIndex was already added to the StackId map and
