@@ -316,7 +316,6 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
 
-
 #### Removed checks
 
 - Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
