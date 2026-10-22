@@ -50,6 +50,7 @@
 ; O0-NEXT:     x86-fast-pre-tile-config
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     x86-fast-tile-config
 ; O0-NEXT:     x86-lower-tile-copy
 ; O0-NEXT:     x86-fp-stackifier
 ; O0-NEXT:     remove-redundant-debug-values
@@ -75,6 +76,7 @@
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
+; O0-NEXT:     pseudo-probe-inserter
 ; O0-NEXT:     unpack-mi-bundles
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
@@ -205,6 +207,7 @@
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
+; O2-NEXT:     pseudo-probe-inserter
 ; O2-NEXT:     unpack-mi-bundles
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
@@ -253,6 +256,7 @@
 ; O0-WINDOWS-NEXT:     x86-fast-pre-tile-config
 ; O0-WINDOWS-NEXT:     phi-node-elimination
 ; O0-WINDOWS-NEXT:     regallocfast
+; O0-WINDOWS-NEXT:     x86-fast-tile-config
 ; O0-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O0-WINDOWS-NEXT:     x86-fp-stackifier
 ; O0-WINDOWS-NEXT:     remove-redundant-debug-values
@@ -277,8 +281,10 @@
 ; O0-WINDOWS-NEXT:     x86-seses
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O0-WINDOWS-NEXT:     cfguard-longjmp
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
+; O0-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O0-WINDOWS-NEXT:     unpack-mi-bundles
 ; O0-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT:     verify
@@ -410,8 +416,10 @@
 ; O3-WINDOWS-NEXT:     x86-seses
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O3-WINDOWS-NEXT:     cfguard-longjmp
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
+; O3-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O3-WINDOWS-NEXT:     unpack-mi-bundles
 ; O3-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT:     verify

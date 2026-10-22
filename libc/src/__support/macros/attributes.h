@@ -31,7 +31,7 @@
 #define LIBC_INLINE inline
 #define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
-#define LIBC_UNUSED __attribute__((unused))
+#define LIBC_UNUSED [[maybe_unused]]
 
 #if __has_attribute(always_inline)
 #define LIBC_ALWAYS_INLINE LIBC_INLINE __attribute__((always_inline))
@@ -48,6 +48,24 @@
 #else
 #define LIBC_NOINLINE
 #endif // __has_attribute(noinline)
+
+#if __has_attribute(cold)
+#define LIBC_COLD __attribute__((cold))
+#else
+#define LIBC_COLD
+#endif // __has_attribute(cold)
+
+#if __has_attribute(flatten)
+#define LIBC_FLATTEN __attribute__((flatten))
+#else
+#define LIBC_FLATTEN
+#endif // __has_attribute(flatten)
+
+#if __has_attribute(may_alias)
+#define LIBC_MAY_ALIAS __attribute__((may_alias))
+#else
+#define LIBC_MAY_ALIAS
+#endif // __has_attribute(may_alias)
 
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \

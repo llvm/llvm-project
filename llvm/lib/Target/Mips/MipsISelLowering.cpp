@@ -4571,13 +4571,14 @@ EVT MipsTargetLowering::getOptimalMemOpType(
   return MVT::i32;
 }
 
-bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                      bool ForCodeSize) const {
+TargetLowering::FPImmAction
+MipsTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                   bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Imm.isNegZero())
-    return false;
-  return Imm.isZero();
+    return FPImmAction::ConstantPool;
+  return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
