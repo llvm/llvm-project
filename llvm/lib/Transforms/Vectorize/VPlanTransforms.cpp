@@ -5972,6 +5972,143 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
+  VPlanTransforms::runPass(
+      "splitSelectBaseMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        bool IsLoad = VPI->getOpcode() == Instruction::Load;
+        if (!IsLoad && VPI->getOpcode() != Instruction::Store)
+          return false;
+
+        // A GEP of a select of uniform bases is not consecutive, even when
+        // its index is. Split it into one consecutive access per base.
+        VPValue *Ptr = VPI->getOperand(!IsLoad);
+        Type *SourceElementTy = nullptr;
+        ArrayRef<VPValue *> GEPOperands;
+        auto *GEPRecipe =
+            dyn_cast_or_null<VPInstruction>(Ptr->getDefiningRecipe());
+        auto *GEP =
+            dyn_cast_or_null<GetElementPtrInst>(Ptr->getUnderlyingValue());
+        if (!GEPRecipe || !GEP || GEP->getNumIndices() != 1 ||
+            !match(Ptr, m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+            GEPOperands.size() != 2)
+          return false;
+
+        VPValue *Cond = nullptr, *TrueBase = nullptr, *FalseBase = nullptr;
+        if (!match(GEPOperands[0],
+                   m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
+                            m_VPValue(FalseBase))) ||
+            vputils::isSingleScalar(Cond) ||
+            !vputils::isSingleScalar(TrueBase) ||
+            !vputils::isSingleScalar(FalseBase))
+          return false;
+
+        Instruction *I = VPI->getUnderlyingInstr();
+        Type *ScalarTy =
+            IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
+        TypeSize TypeScale =
+            Plan.getDataLayout().getTypeAllocSize(SourceElementTy);
+        if (TypeScale.isScalable() ||
+            TypeScale != Plan.getDataLayout().getTypeStoreSize(ScalarTy))
+          return false;
+
+        Value *Index = *GEP->idx_begin();
+        ScalarEvolution &SE = *CostCtx.PSE.getSE();
+        auto *AR = dyn_cast<SCEVAddRecExpr>(CostCtx.PSE.getSCEV(Index));
+        auto *Step = AR && AR->getLoop() == CostCtx.L
+                         ? dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE))
+                         : nullptr;
+        if (!Step || !Step->getAPInt().isOne())
+          return false;
+
+        Align Alignment = getLoadStoreAlignment(I);
+        unsigned AddressSpace = GEP->getAddressSpace();
+        if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy,
+                                                     Alignment, AddressSpace))
+          return false;
+
+        auto IsProfitable = [&](ElementCount VF) {
+          Type *DataTy = VectorType::get(ScalarTy, VF);
+          Type *MaskTy =
+              VectorType::get(Type::getInt1Ty(Plan.getContext()), VF);
+          Type *PtrTy = VectorType::get(GEP->getType(), VF);
+          unsigned GatherScatterID =
+              IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
+          InstructionCost GatherScatterCost =
+              CostCtx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                                    CostCtx.CostKind) +
+              CostCtx.TTI.getMemIntrinsicInstrCost(
+                  MemIntrinsicCostAttributes(
+                      GatherScatterID, DataTy, GEP,
+                      /*VariableMask=*/VPI->getMask() != nullptr, Alignment, I),
+                  CostCtx.CostKind);
+          unsigned MaskedMemID =
+              IsLoad ? Intrinsic::masked_load : Intrinsic::masked_store;
+          InstructionCost MaskedMemCost = CostCtx.TTI.getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(MaskedMemID, DataTy, Alignment,
+                                         AddressSpace),
+              CostCtx.CostKind);
+          InstructionCost SplitCost =
+              2 * MaskedMemCost +
+              CostCtx.TTI.getArithmeticInstrCost(Instruction::Xor, MaskTy,
+                                                 CostCtx.CostKind);
+          if (IsLoad)
+            SplitCost += CostCtx.TTI.getCmpSelInstrCost(
+                Instruction::Select, DataTy, MaskTy,
+                CmpInst::BAD_ICMP_PREDICATE, CostCtx.CostKind);
+          if (VPI->getMask())
+            SplitCost += 2 * CostCtx.TTI.getArithmeticInstrCost(
+                                 Instruction::And, MaskTy, CostCtx.CostKind);
+          return GatherScatterCost.isValid() && SplitCost.isValid() &&
+                 SplitCost < GatherScatterCost;
+        };
+        if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                                Range))
+          return false;
+
+        VPBuilder Builder(VPI);
+        auto CreatePointer = [&](VPValue *Base) {
+          SmallVector<VPValue *> Operands(GEPOperands);
+          Operands[0] = Base;
+          auto *ArmGEP =
+              GEPRecipe->cloneWithOperands(Operands, Ptr->getScalarType());
+          ArmGEP->dropPoisonGeneratingFlags();
+          Builder.insert(ArmGEP);
+          return Builder.createConsecutiveVectorPointer(
+              ArmGEP, ScalarTy, /*Reverse=*/false, VPI->getDebugLoc());
+        };
+        VPValue *TruePtr = CreatePointer(TrueBase);
+        VPValue *FalsePtr = CreatePointer(FalseBase);
+
+        VPValue *FalseCond = Builder.createNot(Cond, VPI->getDebugLoc());
+        VPValue *TrueMask = Cond;
+        VPValue *FalseMask = FalseCond;
+        if (VPValue *Mask = VPI->getMask()) {
+          TrueMask = Builder.createLogicalAnd(Mask, Cond, VPI->getDebugLoc());
+          FalseMask =
+              Builder.createLogicalAnd(Mask, FalseCond, VPI->getDebugLoc());
+        }
+
+        if (IsLoad) {
+          VPSingleDefRecipe *TrueLoad = Builder.createWidenLoad(
+              *cast<LoadInst>(I), TruePtr, TrueMask, /*Consecutive=*/true, *VPI,
+              VPI->getDebugLoc());
+          VPSingleDefRecipe *FalseLoad = Builder.createWidenLoad(
+              *cast<LoadInst>(I), FalsePtr, FalseMask, /*Consecutive=*/true,
+              *VPI, VPI->getDebugLoc());
+          VPInstruction *Select = Builder.createSelect(
+              Cond, TrueLoad, FalseLoad, VPI->getDebugLoc());
+          return ReplaceWith(VPI, Select);
+        }
+
+        VPValue *StoredVal = VPI->getOperand(0);
+        Builder.createWidenStore(*cast<StoreInst>(I), TruePtr, StoredVal,
+                                 TrueMask, /*Consecutive=*/true, *VPI,
+                                 VPI->getDebugLoc());
+        VPRecipeBase *FalseStore = Builder.createWidenStore(
+            *cast<StoreInst>(I), FalsePtr, StoredVal, FalseMask,
+            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        return ReplaceWith(VPI, FalseStore);
+      });
+
   // Widen unit-stride consecutive accesses, matching the legacy CM. Both
   // forward (stride +1) and reverse (stride -1) accesses are handled.
   VPlanTransforms::runPass(
