@@ -146,6 +146,10 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
 #endif
     node->dn.task =
         NULL; // mark this task as finished, so no new dependencies are generated
+#if OMPX_TASKGRAPH
+  else
+    KMP_TASK_TO_TASKDATA(node->dn.task)->td_flags.onced = 1;
+#endif
   KMP_RELEASE_DEPNODE(gtid, node);
 
   kmp_depnode_list_t *next;
