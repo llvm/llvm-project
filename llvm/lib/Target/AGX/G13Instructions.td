@@ -613,8 +613,10 @@ foreach Op = AGXSIMDOps in
 def Kind.Name#_#Op.Name#_g13
     : G13Reduce<Kind.Prefix#Op.Mnemonic, Kind.Opc, Op.Op>;
 
-def SIMD_MATRIX_FMADD32_g13
-    : G13ALU<"simd_matrix_fmadd32", (outs AGXDst:$dst),
+// The operands are register pairs (fp32: r0_r1, fp16: r0l_r0h), encoded as
+// their first register; the emitter's paired forms.
+class G13SimdMatrixFMadd<string mn, bit wide>
+    : G13ALU<mn, (outs AGXDst:$dst),
              (ins AGXSrcF:$src0, AGXSrcF:$src1, AGXSrcF:$src2),
              "$dst, $src0, $src1, $src2", 8> {
   bits<10> dst;
@@ -625,7 +627,7 @@ def SIMD_MATRIX_FMADD32_g13
   let Inst{14-7} = dst{7-0};
   let Inst{15} = 0;
   let Inst{25-16} = src0{9-0};
-  let Inst{26} = 1;
+  let Inst{26} = wide;
   let Inst{27} = 1;
   let Inst{37-28} = src1{9-0};
   let Inst{39-38} = src1{11-10};
@@ -638,6 +640,9 @@ def SIMD_MATRIX_FMADD32_g13
   let Inst{61-60} = dst{9-8};
   let Inst{63} = 1;
 }
+
+def SIMD_MATRIX_FMADD32_g13 : G13SimdMatrixFMadd<"simd_matrix_fmadd32", 1>;
+def SIMD_MATRIX_FMADD16_g13 : G13SimdMatrixFMadd<"simd_matrix_fmadd16", 0>;
 
 //===----------------------------------------------------------------------===//
 // Execution mask control flow

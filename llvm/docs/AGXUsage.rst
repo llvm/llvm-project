@@ -855,8 +855,17 @@ in a ``<2 x T>``, with r = 4 * (t / 16) + (t / 2) % 4 and
 c = 4 * ((t / 8) % 2) + 2 * (t % 2). It is computed with shuffles (each
 thread gathers its row of A and its two columns of B, 24 shuffles; four times
 as many on subtargets with ``quad-shuffle-index-merge``) and 16 fused
-multiply-adds per thread, in order of k starting from C; the matrix unit of
-Apple9 GPUs is not used yet.
+multiply-adds per thread, in order of k starting from C. On G14 the matrix
+unit (``simd_matrix_fmadd32`` and ``simd_matrix_fmadd16``, the
+``llvm.agx.simd.matrix.fmadd32`` and ``fmadd16`` intrinsics on the ``i64`` or
+``i32`` of each ``<2 x T>``) computes the same chain of fused multiply-adds
+for the same layout, ``float`` flushing denormals like the ALU and ``half``
+keeping them; it is used for ``float`` unless the function has IEEE float
+denormals with ``ieee-fp32``, and for ``half`` when the function has IEEE
+half denormals, without ``canonical-nan``. Its operands are register pairs
+(``r0_r1``, or the halves ``r0l_r0h`` of one register), encoded as their
+first register. ``bfloat``, other GPUs and the matrix unit of Apple9 GPUs use
+the shuffles.
 
 SIMD-group shuffles
 -------------------

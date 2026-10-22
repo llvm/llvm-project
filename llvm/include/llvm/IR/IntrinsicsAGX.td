@@ -160,6 +160,18 @@ def int_agx_simdgroup_matrix_fma
                              LLVMMatchType<0>],
                             [IntrNoMem, IntrConvergent]>;
 
+// The matrix unit's simd_matrix_fmadd32 / simd_matrix_fmadd16, which
+// AGXCodeGenPrepare uses for llvm.agx.simdgroup.matrix.fma where it gives the
+// same results: the <2 x float> (i64) or <2 x half> (i32) of each matrix.
+def int_agx_simd_matrix_fmadd32
+    : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                            [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+                            [IntrNoMem, IntrConvergent]>;
+def int_agx_simd_matrix_fmadd16
+    : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // Arithmetic.
 //===----------------------------------------------------------------------===//

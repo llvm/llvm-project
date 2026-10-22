@@ -99,6 +99,14 @@ void AGXMCCodeEmitter::report(const MCInst &MI, const Twine &Msg) const {
                                    Msg);
 }
 
+/// simd_matrix_fmadd's operands are register pairs encoded as their first
+/// register: r0_r1 as the 32-bit r0, and r0l_r0h (a 32-bit register) as the
+/// 16-bit r0l.
+static bool hasPairedOperands(unsigned Opcode) {
+  return Opcode == AGX::SIMD_MATRIX_FMADD32_g13 ||
+         Opcode == AGX::SIMD_MATRIX_FMADD16_g13;
+}
+
 uint64_t AGXMCCodeEmitter::encodeALUSrc(const MCInst &MI,
                                         unsigned OpNo) const {
   unsigned Mods = MI.getOperand(OpNo).getImm();
@@ -128,6 +136,8 @@ uint64_t AGXMCCodeEmitter::encodeALUSrc(const MCInst &MI,
                   : (Mods & AGX::SRC_MOD_CACHE) ? 2
                                                 : 1;
   unsigned Size = Info.getSizeInBits();
+  if (hasPairedOperands(MI.getOpcode()))
+    Size /= 2;
   unsigned SizeFlag = Size == 64 ? 3 : Size == 32 ? 2 : 0;
   return (Idx & 63) | (Hint << 6) | (SizeFlag << 8) | (((Idx >> 6) & 3) << 10);
 }
@@ -239,6 +249,8 @@ void AGXMCCodeEmitter::getDstEncoding(const MCInst &MI, unsigned OpNo,
     report(MI, "invalid destination register");
   bool Cache = MI.getOperand(OpNo + 1).getImm();
   unsigned Size = Info.getSizeInBits();
+  if (hasPairedOperands(MI.getOpcode()))
+    Size /= 2;
   uint64_t D = uint64_t(Cache) | (uint64_t(Size >= 32) << 1) |
                (uint64_t(Info.HalfIndex | (Size == 64 ? 1 : 0)) << 2);
   setOp(Op, D);

@@ -348,4 +348,6 @@ def Src16Op : AGXRegOperand<SRC16, "OPERAND_SRC">;
 def Src32Op : AGXRegOperand<SRC32, "OPERAND_SRC">;
 // 64-bit sources cannot be uniform registers.
 def Src64Op : AGXRegOperand<GPR64, "OPERAND_SRC">;
+// A 32-bit general purpose register (the 16-bit pair of a matrix operand).
+def GPR32SrcOp : AGXRegOperand<GPR32, "OPERAND_SRC">;
 def Base64Op : AGXRegOperand<BASE64, "OPERAND_REGISTER", "MCOI">;

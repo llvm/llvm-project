@@ -1447,13 +1447,27 @@ foreach Op = AGXSIMDOps in {
             (!cast<Instruction>(Kind.Name#"_"#Op.Name#"_32") 0, $v)>;
 }
 
-let isConvergent = 1 in
+let isConvergent = 1 in {
 def SIMD_MATRIX_FMADD32 : AGXALUPseudo<SIMD_MATRIX_FMADD32_g13,
                                        (outs GPR64:$dst),
                                        (ins SrcMods:$src0_mods, Src64Op:$src0,
                                             SrcMods:$src1_mods, Src64Op:$src1,
                                             SrcMods:$src2_mods, Src64Op:$src2),
                                        [], [WriteSIMDReduce]>;
+def SIMD_MATRIX_FMADD16 : AGXALUPseudo<SIMD_MATRIX_FMADD16_g13,
+                                       (outs GPR32:$dst),
+                                       (ins SrcMods:$src0_mods, GPR32SrcOp:$src0,
+                                            SrcMods:$src1_mods, GPR32SrcOp:$src1,
+                                            SrcMods:$src2_mods, GPR32SrcOp:$src2),
+                                       [], [WriteSIMDReduce]>;
+}
+
+let Predicates = [HasSIMDMatrix] in {
+def : Pat<(i64 (int_agx_simd_matrix_fmadd32 i64:$a, i64:$b, i64:$c)),
+          (SIMD_MATRIX_FMADD32 0, $a, 0, $b, 0, $c)>;
+def : Pat<(i32 (int_agx_simd_matrix_fmadd16 i32:$a, i32:$b, i32:$c)),
+          (SIMD_MATRIX_FMADD16 0, $a, 0, $b, 0, $c)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Control flow
