@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "IROptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -63,10 +63,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "auto-upgrade"
-
-static cl::opt<bool>
-    DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
-                                cl::desc("Disable autoupgrade of debug info"));
 
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
@@ -3317,6 +3313,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateAtomicRMW(
         AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
         CI->getContext().getOrInsertSyncScopeID("device"));
+    cast<Instruction>(Rep)->setMetadata(
+        LLVMContext::MD_atomic_ignore_denormal_mode,
+        MDNode::get(CI->getContext(), {}));
     // The default scope for atomic.load.* intrinsics is device
     // (= gpu scope in ptx), but the default LLVM atomic scope is
     // "system"
@@ -3363,6 +3362,11 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
              "unexpected nvvm scoped atomic intrinsic");
       Rep = Builder.CreateAtomicRMW(BinOp, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::Monotonic, SSID);
+      if (BinOp == AtomicRMWInst::FAdd) {
+        cast<Instruction>(Rep)->setMetadata(
+            LLVMContext::MD_atomic_ignore_denormal_mode,
+            MDNode::get(CI->getContext(), {}));
+      }
     }
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
@@ -6769,7 +6773,7 @@ static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
-  if (DisableAutoUpgradeDebugInfo)
+  if (!getIROptions(M.getContext()).auto_upgrade_debug_info)
     return false;
 
   llvm::TimeTraceScope timeScope("Upgrade debug info");

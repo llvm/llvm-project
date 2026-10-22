@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a base class required for offloading to devices.
+// This file defines the classes required for offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,6 +42,25 @@ protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
+};
+
+class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
+  CompilerInstance &DeviceCI;
+  llvm::SmallVector<char, 0> ObjectContent;
+
+  // Generate the AMDGPU object file for the last PTU.
+  llvm::Expected<llvm::StringRef> GenerateDeviceObject();
+
+public:
+  IncrementalHIPDeviceParser(
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+
+  llvm::Error GenerateOffloadBinary() override;
+
+  ~IncrementalHIPDeviceParser() override;
 };
 
 class IncrementalCUDADeviceParser : public IncrementalDeviceParser {

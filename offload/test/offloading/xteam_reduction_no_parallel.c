@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
+// UNSUPPORTED: intelgpu
 
 // Cross-team reductions in kernels without a parallel region. With
 // optimizations, such kernels are executed with only one thread per team

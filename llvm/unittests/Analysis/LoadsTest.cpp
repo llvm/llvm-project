@@ -209,13 +209,43 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
+
+define i64 @f3() {
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 )IR");
   auto *GV1 = M->getNamedValue("f1");
   auto *GV2 = M->getNamedValue("f2");
-  ASSERT_TRUE(GV1 && GV2);
+  auto *GV3 = M->getNamedValue("f3");
+  ASSERT_TRUE(GV1 && GV2 && GV3);
   auto *F1 = dyn_cast<Function>(GV1);
   auto *F2 = dyn_cast<Function>(GV2);
-  ASSERT_TRUE(F1 && F2);
+  auto *F3 = dyn_cast<Function>(GV3);
+  ASSERT_TRUE(F1 && F2 && F3);
 
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
@@ -242,4 +272,10 @@ loop.end:
   ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
   ASSERT_TRUE((NonDerefLoads.size() == 1) &&
               (NonDerefLoads[0]->getName() == "ld1"));
+
+  // A pseudo probe is modelled as accessing inaccessible memory, but it does
+  // not make the loop non-read-only.
+  NonDerefLoads.clear();
+  ASSERT_TRUE(IsReadOnlyLoop(F3, NonDerefLoads));
+  ASSERT_TRUE(NonDerefLoads.empty());
 }

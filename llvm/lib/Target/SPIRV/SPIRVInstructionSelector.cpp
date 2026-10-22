@@ -5997,7 +5997,7 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   assert(Intr.getIntrinsicID() == Intrinsic::spv_resource_updatecounter);
 
   Register CounterHandleReg = Intr.getOperand(2).getReg();
-  Register IncrReg = Intr.getOperand(3).getReg();
+  int64_t IncrVal = Intr.getOperand(3).getImm();
 
   // The counter handle is a pointer to the counter variable (which is a struct
   // containing an i32). We need to get a pointer to that i32 member to do the
@@ -6043,7 +6043,6 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   Register Scope = buildI32Constant(SPIRV::Scope::Device, I);
   Register Semantics = buildI32Constant(SPIRV::MemorySemantics::None, I);
 
-  int64_t IncrVal = getIConstValSext(IncrReg, MRI);
   Register Incr = buildI32Constant(static_cast<uint32_t>(IncrVal), I);
 
   Register AtomicRes = MRI->createVirtualRegister(GR.getRegClass(ResType));
@@ -7268,8 +7267,10 @@ bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
 
 bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
   // When the SPV_KHR_abort extension is disabled, drop the G_TRAP and
-  // G_UBSANTRAP silently.
-  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+  // G_UBSANTRAP silently. Also drop the no-op placeholder of the service
+  // function.
+  if (!STI.canUseExtension(SPIRV::Extension::SPV_KHR_abort) ||
+      I.getMF()->getFunction().hasFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME))
     return true;
 
   // Use the 32-bit integer constant for the abort "message" argument:

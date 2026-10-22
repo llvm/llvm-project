@@ -1078,8 +1078,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
           stderr, NativeFile::Unowned, m_output_mutex)),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
-      m_terminal_state(), m_target_list(*this), m_platform_list(),
-      m_listener_sp(Listener::MakeListener("lldb.Debugger")),
+      m_terminal_state(), m_target_list(*this), m_target_group_list(*this),
+      m_platform_list(), m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
@@ -1201,6 +1201,7 @@ void Debugger::Clear() {
         target_sp->Destroy();
       }
     }
+    m_target_group_list.Clear();
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications
@@ -1319,20 +1320,16 @@ void Debugger::RedrawStatusline(
     std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
 
+  const bool flush = m_flush_statusline.exchange(false);
   if (!m_statusline)
     return;
 
+  if (flush)
+    m_statusline->ClearExecutionContext();
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-void Debugger::FlushStatusLine() {
-  std::lock_guard<std::mutex> guard(m_statusline_mutex);
-
-  if (!m_statusline)
-    return;
-
-  m_statusline->ClearExecutionContext();
-}
+void Debugger::FlushStatusLine() { m_flush_statusline = true; }
 
 ExecutionContext
 Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
