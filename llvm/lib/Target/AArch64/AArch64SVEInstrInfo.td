@@ -772,20 +772,6 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(VT (SVEAndU PT:$pg, VT:$a,
                     (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
               (BIC_ZZZ $a, $b)>;
-
-    // AND_U: an all-active NOT produces ~b regardless of AND_U's predicate.
-    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
-                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
-              (BIC_ZZZ $a, $b)>;
-
-    // AND_U with ordinary LLVM NOT, which produces ~b in every lane.
-    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a, (vnot VT:$b))),
-              (BIC_ZZZ $a, $b)>;
-
-    // Fall back to register AND when no BIC pattern matches.
-    // AND_U allows any result in inactive lanes.
-    def : Pat<(VT (int_aarch64_sve_and_u (PT srcvalue), VT:$a, VT:$b)),
-              (AND_ZZZ $a, $b)>;
   }
   defm : SVEAndNotPats<nxv16i8, nxv16i1>;
   defm : SVEAndNotPats<nxv8i16, nxv8i1>;
