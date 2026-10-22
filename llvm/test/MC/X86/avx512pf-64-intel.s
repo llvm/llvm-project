@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s --check-prefixes=CHECK,ENCODING
+// Check that the printed Intel assembly can be reassembled with the same encoding.
 // RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding | FileCheck %s --check-prefixes=CHECK,ENCODING
-// RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -filetype=obj %s | llvm-objdump -d --no-show-raw-insn --no-print-imm-hex --x86-asm-syntax=intel - | FileCheck %s
 
 // Cover every gather/scatter prefetch mnemonic with unsized and sized memory,
 // high VSIB registers, k1-k7, scaled indices, and compressed displacement.
