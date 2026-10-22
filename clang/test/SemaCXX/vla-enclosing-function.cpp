@@ -52,14 +52,12 @@ void param_bound(int n, int (*p)[n]) {
   struct S { void f() { decltype(p) q; } };
 }
 
-// FIXME: The operand of sizeof is checked in an unevaluated context, so this
-// is not diagnosed.
 void sizeof_type() {
-  using X = int[foo()];
-  int a[foo()];
+  using X = int[foo()]; // expected-note {{size expression is evaluated here}}
+  int a[foo()]; // expected-note {{size expression is evaluated here}}
   struct S {
-    unsigned long f() { return sizeof(X); }
-    unsigned long g() { return sizeof(decltype(a)); }
+    unsigned long f() { return sizeof(X); } // expected-error {{cannot be used in a local class}}
+    unsigned long g() { return sizeof(decltype(a)); } // expected-error {{cannot be used in a local class}}
   };
 }
 
@@ -67,6 +65,15 @@ template <typename T> void in_template() {
   using X = int[foo()]; // expected-note {{size expression is evaluated here}}
   struct S { S() { X x; } }; // expected-error {{cannot be used in a local class}}
 }
+
+template <typename T> void sizeof_in_template() {
+  using X = T[foo()]; // expected-note {{size expression is evaluated here}}
+  struct S { // expected-note {{in instantiation of member function}}
+    unsigned long f() { return sizeof(X); } // expected-error {{cannot be used in a local class}}
+    void g() { decltype(sizeof(X)) n = 0; (void)n; }
+  };
+}
+template void sizeof_in_template<int>(); // expected-note {{in instantiation of}}
 
 namespace GH55686 {
 void f(int n) {
@@ -88,6 +95,15 @@ int same_function() {
   using X = int[foo()];
   X x;
   return sizeof(X) + sizeof(x);
+}
+
+// The bound is not evaluated here.
+void sizeof_not_evaluated() {
+  using X = int[foo()];
+  struct S {
+    void f() { decltype(sizeof(X)) n = 0; (void)n; }
+    unsigned long g() { return alignof(X); }
+  };
 }
 
 void own_vla_in_local_class() {

@@ -22,11 +22,10 @@ void cast_in_block(void) {
   ^{ (void)(P)0; }(); // expected-error {{cannot be used in a block}}
 }
 
-// FIXME: The operand of sizeof is checked in an unevaluated context, so this
-// is not diagnosed.
 void sizeof_in_block(void) {
-  typedef int X[size_tab()];
-  ^{ (void)sizeof(X); }();
+  typedef int X[size_tab()]; // expected-note 2 {{size expression is evaluated here}}
+  ^{ (void)sizeof(X); }(); // expected-error {{cannot be used in a block}}
+  ^{ (void)_Countof(X); }(); // expected-error {{cannot be used in a block}}
 }
 
 // Valid: VLA parameter of the block itself.
