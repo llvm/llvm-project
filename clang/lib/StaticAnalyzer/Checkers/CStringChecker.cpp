@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
@@ -513,16 +514,20 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     const auto *Length = SVB.getKnownValue(State, Size);
     CharUnits CharSize = Ctx.getTypeSizeInChars(
         CK == CharKind::Regular ? Ctx.CharTy : Ctx.WideCharTy);
+    const std::optional<int64_t> LengthValue =
+        Length ? Length->tryExtValue() : std::nullopt;
+    const std::optional<int64_t> CopySize =
+        LengthValue ? llvm::checkedMul(*LengthValue, CharSize.getQuantity())
+                    : std::nullopt;
 
     const auto IsWholeStructObject = [&](const TypedValueRegion *R) {
-      if (!R || !Length)
+      if (!R || !CopySize)
         return false;
 
       QualType Ty = R->getValueType();
       return Ctx.getBaseElementType(Ty)->isStructureType() &&
              !Ty->isIncompleteType() && !Ty->isVariablyModifiedType() &&
-             Ctx.getTypeSizeInChars(Ty).isMultipleOf(CharSize) &&
-             *Length == Ctx.getTypeSizeInChars(Ty) / CharSize;
+             *CopySize == Ctx.getTypeSizeInChars(Ty).getQuantity();
     };
 
     const auto *Object = llvm::dyn_cast_or_null<TypedValueRegion>(BufR);
