@@ -10,4 +10,4 @@
 
 #include "src/stdfix/sqrtur.h"
 
-LIST_SQRT_TESTS(unsigned fract, LIBC_NAMESPACE::sqrtur);
+LIST_SQRT_TESTS(unsigned fract, unsigned fract, LIBC_NAMESPACE::sqrtur);
