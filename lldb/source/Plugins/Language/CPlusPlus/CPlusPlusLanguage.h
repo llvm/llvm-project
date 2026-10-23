@@ -89,6 +89,11 @@ public:
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
+  bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const override;
+
+  std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const override;
+
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
 

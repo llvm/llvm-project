@@ -125,21 +125,27 @@ bool3x1 fn2(bool3 b) {
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B_ROW]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// COL-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-// ROW-CHECK-NEXT:    [[TMP1_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP1]], i32 3, i32 1)
-// ROW-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1_COL]], i32 0
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> poison, i32 [[MATRIXEXT]], i32 0
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne <3 x i32> [[TMP1]], zeroinitializer
+// COL-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i1> [[LOADEDV]], i32 0
+// ROW-CHECK-NEXT:    [[LOADEDV_COL:%.*]] = call <3 x i1> @llvm.matrix.transpose.v3i1(<3 x i1> [[LOADEDV]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i1> [[LOADEDV_COL]], i32 0
+// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[MATRIXEXT]] to i32
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> poison, i32 [[CONV]], i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2]], i32 1
-// ROW-CHECK-NEXT:    [[TMP2_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP2]], i32 3, i32 1)
-// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2_COL]], i32 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 [[MATRIXEXT1]], i32 1
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
+// COL-CHECK-NEXT:    [[MATRIXEXT2:%.*]] = extractelement <3 x i1> [[LOADEDV2]], i32 1
+// ROW-CHECK-NEXT:    [[LOADEDV2_COL:%.*]] = call <3 x i1> @llvm.matrix.transpose.v3i1(<3 x i1> [[LOADEDV2]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT2:%.*]] = extractelement <3 x i1> [[LOADEDV2_COL]], i32 1
+// CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[MATRIXEXT2]] to i32
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 [[CONV2]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3]], i32 2
-// ROW-CHECK-NEXT:    [[TMP3_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP3]], i32 3, i32 1)
-// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3_COL]], i32 2
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <3 x i32> [[VECINIT2]], i32 [[MATRIXEXT3]], i32 2
-// CHECK-NEXT:    ret <3 x i32> [[VECINIT4]]
+// CHECK-NEXT:    [[LOADEDV3:%.*]] = icmp ne <3 x i32> [[TMP3]], zeroinitializer
+// COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i1> [[LOADEDV3]], i32 2
+// ROW-CHECK-NEXT:    [[LOADEDV3_COL:%.*]] = call <3 x i1> @llvm.matrix.transpose.v3i1(<3 x i1> [[LOADEDV3]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i1> [[LOADEDV3_COL]], i32 2
+// CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[MATRIXEXT3]] to i32
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <3 x i32> [[VECINIT2]], i32 [[CONV3]], i32 2
+// CHECK-NEXT:    ret <3 x i32> [[VECINIT3]]
 //
 int3 fn3(bool1x3 b) {
     return b;

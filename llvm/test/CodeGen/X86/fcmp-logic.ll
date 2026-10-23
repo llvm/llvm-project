@@ -387,13 +387,10 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
 ; SSE2-NEXT:    cvtsi2sd %rax, %xmm1
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    maxsd %xmm2, %xmm0
 ; SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm3
-; SSE2-NEXT:    cmpltsd %xmm2, %xmm3
-; SSE2-NEXT:    cmpltsd %xmm0, %xmm1
-; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    ucomisd %xmm1, %xmm0
+; SSE2-NEXT:    seta %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: PR140534:
@@ -404,12 +401,10 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm2
+; AVX1-NEXT:    vmaxsd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vcmpltsd %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpltsd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vorpd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    vucomisd %xmm1, %xmm0
+; AVX1-NEXT:    seta %al
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: PR140534:
@@ -417,12 +412,10 @@ define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
 ; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    vcvtusi2sd %esi, %xmm15, %xmm1
 ; AVX512-NEXT:    vcvtusi2sd %edx, %xmm15, %xmm2
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512-NEXT:    vcmpltsd %xmm2, %xmm1, %k0
-; AVX512-NEXT:    vcmpltsd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    kmovw %k0, %eax
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vucomisd %xmm1, %xmm0
+; AVX512-NEXT:    seta %al
 ; AVX512-NEXT:    retq
   %conv0 = uitofp i32 %a0 to double
   %conv1 = uitofp i32 %a1 to double

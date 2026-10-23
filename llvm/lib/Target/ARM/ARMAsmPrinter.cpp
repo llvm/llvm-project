@@ -535,7 +535,7 @@ void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
 }
 
 void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   auto &TS =
       static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use unified assembler syntax.
@@ -576,7 +576,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
 
 void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // All darwin targets use mach-o.
     const TargetLoweringObjectFileMachO &TLOFMacho =
@@ -830,7 +830,7 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
-    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
+    int WCharWidth = SourceModule->getTargetTriple().getDefaultWCharSize();
     if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
             SourceModule->getModuleFlag("wchar_size")))
       WCharWidth = WCharWidthValue->getZExtValue();
@@ -929,7 +929,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
 
 MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     bool IsIndirect =
         (TargetFlags & ARMII::MO_NONLAZY) && getTM().isGVIndirectSymbol(GV);
