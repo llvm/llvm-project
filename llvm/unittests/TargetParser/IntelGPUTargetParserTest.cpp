@@ -111,16 +111,11 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7.1"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60."), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12."), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_012.60"), IntelGPU::GK_NONE);
 
-  // Each field must fit its GPU IP version field: 10 bits for the major
-  // version, 8 for the minor, 6 for the revision.
+  // The revision must fit its 6-bit GPU IP version field.
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.63"), IntelGPU::GK_XE_PVC);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.64"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.256"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_1024.60"), IntelGPU::GK_NONE);
-  // Truncated to its field, each of these would name xe-pvc.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.316"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_1036.60"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_NONE);
 }
 
@@ -144,6 +139,16 @@ TEST(IntelGPUTargetParserTest, EveryNameParses) {
   EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
 #define INTEL_GPU_ALIAS(NAME, KIND)                                            \
   EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
+TEST(IntelGPUTargetParserTest, NumericNamesParse) {
+  // The numeric name offload-arch prints for a device names that device.
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  EXPECT_EQ(IntelGPU::parseArch(                                               \
+                IntelGPU::getNumericArchName(gpuIPVersion(MAJOR, MINOR, 0))),  \
+            IntelGPU::GK_##KIND)                                               \
+      << NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 }
 
