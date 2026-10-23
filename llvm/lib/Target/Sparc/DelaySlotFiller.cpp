@@ -489,6 +489,20 @@ static bool combineRestoreSETHIi(MachineBasicBlock::iterator RestoreMI,
   return true;
 }
 
+// Returns true if Reg is a fixed operand of the terminator of MBB.
+// Variadic operands are call arguments and are not checked.
+static bool terminatorReadsReg(MachineBasicBlock &MBB, Register Reg) {
+  MachineBasicBlock::iterator Term = MBB.getFirstTerminator();
+  if (Term == MBB.end())
+    return false;
+  for (unsigned I = 0, E = Term->getDesc().getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = Term->getOperand(I);
+    if (MO.isReg() && MO.getReg() == Reg)
+      return true;
+  }
+  return false;
+}
+
 bool Filler::tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI)
 {
@@ -509,6 +523,12 @@ bool Filler::tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
     return false;
 
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+
+  // It cannot be combined if the terminator reads its result, such as the
+  // target of an indirect tail call, before the restore in delay slot.
+  if (PrevInst->getNumOperands() && PrevInst->getOperand(0).isReg() &&
+      terminatorReadsReg(MBB, PrevInst->getOperand(0).getReg()))
+    return false;
 
   switch (PrevInst->getOpcode()) {
   default: break;
