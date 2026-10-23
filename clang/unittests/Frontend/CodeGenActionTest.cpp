@@ -15,7 +15,9 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
@@ -75,5 +77,27 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
   EmitLLVMOnlyAction Action;
   bool Success = Compiler.ExecuteAction(Action);
   EXPECT_TRUE(Success);
+}
+
+// Each input assigns -mllvm library options to the LLVMContext anew.
+TEST(CodeGenTest, LibraryOptionsPerInput) {
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  std::unique_ptr<MemoryBuffer> MemBuffer =
+      MemoryBuffer::getMemBuffer("", "test.ll");
+  for (int I = 0; I != 2; ++I)
+    Invocation->getFrontendOpts().Inputs.push_back(
+        FrontendInputFile(*MemBuffer, Language::LLVM_IR));
+  Invocation->getFrontendOpts().LLVMArgs = {"-instcombine-code-sinking=0"};
+  Invocation->getFrontendOpts().ProgramAction = frontend::EmitLLVMOnly;
+  Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
+  Compiler.parseLLVMArgs();
+
+  LLVMContext Ctx;
+  EmitLLVMOnlyAction Action(&Ctx);
+  EXPECT_TRUE(Compiler.ExecuteAction(Action));
+  EXPECT_EQ(Ctx.getLibraryOptions().args().size(), 1u);
 }
 }

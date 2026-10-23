@@ -2028,7 +2028,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                       m_Ctlz(m_Deferred(A), m_One())))),
                                   m_APInt(XorC))))))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
-      *XorC == A->getType()->getScalarSizeInBits() - 1) {
+      *XorC == A->getType()->getScalarSizeInBits() - 1 &&
+      isPowerOf2_32(A->getType()->getScalarSizeInBits())) {
     Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
     Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
                                           {Sub, Builder.getFalse()});
@@ -2049,6 +2050,16 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   if (Instruction *Res = foldDivCeil(I))
     return Res;
+
+  // (A | -2) + A -> (A - 1) & -2
+  APInt NegTwo(Ty->getScalarSizeInBits(), -2, /*isSigned=*/true);
+  if (match(&I, m_c_BinOp(m_OneUse(m_Or(m_Value(A), m_SpecificInt(NegTwo))),
+                          m_Deferred(A)))) {
+    Value *Ret = Builder.CreateAdd(
+        A, ConstantInt::get(
+               Ty, APInt(Ty->getScalarSizeInBits(), -1, /*isSigned=*/true)));
+    return BinaryOperator::CreateAnd(Ret, ConstantInt::get(Ty, NegTwo));
+  }
 
   // Re-enqueue users of the induction variable of add recurrence if we infer
   // new nuw/nsw flags.
@@ -3102,6 +3113,13 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         return replaceInstUsesWith(I, Sub);
       }
     }
+  }
+
+  // ((X + C) & ~C) - X -> X & C where C is a power of 2.
+  if (match(Op0,
+            m_And(m_Add(m_Specific(Op1), m_Power2(AddC)), m_APInt(AndC))) &&
+      *AddC == ~*AndC) {
+    return BinaryOperator::CreateAnd(Op1, ConstantInt::get(Ty, *AddC));
   }
 
   return TryToNarrowDeduceFlags();

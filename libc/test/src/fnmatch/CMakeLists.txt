@@ -1,4 +1,4 @@
-add_custom_target(libc-fnmatch-tests)
+add_libc_testsuite(libc-fnmatch-tests)
 
 add_libc_test(
   fnmatch_test

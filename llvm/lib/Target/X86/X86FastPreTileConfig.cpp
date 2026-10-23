@@ -266,7 +266,6 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
       FI);
   MachineOperand &MO = NewMI->getOperand(5);
   MO.setReg(StrideReg);
-  MO.setIsKill(true);
   RowMO->setIsKill(false);
   ColMO->setIsKill(false);
   // Erase copy instruction after it is folded.
@@ -439,7 +438,6 @@ void X86FastPreTileConfigImpl::convertPHI(MachineBasicBlock *MBB,
       StackAddrReg);
   MachineOperand &MO = NewMI->getOperand(5);
   MO.setReg(StrideReg);
-  MO.setIsKill(true);
   PHI.eraseFromParent();
   VisitedPHIs.erase(&PHI);
 }
@@ -653,7 +651,9 @@ bool X86FastPreTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
     Register TileReg = MI.getOperand(0).getReg();
     if (mayLiveOut(TileReg, LastTileCfg))
       spill(++MI.getIterator(), TileReg, false);
-    for (MachineInstr &UseMI : MRI->use_instructions(TileReg)) {
+    // reload() rewrites or erases UseMI.
+    for (MachineInstr &UseMI :
+         make_early_inc_range(MRI->use_nodbg_instructions(TileReg))) {
       if (UseMI.getParent() == &MBB) {
         // check user should not across ldtilecfg
         if (!LastTileCfg || !dominates(MBB, LastTileCfg, UseMI))

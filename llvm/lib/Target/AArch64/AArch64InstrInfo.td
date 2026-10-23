@@ -241,6 +241,12 @@ def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
 def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
+def HasSVE_LRCPC     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_LRCPC()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE_LRCPC), "sve-lrcpc">;
+def HasSMEF16F8F16   : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF16F8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F8F16), "sme-f16f8f16">;
+def HasFPv2          : Predicate<"Subtarget->hasFPv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPv2), "fpv2">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -319,6 +325,11 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
+
+def HasNonStreamingMatMulFP64_or_SVE_PERM256
+    : Predicate<"(Subtarget->isSVEorStreamingSVEAvailable()  && Subtarget->hasSVE_PERM256()) || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
+                AssemblerPredicateWithAll<(any_of FeatureMatMulFP64, FeatureSVE_PERM256),
+                "f64mm or sve-perm256">;
 
 def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
@@ -421,7 +432,7 @@ def UseAlternateSExtLoadCVTF32
 
 def UseNegativeImmediates
                      : Predicate<"false">,
-                                 AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+                                 AssemblerPredicate<(none_of FeatureNoNegativeImmediates),
                                  "NegativeImmediates">;
 
 def UseScalarIncVL   : Predicate<"Subtarget->useScalarIncVL()">;
@@ -1069,7 +1080,12 @@ def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
-def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",   SDTFPUnaryOp>;
+// Scalar integer operations use FP types; vectors retain their integer types.
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",
+                          SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>>;
+def AArch64sqabsv : PatFrags<(ops node:$Rn),
+                            [(int_aarch64_neon_sqabs node:$Rn),
+                             (AArch64sqabs node:$Rn)]>;
 def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
@@ -2756,16 +2772,6 @@ def : Pat<(i64 i64imm_32bit:$src),
 }
 
 // Materialize FP constants via MOVi32imm/MOVi64imm (MachO large code model).
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 
 def : Pat<(f32 fpimm:$in),
   (COPY_TO_REGCLASS (MOVi32imm (bitcast_fpimm_to_i32 f32:$in)), FPR32)>;
@@ -5955,6 +5961,15 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
+let Predicates = [HasFPv2] in {
+defm FMAXINM   : TwoOperandFPData<0b1010, "fmaxinm">;
+defm FMAXMG    : TwoOperandFPData<0b1100, "fmaxmg">;
+defm FMAXMGINM : TwoOperandFPData<0b1110, "fmaxmginm">;
+defm FMININM   : TwoOperandFPData<0b1011, "fmininm">;
+defm FMINMG    : TwoOperandFPData<0b1101, "fminmg">;
+defm FMINMGINM : TwoOperandFPData<0b1111, "fminmginm">;
+}
+
 multiclass FMULScalarFromIndexedLane0Patterns<string inst,
                                               string inst_f16_suffix,
                                               string inst_f32_suffix,
@@ -6069,6 +6084,11 @@ def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
 
 defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
 defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
+
+let Predicates = [HasFPv2] in {
+defm FCMTL   : FPTotalOrderComparison<0, "fcmtl">;
+defm FCMTLMG : FPTotalOrderComparison<1, "fcmtlmg">;
+}
 
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.
@@ -6359,7 +6379,7 @@ defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
 defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
-defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
+defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", AArch64sqabsv>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
 defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
@@ -7056,6 +7076,10 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
+
+let Predicates = [HasNEON] in
+def : Pat<(v1i64 (AArch64sqabs (v1i64 FPR64:$Rn))),
+          (SQABSv1i64 FPR64:$Rn)>;
 
 // Scalar i32 -> i64 extend
 def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),
@@ -8287,12 +8311,12 @@ def : Pat<(v8bf16 (AArch64dup (bf16 FPR16:$Rn))),
             (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
             (i64 0)))>;
 
-// Patterns for importing fpr i8 G_DUP under GISel.
-def : Pat<(v8i8 (AArch64dup (i8 FPR8:$Rn))),
+// Patterns for importing fpr i8 G_SPLAT_VECTOR under GISel.
+def : Pat<(v8i8 (splat_vector (i8 FPR8:$Rn))),
           (v8i8 (DUPv8i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
-def : Pat<(v16i8 (AArch64dup (i8 FPR8:$Rn))),
+def : Pat<(v16i8 (splat_vector (i8 FPR8:$Rn))),
           (v16i8 (DUPv16i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;

@@ -7,7 +7,9 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformAttach(GDBRemoteTestBase):
     @skipIfRemote
-    @skipIfWindows
+    # Sometimes times out on Windows on Arm buildbot.
+    # https://github.com/llvm/llvm-project/issues/234e982
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_attach(self):
         """Test attaching by name"""
 

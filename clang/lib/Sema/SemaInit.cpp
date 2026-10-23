@@ -5357,12 +5357,13 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
       // If the conversion function doesn't return a reference type,
       // it can't be considered for this conversion unless we're allowed to
-      // consider rvalues.
+      // consider rvalues. If it's a template, we should accept it first
+      // and specialize it before deciding whether to reject it.
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
-      if ((AllowRValues ||
-           Conv->getConversionType()->isLValueReferenceType())) {
+      if (ConvTemplate || AllowRValues ||
+          Conv->getConversionType()->isLValueReferenceType()) {
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
@@ -8580,7 +8581,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity) &&
+          !CurInit.get()->containsErrors()) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 
