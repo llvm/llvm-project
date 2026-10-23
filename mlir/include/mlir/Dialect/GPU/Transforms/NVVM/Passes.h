@@ -17,14 +17,12 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h.inc"
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h.inc"
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_GPU_TRANSFORMS_NVVM_PASSES_H_

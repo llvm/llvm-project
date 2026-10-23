@@ -67,5 +67,4 @@ getSubgroupReduceClusterInfo(SubgroupReduceOp op, unsigned subgroupSize) {
   return SubgroupReduceClusterInfo{clusterStride, effectiveClusterSize,
                                    subgroupSize};
 }
-
 } // namespace mlir::gpu

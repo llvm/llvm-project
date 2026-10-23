@@ -20,7 +20,6 @@
 #include <optional>
 
 namespace mlir {
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h.inc"
 
@@ -44,7 +43,6 @@ void populateGpuPromoteShuffleToAMDGPUPatterns(
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h.inc"
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_GPU_TRANSFORMS_ROCDL_PASSES_H_
