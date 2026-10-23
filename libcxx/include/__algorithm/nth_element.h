@@ -12,6 +12,7 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/partial_sort.h>
 #include <__algorithm/sort.h>
 #include <__assert>
 #include <__config>
@@ -52,6 +53,8 @@ __nth_element(
   // _Compare is known to be a reference type
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   const difference_type __limit = 7;
+  difference_type __ideal_len   = __last - __first;
+  int __grace_left              = 2;
   while (true) {
     if (__nth == __last)
       return;
@@ -74,6 +77,17 @@ __nth_element(
       std::__selection_sort<_AlgPolicy, _Compare>(__first, __last, __comp);
       return;
     }
+    // Input can be built to defeat the pivots and make this quadratic, so give up if the range shrinks too slowly.
+    if (__len > __ideal_len) {
+      std::__partial_sort_impl<_AlgPolicy, _Compare&>(__first, __nth + difference_type(1), __last, __comp);
+      return;
+    }
+    // Give a grace period and reduce the threshold slower than good pivot selection would, so that we only fall back
+    // after a sustained run of bad pivots.
+    if (__grace_left > 0)
+      --__grace_left;
+    else
+      __ideal_len -= __ideal_len / 8;
     // __len > __limit >= 3
     _RandomAccessIterator __m   = __first + __len / 2;
     _RandomAccessIterator __lm1 = __last;

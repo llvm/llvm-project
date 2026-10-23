@@ -63,6 +63,9 @@ Improvements and New Features
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
+- ``std::nth_element`` and ``std::ranges::nth_element`` no longer take a quadratic number of comparisons on inputs
+  chosen to defeat their pivot selection.
+
 Deprecations and Removals
 -------------------------
 
