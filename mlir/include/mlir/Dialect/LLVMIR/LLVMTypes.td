@@ -372,6 +372,12 @@ def LLVMX86AMXType : LLVMType<"LLVMX86AMX", "x86_amx"> {
     The x86_amx type represents a value held in an AMX tile register on an x86
     machine. Can only be used in AMX intrinsics calls.
   }];
+
+  let extraClassDeclaration = [{
+    /// Returns the primitive bit width of this type, matching
+    /// \c llvm::Type::getPrimitiveSizeInBits.
+    unsigned getPrimitiveBitWidth() const { return 8192; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,6 +390,12 @@ def LLVMPPCFP128Type : LLVMType<"LLVMPPCFP128", "ppc_fp128",
   let description = [{
     A 128 bit floating-point type with IBM double-double semantics.
     See S_PPCDoubleDouble in APFloat.h for details.
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the primitive bit width of this type, matching
+    /// \c llvm::Type::getPrimitiveSizeInBits.
+    unsigned getPrimitiveBitWidth() const { return 128; }
   }];
 }
 
