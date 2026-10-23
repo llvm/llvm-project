@@ -9909,8 +9909,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present. Use the canonical
-      // name, which device images are labeled with.
+      // extract it from any static libraries if present. Use the arch names
+      // from getOffloadArchs so target-ID features are sorted to match the
+      // image labels and --no-offload-arch is applied.
       if (ToolChainArgs.hasArg(OPT_offload_arch_EQ))
         for (const BoundArch &BA :
              C.getDriver().getOffloadArchs(C, ToolChainArgs, Kind, *TC))
