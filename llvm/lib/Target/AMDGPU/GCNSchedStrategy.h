@@ -146,6 +146,12 @@ public:
 
   unsigned AGPRCriticalLimit = 0;
 
+  /// Combined ArchVGPR + AGPR limit for the target occupancy on targets with a
+  /// unified VGPR file, or zero if not applicable. The per-class critical
+  /// limits are each capped by the occupancy budget, so together they can
+  /// exceed it.
+  unsigned UnifiedVGPRCriticalLimit = 0;
+
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;

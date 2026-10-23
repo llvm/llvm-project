@@ -159,10 +159,11 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
+  unsigned VGPRBudget;
   if (!KnownExcessRP) {
-    VGPRCriticalLimit = std::min(
-        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize()),
-        VGPRExcessLimit);
+    VGPRBudget =
+        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize());
+    VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
@@ -174,7 +175,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
         AMDGPU::IsaInfo::getVGPRAllocGranule(ST, DynamicVGPRBlockSize);
     unsigned Addressable =
         AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
-    unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
+    VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   }
@@ -182,12 +183,20 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   // Reuse VGPR critical limit
   AGPRCriticalLimit = std::min(VGPRCriticalLimit, AGPRExcessLimit);
 
+  // With a unified VGPR file, occupancy depends on ArchVGPRs and AGPRs
+  // combined, while the register split comes from the minimum waves per EU.
+  UnifiedVGPRCriticalLimit = ST.hasGFX90AInsts() && AGPRExcessLimit > 0
+                                 ? std::min(VGPRBudget, ST.getMaxNumVGPRs(*MF))
+                                 : 0;
+
   // Apply VGPR excess threshold percentage if specified.
   if (VGPRThresholdPercent > 0) {
     [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
     VGPRExcessLimit = (VGPRThresholdPercent * VGPRExcessLimit + 99) / 100;
     VGPRCriticalLimit = (VGPRThresholdPercent * VGPRCriticalLimit + 99) / 100;
+    UnifiedVGPRCriticalLimit =
+        (VGPRThresholdPercent * UnifiedVGPRCriticalLimit + 99) / 100;
     LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
                       << VGPRThresholdPercent << "%, VGPRExcessLimit: "
                       << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
@@ -197,6 +206,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
     VGPRCriticalLimit -=
         std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+    UnifiedVGPRCriticalLimit -=
+        std::min(VGPRLimitBias + ErrorMargin, UnifiedVGPRCriticalLimit);
   }
 
   // Subtract error margin and bias from register limits and avoid overflow.
@@ -210,6 +221,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", AGPRCriticalLimit = " << AGPRCriticalLimit
                     << ", AGPRExcessLimit = " << AGPRExcessLimit
+                    << ", UnifiedVGPRCriticalLimit = "
+                    << UnifiedVGPRCriticalLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
@@ -406,6 +419,19 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   int VGPRDelta = NewVGPRPressure - VGPRCriticalLimit;
   int AGPRDelta = AGPRExcessLimit > 0 ? NewAGPRPressure - AGPRCriticalLimit
                                       : std::numeric_limits<int>::min();
+
+  // Catch the case where each class is below its own critical limit but the
+  // two together exceed the occupancy budget. Without AGPRs the combined
+  // pressure is the ArchVGPR pressure, which the VGPR delta already covers.
+  // Charge combined pressure to VGPR_32 so that candidates are always compared
+  // within the same pressure set.
+  if (UnifiedVGPRCriticalLimit && NewAGPRPressure && VGPRDelta < 0 &&
+      AGPRDelta < 0) {
+    int UnifiedDelta = static_cast<int>(GCNRegPressure::getUnifiedVGPRNum(
+                           NewVGPRPressure, NewAGPRPressure, 0)) -
+                       static_cast<int>(UnifiedVGPRCriticalLimit);
+    VGPRDelta = std::max(VGPRDelta, UnifiedDelta);
+  }
 
   if (SGPRDelta >= 0 || VGPRDelta >= 0 || AGPRDelta >= 0) {
     HasHighPressure = true;
