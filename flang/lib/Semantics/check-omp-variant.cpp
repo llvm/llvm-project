@@ -789,8 +789,8 @@ void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
         CheckDeclareReduction(*variant);
       }
     }
-    ExitDirectiveNest(MetadirectiveNest);
   }
+  ExitDirectiveNest(MetadirectiveNest);
 }
 
 // Check a loop-associated metadirective's variants against the loop nest they
