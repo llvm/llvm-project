@@ -33672,9 +33672,11 @@ public:
           // the root node, which may be reordered, split or have copyable
           // elements. Place each counter at the lane the matching candidate is
           // vectorized to, so the counter is applied to the correct lane.
-          ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
-          SmallVector<Value *> RootTrackedToOrig(RootVL.size());
+          // The lanes, which are not matched to any candidate (e.g. padding),
+          // remain nullptr.
+          SmallVector<Value *> RootTrackedToOrig(
+              getNumElements(VectorizedRoot->getType()));
           for (auto [Idx, Val] : enumerate(CandSlice))
             RootTrackedToOrig[V.findRootLaneForValue(Val)] =
                 TrackedToOrig[Pos + Idx];
@@ -35212,25 +35214,29 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
-    ArrayRef<Value *> VL = R.getRootNodeScalars();
+    Type *ScalarTy = R.getRootNodeScalars().front()->getType();
     auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
-    if (VTy->getElementType() != VL.front()->getType()) {
+    if (VTy->getElementType() != ScalarTy) {
       VectorizedValue = Builder.CreateIntCast(
-          VectorizedValue,
-          getWidenedType(VL.front()->getType(), VTy->getNumElements()),
+          VectorizedValue, getWidenedType(ScalarTy, VTy->getNumElements()),
           R.isSignedMinBitwidthRootNode());
     }
+    assert(TrackedToOrig.size() == VTy->getNumElements() &&
+           "Expected the original value for each lane.");
+    // The lanes without the original value (e.g. padding) are kept as is.
+    auto GetCount = [&](Value *OrigV) -> unsigned {
+      return OrigV ? SameValuesCounter.lookup(OrigV) : 1;
+    };
     switch (RdxKind) {
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
       SmallVector<Constant *> Vals;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
+      for (Value *OrigV : TrackedToOrig) {
         // The repeat count may not fit the element type (e.g. i1); the
         // modular reduction arithmetic keeps the truncated count equivalent.
         Vals.push_back(ConstantInt::get(
-            V->getType(), APInt(V->getType()->getIntegerBitWidth(), Cnt,
-                                /*isSigned=*/false, /*implicitTrunc=*/true)));
+            ScalarTy, APInt(ScalarTy->getIntegerBitWidth(), GetCount(OrigV),
+                            /*isSigned=*/false, /*implicitTrunc=*/true)));
       }
       auto *Scale = ConstantVector::get(Vals);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
@@ -35265,10 +35271,9 @@ private:
           PoisonMaskElem);
       std::iota(Mask.begin(), Mask.end(), 0);
       bool NeedShuffle = false;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
-        if (Cnt % 2 == 0) {
-          Mask[Idx] = VL.size();
+      for (auto [Lane, OrigV] : enumerate(TrackedToOrig)) {
+        if (GetCount(OrigV) % 2 == 0) {
+          Mask[Lane] = Mask.size();
           NeedShuffle = true;
         }
       }
@@ -35285,10 +35290,8 @@ private:
     case RecurKind::FAdd: {
       // root = fmul prev_root, <1.0, 1.0, n.0, 1.0>
       SmallVector<Constant *> Vals;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
-        Vals.push_back(ConstantFP::get(V->getType(), Cnt));
-      }
+      for (Value *OrigV : TrackedToOrig)
+        Vals.push_back(ConstantFP::get(ScalarTy, GetCount(OrigV)));
       auto *Scale = ConstantVector::get(Vals);
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
