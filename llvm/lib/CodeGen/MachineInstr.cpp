@@ -1507,27 +1507,20 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
       return false;
     if (PSVb && ValA && !PSVb->mayAlias(&MFI))
       return false;
-    if (PSVa && PSVb && (PSVa == PSVb))
-      SameVal = true;
-    else if (PSVa && PSVb) {
-      // A non-fixed spill slot gets storage that frame layout keeps disjoint
-      // from every other frame object (fixed or not) and from other stack
-      // areas. Fixed objects, including fixed spill slots, are placed at
-      // target or ABI defined offsets rather than by frame layout, so no such
-      // guarantee holds for them (fixed objects can overlap, e.g. with tail
-      // calls). Target-custom kinds are target defined, so assume they may
-      // alias.
-      auto IsNonFixedSpillSlot = [&](const PseudoSourceValue *PSV) {
-        const auto *FS = dyn_cast<FixedStackPseudoSourceValue>(PSV);
-        return FS && !MFI.isFixedObjectIndex(FS->getFrameIndex()) &&
-               MFI.isSpillSlotObjectIndex(FS->getFrameIndex());
-      };
-      auto IsTargetCustom = [](const PseudoSourceValue *PSV) {
-        return PSV->kind() >= PseudoSourceValue::TargetCustom;
-      };
-      if ((IsNonFixedSpillSlot(PSVa) && !IsTargetCustom(PSVb)) ||
-          (IsNonFixedSpillSlot(PSVb) && !IsTargetCustom(PSVa)))
-        return false;
+    if (PSVa && PSVb) {
+      if (PSVa == PSVb)
+        SameVal = true;
+      else {
+        // A non-fixed spill slot is disjoint from every other memory object,
+        // including TargetCustom ones.
+        auto IsSpillSlot = [&](const PseudoSourceValue *PSV) {
+          const auto *FS = dyn_cast<FixedStackPseudoSourceValue>(PSV);
+          return FS && !MFI.isFixedObjectIndex(FS->getFrameIndex()) &&
+                 MFI.isSpillSlotObjectIndex(FS->getFrameIndex());
+        };
+        if (IsSpillSlot(PSVa) || IsSpillSlot(PSVb))
+          return false;
+      }
     }
   }
 
