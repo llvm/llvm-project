@@ -3,4 +3,4 @@
 // valid-no-diagnostics
 
 float4 main(float3 b : SV_Barycentrics) : SV_Target { return float4(b, 1); }
-// old-error@-1 {{attribute 'SV_Barycentrics' requires shader model 6.1 or greater}}
+// old-error@-1 {{semantic 'SV_Barycentrics' requires shader model 6.1 or greater}}

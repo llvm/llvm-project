@@ -1288,7 +1288,7 @@ void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
   switch (Kind) {
   case SemanticKind::Barycentrics:
     if (Triple.getOSVersion() < VersionTuple(6, 1))
-      Diag(A->getLoc(), diag::err_hlsl_attribute_in_wrong_shader_model)
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
           << A->getAttrName() << "6.1";
     return;
   default:
