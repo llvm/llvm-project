@@ -14,6 +14,7 @@
 #include "CPPLanguageRuntime.h"
 #include "CommandObjectCPlusPlus.h"
 #include "ItaniumABIRuntime.h"
+#include "MicrosoftABIRuntime.h"
 #include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -125,6 +126,8 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
   }
 
   m_abi_runtimes.emplace_back(new ItaniumABIRuntime(process));
+  if (process->GetTarget().GetArchitecture().GetTriple().isOSWindows())
+    m_abi_runtimes.emplace_back(new MicrosoftABIRuntime(process));
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {

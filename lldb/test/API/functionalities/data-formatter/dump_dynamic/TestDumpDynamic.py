@@ -3,5 +3,11 @@ from lldbsuite.test import lldbinline
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    [lldbinline.expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")],
+    makefile_extras="""
+ifeq "$(OS)" "Windows_NT"
+	ifneq "$(MAKE_PDB)" "YES"
+		LD_EXTRAS += -Wl,-debug:symtab
+	endif
+endif
+""",
 )
