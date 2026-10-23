@@ -7440,16 +7440,9 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
-static bool isSupportedFPArith(SDNode *N, SelectionDAG &DAG,
-                               const NVPTXSubtarget &STI, unsigned ISDOpcode,
-                               Intrinsic::ID IID,
-                               APFloat::roundingMode RoundingMode) {
+static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
+                               unsigned ISDOpcode, Intrinsic::ID IID) {
   const EVT VT = N->getValueType(0);
-  if (!nvvm::FPArithIsSupported(IID, VT.getTypeForEVT(*DAG.getContext()),
-                                RoundingMode))
-    return false;
-
-  // Check the subtarget requirements of the remaining combinations.
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return STI.hasFP16Math() &&
@@ -7491,7 +7484,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FADD, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
@@ -7506,7 +7499,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fma_ftz_relu: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(4).getSExtValue());
-    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FMA, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FMA, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }
@@ -7516,7 +7509,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fmul_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FMUL, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }

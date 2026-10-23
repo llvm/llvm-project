@@ -4301,18 +4301,15 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
       const bool IsFMul = IntrinsicID == Intrinsic::nvvm_fmul ||
                           IntrinsicID == Intrinsic::nvvm_fmul_ftz;
       if (IsFAdd || IsFMul) {
-        APFloat::roundingMode RoundMode =
-            nvvm::GetRoundingModeFromImmArg(Operands[2]);
-        // Do not fold combinations that codegen rejects.
-        if (!nvvm::FPArithIsSupported(IntrinsicID, Ty, RoundMode))
-          return nullptr;
-
         bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz ||
                      IntrinsicID == Intrinsic::nvvm_fmul_ftz;
         APFloat A =
             IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
         APFloat B =
             IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
+
+        APFloat::roundingMode RoundMode =
+            nvvm::GetRoundingModeFromImmArg(Operands[2]);
 
         APFloat Res = A;
         APFloat::opStatus Status =
@@ -4413,12 +4410,6 @@ static Constant *ConstantFoldScalarCall4(StringRef Name,
     if (!Op1 || !Op2 || !Op3)
       return nullptr;
 
-    APFloat::roundingMode RoundMode =
-        nvvm::GetRoundingModeFromImmArg(Operands[3]);
-    // Do not fold combinations that codegen rejects.
-    if (!nvvm::FPArithIsSupported(IntrinsicID, Ty, RoundMode))
-      return nullptr;
-
     bool IsFTZ = nvvm::FPArithShouldFTZ(IntrinsicID);
     APFloat A =
         IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
@@ -4426,6 +4417,9 @@ static Constant *ConstantFoldScalarCall4(StringRef Name,
         IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
     APFloat C =
         IsFTZ ? FTZPreserveSign(Op3->getValueAPF()) : Op3->getValueAPF();
+
+    APFloat::roundingMode RoundMode =
+        nvvm::GetRoundingModeFromImmArg(Operands[3]);
 
     APFloat Res = A;
     APFloat::opStatus Status = Res.fusedMultiplyAdd(B, C, RoundMode);

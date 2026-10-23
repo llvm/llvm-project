@@ -159,12 +159,9 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::floor, FTZ_MustBeOn};
     case Intrinsic::nvvm_fma:
     case Intrinsic::nvvm_fma_ftz: {
-      // Only replace supported combinations with RN rounding.
-      const APFloat::roundingMode RoundMode =
-          nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3));
-      if (RoundMode != APFloat::rmNearestTiesToEven ||
-          !nvvm::FPArithIsSupported(II->getIntrinsicID(), II->getType(),
-                                    RoundMode))
+      // llvm.fma rounds to nearest-even, so only the rn variants map to it.
+      if (nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3)) !=
+          APFloat::rmNearestTiesToEven)
         return {};
       const bool IsFTZ = II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz;
       Type *EltTy = II->getType()->getScalarType();

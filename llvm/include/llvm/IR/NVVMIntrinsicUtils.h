@@ -769,37 +769,6 @@ inline bool FPArithIsRelu(Intrinsic::ID IntrinsicID) {
       "Checking relu flag for invalid NVVM fadd/fmul/fma intrinsic");
 }
 
-// Returns true if the NVVM fadd/fmul/fma intrinsic with the given operand type
-// and rounding mode corresponds to a PTX instruction.
-//
-// TODO: Remove this once https://github.com/llvm/llvm-project/pull/172442
-// lands, adding support for explicit type constraints for overloaded
-// intrinsics in tablegen.
-inline bool FPArithIsSupported(Intrinsic::ID IntrinsicID, Type *Ty,
-                               APFloat::roundingMode RoundingMode) {
-  const bool IsVector = Ty->isVectorTy();
-  const auto *VTy = dyn_cast<FixedVectorType>(Ty);
-  if (IsVector && (!VTy || VTy->getNumElements() != 2))
-    return false;
-
-  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ = FPArithShouldFTZ(IntrinsicID);
-  const bool IsSat = FPArithIsSaturating(IntrinsicID);
-  const bool IsRelu = FPArithIsRelu(IntrinsicID);
-  switch (Ty->getScalarType()->getTypeID()) {
-  case Type::HalfTyID:
-    return IsRN;
-  case Type::BFloatTyID:
-    return IsRN && !IsSat && !IsFTZ;
-  case Type::FloatTyID:
-    return !IsRelu && !(IsVector && IsSat);
-  case Type::DoubleTyID:
-    return !IsVector && !IsSat && !IsFTZ && !IsRelu;
-  default:
-    return false;
-  }
-}
-
 inline bool FDivShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_div_rm_ftz_f:
