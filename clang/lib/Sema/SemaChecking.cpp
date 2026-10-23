@@ -17627,7 +17627,8 @@ bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx) {
     ArgError = true;
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
-    if (!CooperativeMatrixType::isValidElementType(ElementTy)) {
+    if (!CooperativeMatrixType::isValidOpenCLVectorType(ElementTy) &&
+        !CooperativeMatrixType::isValidOpenCLScalarType(ElementTy)) {
       ArgError = true;
     }
   }
@@ -17733,12 +17734,6 @@ bool Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
     return true;
   }
 
-  if (MOutTy->getElementType().getUnqualifiedType() !=
-      M2Ty->getElementType().getUnqualifiedType()) {
-    Diag(Loc, diag::err_mismatched_coopmat_element_types);
-    return true;
-  }
-
   if (!areCoopMatrixTypesCompatible(TheCall->getType(), MC->getType())) {
     Diag(Loc, diag::err_incompatible_coopmat_types);
     return true;
@@ -17761,12 +17756,6 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
     Diag(ALoc, diag::err_incompatible_coopmat_types);
     return true;
   }
-
-  if (M0Ty->getElementType().getUnqualifiedType() !=
-      M1Ty->getElementType().getUnqualifiedType()) {
-    Diag(ALoc, diag::err_mismatched_coopmat_element_types);
-    return true;
-  }
   return false;
 }
 
@@ -17785,14 +17774,6 @@ ExprResult Sema::BuiltinCoopMatrixBinaryOp(CallExpr *TheCall,
   TheCall->setType(Arg0->getType());
 
   return CallResult;
-}
-
-static bool isValidMatAMatCElementTypeCombination(QualType ATy, QualType CTy) {
-  if (ATy->isIntegerType() && CTy->isIntegerType())
-    return true;
-  if (ATy->isFloatingType() && CTy->isFloatingType())
-    return true;
-  return false;
 }
 
 ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
@@ -17851,19 +17832,6 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
       M0Ty->getElementType().getUnqualifiedType().getCanonicalType();
   QualType M1ElemTy =
       M1Ty->getElementType().getUnqualifiedType().getCanonicalType();
-  bool SameElementType = M0ElemTy == M1ElemTy;
-  bool SameIntegerWidth =
-      M0ElemTy->isIntegerType() && M1ElemTy->isIntegerType() &&
-      Context.getTypeSize(M0ElemTy) == Context.getTypeSize(M1ElemTy);
-
-  if (!SameElementType && !SameIntegerWidth) {
-    return ExprError(Diag(Loc0, diag::err_mismatched_coopmat_element_types));
-  }
-
-  if (!isValidMatAMatCElementTypeCombination(M0Ty->getElementType(),
-                                             M2Ty->getElementType()))
-    return ExprError(Diag(Loc1, diag::err_mismatched_coopmat_element_types));
-
   if (M0Ty->getNumRows() != M2Ty->getNumRows())
     return ExprError(Diag(Loc0, diag::err_coopmat_shapes_incompatible));
   if ((M1Ty->getNumColumns() != M2Ty->getNumColumns()) ||
@@ -17880,17 +17848,11 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
 
   Expr *Arg0 = TheCall->getArg(0);
   auto *M0Ty = Arg0->getType()->getAs<CooperativeMatrixType>();
-  auto Loc0 = Arg0->getBeginLoc();
 
   if (!M0Ty) {
     Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
     return ExprError();
   }
-
-  Expr *Arg1 = TheCall->getArg(1);
-  QualType Ty = Arg1->getType();
-  if (M0Ty->getElementType().getUnqualifiedType() != Ty.getUnqualifiedType())
-    return ExprError(Diag(Loc0, diag::err_mismatched_coopmat_element_types));
   TheCall->setType(Arg0->getType());
 
   return CallResult;
@@ -17931,14 +17893,6 @@ ExprResult Sema::BuiltinCoopMatInit(CallExpr *TheCall, ExprResult CallResult) {
   // coop_mat_init(component_type)
   if (ArgTy->isArithmeticType())
     return CallResult;
-
-  // coop_mat_init(const gentype *)
-  if (const auto *PtrTy = ArgTy->getAs<PointerType>()) {
-    QualType PointeeTy = PtrTy->getPointeeType();
-
-    if (PointeeTy->isArithmeticType())
-      return CallResult;
-  }
 
   Diag(Arg->getBeginLoc(), diag::err_invalid_coopmat_builtin_arg);
   return ExprError();

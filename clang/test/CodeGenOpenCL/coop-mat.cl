@@ -3,8 +3,8 @@
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
-// RUN:   -finclude-default-header -emit-llvm -O0 -o - %s \
-// RUN:   | FileCheck %s
+// RUN:   -finclude-default-header -fdeclare-opencl-builtins -emit-llvm -O0 \
+// RUN:   -o - %s | FileCheck %s
 
 #define SCOPE     memory_scope_sub_group
 #define USE_A     CLK_COOPERATIVE_MATRIX_A
@@ -39,22 +39,22 @@ kernel void test_load(__global float *ptr, __global uchar4 *ptr4, __global char 
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_load
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 // CHECK: call
-// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 0)
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 
 // coop_mat_store -> __spirv_CooperativeMatrixStoreKHR
