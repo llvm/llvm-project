@@ -243,7 +243,7 @@ private:
 } // namespace
 
 // PImpl wrapper implementation
-class LiveOriginsAnalysis::Impl : public AnalysisImpl {
+class LiveOriginsAnalysis::Impl final : public AnalysisImpl {
   using AnalysisImpl::AnalysisImpl;
 };
 
