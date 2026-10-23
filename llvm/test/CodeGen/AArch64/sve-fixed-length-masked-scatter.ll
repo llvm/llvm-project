@@ -12,10 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_scatter_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmeq v1.2s, v0.2s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    sshll v1.2d, v1.2s, #0

@@ -25,9 +25,9 @@ subroutine test_udr_combined()
 end subroutine
 
 ! One boxed op per shape is synthesized from the single scalar base op.
-! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_UxUxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_i32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_Uxi32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG: omp.declare_reduction @{{.*}}foo_byref_box_heap_UxUxi32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK-DAG: omp.declare_reduction @{{.*}}foo_i32 : i32
 
 ! The one combined clause binds all three boxed ops in a single wsloop.

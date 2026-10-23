@@ -854,7 +854,7 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_split || DKind == OMPD_interchange ||
-         DKind == OMPD_stripe;
+         DKind == OMPD_stripe || DKind == OMPD_flatten;
 }
 
 bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
@@ -942,6 +942,24 @@ bool clang::isOpenMPOrderConcurrentNestableDirective(
   if (LangOpts.OpenMP >= 60)
     return DKind == OMPD_atomic ||
            isOpenMPLoopTransformationDirective(DKind);
+
+  return false;
+}
+
+bool clang::isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                        OpenMPBindClauseKind BindKind,
+                                        const LangOptions &LangOpts) {
+  if (DKind == OMPD_loop) // binding region undefined: bind(thread)
+    return BindKind == OMPC_BIND_thread;
+  // Directives that may be encountered during execution of a simd region are:
+  // OpenMP 5.x: ordered simd, simd, scan and atomic
+  // OpenMP 6.0: above plus all loop-transformation directives
+  if (DKind == OMPD_ordered_blockassoc || DKind == OMPD_simd ||
+      DKind == OMPD_scan || DKind == OMPD_atomic)
+    return true;
+
+  if (LangOpts.OpenMP >= 60)
+    return isOpenMPLoopTransformationDirective(DKind);
 
   return false;
 }

@@ -98,6 +98,7 @@
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       CodeGen Prepare
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     AArch64 Promote Constant
@@ -118,7 +119,6 @@
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
-; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer
@@ -131,9 +131,9 @@
 ; CHECK-NEXT:       ResetMachineFunction
 ; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       AArch64 Instruction Selection
+; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       AArch64 Local Dynamic TLS Access Clean-up
-; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
@@ -180,11 +180,10 @@
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
+; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler

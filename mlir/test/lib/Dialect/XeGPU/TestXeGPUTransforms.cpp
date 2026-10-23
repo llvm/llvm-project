@@ -166,7 +166,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
                   ConversionPatternRewriter &rewriter) const override {
 
     auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
-    auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
+    auto sliceAttr = op->getDiscardableAttrOfType<xegpu::SliceAttr>(layoutName);
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
 
@@ -361,6 +361,36 @@ struct TestXeGPUResolveLayoutConflicts
   }
 };
 
+struct TestXeGPUSinkElementwiseConversions
+    : public PassWrapper<TestXeGPUSinkElementwiseConversions,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPUSinkElementwiseConversions)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-sink-elementwise-conversions";
+  }
+
+  StringRef getDescription() const final {
+    return "Test sinking of XeGPU layout conversions past elementwise ops.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPUSinkElementwiseConversions() = default;
+  TestXeGPUSinkElementwiseConversions(
+      const TestXeGPUSinkElementwiseConversions &pass) = default;
+
+  void runOnOperation() override {
+    OpBuilder builder(&getContext());
+    xegpu::sinkElementwiseConversions(builder, getOperation());
+  }
+};
+
 struct TestXeGPUArrayLengthOptimization
     : public PassWrapper<TestXeGPUArrayLengthOptimization,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -437,7 +467,8 @@ struct TestXeGPULayoutInterface
     target.addDynamicallyLegalOp<vector::StepOp>(
         [&](vector::StepOp op) -> bool {
           auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
-          auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
+          auto sliceAttr =
+              op->getDiscardableAttrOfType<xegpu::SliceAttr>(layoutName);
           return isLegal(sliceAttr);
         });
 
@@ -557,6 +588,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUSgToLaneDistribute>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPUSinkElementwiseConversions>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
   PassRegistration<TestXeGPUCoalesceGatherScatter>();
 }

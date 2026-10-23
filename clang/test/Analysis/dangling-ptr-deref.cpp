@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.DanglingPtrDeref \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.DanglingPtrDeref \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void test_case_one() {

@@ -1,5 +1,7 @@
 // RUN: mlir-opt -convert-math-to-emitc=language-target=c99 %s | FileCheck %s --check-prefix=c99
 // RUN: mlir-opt -convert-math-to-emitc=language-target=cpp11 %s | FileCheck %s --check-prefix=cpp11
+// RUN: mlir-opt -convert-to-emitc="filter-dialects=math lower-to-cpp=false" %s | FileCheck %s --check-prefix=c99
+// RUN: mlir-opt -convert-to-emitc="filter-dialects=math" %s | FileCheck %s --check-prefix=cpp11
 
 func.func @absf(%arg0: f32, %arg1: f64) {
     // c99: emitc.call_opaque "fabsf"
@@ -122,10 +124,10 @@ func.func @round(%arg0: f32, %arg1: f64) {
 }
 
 func.func @roundeven(%arg0: f32, %arg1: f64) {
-  // c99: emitc.call_opaque "roundevenf"
-  // c99-NEXT: emitc.call_opaque "roundeven"
-  // cpp11: emitc.call_opaque "std::roundeven"
-  // cpp11-NEXT: emitc.call_opaque "std::roundeven"
+  // c99: emitc.call_opaque "__builtin_roundevenf"
+  // c99-NEXT: emitc.call_opaque "__builtin_roundeven"
+  // cpp11: emitc.call_opaque "__builtin_roundevenf"
+  // cpp11-NEXT: emitc.call_opaque "__builtin_roundeven"
   %0 = math.roundeven %arg0 : f32
   %1 = math.roundeven %arg1 : f64
   return

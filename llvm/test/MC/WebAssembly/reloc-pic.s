@@ -2,7 +2,7 @@
 # RUN: sed -e 's/^REF-//g' %s | llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entryes result in R_WASM_GLOBAL_INDEX_LEB against
-# against the corrsponding function or data symbol and that the corresponding
+# against the corresponding function or data symbol and that the corresponding
 # data symbols are imported as a wasm globals.
 
 .functype default_func () -> (i32)
@@ -159,6 +159,7 @@ REF-.tabletype mytable, externref
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            linking
 # CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     SymbolTable:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Kind:            FUNCTION

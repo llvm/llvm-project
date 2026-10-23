@@ -174,6 +174,10 @@ private:
       if (auto FastCheckFilter = scalarValue(N, "FastCheckFilter"))
         F.FastCheckFilter = *FastCheckFilter;
     });
+    Dict.handle("ExperimentalCustomChecks", [&](Node &N) {
+      if (auto Value = boolValue(N, "ExperimentalCustomChecks"))
+        F.ExperimentalCustomChecks = *Value;
+    });
     Dict.parse(N);
   }
 

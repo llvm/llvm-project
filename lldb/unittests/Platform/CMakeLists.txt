@@ -2,17 +2,23 @@ add_lldb_unittest(LLDBPlatformTests
   TestUtils.cpp
   PlatformAppleSimulatorTest.cpp
   PlatformDarwinTest.cpp
+  PlatformEmscriptenTest.cpp
   PlatformMacOSXTest.cpp
+  PlatformRemoteDarwinDeviceTest.cpp
   PlatformSiginfoTest.cpp
   PlatformTest.cpp
+  PlatformWasmTest.cpp
 
   LINK_COMPONENTS
+    Option
     Support
   LINK_LIBS
+    lldbPluginPlatformEmscripten
     lldbPluginPlatformFreeBSD
     lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginPlatformNetBSD
+    lldbPluginPlatformWasm
     lldbUtilityHelpers
     LLVMTestingSupport
   )

@@ -1,18 +1,20 @@
 // REQUIRES: x86-registered-target
 
 // Verify that -foffload-include-binary embeds the finalized SYCL device
-// binary into the host module and emits the registration/unregistration
-// constructors and destructors expected by the SYCL runtime.
+// binary into the host module and emits the constructor that registers it with
+// the SYCL runtime. Unregistration is done from 'atexit', so no global
+// destructor is emitted for it.
 // The binary is already finalized, so it must not land in ".llvm.offloading".
 // RUN: echo -n 'FAKE_SYCL_DEVICE_IMAGE' > %t.bin
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsycl-is-host \
 // RUN:   -foffload-include-binary %t.bin -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --implicit-check-not='.llvm.offloading' \
-// RUN:     --implicit-check-not='llvm.global_ctors.'
+// RUN:     --implicit-check-not='llvm.global_ctors.' \
+// RUN:     --implicit-check-not='llvm.global_dtors'
 
-// The registration functions have to merge into the constructor and destructor
-// lists the rest of the translation unit contributes to, so object emission
-// must succeed for a translation unit that has its own static initializers.
+// The registration function has to merge into the constructor list the rest of
+// the translation unit contributes to, so object emission must succeed for a
+// translation unit that has its own static initializers.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsycl-is-host \
 // RUN:   -foffload-include-binary %t.bin -emit-obj %s -o %t.o
 
@@ -39,11 +41,11 @@ void f() {}
 // CHECK: @.sycl_offloading.binary = internal unnamed_addr constant [22 x i8] c"FAKE_SYCL_DEVICE_IMAGE", section ".sycl_fatbin"
 // CHECK:      @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }]
 // CHECK-SAME:   i32 65535, ptr @_GLOBAL__sub_I_
-// CHECK-SAME:   i32 1, ptr @sycl.descriptor_reg
-// CHECK:      @llvm.global_dtors = {{.*}}@sycl.descriptor_unreg
+// CHECK-SAME:   i32 101, ptr @sycl.descriptor_reg
 // CHECK:      define internal void @sycl.descriptor_reg()
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 22)
+// CHECK-NEXT:   call i32 @atexit(ptr @sycl.descriptor_unreg)
 // CHECK-NEXT:   ret void
 // CHECK:      define internal void @sycl.descriptor_unreg()
 // CHECK-NEXT: entry:

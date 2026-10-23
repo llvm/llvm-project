@@ -5,7 +5,7 @@
 
 ! CHECK-LABEL: func.func @_QPacc_loop_unroll
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine acc_loop_unroll(a, n)
   real :: a(n)
@@ -19,7 +19,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPunroll_acc_loop
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine unroll_acc_loop(a, n)
   real :: a(n)
@@ -33,7 +33,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_loop_unroll_count
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine acc_loop_unroll_count(a, n)
   real :: a(n)
@@ -47,7 +47,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPunroll_count_acc_loop
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine unroll_count_acc_loop(a, n)
   real :: a(n)
@@ -61,7 +61,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_unroll
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine acc_parallel_loop_unroll(a, n)
   real :: a(n)
@@ -75,7 +75,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPunroll_acc_parallel_loop
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine unroll_acc_parallel_loop(a, n)
   real :: a(n)
@@ -89,7 +89,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_unroll_count
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine acc_parallel_loop_unroll_count(a, n)
   real :: a(n)
@@ -103,7 +103,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPunroll_count_acc_parallel_loop
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine unroll_count_acc_parallel_loop(a, n)
   real :: a(n)
@@ -118,7 +118,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_unroll
 ! CHECK: acc.parallel {
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine acc_parallel_unroll(a, n)
   real :: a(n)
@@ -134,7 +134,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPunroll_acc_parallel
 ! CHECK: acc.parallel {
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>}
 
 subroutine unroll_acc_parallel(a, n)
   real :: a(n)
@@ -150,7 +150,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_unroll_count
 ! CHECK: acc.parallel {
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine acc_parallel_unroll_count(a, n)
   real :: a(n)
@@ -166,7 +166,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPunroll_count_acc_parallel
 ! CHECK: acc.parallel {
 ! CHECK: acc.loop {{.*}} {
-! CHECK: } attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
+! CHECK: } {{.*}}attributes {{{.*}}llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, count = 4 : i64>>}
 
 subroutine unroll_count_acc_parallel(a, n)
   real :: a(n)

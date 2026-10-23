@@ -32,7 +32,7 @@ static cl::opt<bool> SPVPreserveAuxData(
     cl::desc("Preserve LLVM attributes and metadata as "
              "NonSemantic.AuxData ExtInst annotations (requires "
              "SPV_KHR_non_semantic_info)"),
-    cl::Optional, cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(false));
 
 namespace {
 enum AuxDataLinkageType : uint32_t {
@@ -56,28 +56,51 @@ static bool wasAvailableExternally(const GlobalObject *GO) {
       SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
 }
 
+// Return true if any function definition may get an AuxData record.
+static bool hasFunctionAuxData(const Module &M) {
+  return any_of(M.functions(), [](const Function &F) {
+    return !F.isDeclaration() &&
+           (F.getAttributes().hasFnAttrs() || F.hasMetadata());
+  });
+}
+
+static bool canUseForwardRefs(const SPIRV::ModuleAnalysisInfo &MAI) {
+  return MAI.Reqs.getExtensions().contains(
+      SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
+}
+
 SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
     : Asm(AP), Mod(M) {
+  assert(spirvPreserveAuxData(M.getTargetTriple()) &&
+         "AuxData handler created with AuxData preservation disabled");
   for (const GlobalObject &GO : M.global_objects())
     if (wasAvailableExternally(&GO))
       LinkagePreservedGOs.push_back(&GO);
 }
 
-bool SPIRVAuxDataHandler::hasWork() const { return SPVPreserveAuxData; }
+bool llvm::spirvPreserveAuxData(const Triple &TT) {
+  return SPVPreserveAuxData || TT.getVendor() == Triple::VendorType::AMD;
+}
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!hasWork())
-    return;
-  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info)) {
-    if (SPVPreserveAuxData)
-      report_fatal_error("-spirv-preserve-auxdata requires the "
-                         "SPV_KHR_non_semantic_info extension to be enabled.");
-    return;
-  }
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+    reportFatalUsageError("-spirv-preserve-auxdata requires the "
+                          "SPV_KHR_non_semantic_info extension to be enabled.");
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
-  if (!MAI.ExtInstSetMap.count(NonSemanticAuxDataSet))
+  if (!MAI.ExtInstSetMap.contains(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
+
+  // Drop NonSemantic forward references if
+  // SPV_KHR_relaxed_extended_instruction not enabled.
+  if (MAI.InstrAuxDataRecords.empty() && !hasFunctionAuxData(Mod))
+    return;
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
+    MAI.Reqs.addExtension(
+        SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
+  else
+    MAI.InstrAuxDataRecords.clear();
 }
 
 MCRegister
@@ -169,14 +192,29 @@ void SPIRVAuxDataHandler::collectMetadataFor(const GlobalObject *GO,
 }
 
 void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!SPVPreserveAuxData)
-    return;
   if (!MAI.getExtInstSetReg(NonSemanticAuxDataSet).isValid())
     return;
+  // One OpString per metadata kind; stop scanning once every kind is seen.
+  constexpr unsigned AllMDKindsSeen =
+      (1u << (static_cast<unsigned>(
+                  SPIRV::ModuleAnalysisInfo::AMDGPUAtomicMDKind::Last) +
+              1)) -
+      1;
+  unsigned SeenMask = 0;
+  for (const auto &Rec : MAI.InstrAuxDataRecords) {
+    unsigned Bit = 1u << static_cast<unsigned>(Rec.Kind);
+    if (SeenMask & Bit)
+      continue;
+    SeenMask |= Bit;
+    getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
+    if (SeenMask == AllMDKindsSeen)
+      break;
+  }
   SmallVector<StringRef> MDNames;
   Mod.getContext().getMDKindNames(MDNames);
+  bool CanUseForwardRefs = canUseForwardRefs(MAI);
   for (const GlobalObject &GO : Mod.global_objects()) {
-    if (GO.isDeclaration())
+    if (GO.isDeclaration() || (isa<Function>(GO) && !CanUseForwardRefs))
       continue;
     collectAttributesFor(&GO, MAI);
     collectMetadataFor(&GO, MDNames, MAI);
@@ -198,7 +236,20 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
     Operands.push_back(TargetReg);
     for (const Operand &Op : Rec.Operands)
       Operands.push_back(Op.Const ? emitConstant(Op.Const, MAI) : Op.Reg);
-    emitAuxDataExtInst(Rec.Opcode, VoidTypeReg, ExtSetReg, Operands, MAI);
+    emitAuxDataExtInst(Rec.Opcode, VoidTypeReg, ExtSetReg, Operands, MAI,
+                       /*UseForwardRefs=*/isa<Function>(Rec.Target));
+  }
+
+  for (const auto &Rec : MAI.InstrAuxDataRecords) {
+    MCRegister TargetReg = MAI.getRegisterAlias(Rec.MF, Rec.TargetReg);
+    if (!TargetReg.isValid())
+      continue;
+    MCRegister MDNameReg =
+        getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
+    // TargetReg is defined in a function body, emitted after this section, so
+    // it is always a forward reference.
+    emitAuxDataExtInst(InstructionMetadataOpcode, VoidTypeReg, ExtSetReg,
+                       {TargetReg, MDNameReg}, MAI, /*UseForwardRefs=*/true);
   }
 
   if (LinkagePreservedGOs.empty())
@@ -206,7 +257,10 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
 
   MCRegister UInt32TypeReg = findOrEmitOpTypeUInt32(MAI);
   MCRegister AEConstReg;
+  bool CanUseForwardRefs = canUseForwardRefs(MAI);
   for (const GlobalObject *GO : LinkagePreservedGOs) {
+    if (isa<Function>(GO) && !CanUseForwardRefs)
+      continue;
     MCRegister TargetReg = MAI.getGlobalObjReg(GO);
     if (!TargetReg.isValid())
       continue;
@@ -214,7 +268,8 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
       AEConstReg =
           emitOpConstantUInt32(AvailableExternally, UInt32TypeReg, MAI);
     emitAuxDataExtInst(LinkageOpcode, VoidTypeReg, ExtSetReg,
-                       {TargetReg, AEConstReg}, MAI);
+                       {TargetReg, AEConstReg}, MAI,
+                       /*UseForwardRefs=*/isa<Function>(GO));
   }
 }
 
@@ -222,9 +277,11 @@ void SPIRVAuxDataHandler::emitAuxDataExtInst(AuxDataOpcode Opcode,
                                              MCRegister VoidTypeReg,
                                              MCRegister ExtSetReg,
                                              ArrayRef<MCRegister> Operands,
-                                             SPIRV::ModuleAnalysisInfo &MAI) {
+                                             SPIRV::ModuleAnalysisInfo &MAI,
+                                             bool UseForwardRefs) {
   MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExtInst);
+  Inst.setOpcode(UseForwardRefs ? SPIRV::OpExtInstWithForwardRefsKHR
+                                : SPIRV::OpExtInst);
   Inst.addOperand(MCOperand::createReg(MAI.getNextIDRegister()));
   Inst.addOperand(MCOperand::createReg(VoidTypeReg));
   Inst.addOperand(MCOperand::createReg(ExtSetReg));

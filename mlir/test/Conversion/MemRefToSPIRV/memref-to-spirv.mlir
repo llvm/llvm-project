@@ -89,21 +89,21 @@ func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i :
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %[[IDX:.+]]: index)
 func.func @load_aligned(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_nontemporal
 func.func @load_aligned_nontemporal(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned|Nontemporal", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32, nontemporal = true } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) nontemporal(true) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_psb
 func.func @load_aligned_psb(%src: memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>, %i : index) -> i1 {
   // CHECK: %[[VAL:.+]] = spirv.Load "PhysicalStorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
   return %0: i1
 }
 
@@ -122,10 +122,15 @@ func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i:
   return
 }
 
+// COM: Native i16 storage is supported by this test module's target.
 // CHECK-LABEL: @load_i16
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<i16, #spirv.storage_class<StorageBuffer>>)
 func.func @load_i16(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) {
   // CHECK-NOT: spirv.SDiv
-  //     CHECK: spirv.Load
+  //     CHECK: %[[BASE:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<i16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i16, stride=2> [0])>, StorageBuffer>
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %[[BASE]][%[[ZERO]], %[[ZERO]]] : {{.+}} -> !spirv.ptr<i16, StorageBuffer>
+  //     CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" %[[PTR]] : i16
   // CHECK-NOT: spirv.ShiftRightArithmetic
   %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
   return
@@ -488,30 +493,33 @@ func.func @reinterpret_cast(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgr
 //       CHECK:  %[[RET:.*]] = spirv.InBoundsPtrAccessChain %[[MEM1]][%[[OFF1]]] : !spirv.ptr<f32, CrossWorkgroup>, i32
 //       CHECK:  %[[RET1:.*]] = builtin.unrealized_conversion_cast %[[RET]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
 //       CHECK:  return %[[RET1]]
-  %ret = memref.reinterpret_cast %arg to offset: [%arg1], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  %c10 = arith.constant 10 : index
+  %ret = memref.reinterpret_cast %arg to offset: [%arg1], sizes: [%c10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
   return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
 }
 
 // CHECK-LABEL: func.func @reinterpret_cast_0
 //  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>)
-func.func @reinterpret_cast_0(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>> {
+func.func @reinterpret_cast_0(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1]>, #spirv.storage_class<CrossWorkgroup>> {
 //   CHECK-DAG:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
-//   CHECK-DAG:  %[[RET:.*]] = builtin.unrealized_conversion_cast %[[MEM1]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+//   CHECK-DAG:  %[[RET:.*]] = builtin.unrealized_conversion_cast %[[MEM1]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1]>, #spirv.storage_class<CrossWorkgroup>>
 //       CHECK:  return %[[RET]]
-  %ret = memref.reinterpret_cast %arg to offset: [0], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
-  return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  %c10 = arith.constant 10 : index
+  %ret = memref.reinterpret_cast %arg to offset: [0], sizes: [%c10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1]>, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?xf32, strided<[1]>, #spirv.storage_class<CrossWorkgroup>>
 }
 
 // CHECK-LABEL: func.func @reinterpret_cast_5
 //  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>)
-func.func @reinterpret_cast_5(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>> {
+func.func @reinterpret_cast_5(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1], offset: 5>, #spirv.storage_class<CrossWorkgroup>> {
 //       CHECK:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
 //       CHECK:  %[[OFF:.*]] = spirv.Constant 5 : i32
 //       CHECK:  %[[RET:.*]] = spirv.InBoundsPtrAccessChain %[[MEM1]][%[[OFF]]] : !spirv.ptr<f32, CrossWorkgroup>, i32
-//       CHECK:  %[[RET1:.*]] = builtin.unrealized_conversion_cast %[[RET]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  %[[RET1:.*]] = builtin.unrealized_conversion_cast %[[RET]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: 5>, #spirv.storage_class<CrossWorkgroup>>
 //       CHECK:  return %[[RET1]]
-  %ret = memref.reinterpret_cast %arg to offset: [5], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
-  return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  %c10 = arith.constant 10 : index
+  %ret = memref.reinterpret_cast %arg to offset: [5], sizes: [%c10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: 5>, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?xf32, strided<[1], offset: 5>, #spirv.storage_class<CrossWorkgroup>>
 }
 
 } // end module
@@ -620,17 +628,17 @@ module attributes {
   ]>, #spirv.resource_limits<>>
 } {
   func.func @load_nontemporal(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Load "StorageBuffer" %{{.+}} ["Nontemporal"] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} ["Nontemporal"] : f32
     return
   }
 
   func.func @load_nontemporal_aligned(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned|Nontemporal", 4] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned|Nontemporal", 4] : f32
     return
   }

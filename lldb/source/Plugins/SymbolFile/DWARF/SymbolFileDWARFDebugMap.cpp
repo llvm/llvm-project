@@ -179,9 +179,10 @@ class DebugMapModule : public Module {
 public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
                  const FileSpec &file_spec, const ArchSpec &arch,
-                 ConstString object_name, off_t object_offset,
+                 std::string object_name, off_t object_offset,
                  const llvm::sys::TimePoint<> object_mod_time)
-      : Module(file_spec, arch, object_name, object_offset, object_mod_time),
+      : Module(file_spec, arch, std::move(object_name), object_offset,
+               object_mod_time),
         m_exe_module_wp(exe_module_sp), m_cu_idx(cu_idx) {}
 
   ~DebugMapModule() override = default;
@@ -418,7 +419,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
           comp_unit_info->oso_sp;
       const char *oso_path = comp_unit_info->oso_path.GetCString();
       FileSpec oso_file(oso_path);
-      ConstString oso_object;
+      llvm::StringRef oso_object;
       if (FileSystem::Instance().Exists(oso_file)) {
         // The modification time returned by the FS can have a higher precision
         // than the one from the CU.
@@ -450,6 +451,8 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
+          obj_file->GetModule()->ReportError(
+              "{0}", comp_unit_info->oso_load_error.AsCString());
           return nullptr;
         }
       }
@@ -470,19 +473,21 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              .c_str());
       comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
-          oso_arch, oso_object, 0,
-          oso_object ? comp_unit_info->oso_mod_time : llvm::sys::TimePoint<>());
+          oso_arch, oso_object.str(), 0,
+          !oso_object.empty() ? comp_unit_info->oso_mod_time
+                              : llvm::sys::TimePoint<>());
 
-      if (oso_object && !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
+      if (!oso_object.empty() &&
+          !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
           FileSystem::Instance().Exists(oso_file)) {
         // If we are loading a .o file from a .a file the "oso_object" will
         // have a valid value name and if the .a file exists, either the .o
         // file didn't exist in the .a file or the mod time didn't match.
-        comp_unit_info->oso_load_error = Status::FromErrorStringWithFormat(
-            "\"%s\" object from the \"%s\" archive: "
+        comp_unit_info->oso_load_error = Status::FromErrorStringWithFormatv(
+            "\"{0}\" object from the \"{1}\" archive: "
             "either the .o file doesn't exist in the archive or the "
-            "modification time (0x%8.8x) of the .o file doesn't match",
-            oso_object.AsCString(""), oso_file.GetPath().c_str(),
+            "modification time (0x{2:x-8}) of the .o file doesn't match",
+            oso_object, oso_file.GetPath(),
             (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }
@@ -686,7 +691,8 @@ SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
   return eLanguageTypeUnknown;
 }
 
-XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKAndSysroot
+SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
@@ -1300,12 +1306,12 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
 
     ModuleSpec spec;
     FileSpec oso_file;
-    ConstString oso_object;
+    llvm::StringRef oso_object;
     if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
                                                oso_file, oso_object,
                                                /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
-      spec.GetObjectName() = oso_object;
+      spec.SetObjectName(oso_object.str());
     } else {
       spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
     }
@@ -1640,6 +1646,18 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
     oso_dwarf.GetCompileOptions(args);
     return IterationAction::Continue;
   });
+}
+
+lldb::TypeSP
+SymbolFileDWARFDebugMap::GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+  lldb::TypeSP type;
+  ForEachSymbolFile("Looking up enclosing type for variable",
+                    [&](SymbolFileDWARF &oso_dwarf) {
+                      type = oso_dwarf.GetTypeEnclosingVariableUID(uid);
+                      return type ? IterationAction::Stop
+                                  : IterationAction::Continue;
+                    });
+  return type;
 }
 
 llvm::Expected<SymbolContext>

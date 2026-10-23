@@ -348,8 +348,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %h0:_(i16) = COPY $h0
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES %h0(i16), %h0(i16), %h0(i16), %h0(i16)
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[MV]](i64), 1
-    ; CHECK-NEXT: %extract:_(i16) = COPY [[EXTRACT]](s16)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(i16) = G_EXTRACT [[MV]](i64), 1
+    ; CHECK-NEXT: %extract:_(i16) = COPY [[EXTRACT]](i16)
     ; CHECK-NEXT: $h0 = COPY %extract(i16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %h0:_(i16) = COPY $h0
@@ -369,8 +369,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %h0:_(i16) = COPY $h0
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES %h0(i16), %h0(i16), %h0(i16), %h0(i16)
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[MV]](i64), 1
-    ; CHECK-NEXT: %extract:_(i32) = COPY [[EXTRACT]](s32)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(i32) = G_EXTRACT [[MV]](i64), 1
+    ; CHECK-NEXT: %extract:_(i32) = COPY [[EXTRACT]](i32)
     ; CHECK-NEXT: $w0 = COPY %extract(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %h0:_(i16) = COPY $h0

@@ -23,12 +23,9 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -135,8 +132,6 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   LLVMContext &C = M.getContext();
   auto [EntriesB, EntriesE] = EntryArray;
 
-  auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
-
   // Create initializer for the images array.
   SmallVector<Constant *, 4u> ImagesInits;
   ImagesInits.reserve(Bufs.size());
@@ -173,13 +168,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 
     auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
     auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
-    Constant *ZeroBegin[] = {Zero, Begin};
-    Constant *ZeroSize[] = {Zero, Size};
-
-    auto *ImageB =
-        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroBegin);
-    auto *ImageE =
-        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroSize);
+    auto *ImageB = ConstantExpr::getPtrAdd(Image, Begin);
+    auto *ImageE = ConstantExpr::getPtrAdd(Image, Size);
 
     ImagesInits.push_back(ConstantStruct::get(getDeviceImageTy(M), ImageB,
                                               ImageE, EntriesB, EntriesE));
@@ -654,11 +644,8 @@ public:
                                           : ".llvm.offloading");
 
     IntegerType *Int64Ty = Type::getInt64Ty(C);
-    Constant *Zero = ConstantInt::get(Int64Ty, 0);
     Constant *Size = ConstantInt::get(Int64Ty, Buffer.size());
-    Constant *Start = ConstantExpr::getGetElementPtr(
-        BinaryGV->getValueType(), BinaryGV, ArrayRef<Constant *>{Zero, Zero});
-    return {Start, Size};
+    return {BinaryGV, Size};
   }
 
   Function *createRegisterFatbinFunction(Constant *Start, Constant *Size) {
@@ -676,13 +663,25 @@ public:
     FunctionCallee RegFuncC =
         M.getOrInsertFunction("__sycl_register_lib", RegFuncTy);
 
+    FunctionType *AtExitTy =
+        FunctionType::get(Type::getInt32Ty(C), PtrTy, /*isVarArg=*/false);
+    FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+
+    Function *UnregFunc = createUnregisterFunction(Start, Size);
+
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
     Builder.CreateCall(RegFuncC, {Start, Size});
+
+    // Unregister with 'atexit'. The handler is installed after
+    // __sycl_register_lib has brought the runtime's own exit-time cleanup into
+    // the atexit chain, so it is ordered ahead of that cleanup.
+    Builder.CreateCall(AtExit, UnregFunc);
     Builder.CreateRetVoid();
 
     return Func;
   }
 
+private:
   Function *createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
@@ -705,7 +704,6 @@ public:
     return Func;
   }
 
-private:
   Module &M;
   LLVMContext &C;
   SYCLJITOptions Options;
@@ -753,20 +751,18 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
   return Error::success();
 }
 
-Error llvm::offloading::wrapSYCLBinaries(
-    llvm::Module &M, ArrayRef<char> Buffer, SYCLJITOptions Options,
-    bool IsFinalizedImage,
-    std::pair<Function *, Function *> *RegistrationFuncs) {
+Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
+                                         SYCLJITOptions Options,
+                                         bool IsFinalizedImage,
+                                         Function **RegistrationFunc) {
   SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
   Function *RegisterFunc = W.createRegisterFatbinFunction(Start, Size);
-  Function *UnregisterFunc = W.createUnregisterFunction(Start, Size);
-  if (RegistrationFuncs) {
-    *RegistrationFuncs = {RegisterFunc, UnregisterFunc};
+  if (RegistrationFunc) {
+    *RegistrationFunc = RegisterFunc;
     return Error::success();
   }
 
-  appendToGlobalCtors(M, RegisterFunc, /*Priority*/ 1);
-  appendToGlobalDtors(M, UnregisterFunc, /*Priority*/ 1);
+  appendToGlobalCtors(M, RegisterFunc, /*Priority=*/101);
   return Error::success();
 }

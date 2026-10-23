@@ -20,9 +20,12 @@ using namespace llvm;
 
 namespace {
 
-class LanaiCodeGenPassBuilder
-    : public CodeGenPassBuilder<LanaiCodeGenPassBuilder, LanaiTargetMachine> {
-  using Base = CodeGenPassBuilder<LanaiCodeGenPassBuilder, LanaiTargetMachine>;
+class LanaiCodeGenPassBuilder : public CodeGenPassBuilder {
+  using Base = CodeGenPassBuilder;
+
+  LanaiTargetMachine &getTM() const {
+    return static_cast<LanaiTargetMachine &>(TM);
+  }
 
 public:
   explicit LanaiCodeGenPassBuilder(LanaiTargetMachine &TM,
@@ -30,44 +33,43 @@ public:
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addPreSched2(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
+  void addIRPasses(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
+  void addPreSched2(PassManagerWrapper &PMW) override;
+  void addPreEmitPass(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
-void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
   Base::addIRPasses(PMW);
 }
 
-Error LanaiCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(LanaiISelDAGToDAGPass(TM), PMW);
+Error LanaiCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LanaiISelDAGToDAGPass(getTM()), PMW);
   return Error::success();
 }
 
-void LanaiCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LanaiMemAluCombinerPass(), PMW);
 }
 
-void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LanaiDelaySlotFillerPass(), PMW);
 }
 
-void LanaiCodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
   addModulePass(LanaiAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
-void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LanaiAsmPrinterPass(), PMW);
 }
 
-void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(LanaiAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 

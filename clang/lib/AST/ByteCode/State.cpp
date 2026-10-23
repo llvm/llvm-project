@@ -8,8 +8,7 @@
 
 #include "State.h"
 #include "Frame.h"
-#include "Program.h"
-#include "clang/AST/ASTContext.h"
+#include "Source.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/OptionalDiagnostic.h"
 
@@ -18,9 +17,11 @@ using namespace clang::interp;
 
 State::~State() {}
 
-bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
-  if (!Ctx.getLangOpts().MSVCCompat || !EvalStatus.ExtendedDiag)
+bool State::emitRelaxedDiag(SourceLocation Loc, diag::kind DiagId) {
+  if (!Ctx.getLangOpts().MSVCCompat ||
+      (!EvalStatus.ExtendedDiag && !InConstantContext))
     return false;
+
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
     addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_cast);
@@ -35,14 +36,14 @@ bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
 
 OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
                                  unsigned ExtraNotes) {
-  return diag(Loc, DiagId, ExtraNotes, false);
+  return diag(Loc, DiagId, ExtraNotes, /*IsFFDiag=*/true);
 }
 
 OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
                                  unsigned ExtraNotes) {
   EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
-    return diag(E->getExprLoc(), DiagId, ExtraNotes, false);
+    return diag(E->getExprLoc(), DiagId, ExtraNotes, /*IsFFDiag=*/true);
   setActiveDiagnostic(false);
   return OptionalDiagnostic();
 }
@@ -51,14 +52,14 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
                                  unsigned ExtraNotes) {
   EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
-    return diag(SI.getLoc(), DiagId, ExtraNotes, false);
+    return diag(SI.getLoc(), DiagId, ExtraNotes, /*IsFFDiag=*/true);
   setActiveDiagnostic(false);
   return OptionalDiagnostic();
 }
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
-  if (shouldRelaxDiag(Loc, DiagId)) {
+  if (emitRelaxedDiag(Loc, DiagId)) {
     setActiveDiagnostic(false);
     return OptionalDiagnostic();
   }
@@ -69,7 +70,7 @@ OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
     setActiveDiagnostic(false);
     return OptionalDiagnostic();
   }
-  return diag(Loc, DiagId, ExtraNotes, true);
+  return diag(Loc, DiagId, ExtraNotes, /*IsFFDiag=*/false);
 }
 
 OptionalDiagnostic State::CCEDiag(const Expr *E, diag::kind DiagId,
@@ -94,11 +95,6 @@ OptionalDiagnostic State::Note(SourceInfo SI, diag::kind DiagId) {
   return OptionalDiagnostic(&addDiag(SI.getLoc(), DiagId));
 }
 
-void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
-  if (hasActiveDiagnostic())
-    llvm::append_range(*EvalStatus.Diag, Diags);
-}
-
 DiagnosticBuilder State::report(SourceLocation Loc, diag::kind DiagId) {
   return Ctx.getDiagnostics().Report(Loc, DiagId);
 }
@@ -111,12 +107,14 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
 }
 
 void State::addExtendedDiag(SourceLocation Loc, diag::kind DiagId) {
+  if (!EvalStatus.ExtendedDiag)
+    return;
   PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
   EvalStatus.ExtendedDiag->push_back(std::make_pair(Loc, PD));
 }
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
-                               unsigned ExtraNotes, bool IsCCEDiag) {
+                               unsigned ExtraNotes, bool IsFFDiag) {
   if (EvalStatus.Diag) {
     if (hasPriorDiagnostic()) {
       return OptionalDiagnostic();
@@ -130,7 +128,7 @@ OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
       CallStackNotes = 0;
 
     setActiveDiagnostic(true);
-    setFoldFailureDiagnostic(!IsCCEDiag);
+    setFoldFailureDiagnostic(IsFFDiag);
     EvalStatus.Diag->clear();
     EvalStatus.Diag->reserve(1 + ExtraNotes + CallStackNotes);
     addDiag(Loc, DiagId);

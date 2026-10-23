@@ -57,7 +57,7 @@
 
 func.func private @printMemrefF32(memref<*xf32>)
 
-memref.global "private" @accShmem : memref<0xf32, 3> {alignment = 16 : i64}
+memref.global "private" @accShmem : memref<0xf32, 3> alignment = 16
 
 func.func @main() {
   // matrix A (128*64) * matrix B (64*128) * stages(2)

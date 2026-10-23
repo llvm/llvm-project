@@ -190,6 +190,11 @@ size_t PageSize() {
   return PageSizeCached;
 }
 
+#if !LIBFUZZER_APPLE
+// FuzzerUtilDarwin.cpp has its own implementation.
+void PlatformInit() {}
+#endif
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

@@ -11,30 +11,10 @@
 __attribute__((interrupt("qci-nest")))
 void foo_nest_interrupt(void) {}
 
-// CHECK-LABEL: @foo_nest_nest_interrupt() #0
-// CHECK: ret void
-__attribute__((interrupt("qci-nest", "qci-nest")))
-void foo_nest_nest_interrupt(void) {}
-
-// CHECK-LABEL: @foo_nest_nest_nest_interrupt() #0
-// CHECK: ret void
-__attribute__((interrupt("qci-nest", "qci-nest", "qci-nest")))
-void foo_nest_nest_nest_interrupt(void) {}
-
 // CHECK-LABEL: @foo_nonest_interrupt() #1
 // CHECK: ret void
 __attribute__((interrupt("qci-nonest")))
 void foo_nonest_interrupt(void) {}
-
-// CHECK-LABEL: @foo_nonest_nonest_interrupt() #1
-// CHECK: ret void
-__attribute__((interrupt("qci-nonest", "qci-nonest")))
-void foo_nonest_nonest_interrupt(void) {}
-
-// CHECK-LABEL: @foo_nonest_nonest_nonest_interrupt() #1
-// CHECK: ret void
-__attribute__((interrupt("qci-nonest", "qci-nonest", "qci-nonest")))
-void foo_nonest_nonest_nonest_interrupt(void) {}
 
 // CHECK: attributes #0
 // CHECK: "interrupt"="qci-nest"
@@ -56,10 +36,14 @@ __attribute__((interrupt("qci-nest", "qci-nonest"))) void foo_nest5(void) {} // 
 __attribute__((interrupt("qci-nest"))) void foo_nest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nest' requires extension 'Xqciint'}}
 __attribute__((interrupt("qci-nonest"))) void foo_nonest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nonest' requires extension 'Xqciint'}}
 
-__attribute__((interrupt("qci-nest", "qci-nest"))) void foo_nest_nest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nest' requires extension 'Xqciint'}}
-__attribute__((interrupt("qci-nonest", "qci-nonest"))) void foo_nonest_nonest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nonest' requires extension 'Xqciint'}}
-__attribute__((interrupt("qci-nest", "qci-nest", "qci-nest"))) void foo_nest_nest_nest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nest' requires extension 'Xqciint'}}
-__attribute__((interrupt("qci-nonest", "qci-nonest", "qci-nonest"))) void foo_nonest_nonest_nonest(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'qci-nonest' requires extension 'Xqciint'}}
+__attribute__((interrupt("qci-nest", "qci-nest"))) void foo_nest_nest(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'qci-nest' specified more than once}} \
+  // disabled-error {{RISC-V 'interrupt' attribute 'qci-nest' requires extension 'Xqciint'}}
+__attribute__((interrupt("qci-nonest", "qci-nonest"))) void foo_nonest_nonest(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'qci-nonest' specified more than once}} \
+  // disabled-error {{RISC-V 'interrupt' attribute 'qci-nonest' requires extension 'Xqciint'}}
+__attribute__((interrupt("qci-nest", "qci-nest", "qci-nest"))) void foo_nest_nest_nest(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'qci-nest' specified more than once}} \
+  // disabled-error {{RISC-V 'interrupt' attribute 'qci-nest' requires extension 'Xqciint'}}
+__attribute__((interrupt("qci-nonest", "qci-nonest", "qci-nonest"))) void foo_nonest_nonest_nonest(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'qci-nonest' specified more than once}} \
+  // disabled-error {{RISC-V 'interrupt' attribute 'qci-nonest' requires extension 'Xqciint'}}
 
 
 // This tests the errors for the qci interrupts when using
