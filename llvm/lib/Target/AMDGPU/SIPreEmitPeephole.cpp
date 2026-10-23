@@ -195,7 +195,8 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
                                       E = MBB.rend();
   bool ReadsCond = false;
   unsigned Threshold = 5;
-  for (++A; A != E; ++A) {
+  for (A = next_nodbg(A, E, /*SkipPseudoOp=*/false); A != E;
+       A = next_nodbg(A, E, /*SkipPseudoOp=*/false)) {
     if (!--Threshold)
       return false;
     if (A->modifiesRegister(ExecReg, TRI))

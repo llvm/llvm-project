@@ -56,6 +56,27 @@ body:             |
     S_ENDPGM 0
 ...
 ---
+# GCN-LABEL: name: and_execnz_imm_vccnz_debug
+# GCN-NOT: S_AND_
+# GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+name:            and_execnz_imm_vccnz_debug
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    DBG_VALUE
+    DBG_VALUE
+    DBG_VALUE
+    DBG_VALUE
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+---
 # GCN-LABEL: name: and_execz_imm_vccz_live_scc
 # GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
 # GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
