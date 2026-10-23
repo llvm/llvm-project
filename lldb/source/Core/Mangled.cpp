@@ -10,7 +10,6 @@
 
 #include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/DemangledNameInfo.h"
-#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataEncoder.h"
@@ -218,64 +217,6 @@ static char *GetDLangDemangledStr(llvm::StringRef M) {
   }
 
   return demangled_cstr;
-}
-
-// Explicit demangling for scheduled requests during batch processing. This
-// makes use of ItaniumPartialDemangler's rich demangle info
-bool Mangled::GetRichManglingInfo(RichManglingContext &context,
-                                  SkipMangledNameFn *skip_mangled_name) {
-  // Others are not meant to arrive here. ObjC names or C's main() for example
-  // have their names stored in m_demangled, while m_mangled is empty.
-  assert(m_mangled);
-
-  // Check whether or not we are interested in this name at all.
-  ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
-  if (skip_mangled_name && skip_mangled_name(m_mangled.GetStringRef(), scheme))
-    return false;
-
-  switch (scheme) {
-  case eManglingSchemeNone:
-    // The current mangled_name_filter would allow llvm_unreachable here.
-    return false;
-
-  case eManglingSchemeItanium:
-    // We want the rich mangling info here, so we don't care whether or not
-    // there is a demangled string in the pool already.
-    return context.FromItaniumName(m_mangled);
-
-  case eManglingSchemeMSVC: {
-    // We have no rich mangling for MSVC-mangled names yet, so first try to
-    // demangle it if necessary.
-    if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
-      if (char *d = GetMSVCDemangledStr(m_mangled)) {
-        // Without the rich mangling info we have to demangle the full name.
-        // Copy it to string pool and connect the counterparts to accelerate
-        // later access in GetDemangledName().
-        m_demangled.SetStringWithMangledCounterpart(llvm::StringRef(d),
-                                                    m_mangled);
-        ::free(d);
-      } else {
-        m_demangled.SetCString("");
-      }
-    }
-
-    if (m_demangled.IsEmpty()) {
-      // Cannot demangle it, so don't try parsing.
-      return false;
-    } else {
-      // Demangled successfully, we can try and parse it with
-      // CPlusPlusLanguage::CxxMethodName.
-      return context.FromCxxMethodName(m_demangled);
-    }
-  }
-
-  case eManglingSchemeRustV0:
-  case eManglingSchemeD:
-  case eManglingSchemeSwift:
-    // Rich demangling scheme is not supported
-    return false;
-  }
-  llvm_unreachable("Fully covered switch above!");
 }
 
 // Generate the demangled name on demand using this accessor. Code in this

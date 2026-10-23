@@ -153,7 +153,8 @@ TEST(MangledTest, BoolConversionOperator) {
 }
 
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
-  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab,
+                CPlusPlusLanguage>
       subsystems;
 
   auto ExpectedFile = TestFile::fromYaml(R"(
