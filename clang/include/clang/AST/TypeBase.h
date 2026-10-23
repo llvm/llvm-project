@@ -4650,10 +4650,7 @@ public:
     ID.AddInteger(TypeClass);
   }
 
-  static bool isValidElementType(QualType ElemTy) {
-    // OpenCL vector types are valid when their scalar element type is valid.
-    if (const auto *VT = ElemTy->getAs<VectorType>())
-      return isValidElementType(VT->getElementType());
+  static bool isValidOpenCLScalarType(QualType ElemTy) {
     return ElemTy->isSpecificBuiltinType(BuiltinType::Char_S) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::UChar) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::Short) ||
@@ -4665,6 +4662,13 @@ public:
            ElemTy->isSpecificBuiltinType(BuiltinType::Half) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::Float) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::Double);
+  }
+
+  static bool isValidOpenCLVectorType(QualType ElemTy) {
+    // OpenCL vector types are valid when their scalar element type is valid.
+    if (const auto *VT = ElemTy->getAs<VectorType>())
+      return isValidOpenCLScalarType(VT->getElementType());
+    return false;
   }
 
   bool isSugared() const { return false; }
