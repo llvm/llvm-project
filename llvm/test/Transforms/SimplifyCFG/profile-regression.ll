@@ -28,6 +28,24 @@ bbl2:
   ret ptr null
 }
 
+define i32 @test2(i1 %cond, i1 %sel_c, i32 %a, i32 %b) !prof !0 {
+; CHECK-LABEL: define i32 @test2(
+; CHECK-SAME: i1 [[COND:%.*]], i1 [[SEL_C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V1:%.*]] = select i1 [[SEL_C]], i32 [[A]], i32 [[B]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+if.true:
+  %v1 = select i1 %sel_c, i32 %a, i32 %b, !prof !2
+  ret i32 %v1
+if.false:
+  %v2 = select i1 %sel_c, i32 %a, i32 %b, !prof !3
+  ret i32 %v2
+}
+
+
 define i32 @test3(i1 %c, i1 %s, i32 %a, i32 %b) !prof !0 {
 ; CHECK-LABEL: define i32 @test3(
 ; CHECK-SAME: i1 [[C:%.*]], i1 [[S:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {

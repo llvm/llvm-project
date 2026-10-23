@@ -177,6 +177,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
+* Removed `TargetOptions::ExceptionModel`. The exception model should
+  be controlled by setting the `"exception-model"` module flag.
+
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
@@ -423,7 +426,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Deprecated `LLVMCreateBuilderInContext()` in favor of
   `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
-  `LLVMContextRef`.
+  `LLVMContextRef`. When using the old API, an insertion point (connected to a
+  module) must be set using a `LLVMPositionBuilder*()` API before building any
+  instructions, otherwise an error will be generated.
 
 ### Changes to the CodeGen infrastructure
 
