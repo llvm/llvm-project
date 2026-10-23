@@ -1103,10 +1103,15 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
 }
 
 llvm::SmallBitVector SubViewOp::getDroppedDims() {
-  MemRefType sourceType = getSourceType();
+  // Compute the dropped dims the same way as the verifier: from the
+  // non-rank-reduced result type, whose strides are the source strides
+  // multiplied by the subview strides.
+  MemRefType expectedType =
+      SubViewOp::inferResultType(getSourceType(), getStaticOffsets(),
+                                 getStaticSizes(), getStaticStrides());
   MemRefType resultType = getType();
   FailureOr<llvm::SmallBitVector> unusedDims =
-      computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
+      computeMemRefRankReductionMask(expectedType, resultType, getMixedSizes());
   assert(succeeded(unusedDims) && "unable to find unused dims of subview");
   return *unusedDims;
 }
