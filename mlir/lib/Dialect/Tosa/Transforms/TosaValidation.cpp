@@ -1408,6 +1408,34 @@ LogicalResult checkErrorIfSlice(Operation *op) {
            << ") which "
               "does not conform to the TOSA specification";
 
+  // ERROR_IF(any(start < 0))
+  if (hasStartValues &&
+      llvm::any_of(startValues, [](int64_t v) { return v < 0; }))
+    return op->emitOpError("start values must be non-negative, got [")
+           << startValues << "]";
+
+  // ERROR_IF(any(size <= 0))
+  if (hasSizeValues &&
+      llvm::any_of(sizeValues, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("size values must be > 0, got [")
+           << sizeValues << "]";
+
+  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
+  // get_innermost_block_size<in_out_t>() != 0)
+  if (hasStartValues) {
+    auto elemType = getElementTypeOrSelf(sliceOp.getInput1().getType());
+    if (auto blockScaledType = dyn_cast<BlockScaledType>(elemType)) {
+      const int64_t startBlock = startValues.back();
+      const int64_t scaleBlock =
+          BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+      if (startBlock % scaleBlock != 0)
+        return op->emitOpError(
+                   "expected start innermost block size to match data type "
+                   "for block scaled input, got start block=")
+               << startBlock << ", scale block=" << scaleBlock;
+    }
+  }
+
   return success();
 }
 
