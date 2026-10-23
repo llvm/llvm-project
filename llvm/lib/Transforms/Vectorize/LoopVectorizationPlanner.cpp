@@ -355,7 +355,8 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
     bool FoldTailByMasking, bool RequiresScalarEpilogue) {
-  auto [SmallestType, WidestType] = getSmallestAndWidestTypes();
+  auto [SmallestTypeForMaxBandwidth, WidestType] =
+      getTypeWidthsForVFSelection();
 
   // Get the maximum safe dependence distance in bits computed by LAA.
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
@@ -442,19 +443,20 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "LV: The Smallest and Widest types: " << SmallestType
-                    << " / " << WidestType << " bits.\n");
+  LLVM_DEBUG(dbgs() << "LV: The Smallest and Widest types: "
+                    << SmallestTypeForMaxBandwidth << " / " << WidestType
+                    << " bits.\n");
 
   FixedScalableVFPair Result(ElementCount::getFixed(1),
                              ElementCount::getScalable(0));
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestType, WidestType, MaxSafeFixedVF, UserIC,
-          FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, SmallestTypeForMaxBandwidth, WidestType, MaxSafeFixedVF,
+          UserIC, FoldTailByMasking, RequiresScalarEpilogue))
     Result.FixedVF = MaxVF;
 
   if (auto MaxVF = getMaximizedVFForTarget(
-          MaxTripCount, SmallestType, WidestType, MaxSafeScalableVF, UserIC,
-          FoldTailByMasking, RequiresScalarEpilogue))
+          MaxTripCount, SmallestTypeForMaxBandwidth, WidestType,
+          MaxSafeScalableVF, UserIC, FoldTailByMasking, RequiresScalarEpilogue))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -464,24 +466,25 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
   return Result;
 }
 
-std::pair<unsigned, unsigned>
-VFSelectionContext::getSmallestAndWidestTypes() const {
-  unsigned MinWidth = -1U;
+VFSelectionContext::VFSelectionTypeWidths
+VFSelectionContext::getTypeWidthsForVFSelection() const {
+  unsigned MinWidthForMaxBandwidth = -1U;
   unsigned MaxWidth = 8;
   const DataLayout &DL = F.getDataLayout();
 
   auto UpdateSmallestAndWidestSizes = [&](Type *T) {
-    // Skip `i1` types. i1 can be a legal (predicate) element type, but should
-    // not influence the VF chosen for a loop. Especially with maximize
-    // vector bandwidth enabled, where it could result in VFs much wider than
-    // a target's legal vectors being picked.
-    if (!T || T->isIntegerTy(1))
-      return;
-
-    MinWidth = std::min<unsigned>(
-        MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
     MaxWidth = std::max<unsigned>(
         MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
+
+    // Note: -vectorizer-maximize-bandwidth overrides the target preference.
+    if (!valueOr(Opts.vectorizer_maximize_bandwidth,
+                 TTI.shouldMaximizeVectorBandwidth(
+                     TargetTransformInfo::RGK_AnyVector, T)))
+      return;
+
+    MinWidthForMaxBandwidth = std::min<unsigned>(
+        MinWidthForMaxBandwidth,
+        DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
   };
 
   // For in-loop reductions, no element types are added to ElementTypesInLoop
@@ -494,7 +497,8 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
       // for casts on the input operands of the recurrence.
       for (Type *T : {RdxDesc.getRecurrenceType(),
                       RdxDesc.getMinWidthCastToRecurrenceType()})
-        UpdateSmallestAndWidestSizes(T);
+        if (T)
+          UpdateSmallestAndWidestSizes(T);
     }
   } else {
     for (Type *T : ElementTypesInLoop)
@@ -502,14 +506,14 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
   }
 
   // If the loop has no loads/stores or reductions (e.g. a search loop with an
-  // early exit), MinWidth is never updated and is left at its sentinel value.
-  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
-  // callers such as the max-bandwidth VF computation don't divide by the
-  // sentinel and collapse the VF to zero.
-  if (MinWidth == -1U)
-    MinWidth = MaxWidth;
+  // early exit), MinWidthForMaxBandwidth is never updated and is left at its
+  // sentinel value. Fall back to MaxWidth to keep the SmallestType <=
+  // WidestType invariant, so callers such as the max-bandwidth VF computation
+  // don't divide by the sentinel and collapse the VF to zero.
+  if (MinWidthForMaxBandwidth == -1U)
+    MinWidthForMaxBandwidth = MaxWidth;
 
-  return {MinWidth, MaxWidth};
+  return {MinWidthForMaxBandwidth, MaxWidth};
 }
 
 void VFSelectionContext::collectElementTypesForWidening(
@@ -789,7 +793,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
 
   ElementCount VF = UserVF;
   if (VF.isZero()) {
-    auto [_, WidestType] = getSmallestAndWidestTypes();
+    auto [_, WidestType] = getTypeWidthsForVFSelection();
 
     auto RegKind = TTI.enableScalableVectorization()
                        ? TargetTransformInfo::RGK_ScalableVector

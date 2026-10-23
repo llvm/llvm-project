@@ -1438,7 +1438,12 @@ public:
   LLVM_ABI InstructionCost
   getRegisterClassReloadCost(unsigned ClassID, TargetCostKind CostKind) const;
 
-  enum RegisterKind { RGK_Scalar, RGK_FixedWidthVector, RGK_ScalableVector };
+  enum RegisterKind {
+    RGK_Scalar,
+    RGK_FixedWidthVector,
+    RGK_ScalableVector,
+    RGK_AnyVector
+  };
 
   /// \return The width of the largest scalar or vector register type.
   LLVM_ABI TypeSize getRegisterBitWidth(RegisterKind K) const;
@@ -1457,7 +1462,8 @@ public:
   /// size of the widest element type.
   /// \p K Register Kind for vectorization.
   LLVM_ABI bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                Type *ElementTy = nullptr) const;
 
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
