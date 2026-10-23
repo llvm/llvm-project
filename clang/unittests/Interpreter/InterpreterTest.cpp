@@ -25,6 +25,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -586,7 +587,7 @@ TEST_F(InterpreterTest, SetOptLevel) {
   EXPECT_TRUE(F0->hasFnAttribute(llvm::Attribute::OptimizeNone));
 
   // A change only takes effect on the next parsed module.
-  Interp->setOptLevel(2);
+  cantFail(Interp->setOptLevel(2));
 
   auto &PTU1 = cantFail(Interp->Parse("extern \"C\" int f1() { return 1; }"));
   llvm::Function *F1 = PTU1.TheModule->getFunction("f1");
@@ -595,7 +596,7 @@ TEST_F(InterpreterTest, SetOptLevel) {
   EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::NoInline));
 
   // -Oz is level 2, size 2.
-  Interp->setOptLevel(2, 2);
+  cantFail(Interp->setOptLevel(2, 2));
 
   auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
   llvm::Function *F2 = PTU2.TheModule->getFunction("f2");
@@ -649,6 +650,41 @@ TEST_F(InterpreterTest, PragmaOptimizeLevel) {
                                       "extern \"C\" int f7() { return 7; }\n"
                                       "#pragma clang repl optimize(O2)\n"));
   EXPECT_TRUE(HasAttr(PTU6, "f6", llvm::Attribute::OptimizeNone));
+}
+
+TEST_F(InterpreterTest, SetOptLevelMatchesOptFlag) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  struct {
+    const char *Flag;
+    unsigned Level, Size;
+  } Levels[] = {{"-O2", 2, 0}, {"-O3", 3, 0}, {"-Os", 2, 1},
+                {"-Oz", 2, 2}, {"-O1", 1, 0}, {"-O0", 0, 0}};
+  for (const auto &L : Levels) {
+    cantFail(Interp->setOptLevel(L.Level, L.Size));
+    std::unique_ptr<Interpreter> Ref = createInterpreter({L.Flag});
+    const CodeGenOptions &Got = Interp->getCompilerInstance()->getCodeGenOpts();
+    const CodeGenOptions &Want = Ref->getCompilerInstance()->getCodeGenOpts();
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  EXPECT_EQ(Got.Name, Want.Name) << #Name << " at " << L.Flag;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  EXPECT_EQ(Got.get##Name(), Want.get##Name()) << #Name << " at " << L.Flag;
+#include "clang/Basic/CodeGenOptions.def"
+  }
+
+  // No -O flag sets level 3 with size 1.
+  EXPECT_THAT_ERROR(Interp->setOptLevel(3, 1), llvm::Failed());
+}
+
+TEST_F(InterpreterTest, SetOptLevelKeepsExplicitOptions) {
+  std::unique_ptr<Interpreter> Interp =
+      createInterpreter({"-O2", "-fno-vectorize"});
+  const CodeGenOptions &CGO = Interp->getCompilerInstance()->getCodeGenOpts();
+  for (unsigned Level : {3, 0, 2}) {
+    cantFail(Interp->setOptLevel(Level));
+    EXPECT_FALSE(CGO.VectorizeLoop);
+    EXPECT_EQ(CGO.VectorizeSLP, Level > 0);
+  }
 }
 
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
