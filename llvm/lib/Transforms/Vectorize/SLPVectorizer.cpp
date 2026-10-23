@@ -14473,9 +14473,10 @@ bool BoUpSLP::matchesInversedZExtSelect(
   auto MatchCmp = m_Cmp(Pred, m_Value(), m_Value());
   if (!match(Cmp, MatchCmp))
     return false;
-  CmpPredicate MainPred = Pred;
-  CmpPredicate InversedPred(CmpInst::getInversePredicate(Pred),
-                            Pred.hasSameSign());
+  // The vector compare keeps the main predicate, so only the lanes with
+  // samesign may match it with the flipped signedness.
+  CmpPredicate MainPred = Pred.dropSameSign();
+  CmpPredicate InversedPred = CmpInst::getInversePredicate(Pred);
   for (const auto [Idx, V] :
        make_filter_range(enumerate(CmpTE->Scalars), [&](const auto &P) {
          return match(P.value(), MatchCmp);
