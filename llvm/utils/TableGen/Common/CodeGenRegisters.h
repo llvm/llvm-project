@@ -526,6 +526,7 @@ public:
   // addSuperRegClass - Add a class containing only SubIdx super-registers.
   void addSuperRegClass(CodeGenSubRegIndex *SubIdx,
                         CodeGenRegisterClass *SuperRC) {
+    assert(SuperRC->CreationIndex != ~0u && "CreationIndex is not set");
     BitVector &Supers = SuperRegClasses[SubIdx];
     if (Supers.size() <= SuperRC->CreationIndex)
       Supers.resize(SuperRC->CreationIndex + 1);
