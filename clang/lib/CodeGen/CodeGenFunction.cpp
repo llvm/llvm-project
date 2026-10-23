@@ -29,7 +29,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -1735,53 +1734,6 @@ bool CodeGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
   return false;
 }
 
-/// containsBreak - Return true if the statement contains a break out of it.
-/// If the statement (recursively) contains a switch or loop with a break
-/// inside of it, this is fine.
-bool CodeGenFunction::containsBreak(const Stmt *S) {
-  // Null statement, not a label!
-  if (!S) return false;
-
-  // If this is a switch or loop that defines its own break scope, then we can
-  // include it and anything inside of it.
-  if (isa<SwitchStmt>(S) || isa<WhileStmt>(S) || isa<DoStmt>(S) ||
-      isa<ForStmt>(S))
-    return false;
-
-  if (isa<BreakStmt>(S))
-    return true;
-
-  // Scan subexpressions for verboten breaks.
-  for (const Stmt *SubStmt : S->children())
-    if (containsBreak(SubStmt))
-      return true;
-
-  return false;
-}
-
-bool CodeGenFunction::mightAddDeclToScope(const Stmt *S) {
-  if (!S) return false;
-
-  // Some statement kinds add a scope and thus never add a decl to the current
-  // scope. Note, this list is longer than the list of statements that might
-  // have an unscoped decl nested within them, but this way is conservatively
-  // correct even if more statement kinds are added.
-  if (isa<IfStmt>(S) || isa<SwitchStmt>(S) || isa<WhileStmt>(S) ||
-      isa<DoStmt>(S) || isa<ForStmt>(S) || isa<CompoundStmt>(S) ||
-      isa<CXXForRangeStmt>(S) || isa<CXXTryStmt>(S) ||
-      isa<ObjCForCollectionStmt>(S) || isa<ObjCAtTryStmt>(S))
-    return false;
-
-  if (isa<DeclStmt>(S))
-    return true;
-
-  for (const Stmt *SubStmt : S->children())
-    if (mightAddDeclToScope(SubStmt))
-      return true;
-
-  return false;
-}
-
 /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the boolean result in Result.
@@ -1795,32 +1747,17 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
       CGM.getCodeGenOpts().MCDCCoverage)
     return false;
 
-  llvm::APSInt ResultInt;
-  if (!ConstantFoldsToSimpleInteger(Cond, ResultInt, AllowLabels))
-    return false;
-
-  ResultBool = ResultInt.getBoolValue();
-  return true;
-}
-
-/// ConstantFoldsToSimpleInteger - If the specified expression does not fold
-/// to a constant, or if it does but contains a label, return false.  If it
-/// constant folds return true and set the folded value.
-bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
-                                                   llvm::APSInt &ResultInt,
-                                                   bool AllowLabels) {
   // FIXME: Rename and handle conversion of other evaluatable things
   // to bool.
   Expr::EvalResult Result;
   if (!Cond->EvaluateAsInt(Result, getContext()))
     return false;  // Not foldable, not integer or not fully evaluatable.
 
-  llvm::APSInt Int = Result.Val.getInt();
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
   PGO->markStmtMaybeUsed(Cond);
-  ResultInt = std::move(Int);
+  ResultBool = Result.Val.getInt().getBoolValue();
   return true;
 }
 

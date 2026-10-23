@@ -26,9 +26,15 @@ void a(int A, int B) {
 // CHECK: ], !dbg [[G4R1:!.*]]
     switch ((B)) {
         case 0: {
-// Test that assignments in constant-folded switches don't go missing.
 // CHECK-CXX: sw.bb2:
 // CHECK-CXX: store i32 1, ptr %C{{.*}}, !dbg [[G5R1:!.*]]
+// CHECK-CXX: switch i32 1, label %sw.default [
+// CHECK-CXX:   i32 0, label %sw.bb3
+// CHECK-CXX:   i32 1, label %sw.bb4
+// CHECK-CXX: ], !dbg [[G6R1:!.*]]
+// CHECK-CXX: br label %sw.epilog, !dbg [[G7R1:!.*]]
+// CHECK-CXX: br label %sw.epilog, !dbg [[G8R1:!.*]]
+// CHECK-CXX: br label %sw.epilog, !dbg [[G9R1:!.*]]
 #ifdef __cplusplus
             switch (const int C = 1; C) {
                 case 0: break;
@@ -50,5 +56,9 @@ void a(int A, int B) {
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK-CXX: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
-// CHECK-CXX: [[RET]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)
+// CHECK-CXX: [[G6R1]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)
+// CHECK-CXX: [[G7R1]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 1)
+// CHECK-CXX: [[G8R1]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 1)
+// CHECK-CXX: [[G9R1]] = !DILocation({{.*}}, atomGroup: 9, atomRank: 1)
+// CHECK-CXX: [[RET]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 1)
 // CHECK-C: [[RET]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
