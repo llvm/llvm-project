@@ -77,6 +77,7 @@ cc_library(
         "//mlir:MathToLibm",
         "//mlir:MathToNVVM",
         "//mlir:MathToROCDL",
+        "//mlir:MemRefToLLVM",
         "//mlir:NVVMDialect",
         "//mlir:OpenACCDialect",
         "//mlir:OpenMPDialect",
