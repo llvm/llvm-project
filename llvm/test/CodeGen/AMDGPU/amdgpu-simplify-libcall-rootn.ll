@@ -642,7 +642,7 @@ define float @test_rootn_f32__y_2_nsz_ninf(float %x) {
 ; CHECK-LABEL: define float @test_rootn_f32__y_2_nsz_ninf(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call ninf nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ninf nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -655,7 +655,7 @@ define float @test_rootn_f32__y_2_fpmath_3(float %x) {
 ; CHECK-LABEL: define float @test_rootn_f32__y_2_fpmath_3(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan nsz float @_Z5rootnfi(float [[X]], i32 2), !fpmath [[META2:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan nsz float @_Z5rootnfi(float [[X]], i32 2), !fpmath [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -922,7 +922,7 @@ define float @test_rootn_f32__y_neg2__nsz_ninf(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ninf nsz contract float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf nsz contract float 1.000000e+00, [[TMP0]], !fpmath [[META1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf nsz contract float 1.000000e+00, [[TMP0]], !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
@@ -1960,10 +1960,8 @@ attributes #0 = { nobuiltin }
 attributes #1 = { strictfp }
 attributes #2 = { noinline }
 
-!llvm.module.flags = !{!1}
 
 !0 = !{float 3.0}
-!1 = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
 
 ;.
 ; PRELINK: attributes #[[ATTR0]] = { strictfp }
@@ -1978,11 +1976,9 @@ attributes #2 = { noinline }
 ; NOPRELINK: attributes #[[ATTR3]] = { noinline }
 ; NOPRELINK: attributes #[[ATTR4]] = { nobuiltin }
 ;.
-; PRELINK: [[META0:![0-9]+]] = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
-; PRELINK: [[META1]] = !{float 2.000000e+00}
-; PRELINK: [[META2]] = !{float 3.000000e+00}
+; PRELINK: [[META0]] = !{float 2.000000e+00}
+; PRELINK: [[META1]] = !{float 3.000000e+00}
 ;.
-; NOPRELINK: [[META0:![0-9]+]] = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
-; NOPRELINK: [[META1]] = !{float 2.000000e+00}
-; NOPRELINK: [[META2]] = !{float 3.000000e+00}
+; NOPRELINK: [[META0]] = !{float 2.000000e+00}
+; NOPRELINK: [[META1]] = !{float 3.000000e+00}
 ;.
