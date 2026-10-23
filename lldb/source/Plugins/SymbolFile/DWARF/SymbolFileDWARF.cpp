@@ -19,6 +19,7 @@
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/Module.h"
@@ -316,7 +317,9 @@ struct lldb_private::plugin::dwarf::StandaloneDWARFLineTableInfo {
     explicit LineTableEntry(uint64_t offset) : offset(offset) {}
 
     uint64_t offset;
-    bool parsed = false;
+    bool prologue_parsed = false;
+    std::optional<llvm::DWARFDebugLine::Prologue> prologue;
+    bool line_table_parsed = false;
     std::optional<llvm::DWARFDebugLine::LineTable> line_table;
   };
 
@@ -326,7 +329,7 @@ struct lldb_private::plugin::dwarf::StandaloneDWARFLineTableInfo {
   llvm::once_flag aranges_once_flag;
   DWARFDebugAranges aranges;
 
-  bool HasLineTables();
+  bool HasLineTables() const { return !line_tables.empty(); }
   uint32_t CalculateNumCompileUnits() const;
   CompUnitSP ParseCompileUnitAtIndex(uint32_t cu_idx);
   bool ParseLineTable(CompileUnit &comp_unit);
@@ -335,12 +338,17 @@ struct lldb_private::plugin::dwarf::StandaloneDWARFLineTableInfo {
                                 SymbolContext &sc);
 
   const llvm::DWARFDebugLine::LineTable *GetLineTable(uint32_t cu_idx);
+  const llvm::DWARFDebugLine::Prologue *GetPrologue(uint32_t cu_idx);
 
   const DWARFDebugAranges &GetAranges(lldb::addr_t first_code_address);
 
 private:
+  std::optional<llvm::DWARFDebugLine::Prologue>
+  ParsePrologueAtOffset(uint64_t offset);
   std::optional<llvm::DWARFDebugLine::LineTable>
   ParseLineTableAtOffset(uint64_t offset);
+  std::optional<llvm::DWARFAddressRangesVector>
+  ParseSequenceRangesAtOffset(uint64_t offset);
 
   SymbolFileDWARF &m_symfile;
 };
@@ -353,9 +361,9 @@ ConvertLineTable(CompileUnit &comp_unit,
   // The Sequences view contains only valid line sequences. Don't iterate over
   // the Rows directly.
   for (const llvm::DWARFDebugLine::Sequence &seq : line_table.Sequences) {
-    // Ignore line sequences that do not start after the first code address.
-    // All addresses generated in a sequence are incremental so we only need
-    // to check the first one of the sequence.
+    // Ignore line sequences that start before the first code address.
+    // Addresses within a sequence are monotonically increasing, so checking
+    // LowPC is sufficient.
     if (seq.LowPC < first_code_address)
       continue;
     LineTable::Sequence sequence;
@@ -380,19 +388,70 @@ StandaloneDWARFLineTableInfo::StandaloneDWARFLineTableInfo(
   if (line_data.getData().empty())
     return;
 
+  auto get_contribution_end = [&](uint64_t offset) -> std::optional<uint64_t> {
+    llvm::DataExtractor::Cursor cursor(offset);
+    uint64_t length = line_data.getInitialLength(cursor).first;
+    if (!cursor) {
+      llvm::consumeError(cursor.takeError());
+      return std::nullopt;
+    }
+    if (length == 0 ||
+        !line_data.isValidOffsetForDataOfSize(cursor.tell(), length))
+      return std::nullopt;
+    return cursor.tell() + length;
+  };
+
+  uint64_t offset = 0;
+  while (std::optional<uint64_t> end = get_contribution_end(offset)) {
+    line_tables.emplace_back(offset);
+    if (*end == line_data.size())
+      break;
+
+    // Match DWARFDebugLine::SectionParser::moveToNextTable, which accepts the
+    // 4- or 8-byte alignment padding emitted by the ARM C/C++ Compiler. See
+    // llvm/test/tools/llvm-dwarfdump/ARM/aligned_line_tables.s.
+    std::optional<uint64_t> next_offset;
+    if (get_contribution_end(*end))
+      next_offset = *end;
+    for (unsigned alignment : {4, 8}) {
+      if (next_offset)
+        break;
+      uint64_t candidate = llvm::alignTo(*end, alignment);
+      if (candidate != *end && candidate < line_data.size() &&
+          get_contribution_end(candidate))
+        next_offset = candidate;
+    }
+    if (!next_offset)
+      break;
+    offset = *next_offset;
+  }
+}
+
+std::optional<llvm::DWARFDebugLine::Prologue>
+StandaloneDWARFLineTableInfo::ParsePrologueAtOffset(uint64_t offset) {
+  llvm::DWARFDataExtractor line_data =
+      m_symfile.m_context.getOrLoadLineData().GetAsLLVMDWARF();
+  line_data.setAddressSize(0);
   llvm::DWARFContext &context = m_symfile.m_context.GetAsLLVM();
-  llvm::DWARFDebugLine::SectionParser parser(line_data, context,
-                                             context.normal_units());
   Log *log = GetLog(DWARFLog::DebugInfo);
-  auto error_handler = [&](llvm::Error error) {
+  auto recoverable = [&](llvm::Error error) {
     LLDB_LOG_ERROR(log, std::move(error),
                    "SymbolFileDWARF failed to parse standalone line "
                    "table prologue: {0}");
   };
-  while (!parser.done()) {
-    line_tables.emplace_back(parser.getOffset());
-    parser.skip(error_handler, error_handler);
+
+  llvm::DWARFDebugLine::Prologue prologue;
+  if (llvm::Error error =
+          prologue.parse(line_data, &offset, recoverable, context, nullptr)) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "SymbolFileDWARF failed to parse standalone line "
+                   "table prologue: {0}");
+    return std::nullopt;
   }
+  if (!SymbolFileDWARF::SupportedVersion(prologue.getVersion()) ||
+      prologue.FileNames.empty())
+    return std::nullopt;
+  return prologue;
 }
 
 std::optional<llvm::DWARFDebugLine::LineTable>
@@ -425,25 +484,64 @@ StandaloneDWARFLineTableInfo::ParseLineTableAtOffset(uint64_t offset) {
   return line_table;
 }
 
+std::optional<llvm::DWARFAddressRangesVector>
+StandaloneDWARFLineTableInfo::ParseSequenceRangesAtOffset(uint64_t offset) {
+  llvm::DWARFDataExtractor line_data =
+      m_symfile.m_context.getOrLoadLineData().GetAsLLVMDWARF();
+  line_data.setAddressSize(0);
+  llvm::DWARFContext &context = m_symfile.m_context.GetAsLLVM();
+  Log *log = GetLog(DWARFLog::DebugInfo);
+  auto recoverable = [&](llvm::Error error) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "SymbolFileDWARF failed to parse standalone line "
+                   "table ranges: {0}");
+  };
+
+  llvm::DWARFDebugLine::LineTable line_table;
+  llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+      line_table.parseSequenceRanges(line_data, &offset, context, nullptr,
+                                     recoverable);
+  if (!ranges) {
+    LLDB_LOG_ERROR(log, ranges.takeError(),
+                   "SymbolFileDWARF failed to parse standalone line "
+                   "table ranges: {0}");
+    return std::nullopt;
+  }
+  if (!SymbolFileDWARF::SupportedVersion(line_table.Prologue.getVersion()) ||
+      line_table.Prologue.FileNames.empty())
+    return std::nullopt;
+  return std::move(*ranges);
+}
+
+const llvm::DWARFDebugLine::Prologue *
+StandaloneDWARFLineTableInfo::GetPrologue(uint32_t cu_idx) {
+  if (cu_idx >= line_tables.size())
+    return nullptr;
+  LineTableEntry &entry = line_tables[cu_idx];
+  if (entry.line_table)
+    return &entry.line_table->Prologue;
+  if (!entry.prologue_parsed) {
+    entry.prologue = ParsePrologueAtOffset(entry.offset);
+    entry.prologue_parsed = true;
+  }
+  return entry.prologue ? &*entry.prologue : nullptr;
+}
+
 const llvm::DWARFDebugLine::LineTable *
 StandaloneDWARFLineTableInfo::GetLineTable(uint32_t cu_idx) {
   if (cu_idx >= line_tables.size())
     return nullptr;
   LineTableEntry &entry = line_tables[cu_idx];
-  if (!entry.parsed) {
+  if (!entry.line_table_parsed) {
     if (std::optional<llvm::DWARFDebugLine::LineTable> line_table =
-            ParseLineTableAtOffset(entry.offset))
+            ParseLineTableAtOffset(entry.offset)) {
       entry.line_table.emplace(std::move(*line_table));
-    entry.parsed = true;
+      entry.prologue.reset();
+      entry.prologue_parsed = true;
+    }
+    entry.line_table_parsed = true;
   }
   return entry.line_table ? &*entry.line_table : nullptr;
-}
-
-bool StandaloneDWARFLineTableInfo::HasLineTables() {
-  for (uint32_t cu_idx = 0; cu_idx < line_tables.size(); ++cu_idx)
-    if (GetLineTable(cu_idx))
-      return true;
-  return false;
 }
 
 const DWARFDebugAranges &
@@ -451,27 +549,24 @@ StandaloneDWARFLineTableInfo::GetAranges(lldb::addr_t first_code_address) {
   llvm::call_once(aranges_once_flag, [&] {
     for (uint32_t cu_idx = 0; cu_idx < line_tables.size(); ++cu_idx) {
       LineTableEntry &entry = line_tables[cu_idx];
-      // LLVM currently creates rows while discovering sequences. Parse into a
-      // temporary table so address lookup does not retain every table's rows.
-      std::optional<llvm::DWARFDebugLine::LineTable> temporary_line_table;
-      const llvm::DWARFDebugLine::LineTable *line_table;
-      if (entry.parsed) {
+      if (entry.line_table_parsed) {
         if (!entry.line_table)
           continue;
-        line_table = &*entry.line_table;
-      } else {
-        std::optional<llvm::DWARFDebugLine::LineTable> parsed_line_table =
-            ParseLineTableAtOffset(entry.offset);
-        if (!parsed_line_table) {
-          entry.parsed = true;
-          continue;
+        for (const llvm::DWARFDebugLine::Sequence &seq :
+             entry.line_table->Sequences) {
+          if (seq.isValid() && seq.LowPC >= first_code_address)
+            aranges.AppendRange(cu_idx, seq.LowPC, seq.HighPC);
         }
-        temporary_line_table.emplace(std::move(*parsed_line_table));
-        line_table = &*temporary_line_table;
+        continue;
       }
-      for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
-        if (seq.isValid() && seq.LowPC >= first_code_address)
-          aranges.AppendRange(cu_idx, seq.LowPC, seq.HighPC);
+
+      std::optional<llvm::DWARFAddressRangesVector> ranges =
+          ParseSequenceRangesAtOffset(entry.offset);
+      if (!ranges)
+        continue;
+      for (const llvm::DWARFAddressRange &range : *ranges) {
+        if (range.LowPC >= first_code_address)
+          aranges.AppendRange(cu_idx, range.LowPC, range.HighPC);
       }
     }
     aranges.Sort(/*minimize=*/true);
@@ -485,19 +580,19 @@ uint32_t StandaloneDWARFLineTableInfo::CalculateNumCompileUnits() const {
 
 CompUnitSP
 StandaloneDWARFLineTableInfo::ParseCompileUnitAtIndex(uint32_t cu_idx) {
-  const llvm::DWARFDebugLine::LineTable *line_table = GetLineTable(cu_idx);
-  if (!line_table)
+  const llvm::DWARFDebugLine::Prologue *prologue = GetPrologue(cu_idx);
+  if (!prologue)
     return {};
 
   SupportFileList support_files;
   ParseSupportFilesFromPrologue(
-      support_files, m_symfile.m_objfile_sp->GetModule(), line_table->Prologue,
+      support_files, m_symfile.m_objfile_sp->GetModule(), *prologue,
       m_symfile.m_objfile_sp->GetFileSpec().GetPathStyle());
 
   // DWARF v5 guarantees that file index zero names the primary source file.
   // Earlier versions are one-based and have no explicit primary-file field;
   // use the first file in the table as the best available fallback.
-  const size_t primary_file_idx = line_table->Prologue.getVersion() < 5 ? 1 : 0;
+  const size_t primary_file_idx = prologue->getVersion() < 5 ? 1 : 0;
   SupportFileNSP primary_file =
       support_files.GetSupportFileAtIndex(primary_file_idx);
 
