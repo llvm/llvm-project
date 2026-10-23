@@ -1281,6 +1281,7 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   }
 }
 
+#if 1// <<<<<<< HEAD
 int GenericPluginTy::number_of_team_procs(int DeviceId) {
   auto T = logger::log<int>(__func__, DeviceId);
   auto R = [&]() { return getDevice(DeviceId).getNumComputeUnits(); }();
@@ -1326,6 +1327,7 @@ int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
   return R;
 }
 
+#endif//>>>>>>> 41332490797d
 int32_t GenericPluginTy::initialize_record_replay(
     int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
     bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
@@ -1385,6 +1387,7 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
   return R;
 }
 
+#if 0//<<<<<<< HEAD
 int32_t GenericPluginTy::data_submit(int32_t DeviceId, void *TgtPtr,
                                      void *HstPtr, int64_t Size) {
   auto T = logger::log<int32_t>(__func__, DeviceId, TgtPtr, HstPtr, Size);
@@ -1475,7 +1478,7 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
   T.res(R);
   return R;
 }
-
+#endif//
 int32_t GenericPluginTy::launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,
                                             KernelLaunchArgsTy &LaunchArgs) {
   auto T = logger::log<int32_t>(__func__, DeviceId, TgtEntryPtr, &LaunchArgs);
