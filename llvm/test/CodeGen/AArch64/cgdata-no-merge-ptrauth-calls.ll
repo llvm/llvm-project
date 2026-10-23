@@ -4,18 +4,14 @@
 ; with no ptrauth bundle. Differences elsewhere, and callee differences in
 ; functions without the attribute, still merge.
 
-; RUN: opt -mtriple=arm64e-apple-darwin -S --passes=global-merge-func %s | FileCheck %s
-; RUN: llc -mtriple=arm64e-apple-darwin -enable-global-merge-func=true < %s | FileCheck %s --check-prefix=ASM
+; RUN: opt -mtriple=arm64e-apple-darwin -S --passes=global-merge-func %s | FileCheck %s --implicit-check-not=f1.Tgm --implicit-check-not=f2.Tgm
+; RUN: llc -mtriple=arm64e-apple-darwin -enable-global-merge-func=true < %s | FileCheck %s --check-prefix=ASM --implicit-check-not=f1.Tgm --implicit-check-not=f2.Tgm
 
-; CHECK-NOT: @f1.Tgm
-; CHECK-NOT: @f2.Tgm
 ; CHECK: define internal i32 @f3.Tgm(i32 %0, ptr %1)
 ; CHECK: define internal i32 @f4.Tgm(i32 %0, ptr %1)
 ; CHECK: define internal i32 @f5.Tgm(i32 %0, ptr %1)
 ; CHECK: define internal i32 @f6.Tgm(i32 %0, ptr %1)
 
-; ASM-NOT: _f1.Tgm
-; ASM-NOT: _f2.Tgm
 ; ASM: _f3.Tgm
 ; ASM: _f4.Tgm
 ; ASM: _f5.Tgm
