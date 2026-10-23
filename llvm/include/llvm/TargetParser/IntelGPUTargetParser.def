@@ -48,7 +48,7 @@
 //     NAME              - Name of the IGCA target, e.g. "igca_15ra". Name must
 //                         agree with the other columns.
 //     TARGET            - Numeric IGCA target level, e.g. 60.
-//     FEATURE_SET       - Feature set of the current target, i.e. "Compute" for
+//     FEATURE_SET       - Feature set of the current target, e.g. "Compute" for
 //                         "c" suffix, "Render" for "r", "ComputeExact" for
 //                         "ca", "Core" for "", etc.
 //

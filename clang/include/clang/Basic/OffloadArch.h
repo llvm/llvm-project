@@ -90,11 +90,11 @@ public:
   bool isAMDGCNSPIRV() const { return V == TargetArch::AMDGCNSPIRV; }
   bool isIntelCPU() const { return V == TargetArch::IntelCPU; }
   bool isIntelGPU() const { return V == TargetArch::IntelGPU; }
+  bool isIntelIGCA() const { return V == TargetArch::IntelIGCA; }
   bool isIntel() const { return isIntelCPU() || isIntelGPU() || isIntelIGCA(); }
   bool isGeneric() const { return V == TargetArch::Generic; }
   bool isUnused() const { return V == TargetArch::Unused; }
   bool isUnknown() const { return V == TargetArch::Unknown; }
-  bool isIntelIGCA() const { return V == TargetArch::IntelIGCA; }
 
   // Only valid when isNVPTX() / isAMDGPU() / isIntelIGCA() respectively.
   llvm::NVPTX::GPUKind nvptxKind() const {

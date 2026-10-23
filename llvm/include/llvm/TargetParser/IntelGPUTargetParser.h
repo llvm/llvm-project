@@ -166,7 +166,7 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 ///
 /// \return an invalid IGCATarget if \p TargetStr is not a known target in
 /// IntelGPUTargetParser.def.
-LLVM_ABI IGCATarget parseIGCATarget(StringRef TargetStr);
+LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 
 /// \return the \p Target as a string, i.e. "igca_20ca", or an empty string if
 /// \p Target is invalid or not a known target in IntelGPUTargetParser.def.

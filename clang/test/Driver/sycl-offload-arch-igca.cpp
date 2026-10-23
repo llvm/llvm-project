@@ -12,8 +12,16 @@
 // CHK-INVALID: error: unsupported IGCA gpu architecture: igca_42a
 // CHK-INVALID-NOT: llvm-offload-binary
 
-/// FIXME(IGCA): Enable this when OffloadArchToTriple gives IGCA targets a triple.
-// TODO-RUN %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// TODO-RUN   --offload-arch=igca_20ca -c %s 2>&1 | FileCheck -check-prefix=CHK-INFER %s
-// CHK-INFER-NOT: error:
-// CHK-INFER: llvm-offload-binary{{.*}} "--image=file={{.*}}.bc,triple=spirv64{{[^,]*}},arch=igca_20ca,kind=sycl"
+/// A valid IGCA target is still rejected on NVPTX and AMDGPU device triples,
+/// with the existing CUDA/HIP diagnostic:
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=nvptx64-nvidia-cuda --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-NVPTX %s
+// CHK-NVPTX: error: unsupported CUDA gpu architecture: igca_20ca
+// CHK-NVPTX-NOT: llvm-offload-binary
+
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=amdgcn-amd-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
+// CHK-AMDGPU: error: unsupported HIP gpu architecture: igca_20ca
+// CHK-AMDGPU-NOT: llvm-offload-binary
