@@ -24,6 +24,8 @@
 #define LLVM_CODEGEN_LIVEREGMATRIX_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <memory>
@@ -40,12 +42,27 @@ class VirtRegMap;
 class LiveRegMatrix {
   friend class LiveRegMatrixWrapperLegacy;
   friend class LiveRegMatrixAnalysis;
+
+public:
+  using UnassignListenerFn = void (*)(void *Ctx, const LiveInterval &LI,
+                                      MCRegister PhysReg,
+                                      bool ClearAllReferencingSegments);
+
+private:
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
 
   // UserTag changes whenever virtual registers have been modified.
   unsigned UserTag = 0;
+
+  struct UnassignListener {
+    UnassignListenerFn Fn = nullptr;
+    void *Ctx = nullptr;
+  };
+  /// Every live advisor registers one. MLEvictAdvisor embeds a
+  /// DefaultEvictionAdvisor, so more than one cache must observe unassigns.
+  SmallVector<UnassignListener, 2> UnassignListeners;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
   std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
@@ -92,6 +109,25 @@ public:
   /// live ranges. Interference checks may return stale information unless
   /// caches are invalidated.
   void invalidateVirtRegs() { ++UserTag; }
+
+  /// Called at the end of every unassign. \p Ctx identifies the registration.
+  /// Adds a listener, or replaces the one already registered with \p Ctx.
+  /// Several may be active: a nested advisor must not drop the outer cache.
+  void setUnassignListener(UnassignListenerFn Fn, void *Ctx) {
+    for (UnassignListener &L : UnassignListeners) {
+      if (L.Ctx == Ctx) {
+        L.Fn = Fn;
+        return;
+      }
+    }
+    UnassignListeners.push_back({Fn, Ctx});
+  }
+
+  /// Remove the listener registered with \p Ctx.
+  void clearUnassignListener(void *Ctx) {
+    llvm::erase_if(UnassignListeners,
+                   [Ctx](const UnassignListener &L) { return L.Ctx == Ctx; });
+  }
 
   enum InterferenceKind {
     /// No interference, go ahead and assign.
