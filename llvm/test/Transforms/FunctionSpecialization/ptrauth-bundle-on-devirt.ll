@@ -37,9 +37,13 @@ define void @caller_call_b() {
   ret void
 }
 
-;; .specialized.N suffix is traversal-order-dependent; just check both exist.
-; CHECK-DAG: @helper_call.specialized
-; CHECK-DAG: @helper_call.specialized
+;; .specialized.N suffix is traversal-order-dependent, so match any N. The
+;; CHECK-DAG lines in this file are one group and their matches cannot overlap,
+;; so each repeated line needs its own clone.
+; CHECK-DAG: define internal void @helper_call.specialized.{{[0-9]+}}(
+; CHECK-DAG: define internal void @helper_call.specialized.{{[0-9]+}}(
+; CHECK-DAG: call void @callee1() [ "ptrauth"(i32 0, i64 0) ]
+; CHECK-DAG: call void @callee2() [ "ptrauth"(i32 0, i64 0) ]
 
 ;; Invoke form: same shape with an unwind edge.
 
@@ -68,8 +72,10 @@ define void @caller_invoke_b() {
   ret void
 }
 
-; CHECK-DAG: @helper_invoke.specialized
-; CHECK-DAG: @helper_invoke.specialized
+; CHECK-DAG: define internal void @helper_invoke.specialized.{{[0-9]+}}(
+; CHECK-DAG: define internal void @helper_invoke.specialized.{{[0-9]+}}(
+; CHECK-DAG: invoke void @callee1() [ "ptrauth"(i32 0, i64 0) ]
+; CHECK-DAG: invoke void @callee2() [ "ptrauth"(i32 0, i64 0) ]
 
 ;; Mixed form: bundle on a still-indirect call must be preserved.
 
@@ -91,10 +97,11 @@ define void @caller_mixed_b() {
   ret void
 }
 
-; CHECK-DAG: @helper_mixed.specialized
-; CHECK-DAG: @helper_mixed.specialized
+; CHECK-DAG: define internal void @helper_mixed.specialized.{{[0-9]+}}(
+; CHECK-DAG: define internal void @helper_mixed.specialized.{{[0-9]+}}(
+; CHECK-DAG: call void @callee1() [ "ptrauth"(i32 0, i64 0) ]
+; CHECK-DAG: call void @callee2() [ "ptrauth"(i32 0, i64 0) ]
 
 ;; The still-indirect call in each mixed clone retains its ptrauth bundle.
-;; (The devirtualized direct call's bundle is dropped from this CHECK
-;; pattern by the `%{{.*}}` matcher — direct calls use `@name`, not `%reg`.)
-; CHECK-COUNT-2: call void %{{.*}}() [ "ptrauth"(i32 0, i64 0) ]
+; CHECK-DAG: call void %loaded() [ "ptrauth"(i32 0, i64 0) ]
+; CHECK-DAG: call void %loaded() [ "ptrauth"(i32 0, i64 0) ]
