@@ -84,9 +84,6 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
              getTargetTriple().getDefaultExceptionHandling() &&
          "MCAsmInfo and Triple disagree on default exception handling type");
 
-  if (Options.ExceptionModel != ExceptionHandling::Default)
-    TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
-
   AsmInfo.reset(TmpAsmInfo);
 }
 

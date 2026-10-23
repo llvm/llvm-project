@@ -211,6 +211,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/inotify.h entrypoints
     libc.src.sys.inotify.inotify_add_watch
     libc.src.sys.inotify.inotify_init
@@ -753,6 +756,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
+      libc.src.unistd.setresgid
+      libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
     )
