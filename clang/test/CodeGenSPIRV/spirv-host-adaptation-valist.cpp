@@ -5,8 +5,9 @@
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=WINDOWS %s
 
-/// The sycl_external attribute is ignored for a variadic function, so 'f' is
-/// emitted because 'g' references it.
+// SYCL 2020 section 5.4, "Language restrictions for device functions", prohibits
+// calls to variadic functions in device code, but doesn't prohibit other ODR-uses.
+// Function f() is emitted during device compilation due to the ODR-use in g().
 int f(int n, ...) {
   __builtin_va_list ap1, ap2;
   __builtin_va_start(ap1, n);

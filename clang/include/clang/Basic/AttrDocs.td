@@ -624,9 +624,9 @@ following requirements:
 The attribute shall be present on the first declaration of a function and
 may optionally be present on subsequent declarations.
 
-The attribute is ignored, with a warning, when applied to a variadic function.
-A variadic function cannot be called from device code, so there is no reason to
-emit device code for one.
+SYCL prohibits calls to a variadic function in device functions. Since there is
+little reason to emit a function that cannot be called, the attribute is ignored,
+with a warning, when applied to a variadic function.
 
 When compiling for a SYCL device target that does not support the generic
 address space, the function shall not specify a raw pointer or reference type
@@ -642,9 +642,9 @@ The following examples demonstrate the use of this attribute:
 [[clang::sycl_external]] extern void Baz(); // Ok.
 
 [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
-```
 
-  [[clang::sycl_external]] void Corge(int, ...); // warning: attribute ignored;  Corge() is variadic.
+[[clang::sycl_external]] void Corge(int, ...); // warning: attribute ignored;  Corge() is variadic.
+```
 
   }];
 }
