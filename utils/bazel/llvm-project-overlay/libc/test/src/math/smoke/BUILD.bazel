@@ -499,7 +499,13 @@ math_test(name = "erfcf16")
 
 math_test(name = "erff16")
 
-math_test(name = "exp")
+math_test(
+    name = "exp",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp_double_eval",
+    ],
+)
 
 math_test(
     name = "expf",

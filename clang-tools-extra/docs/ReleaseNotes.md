@@ -334,6 +334,10 @@ infrastructure are described first, followed by tool-specific sections.
   warning when returning a variable captured by a lambda or a block, which is
   never implicitly moved from.
 
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
