@@ -554,8 +554,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     std::swap(hashes, nextHashes);
   }
 
-  // Order sections so that those in the same equivalence class are
-  // consecutive.
+  // Order sections so that those in the same equivalence class are consecutive.
   SmallVector<uint64_t, 0> keys;
   keys.resize_for_overwrite(numSections);
   parallelFor(0, numSections, [&](size_t i) {
