@@ -11,7 +11,7 @@
 // the result of rematerialization, while the addresses are redundant frame
 // addressing anchor points created during Frame Indices elimination.
 //
-// Reloads of non-fixed spill slots are handled as well: these slots do not
+// Reloads of spill slots are handled as well: these slots do not
 // alias IR values, so an earlier reload can be reused as long as nothing in
 // between may have written to that same slot.
 //
@@ -176,9 +176,9 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
 }
 
 // Return true if MI reloads a non-fixed spill slot and does not store.
-static bool isNonFixedSpillSlotReload(const MachineInstr &MI,
-                                      const TargetInstrInfo &TII,
-                                      const MachineFrameInfo &MFI) {
+static bool isSpillSlotReload(const MachineInstr &MI,
+                              const TargetInstrInfo &TII,
+                              const MachineFrameInfo &MFI) {
   if (MI.mayStore() || !MI.hasOneMemOperand())
     return false;
   int FI;
@@ -210,7 +210,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   // for a spill-slot reload, where only a write to the same slot matters and
   // processBlock() already drops the reload as soon as it sees one. Clear
   // SawStore for those reloads to defer to that finer check.
-  bool SawStore = !isNonFixedSpillSlotReload(*MI, TII, MFI);
+  bool SawStore = !isSpillSlotReload(*MI, TII, MFI);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -273,7 +273,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
                         << printMBBReference(*MBB) << ":  " << MI);
-      if (isNonFixedSpillSlotReload(MI, TII, MFI))
+      if (isSpillSlotReload(MI, TII, MFI))
         ++NumSpillSlotReloadsRemoved;
       removeRedundantDef(&MI);
       Changed = true;
@@ -286,7 +286,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     MBBDefs.remove_if([&](const auto &Entry) {
       Register Reg = Entry.first;
       if (MI.modifiesRegister(Reg, TRI) ||
-          (isNonFixedSpillSlotReload(*Entry.second, TII, MFI) &&
+          (isSpillSlotReload(*Entry.second, TII, MFI) &&
            mayClobberReload(MI, *Entry.second))) {
         MBBKills.erase(Reg);
         return true;
