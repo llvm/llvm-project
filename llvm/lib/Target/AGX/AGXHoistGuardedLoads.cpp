@@ -23,6 +23,12 @@
 // the loop header and the load moved there, where the loads of all copies
 // issue together.
 //
+// Once those loads are in the header, a side-effect-free block between the
+// self-skip and another skip to the same merge can run for every lane. Fold
+// the outer skip into the inner branch: this removes a divergent execution
+// mask push/pop without changing the update's predicate. The merge's phi
+// values must agree on both skip edges.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
@@ -30,6 +36,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -59,11 +66,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    AU.setPreservesCFG();
   }
 
 private:
-  bool runOnLoop(Loop *L, DominatorTree &DT);
+  bool runOnLoop(Loop *L, DominatorTree &DT,
+                 SmallPtrSetImpl<BasicBlock *> &HoistedBodies);
 };
 
 } // namespace
@@ -131,7 +138,9 @@ static bool collectExpression(Value *V, Loop *L, SmallVectorImpl<Instruction *> 
   return true;
 }
 
-bool AGXHoistGuardedLoads::runOnLoop(Loop *L, DominatorTree &DT) {
+bool AGXHoistGuardedLoads::runOnLoop(
+    Loop *L, DominatorTree &DT,
+    SmallPtrSetImpl<BasicBlock *> &HoistedBodies) {
   BasicBlock *Header = L->getHeader(), *Latch = L->getLoopLatch();
   // every block between the header and the latch runs each iteration, or is
   // skipped by a branch inside the loop: the latch is the only exit
@@ -213,10 +222,64 @@ bool AGXHoistGuardedLoads::runOnLoop(Loop *L, DominatorTree &DT) {
       LI->moveBefore(At->getIterator());
       if (Value *M = Map.lookup(Ptr))
         LI->setOperand(LI->getPointerOperandIndex(), M);
+      HoistedBodies.insert(B);
       Changed = true;
     }
   }
   return Changed;
+}
+
+/// After the guarded loads have been moved to the loop header, fuse a
+/// side-effect-free outer skip with an inner skip to the same block. The
+/// outer condition is still applied to the inner branch, so even if the
+/// speculative arithmetic produces a different value for the skipped lane,
+/// that lane cannot run the update. A select prevents poison in the unused
+/// inner condition from reaching the branch.
+static bool flattenHoistedGuard(BasicBlock *Body) {
+  BasicBlock *Guard = Body->getSinglePredecessor();
+  if (!Guard)
+    return false;
+  auto *Outer = dyn_cast<CondBrInst>(Guard->getTerminator());
+  auto *Inner = dyn_cast<CondBrInst>(Body->getTerminator());
+  if (!Outer || !Inner)
+    return false;
+  BasicBlock *Skip = Outer->getSuccessor(0) == Body
+                         ? Outer->getSuccessor(1)
+                         : Outer->getSuccessor(1) == Body
+                               ? Outer->getSuccessor(0)
+                               : nullptr;
+  if (!Skip || (Inner->getSuccessor(0) != Skip &&
+                Inner->getSuccessor(1) != Skip))
+    return false;
+  for (Instruction &I : *Body) {
+    if (&I == Inner)
+      break;
+    if (isa<PHINode>(I) || I.mayReadOrWriteMemory() ||
+        !isSafeToSpeculativelyExecute(&I))
+      return false;
+  }
+  // The value on the old outer edge must equal the value on the inner skip.
+  for (PHINode &Phi : Skip->phis())
+    if (Phi.getIncomingValueForBlock(Guard) !=
+        Phi.getIncomingValueForBlock(Body))
+      return false;
+
+  IRBuilder<> B(Inner);
+  Value *OuterSkips = Outer->getSuccessor(0) == Skip
+                          ? Outer->getCondition()
+                          : B.CreateNot(Outer->getCondition());
+  Value *InnerCond = Inner->getCondition();
+  Value *Combined = B.CreateSelect(
+      OuterSkips,
+      ConstantInt::get(Type::getInt1Ty(B.getContext()),
+                       Inner->getSuccessor(0) == Skip),
+      InnerCond, "agx.skip");
+  Inner->setCondition(Combined);
+  UncondBrInst::Create(Body, Outer->getIterator());
+  Outer->eraseFromParent();
+  for (PHINode &Phi : Skip->phis())
+    Phi.removeIncomingValue(Guard, false);
+  return true;
 }
 
 bool AGXHoistGuardedLoads::runOnFunction(Function &F) {
@@ -225,8 +288,11 @@ bool AGXHoistGuardedLoads::runOnFunction(Function &F) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   bool Changed = false;
+  SmallPtrSet<BasicBlock *, 16> HoistedBodies;
   for (Loop *L : LI.getLoopsInPreorder())
     if (L->isInnermost())
-      Changed |= runOnLoop(L, DT);
+      Changed |= runOnLoop(L, DT, HoistedBodies);
+  for (BasicBlock *Body : HoistedBodies)
+    Changed |= flattenHoistedGuard(Body);
   return Changed;
 }
