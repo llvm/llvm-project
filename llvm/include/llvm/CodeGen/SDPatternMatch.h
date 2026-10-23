@@ -1182,6 +1182,11 @@ template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
 }
 
+/// Match a zext or sext
+template <typename Opnd> inline auto m_ZExtOrSExt(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), m_SExt(Op));
+}
+
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
@@ -1375,12 +1380,12 @@ struct Zero_match {
   bool match(SDValue N) const { return isZeroOrZeroSplat(N, AllowUndefs); }
 };
 
-struct Ones_match {
+struct One_match {
   bool AllowUndefs;
 
-  Ones_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+  One_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
 
-  bool match(SDValue N) { return isOnesOrOnesSplat(N, AllowUndefs); }
+  bool match(SDValue N) { return isOneOrOneSplat(N, AllowUndefs); }
 };
 
 struct AllOnes_match {
@@ -1391,8 +1396,8 @@ struct AllOnes_match {
   bool match(SDValue N) { return isAllOnesOrAllOnesSplat(N, AllowUndefs); }
 };
 
-inline Ones_match m_One(bool AllowUndefs = false) {
-  return Ones_match(AllowUndefs);
+inline One_match m_One(bool AllowUndefs = false) {
+  return One_match(AllowUndefs);
 }
 inline Zero_match m_Zero(bool AllowUndefs = false) {
   return Zero_match(AllowUndefs);

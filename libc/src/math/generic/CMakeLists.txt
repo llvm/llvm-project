@@ -360,8 +360,6 @@ add_entrypoint_object(
     ../sinf16.h
   DEPENDS
     libc.src.__support.math.sinf16
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
@@ -1282,6 +1280,16 @@ add_entrypoint_object(
     ../exp2f.h
   DEPENDS
     libc.src.__support.math.exp2f
+)
+
+add_entrypoint_object(
+  exp2bf16
+  SRCS
+    exp2bf16.cpp
+  HDRS
+    ../exp2bf16.h
+  DEPENDS
+    libc.src.__support.math.exp2bf16
 )
 
 add_entrypoint_object(

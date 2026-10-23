@@ -4026,7 +4026,8 @@ private:
   ///                   instructions.
   /// \param RMWOp		  The binary operation used for update. If
   ///                   operation is not supported by atomicRMW,
-  ///                   or belong to {FADD, FSUB, BAD_BINOP}.
+  ///                   or belong to {FMaximumNum, FMinimumNum, UDecWrap,
+  ///                   UIncWrap, USubCond, USubSat, BAD_BINOP}.
   ///                   Then a `cmpExch` based	atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
@@ -4103,8 +4104,9 @@ public:
   /// \param AO       Atomic ordering of the generated atomic instructions.
   /// \param RMWOp    The binary operation used for update. If operation
   ///                 is	not supported by atomicRMW, or belong to
-  ///	                {FADD, FSUB, BAD_BINOP}. Then a `cmpExch` based
-  ///                 atomic will be generated.
+  ///                 {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                 USubCond, USubSat, BAD_BINOP}. Then a
+  ///                 `cmpExch` based atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param IsXBinopExpr true if \a X is Left H.S. in Right H.S. part of the
@@ -4135,8 +4137,9 @@ public:
   /// \param AO         Atomic ordering of the generated atomic instructions
   /// \param RMWOp      The binary operation used for update. If
   ///                   operation is not supported by atomicRMW, or belong to
-  ///	                  {FADD, FSUB, BAD_BINOP}. Then a cmpExch based
-  ///                   atomic will be generated.
+  ///                   {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                   USubCond, USubSat, BAD_BINOP}. Then a
+  ///                   `cmpExch` based atomic will be generated.
   /// \param UpdateOp   Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param UpdateExpr true if X is an in place update of the form
@@ -4295,10 +4298,13 @@ public:
   ///
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
-  ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///  - \p BodyGen may freely emit instructions and introduce control flow
+  ///    within the loop body.
+  ///  - If the body leaves exactly one block without a terminator after
+  ///    \p BodyGen returns, a branch to the latch is inserted there. Otherwise,
+  ///    some block of the body must already branch to the latch.
+  ///  - The body must not branch to blocks that existed before \p BodyGen ran,
+  ///    other than the body block and the latch.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.

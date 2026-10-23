@@ -88,15 +88,15 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
   //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
   const FileSpec &file_spec = m_objfile->GetFileSpec();
-  const char *object_name = nullptr;
+  llvm::StringRef object_name;
   if (m_objfile->GetModule())
-    object_name = m_objfile->GetModule()->GetObjectName().GetCString();
+    object_name = m_objfile->GetModule()->GetObjectName();
 
   if (file_spec)
-    s->Printf("Symtab, file = %s%s%s%s, num_symbols = %" PRIu64,
-              file_spec.GetPath().c_str(), object_name ? "(" : "",
-              object_name ? object_name : "", object_name ? ")" : "",
-              (uint64_t)m_symbols.size());
+    s->Format("Symtab, file = {0}{1}{2}{3}, num_symbols = {4}",
+              file_spec.GetPath(), !object_name.empty() ? "(" : "",
+              !object_name.empty() ? object_name : "",
+              !object_name.empty() ? ")" : "", (uint64_t)m_symbols.size());
   else
     s->Printf("Symtab, num_symbols = %" PRIu64 "", (uint64_t)m_symbols.size());
 
@@ -1167,7 +1167,7 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1346,7 +1346,7 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return false;
 

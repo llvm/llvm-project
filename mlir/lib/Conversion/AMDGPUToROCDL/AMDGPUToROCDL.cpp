@@ -3479,7 +3479,8 @@ struct DsBarrierPollStateOpLowering
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         op, i64, ptr, /*alignment=*/8, /*volatile_=*/false,
         /*nontemporal=*/false, /*invariant=*/false,
-        /*invariantGroup=*/false, LLVM::AtomicOrdering::acquire,
+        /*invariantGroup=*/false, /*noundef=*/false,
+        LLVM::AtomicOrdering::acquire,
         /*syncscope=*/"workgroup");
     return success();
   }
