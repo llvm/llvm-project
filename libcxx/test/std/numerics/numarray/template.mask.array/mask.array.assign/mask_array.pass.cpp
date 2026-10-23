@@ -29,7 +29,7 @@ int main(int, char**)
     bool b2[N2] = {true,  false, true, true,
                    false, false, true, true};
     std::valarray<int> v1(a1, N1);
-    const std::valarray<int> v2(a2, N2);
+    std::valarray<int> v2(a2, N2);
     std::valarray<bool> vb1(b1, N1);
     std::valarray<bool> vb2(b2, N2);
     v1[vb1] = v2[vb2];
