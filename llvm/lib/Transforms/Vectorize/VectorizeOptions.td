@@ -39,7 +39,7 @@ defm : BoolField<"lv-compressing-patterns", "true",
 defm : EnumField<"scalable-vectorization", "LoopVectorizeHints::ScalableForceKind", "LoopVectorizeHints::SK_Unspecified", "off,preferred,on,always",
   ["LoopVectorizeHints::SK_FixedWidthOnly", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_AlwaysScalable"],
   "Control whether the compiler can use scalable vectors to vectorize a loop">;
-defm : BoolField<"vectorize-vector-loops", "false",
+defm : BoolField<"vectorize-vector-loops", "true",
   "Allow vectorization of loops with vector instructions.">;
 defm : BoolField<"interleave-revec-loops", "false",
   "Allow IC>1 for re-vectorised loops.">;
