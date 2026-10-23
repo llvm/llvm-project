@@ -4,25 +4,27 @@
 define void @PR57402() {
 ; CHECK-LABEL: PR57402:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # freeze: $rcx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $-2, %eax
-; CHECK-NEXT:    leal 1(%rax,%rax,2), %ecx
-; CHECK-NEXT:    movswq %cx, %rsi
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    leal 1(%rax,%rax,2), %esi
+; CHECK-NEXT:    movswq %si, %rdi
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divq %rsi
-; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    divq %rdi
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    andl %esi, %edx
 ; CHECK-NEXT:    movswl %dx, %eax
-; CHECK-NEXT:    imull %eax, %eax
-; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    imull %eax, %ecx
+; CHECK-NEXT:    testq %rcx, %rcx
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  .LBB0_4: # %if.end
 ; CHECK-NEXT:    retq

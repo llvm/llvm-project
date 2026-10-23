@@ -1293,13 +1293,14 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-SDAG-NEXT:    global_load_u16 v3, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v4, 0xffff, v0
-; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX12-5-SDAG-NEXT:    v_mov_b16_e32 v4.l, v0.l
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v5, v4, v2
 ; GFX12-5-SDAG-NEXT:    v_max_u32_e32 v2, v4, v2
+; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-5-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_sub_nc_u32 v2, v2, v5
-; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-5-SDAG-NEXT:    v_add_nc_u32_e32 v2, v2, v3
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-SDAG-NEXT:    global_store_b16 v4, v2, s[0:1]

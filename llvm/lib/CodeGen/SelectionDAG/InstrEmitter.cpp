@@ -1103,6 +1103,26 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // hook knows where in the block to insert the replacement code.
   MBB->insert(InsertPos, MIB);
 
+  // A FREEZE doesn't change register class. Classes without a common subclass
+  // are split with a COPY:
+  //   %d:sgpr_32 = FREEZE %s:vgpr_32
+  // becomes
+  //   %f:vgpr_32 = FREEZE %s:vgpr_32
+  //   %d:sgpr_32 = COPY %f:vgpr_32
+  if (Opc == TargetOpcode::FREEZE) {
+    Register DstReg = MIB->getOperand(0).getReg();
+    Register SrcReg = MIB->getOperand(1).getReg();
+    const TargetRegisterClass *SrcRC =
+        SrcReg.isVirtual() ? MRI->getRegClass(SrcReg) : nullptr;
+    if (SrcRC && !TRI->getCommonSubClass(MRI->getRegClass(DstReg), SrcRC)) {
+      Register FrozenReg = MRI->createVirtualRegister(SrcRC);
+      MIB->getOperand(0).setReg(FrozenReg);
+      BuildMI(*MBB, InsertPos, MIB->getDebugLoc(), TII->get(TargetOpcode::COPY),
+              DstReg)
+          .addReg(FrozenReg);
+    }
+  }
+
   // The MachineInstr may also define physregs instead of virtregs.  These
   // physreg values can reach other instructions in different ways:
   //

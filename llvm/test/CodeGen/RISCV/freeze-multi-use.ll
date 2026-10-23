@@ -8,14 +8,16 @@
 define i32 @add_twice(i32 %n) {
 ; RV32-LABEL: add_twice:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    add a0, a0, a0
-; RV32-NEXT:    add a0, a0, a0
+; RV32-NEXT:    # freeze: $x11
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: add_twice:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    add a0, a0, a0
-; RV64-NEXT:    addw a0, a0, a0
+; RV64-NEXT:    # freeze: $x11
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %w = freeze i32 poison
   %a = add i32 %n, %w
@@ -30,8 +32,9 @@ define i32 @cross_block(i1 %c, i32 %x) {
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    beqz a0, .LBB1_2
 ; RV32-NEXT:  # %bb.1: # %t
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    sub a0, a0, a0
+; RV32-NEXT:    # freeze: $x10
+; RV32-NEXT:    add a1, a0, a1
+; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB1_2: # %e
 ; RV32-NEXT:    mv a0, a1
@@ -42,8 +45,9 @@ define i32 @cross_block(i1 %c, i32 %x) {
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    beqz a0, .LBB1_2
 ; RV64-NEXT:  # %bb.1: # %t
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    subw a0, a0, a0
+; RV64-NEXT:    # freeze: $x10
+; RV64-NEXT:    add a1, a0, a1
+; RV64-NEXT:    subw a0, a1, a0
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB1_2: # %e
 ; RV64-NEXT:    mv a0, a1
@@ -66,16 +70,23 @@ define i32 @float_bits() {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    # freeze: $x8
+; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    call __unordsf2
-; RV32-NEXT:    slli a1, a0, 1
-; RV32-NEXT:    srli a1, a1, 1
-; RV32-NEXT:    lui a2, 522240
+; RV32-NEXT:    slli s0, s0, 1
+; RV32-NEXT:    srli s0, s0, 1
+; RV32-NEXT:    lui a1, 522240
 ; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    sltu a1, a2, a1
+; RV32-NEXT:    sltu a1, a1, s0
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -85,16 +96,23 @@ define i32 @float_bits() {
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    # freeze: $x8
+; RV64-NEXT:    mv a0, s0
+; RV64-NEXT:    mv a1, s0
 ; RV64-NEXT:    call __unordsf2
-; RV64-NEXT:    slli a1, a0, 33
-; RV64-NEXT:    srli a1, a1, 33
-; RV64-NEXT:    lui a2, 522240
+; RV64-NEXT:    slli s0, s0, 33
+; RV64-NEXT:    srli s0, s0, 33
+; RV64-NEXT:    lui a1, 522240
 ; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    sltu a1, a2, a1
+; RV64-NEXT:    sltu a1, a1, s0
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
@@ -114,8 +132,13 @@ define i32 @across_call() nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    # freeze: $x8
+; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    call use
+; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -123,8 +146,13 @@ define i32 @across_call() nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    # freeze: $x8
+; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    call use
+; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %w = freeze i32 poison
