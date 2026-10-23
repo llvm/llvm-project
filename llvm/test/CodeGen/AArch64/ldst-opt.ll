@@ -1919,7 +1919,6 @@ define void @no_merge_zr32_2_offset(ptr %p) {
 ; STRICTALIGN:       // %bb.0: // %entry
 ; STRICTALIGN-NEXT:    add x1, x0, #1, lsl #12 // =4096
 ; STRICTALIGN-NEXT:    stp wzr, wzr, [x1]
-; STRICTALIGN-NEXT:    add x1, x0, #1, lsl #12 // =4096
 ; STRICTALIGN-NEXT:    stp wzr, wzr, [x1, #8]
 ; STRICTALIGN-NEXT:    ret
 entry:
