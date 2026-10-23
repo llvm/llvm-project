@@ -11,26 +11,16 @@ declare void @g()
 define void @sub_branch(ptr %x, i64 %y0, i64 %y1) {
 ; CHECK-LABEL: sub_branch:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq 8(%rdi), %rcx
-; CHECK-NEXT:    movq %rcx, %r8
-; CHECK-NEXT:    subq %rdx, %r8
 ; CHECK-NEXT:    subq %rsi, (%rdi)
-; CHECK-NEXT:    sbbq $0, %r8
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    cmpq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, 8(%rdi)
-; CHECK-NEXT:    jb .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %ret
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %call
+; CHECK-NEXT:    sbbq %rdx, 8(%rdi)
+; CHECK-NEXT:    jae .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %call
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq g@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .LBB0_2: # %ret
 ; CHECK-NEXT:    retq
 entry:
   %x0 = load i64, ptr %x, align 8
