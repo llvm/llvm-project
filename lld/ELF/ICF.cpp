@@ -502,7 +502,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     return std::make_pair(begin, std::min(begin + chunkSize, total));
   };
   uint32_t eqClassBase = uniqueId + inputs.size();
-  SmallVector<uint32_t, 0> offsets(numInputChunks);
+  SmallVector<uint32_t, 0> firstIdx(numInputChunks);
   parallelFor(0, numInputChunks, [&](size_t c) {
     auto [begin, end] = chunkRange(c, inputs.size());
     uint32_t n = 0;
@@ -517,13 +517,14 @@ template <class ELFT> void ICF<ELFT>::run() {
         }
       }
     }
-    offsets[c] = n;
+    // Temporarily store the number of sections per chunk.
+    firstIdx[c] = n;
   });
 
   // Compute the total number of eligible sections and each chunk's left index.
   size_t numSections = 0;
   for (size_t c = 0; c != numInputChunks; ++c) {
-    auto n = std::exchange(offsets[c], numSections);
+    auto n = std::exchange(firstIdx[c], numSections);
     numSections += n;
   }
   sections.resize_for_overwrite(numSections);
@@ -532,7 +533,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   assert(uint64_t(eqClassBase) + numSections <= UINT32_MAX);
   parallelFor(0, numInputChunks, [&](size_t c) {
     auto [begin, end] = chunkRange(c, inputs.size());
-    auto idx = offsets[c];
+    auto idx = firstIdx[c];
     for (size_t i = begin; i != end; ++i) {
       auto *s = dyn_cast<InputSection>(inputs[i]);
       if (s && s->eqClass[0] == eqClassBase) {
