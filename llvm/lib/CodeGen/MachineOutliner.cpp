@@ -525,7 +525,9 @@ struct MachineOutliner : public ModulePass {
 
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
-  bool doOutline(Module &M, unsigned &OutlinedFunctionNum);
+  /// \p Mapper is reset with this iteration's instruction mapping.
+  bool doOutline(Module &M, std::optional<InstructionMapper> &Mapper,
+                 unsigned &OutlinedFunctionNum);
 
   /// Return a DISubprogram for OF if one exists, and null otherwise. Helper
   /// function for remark emission.
@@ -1677,14 +1679,15 @@ bool MachineOutliner::runOnModule(Module &M) {
   OutlineRepeatedNum = 0;
   UnprofitableCandidates.clear();
   UnprofitableCandidateHashTree.clear();
-  if (!doOutline(M, OutlinedFunctionNum))
-    return false;
+  // Rebuilt by each doOutline; the last mapping is kept for publishing below.
+  std::optional<InstructionMapper> Mapper;
+  const bool OutlinedSomething = doOutline(M, Mapper, OutlinedFunctionNum);
 
-  for (unsigned I = 0; I < Opts->machine_outliner_reruns && OutlinedFunctionNum;
+  for (unsigned I = 0; OutlinedSomething && I < Opts->machine_outliner_reruns;
        ++I) {
     OutlinedFunctionNum = 0;
     OutlineRepeatedNum++;
-    if (!doOutline(M, OutlinedFunctionNum)) {
+    if (!doOutline(M, Mapper, OutlinedFunctionNum)) {
       LLVM_DEBUG({
         dbgs() << "Did not outline on iteration " << I + 2 << " out of "
                << Opts->machine_outliner_reruns + 1 << "\n";
@@ -1693,13 +1696,23 @@ bool MachineOutliner::runOnModule(Module &M) {
     }
   }
 
+  // Recount in the final iteration's mapping, which excludes sites consumed by
+  // local outlining. Remapping the module would also count sites inside the
+  // functions outlined by that iteration.
+  const bool PublishedUnprofitableCandidates =
+      publishUnprofitableCandidates(*Mapper);
+  if (!OutlinedSomething && !PublishedUnprofitableCandidates)
+    return false;
+
   if (OutlinerMode == CGDataMode::Write)
     emitOutlinedHashTree(M);
 
   return true;
 }
 
-bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
+bool MachineOutliner::doOutline(Module &M,
+                                std::optional<InstructionMapper> &Mapper,
+                                unsigned &OutlinedFunctionNum) {
   // If the user passed -enable-machine-outliner=always or
   // -enable-machine-outliner, the pass will run on all functions in the module.
   // Otherwise, if the target supports default outlining, it will run on all
@@ -1729,17 +1742,17 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
   OutlineFromLinkOnceODRs = Opts->enable_linkonceodr_outlining;
-  InstructionMapper Mapper(*MMI);
+  Mapper.emplace(*MMI);
 
   // Prepare instruction mappings for the suffix tree.
-  populateMapper(Mapper, M);
+  populateMapper(*Mapper, M);
   std::vector<std::unique_ptr<OutlinedFunction>> FunctionList;
 
   // Find all of the outlining candidates.
   if (OutlinerMode == CGDataMode::Read)
-    findGlobalCandidates(Mapper, FunctionList);
+    findGlobalCandidates(*Mapper, FunctionList);
   else
-    findCandidates(Mapper, FunctionList);
+    findCandidates(*Mapper, FunctionList);
 
   // If we've requested size remarks, then collect the MI counts of every
   // function before outlining, and the MI counts after outlining.
@@ -1757,12 +1770,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
 
   // Outline each of the candidates and return true if something was outlined.
   bool OutlinedSomething =
-      outline(M, FunctionList, Mapper, OutlinedFunctionNum);
-
-  const bool PublishedUnprofitableCandidates =
-      (!OutlinedSomething ||
-       OutlineRepeatedNum == Opts->machine_outliner_reruns) &&
-      publishUnprofitableCandidates(Mapper);
+      outline(M, FunctionList, *Mapper, OutlinedFunctionNum);
 
   // If we outlined something, we definitely changed the MI count of the
   // module. If we've asked for size remarks, then output them.
@@ -1776,5 +1784,5 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
              << " because no changes were found.\n";
   });
 
-  return OutlinedSomething || PublishedUnprofitableCandidates;
+  return OutlinedSomething;
 }

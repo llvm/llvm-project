@@ -169,6 +169,8 @@ defm : BoolField<"machine-outliner-publish-unprofitable-candidates", "false",
 // meaning the outliner will run one time and rerun zero times after that.
 defm : ValueField<"machine-outliner-reruns", "unsigned", "0",
   "Number of times to rerun the outliner after the initial outline">;
+// Chosen experimentally: longer sequences are rarely locally unprofitable, so
+// publishing them mostly adds build time.
 defm : ValueField<"machine-outliner-unprofitable-candidate-max-instrs", "unsigned", "3",
   "Maximum instruction count for locally unprofitable candidates">;
 defm : ValueField<"outliner-benefit-threshold", "unsigned", "1",
