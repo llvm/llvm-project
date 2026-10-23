@@ -4153,6 +4153,9 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
   if (!useModuleScope_) {
     return {}; // error occurred finding module
   }
+  if (useModuleScope_->Contains(currScope())) {
+    return {}; // itself error already reported
+  }
   if (!useSymbol) {
     Say(useName, "'%s' not found in module '%s'"_err_en_US, MakeOpName(useName),
         useModuleScope_->GetName().value());
