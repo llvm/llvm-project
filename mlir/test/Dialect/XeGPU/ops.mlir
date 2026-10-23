@@ -569,6 +569,21 @@ gpu.func @load_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
   gpu.return
 }
 
+// CHECK: gpu.func @load_matrix_contiguity([[ARG0:%.+]]: !xegpu.mem_desc<16x64xf16>)
+gpu.func @load_matrix_contiguity(%arg0: !xegpu.mem_desc<16x64xf16>) {
+  // A user-provided `contiguity` round-trips through the optional op attribute.
+  // CHECK: xegpu.load_matrix [[ARG0]][8, 8] <{contiguity = 16 : i64}> : !xegpu.mem_desc<16x64xf16> -> vector<8x16xf16>
+  %data = xegpu.load_matrix %arg0[8, 8] <{contiguity = 16 : i64}> : !xegpu.mem_desc<16x64xf16> -> vector<8x16xf16>
+  gpu.return
+}
+
+// CHECK: gpu.func @store_matrix_contiguity([[ARG0:%.+]]: !xegpu.mem_desc<16x64xf16>, [[ARG1:%.+]]: vector<16x16xf16>)
+gpu.func @store_matrix_contiguity(%arg0: !xegpu.mem_desc<16x64xf16>, %arg1: vector<16x16xf16>) {
+  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 8] <{contiguity = 8 : i64}> : vector<16x16xf16>, !xegpu.mem_desc<16x64xf16>
+  xegpu.store_matrix %arg1, %arg0[8, 8] <{contiguity = 8 : i64}> : vector<16x16xf16>, !xegpu.mem_desc<16x64xf16>
+  gpu.return
+}
+
 // CHECK: gpu.func @load_matrix_with_stride(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>)
 gpu.func @load_matrix_with_stride(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>) {
   // CHECK: xegpu.load_matrix [[ARG0]][8, 8] : !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>> -> vector<8x16xf16>

@@ -62,3 +62,33 @@ gpu.module @test {
     return
   }
 }
+
+// -----
+// An inst_data-only anchor is completed from the offsets' contiguity. Every
+// offset here is the same, so a lane can take only one element, and 16 lanes
+// cannot cover inst_data = [1, 32] with one access each.
+gpu.module @test {
+func.func @scatter_inst_data_needs_contiguous_offsets(%src: memref<512xf32>) {
+  %mask = arith.constant dense<1> : vector<16x32xi1>
+  %offset = arith.constant dense<12> : vector<16x32xindex>
+  %v = arith.constant dense<1.0> : vector<16x32xf32>
+  // expected-error@+1 {{Failed to identify lane layouts for the specified inst_data.}}
+  xegpu.store %v, %src[%offset], %mask <{layout = #xegpu.layout<inst_data = [1, 32]>}>
+      : vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
+  return
+}
+}
+
+// -----
+// Runs of 3 (the block width) allow one element per lane, so inst_data =
+// [1, 32] has no completion that keeps every access inside one block.
+gpu.module @test {
+func.func @store_matrix_inst_data_needs_contiguous_runs(
+    %dst: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>) {
+  %v = arith.constant dense<1.0> : vector<8x96xf32>
+  // expected-error@+1 {{Failed to identify lane layouts for the specified inst_data.}}
+  xegpu.store_matrix %v, %dst[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32]>}>
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>
+  return
+}
+}
