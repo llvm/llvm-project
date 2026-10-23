@@ -2999,16 +2999,18 @@ protected:
 /// first operand of the recipe, the incoming value from the backedge is the
 /// second operand, and the third operand is the step.
 class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
+  const SCEV *StepSCEV = nullptr;
+
 public:
   VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
-                                  VPValue &BackedgeValue, VPValue &Step)
+                                  VPValue &BackedgeValue, const SCEV *StepSCEV)
       : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
-                          &Start, Start.getScalarType()) {
+                          &Start, Start.getScalarType()),
+        StepSCEV(StepSCEV) {
     addOperand(&BackedgeValue);
-    addOperand(&Step);
   }
 
-  VPValue *getStep() const { return getOperand(2); }
+  const SCEV *getStepSCEV() const { return StepSCEV; }
 
   unsigned getNumIncoming() const override { return 2; }
 
@@ -3016,7 +3018,7 @@ public:
 
   VPConditionalInductionPHIRecipe *clone() override {
     return new VPConditionalInductionPHIRecipe(*getPHINode(), *getStartValue(),
-                                               *getBackedgeValue(), *getStep());
+                                               *getBackedgeValue(), StepSCEV);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)

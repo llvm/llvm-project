@@ -19,7 +19,7 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      CONDITIONAL-INDUCTION-PHI ir<%idx> = phi ir<0>, vp<%conditional.step>, ir<1>
+; CHECK-NEXT:      CONDITIONAL-INDUCTION-PHI ir<%idx> = phi ir<0>, vp<%conditional.step>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%src.ptr>, ir<1>
@@ -93,7 +93,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      CONDITIONAL-INDUCTION-PHI ir<%idx> = phi ir<0>, vp<%conditional.step>, ir<1>
+; CHECK-NEXT:      CONDITIONAL-INDUCTION-PHI ir<%idx> = phi ir<0>, vp<%conditional.step>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i32, ir<%dst.ptr>, ir<1>

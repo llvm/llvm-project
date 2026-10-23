@@ -988,10 +988,8 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     if (ConditionalInductionIt != ConditionalInductions.end()) {
       const ConditionalInductionDescriptor &CondID =
           ConditionalInductionIt->second;
-      VPValue *Step =
-          vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
       return new VPConditionalInductionPHIRecipe(*Phi, *Start, *BackedgeValue,
-                                                 *Step);
+                                                 CondID.getStepSCEV());
     }
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");
