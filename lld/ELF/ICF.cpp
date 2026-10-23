@@ -491,30 +491,58 @@ template <class ELFT> void ICF<ELFT>::run() {
   ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
       [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
-  // Collect sections to merge.
-  for (InputSectionBase *sec : ctx.inputSections) {
-    auto *s = dyn_cast<InputSection>(sec);
-    if (s && s->eqClass[0] == 0) {
-      if (isEligible(s))
-        sections.push_back(s);
-      else
-        // Ineligible sections are assigned unique IDs, i.e. each section
-        // belongs to an equivalence class of its own.
-        s->eqClass[0] = s->eqClass[1] = ++uniqueId;
+  // Assign a temporary class ID (eqClassBase) to eligible sections and assign
+  // unique IDs to ineligible sections. Use eqClassBase as the base for class
+  // IDs. Each ineligible section belongs to an equivalence class of its own.
+  constexpr size_t chunkSize = 1024;
+  ArrayRef<InputSectionBase *> inputs = ctx.inputSections;
+  size_t numInputChunks = divideCeil(inputs.size(), chunkSize);
+  uint32_t eqClassBase = uniqueId + inputs.size() + 1;
+  SmallVector<uint32_t, 0> offsets(numInputChunks);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    size_t begin = c * chunkSize,
+           end = std::min(begin + chunkSize, inputs.size());
+    uint32_t n = 0;
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == 0) {
+        if (isEligible(s)) {
+          s->eqClass[0] = eqClassBase;
+          ++n;
+        } else {
+          s->eqClass[0] = s->eqClass[1] = uniqueId + 1 + i;
+        }
+      }
     }
-  }
+    offsets[c] = n;
+  });
 
-  // Number candidates above the unique IDs so that hashRelocs() can tell them
-  // apart. Use eqClassBase as the base for class IDs as well.
-  size_t numSections = sections.size();
-  uint32_t eqClassBase = ++uniqueId;
-  parallelFor(0, numSections,
-              [&](size_t i) { sections[i]->eqClass[0] = eqClassBase + i; });
+  // Compute the total number of eligible sections and each chunk's left index.
+  size_t numSections = 0;
+  for (size_t i = 0; i != numInputChunks; ++i) {
+    auto t = std::exchange(offsets[i], numSections);
+    numSections += t;
+  }
+  sections.resize_for_overwrite(numSections);
+  // Update temporary class ID above the unique IDs so that hashRelocs() can
+  // tell them apart.
+  assert(uint64_t(eqClassBase) + numSections <= UINT32_MAX);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    size_t begin = c * chunkSize,
+           end = std::min(begin + chunkSize, inputs.size());
+    auto idx = offsets[c];
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == eqClassBase) {
+        s->eqClass[0] = eqClassBase + idx;
+        sections[idx++] = s;
+      }
+    }
+  });
 
   // Hash sections in chunks. An edge is a relocation to a candidate, recorded
   // as the target's index. Each chunk appends its sections' edges to its own
   // buffer; edgeEnd[i] is where section i's edges end within that buffer.
-  constexpr size_t chunkSize = 1024;
   size_t numChunks = divideCeil(numSections, chunkSize);
   SmallVector<uint64_t, 0> hashes;
   SmallVector<uint32_t, 0> edgeEnd;
@@ -588,7 +616,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
-  forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     for (size_t i = begin + 1; i < end; ++i) {
       sections[begin]->replace(sections[i]);
 
