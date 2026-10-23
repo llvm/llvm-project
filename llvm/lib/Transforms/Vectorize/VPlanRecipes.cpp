@@ -68,6 +68,15 @@ static Function *getCalledFunction(ArrayRef<VPValue *> Operands) {
   return cast<Function>(cast<VPIRValue>(Operands[Idx])->getValue());
 }
 
+/// Return the function attributes of the callee of \p VPI, which must be a
+/// call or intrinsic VPInstruction.
+static AttributeSet getCalleeFnAttrs(const VPInstruction &VPI) {
+  if (VPI.getOpcode() == VPInstruction::Intrinsic)
+    return Intrinsic::getFnAttributes(VPI.getScalarType()->getContext(),
+                                      vputils::getIntrinsicID(&VPI));
+  return getCalledFunction(VPI.operands())->getAttributes().getFnAttrs();
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -208,9 +217,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
-    if (VPI->getOpcode() == Instruction::Call) {
-      AttributeSet CalleeFnAttrs =
-          getCalledFunction(VPI->operands())->getAttributes().getFnAttrs();
+    if (VPI->getOpcode() == Instruction::Call ||
+        VPI->getOpcode() == VPInstruction::Intrinsic) {
+      AttributeSet CalleeFnAttrs = getCalleeFnAttrs(*VPI);
       return mayWriteToMemory() ||
              !VPI->hasFnAttr(Attribute::NoUnwind, CalleeFnAttrs) ||
              !VPI->hasFnAttr(Attribute::WillReturn, CalleeFnAttrs);
@@ -1783,16 +1792,9 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
     return false;
-  case VPInstruction::Intrinsic: {
-    LLVMContext &Ctx = getScalarType()->getContext();
-    AttributeSet Attrs =
-        Intrinsic::getFnAttributes(Ctx, vputils::getIntrinsicID(this));
-    return !Attrs.getMemoryEffects().doesNotAccessMemory();
-  }
+  case VPInstruction::Intrinsic:
   case Instruction::Call:
-    return !getMemoryEffects(
-                getCalledFunction(operands())->getAttributes().getFnAttrs())
-                .doesNotAccessMemory();
+    return !getMemoryEffects(getCalleeFnAttrs(*this)).doesNotAccessMemory();
   default:
     return true;
   }
@@ -2321,7 +2323,6 @@ VPIRAttributes::VPIRAttributes(const VPInstruction &Call,
 
 void VPIRAttributes::intersectAttrs(const VPIRAttributes &Other,
                                     LLVMContext &Ctx) {
-  // Only poison-generating attributes are stored, which can always be dropped.
   CallAttrs =
       CallAttrs.intersectWith(Ctx, Other.CallAttrs).value_or(AttributeList());
 }
