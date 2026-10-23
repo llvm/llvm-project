@@ -305,6 +305,8 @@ private:
                                SmallVectorImpl<Register> &, SmallVirtRegSet &,
                                RecoloringStack &, unsigned = 0);
 
+  void LRE_WillEraseInstruction(MachineInstr *) override;
+  void aboutToEraseInstruction(MachineInstr &) override;
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_WillShrinkVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;

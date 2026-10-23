@@ -30,6 +30,7 @@ namespace llvm {
 
 template <typename T> class ArrayRef;
 class LiveIntervals;
+class SlotIndex;
 class SlotIndexes;
 class VirtRegMap;
 
@@ -69,6 +70,13 @@ public:
 
   LLVM_ABI void releaseMemory();
 
+  /// handleInstructionErased - Called just before the instruction at \p Idx is
+  /// erased, so that any SlotIndex held into it can be repaired. Afterwards
+  /// that index no longer names a position in the function.
+  LLVM_ABI void handleInstructionErased(SlotIndex Idx);
+
+  LLVM_ABI void verifyAnalysis() const;
+
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &Inv);
 
@@ -93,6 +101,12 @@ public:
     if (Impl)
       Impl->releaseMemory();
   }
+
+  void verifyAnalysis() const override {
+    if (Impl)
+      Impl->verifyAnalysis();
+  }
+
   void getAnalysisUsage(AnalysisUsage &) const override;
 
   MachineFunctionProperties getSetProperties() const override {

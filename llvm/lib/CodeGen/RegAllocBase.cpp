@@ -161,6 +161,7 @@ void RegAllocBase::postOptimization() {
   assert(Matrix->isValid() && "LiveRegMatrix validation failed");
 
   for (auto *DeadInst : DeadRemats) {
+    aboutToEraseInstruction(*DeadInst);
     LIS->RemoveMachineInstrFromMaps(*DeadInst);
     DeadInst->eraseFromParent();
   }
