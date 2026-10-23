@@ -1612,6 +1612,17 @@ def AGX_STOP : AGXPseudo<(outs), (ins), [(AGXstop)]> {
   let G13Real = STOP_g13;
 }
 
+let isCall = 1, hasSideEffects = 1, Defs = [R1] in
+def AGX_CALL : AGXPseudo<(outs), (ins AGXBrTarget:$target),
+                         []> {
+  let G13Real = CALL_g13;
+}
+
+let isTerminator = 1, isReturn = 1, hasSideEffects = 1, Uses = [R1] in
+def AGX_RET : AGXPseudo<(outs), (ins AGXCallReg:$target), []> {
+  let G13Real = RET_g13;
+}
+
 let isTrap = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 1 in
 def AGX_TRAP : AGXPseudo<(outs), (ins), [(trap)]> {
   let G13Real = TRAP_g13;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXRegisterInfo.h"
+#include "AGX.h"
 #include "AGXSubtarget.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -42,6 +43,8 @@ BitVector AGXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // r0l is the execution mask nesting counter. r0h is left alone so that
   // r0 is never clobbered as a whole.
   ReserveWithAliases(AGX::R0);
+  if (agxExperimentalLeafCallsEnabled())
+    ReserveWithAliases(AGX::R1);
 
   // Registers beyond the subtarget's register file.
   for (unsigned I = ST.getMaxGPRs(MF.getFunction()); I < 128; ++I)

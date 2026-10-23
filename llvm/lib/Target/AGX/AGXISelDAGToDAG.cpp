@@ -109,6 +109,23 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   switch (N->getOpcode()) {
+  case AGXISD::CALL: {
+    SDLoc DL(N);
+    SDNode *Call = CurDAG->getMachineNode(AGX::AGX_CALL, DL, MVT::Other,
+                                          N->getOperand(1), N->getOperand(0));
+    SDValue Nest = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    SDValue Count = CurDAG->getTargetConstant(2, DL, MVT::i32);
+    ReplaceNode(N, CurDAG->getMachineNode(AGX::POP_EXEC, DL, MVT::Other,
+                                          Nest, Count, SDValue(Call, 0)));
+    return;
+  }
+  case AGXISD::RET: {
+    SDLoc DL(N);
+    SDValue Link = CurDAG->getRegister(AGX::R1, MVT::i32);
+    ReplaceNode(N, CurDAG->getMachineNode(AGX::AGX_RET, DL, MVT::Other,
+                                          Link, N->getOperand(0)));
+    return;
+  }
   case AGXISD::LOAD_V2:
   case AGXISD::LOAD_V3:
   case AGXISD::LOAD_V4:

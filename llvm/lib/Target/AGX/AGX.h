@@ -23,6 +23,8 @@ class Module;
 class ModulePass;
 class PassRegistry;
 
+bool agxExperimentalLeafCallsEnabled();
+
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
 ModulePass *createAGXPromoteKernelArgsPass();

@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -40,6 +41,10 @@ bool AGXMCInstLower::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_MachineBasicBlock:
     MCOp = MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+    return true;
+  case MachineOperand::MO_GlobalAddress:
+    MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
+        Ctx.getOrCreateSymbol(MO.getGlobal()->getName()), Ctx));
     return true;
   case MachineOperand::MO_RegisterMask:
     return false;

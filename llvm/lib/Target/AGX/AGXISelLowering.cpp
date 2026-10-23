@@ -15,7 +15,8 @@
 // shifts, compares and bit counts are split into 32-bit halves here.
 //
 // Kernel arguments arrive in uniform registers, see LowerFormalArguments and
-// llvm/docs/AGXUsage.rst. Calls are not supported: everything is inlined.
+// llvm/docs/AGXUsage.rst. Calls are normally inlined. A narrow, opt-in leaf
+// experiment exercises direct call/return code generation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,6 +31,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -39,6 +41,12 @@
 #include <cmath>
 
 using namespace llvm;
+
+static cl::opt<bool> ExperimentalLeafCalls(
+    "agx-experimental-leaf-calls", cl::Hidden, cl::init(false),
+    cl::desc("Emit direct calls to argument-free void AGX leaf functions"));
+
+bool llvm::agxExperimentalLeafCallsEnabled() { return ExperimentalLeafCalls; }
 
 #define DEBUG_TYPE "agx-lower"
 
@@ -395,6 +403,9 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
                                const SDLoc &DL, SelectionDAG &DAG) const {
+  if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls &&
+      Outs.empty())
+    return DAG.getNode(AGXISD::RET, DL, MVT::Other, Chain);
   if (!Outs.empty())
     diagnose(DAG, DL, "AGX kernels cannot return values");
   return DAG.getNode(AGXISD::STOP, DL, MVT::Other, Chain);
@@ -403,6 +414,39 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
+  if (ExperimentalLeafCalls && CLI.Outs.empty() && CLI.Ins.empty() &&
+      DAG.getMachineFunction().getFunction().getCallingConv() ==
+          CallingConv::AGX_KERNEL) {
+    if (auto *G = dyn_cast<GlobalAddressSDNode>(CLI.Callee)) {
+      if (const auto *F = dyn_cast<Function>(G->getGlobal())) {
+        const Function &Caller = DAG.getMachineFunction().getFunction();
+        bool HasCall = false;
+        bool EntryOnly = true;
+        for (const BasicBlock &BB : Caller)
+          for (const Instruction &I : BB)
+            if (const auto *CB = dyn_cast<CallBase>(&I))
+              if (CB->getCalledFunction() == F) {
+                HasCall = true;
+                EntryOnly &= &BB == &Caller.getEntryBlock();
+              }
+        bool Leaf = true;
+        for (const BasicBlock &BB : *F)
+          for (const Instruction &I : BB)
+            if (isa<AllocaInst>(I))
+              Leaf = false;
+            else if (const auto *CB = dyn_cast<CallBase>(&I))
+              Leaf &= CB->getCalledFunction() &&
+                      CB->getCalledFunction()->isIntrinsic();
+        if (!F->isDeclaration() && HasCall && EntryOnly && Leaf &&
+            F->getReturnType()->isVoidTy() &&
+            F->arg_empty() && F->hasFnAttribute(Attribute::NoInline)) {
+          SDValue Target = DAG.getTargetGlobalAddress(F, CLI.DL, MVT::i64);
+          return DAG.getNode(AGXISD::CALL, CLI.DL, MVT::Other, CLI.Chain,
+                             Target);
+        }
+      }
+    }
+  }
   StringRef Name = "<indirect>";
   if (auto *G = dyn_cast<GlobalAddressSDNode>(CLI.Callee))
     Name = G->getGlobal()->getName();
