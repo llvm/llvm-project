@@ -3815,3 +3815,31 @@ define i32 @test_mulqr_i32(i32 %a, i32 %b) {
   %res = call i32 @llvm.riscv.mulqr.i32(i32 %a, i32 %b)
   ret i32 %res
 }
+
+define i64 @test_mqwacc_i64(i64 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: test_mqwacc_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqwacc a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqwacc_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mqacc.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.mqwacc.i64(i64 %rd, i32 %a, i32 %b)
+  ret i64 %res
+}
+
+define i64 @test_mqrwacc_i64(i64 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: test_mqrwacc_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqrwacc a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqrwacc_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mqracc.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.mqrwacc.i64(i64 %rd, i32 %a, i32 %b)
+  ret i64 %res
+}

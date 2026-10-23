@@ -177,6 +177,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
+* Removed `TargetOptions::ExceptionModel`. The exception model should
+  be controlled by setting the `"exception-model"` module flag.
+
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
@@ -311,6 +314,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AVR Backend
 
+### Changes to the BPF Backend
+
+* Added `-mcpu=v5`, which includes the v4 instruction set and enables unsigned
+  and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
+  `-disable-hmul` to disable their generation.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,
@@ -417,7 +426,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Deprecated `LLVMCreateBuilderInContext()` in favor of
   `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
-  `LLVMContextRef`.
+  `LLVMContextRef`. When using the old API, an insertion point (connected to a
+  module) must be set using a `LLVMPositionBuilder*()` API before building any
+  instructions, otherwise an error will be generated.
 
 ### Changes to the CodeGen infrastructure
 

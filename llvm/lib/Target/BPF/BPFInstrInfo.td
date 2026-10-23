@@ -71,6 +71,7 @@ def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;
 def BPFHasMovsx : Predicate<"Subtarget->hasMovsx()">;
 def BPFHasBswap : Predicate<"Subtarget->hasBswap()">;
 def BPFHasSdivSmod : Predicate<"Subtarget->hasSdivSmod()">;
+def BPFHasHmul : Predicate<"Subtarget->hasHmul()">;
 def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
@@ -360,7 +361,7 @@ class ALU_RR<BPFOpClass Class, BPFArithOp Opc, int off,
   let BPFClass = Class;
 }
 
-multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
+multiclass ALU64<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
   def _rr : ALU_RR<BPF_ALU64, Opc, off,
                    (outs GPR:$dst),
                    (ins GPR:$src2, GPR:$src),
@@ -371,6 +372,10 @@ multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
                    (ins GPR:$src2, i64imm:$imm),
                    "$dst "#OpcodeStr#" $imm",
                    [(set GPR:$dst, (OpNode GPR:$src2, i64immSExt32:$imm))]>;
+}
+
+multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode>
+    : ALU64<Opc, off, OpcodeStr, OpNode> {
   def _rr_32 : ALU_RR<BPF_ALU, Opc, off,
                    (outs GPR32:$dst),
                    (ins GPR32:$src2, GPR32:$src),
@@ -401,6 +406,14 @@ let isAsCheapAsAMove = 1 in {
   let Predicates = [BPFHasSdivSmod] in {
     defm SDIV : ALU<BPF_DIV, 1, "s/=", sdiv>;
     defm SMOD : ALU<BPF_MOD, 1, "s%=", srem>;
+  }
+
+  // High-half multiply variants encoded via insn->off on BPF_MUL:
+  //   off == 1  UHMUL:  dst = ((u128)dst * (u128)src) >> 64
+  //   off == 2  SHMUL:  dst = ((i128)dst * (i128)src) >> 64
+  let Predicates = [BPFHasHmul] in {
+    defm UHMUL : ALU64<BPF_MUL, 1, "uh*=", mulhu>;
+    defm SHMUL : ALU64<BPF_MUL, 2, "sh*=", mulhs>;
   }
 }
 

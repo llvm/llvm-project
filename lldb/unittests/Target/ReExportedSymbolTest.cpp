@@ -233,7 +233,7 @@ static ModuleSP AddModule(Target &target, TestFile &file, const char *name) {
   if (ObjectFile *of = module_sp->GetObjectFile())
     of->GetReExportedLibraries();
   module_sp->GetSymtab();
-  module_sp->SetFileSpecAndObjectName(FileSpec(name), ConstString());
+  module_sp->SetFileSpecAndObjectName(FileSpec(name), std::string());
 
   // Append without notifying: the module-added notification pulls in symbol
   // preloading and scripting-resource loading, which need a fully initialized
