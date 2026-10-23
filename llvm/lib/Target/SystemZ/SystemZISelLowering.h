@@ -431,10 +431,6 @@ private:
                                    bool Invert) const;
   MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
                                    bool Unsigned) const;
-  MachineBasicBlock *emitPair128(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
-                                bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode,
