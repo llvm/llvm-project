@@ -112,11 +112,12 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60."), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12."), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_012.60.0"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.abc"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.-1"), IntelGPU::GK_NONE);
 
-  // The revision must fit its 6-bit GPU IP version field.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.63"), IntelGPU::GK_XE_PVC);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.64"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_NONE);
+  // The revision may be any number.
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.64"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_XE_PVC);
 }
 
 TEST(IntelGPUTargetParserTest, EveryNameParses) {
