@@ -1,6 +1,13 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -filetype=obj -o - \
 ; RUN:  | llvm-objdump --no-print-imm-hex --triple=aarch64-unknown-linux-gnu --show-all-symbols -d - \
 ; RUN:  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -stop-after=finalize-isel -o %t.mir
+; RUN: not llc %t.mir -start-after=finalize-isel -filetype=obj -o %t.o 2>&1 \
+; RUN:  | FileCheck %s --check-prefix=ERROR
+
+; FIXME: MIR does not preserve LabelMustBeEmitted on the inline asm targets.
+; ERROR: error: expected a symbol reference
+; ERROR-NEXT: b ""
 
 %struct.c = type { ptr }
 
