@@ -3351,6 +3351,12 @@ static bool MayRunOnCUDADevice(const semantics::Scope &scope) {
   return false;
 }
 
+// Specifics of intrinsic modules such as CUDADEVICE (e.g. ATOMICADD).
+static bool IsFromIntrinsicModule(const Symbol &symbol) {
+  const Symbol *module{symbol.GetUltimate().owner().GetSymbol()};
+  return module && module->attrs().test(semantics::Attr::INTRINSIC);
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
@@ -3393,63 +3399,78 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
         context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
         !GetContextualMessages().at().empty() &&
         !MayRunOnCUDADevice(context_.FindScope(GetContextualMessages().at()))};
-    for (const Symbol &specific0 : genericDetails->specificProcs()) {
-      const Symbol &specific1{BypassGeneric(specific0)};
-      if (isSubroutine != !IsFunction(specific1)) {
-        continue;
-      }
-      const Symbol *specific{ResolveForward(specific1)};
-      if (!specific) {
-        continue;
-      }
-      if (inHostCode && IsCUDADeviceOnly(*specific)) {
-        continue;
-      }
-      if (std::optional<characteristics::Procedure> procedure{
-              characteristics::Procedure::Characterize(
-                  ProcedureDesignator{*specific}, context_.foldingContext(),
-                  /*emitError=*/false)}) {
-        ActualArguments localActuals{actuals};
-        if (specific->has<semantics::ProcBindingDetails>()) {
-          if (!adjustActuals.value()(*specific, localActuals)) {
-            continue;
-          }
+    // Prefer specifics callable from host code at a host call site. If none
+    // matches, still accept device-only specifics of intrinsic modules, which
+    // host code has always been allowed to reference.
+    bool skipDeviceOnly{inHostCode};
+    const auto triedBefore{tried.size()};
+    for (;;) {
+      for (const Symbol &specific0 : genericDetails->specificProcs()) {
+        const Symbol &specific1{BypassGeneric(specific0)};
+        if (isSubroutine != !IsFunction(specific1)) {
+          continue;
         }
-        tried.push_back(*specific);
-        if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-                context_, false /* no integer conversions */) &&
-            CheckCompatibleArguments(
-                *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{
-              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
-          if ((procedure->IsElemental() && elemental) ||
-              (!procedure->IsElemental() && nonElemental)) {
-            if (crtMatchingDistance) {
-              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-              if (cmp > 0) {
-                continue;
-              }
-              if (cmp == 0) {
-                // 16.9.144(6): a bare NULL() is not allowed as an actual
-                // argument to a generic procedure if the specific procedure
-                // cannot be unambiguously distinguished
-                // Underspecified external procedure actual arguments can
-                // also lead to ambiguity.
-                return {nullptr, true /* due to ambiguity */, std::move(tried)};
-              }
-              // Matching distance is smaller than the previously matched
-              // specific. Let it go through so the current procedure is picked.
+        const Symbol *specific{ResolveForward(specific1)};
+        if (!specific) {
+          continue;
+        }
+        if (inHostCode && IsCUDADeviceOnly(*specific) &&
+            (skipDeviceOnly || !IsFromIntrinsicModule(*specific))) {
+          continue;
+        }
+        if (std::optional<characteristics::Procedure> procedure{
+                characteristics::Procedure::Characterize(
+                    ProcedureDesignator{*specific}, context_.foldingContext(),
+                    /*emitError=*/false)}) {
+          ActualArguments localActuals{actuals};
+          if (specific->has<semantics::ProcBindingDetails>()) {
+            if (!adjustActuals.value()(*specific, localActuals)) {
+              continue;
             }
           }
-          if (!procedure->IsElemental()) {
-            // takes priority over elemental match
-            nonElemental = specific;
-          } else {
-            elemental = specific;
+          tried.push_back(*specific);
+          if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+                  context_, false /* no integer conversions */) &&
+              CheckCompatibleArguments(
+                  *procedure, localActuals, foldingContext_)) {
+            CudaMatchingDistance d{ComputeCudaMatchingDistance(
+                context_, *procedure, localActuals)};
+            if ((procedure->IsElemental() && elemental) ||
+                (!procedure->IsElemental() && nonElemental)) {
+              if (crtMatchingDistance) {
+                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+                if (cmp > 0) {
+                  continue;
+                }
+                if (cmp == 0) {
+                  // 16.9.144(6): a bare NULL() is not allowed as an actual
+                  // argument to a generic procedure if the specific procedure
+                  // cannot be unambiguously distinguished
+                  // Underspecified external procedure actual arguments can
+                  // also lead to ambiguity.
+                  return {
+                      nullptr, true /* due to ambiguity */, std::move(tried)};
+                }
+                // Matching distance is smaller than the previously matched
+                // specific. Let it go through so the current procedure is
+                // picked.
+              }
+            }
+            if (!procedure->IsElemental()) {
+              // takes priority over elemental match
+              nonElemental = specific;
+            } else {
+              elemental = specific;
+            }
+            crtMatchingDistance = std::move(d);
           }
-          crtMatchingDistance = std::move(d);
         }
       }
+      if (!skipDeviceOnly || nonElemental || elemental) {
+        break;
+      }
+      skipDeviceOnly = false;
+      tried.erase(tried.begin() + triedBefore, tried.end());
     }
   }
   // Is there a derived type of the same name?

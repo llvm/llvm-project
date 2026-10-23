@@ -44,6 +44,12 @@ contains
     integer :: i
     call sg(a(i), y(i))
   end subroutine
+
+  subroutine intrinsic_caller(i)
+    use cudadevice, only: atomicadd
+    integer :: i, r
+    r = atomicadd(i, 1)
+  end subroutine
 end module
 
 ! CHECK-LABEL: func.func @_QMmPacc_caller
@@ -54,3 +60,8 @@ end module
 
 ! CHECK-LABEL: func.func @_QMmPhost_caller
 ! CHECK: fir.call @_QMmPs_host
+
+! A device-only specific of an intrinsic module is still accepted when no
+! host-callable specific matches.
+! CHECK-LABEL: func.func @_QMmPintrinsic_caller
+! CHECK: llvm.atomicrmw add
