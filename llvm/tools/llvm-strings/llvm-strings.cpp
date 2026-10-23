@@ -27,10 +27,16 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/Unicode.h"
+#include "llvm/Support/UnicodeCharRanges.h"
 #include "llvm/Support/WithColor.h"
+#include <bitset>
 #include <clocale>
 #include <cuchar>
 #include <string>
+
+#ifdef LLVM_ON_UNIX
+#include <langinfo.h>
+#endif
 
 #ifdef _WIN32
 #include "llvm/Support/Windows/WindowsSupport.h"
@@ -38,6 +44,11 @@
 
 using namespace llvm;
 using namespace llvm::object;
+
+namespace llvm::sys::unicode {
+extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
+extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
+} // namespace llvm::sys::unicode
 
 namespace {
 enum ID {
@@ -128,169 +139,216 @@ static size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
 }
 #endif
 
-template <enum Encoding> struct Strings {
-  Strings() = delete;
+struct CharSet {
+  template <typename T> struct Base {
+    Base() = delete;
 
-  // Tries to read one character from the bytes Cur...End and store it in Ch.
-  // Returns true if a (possibly invalid) character was read, false otherwise.
-  //
-  // If Cur...End starts with a valid complete character, Cur and MBState are
-  // updated and true is returned.
-  // If Cur...End is empty, or holds an incomplete character and AtEOF is false,
-  // Cur and MBState are unchanged, Ch is set to 0, and false is returned. This
-  // is intended to allow more bytes to be read and readChar to be called again.
-  // If Cur...End holds an incomplete character and AtEOF is true, or if
-  // Cur...End starts with an invalid character, the first bytes are skipped and
-  // MBState is reset to allow continuing from the next point, Ch is set to 0,
-  // and true is returned. This case is indistinguishable to the caller from a
-  // null byte being successfully converted to a null character, but a null
-  // character is never printable under any settings and that is how invalid
-  // bytes are treated as well.
-  //
-  // The number of skipped bytes for invalid characters follows the Unicode
-  // definition of the maximal subpart of an ill-formed subsequence, applied to
-  // arbitrary locales: it is the longest subsequence that could start a valid
-  // multibyte character, or if the initial byte cannot start a valid multibyte
-  // character, the initial byte. This allows consistent error recovery.
-  static bool readChar(const char *&Cur, const char *End,
-                       std::mbstate_t &MBState, bool AtEOF, UTF32 &Ch);
+    using CharT = T;
 
-  static bool isStringChar(UTF32 Ch);
+    // Tries to read one character from the bytes Cur...End and store it in Ch.
+    // Returns true if a (possibly invalid) character was read, false otherwise.
+    //
+    // If Cur...End starts with a valid complete character, Cur and MBState are
+    // updated and true is returned.
+    // If Cur...End is empty, or holds an incomplete character and AtEOF is
+    // false, Cur and MBState are unchanged, Ch is set to 0, and false is
+    // returned. This is intended to allow more bytes to be read and readChar to
+    // be called again. If Cur...End holds an incomplete character and AtEOF is
+    // true, or if Cur...End starts with an invalid character, the first bytes
+    // are skipped and MBState is reset to allow continuing from the next point,
+    // Ch is set to 0, and true is returned. This case is indistinguishable to
+    // the caller from a null byte being successfully converted to a null
+    // character, but a null character is never printable under any settings and
+    // that is how invalid bytes are treated as well.
+    //
+    // The number of skipped bytes for invalid characters follows the Unicode
+    // definition of the maximal subpart of an ill-formed subsequence, applied
+    // to arbitrary locales: it is the longest subsequence that could start a
+    // valid multibyte character, or if the initial byte cannot start a valid
+    // multibyte character, the initial byte. This allows consistent error
+    // recovery.
+    static bool readChar(const char *&Cur, const char *End,
+                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch);
 
-  static void endString(raw_ostream &OS, std::mbstate_t &MBState);
+    static bool isStringChar(CharT Ch);
 
-  static void run(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle);
-};
+    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
+      OS << '\n';
+    }
+  };
 
-template <>
-bool Strings<Encoding::Ascii>::readChar(const char *&Cur, const char *End,
-                                        std::mbstate_t &MBState, bool AtEOF,
-                                        UTF32 &Ch) {
-  if (Cur == End)
-    return false;
-
-  Ch = *Cur++;
-  return true;
-}
-
-template <>
-bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
-                                         std::mbstate_t &MBState, bool AtEOF,
-                                         UTF32 &Ch) {
-  if (Cur == End)
-    return false;
-
-  const char *Next = Cur;
-  std::mbstate_t NextMBState = MBState;
-  char_t UCh;
-  for (;;) {
-    // Read one byte at a time. This is usually not the best way to use
-    // mbrtoc32(), usually it would make more sense to pass the size of the
-    // buffer, but the strings utility is unusual in that it is expected to
-    // encounter many bytes that do not form valid characters and it is more
-    // useful to optimise for this case.
-    const size_t BytesRead = mbrtoc(&UCh, Next, 1, &NextMBState);
-    switch (BytesRead) {
-    case 1:
-      ++Next;
-      LLVM_FALLTHROUGH;
-
-    case (size_t)-3:
-      Cur = Next;
-      MBState = NextMBState;
-      Ch = UCh;
-      return true;
-
-    case (size_t)-2:
-      // We encountered a byte that is a valid start or continuation of a
-      // multibyte character. If we have more bytes, carry on. If we don't
-      // have more bytes yet, but we are not at the end of file, return false.
-      // If we don't have more bytes and we are at the end of file, fall
-      // through to treat it as an error.
-      ++Next;
-      if (Next != End)
-        continue;
-      if (AtEOF)
+  struct MultiByte : Base<UTF32> {
+    static bool readChar(const char *&Cur, const char *End,
+                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+      if (Cur == End)
         return false;
-      LLVM_FALLTHROUGH;
 
-    case 0:
-    case (size_t)-1:
-      // We cannot form a valid non-null character.
-      //
-      // If we processed any bytes already that formed an incomplete multibyte
-      // character, treat those bytes as a single null character, otherwise
-      // treat the current byte as a single null character.
-      if (Next == Cur)
-        ++Next;
-      Cur = Next;
-      MBState = {};
-      Ch = 0;
+      const char *Next = Cur;
+      std::mbstate_t NextMBState = MBState;
+      char_t UCh;
+      for (;;) {
+        // Read one byte at a time. This is usually not the best way to use
+        // mbrtoc32(), usually it would make more sense to pass the size of the
+        // buffer, but the strings utility is unusual in that it is expected to
+        // encounter many bytes that do not form valid characters and it is more
+        // useful to optimise for this case.
+        const size_t BytesRead = mbrtoc(&UCh, Next, 1, &NextMBState);
+        switch (BytesRead) {
+        case 1:
+          ++Next;
+          LLVM_FALLTHROUGH;
+
+        case (size_t)-3:
+          Cur = Next;
+          MBState = NextMBState;
+          Ch = std::min<UTF32>(UCh, 0x10FFFF);
+          return true;
+
+        case (size_t)-2:
+          // We encountered a byte that is a valid start or continuation of a
+          // multibyte character. If we have more bytes, carry on. If we don't
+          // have more bytes yet, but we are not at the end of file, return
+          // false. If we don't have more bytes and we are at the end of file,
+          // fall through to treat it as an error.
+          ++Next;
+          if (Next != End)
+            continue;
+          if (!AtEOF)
+            return false;
+          LLVM_FALLTHROUGH;
+
+        case 0:
+        case (size_t)-1:
+          // We cannot form a valid non-null character.
+          //
+          // If we processed any bytes already that formed an incomplete
+          // multibyte character, treat those bytes as a single null character,
+          // otherwise treat the current byte as a single null character.
+          if (Next == Cur)
+            ++Next;
+          Cur = Next;
+          MBState = {};
+          Ch = 0;
+          return true;
+        }
+      }
+    }
+
+    static bool isStringChar(CharT Ch) {
+      using StringCharSet = std::bitset<0x110000>;
+      static const StringCharSet &StringChars = []() -> const StringCharSet & {
+        static StringCharSet StringChars;
+
+        using llvm::sys::unicode::GeneratedCharacterRanges;
+        using llvm::sys::unicode::GeneratedControlCharacterRanges;
+        using llvm::sys::UnicodeCharRange;
+
+        for (const UnicodeCharRange &Range : GeneratedCharacterRanges)
+          for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch)
+            StringChars[Ch] = true;
+        for (const UnicodeCharRange &Range : GeneratedControlCharacterRanges)
+          for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch)
+            StringChars[Ch] = false;
+        StringChars[U'\t'] = true;
+
+        return StringChars;
+      }();
+
+      return StringChars[Ch];
+    }
+
+    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
+      char Buf[MB_LEN_MAX];
+      // Note: This is only required for stateful encodings such as the
+      // ISO-2022 ones.
+      const size_t BytesWritten = crtomb(Buf, 0, &MBState);
+      assert(BytesWritten < (size_t)-1 &&
+             "A null character must always be valid");
+      Buf[BytesWritten - 1] = '\n';
+      OS << StringRef(Buf, BytesWritten);
+    }
+  };
+
+  struct Utf8 : MultiByte {
+    static bool readChar(const char *&Cur, const char *End,
+                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+      if (Cur == End)
+        return false;
+
+      const UTF8 *UTF8Cur = reinterpret_cast<const UTF8 *>(Cur);
+      const UTF8 *UTF8Next = UTF8Cur;
+      const UTF8 *UTF8End = reinterpret_cast<const UTF8 *>(End);
+      UTF32 *UTF32Next = &Ch;
+      const auto Res = ConvertUTF8toUTF32(&UTF8Next, UTF8End, &UTF32Next,
+                                          &Ch + 1, strictConversion);
+      if (UTF8Next != UTF8Cur) {
+        assert(UTF32Next != &Ch);
+        assert(Ch <= 0x10FFFF &&
+               "ConvertUTF8toUTF32 produced an out-of-range character");
+      } else if (Res == sourceExhausted && !AtEOF) {
+        return false;
+      } else {
+        assert(UTF32Next == &Ch);
+        UTF8Next +=
+            findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
+        Ch = 0;
+      }
+      Cur = reinterpret_cast<const char *>(UTF8Next);
       return true;
     }
-  }
-}
 
-template <>
-bool Strings<Encoding::Utf8>::readChar(const char *&Cur, const char *End,
-                                       std::mbstate_t &MBState, bool AtEOF,
-                                       UTF32 &Ch) {
-  if (Cur == End)
-    return false;
+    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
+      Base::endString(OS, MBState);
+    }
+  };
 
-  const UTF8 *UTF8Cur = reinterpret_cast<const UTF8 *>(Cur);
-  const UTF8 *UTF8Next = UTF8Cur;
-  const UTF8 *UTF8End = reinterpret_cast<const UTF8 *>(End);
-  UTF32 *UTF32Next = &Ch;
-  const auto Res = ConvertUTF8toUTF32(&UTF8Next, UTF8End, &UTF32Next, &Ch + 1,
-                                      strictConversion);
-  if (UTF8Next != UTF8Cur) {
-    assert(UTF32Next != &Ch);
-  } else if (Res == sourceExhausted && !AtEOF) {
-    return false;
-  } else {
-    assert(UTF32Next == &Ch);
-    UTF8Next += findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
-    Ch = 0;
-  }
-  Cur = reinterpret_cast<const char *>(UTF8Next);
-  return true;
-}
+  struct SingleByte : Base<unsigned char> {
+    static bool readChar(const char *&Cur, const char *End,
+                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+      if (Cur == End)
+        return false;
 
-template <> bool Strings<Encoding::Ascii>::isStringChar(UTF32 Ch) {
-  return Ch == U'\t' || (Ch >= U' ' && Ch <= U'~');
-}
+      Ch = *reinterpret_cast<const unsigned char *>(Cur++);
+      return true;
+    }
 
-template <> bool Strings<Encoding::Locale>::isStringChar(UTF32 Ch) {
-  return llvm::sys::unicode::isCharacter(Ch) &&
-         (Ch == U'\t' || !llvm::sys::unicode::isControl(Ch));
-}
+    static bool isStringChar(CharT Ch) {
+      using StringCharSet = std::bitset<0x100>;
+      static const StringCharSet &StringChars = []() -> const StringCharSet & {
+        static StringCharSet StringChars;
 
-template <> bool Strings<Encoding::Utf8>::isStringChar(UTF32 Ch) {
-  return llvm::sys::unicode::isCharacter(Ch) &&
-         (Ch == U'\t' || !llvm::sys::unicode::isControl(Ch));
-}
+        using llvm::sys::unicode::isCharacter;
+        using llvm::sys::unicode::isControl;
 
-template <enum Encoding Encoding>
-void Strings<Encoding>::endString(raw_ostream &OS, std::mbstate_t &MBState) {
-  OS << '\n';
-}
+        for (int I = 0; I < 0x100; ++I) {
+          const unsigned char Ch = I;
+          const char *Cur = reinterpret_cast<const char *>(&Ch), *End = Cur + 1;
+          std::mbstate_t MBState = {};
+          UTF32 UCh;
+          if (MultiByte::readChar(Cur, End, MBState, /*AtEOF=*/true, UCh)) {
+            if (UCh == U'\t' || (isCharacter(UCh) && !isControl(UCh)))
+              StringChars[I] = true;
+          }
+        }
 
-template <>
-void Strings<Encoding::Locale>::endString(raw_ostream &OS,
-                                          std::mbstate_t &MBState) {
-  char Buf[MB_LEN_MAX];
-  // Note: This is only required for stateful encodings such as the
-  // ISO-2022 ones.
-  const size_t BytesWritten = crtomb(Buf, 0, &MBState);
-  assert(BytesWritten < (size_t)-1 && "A null character must always be valid");
-  Buf[BytesWritten - 1] = '\n';
-  OS << StringRef(Buf, BytesWritten);
-}
+        return StringChars;
+      }();
 
-template <enum Encoding Encoding>
-void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
-                            sys::fs::file_t Handle) {
+      return StringChars[Ch];
+    }
+  };
+
+  struct Ascii : SingleByte {
+    static bool isStringChar(CharT Ch) {
+      return Ch == '\t' || (Ch >= ' ' && Ch <= '~');
+    }
+  };
+};
+
+template <typename CharSet>
+void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
+  using CharT = typename CharSet::CharT;
+
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
   auto PrintHeader = [&OS, FileName](size_t StringStart) {
     if (PrintFileName)
@@ -355,7 +413,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
     const char *End = Begin + ChunkSize;
     const char *Cur = Begin;
 
-    UTF32 Ch;
+    CharT Ch;
 
     // Handle the remaining part from the previous chunk.
     // The previous chunk can be either shorter than MinSize or part of the
@@ -375,8 +433,8 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
       for (;;) {
         StringEnd = Cur;
         PrevMBState = MBState;
-        EndOfChunk = !readChar(Cur, End, MBState, AtEOF, Ch);
-        if (EndOfChunk || !isStringChar(Ch))
+        EndOfChunk = !CharSet::readChar(Cur, End, MBState, AtEOF, Ch);
+        if (EndOfChunk || !CharSet::isStringChar(Ch))
           break;
         ++LengthChars;
       }
@@ -424,7 +482,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
       if (InString) {
         // We haven't reached the end of the chunk, which means the string is
         // terminated.
-        endString(OS, PrevMBState);
+        CharSet::endString(OS, PrevMBState);
         InString = false;
       }
     }
@@ -436,9 +494,9 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
     for (;;) {
       const char *Prev = Cur;
       std::mbstate_t PrevMBState = MBState;
-      if (!readChar(Cur, End, MBState, AtEOF, Ch))
+      if (!CharSet::readChar(Cur, End, MBState, AtEOF, Ch))
         break;
-      if (isStringChar(Ch)) {
+      if (CharSet::isStringChar(Ch)) {
         // Find the start of the next string.
         if (!StrHead)
           StrHead = Prev;
@@ -449,7 +507,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
         if (LengthChars >= MinLengthChars) {
           PrintHeader(ChunkOffset + (StrHead - Begin));
           OS << StringRef(StrHead, Prev - StrHead);
-          endString(OS, PrevMBState);
+          CharSet::endString(OS, PrevMBState);
         }
         StrHead = nullptr;
         LengthChars = 0;
@@ -479,7 +537,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
   }
 
   if (InString)
-    endString(OS, MBState);
+    CharSet::endString(OS, MBState);
 }
 } // namespace
 
@@ -523,10 +581,6 @@ int main(int argc, char **argv) {
       invalidArgValue(EncodingArg);
     Encoding = *EncodingVal;
   }
-#ifdef _WIN32
-  if (Encoding == Encoding::Locale && GetACP() == CP_UTF8)
-    Encoding = Encoding::Utf8;
-#endif
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
   Arg *RadixArg = Args.getLastArg(OPT_radix_EQ);
@@ -551,13 +605,32 @@ int main(int argc, char **argv) {
                             sys::fs::file_t Handle) = [] {
     switch (Encoding) {
     case Encoding::Ascii:
-      return Strings<Encoding::Ascii>::run;
+      return strings<CharSet::Ascii>;
 
     case Encoding::Locale:
-      return Strings<Encoding::Locale>::run;
+      if (MB_CUR_MAX == 1)
+        return strings<CharSet::SingleByte>;
+
+#ifdef LLVM_ON_UNIX
+      // Using LLVM's built-in decoder is faster than going through libc, but
+      // this doesn't affect correctness (assuming 32-bit wchar_t), so it's fine
+      // if this check has false negatives (e.g. if some OS returns "utf8"
+      // instead).
+      if (StringRef(nl_langinfo(CODESET)) == "UTF-8")
+        return strings<CharSet::Utf8>;
+#endif
+#ifdef _WIN32
+      // Using LLVM's built-in decoder is necessary for correctness as
+      // Strings<CharSet::MultiByte> on WIndows is implemented on top of 16-bit
+      // wchar_t which cannot represent all code points.
+      if (GetACP() == CP_UTF8)
+        return strings<CharSet::Utf8>;
+#endif
+
+      return strings<CharSet::MultiByte>;
 
     case Encoding::Utf8:
-      return Strings<Encoding::Utf8>::run;
+      return strings<CharSet::Utf8>;
     }
 
     llvm_unreachable("unhandled encoding");
