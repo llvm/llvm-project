@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fopenacc -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenacc -fcuda -fdoconcurrent-offload %s -o - | FileCheck %s
 
 ! Test CUDA Fortran data transfer using assignment statements.
 
