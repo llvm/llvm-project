@@ -124,9 +124,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI) {
 }
 
 /// Fold `icmp pred (readfirstlane X), X` when X is uniform at that use.
-static bool
-optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI,
-                                const ValueMap<const Value *, bool> &Tracker) {
+static bool optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI) {
   Value *X;
   Instruction *RFL;
   if (!match(&Cmp,
@@ -136,7 +134,7 @@ optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI,
                       m_Deferred(X))))
     return false;
 
-  if (isDivergentUseWithNew(RFL->getOperandUse(0), UI, Tracker))
+  if (UI.isDivergentAtUse(RFL->getOperandUse(0)))
     return false;
 
   // If readfirstlane's operand is uniform then we know we are comparing two
@@ -156,7 +154,7 @@ static bool runUniformIntrinsicCombine(Function &F, UniformityInfo &UI) {
   bool IsChanged = false;
   for (Instruction &I : make_early_inc_range(instructions(F))) {
     if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
-      IsChanged |= optimizeUniformCmpReadFirstLane(*Cmp, UI, Tracker);
+      IsChanged |= optimizeUniformCmpReadFirstLane(*Cmp, UI);
       continue;
     }
     auto *II = dyn_cast<IntrinsicInst>(&I);
