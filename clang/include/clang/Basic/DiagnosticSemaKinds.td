@@ -12068,9 +12068,6 @@ def err_invalid_coopmat_assignment
 
 def err_invalid_coopmat_use : Error<"argument of cooperative matrix must have '%0' use">;
 
-def err_mismatched_coopmat_element_types
-    : Error<"inconsistent cooperative matrix element types">;
-
 def err_invalid_coopmat_element_type
     : Error<"%0 is invalid cooperative matrix element type">;
 
@@ -12088,9 +12085,6 @@ def err_incompatible_coopmat_types
 
 def err_invalid_coopmat_builtin_arg
     : Error<"invalid argument of cooperative matrix builtin">;
-
-def err_coopmat_pointer
-    : Error<"pointer to cooperative matrix type is not allowed">;
 
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
