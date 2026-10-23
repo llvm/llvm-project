@@ -19,20 +19,66 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace opts {
 extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::opt<unsigned> Verbosity;
+extern llvm::cl::opt<bool> UseOldText;
 } // namespace opts
 
 namespace llvm {
 namespace bolt {
 
 Error PatchEntries::runOnFunctions(BinaryContext &BC) {
+  std::vector<BinaryContext::PendingInstructionPatch> InstructionPatches;
+
+  // Validate before installing any entry patch. Retaining an out-of-range
+  // target scans its original body and may add more references to this queue.
+  // Use a conservative bound on the entire output code, rather than tentative
+  // symbol addresses that linker relaxation can still change.
+  auto resolveInstructionPatches = [&] {
+    if (BC.PendingInstructionPatches.empty())
+      return;
+
+    const RelocationHandler &RH = BC.getRelocationHandler();
+    uint64_t CodeStart = BC.BOLTReserved.empty() ? BC.LayoutStartAddress
+                                                 : BC.BOLTReserved.start();
+    uint64_t CodeEnd = SaturatingAdd(CodeStart, estimateRISCVCodeSize(BC));
+    if (opts::UseOldText) {
+      CodeStart = std::min(CodeStart, BC.OldTextSectionAddress);
+      CodeEnd =
+          std::max(CodeEnd, BC.OldTextSectionAddress + BC.OldTextSectionSize);
+    }
+
+    while (!BC.PendingInstructionPatches.empty()) {
+      auto Patch = std::move(BC.PendingInstructionPatches.back());
+      BC.PendingInstructionPatches.pop_back();
+      const Relocation &Ref = Patch.Reference;
+      BinaryFunction *Target = BC.getFunctionForSymbol(Ref.Symbol);
+      if (!BC.shouldEmit(*Target))
+        continue;
+      if (CodeEnd - CodeStart > UINT32_MAX ||
+          !RH.canEncodeValue(Ref.Type, CodeStart, Ref.Offset) ||
+          !RH.canEncodeValue(Ref.Type, alignDown(CodeEnd, 2), Ref.Offset)) {
+        Target->setIgnored();
+        continue;
+      }
+      InstructionPatches.push_back(std::move(Patch));
+    }
+  };
+  auto installInstructionPatches = [&] {
+    for (const auto &Patch : InstructionPatches)
+      if (BC.shouldEmit(*BC.getFunctionForSymbol(Patch.Reference.Symbol)))
+        BC.createInstructionPatch(Patch.Address, Patch.Instructions);
+  };
+  resolveInstructionPatches();
+
   if (!opts::ForcePatch) {
     // Mark the binary for patching if we did not create external references
     // for original code in any of functions we are not going to emit.
@@ -49,8 +95,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     };
 
     if (!llvm::any_of(llvm::make_second_range(BC.getBinaryFunctions()),
-                      needsPatching))
+                      needsPatching)) {
+      installInstructionPatches();
       return Error::success();
+    }
   }
 
   if (opts::Verbosity >= 1)
@@ -70,6 +118,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     FillerSize = BC.computeCodeSize(Seq.begin(), Seq.end());
   }
 
+  std::vector<std::pair<BinaryFunction *, std::vector<Patch>>> EntryPatches;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
 
@@ -133,7 +182,19 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       continue;
     }
 
-    for (Patch &Patch : PendingPatches) {
+    EntryPatches.emplace_back(&Function, std::move(PendingPatches));
+  }
+
+  // A function that cannot be patched is retained. Scanning its references
+  // can retain functions visited earlier, so install patches only after all
+  // patchability checks and their transitive scans have finished.
+  resolveInstructionPatches();
+  installInstructionPatches();
+  for (auto &[Function, Patches] : EntryPatches) {
+    if (!BC.shouldEmit(*Function))
+      continue;
+
+    for (Patch &Patch : Patches) {
       // Add instruction patch to the binary.
       InstructionListType Instructions;
       BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());

@@ -3545,6 +3545,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     }
   }
 
+  if (BC->isRISCV() && BC->forceSymbolRelocations(SymbolName)) {
+    // Do not turn a moving linker symbol into a function reference when it
+    // happens to coincide with a function boundary. Retained-code scanning
+    // needs the original identity to detect references it cannot preserve.
+    ReferencedBF = nullptr;
+    ReferencedSymbol = BC->Ctx->getOrCreateSymbol(SymbolName);
+  }
+
   if (ForceRelocation && !ReferencedBF) {
     // Create the relocation symbol if it's not defined in the binary.
     if (SymbolAddress == 0)

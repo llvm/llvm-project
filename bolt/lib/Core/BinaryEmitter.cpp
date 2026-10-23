@@ -21,8 +21,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 
 #define DEBUG_TYPE "bolt"
@@ -438,6 +440,17 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
 
 void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
                                      bool EmitCodeOnly) {
+  // Patches overwrite existing instructions. Neither assembler relaxation nor
+  // linker relaxation may change their size or the address of a return site.
+  const MCSubtargetInfo *STI = BC.STI.get();
+  if (BC.isRISCV() && BF.isPatch()) {
+    // MC fragments retain the subtarget until layout, so let the MCContext
+    // own the copy used for this emission, including during size estimation.
+    MCSubtargetInfo &PatchSTI = Streamer.getContext().getSubtargetCopy(*STI);
+    PatchSTI.ApplyFeatureFlag("+exact-asm");
+    PatchSTI.ApplyFeatureFlag("-relax");
+    STI = &PatchSTI;
+  }
   if (!EmitCodeOnly && FF.isSplitFragment() && BF.hasConstantIsland()) {
     assert(BF.getLayout().isHotColdSplit() &&
            "Constant island support only with hot/cold split");
@@ -513,7 +526,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
       }
 
-      Streamer.emitInstruction(Instr, *BC.STI);
+      Streamer.emitInstruction(Instr, *STI);
     }
   }
 
@@ -1233,6 +1246,62 @@ void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
 
 namespace llvm {
 namespace bolt {
+
+uint64_t estimateRISCVCodeSize(BinaryContext &BC) {
+  assert(BC.isRISCV());
+  uint64_t Size = 0;
+  StringMap<uint64_t> SectionAlignments;
+  if (opts::HotText)
+    SectionAlignments[BC.getMainCodeSectionName()] = BC.AlignText;
+  auto add = [&](uint64_t Bytes) { Size = SaturatingAdd(Size, Bytes); };
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    if (!BC.shouldEmit(*BF) || BF->isPatch())
+      continue;
+    for (FunctionFragment &FF : BF->getLayout().fragments()) {
+      const SmallString<32> SectionName =
+          BF->getCodeSectionName(FF.getFragmentNum());
+      uint64_t &Alignment = SectionAlignments[SectionName];
+      Alignment =
+          std::max<uint64_t>({Alignment, BC.AlignFunctions, BF->getAlignment(),
+                              BF->getMinAlign().value()});
+      if (SectionName == BC.getMainCodeSectionName())
+        Alignment = std::max<uint64_t>(Alignment, BC.AlignText);
+      add(BF->getMinAlign().value());
+      add(BF->getAlignment());
+      add(opts::padFunctionBefore(*BF));
+      add(opts::padFunctionAfter(*BF));
+      // Account for break-funcs and mark-funcs.
+      add(8);
+      for (BinaryBasicBlock *BB : FF) {
+        Alignment = std::max<uint64_t>(Alignment, BB->getAlignment());
+        add(BB->getAlignment());
+        add(BB->estimateSize());
+        for (const MCInst &Inst : *BB)
+          if (BC.MIB->isBranch(Inst))
+            add(16);
+      }
+      if (BF->hasIslandsInfo()) {
+        Alignment =
+            std::max<uint64_t>(Alignment, BF->getConstantIslandAlignment());
+        add(BF->getConstantIslandAlignment());
+        add(BF->estimateConstantIslandSize());
+      }
+    }
+  }
+  for (const auto &Entry : SectionAlignments)
+    add(Entry.second);
+  // Hugify aligns the end of the last non-cold section before allocating
+  // subsequent code. HotText's final page padding does not move any code.
+  if (opts::Hugify && !BC.HasFixedLoadAddress) {
+    const char *LastNonColdSectionName = BC.HasWarmSection
+                                             ? BC.getWarmCodeSectionName()
+                                             : BC.getMainCodeSectionName();
+    const auto It = SectionAlignments.find(LastNonColdSectionName);
+    if (It != SectionAlignments.end())
+      add(It->second);
+  }
+  return Size;
+}
 
 void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
                        StringRef OrgSecPrefix) {

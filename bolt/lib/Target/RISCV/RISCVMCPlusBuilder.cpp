@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "mcplus"
@@ -381,7 +382,8 @@ public:
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
                           MCContext *Ctx) override {
-    createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
+    Seq.emplace_back();
+    createTailCall(Seq.back(), Target, Ctx);
   }
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
@@ -819,6 +821,42 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, AuipcLabel, Addend, Ctx,
                           ELF::R_RISCV_PCREL_LO12_I);
     return Insts;
+  }
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override {
+    // Keep this in sync with RISCVRelocationHandler::encodeValue(). Instruction
+    // fixups need range checking and potentially a matching high/low
+    // instruction.
+    if (Fixup.isPCRel())
+      return std::nullopt;
+
+    uint32_t Type;
+    switch (Fixup.getKind()) {
+    case FK_Data_4:
+    case ELF::R_RISCV_32:
+      Type = ELF::R_RISCV_32;
+      break;
+    case FK_Data_8:
+    case ELF::R_RISCV_64:
+      Type = ELF::R_RISCV_64;
+      break;
+    default:
+      return std::nullopt;
+    }
+
+    const MCExpr *Expr = Fixup.getValue();
+    while (const auto *Specifier = dyn_cast<MCSpecifierExpr>(Expr))
+      Expr = Specifier->getSubExpr();
+
+    MCValue Value;
+    if (!Expr->evaluateAsRelocatable(Value, nullptr) || Value.getSubSym())
+      return std::nullopt;
+
+    return Relocation(Fixup.getOffset(),
+                      const_cast<MCSymbol *>(Value.getAddSym()), Type,
+                      static_cast<uint64_t>(Value.getConstant()), 0);
   }
 
   InstructionListType createInstrIncMemory(const MCSymbol *Target,

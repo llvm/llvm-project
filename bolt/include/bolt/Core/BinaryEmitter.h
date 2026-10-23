@@ -15,6 +15,7 @@
 #define BOLT_CORE_BINARY_EMITTER_H
 
 #include "llvm/ADT/StringRef.h"
+#include <cstdint>
 
 namespace llvm {
 class MCStreamer;
@@ -36,6 +37,11 @@ void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
 /// symbol(s) and setting the section to emit the code to.
 void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
                       FunctionFragment &FF, bool EmitCodeOnly);
+
+/// Bound the size of RISC-V code after optimization, including worst-case
+/// alignment, assembler branch expansion, and requested padding. Linker
+/// relaxation can only shrink this layout.
+uint64_t estimateRISCVCodeSize(BinaryContext &BC);
 
 } // namespace bolt
 } // namespace llvm
