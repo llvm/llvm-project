@@ -135,4 +135,44 @@ namespace ns2 {
   unsigned twotimes1 = ns1::value_func() + ns1::value_func();
   // expected-error@-1 {{reference to __device__ function 'value_func' in global initializer}}
 
+  __device__ constexpr int devicefoo() { return 1; }
+  // host-note@-1 6{{declared here}}
+
+  __device__ void static test_statics_in_device() {
+    static constexpr int b = devicefoo();
+    static int b1 = devicefoo();
+    [](){ // lambdas are automatically HD
+      static int b2 = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+      static constexpr int b3 = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+    }();
+  }
+  __host__ __device__ void static test_statics_in_hd() {
+    static constexpr int b = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+    static int b1 = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+    [](){
+      static int b2 = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+      static constexpr int b3 = devicefoo();
+      // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
+    }();
+  }
+
+  template <typename T> __device__ void templatedevice() {
+    static constexpr T b = devicefoo();
+  }
+  template <>
+  __device__ void templatedevice<int>();
+  template <typename T> __device__ __host__ void templatehd() {
+    static constexpr T b = devicefoo();
+  }
+  // FIXME: probably should be diagnosed for host
+  template <>
+  __device__ __host__ void templatehd<int>();
+
+
+
 }
