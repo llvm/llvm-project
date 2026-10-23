@@ -7,19 +7,21 @@
 ; The static-data-splitter pass doesn't run.
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -function-sections=true \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
-; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFAULT,COMM
+; RUN:     -unique-section-names=true -partition-static-data-sections \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFAULT,COMM
 
 ; Repeat the command with -preserve-hot-data-section-prefix=false
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -function-sections=true \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     -preserve-hot-data-section-prefix=false \
-; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFNOHOT,COMM
+; RUN:     -unique-section-names=true -partition-static-data-sections \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFNOHOT,COMM
 
 ; DEFAULT: .section .rodata.hot.foo,"a",@progbits
 ; DEFNOHOT: .section .rodata.foo,"a",@progbits
 ; COMM:   .LJTI0_0:
-; COMM:   .LJTI0_1:
 ; COMM:   .LJTI0_2:
+; COMM:   .LJTI0_1:
 ; COMM:   .LJTI0_3:
 ; COMM: .section .rodata.func_without_profile,"a",@progbits
 ; COMM:   .LJTI1_0:

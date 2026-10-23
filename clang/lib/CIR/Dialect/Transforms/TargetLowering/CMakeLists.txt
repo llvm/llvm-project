@@ -11,6 +11,8 @@ add_clang_library(MLIRCIRTargetLowering
 
   DEPENDS
   clangBasic
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_COMPONENTS
   TargetParser
@@ -23,6 +25,7 @@ add_clang_library(MLIRCIRTargetLowering
   MLIRPass
   MLIRDLTIDialect
   MLIRCIR
+  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRLLVMDialect
 )

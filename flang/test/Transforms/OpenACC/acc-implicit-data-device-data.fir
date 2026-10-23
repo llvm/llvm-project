@@ -13,7 +13,7 @@
 
 // A managed POINTER descriptor must be mapped, not deviceptr.
 func.func @managed_ptr_desc() {
-  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> {bindc_name = "p", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEp"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> uniq_name("_QFEp") bindc_name("p") data_attr(managed) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
   acc.parallel {
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
     acc.yield
@@ -30,7 +30,7 @@ func.func @managed_ptr_desc() {
 
 // A managed ALLOCATABLE descriptor must be mapped, not deviceptr (same rule).
 func.func @managed_alloc_desc() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> uniq_name("_QFEa") bindc_name("a") data_attr(managed) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   acc.parallel {
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     acc.yield
@@ -47,7 +47,7 @@ func.func @managed_alloc_desc() {
 
 // A unified ALLOCATABLE descriptor must be mapped, not deviceptr.
 func.func @unified_alloc_desc() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "u", data_attr = #cuf.cuda<unified>, uniq_name = "_QFEu"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> uniq_name("_QFEu") bindc_name("u") data_attr(unified) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   acc.parallel {
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     acc.yield
@@ -63,7 +63,7 @@ func.func @unified_alloc_desc() {
 
 // A device descriptor is physically in device memory and stays deviceptr.
 func.func @device_alloc_desc() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFEd"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> uniq_name("_QFEd") bindc_name("d") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   acc.parallel {
     %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     acc.yield
@@ -80,8 +80,8 @@ func.func @device_alloc_desc() {
 // The underlying-storage walk sees through fir.declare (partial-entity access):
 // a managed descriptor stays mapped even behind a declare.
 func.func @managed_declare() {
-  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> {bindc_name = "p", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEp"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
-  %1 = fir.declare %0 {uniq_name = "_QFEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf64>>> uniq_name("_QFEp") bindc_name("p") data_attr(managed) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
+  %1 = fir.declare %0 uniq_name("_QFEp") : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
   acc.parallel {
     %2 = fir.load %1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
     acc.yield
@@ -170,7 +170,7 @@ func.func @device_dummy(%arg0: !fir.ref<!fir.array<10xf64>> {cuf.data_attr = #cu
 // A managed polymorphic (CLASS) POINTER descriptor must be mapped, not
 // deviceptr -- same rule as the non-polymorphic descriptors.
 func.func @managed_class_ptr() {
-  %0 = cuf.alloc !fir.class<!fir.ptr<!fir.array<?xf64>>> {bindc_name = "cp", data_attr = #cuf.cuda<managed>, uniq_name = "_QFEcp"} -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?xf64>>>>
+  %0 = cuf.alloc !fir.class<!fir.ptr<!fir.array<?xf64>>> uniq_name("_QFEcp") bindc_name("cp") data_attr(managed) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?xf64>>>>
   acc.parallel {
     %1 = fir.load %0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xf64>>>>
     acc.yield

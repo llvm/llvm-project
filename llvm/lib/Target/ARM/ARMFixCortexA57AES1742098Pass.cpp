@@ -415,7 +415,7 @@ void ARMFixCortexA57AES1742098::insertAESFixup(
       .addReg(RegToFixup, RegState::Kill | Renamable)
       .addReg(RegToFixup, RegState::Kill | Renamable)
       .addImm((uint64_t)ARMCC::AL)
-      .addReg(ARM::NoRegister);
+      .addReg(Register());
 }
 
 // Factory function used by AArch64TargetMachine to add the pass to
