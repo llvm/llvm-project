@@ -4572,6 +4572,39 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Dividend));
   }
 
+  // e.g., i32 @llvm.experimental.vector.extract.last.active.v4i32(
+  //           <4 x i32> %data, <4 x i1> %mask, i32 %default)
+  void handleVectorExtractLastActive(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Data = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(1);
+    Value *Default = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    Value *DataShadow = getShadow(Data);
+    Value *DefaultShadow = getShadow(Default);
+    Value *Shadow = IRB.CreateIntrinsic(
+        Intrinsic::experimental_vector_extract_last_active,
+        {DataShadow->getType()},
+        {DataShadow, Mask, DefaultShadow},
+        /*FMFSource=*/{}, "_msprop");
+    setShadow(&I, Shadow);
+
+    if (MS.TrackOrigins) {
+      Value *AnyActive = IRB.CreateOrReduce(Mask);
+      setOrigin(&I, IRB.CreateSelect(AnyActive, getOrigin(Data),
+                                     getOrigin(Default)));
+    }
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -6009,6 +6042,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_partial_reduce_add:
     case Intrinsic::vector_partial_reduce_fadd:
       handleVectorPartialReduceAddIntrinsic(I);
+      break;
+
+    case Intrinsic::experimental_vector_extract_last_active:
+      handleVectorExtractLastActive(I);
       break;
 
     case Intrinsic::scmp:
