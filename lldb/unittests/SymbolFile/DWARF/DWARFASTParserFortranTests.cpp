@@ -261,16 +261,28 @@ DWARF:
           Values:
             - Value:           0x22  # DW_LANG_Fortran95
         
-        - AbbrCode:        0x4  # DW_TAG_base_type
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x0E)
           Values:
             - CStr:            'integer'
             - Value:           0x5   # DW_ATE_signed
             - Value:           0x4   # 4 bytes
 
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x19)
+          Values:
+            - CStr:            'real'
+            - Value:           0x4   # DW_ATE_float
+            - Value:           0x4   # 4 bytes
+
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x21)
+          Values:
+            - CStr:            'logical'
+            - Value:           0x2   # DW_ATE_boolean
+            - Value:           0x4   # 4 bytes
+
         - AbbrCode:        0x2  # DW_TAG_subprogram
           Values:
             - CStr:            'multiply_and_add'
-            - Value:           0x0E  # Return type points to 0x0E (integer)
+            - Value:           0x21  # Return type points to 0x21 (logical)
         
         # Child 1: Parameter 'a'
         - AbbrCode:        0x3  # DW_TAG_formal_parameter
@@ -282,7 +294,7 @@ DWARF:
         - AbbrCode:        0x3  # DW_TAG_formal_parameter
           Values:
             - CStr:            'b'
-            - Value:           0x0E  # Type points to 0x0E (integer)
+            - Value:           0x19  # Type points to 0x19 (real)
             
         - AbbrCode:        0x0  # End of subprogram children
         - AbbrCode:        0x0  # End of compile_unit children
@@ -293,7 +305,7 @@ DWARF:
   DWARFDIE subprogram_die;
   SymbolContext sc;
   bool is_new_type;
-  std::string expected_name = "INTEGER multiply_and_add(INTEGER a, INTEGER b)";
+  std::string expected_name = "LOGICAL multiply_and_add(INTEGER a, REAL b)";
   for (DWARFDIE child_die : cu_die.children()) {
     if (child_die.Tag() == DW_TAG_subprogram) {
       subprogram_die = child_die;
@@ -316,8 +328,8 @@ DWARF:
   CompilerType return_type = function_type.GetFunctionReturnType();
   EXPECT_TRUE(return_type.IsValid());
   EXPECT_EQ(arg_1.GetBasicTypeEnumeration(), eBasicTypeInt);
-  EXPECT_EQ(arg_2.GetBasicTypeEnumeration(), eBasicTypeInt);
-  EXPECT_EQ(return_type.GetBasicTypeEnumeration(), eBasicTypeInt);
+  EXPECT_EQ(arg_2.GetBasicTypeEnumeration(), eBasicTypeFloat);
+  EXPECT_EQ(return_type.GetBasicTypeEnumeration(), eBasicTypeBool);
 }
 
 TEST_F(DWARFASTParserFortranTests,

@@ -185,32 +185,29 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
     size_t num_attr = attributes.Size();
 
     for (size_t i = 0; i < num_attr; ++i) {
-      if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-        switch (attributes.AttributeAtIndex(i)) {
-        case DW_AT_name:
-          type_name_cstr = form_value.AsCString();
-          if (type_name_cstr &&
-              type_name_cstr[0]) { // Check for null AND empty string
-            type_name.SetString(llvm::StringRef(type_name_cstr));
-          } else {
-            type_name.SetCString("UNKNOWN_FORTRAN_FUNCTION");
-          }
-          break;
+      if (!attributes.ExtractFormValueAtIndex(i, form_value))
+        continue;
+      switch (attributes.AttributeAtIndex(i)) {
+      case DW_AT_name:
+        type_name_cstr = form_value.AsCString();
+        if (type_name_cstr &&
+            type_name_cstr[0]) { // Check for null AND empty string
+          type_name.SetString(type_name_cstr);
+        } else {
+          type_name.SetCString("UNKNOWN_FORTRAN_FUNCTION");
+        }
+        break;
 
-        case DW_AT_type: {
-          DWARFDIE type_die = form_value.Reference();
-          if (!type_die)
-            break;
-
+      case DW_AT_type: {
+        if (DWARFDIE type_die = form_value.Reference())
           if (Type *resolved_type = die.GetDWARF()->ResolveType(type_die))
             return_type = resolved_type->GetForwardCompilerType();
 
-          break;
-        }
+        break;
+      }
 
-        default:
-          break;
-        }
+      default:
+        break;
       }
     }
 
@@ -274,16 +271,11 @@ lldb_private::Function *DWARFASTParserFortran::ParseFunctionFromDWARF(
     func_name.SetDemangledName(ConstString(name));
 
   FunctionSP func_sp;
-
   SymbolFileDWARF *dwarf = die.GetDWARF();
-
   // Supply the type only if it has already been parsed
   Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
-
   assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
-
   const user_id_t func_user_id = die.GetID();
-
   Address func_addr = ranges[0].GetBaseAddress();
 
   func_sp = std::make_shared<Function>(&comp_unit,
