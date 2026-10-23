@@ -7,12 +7,24 @@
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -dwarf-version=2 \
 # RUN:   %s -o %t.good.o
+# RUN: llvm-objcopy --only-section=.debug_line --strip-all \
+# RUN:   --set-section-alignment=.debug_line=8 %t.good.o %t.aligned-second.o
+# RUN: ld.lld -r %t.good.o %t.aligned-second.o -o %t.aligned
+# RUN: lldb-test symbols %t.aligned | \
+# RUN:   FileCheck %s --check-prefix=ALIGNED
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym MALFORMED_BODY=1 %s -o %t.bad-body.o
 # RUN: ld.lld -e bad_body -Ttext=0x201000 %t.bad-body.o -o %t.bad-body
 # RUN: %lldb %t.bad-body -b -o "image dump symfile" \
 # RUN:   -o "image lookup -a 0x201000 -v" | \
 # RUN:   FileCheck %s --check-prefix=BAD-BODY
+# RUN: lldb-test symbols %t.bad-body | \
+# RUN:   FileCheck %s --check-prefix=BAD-BODY-CU
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
+# RUN:   --defsym BAD_LENGTH=1 %s -o %t.bad-length.o
+# RUN: ld.lld -e bad_length -Ttext=0x201000 %t.bad-length.o -o %t.bad-length
+# RUN: %lldb %t.bad-length -b -o "image dump symfile" | \
+# RUN:   FileCheck %s --check-prefix=BAD-LENGTH
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux \
 # RUN:   %S/debug-types-line-tables.s -o %t.types.o
 # RUN: llvm-objcopy --remove-section=.debug_info %t.types.o %t.types
@@ -33,6 +45,21 @@
 
         .ifdef INFO_ONLY
         .section .debug_info,"",@progbits
+        .byte 0
+        .else
+        .ifdef BAD_LENGTH
+        .text
+        .globl bad_length
+        .type bad_length,@function
+bad_length:
+        nop
+        retq
+.Lbad_length_end:
+        .size bad_length, .Lbad_length_end-bad_length
+
+        .section .debug_line,"",@progbits
+        # The contribution length extends beyond the end of the section.
+        .long 0x100
         .byte 0
         .else
         .ifdef MALFORMED_BODY
@@ -139,11 +166,20 @@ foo:
         .endif
         .endif
         .endif
+        .endif
 
-# BAD-BODY: SymbolFile symtab
+# BAD-BODY: SymbolFile dwarf
 # BAD-BODY-LABEL: (lldb) image lookup -a 0x201000 -v
 # BAD-BODY-NOT: CompileUnit:
 # BAD-BODY: Symbol: {{.*}}name="bad_body"
+
+# BAD-BODY-CU: CompileUnit{{.*}}file = '/tmp/bad-body.c'
+
+# BAD-LENGTH: SymbolFile symtab
+
+# ALIGNED: Compile units:
+# ALIGNED-COUNT-2: CompileUnit{{.*}}file = '/tmp/standalone-one.c'
+# ALIGNED-NOT: CompileUnit
 
 # TYPES: Compile units:
 # TYPES: CompileUnit{{.*}}file = '/tmp/b.cc'
