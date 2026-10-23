@@ -20,7 +20,7 @@
 using namespace llvm;
 
 void DWARFDebugAranges::extract(
-    DWARFDataExtractor DebugArangesData,
+    DWARFDataExtractor DebugArangesData, uint64_t LowestAllocatedAddress,
     function_ref<void(Error)> RecoverableErrorHandler,
     function_ref<void(Error)> WarningHandler) {
   if (!DebugArangesData.isValidOffset(0))
@@ -37,7 +37,7 @@ void DWARFDebugAranges::extract(
     for (const auto &Desc : Set.descriptors()) {
       uint64_t LowPC = Desc.Address;
       uint64_t HighPC = Desc.getEndAddress();
-      appendRange(CUOffset, LowPC, HighPC);
+      appendRange(CUOffset, LowPC, HighPC, LowestAllocatedAddress);
     }
     ParsedCUOffsets.insert(CUOffset);
   }
@@ -47,12 +47,14 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
   clear();
   if (!CTX)
     return;
+  uint64_t LowestAllocatedAddress =
+      CTX->getDWARFObj().getLowestAllocatedAddress();
 
   // Extract aranges from .debug_aranges section.
   DWARFDataExtractor ArangesData(CTX->getDWARFObj().getArangesSection(),
                                  CTX->isLittleEndian(), 0);
-  extract(ArangesData, CTX->getRecoverableErrorHandler(),
-          CTX->getWarningHandler());
+  extract(ArangesData, LowestAllocatedAddress,
+          CTX->getRecoverableErrorHandler(), CTX->getWarningHandler());
 
   // Generate aranges from DIEs: even if .debug_aranges section is present,
   // it may describe only a small subset of compilation units, so we need to
@@ -65,7 +67,7 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
         CTX->getRecoverableErrorHandler()(CURanges.takeError());
       else
         for (const auto &R : *CURanges)
-          appendRange(CUOffset, R.LowPC, R.HighPC);
+          appendRange(CUOffset, R.LowPC, R.HighPC, LowestAllocatedAddress);
     }
   }
 
@@ -79,8 +81,12 @@ void DWARFDebugAranges::clear() {
 }
 
 void DWARFDebugAranges::appendRange(uint64_t CUOffset, uint64_t LowPC,
-                                    uint64_t HighPC) {
-  if (LowPC >= HighPC)
+                                    uint64_t HighPC,
+                                    uint64_t LowestAllocatedAddress) {
+  // A linker can leave a low address in debug info for a discarded or folded
+  // section. Ignore the entire range, even if its end overlaps live code or
+  // data. Without a nonzero lower bound, zero may be a valid address.
+  if (LowPC >= HighPC || LowPC < LowestAllocatedAddress)
     return;
   Endpoints.emplace_back(LowPC, CUOffset, true);
   Endpoints.emplace_back(HighPC, CUOffset, false);

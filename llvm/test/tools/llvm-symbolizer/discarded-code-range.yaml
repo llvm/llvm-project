@@ -1,0 +1,226 @@
+## A discarded CU covers [0, 0x2000), overlapping a live CU at 0x1000.
+## Its range must not hide the live CU in a linked ELF file.
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-symbolizer --obj=%t.exe 0x1004 | FileCheck %s --check-prefix=LIVE
+# RUN: llvm-addr2line -f -e %t.exe 0x1004 | FileCheck %s --check-prefix=ADDR2LINE
+# RUN: llvm-dwarfdump --lookup=0x1004 %t.exe | FileCheck %s --check-prefix=LOOKUP
+# RUN: yaml2obj -DTYPE=ET_DYN %s -o %t.so
+# RUN: llvm-symbolizer --obj=%t.so 0x1004 | FileCheck %s --check-prefix=LIVE
+# RUN: yaml2obj -DLOW=4 %s -o %t.addend
+# RUN: llvm-symbolizer --obj=%t.addend 0x1004 | FileCheck %s --check-prefix=LIVE
+# RUN: yaml2obj -DCLASS=ELFCLASS32 -DMACHINE=EM_386 -DADDRSIZE=4 \
+# RUN:   -DLIVE_CU=0x2a %s -o %t.32
+# RUN: llvm-symbolizer --obj=%t.32 0x1004 | FileCheck %s --check-prefix=LIVE
+
+## The same check applies to ranges collected from the CU DIEs.
+# RUN: llvm-objcopy --remove-section=.debug_aranges %t.exe %t.no-aranges
+# RUN: llvm-symbolizer --obj=%t.no-aranges 0x1004 | FileCheck %s --check-prefix=LIVE
+# RUN: llvm-dwarfdump --lookup=0x1004 %t.no-aranges | FileCheck %s --check-prefix=LOOKUP
+
+## DWARF 5 can obtain the same discarded range through .debug_addr.
+# RUN: yaml2obj --docnum=2 %s -o %t.rnglists
+# RUN: llvm-symbolizer --obj=%t.rnglists 0x1004 | FileCheck %s --check-prefix=LIVE
+
+## Keep valid zero addresses in relocatable objects and linked firmware.
+# RUN: yaml2obj -DTYPE=ET_REL %s -o %t.o
+# RUN: llvm-symbolizer --obj=%t.o 0x4 | FileCheck %s --check-prefix=ZERO
+# RUN: yaml2obj -DTEXT=0 %s -o %t.zero
+# RUN: llvm-symbolizer --obj=%t.zero 0x4 | FileCheck %s --check-prefix=ZERO
+
+## Allocated NOBITS data at zero also disables the lower-bound filter.
+# RUN: yaml2obj -DBSS_SIZE=4 %s -o %t.zero-bss
+# RUN: llvm-symbolizer --obj=%t.zero-bss 0x4 | FileCheck %s --check-prefix=ZERO
+
+## Without nonempty allocated sections there is no lower bound to use.
+# RUN: yaml2obj -DFLAGS= %s -o %t.no-alloc
+# RUN: llvm-symbolizer --obj=%t.no-alloc 0x4 | FileCheck %s --check-prefix=ZERO
+# RUN: yaml2obj -DSIZE=0 %s -o %t.empty
+# RUN: llvm-symbolizer --obj=%t.empty 0x4 | FileCheck %s --check-prefix=ZERO
+
+## A debug-only file retains the allocated sections' addresses and sizes.
+# RUN: llvm-objcopy --only-keep-debug %t.exe %t.debug
+# RUN: llvm-symbolizer --obj=%t.debug 0x1004 | FileCheck %s --check-prefix=LIVE
+
+# LIVE:      live
+# LIVE-NEXT: ??:0:0
+# ZERO:      zero
+# ZERO-NEXT: ??:0:0
+# ADDR2LINE:      live
+# ADDR2LINE-NEXT: ??:0
+# LOOKUP:      DW_TAG_compile_unit
+# LOOKUP-NEXT: DW_AT_name ("live.c")
+# LOOKUP:      DW_TAG_subprogram
+# LOOKUP-NEXT: DW_AT_name ("live")
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS=ELFCLASS64]]
+  Data:    ELFDATA2LSB
+  Type:    [[TYPE=ET_EXEC]]
+  Machine: [[MACHINE=EM_X86_64]]
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ [[FLAGS=SHF_ALLOC, SHF_EXECINSTR]] ]
+    Address: [[TEXT=0x1000]]
+    Size:    [[SIZE=0x10]]
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0
+    Size:    [[BSS_SIZE=0]]
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
+  debug_info:
+    - Version:       4
+      AddrSize:      [[ADDRSIZE=8]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr:  zero.c
+            - Value: [[LOW=0]]
+            - Value: 0x2000
+        - AbbrCode: 2
+          Values:
+            - CStr:  zero
+            - Value: [[LOW=0]]
+            - Value: 0x2000
+        - AbbrCode: 0
+    - Version:       4
+      AddrSize:      [[ADDRSIZE=8]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr:  live.c
+            - Value: 0x1000
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr:  live
+            - Value: 0x1000
+            - Value: 0x10
+        - AbbrCode: 0
+  debug_aranges:
+    - Version:  2
+      CuOffset: 0
+      Descriptors:
+        - Address: [[LOW=0]]
+          Length:  0x2000
+    - Version:  2
+      CuOffset: [[LIVE_CU=0x32]]
+      Descriptors:
+        - Address: 0x1000
+          Length:  0x10
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_ranges
+              Form:      DW_FORM_rnglistx
+            - Attribute: DW_AT_rnglists_base
+              Form:      DW_FORM_sec_offset
+            - Attribute: DW_AT_addr_base
+              Form:      DW_FORM_sec_offset
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
+  debug_info:
+    - Version:       5
+      UnitType:      DW_UT_compile
+      AddrSize:      8
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr:  zero.c
+            - Value: 0
+            - Value: 12
+            - Value: 8
+        - AbbrCode: 2
+          Values:
+            - CStr:  zero
+            - Value: 0
+            - Value: 0x2000
+        - AbbrCode: 0
+    - Version:       5
+      UnitType:      DW_UT_compile
+      AddrSize:      8
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr:  live.c
+            - Value: 1
+            - Value: 12
+            - Value: 8
+        - AbbrCode: 2
+          Values:
+            - CStr:  live
+            - Value: 0x1000
+            - Value: 0x10
+        - AbbrCode: 0
+  debug_addr:
+    - Version:     5
+      AddressSize: 8
+      Entries:
+        - Address: 0
+        - Address: 0x1000
+  debug_rnglists:
+    - AddressSize: 8
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_startx_length
+              Values:   [ 0, 0x2000 ]
+            - Operator: DW_RLE_end_of_list
+        - Entries:
+            - Operator: DW_RLE_startx_length
+              Values:   [ 1, 0x10 ]
+            - Operator: DW_RLE_end_of_list
