@@ -54,8 +54,8 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 ///
 /// \p Name may be a human-friendly name ("xe-pvc"), a compatibility name
 /// ("xe-dg2"), an alias ("xe-arl-u") or a numeric name ("xe_12.60.7"). A
-/// numeric name must give a revision, but the revision is ignored, so
-/// "xe_12.60.0" and "xe_12.60.7" denote the same device.
+/// numeric name must end in a revision, which may be any number and is ignored,
+/// so "xe_12.60.0" and "xe_12.60.7" denote the same device.
 LLVM_ABI GPUKind parseArch(StringRef Name);
 
 } // namespace IntelGPU
