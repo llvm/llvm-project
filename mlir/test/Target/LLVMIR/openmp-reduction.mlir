@@ -58,6 +58,7 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Atomic reduction.
 // CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
 // CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL]]
+// CHECK: call void @__kmpc_end_reduce
 
 // Non-atomic reduction:
 // CHECK: fadd float
