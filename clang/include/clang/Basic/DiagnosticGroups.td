@@ -648,8 +648,16 @@ This warning may produce false-positives diagnostics when it cannot fully model 
   }];
 }
 
+def LifetimeSafetyInapplicableLifetimeboundReturn
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound-return"> {
+  code Documentation = [{
+Detects uses of [[clang::lifetimebound]] that may be incorrect or indicate a missing lifetime annotation on the return type.
+  }];
+}
+
 def LifetimeSafetyInapplicableLifetimebound
-    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound",
+                [LifetimeSafetyInapplicableLifetimeboundReturn]> {
   code Documentation = [{
 Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
   }];
