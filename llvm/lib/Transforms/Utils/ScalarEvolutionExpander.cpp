@@ -302,9 +302,8 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
           if (I->hasNoUnsignedWrap() != any(Flags & SCEV::FlagNUW))
             return true;
         }
-        // Conservatively, do not use any instruction which has any of exact
-        // flags installed.
-        if (isa<PossiblyExactOperator>(I) && I->isExact())
+        if (isa<PossiblyExactOperator>(I) &&
+            I->isExact() != any(Flags & SCEV::FlagExact))
           return true;
         return false;
       };
@@ -335,6 +334,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
   Builder.SetCurrentDebugLocation(Loc);
   bool IsNUW = any(Flags & SCEV::FlagNUW);
   bool IsNSW = any(Flags & SCEV::FlagNSW);
+  bool IsExact = any(Flags & SCEV::FlagExact);
   // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
   // the rewrites.
   if (LSRMode && !PostIncLoops.empty() &&
@@ -346,8 +346,14 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
       BO->setHasNoUnsignedWrap();
     if (IsNSW)
       BO->setHasNoSignedWrap();
+    if (IsExact) {
+      assert(!IsNUW && !IsNSW && "Unexpected nuw/nsw found");
+      BO->setIsExact();
+    }
     return Builder.Insert(BO);
   }
+  if (IsExact)
+    return Builder.CreateExactBinOp(Opcode, LHS, RHS, IsExact);
   return Builder.CreateNoWrapBinOp(Opcode, LHS, RHS, IsNUW, IsNSW);
 }
 
@@ -741,7 +747,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
-  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagNone,
+  return InsertBinop(Instruction::UDiv, LHS, RHS, S.getExactFlag(),
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 
