@@ -327,6 +327,100 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   // correctly.
 }
 
+TEST_F(DebugLineBasicFixture, ParseSequenceRangesDoesNotRetainRowsOrSequences) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x2000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xbb);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  generate();
+
+  DWARFDebugLine::LineTable RangesOnly;
+  uint64_t Offset = 0;
+  Expected<DWARFAddressRangesVector> Ranges = RangesOnly.parseSequenceRanges(
+      LineData, &Offset, *Context, nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(Ranges, Succeeded());
+  ASSERT_EQ(Ranges->size(), 2u);
+  EXPECT_EQ((*Ranges)[0].LowPC, 0x2000u);
+  EXPECT_EQ((*Ranges)[1].LowPC, 0x1000u);
+  EXPECT_TRUE(RangesOnly.Rows.empty());
+  EXPECT_TRUE(RangesOnly.Sequences.empty());
+
+  DWARFDebugLine::LineTable Full;
+  Offset = 0;
+  ASSERT_THAT_ERROR(
+      Full.parse(LineData, &Offset, *Context, nullptr, RecordRecoverable),
+      Succeeded());
+  ASSERT_EQ(Ranges->size(), Full.Sequences.size());
+  for (size_t I = 0; I < Ranges->size(); ++I) {
+    const DWARFDebugLine::Sequence &Sequence =
+        Full.Sequences[Ranges->size() - I - 1];
+    EXPECT_EQ((*Ranges)[I], DWARFAddressRange(Sequence.LowPC, Sequence.HighPC,
+                                              Sequence.SectionIndex));
+  }
+}
+
+TEST_F(DebugLineBasicFixture, ParseSequenceRangesOmitsInvalidSequences) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x2000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x3000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  generate();
+
+  DWARFDebugLine::LineTable RangesOnly;
+  uint64_t Offset = 0;
+  Expected<DWARFAddressRangesVector> Ranges = RangesOnly.parseSequenceRanges(
+      LineData, &Offset, *Context, nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(Ranges, Succeeded());
+  ASSERT_EQ(Ranges->size(), 1u);
+  EXPECT_EQ((*Ranges)[0].LowPC, 0x2000u);
+  EXPECT_TRUE(RangesOnly.Rows.empty());
+  EXPECT_TRUE(RangesOnly.Sequences.empty());
+  EXPECT_THAT_ERROR(
+      std::move(Recoverable),
+      FailedWithMessage("last sequence in debug line table at offset "
+                        "0x00000000 is not terminated"));
+}
+
+TEST_F(DebugLineBasicFixture, ParseSequenceRangesDoesNotReturnPartialResults) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  // Leave an opcode requiring a ULEB128 operand at the end of the program.
+  LT.addByte(DW_LNS_advance_pc);
+  generate();
+
+  DWARFDebugLine::LineTable RangesOnly;
+  uint64_t Offset = 0;
+  Expected<DWARFAddressRangesVector> Ranges = RangesOnly.parseSequenceRanges(
+      LineData, &Offset, *Context, nullptr, RecordRecoverable);
+  EXPECT_THAT_EXPECTED(Ranges, Failed());
+  EXPECT_TRUE(RangesOnly.Rows.empty());
+  EXPECT_TRUE(RangesOnly.Sequences.empty());
+}
+
 #ifdef NO_SUPPORT_DEBUG_ADDR
 TEST_P(DebugLineParameterisedFixture, DISABLED_ClearLineValidTable) {
 #else
