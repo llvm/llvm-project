@@ -180,24 +180,22 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp ugt <2 x double> [[TMP14]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i1> [[TMP15]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = freeze <2 x i1> [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <2 x i1> [[TMP17]] to i2
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP18]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP17]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT26:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT27:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT26]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <2 x i1> [[TMP17]] to i2
-; CHECK-NEXT:    [[DOTNOT39:%.*]] = icmp eq i2 [[TMP19]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP17]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY28:.*]]
 ; CHECK:       [[VECTOR_BODY28]]:
 ; CHECK-NEXT:    [[INDEX29:%.*]] = phi i64 [ 0, %[[VECTOR_PH19]] ], [ [[INDEX_NEXT33:%.*]], %[[TMP22:.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI30:%.*]] = phi <2 x i64> [ [[BROADCAST_SPLAT27]], %[[VECTOR_PH19]] ], [ [[TMP24:%.*]], %[[TMP22]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_PH19]] ], [ [[TMP23:%.*]], %[[TMP22]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT39]], label %[[TMP22]], label %[[BB21:.*]]
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[BB21:.*]], label %[[TMP22]]
 ; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    store i64 0, ptr [[BASE]], align 8, !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    br label %[[TMP22]]
 ; CHECK:       [[TMP22]]:
-; CHECK-NEXT:    [[TMP23]] = select i1 [[DOTNOT]], <2 x i1> [[TMP20]], <2 x i1> [[TMP17]]
-; CHECK-NEXT:    [[TMP24]] = select i1 [[DOTNOT]], <2 x i64> [[VEC_PHI30]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP23]] = select i1 [[TMP18]], <2 x i1> [[TMP17]], <2 x i1> [[TMP20]]
+; CHECK-NEXT:    [[TMP24]] = select i1 [[TMP18]], <2 x i64> zeroinitializer, <2 x i64> [[VEC_PHI30]]
 ; CHECK-NEXT:    [[INDEX_NEXT33]] = add nuw i64 [[INDEX29]], 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT33]], [[N_VEC21]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK34:.*]], label %[[VECTOR_BODY28]], !llvm.loop [[LOOP8:![0-9]+]]
