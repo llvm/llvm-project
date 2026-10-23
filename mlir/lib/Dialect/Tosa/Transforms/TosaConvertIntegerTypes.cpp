@@ -58,14 +58,14 @@ namespace mlir::tosa {
 using namespace mlir;
 
 namespace {
-static APInt convertValue(const APInt &value, Type type, unsigned width) {
+APInt convertValue(const APInt &value, Type type, unsigned width) {
   return type.isUnsignedInteger() ? value.zextOrTrunc(width)
                                   : value.sextOrTrunc(width);
 }
 
 // Convert a validated byte-aligned payload, retaining storage for every
 // element. In particular, each i4 element occupies one byte, not half a byte.
-static SmallVector<char> convertRawValues(ArrayRef<char> rawData,
+SmallVector<char> convertRawValues(ArrayRef<char> rawData,
                                           IntegerType type,
                                           IntegerType convertedType) {
   const unsigned inputBytes = llvm::divideCeil(type.getWidth(), 8);

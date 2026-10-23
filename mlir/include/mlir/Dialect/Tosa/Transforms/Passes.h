@@ -17,8 +17,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Pass/Pass.h"
 
-#include <utility>
-
 namespace mlir {
 class TypeConverter;
 namespace tosa {

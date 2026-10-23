@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics -tosa-convert-integer-types='bitwidth-mappings=4:8,48:64,8:4' %s
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=16:16' %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -verify-diagnostics -tosa-convert-integer-types-bitwidth='bitwidth-mappings=4:8,48:64,8:4' %s
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=16:16' %s | FileCheck %s
 
 // Unselected widths must leave even missing or malformed resources untouched.
 // CHECK-LABEL: func.func @missing_resource()

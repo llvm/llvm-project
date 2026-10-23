@@ -1,6 +1,6 @@
 // REQUIRES: host-byteorder-little-endian
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=3:4,4:8,8:4,13:16,16:1,24:32,40:24,48:64,56:48,65:128,128:65' -mlir-print-op-generic %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=128:65,65:128,56:48,48:64,40:24,24:32,16:1,13:16,8:4,4:8,3:4' -mlir-print-op-generic %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=3:4,4:8,8:4,13:16,16:1,24:32,40:24,48:64,56:48,65:128,128:65' -mlir-print-op-generic %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=128:65,65:128,56:48,48:64,40:24,24:32,16:1,13:16,8:4,4:8,3:4' -mlir-print-op-generic %s | FileCheck %s
 
 // Each mapping applies once to the original width, including cycles and
 // destinations that are also sources. Reversing the list must have no effect.

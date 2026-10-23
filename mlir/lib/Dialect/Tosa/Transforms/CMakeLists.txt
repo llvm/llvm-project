@@ -29,7 +29,6 @@ add_mlir_dialect_library(MLIRTosaTransforms
   MLIRFuncDialect
   MLIRFuncTransformOps
   MLIRPass
-  MLIRTensorDialect
   MLIRTosaDialect
   MLIRTransformUtils
   MLIRFuncTransforms

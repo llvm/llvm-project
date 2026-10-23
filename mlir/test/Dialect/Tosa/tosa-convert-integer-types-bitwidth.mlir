@@ -1,6 +1,6 @@
 // REQUIRES: host-byteorder-little-endian
-// RUN: mlir-opt -split-input-file -pass-pipeline='builtin.module(tosa-convert-integer-types{bitwidth-mappings=4:8,48:64})' %s | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=4:8,48:64' %s | mlir-opt -split-input-file -tosa-convert-integer-types='bitwidth-mappings=4:8,48:64' | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
+// RUN: mlir-opt -split-input-file -pass-pipeline='builtin.module(tosa-convert-integer-types-bitwidth{bitwidth-mappings=4:8,48:64})' %s | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
+// RUN: mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=4:8,48:64' %s | mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=4:8,48:64' | FileCheck %s --implicit-check-not=i4 --implicit-check-not=unrealized_conversion_cast --implicit-check-not=tosa.cast
 
 // CHECK-LABEL: func.func @clamp
 func.func @clamp(%arg: tensor<4xi48>) -> tensor<4xi48> {
