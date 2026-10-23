@@ -1813,6 +1813,19 @@
     ),
   },
   {
+    ClauseSet::DeclareMapperClauseSet1,
+    descriptor::ClauseSet(
+      "declare_mapper_clause_set_1",
+      {
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+      }
+    ),
+  },
+  {
     ClauseSet::DepobjClauseSet1,
     descriptor::ClauseSet(
       "depobj_clause_set_1",
@@ -2126,11 +2139,11 @@
     descriptor::Directive(
       "declare_mapper",
       {
-        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
+        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
       }
     ),
   },
