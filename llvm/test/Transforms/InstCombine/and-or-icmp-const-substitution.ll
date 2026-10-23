@@ -4,8 +4,7 @@ define i1 @src(i32 noundef %x, i32 noundef %y, i32 noundef %z) {
 ; CHECK-LABEL: define i1 @src(
 ; CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]], i32 noundef [[Z:%.*]]) {
 ; CHECK-NEXT:    [[ZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[EQUAL:%.*]] = icmp eq i32 [[SUM]], [[Z]]
+; CHECK-NEXT:    [[EQUAL:%.*]] = icmp eq i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[ZERO]], [[EQUAL]]
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
