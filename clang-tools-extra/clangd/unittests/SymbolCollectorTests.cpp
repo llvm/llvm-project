@@ -2266,6 +2266,26 @@ TEST_F(SymbolCollectorTest, ExportedDeclarationsForCodeCompletion) {
                            AllOf(qName("ns::h"), forCodeCompletion(true))));
 }
 
+TEST_F(SymbolCollectorTest, ExportedDeclarationsHaveDistinctIDs) {
+  // The enclosing namespace must be part of an exported symbol's USR, or these
+  // functions would share one SymbolID and be merged.
+  const char *Main = R"cpp(
+    export module m;
+    void f();
+    namespace a {
+    export void f();
+    }
+    namespace b {
+    export void f();
+    }
+  )cpp";
+
+  runSymbolCollector("", Main, {"-std=c++20", "-xc++-module"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(qName("f"), qName("a"), qName("a::f"),
+                                   qName("b"), qName("b::f")));
+}
+
 TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {
   CollectorOpts.CollectIncludePath = true;
   const std::string Header = R"cpp(#pragma once 
