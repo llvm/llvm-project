@@ -1,0 +1,43 @@
+! RUN: not bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - 2>&1 | FileCheck %s
+
+! Neither a managed nor a unified dummy accepts ordinary private storage in
+! default GPU memory mode. Infinite contextual scores must reject candidates,
+! rather than selecting one or diagnosing a tie between incompatible ones.
+module incompatible_candidates
+  interface choose
+    module procedure managed_specific, unified_specific
+  end interface
+  interface value_generic
+    module procedure value_specific
+  end interface
+contains
+  subroutine value_specific(x)
+    real(8), value :: x
+  end subroutine
+  subroutine managed_specific(x)
+    real(8), managed :: x
+  end subroutine
+  subroutine unified_specific(x)
+    real(8), unified :: x
+  end subroutine
+end module
+
+subroutine incompatible_actual
+  use incompatible_candidates
+  real(8) :: x
+  !$acc serial private(x)
+  ! CHECK: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(x)
+  !$acc end serial
+end subroutine
+
+subroutine explicit_device_value(input)
+  use incompatible_candidates
+  real(8), device :: input
+  !$acc serial
+  ! Preserve ordinary CUDA matching for VALUE dummies. An explicit DEVICE
+  ! actual has an infinite host-dummy score, including in a GPU compute body.
+  ! CHECK: No specific subroutine of generic 'value_generic' matches the actual arguments
+  call value_generic(input)
+  !$acc end serial
+end subroutine

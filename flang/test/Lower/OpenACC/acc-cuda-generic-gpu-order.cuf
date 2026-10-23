@@ -1,0 +1,48 @@
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - | FileCheck %s -DNOD=host_specific -DNOM=device_specific -DHU=host_specific
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=managed -emit-hlfir %s -o - | FileCheck %s -DNOD=managed_specific -DNOM=device_specific -DHU=unified_specific
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=unified -emit-hlfir %s -o - | FileCheck %s -DNOD=managed_specific -DNOM=device_specific -DHU=host_specific
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s -DNOD=host_specific -DNOM=host_specific -DHU=host_specific
+
+! Removing the best candidates checks the intermediate preference ordering,
+! rather than just the winner when all four CUDA attributes are available.
+module gpu_order_candidates
+  interface no_device
+    module procedure host_specific, managed_specific, unified_specific
+  end interface
+  interface no_managed
+    module procedure host_specific, unified_specific, device_specific
+  end interface
+  interface host_unified
+    module procedure host_specific, unified_specific
+  end interface
+contains
+  subroutine host_specific(x)
+    real(8) :: x(:)
+  end subroutine
+  subroutine device_specific(x)
+    real(8), device :: x(:)
+  end subroutine
+  subroutine managed_specific(x)
+    real(8), managed :: x(:)
+  end subroutine
+  subroutine unified_specific(x)
+    real(8), unified :: x(:)
+  end subroutine
+end module
+
+subroutine contextual_order
+  use gpu_order_candidates
+  real(8), allocatable :: x(:)
+  allocate(x(2))
+  ! CHECK-LABEL: func.func @_QPcontextual_order
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_order_candidatesP[[NOD]]
+  ! CHECK: fir.call @_QMgpu_order_candidatesP[[NOM]]
+  ! CHECK: fir.call @_QMgpu_order_candidatesP[[HU]]
+  !$acc serial copy(x)
+  call no_device(x)
+  call no_managed(x)
+  call host_unified(x)
+  !$acc end serial
+  deallocate(x)
+end subroutine

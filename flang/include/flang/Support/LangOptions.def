@@ -32,6 +32,8 @@ LANGOPT(NoHonorNaNs, 1, false)
 /// Allow math functions to be replaced with an approximately equivalent
 /// calculation
 LANGOPT(ApproxFunc, 1, false)
+/// OpenACC compute constructs target only GPUs (subject to IF/SELF clauses).
+LANGOPT(OpenACCIsGPU, 1, false)
 /// Allow optimizations that ignore the sign of floating point zeros
 LANGOPT(NoSignedZeros, 1, false)
 /// Allow reassociation transformations for floating-point instructions

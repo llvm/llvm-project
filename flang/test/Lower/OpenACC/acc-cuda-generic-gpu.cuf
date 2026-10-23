@@ -1,0 +1,271 @@
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - | FileCheck %s -DGPU=device_specific -DHOST=host_specific -DCOUNT=host_count -DALLOC_HOST=host_specific -DMAPPED_GPU=device_specific
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=managed -emit-hlfir %s -o - | FileCheck %s -DGPU=device_specific -DHOST=host_specific -DCOUNT=host_count -DALLOC_HOST=managed_specific -DMAPPED_GPU=device_specific
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=unified -emit-hlfir %s -o - | FileCheck %s -DGPU=managed_specific -DHOST=unified_specific -DCOUNT=device_count -DALLOC_HOST=unified_specific -DMAPPED_GPU=managed_specific
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s -DGPU=host_specific -DHOST=host_specific -DCOUNT=host_count -DALLOC_HOST=host_specific -DMAPPED_GPU=device_specific
+
+! A VALUE input must keep its ordinary score. Only the following reference
+! argument should acquire the compute-body preference. Reversing declaration
+! order must not change the selected specific.
+module gpu_candidates
+  interface choose
+    module procedure host_specific, unified_specific
+    module procedure managed_specific, device_specific
+  end interface
+  interface reverse_choose
+    module procedure device_specific, managed_specific
+    module procedure unified_specific, host_specific
+  end interface
+  interface trip_count
+    module procedure host_count, device_count
+  end interface
+  interface choose_kind
+    module procedure device_specific, host_single
+  end interface
+  interface value_only
+    module procedure value_copy
+  end interface
+contains
+  subroutine value_copy(x)
+    real(8), value :: x
+  end subroutine
+  subroutine host_single(value, x)
+    real(8), value :: value
+    real(4) :: x
+    x = value
+  end subroutine
+  subroutine host_specific(value, x)
+    real(8), value :: value
+    real(8) :: x
+    x = value
+  end subroutine
+  subroutine device_specific(value, x)
+    real(8), value :: value
+    real(8), device :: x
+    x = value
+  end subroutine
+  subroutine managed_specific(value, x)
+    real(8), value :: value
+    real(8), managed :: x
+    x = value
+  end subroutine
+  subroutine unified_specific(value, x)
+    real(8), value :: value
+    real(8), unified :: x
+    x = value
+  end subroutine
+  integer function host_count(x)
+    real(8) :: x
+    host_count = 1
+  end function
+  integer function device_count(x)
+    real(8), device :: x
+    device_count = 1
+  end function
+end module
+
+subroutine compute_bodies(x)
+  use gpu_candidates
+  real(8) :: x
+  integer :: i
+  ! CHECK-LABEL: func.func @_QPcompute_bodies
+  ! CHECK: fir.call @_QMgpu_candidatesP[[HOST]]
+  call choose(1.0_8, x)
+  ! CHECK: acc.parallel
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc parallel private(x)
+  call choose(1.0_8, x)
+  !$acc end parallel
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc serial private(x)
+  call reverse_choose(1.0_8, x)
+  !$acc end serial
+  ! CHECK: acc.kernels
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc kernels
+  call choose(1.0_8, x)
+  !$acc end kernels
+  ! CHECK: acc.parallel combined(loop)
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc parallel loop private(x)
+  do i = 1, 2
+    call choose(1.0_8, x)
+  end do
+  !$acc end parallel loop
+  ! CHECK: acc.serial combined(loop)
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc serial loop private(x)
+  do i = 1, 2
+    call choose(1.0_8, x)
+  end do
+  !$acc end serial loop
+  ! CHECK: acc.kernels combined(loop)
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc kernels loop private(x)
+  do i = 1, 2
+    call choose(1.0_8, x)
+  end do
+  !$acc end kernels loop
+end subroutine
+
+subroutine host_contexts(x, other, flag)
+  use gpu_candidates
+  real(8) :: x, other
+  logical :: flag
+  integer :: i
+  ! CHECK-LABEL: func.func @_QPhost_contexts
+  ! The mapped object is deliberately different from the actual.
+  ! CHECK: acc.data
+  ! CHECK: fir.call @_QMgpu_candidatesP[[HOST]]
+  !$acc data create(other)
+  call choose(1.0_8, x)
+  !$acc end data
+  ! CHECK: acc.parallel
+  ! CHECK: fir.call @_QMgpu_candidatesP[[HOST]]
+  !$acc parallel if(flag) private(x)
+  call choose(1.0_8, x)
+  !$acc end parallel
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesP[[HOST]]
+  !$acc serial self(flag) private(x)
+  call choose(1.0_8, x)
+  !$acc end serial
+  ! Directive expressions and loop headers do not acquire the body preference.
+  ! CHECK: fir.call @_QMgpu_candidatesP[[COUNT]]
+  ! CHECK: acc.parallel
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc parallel num_gangs(trip_count(x)) private(x)
+  call choose(1.0_8, x)
+  !$acc end parallel
+  ! CHECK: acc.parallel combined(loop)
+  ! CHECK: fir.call @_QMgpu_candidatesP[[COUNT]]
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc parallel loop private(x)
+  do i = 1, trip_count(x)
+    call choose(1.0_8, x)
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine collapsed_headers(x)
+  use gpu_candidates
+  real(8) :: x
+  integer :: i, j
+  ! CHECK-LABEL: func.func @_QPcollapsed_headers
+  ! CHECK: acc.parallel combined(loop)
+  ! CHECK: fir.call @_QMgpu_candidatesP[[COUNT]]
+  ! CHECK: fir.call @_QMgpu_candidatesP[[COUNT]]
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc parallel loop collapse(2) private(x)
+  do i = 1, trip_count(x)
+    do j = 1, trip_count(x)
+      call choose(1.0_8, x)
+    end do
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine mapped_actual(x)
+  use gpu_candidates
+  real(8) :: x
+  ! CHECK-LABEL: func.func @_QPmapped_actual
+  ! Structured-data mapping outside compute retains its existing preference.
+  ! CHECK: acc.data
+  ! CHECK: fir.call @_QMgpu_candidatesPdevice_specific
+  !$acc data copy(x)
+  call choose(1.0_8, x)
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesP[[MAPPED_GPU]]
+  !$acc serial present(x)
+  call choose(1.0_8, x)
+  !$acc end serial
+  ! An explicit use_device attribute likewise keeps ordinary CUDA matching.
+  ! CHECK: acc.host_data
+  ! CHECK: fir.call @_QMgpu_candidatesPdevice_specific
+  !$acc host_data use_device(x)
+  call choose(1.0_8, x)
+  !$acc end host_data
+  !$acc end data
+end subroutine
+
+subroutine explicit_attributes
+  use gpu_candidates
+  real(8), device :: d
+  real(8), managed :: m
+  real(8), unified :: u
+  ! CHECK-LABEL: func.func @_QPexplicit_attributes
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesPdevice_specific
+  ! CHECK: fir.call @_QMgpu_candidatesPmanaged_specific
+  ! CHECK: fir.call @_QMgpu_candidatesPunified_specific
+  !$acc serial
+  call choose(1.0_8, d)
+  call choose(1.0_8, m)
+  call choose(1.0_8, u)
+  !$acc end serial
+end subroutine
+
+subroutine pointer_actual
+  use gpu_candidates
+  real(8), pointer :: x
+  allocate(x)
+  ! CHECK-LABEL: func.func @_QPpointer_actual
+  ! CHECK: fir.call @_QMgpu_candidatesP[[ALLOC_HOST]]
+  call choose(1.0_8, x)
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc serial
+  call choose(1.0_8, x)
+  !$acc end serial
+  deallocate(x)
+end subroutine
+
+subroutine allocated_actual
+  use gpu_candidates
+  real(8), allocatable :: x
+  allocate(x)
+  ! CHECK-LABEL: func.func @_QPallocated_actual
+  ! CHECK: fir.call @_QMgpu_candidatesP[[ALLOC_HOST]]
+  call choose(1.0_8, x)
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  !$acc serial
+  call choose(1.0_8, x)
+  !$acc end serial
+  deallocate(x)
+end subroutine
+
+subroutine routine_body(x)
+  use gpu_candidates
+  !$acc routine seq
+  real(8) :: x
+  ! CHECK-LABEL: func.func @_QProutine_body
+  ! CHECK: fir.call @_QMgpu_candidatesP[[HOST]]
+  call choose(1.0_8, x)
+end subroutine
+
+subroutine kind_compatibility
+  use gpu_candidates
+  real(4) :: x
+  ! CHECK-LABEL: func.func @_QPkind_compatibility
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_candidatesPhost_single
+  !$acc serial private(x)
+  call choose_kind(1.0_8, x)
+  !$acc end serial
+end subroutine
+
+subroutine variable_value_input(input)
+  use gpu_candidates
+  real(8) :: input
+  real(8) :: x
+  ! CHECK-LABEL: func.func @_QPvariable_value_input
+  ! CHECK: acc.serial
+  ! The first VALUE argument must not hide the second argument's score.
+  ! CHECK: fir.call @_QMgpu_candidatesP[[GPU]]
+  ! CHECK: fir.call @_QMgpu_candidatesPvalue_copy
+  !$acc serial private(x)
+  call choose(input, x)
+  call value_only(input)
+  !$acc end serial
+end subroutine

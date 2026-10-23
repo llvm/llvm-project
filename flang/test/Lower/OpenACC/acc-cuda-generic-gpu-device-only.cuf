@@ -1,0 +1,36 @@
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - | FileCheck %s
+
+! Keep a CUDA-specific by-reference candidate eligible through interface
+! checking, before the GPU-body score is applied. The VALUE input is a
+! temporary and must retain its normal argument matching.
+module gpu_only_candidate
+  interface choose
+    module procedure device_specific
+  end interface
+contains
+  subroutine device_specific(value, x, y)
+    real(8), value :: value
+    real(8), device :: x, y
+    x = value
+    y = value
+  end subroutine
+end module
+
+subroutine device_only_generic
+  use gpu_only_candidate
+  real(8) :: x, y
+  integer :: i
+  ! CHECK-LABEL: func.func @_QPdevice_only_generic
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_only_candidatePdevice_specific
+  !$acc serial private(x, y)
+  call choose(1.0_8, x, y)
+  !$acc end serial
+  ! CHECK: acc.parallel combined(loop)
+  ! CHECK: fir.call @_QMgpu_only_candidatePdevice_specific
+  !$acc parallel loop private(x, y)
+  do i = 1, 2
+    call choose(1.0_8, x, y)
+  end do
+  !$acc end parallel loop
+end subroutine
