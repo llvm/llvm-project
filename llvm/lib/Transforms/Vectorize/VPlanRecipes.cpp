@@ -1789,13 +1789,10 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  unsigned Opcode = getOpcode();
   if (vputils::propagatesFirstLaneUse(this, Op))
     return vputils::onlyFirstLaneUsed(this);
-  if (Opcode == VPInstruction::PtrAdd)
-    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
 
-  switch (Opcode) {
+  switch (getOpcode()) {
   default:
     return false;
   case Instruction::ExtractElement:
@@ -1822,6 +1819,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return true;
   case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
+  case VPInstruction::PtrAdd:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
