@@ -877,9 +877,7 @@ define <vscale x 4 x float> @max_positive_zero_scalable(<vscale x 4 x float> %x)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmfgt.vf v0, v8, fa5
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vfmax.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %cmp = fcmp ogt <vscale x 4 x float> %x, zeroinitializer
   %r = select <vscale x 4 x i1> %cmp, <vscale x 4 x float> %x, <vscale x 4 x float> zeroinitializer

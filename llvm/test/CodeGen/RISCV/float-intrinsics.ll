@@ -3072,49 +3072,29 @@ define float @max_positive_zero_f32(float %x) {
 ; RV32IF-LABEL: max_positive_zero_f32:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmv.w.x fa5, zero
-; RV32IF-NEXT:    flt.s a0, fa5, fa0
-; RV32IF-NEXT:    bnez a0, .LBB54_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fmv.s fa0, fa5
-; RV32IF-NEXT:  .LBB54_2:
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa5
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: max_positive_zero_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    flt.s a1, zero, a0
-; RV32IZFINX-NEXT:    bnez a1, .LBB54_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    li a0, 0
-; RV32IZFINX-NEXT:  .LBB54_2:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, zero
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IF-LABEL: max_positive_zero_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fmv.w.x fa5, zero
-; RV64IF-NEXT:    flt.s a0, fa5, fa0
-; RV64IF-NEXT:    bnez a0, .LBB54_2
-; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    fmv.s fa0, fa5
-; RV64IF-NEXT:  .LBB54_2:
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa5
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: max_positive_zero_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    flt.s a1, zero, a0
-; RV64IZFINX-NEXT:    bnez a1, .LBB54_2
-; RV64IZFINX-NEXT:  # %bb.1:
-; RV64IZFINX-NEXT:    li a0, 0
-; RV64IZFINX-NEXT:  .LBB54_2:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, zero
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV64IFD-LABEL: max_positive_zero_f32:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    fmv.w.x fa5, zero
-; RV64IFD-NEXT:    flt.s a0, fa5, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB54_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    fmv.s fa0, fa5
-; RV64IFD-NEXT:  .LBB54_2:
+; RV64IFD-NEXT:    fmax.s fa0, fa0, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: max_positive_zero_f32:
@@ -3280,47 +3260,27 @@ define float @scalar_negative_zero(float %x) {
 define float @scalar_known_not_nan_or_negzero(float %x, float nofpclass(nan nzero) %y) {
 ; RV32IF-LABEL: scalar_known_not_nan_or_negzero:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    flt.s a0, fa1, fa0
-; RV32IF-NEXT:    bnez a0, .LBB56_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fmv.s fa0, fa1
-; RV32IF-NEXT:  .LBB56_2:
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa1
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: scalar_known_not_nan_or_negzero:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    flt.s a2, a1, a0
-; RV32IZFINX-NEXT:    bnez a2, .LBB56_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    mv a0, a1
-; RV32IZFINX-NEXT:  .LBB56_2:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IF-LABEL: scalar_known_not_nan_or_negzero:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    flt.s a0, fa1, fa0
-; RV64IF-NEXT:    bnez a0, .LBB56_2
-; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    fmv.s fa0, fa1
-; RV64IF-NEXT:  .LBB56_2:
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa1
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: scalar_known_not_nan_or_negzero:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    flt.s a2, a1, a0
-; RV64IZFINX-NEXT:    bnez a2, .LBB56_2
-; RV64IZFINX-NEXT:  # %bb.1:
-; RV64IZFINX-NEXT:    mv a0, a1
-; RV64IZFINX-NEXT:  .LBB56_2:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a1
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV64IFD-LABEL: scalar_known_not_nan_or_negzero:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    flt.s a0, fa1, fa0
-; RV64IFD-NEXT:    bnez a0, .LBB56_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    fmv.s fa0, fa1
-; RV64IFD-NEXT:  .LBB56_2:
+; RV64IFD-NEXT:    fmax.s fa0, fa0, fa1
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: scalar_known_not_nan_or_negzero:
