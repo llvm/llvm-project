@@ -9832,8 +9832,9 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       unsigned StartingIndex = 0,
                       MutableArrayRef<uint8_t> ByteMask = {}) {
 
-  // Typical i64 by i8 pattern requires recursion up to 8 calls depth
-  if (Depth == 10)
+  // Typical i64 by i8 pattern requires recursion up to 8 calls depth, but
+  // unrolled byte-accumulate loops can form deeper Horner-style shift/or trees.
+  if (Depth >= 16)
     return std::nullopt;
 
   // Only allow multiple uses if the instruction is a vector load (in which
@@ -10327,9 +10328,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SmallVector<uint8_t, 8> ByteMasks(ByteWidth, 0xFF);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
-    auto P =
-        calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i, ByteMasks);
+    auto P = calculateByteProvider(SDValue(N, 0), i, 0,
+                                   /*VectorIndex*/ std::nullopt,
+                                   /*StartingIndex*/ i, ByteMasks);
     if (!P)
       return SDValue();
 
