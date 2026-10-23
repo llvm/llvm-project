@@ -293,11 +293,8 @@ createBBClusterInfoForFunction(MachineFunction &MF,
   // Generate the "hot" basic block cluster.
   if (!HotMBBs.empty()) {
     unsigned CurrentPosition = 0;
-    for (auto &MBB : HotMBBs) {
-      if (MBB->getBBID()) {
-        BBClusterInfos.push_back({*(MBB->getBBID()), 0, CurrentPosition++});
-      }
-    }
+    for (auto &MBB : HotMBBs)
+      BBClusterInfos.push_back({*MBB->getBBID(), 0, CurrentPosition++});
   }
   return BBClusterInfos;
 }
