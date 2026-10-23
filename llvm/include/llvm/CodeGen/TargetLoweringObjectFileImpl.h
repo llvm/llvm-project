@@ -192,6 +192,7 @@ class LLVM_ABI TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
 
 public:
+  TargetLoweringObjectFileCOFF();
   ~TargetLoweringObjectFileCOFF() override = default;
 
   void initialize(MCContext &Ctx, const TargetMachine &TM,
