@@ -1,5 +1,5 @@
 // RUN: %liboffload-compilexx %s -o %t
-// RUN: env LIBOMPTARGET_DEBUG=1 %t %target_triple 2>&1 | %fcheck-generic
+// RUN: env LIBOFFLOAD_DEBUG=Sync %t %target_triple 2>&1 | %fcheck-generic
 
 // The host plugin runs host functions synchronously, so it cannot keep a
 // destroyed queue busy.
