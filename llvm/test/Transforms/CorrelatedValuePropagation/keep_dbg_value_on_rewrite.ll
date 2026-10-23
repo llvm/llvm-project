@@ -3,7 +3,7 @@
 ; When replacing an instruction (ie sdiv->udiv), check that the debug
 ; info keeps the original value of the variable, rather than the value
 ; of the new calculation
-; See issues #218621, #218622, #218623 and 218626
+; See issues #218621, #218622, #218623 and 218366
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @srem_to_urem(i32 noundef %x) #0 !dbg !9 {
