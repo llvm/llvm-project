@@ -1936,7 +1936,7 @@ def CIR_BrOp : CIR_Op<"br",[
   ];
 
   let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
-                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
@@ -2286,7 +2286,7 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
                        Variadic<CIR_AnyType>:$destOperandsFalse,
-                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
@@ -2396,7 +2396,7 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
   let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
-                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
@@ -2478,7 +2478,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
-  let arguments = (ins OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
+  let arguments = (ins OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
   let assemblyFormat = [{
@@ -2559,7 +2559,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
   }];
 
   let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
-                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
+                       OptionalAttr<AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
