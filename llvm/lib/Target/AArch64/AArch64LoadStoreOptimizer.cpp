@@ -216,6 +216,17 @@ struct AArch64LoadStoreOpt {
                               MCPhysReg BaseReg, int64_t ByteOffset,
                               int MemScale, int64_t &ResidualScaled);
 
+  // Try to reuse the ADDXri produced by a preceding base-adjust pair when
+  // consecutive pairs share the same 4096-aligned base. Walks backwards from
+  // FirstMI, skipping instructions that do not clobber Scratch (e.g. prior
+  // pair instructions that reused the same ADDXri), until the first
+  // instruction that modifies Scratch. If that is an ADDXri defining Scratch
+  // from BaseReg with an immediate matching EncodableBase, returns Scratch;
+  // otherwise returns NoRegister.
+  Register tryReusePrevPairBaseAdjust(MachineInstr &FirstMI,
+                                      MCPhysReg BaseReg, MCPhysReg Scratch,
+                                      int64_t EncodableBase);
+
   // Promote the load that reads directly from the address stored to.
   MachineBasicBlock::iterator
   promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
@@ -1244,6 +1255,44 @@ Register AArch64LoadStoreOpt::tryMergeBaseAdjust(
   return BaseReg;
 }
 
+Register AArch64LoadStoreOpt::tryReusePrevPairBaseAdjust(
+    MachineInstr &FirstMI, MCPhysReg BaseReg, MCPhysReg Scratch,
+    int64_t EncodableBase) {
+  MachineBasicBlock *MBB = FirstMI.getParent();
+  MachineBasicBlock::iterator MBBBegin = MBB->begin();
+
+  // If FirstMI is the first instruction, there's nothing to reuse.
+  if (FirstMI.getIterator() == MBBBegin)
+    return AArch64::NoRegister;
+
+  // Walk backwards from FirstMI, skipping instructions that do not clobber
+  // Scratch (e.g. preceding pair instructions that already reused the same
+  // ADDXri).  The first instruction that modifies Scratch is either the
+  // ADDXri we want to reuse (if it matches) or a clobber that makes reuse
+  // impossible.
+  auto It = prev_nodbg(FirstMI.getIterator(), MBB->instr_begin());
+  while (true) {
+    MachineInstr &MI = *It;
+    if (MI.modifiesRegister(Scratch, TRI)) {
+      // Scratch is defined here.  Reuse is possible only if this is an ADDXri
+      // computing Scratch = BaseReg + EncodableBase.
+      if (MI.getOpcode() != AArch64::ADDXri || !MI.getOperand(2).isImm() ||
+          MI.getOperand(0).getReg() != Scratch ||
+          MI.getOperand(1).getReg() != BaseReg)
+        return AArch64::NoRegister;
+      unsigned Shift = AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
+      if ((Shift == 0 || Shift == 12) &&
+          (int64_t)MI.getOperand(2).getImm() << Shift == EncodableBase)
+        return Scratch;
+      return AArch64::NoRegister;
+    }
+    // Scratch not clobbered; keep walking backwards.
+    if (It == MBBBegin)
+      return AArch64::NoRegister;
+    It = prev_nodbg(It, MBB->instr_begin());
+  }
+}
+
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                       MachineBasicBlock::iterator Paired,
@@ -1403,22 +1452,35 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                      "findMatchingInsn should have rejected this");
         FoldResidualScaled = Residual;
       }
-      unsigned Imm12, Shift;
-      if (EncodableBase <= 0xFFF) {
-        Imm12 = EncodableBase;
-        Shift = 0;
+      // Before emitting a new ADDXri, try to reuse the ADDXri from a
+      // preceding base-adjust pair. When consecutive pairs fall in the
+      // same 4096-aligned window, the prior pair's ADDXri already computed
+      // the same adjusted base (EncodableBase); reuse it instead of
+      // emitting a redundant duplicate. FoldResidualScaled is already
+      // correct: it encodes the offset of the current pair relative to
+      // EncodableBase, which is the same whether or not the ADDXri is
+      // newly emitted.
+      if (tryReusePrevPairBaseAdjust(*I, BaseReg, Scratch, EncodableBase) !=
+          AArch64::NoRegister) {
+        AdjustBaseReg = Scratch;
       } else {
-        Imm12 = EncodableBase >> 12;
-        Shift = 12;
+        unsigned Imm12, Shift;
+        if (EncodableBase <= 0xFFF) {
+          Imm12 = EncodableBase;
+          Shift = 0;
+        } else {
+          Imm12 = EncodableBase >> 12;
+          Shift = 12;
+        }
+        MachineBasicBlock *AdjMBB = I->getParent();
+        DebugLoc AdjDL = I->getDebugLoc();
+        BuildMI(*AdjMBB, I, AdjDL, TII->get(AArch64::ADDXri))
+            .addDef(Scratch)
+            .addUse(BaseReg)
+            .addImm(Imm12)
+            .addImm(Shift);
+        AdjustBaseReg = Scratch;
       }
-      MachineBasicBlock *AdjMBB = I->getParent();
-      DebugLoc AdjDL = I->getDebugLoc();
-      BuildMI(*AdjMBB, I, AdjDL, TII->get(AArch64::ADDXri))
-          .addDef(Scratch)
-          .addUse(BaseReg)
-          .addImm(Imm12)
-          .addImm(Shift);
-      AdjustBaseReg = Scratch;
     }
     MergeForward = false;
   }

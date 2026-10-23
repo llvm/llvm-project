@@ -7,9 +7,7 @@ define void @basic_split(ptr %p) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-160]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
@@ -41,9 +39,8 @@ define void @basic_multi_use_ptr(ptr %p, ptr %p2) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    mov w8, #8008 ; =0x1f48
 ; CHECK-NO-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    add x8, x0, x8
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x2, #-176]
 ; CHECK-NO-SPLIT-NEXT:    str x8, [x1]
 ; CHECK-NO-SPLIT-NEXT:    ret
@@ -52,9 +49,8 @@ define void @basic_multi_use_ptr(ptr %p, ptr %p2) {
 ; CHECK-SPLIT:       ; %bb.0:
 ; CHECK-SPLIT-NEXT:    mov w8, #8008 ; =0x1f48
 ; CHECK-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
-; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
-; CHECK-SPLIT-NEXT:    add x2, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    add x8, x0, x8
+; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x2, #-192]
 ; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x2, #-176]
 ; CHECK-SPLIT-NEXT:    str x8, [x1]
 ; CHECK-SPLIT-NEXT:    ret
@@ -76,7 +72,6 @@ define void @not_consecutive(ptr %p) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-168]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
@@ -84,7 +79,6 @@ define void @not_consecutive(ptr %p) {
 ; CHECK-SPLIT:       ; %bb.0:
 ; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
-; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    stp xzr, xzr, [x1, #-168]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
@@ -103,11 +97,9 @@ define void @early_store_is_invalid_but_split_rest(ptr %p) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8000]
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
-; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-160]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8080]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
+; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-160]
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-144]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
@@ -146,11 +138,8 @@ define void @vector(ptr %p) {
 ; CHECK-NO-SPLIT-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
 ; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-384]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
 ; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-352]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
 ; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-320]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #4, lsl #12 ; =16384
 ; CHECK-NO-SPLIT-NEXT:    stp q0, q0, [x1, #-288]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
@@ -219,7 +208,6 @@ define void @use_of_load_in_between(ptr %p, ptr %ldptr, ptr %ldptr2) {
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x1]
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x1, #-184]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-NO-SPLIT-NEXT:    stp x8, xzr, [x1, #-168]
@@ -231,7 +219,6 @@ define void @use_of_load_in_between(ptr %p, ptr %ldptr, ptr %ldptr2) {
 ; CHECK-SPLIT-NEXT:    ldr x8, [x1]
 ; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    stp x8, xzr, [x1, #-184]
-; CHECK-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-SPLIT-NEXT:    stp x8, xzr, [x1, #-168]
@@ -330,7 +317,6 @@ define void @offset_illegal_for_add_imm_4_stores(ptr %p) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-192]
-; CHECK-NO-SPLIT-NEXT:    add x1, x0, #2, lsl #12 ; =8192
 ; CHECK-NO-SPLIT-NEXT:    stp xzr, xzr, [x1, #-176]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
