@@ -5402,6 +5402,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
       if (!Builder.GetInsertBlock())
         return InsertPointTy();
     }
+    // For the barrier (non-nowait) reduction, the atomic path must still call
+    // __kmpc_end_reduce so the runtime runs the trailing barrier and pops the
+    // reduction frame from its consistency stack. Omitting it aborts under
+    // KMP_CONSISTENCY_CHECK ("barrier incorrectly nested within reduce"). The
+    // nowait path performs no barrier and needs no finalization here.
+    if (!IsNoWait)
+      createRuntimeFunctionCall(EndReduceFunc, {Ident, ThreadId, Lock});
     Builder.CreateBr(ContinuationBlock);
   } else {
     Builder.CreateUnreachable();
