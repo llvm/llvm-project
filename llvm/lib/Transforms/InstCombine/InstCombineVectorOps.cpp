@@ -908,7 +908,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
         PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
-  if (isa<ConstantAggregateZero>(V)) {
+  if (match(V, m_ZeroForbidPoison())) {
     Mask.assign(NumElts, 0);
     return std::make_pair(V, nullptr);
   }

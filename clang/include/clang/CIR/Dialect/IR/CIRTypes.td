@@ -456,7 +456,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins CIR_ArrayElementType:$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -478,7 +478,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 }
 
 //===----------------------------------------------------------------------===//
-// VectorType (fixed size)
+// VectorType
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -488,8 +488,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes three parameters: the element type, the number of elements and the
-    scalability flag (optional, defaults to `false`).
+    It takes two parameters: the element type and an element count, which
+    records both the known minimum number of elements and whether the vector is
+    scalable.
 
     Syntax:
 
@@ -524,20 +525,34 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "uint64_t":$size,
-    OptionalParameter<"bool">:$is_scalable
+    "llvm::ElementCount":$size
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$is_scalable
+      "mlir::Type":$element_type, "llvm::ElementCount":$size
     ), [{
-        return $_get(element_type.getContext(), element_type, size, is_scalable);
+        return $_get(element_type.getContext(), element_type, size);
     }]>,
   ];
 
   let extraClassDeclaration = [{
+    /// Return the size of a fixed-width vector.
+    uint64_t getFixedSize() const { return getSize().getFixedValue(); }
+
+    /// Return whether this vector is scalable.
+    bool isScalable() const { return getSize().isScalable(); }
+
+    /// Return a fixed-width vector with the given element type and size.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getFixed(size));
+    }
+
+    /// Return a scalable vector with the given element type and minimum size.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getScalable(size));
+    }
+
     /// The width of the integer a vector of `!cir.bool` is stored as: one bit
     /// per element, at least a byte.
     uint64_t getBoolStorageWidth() const;
@@ -1064,9 +1079,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 

@@ -58,7 +58,7 @@ char *get_ptr_to_element() { return ptrToElement; }
 // CIR:   %[[GS_AS_VOID:.*]] = cir.cast bitcast %[[GS_PTR]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
 // CIR:   cir.call @_Z3usePv(%[[GS_AS_VOID]]) : (!cir.ptr<!void> {{.*}}) -> ()
 
-// LLVM: @_ZL2gS = internal global %struct.S { [28 x i8] c"PK\03\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }, align 1
+// LLVM: @_ZL2gS = internal global { <{ i8, i8, i8, i8, [24 x i8] }> } { <{ i8, i8, i8, i8, [24 x i8] }> <{ i8 80, i8 75, i8 3, i8 4, [24 x i8] zeroinitializer }> }, align 1
 // LLVM: @ptrToS = global ptr @_ZL2gS, align 8
 // LLVM: @gSMulti = global {{.*}} align 1
 // LLVM: @ptrToElement = global ptr getelementptr
