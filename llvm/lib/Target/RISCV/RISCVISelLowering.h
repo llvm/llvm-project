@@ -243,9 +243,7 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
-  bool hasMultipleConditionRegisters(EVT VT) const override {
-    return VT.isVector();
-  }
+  bool hasMultipleConditionRegisters(EVT VT) const override;
 
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
