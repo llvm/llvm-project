@@ -4,12 +4,7 @@
 define <2 x i32> @and_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: and_v2i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <2 x i32> %a, i64 0
   %y = extractelement <2 x i32> %b, i64 0
@@ -21,10 +16,7 @@ define <2 x i32> @and_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <4 x i32> @and_v4i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: and_v4i32_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %a, i64 0
   %y = extractelement <4 x i32> %b, i64 0
@@ -36,12 +28,7 @@ define <4 x i32> @and_v4i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @and_v2i32_v4i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: and_v2i32_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <2 x i32> %a, i64 0
   %y = extractelement <2 x i32> %b, i64 0
@@ -53,10 +40,7 @@ define <4 x i32> @and_v2i32_v4i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @and_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: and_v4i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %a, i64 0
   %y = extractelement <4 x i32> %b, i64 0
@@ -68,12 +52,7 @@ define <2 x i32> @and_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @or_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: or_v2i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <2 x i32> %a, i64 0
   %y = extractelement <2 x i32> %b, i64 0
@@ -85,12 +64,7 @@ define <2 x i32> @or_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @xor_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: xor_v2i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <2 x i32> %a, i64 0
   %y = extractelement <2 x i32> %b, i64 0
@@ -102,10 +76,8 @@ define <2 x i32> @xor_v2i32_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i8> @and_v8i8_i8(i8 %x, <8 x i8> %b) {
 ; CHECK-LABEL: and_v8i8_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    eor w8, w0, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
   %y = extractelement <8 x i8> %b, i64 0
   %z = xor i8 %x, %y
@@ -116,9 +88,8 @@ define <8 x i8> @and_v8i8_i8(i8 %x, <8 x i8> %b) {
 define <8 x i16> @or_v8i16_i16(i16 %x, <8 x i16> %b) {
 ; CHECK-LABEL: or_v8i16_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    eor w8, w0, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %y = extractelement <8 x i16> %b, i64 0
   %z = xor i16 %x, %y
@@ -129,10 +100,8 @@ define <8 x i16> @or_v8i16_i16(i16 %x, <8 x i16> %b) {
 define <2 x i32> @xor_v2i32_i32(i32 %x, <2 x i32> %b) {
 ; CHECK-LABEL: xor_v2i32_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    eor w8, w0, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    eor v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
   %y = extractelement <2 x i32> %b, i64 0
   %z = xor i32 %x, %y
@@ -143,9 +112,8 @@ define <2 x i32> @xor_v2i32_i32(i32 %x, <2 x i32> %b) {
 define <2 x i64> @and_v2i64_i64(i64 %x, <2 x i64> %b) {
 ; CHECK-LABEL: and_v2i64_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    bic x8, x0, x8
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %y = extractelement <2 x i64> %b, i64 0
   %not = xor i64 %y, -1
@@ -157,10 +125,7 @@ define <2 x i64> @and_v2i64_i64(i64 %x, <2 x i64> %b) {
 define <2 x i32> @bic_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: bic_v4i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    bic w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    bic v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %a, i64 0
   %y = extractelement <4 x i32> %b, i64 0
@@ -173,10 +138,7 @@ define <2 x i32> @bic_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @ornot_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: ornot_v4i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    orn w8, w8, w9
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %a, i64 0
   %y = extractelement <4 x i32> %b, i64 0
@@ -206,12 +168,8 @@ define <4 x i32> @andor_v4i32_v2i32(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: andor_v4i32_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    and w8, w10, w8
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x i32> %a, i64 0
   %y = extractelement <4 x i32> %b, i64 0
