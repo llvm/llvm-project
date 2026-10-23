@@ -28,6 +28,8 @@ import time
 
 object_file = sys.argv[1]
 share_flags = int(sys.argv[2])
+if sys.argv[3] not in ('true', 'false'):
+    sys.exit("expected 'true' or 'false', got '%s'" % sys.argv[3])
 use_mmap = sys.argv[3] == 'true'
 
 @contextlib.contextmanager
