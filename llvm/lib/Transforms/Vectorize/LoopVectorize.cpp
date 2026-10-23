@@ -7641,15 +7641,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IC = 1;
   }
 
-  // FIXME: Enable interleaving for EE-with-side-effects.
-  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
-    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
-                  "Unable to interleave due to early exit with side effects."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
-
   // Emit diagnostic messages, if any.
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
