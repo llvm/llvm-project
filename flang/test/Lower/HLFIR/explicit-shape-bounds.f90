@@ -264,29 +264,59 @@ end module
 ! CHECK:  fir.shape_shift %{{.*}} -> !fir.shapeshift<3>
 ! CHECK:  hlfir.declare {{.*}}Ea"
 
-! Two rank-1 bound elements with DIFFERENT bases on the same side: out's dim1
-! upper is ubound(b,2) (base m) and dim2 upper is ubound(d,2) (base p).  The
-! shared-base reuse must not collapse both dimensions onto the first base; each
-! dimension extracts its element from its own base.
+! Two rank-1 bound elements with DIFFERENT, irreducible bases on the same side:
+! out's dim1 upper is ubound(b,2) (base merge(m,m2,c)) and dim2 upper is
+! ubound(d,2) (base merge(p,p2,c)).  The logical mask keeps both bases from
+! reducing to a plain element reference, so each bound survives as a rank-1
+! bound element wrapped in int(int(max(0, ROBE), 4), 8).  The shared-base helper
+! only matches a bare element, so it declines and each dimension lowers its own
+! base independently: the two bases are evaluated once each and never collapsed
+! onto one another.  (A bare element with ubound() provenance only arises for a
+! constant extent, which folds to a scalar first, so the helper's
+! different-bases comparison is a guard rather than a path reachable from
+! source.)
 module test_mixed_base
 contains
-  subroutine test_mixed_base_bounds(m, p, out)
-    integer, intent(in) :: m(2), p(2)
-    real :: b(m)
-    real :: d(p)
+  subroutine test_mixed_base_bounds(m, m2, p, p2, c, out)
+    integer, intent(in) :: m(2), m2(2), p(2), p2(2)
+    logical, intent(in) :: c(2)
+    real :: b(merge(m, m2, c))
+    real :: d(merge(p, p2, c))
     real :: out(ubound(b,2), ubound(d,2))
     out = 0.0
   end subroutine
 end module
 ! CHECK-LABEL: func.func @_QMtest_mixed_basePtest_mixed_base_bounds(
 ! CHECK:  %[[M:.*]]:2 = hlfir.declare %arg0{{.*}}Em"
-! CHECK:  %[[P:.*]]:2 = hlfir.declare %arg1{{.*}}Ep"
+! CHECK:  %[[M2:.*]]:2 = hlfir.declare %arg1{{.*}}Em2"
+! CHECK:  %[[C:.*]]:2 = hlfir.declare %arg4{{.*}}Ec"
+! CHECK:  %[[P:.*]]:2 = hlfir.declare %arg2{{.*}}Ep"
+! CHECK:  %[[P2:.*]]:2 = hlfir.declare %arg3{{.*}}Ep2"
 ! CHECK:  hlfir.declare {{.*}}Eb"
 ! CHECK:  hlfir.declare {{.*}}Ed"
-! CHECK:  hlfir.designate %[[M]]#0 ({{.*}}) : ({{.*}}) -> !fir.ref<i32>
-! CHECK:  hlfir.designate %[[P]]#0 ({{.*}}) : ({{.*}}) -> !fir.ref<i32>
+! CHECK:  %[[MBASE:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<2xi32> {
+! CHECK:    hlfir.designate %[[M]]#0
+! CHECK:    hlfir.designate %[[M2]]#0
+! CHECK:    hlfir.designate %[[C]]#0
+! CHECK:  }
+! CHECK:  %[[MCONV:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<2xi64> {
+! CHECK:    hlfir.apply %[[MBASE]]
+! CHECK:  }
+! CHECK:  %[[MELT:.*]] = hlfir.apply %[[MCONV]], %{{.*}} : (!hlfir.expr<2xi64>, index) -> i64
+! CHECK:  arith.maxsi %{{.*}}, %[[MELT]]
+! CHECK:  %[[PBASE:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<2xi32> {
+! CHECK:    hlfir.designate %[[P]]#0
+! CHECK:    hlfir.designate %[[P2]]#0
+! CHECK:    hlfir.designate %[[C]]#0
+! CHECK:  }
+! CHECK:  %[[PCONV:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<2xi64> {
+! CHECK:    hlfir.apply %[[PBASE]]
+! CHECK:  }
+! CHECK:  %[[PELT:.*]] = hlfir.apply %[[PCONV]], %{{.*}} : (!hlfir.expr<2xi64>, index) -> i64
+! CHECK:  arith.maxsi %{{.*}}, %[[PELT]]
+! CHECK-NOT: hlfir.apply %[[MCONV]]
 ! CHECK:  %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
-! CHECK:  hlfir.declare %arg2(%[[SHAPE]]){{.*}}Eout"
+! CHECK:  hlfir.declare %arg5(%[[SHAPE]]){{.*}}Eout"
 
 ! A rank-1-bound-expanded array (b, declared with the rank-1 bound m) used only
 ! as the argument of an ordinary descriptor inquiry.  ubound(b,2) folds to a

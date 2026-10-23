@@ -173,15 +173,25 @@ private:
   bool arrayFromParenthesesExpr{false};
 };
 
-// Gate for folding SHAPE/SIZE/SIZEOF into a stored expression: a raw rank-1
-// bound element left in an extent (because neither UBOUND nor LBOUND is exact
-// for that dimension; see CloneBound in shape.cpp) has no Fortran spelling, so
-// the inquiry must stay intact rather than fold.
+// Gate for folding SHAPE/SIZE/SIZEOF/UBOUND into a stored expression: a raw
+// rank-1 bound element left in an extent (because neither UBOUND nor LBOUND is
+// exact for that dimension; see CloneBound in shape.cpp) has no Fortran
+// spelling, so the inquiry must stay intact rather than fold.  The extent is
+// folded first, in place: an element with a constant base, as in a(0:[2,3]),
+// reduces to its scalar value and must not block folding.
+static bool FoldedExtentHasUntaggedRankOneBoundElement(
+    FoldingContext &context, MaybeExtentExpr &extent) {
+  if (extent) {
+    extent = Fold(context, std::move(*extent));
+    return ContainsUntaggedRankOneBoundElement(*extent);
+  }
+  return false;
+}
 static bool ShapeHasUntaggedRankOneBoundElement(
-    const std::optional<Shape> &shape) {
+    FoldingContext &context, std::optional<Shape> &shape) {
   if (shape) {
-    for (const auto &extent : *shape) {
-      if (extent && ContainsUntaggedRankOneBoundElement(*extent)) {
+    for (auto &extent : *shape) {
+      if (FoldedExtentHasUntaggedRankOneBoundElement(context, extent)) {
         return true;
       }
     }
@@ -286,14 +296,19 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         return GetConstantArrayBoundHelper::GetUbound<T>(*array, dim);
       }
       if (takeBoundsFromShape) {
+        // UBOUND(transpose(a),DIM), UBOUND((a)), UBOUND(x%a): the bounds are
+        // the shape's extents, which may embed a raw rank-1 bound element.
         if (auto shape{GetContextFreeShape(context, *array)}) {
           if (dim) {
-            if (auto &dimSize{shape->at(*dim)}) {
+            if (auto &dimSize{shape->at(*dim)}; dimSize &&
+                !FoldedExtentHasUntaggedRankOneBoundElement(context, dimSize)) {
               return Fold(context,
                   ConvertToType<T>(Expr<ExtentType>{std::move(*dimSize)}));
             }
-          } else if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
-            return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
+          } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
+            if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
+              return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
+            }
           }
         }
       }
@@ -1427,7 +1442,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "shape") {
     if (auto shape{GetContextFreeShape(context, args[0])};
-        shape && !ShapeHasUntaggedRankOneBoundElement(shape)) {
+        shape && !ShapeHasUntaggedRankOneBoundElement(context, shape)) {
       if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
         return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
       }
@@ -1444,30 +1459,35 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   } else if (name == "size") {
-    if (auto shape{GetContextFreeShape(context, args[0])};
-        shape && !ShapeHasUntaggedRankOneBoundElement(shape)) {
+    if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (args[1]) { // DIM= is present, get one extent
+        // DIM= is validated whenever the shape is known, so that a raw rank-1
+        // bound element in some extent neither hides an out-of-range DIM nor
+        // blocks folding of a dimension that does not contain one.
         std::optional<int> dim;
         if (const auto *array{args[0].value().UnwrapExpr()}; array &&
             !CheckDimArg(args[1], *array, context.messages(), false, dim)) {
           return MakeInvalidIntrinsic<T>(std::move(funcRef));
         } else if (dim) {
-          if (auto &extent{shape->at(*dim)}) {
+          if (auto &extent{shape->at(*dim)}; extent &&
+              !FoldedExtentHasUntaggedRankOneBoundElement(context, extent)) {
             return Fold(context, ConvertToType<T>(std::move(*extent)));
           }
         }
-      } else if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
-        // DIM= is absent; compute PRODUCT(SHAPE())
-        ExtentExpr product{1};
-        for (auto &&extent : std::move(*extents)) {
-          product = std::move(product) * std::move(extent);
+      } else if (!ShapeHasUntaggedRankOneBoundElement(context, shape)) {
+        if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
+          // DIM= is absent; compute PRODUCT(SHAPE())
+          ExtentExpr product{1};
+          for (auto &&extent : std::move(*extents)) {
+            product = std::move(product) * std::move(extent);
+          }
+          return Expr<T>{ConvertToType<T>(Fold(context, std::move(product)))};
         }
-        return Expr<T>{ConvertToType<T>(Fold(context, std::move(product)))};
       }
     }
   } else if (name == "sizeof") { // in bytes; extension
-    if (!ShapeHasUntaggedRankOneBoundElement(
-            GetContextFreeShape(context, args[0]))) {
+    if (auto shape{GetContextFreeShape(context, args[0])};
+        !ShapeHasUntaggedRankOneBoundElement(context, shape)) {
       if (auto info{
               characteristics::TypeAndShape::Characterize(args[0], context)}) {
         if (auto bytes{info->MeasureSizeInBytes(context)}) {

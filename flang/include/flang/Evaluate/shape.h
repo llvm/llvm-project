@@ -154,7 +154,13 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 // no ubound()/lbound() provenance?  Such an element has no Fortran spelling
 // (its debug rendering is the synthetic %ROBE marker) and must never reach a
 // mod file; an inquiry whose folded result would contain one must stay intact.
-bool ContainsUntaggedRankOneBoundElement(const ExtentExpr &);
+template <typename T> bool ContainsUntaggedRankOneBoundElement(const Expr<T> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeType> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeInteger> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
 
 // GetShape()
 

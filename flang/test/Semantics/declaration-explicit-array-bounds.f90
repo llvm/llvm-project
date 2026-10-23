@@ -146,6 +146,28 @@ module data
   !ERROR: Rank-1 integer array used as upper bounds in DECLARATION must have constant size
   integer :: gg3(nonconstsize : nonconstsize)
 end module 
+! A raw rank-1 bound element in a(0:n)'s extents (the lower bound 0 makes
+! neither UBOUND nor LBOUND exact) must keep SIZE from folding, but must not
+! keep it from validating DIM=: an out-of-range or non-positive DIM is still
+! diagnosed.
+subroutine size_dim_checked(n)
+  integer, intent(in) :: n(2)
+  real :: a(0:n)
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  print *, size(a, 9)
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  print *, size(a, 2147483648_8)
+  !ERROR: DIM=0 dimension must be positive
+  print *, size(a, 0)
+end subroutine
+! With a constant base the raw element folds to its scalar value, so size(a)
+! is a constant expression: 3*4 == 12 (a kind of -1 would be rejected).
+subroutine size_constant_base()
+  real :: a(0:[2, 3])
+  integer, parameter :: count = size(a)
+  integer(kind=merge(4, -1, count == 12)) :: ok
+  ok = 0
+end subroutine
 program declaration_array_bounds
   use getter
   implicit none

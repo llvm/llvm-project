@@ -853,3 +853,118 @@ end module
 !real(4)::bbytes(1_8:sizeof(a))
 !end
 !end
+
+!===============================================================================
+! UBOUND through the shape-derived path
+!
+! ubound(transpose(a),DIM), ubound((a)) and ubound(x%a) take their bounds from
+! the operand's shape rather than from a named array's declared bounds, so a
+! raw rank-1 bound element in an extent (a has a lower bound of 0, making
+! neither UBOUND nor LBOUND exact) must keep the inquiry from folding exactly as
+! it keeps size()/shape() from folding: the call is kept intact and serialized
+! as a runtime inquiry, never as a raw element.  With DIM the result is a plain
+! scalar bound; without DIM it is itself a rank-1 explicit-shape base.
+!===============================================================================
+module mshapepath
+contains
+  subroutine s(n, m, c, a, b, d)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: a(0 : merge(n, m, c))
+    real :: b(ubound(transpose(a), 1))
+    real :: d(ubound((a)))
+    b(1) = 1.0
+    d(1, 1) = 1.0
+    a(1, 1) = b(1)
+  end subroutine
+end module
+
+!Expect: mshapepath.mod
+!module mshapepath
+!contains
+!subroutine s(n,m,c,a,b,d)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::a(0_8:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::b(1_8:__builtin_int(ubound(transpose(a),1_4),kind=8))
+!real(4)::d(1_8:__builtin_int(ubound((a)),kind=8))
+!end
+!end
+
+!===============================================================================
+! A character length through the same path
+!
+! The writer checks every expression it prints, not only array bounds: a raw
+! element reaching a character length would be serialized as the unparsable
+! %ROBE marker.  The inquiry must stay intact here too.
+!===============================================================================
+module mcharlen
+contains
+  subroutine s(l, u, a, c)
+    integer, intent(in) :: l(2), u(2)
+    real, intent(inout) :: a(merge(l, l, [.true., .true.]) : merge(u, u, [.true., .true.]))
+    character(len=ubound((a), 2)), intent(inout) :: c
+  end subroutine
+end module
+
+!Expect: mcharlen.mod
+!module mcharlen
+!contains
+!subroutine s(l,u,a,c)
+!integer(4),intent(in)::l(1_8:2_8)
+!integer(4),intent(in)::u(1_8:2_8)
+!real(4),intent(inout)::a(__builtin_int(merge(l,l,[LOGICAL(4)::.true._4,.true._4]),kind=8):__builtin_int(merge(u,u,[LOGICAL(4)::.true._4,.true._4]),kind=8))
+!character(ubound((a),2_4),1),intent(inout)::c
+!end
+!end
+
+!===============================================================================
+! A constant base folds through a raw element
+!
+! a(0:[2,3]) leaves a raw element in each extent (lower bound 0), but its base
+! is constant, so folding reduces the element to its scalar value before the
+! raw-element gate is applied: size(a) is the constant 3*4 == 12.
+!===============================================================================
+module msizeconst
+  real :: a(0 : [2, 3])
+  integer, parameter :: count = size(a)
+end module
+
+!Expect: msizeconst.mod
+!module msizeconst
+!real(4)::a(0_8:[INTEGER(8)::2_8,3_8])
+!integer(4),parameter::count=12_4
+!intrinsic::size
+!end
+
+!===============================================================================
+! Provenance declares its originating array
+!
+! A bound serialized as ubound(z,dim) names z, which the expression's symbol
+! traversal does not visit; the writer declares z ahead of the dependent entity
+! even when z follows it in the dummy argument list.
+!===============================================================================
+module mdeporder
+contains
+  subroutine s(n, m, c, b, z)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: z(merge(n, m, c))
+    real :: b(size(z, 2))
+    b(1) = 1.0
+    z(1, 1) = b(1)
+  end subroutine
+end module
+
+!Expect: mdeporder.mod
+!module mdeporder
+!contains
+!subroutine s(n,m,c,b,z)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::z(1_8:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,ubound(z,dim=2,kind=8)),kind=4),kind=8))
+!end
+!end

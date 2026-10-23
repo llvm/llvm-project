@@ -232,7 +232,8 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
   return MyVisitor{}(expr);
 }
 
-bool ContainsUntaggedRankOneBoundElement(const ExtentExpr &expr) {
+template <typename T>
+bool ContainsUntaggedRankOneBoundElement(const Expr<T> &expr) {
   struct MyVisitor : public AnyTraverse<MyVisitor> {
     using Base = AnyTraverse<MyVisitor>;
     MyVisitor() : Base{*this} {}
@@ -243,6 +244,10 @@ bool ContainsUntaggedRankOneBoundElement(const ExtentExpr &expr) {
   };
   return MyVisitor{}(expr);
 }
+template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeType> &);
+template bool ContainsUntaggedRankOneBoundElement(const Expr<SomeInteger> &);
+template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
 
 // Copies a declared bound out of its ShapeSpec.  A rank-1 array bound is stored
 // as a RankOneBoundElement wrapping the whole rank-1 expression; the copy is
