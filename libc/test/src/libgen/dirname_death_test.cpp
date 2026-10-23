@@ -15,6 +15,10 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcDirnameTest, ModifyReturnValue) {
-  char *r = LIBC_NAMESPACE::dirname(nullptr);
-  ASSERT_DEATH([r]() { r[0] = 'a'; }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(
+      []() {
+        char *r = LIBC_NAMESPACE::dirname(nullptr);
+        r[0] = 'a';
+      },
+      WITH_SIGNAL(-1));
 }
