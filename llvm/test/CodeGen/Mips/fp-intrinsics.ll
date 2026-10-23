@@ -42,7 +42,8 @@ define float @frem_f32(float %x, float %y) #0 {
 
 define float @fma_f32(float %x, float %y, float %z) #0 {
 ; CHECK-LABEL: fma_f32:
-; CHECK: jal fmaf
+; CHECK-R2: jal fmaf
+; CHECK-R6: maddf.s
   %val = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -349,7 +350,8 @@ define double @frem_f64(double %x, double %y) #0 {
 
 define double @fma_f64(double %x, double %y, double %z) #0 {
 ; CHECK-LABEL: fma_f64:
-; CHECK: jal fma
+; CHECK-R2: jal fma
+; CHECK-R6: maddf.d
   %val = call double @llvm.experimental.constrained.fma.f64(double %x, double %y, double %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
