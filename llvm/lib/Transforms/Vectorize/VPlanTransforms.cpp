@@ -5923,6 +5923,12 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     Type *DataTy = VectorType::get(ScalarTy, VF);
     Type *MaskTy = VectorType::get(Type::getInt1Ty(Plan.getContext()), VF);
     Type *PtrTy = VectorType::get(GEP->getType(), VF);
+    // Avoid VFs that split the index vector, which require rebuilding the
+    // condition mask across parts and can outweigh the benefit of splitting
+    // the gather or scatter.
+    if (CostCtx.TTI.getNumberOfParts(VectorType::get(Index->getType(), VF)) !=
+        1)
+      return false;
     unsigned GatherScatterID =
         IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
     InstructionCost GatherScatterCost =
