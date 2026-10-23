@@ -834,6 +834,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
+- Fixed a crash when a variably modified type whose size is evaluated in an enclosing function was used in a local class or a block. Such uses are now diagnosed, and a lambda now captures the size of such a type. (#GH55686)
 
 #### Bug Fixes to Compiler Builtins
 
