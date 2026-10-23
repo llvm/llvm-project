@@ -44,15 +44,21 @@ module attributes {gpu.container_module} {
 // -----
 
 // Checking that the argument storage of a launch in a loop is allocated in the
-// entry block.
+// entry block, and that lifetime markers bound its use to the launch.
 module attributes {gpu.container_module} {
   gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
   // CHECK-LABEL: define void @launch_in_loop(
-  // CHECK-NEXT: alloca %{{.*}}, align 8
+  // CHECK-NEXT: [[ARGS:%.*]] = alloca %{{.*}}, align 8
   // CHECK-NEXT: [[ARGS_ARRAY:%.*]] = alloca ptr, i64 1, align 8
   // CHECK-NEXT: br label
   // CHECK-NOT: alloca
+  // CHECK-NOT: store
+  // CHECK: call void @llvm.lifetime.start.p0(ptr [[ARGS]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[ARGS_ARRAY]])
+  // CHECK-NOT: alloca
   // CHECK: call void @mgpuLaunchKernel({{.*}}, ptr [[ARGS_ARRAY]], ptr null, i64 1)
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[ARGS]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[ARGS_ARRAY]])
   llvm.func @launch_in_loop(%cond : i1) {
     %0 = llvm.mlir.constant(8 : i64) : i64
     llvm.br ^bb1
