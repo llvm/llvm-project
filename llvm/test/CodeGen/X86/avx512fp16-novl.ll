@@ -274,3 +274,628 @@ define i1 @fcmp_f16_and(half %w, half %x, half %y, half %z) {
   %r = and i1 %c0, %c1
   ret i1 %r
 }
+
+define <8 x half> @fadd_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fadd_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = fadd <8 x half> %x, %y
+  ret <8 x half> %r
+}
+
+define <8 x half> @fsub_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fsub_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vsubsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vsubsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vsubsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vsubsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = fsub <8 x half> %x, %y
+  ret <8 x half> %r
+}
+
+define <8 x half> @fmul_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fmul_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vmulsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vmulsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vmulsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmulsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = fmul <8 x half> %x, %y
+  ret <8 x half> %r
+}
+
+define <8 x half> @fdiv_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: fdiv_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vdivsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vdivsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vdivsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vdivsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = fdiv <8 x half> %x, %y
+  ret <8 x half> %r
+}
+
+define <16 x half> @fadd_v16f16(<16 x half> %x, <16 x half> %y) {
+; CHECK-LABEL: fadd_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm2[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm3[1,0]
+; CHECK-NEXT:    vaddsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm0[1,0]
+; CHECK-NEXT:    vaddsh %xmm7, %xmm8, %xmm7
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
+; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm5
+; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm6
+; CHECK-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm3[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm6
+; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
+; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm5
+; CHECK-NEXT:    vaddsh %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; CHECK-NEXT:    retq
+  %r = fadd <16 x half> %x, %y
+  ret <16 x half> %r
+}
+
+define <16 x half> @fsub_v16f16(<16 x half> %x, <16 x half> %y) {
+; CHECK-LABEL: fsub_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[3,3,3,3]
+; CHECK-NEXT:    vsubsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm2[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm3[1,0]
+; CHECK-NEXT:    vsubsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vsubsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vsubsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm0[1,0]
+; CHECK-NEXT:    vsubsh %xmm7, %xmm8, %xmm7
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
+; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm5
+; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm6
+; CHECK-NEXT:    vsubsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm3[1,1,3,3]
+; CHECK-NEXT:    vsubsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vsubsh %xmm2, %xmm3, %xmm6
+; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
+; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
+; CHECK-NEXT:    vsubsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm5
+; CHECK-NEXT:    vsubsh %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vsubsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; CHECK-NEXT:    retq
+  %r = fsub <16 x half> %x, %y
+  ret <16 x half> %r
+}
+
+define <16 x half> @fmul_v16f16(<16 x half> %x, <16 x half> %y) {
+; CHECK-LABEL: fmul_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[3,3,3,3]
+; CHECK-NEXT:    vmulsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm2[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm3[1,0]
+; CHECK-NEXT:    vmulsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vmulsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm0[1,0]
+; CHECK-NEXT:    vmulsh %xmm7, %xmm8, %xmm7
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
+; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm5
+; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm6
+; CHECK-NEXT:    vmulsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm3[1,1,3,3]
+; CHECK-NEXT:    vmulsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vmulsh %xmm2, %xmm3, %xmm6
+; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
+; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
+; CHECK-NEXT:    vmulsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm5
+; CHECK-NEXT:    vmulsh %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmulsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; CHECK-NEXT:    retq
+  %r = fmul <16 x half> %x, %y
+  ret <16 x half> %r
+}
+
+define <16 x half> @fdiv_v16f16(<16 x half> %x, <16 x half> %y) {
+; CHECK-LABEL: fdiv_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[3,3,3,3]
+; CHECK-NEXT:    vdivsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm2[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm3[1,0]
+; CHECK-NEXT:    vdivsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm6 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vdivsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm0[1,0]
+; CHECK-NEXT:    vdivsh %xmm7, %xmm8, %xmm7
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
+; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm5
+; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm6
+; CHECK-NEXT:    vdivsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm3[1,1,3,3]
+; CHECK-NEXT:    vdivsh %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vdivsh %xmm2, %xmm3, %xmm6
+; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
+; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
+; CHECK-NEXT:    vdivsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm5
+; CHECK-NEXT:    vdivsh %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vdivsh %xmm5, %xmm6, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; CHECK-NEXT:    retq
+  %r = fdiv <16 x half> %x, %y
+  ret <16 x half> %r
+}
+
+define <4 x half> @fadd_v4f16(<4 x half> %x, <4 x half> %y) {
+; CHECK-LABEL: fadd_v4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = fadd <4 x half> %x, %y
+  ret <4 x half> %r
+}
+
+define <8 x half> @fmul_v8f16_broadcast(<8 x half> %x, ptr %p) {
+; CHECK-LABEL: fmul_v8f16_broadcast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vmulsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
+; CHECK-NEXT:    vmulsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <8 x half> poison, half %s, i64 0
+  %b = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %r = fmul <8 x half> %x, %b
+  ret <8 x half> %r
+}
+
+define <16 x half> @fadd_v16f16_broadcast_commuted(<16 x half> %x, ptr %p) {
+; CHECK-LABEL: fadd_v16f16_broadcast_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm3, %xmm1, %xmm3
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm1, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm4, %xmm1, %xmm4
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm2[1,0]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm1, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm4, %xmm1, %xmm4
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm1, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm5, %xmm1, %xmm5
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm0[1,0]
+; CHECK-NEXT:    vaddsh %xmm6, %xmm1, %xmm6
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
+; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm4
+; CHECK-NEXT:    vaddsh %xmm4, %xmm1, %xmm4
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm1, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vaddsh %xmm2, %xmm1, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
+; CHECK-NEXT:    vaddsh %xmm2, %xmm1, %xmm2
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vaddsh %xmm4, %xmm1, %xmm4
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm5, %xmm1, %xmm5
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm5
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1],xmm5[2],xmm0[2],xmm5[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm3[0],ymm0[2],ymm3[2]
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <16 x half> poison, half %s, i64 0
+  %b = shufflevector <16 x half> %i, <16 x half> poison, <16 x i32> zeroinitializer
+  %r = fadd <16 x half> %b, %x
+  ret <16 x half> %r
+}
+
+define <8 x half> @fdiv_v8f16_broadcast(<8 x half> %x, ptr %p) {
+; CHECK-LABEL: fdiv_v8f16_broadcast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vdivsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
+; CHECK-NEXT:    vdivsh %xmm1, %xmm3, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm4, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %s = load half, ptr %p
+  %i = insertelement <8 x half> poison, half %s, i64 0
+  %b = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %r = fdiv <8 x half> %x, %b
+  ret <8 x half> %r
+}
+
+; Strict ops are not widened, as the upper elements could raise exceptions.
+define <8 x half> @strict_fadd_v8f16(<8 x half> %x, <8 x half> %y) strictfp {
+; CHECK-LABEL: strict_fadd_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
+; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm4
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
+  %r = call <8 x half> @llvm.experimental.constrained.fadd.v8f16(<8 x half> %x, <8 x half> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <8 x half> %r
+}
