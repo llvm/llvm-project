@@ -1256,17 +1256,6 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
 
-  // DXIL only: SV_ShadingRate requires shader model 6.4.
-  if (Kind == SemanticKind::ShadingRate) {
-    const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
-    if (TT.isDXIL() && TT.getOSVersion() < VersionTuple(6, 4)) {
-      Diag(SemanticAttr->getLoc(),
-           diag::err_hlsl_semantic_in_wrong_shader_model)
-          << SemanticAttr->getAttrName() << "6.4";
-      return;
-    }
-  }
-
   // A system-value name can have an arbitrary interpretation, for example
   // SV_Position on a vertex input. Only the general type restrictions apply.
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
@@ -1290,6 +1279,11 @@ void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
     if (Triple.getOSVersion() < VersionTuple(6, 1))
       Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
           << A->getAttrName() << "6.1";
+    return;
+  case SemanticKind::ShadingRate:
+    if (Triple.getOSVersion() < VersionTuple(6, 4))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
+          << A->getAttrName() << "6.4";
     return;
   default:
     return;
