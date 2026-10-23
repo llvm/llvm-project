@@ -921,17 +921,17 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   if (EH != ExceptionHandling::None && EH != ExceptionHandling::Wasm &&
       EH != ExceptionHandling::Emscripten)
     reportFatalUsageError(
-        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
+        "exception model should be 'none', 'wasm', or 'emscripten'");
 
   EnableEmEH = EH == ExceptionHandling::Emscripten;
   // You can't mix Emscripten EH with Wasm SjLj.
   if (EnableEmEH && EnableWasmSjLj)
     reportFatalUsageError(
-        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
+        "'emscripten' exception model is not allowed with -wasm-enable-sjlj");
   // You can't mix Wasm EH with Emscripten SjLj.
   if (EH == ExceptionHandling::Wasm && EnableEmSjLj)
     reportFatalUsageError(
-        "-exception-model=wasm not allowed with -enable-emscripten-sjlj");
+        "'wasm' exception model is not allowed with -wasm-enable-sjlj");
 
   bool Changed = false;
 
