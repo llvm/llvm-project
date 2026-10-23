@@ -4503,8 +4503,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_fmafx_rvvm2 : RuntimeLibcallImpl<FMA_NXV4F32>;
   def Sleef_fmaxdx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV2F64>;
   def Sleef_fmaxfx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV4F32>;
-  def Sleef_fmindx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
-  def Sleef_fminfx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
+  def Sleef_fmindx_rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
+  def Sleef_fminfx_rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
   def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<REM_NXV2F64>;
   def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<REM_NXV4F32>;
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
@@ -4531,8 +4531,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_powfx_u10rvvm2 : RuntimeLibcallImpl<POW_NXV4F32>;
   def Sleef_sincosdx_u10rvvm2 : RuntimeLibcallImpl<SINCOS_NXV2F64>;
   def Sleef_sincosfx_u10rvvm2 : RuntimeLibcallImpl<SINCOS_NXV4F32>;
-  def Sleef_sincospidx_u10rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
-  def Sleef_sincospifx_u10rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def Sleef_sincospidx_u05rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+  def Sleef_sincospifx_u05rvvm2 : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
   def Sleef_sindx_u10rvvm2 : RuntimeLibcallImpl<SIN_NXV2F64>;
   def Sleef_sinfx_u10rvvm2 : RuntimeLibcallImpl<SIN_NXV4F32>;
   def Sleef_sinhdx_u10rvvm2 : RuntimeLibcallImpl<SINH_NXV2F64>;
@@ -4888,8 +4888,12 @@ def SLEEFGNUABIAArch64Library : LibcallLibrary<"sleefgnuabi",
   (add SLEEFGNUABI_VF2_VECFUNCS, SLEEFGNUABI_VF4_VECFUNCS,
        SLEEFGNUABI_SCALABLE_VECFUNCS), isAArch64>;
 
+// RVV sincos[pi] and modf return both results in a doubled-width vector rather
+// than using the output pointers supported by the current lowering.
 def SLEEFGNUABIRISCVLibrary : LibcallLibrary<"sleefgnuabi",
-  (add SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV), isRISCV64>;
+  (add !filter(impl, SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV,
+               !not(!match(!cast<string>(impl.Provides),
+                            "^(MODF|SINCOS|SINCOSPI)_")))), isRISCV64>;
 
 def ArmPLLibrary : LibcallLibrary<"armpl",
   (add LibcallsWithCC<(add !filter(entry, ARMPL_VECFUNCS,
@@ -4898,7 +4902,7 @@ def ArmPLLibrary : LibcallLibrary<"armpl",
        !filter(entry, ARMPL_VECFUNCS,
                !match(entry.LibCallFuncName, "^armpl_sv"))), isAArch64>;
 
-def AMDLIBMLibrary : LibcallLibrary<"amdlibm", (add AMDLIBM_VECFUNCS)>;
+def AMDLIBMLibrary : LibcallLibrary<"amdlibm", (add AMDLIBM_VECFUNCS), isX86>;
 
 def AccelerateLibrary : LibcallLibrary<"accelerate", (add ACCELERATE_VECFUNCS)>;
 

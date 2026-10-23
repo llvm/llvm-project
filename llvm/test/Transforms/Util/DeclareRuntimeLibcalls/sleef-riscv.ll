@@ -1,5 +1,8 @@
-; REQUIRES: riscv-registered-target
-; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=riscv64-unknown-linux -mattr=+v -vector-library=sleefgnuabi < %s | FileCheck %s
+; REQUIRES: riscv-registered-target, x86-registered-target
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=riscv64-unknown-linux -mattr=+v -vector-library=sleefgnuabi < %s | FileCheck %s --implicit-check-not=_ZGV --implicit-check-not=Sleef_modf --implicit-check-not=Sleef_sincos
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=riscv32-unknown-linux-gnu -mattr=+v -vector-library=sleefgnuabi < %s | FileCheck %s --check-prefix=NONE --implicit-check-not=_ZGV --implicit-check-not=Sleef_
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-linux-gnu -vector-library=sleefgnuabi < %s | FileCheck %s --check-prefix=NONE --implicit-check-not=_ZGV --implicit-check-not=Sleef_
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=riscv64-unknown-linux-gnu -mattr=+v -vector-library=none < %s | FileCheck %s --check-prefix=NONE --implicit-check-not=_ZGV --implicit-check-not=Sleef_
 
 ; CHECK: declare <vscale x 2 x double> @Sleef_acosdx_u10rvvm2(<vscale x 2 x double>) [[ATTRS:#[0-9]+]]
 
@@ -85,10 +88,12 @@
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_fmaxfx_rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
 
-; CHECK: declare <vscale x 2 x double> @Sleef_fmindx_u10rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
+; CHECK: declare <vscale x 2 x double> @Sleef_fmindx_rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
 
-; CHECK: declare <vscale x 4 x float> @Sleef_fminfx_u10rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
+; CHECK: declare <vscale x 4 x float> @Sleef_fminfx_rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
 
+; RVV fmod has two vector arguments and no mask. The multi-result functions
+; require a different ABI and must remain unavailable until it is supported.
 ; CHECK: declare <vscale x 2 x double> @Sleef_fmoddx_rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_fmodfx_rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
@@ -125,10 +130,6 @@
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float>) [[ATTRS]]
 
-; CHECK: declare <vscale x 2 x double> @Sleef_modfdx_rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG:#[0-9]+]]
-
-; CHECK: declare <vscale x 4 x float> @Sleef_modffx_rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
-
 ; CHECK: declare <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_nextafterfx_rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
@@ -136,14 +137,6 @@
 ; CHECK: declare <vscale x 2 x double> @Sleef_powdx_u10rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
-
-; CHECK: declare void @Sleef_sincosdx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
-
-; CHECK: declare void @Sleef_sincosfx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
-
-; CHECK: declare void @Sleef_sincospidx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
-
-; CHECK: declare void @Sleef_sincospifx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double>) [[ATTRS]]
 
@@ -174,4 +167,7 @@
 ; CHECK: declare <vscale x 4 x float> @Sleef_tgammafx_u10rvvm2(<vscale x 4 x float>) [[ATTRS]]
 
 ; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+
+; The vector library selection must not enable functions for another target,
+; and the RVV functions must not enter the default system runtime library.
+; NONE: declare double @fmod(double, double)
