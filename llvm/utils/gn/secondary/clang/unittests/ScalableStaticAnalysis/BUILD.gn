@@ -23,6 +23,7 @@ unittest("ClangScalableAnalysisTests") {
     "ASTEntityMappingTest.cpp",
     "Analyses/CallGraph/CallGraphExtractorTest.cpp",
     "Analyses/EntityPointerLevel/EntityPointerLevelTest.cpp",
+    "Analyses/PointerFlow/PointerFlowPairsTest.cpp",
     "Analyses/PointerFlow/PointerFlowTest.cpp",
     "Analyses/PointerFlow/PointerFlowWPATest.cpp",
     "Analyses/SharedLexicalRepresentation/EntitySourceLocationExtractorTest.cpp",
