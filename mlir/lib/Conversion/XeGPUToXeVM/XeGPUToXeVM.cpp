@@ -244,7 +244,7 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   // Checks the surface width and pitch against the target's 2D block memory
   // restrictions. Only these two are enforced: both are backed by the source's
@@ -1138,7 +1138,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 };
 
 class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::PrefetchOp op, xegpu::PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1205,7 +1205,7 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
 };
 
 class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::FenceOp op, xegpu::FenceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1278,7 +1278,7 @@ static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
 }
 
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, xegpu::DpasOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1389,7 +1389,7 @@ matchSimpleAtomicOp(arith::AtomicRMWKind arithKind) {
 }
 
 class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::AtomicRMWOp op, xegpu::AtomicRMWOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1428,7 +1428,7 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
 };
 
 class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1565,7 +1565,7 @@ static bool isXeVMTruncf(arith::TruncFOp op) {
 }
 
 class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::ExtFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1600,7 +1600,7 @@ class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
 };
 
 class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::TruncFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1679,7 +1679,7 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
 // same-width integer vector on the way in and back on the way out.
 class LaneShuffleToXeVMPattern
     : public OpConversionPattern<xegpu::LaneShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

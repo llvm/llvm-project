@@ -58,7 +58,7 @@ protected:
       GTEST_SKIP();
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
-    PassBuilder PB(TM.get());
+    PassBuilder PB(Context, TM.get());
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);

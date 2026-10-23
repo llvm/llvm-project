@@ -192,5 +192,5 @@ can select the target after connecting to the server. Note that some commands
 SEE ALSO
 --------
 
-The LLDB project page https://lldb.llvm.org has many different resources
+The :doc:`LLDB project page </index>` has many different resources
 for :program:`lldb-server` users.
