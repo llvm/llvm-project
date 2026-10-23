@@ -188,7 +188,7 @@ struct ReplacementIRBuilder
       : IRBuilder(
             I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+    if (I->getFunction()->hasFnAttribute(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
@@ -261,6 +261,9 @@ static void copyMetadataForAtomic(Instruction &Dest,
       if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
         Dest.setMetadata(ID, N);
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
+        Dest.setMetadata(ID, N);
+
+      if (ID == Ctx.getMDKindID("amdgpu.cfs"))
         Dest.setMetadata(ID, N);
 
       // Losing atomic.ignore.denormal.mode, but it doesn't matter for current

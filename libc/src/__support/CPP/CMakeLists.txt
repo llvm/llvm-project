@@ -117,6 +117,9 @@ add_header_library(
   DEPENDS
     .type_traits
     .utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -210,6 +213,10 @@ add_header_library(
   expected
   HDRS
     expected.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
