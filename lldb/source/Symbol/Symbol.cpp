@@ -719,7 +719,7 @@ void Symbol::SynthesizeNameIfNeeded() const {
 
 bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
                     const SectionList *section_list,
-                    const StringTableReader &strtab) {
+                    const StringTableReader &strtab, addr_t file_base_addr) {
   if (!data.ValidOffsetForDataOfSize(*offset_ptr, 8))
     return false;
   m_uid = data.GetU32(offset_ptr);
@@ -746,7 +746,8 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     if (is_addr) {
       m_addr_or_reexport.GetAddressRange(*this)
           .GetBaseAddress()
-          .ResolveAddressUsingFileSections(value, section_list);
+          .ResolveAddressUsingFileSections(value + file_base_addr,
+                                           section_list);
     } else {
       m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Clear();
       m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().SetOffset(
@@ -792,7 +793,8 @@ static_assert(sizeof(lldb_private::Symbol) == 72,
 /// do the same thing when decoding the symbol. There are test that ensure this
 /// encoding works for each individual bit. Everything else is very easy to
 /// store.
-void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
+void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab,
+                    addr_t file_base_addr) const {
   file.AppendU32(m_uid);
   file.AppendU16(m_type_data);
   uint16_t bitfields = m_type;
@@ -828,9 +830,12 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
                        .GetSection()
                        .get() != nullptr;
     file.AppendU8(is_addr);
-    file.AppendU64(m_addr_or_reexport.GetAddressRange(*this)
-                       .GetBaseAddress()
-                       .GetFileAddress());
+    uint64_t value = m_addr_or_reexport.GetAddressRange(*this)
+                         .GetBaseAddress()
+                         .GetFileAddress();
+    if (is_addr)
+      value = value - file_base_addr;
+    file.AppendU64(value);
     file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
     file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
