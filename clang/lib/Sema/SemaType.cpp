@@ -1846,7 +1846,8 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
 QualType Sema::BuildPointerType(QualType T,
                                 SourceLocation Loc, DeclarationName Entity) {
   if (getLangOpts().OpenCL && T->getAs<CooperativeMatrixType>()) {
-    Diag(Loc, diag::err_coopmat_pointer);
+    Diag(Loc, diag::err_invalid_coopmat_element_type)
+        << T->getAs<CooperativeMatrixType>()->getElementType();
     return QualType();
   }
 
@@ -2725,7 +2726,7 @@ QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
     Diag(AttrLoc, diag::err_invalid_coopmat_attr) << "use";
     return QualType();
   }
-  if (!CooperativeMatrixType::isValidElementType(ElementTy)) {
+  if (!CooperativeMatrixType::isValidOpenCLScalarType(ElementTy)) {
     Diag(AttrLoc, diag::err_invalid_coopmat_element_type) << ElementTy;
     return QualType();
   }
