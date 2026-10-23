@@ -594,7 +594,8 @@ define void @freeze_buildvector_one_undef_elt(ptr %origin0, ptr %origin1, ptr %o
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, (%edx), %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X86-NEXT:    # freeze: $edx
+; X86-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
@@ -605,6 +606,7 @@ define void @freeze_buildvector_one_undef_elt(ptr %origin0, ptr %origin1, ptr %o
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm0
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
@@ -1125,13 +1127,15 @@ define <4 x i32> @freeze_poison_multi_use_with_zeros(ptr %p) nounwind {
 ; X86-LABEL: freeze_poison_multi_use_with_zeros:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%eax)
-; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    # freeze: $ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    vmovd %ecx, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_poison_multi_use_with_zeros:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
@@ -1147,15 +1151,17 @@ define <4 x i32> @freeze_poison_multi_use_splat(ptr %p, i32 %x) nounwind {
 ; X86-LABEL: freeze_poison_multi_use_splat:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%eax)
-; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    # freeze: $ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    vmovd %ecx, %xmm0
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_poison_multi_use_splat:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
@@ -1176,15 +1182,17 @@ define <8 x i32> @freeze_poison_multi_use_upper(ptr %p, i32 %x) nounwind {
 ; X86-LABEL: freeze_poison_multi_use_upper:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%eax)
+; X86-NEXT:    # freeze: $ecx
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    vmovd %ecx, %xmm1
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_poison_multi_use_upper:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    vmovd %esi, %xmm0
 ; X64-NEXT:    vmovd %eax, %xmm1

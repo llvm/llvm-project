@@ -810,6 +810,7 @@ define i64 @poison_should_freeze(i1 %cond1, i32 %val, i16 %val2, i64 %a, i64 %b)
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0x5040100
+; GCN-NEXT:    ; freeze: $sgpr4
 ; GCN-NEXT:    v_perm_b32 v2, v2, s4, v7
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
@@ -831,6 +832,7 @@ define <8 x i16> @poison_should_freeze_v8i16(i1 %cond1, i32 %val, i16 %val2, <8 
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0x5040100
+; GCN-NEXT:    ; freeze: $sgpr4
 ; GCN-NEXT:    v_perm_b32 v2, v2, s4, v11
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc

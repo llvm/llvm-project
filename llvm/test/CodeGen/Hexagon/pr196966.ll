@@ -34,33 +34,36 @@ define void @pr196966(ptr %base) {
 ; CHECK-NEXT:     r0 = add(r29,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = add(r16,#6)
-; CHECK-NEXT:     r1:0 = memd(r29+#24)
-; CHECK-NEXT:     r5:4 = memd(r29+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r5:4 = extractu(r5:4,#16,#32)
-; CHECK-NEXT:     p0 = bitsclr(r0,#4)
-; CHECK-NEXT:     r3:2 = memd(r29+#8)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = bitsclr(r0,#32)
-; CHECK-NEXT:     p2 = !tstbit(r0,#13)
 ; CHECK-NEXT:     r3 = add(r16,#20)
-; CHECK-NEXT:     if (!p0) memh(r0+#0) = r4
+; CHECK-NEXT:     r8 = add(r16,#6)
+; CHECK-NEXT:     r7:6 = memd(r29+#0)
+; CHECK-NEXT:     r1:0 = memd(r29+#24)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = !tstbit(r0,#15)
-; CHECK-NEXT:     if (!p1) memh(r3+#0) = r2.h
-; CHECK-NEXT:     if (!p2) memh(r6+#0) = r0.h
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
+; CHECK-NEXT:     r7:6 = extractu(r7:6,#16,#32)
+; CHECK-NEXT:     r5:4 = memd(r29+#8)
 ; CHECK-NEXT:     r17:16 = memd(r30+#-8)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    // freeze: $r5
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = bitsclr(r5,#4)
+; CHECK-NEXT:     p1 = bitsclr(r5,#32)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p2 = !tstbit(r5,#13)
+; CHECK-NEXT:     p0 = !tstbit(r5,#15)
+; CHECK-NEXT:     if (!p0) memh(r2+#0) = r6
+; CHECK-NEXT:     if (!p1) memh(r3+#0) = r4.h
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     if (!p2) memh(r8+#0) = r0.h
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = deallocframe(r30):raw
-; CHECK-NEXT:    } // 8-byte Folded Reload
+; CHECK-NEXT:     if (!p0) memh(r2+#0) = r1.h
+; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     if (!p0) memh(r0+#0) = r1.h
 ; CHECK-NEXT:    }
 entry:
   %mb = icmp ne ptr %base, null
