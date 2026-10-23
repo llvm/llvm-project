@@ -1,0 +1,36 @@
+; RUN: rm -rf %t && split-file %s %t
+; RUN: llvm-profdata show --sample %t/profile.proftext | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --extbinary %t/profile.proftext -o %t/profile.extbin
+; RUN: llvm-profdata show --sample %t/profile.extbin | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --text %t/profile.extbin -o - | FileCheck %s --check-prefix=TEXT
+; RUN: llvm-profdata merge --sample --extbinary --split-layout %t/profile.proftext -o %t/profile.split
+; RUN: llvm-profdata show --sample %t/profile.split | FileCheck %s --check-prefix=SHOW
+
+; SHOW: Function: foo: 100, 0, 1 sampled lines
+; SHOW: Samples collected in the function's body {
+; SHOW:   1: 10
+; SHOW: }
+; SHOW: DataAccessProfiles:
+; SHOW-NEXT:   SampledRecords:
+; SHOW-NEXT:     - Symbol: global_var
+; SHOW-NEXT:       AccessCount: 42
+; SHOW-NEXT:       Locations:
+; SHOW-NEXT:         - FileName: file.c
+; SHOW-NEXT:           Line: 10
+; SHOW-NEXT:     - Symbol: global_arr
+; SHOW-NEXT:       AccessCount: 100
+
+; TEXT: foo:100:0
+; TEXT:  1: 10
+; TEXT: [DataAccessProfiles]
+; TEXT-NEXT: global_var:42
+; TEXT-NEXT:  file.c:10
+; TEXT-NEXT: global_arr:100
+
+//--- profile.proftext
+foo:100:0
+ 1: 10
+[DataAccessProfiles]
+global_var:42
+ file.c:10
+global_arr:100

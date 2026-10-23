@@ -1,0 +1,30 @@
+; REQUIRES: opencsd, arm-registered-target
+; RUN: yaml2obj %S/Inputs/etm-opencsd.yaml -o %t.bin
+
+; Verify ITM data trace decoding generates data access profiles.
+; RUN: printf "\000\000\000\000\000\200\117\000\020\000\040\115\000\115\010" > %t.trace
+
+; Verify sample-based data access profile generation (default).
+; RUN: llvm-profgen --etm=%t.trace --binary=%t.bin --output=%t.prof --format=text
+; RUN: llvm-profdata show --sample %t.prof | FileCheck %s
+
+; Verify instrumentation-based data access profile generation.
+; RUN: llvm-profgen --etm=%t.trace --binary=%t.bin --output=%t2.profdata --profile-format=instr
+; RUN: ls %t2-data.profdata
+; RUN: llvm-profdata show %t2-data.profdata | FileCheck %s --check-prefix=INSTR
+
+; CHECK: DataAccessProfiles:
+; CHECK-NEXT:   SampledRecords:
+; CHECK-NEXT:     - Symbol: global_var
+; CHECK-NEXT:       AccessCount: 2
+; CHECK-NEXT:     - Symbol: global_arr
+; CHECK-NEXT:       AccessCount: 1
+
+; INSTR: Instrumentation level: Front-end
+; INSTR: # MemProfSummary:
+; INSTR: DataAccessProfiles:
+; INSTR-NEXT: SampledRecords:
+; INSTR-NEXT:   - Symbol:          global_var
+; INSTR-NEXT:     AccessCount:     2
+; INSTR-NEXT:   - Symbol:          global_arr
+; INSTR-NEXT:     AccessCount:     1
