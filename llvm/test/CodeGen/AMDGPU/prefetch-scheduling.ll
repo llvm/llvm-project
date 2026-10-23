@@ -5,10 +5,10 @@
 ; RUN: llc -mtriple=amdgpu12.50 -mattr=+si-scheduler < %s | FileCheck --check-prefix=GFX1250-SI %s
 
 ; Prefetches are not ordered against other memory operations, except that the
-; machine scheduler keeps a prefetch ahead of the loads that follow it.
+; machine scheduler keeps them in program order with respect to loads.
 
-; The prefetch can move above the two earlier loads, and the four loads can be
-; issued back to back. It stays ahead of the two later loads.
+; The prefetch stays after the two earlier loads and ahead of the two later
+; ones, and all four loads are issued before the first wait.
 define amdgpu_kernel void @prefetch_between_loads(ptr addrspace(1) noalias %a, ptr addrspace(1) noalias %q, ptr addrspace(1) noalias %out) {
 ; GFX1250-LABEL: prefetch_between_loads:
 ; GFX1250:       ; %bb.0:
@@ -24,10 +24,11 @@ define amdgpu_kernel void @prefetch_between_loads(ptr addrspace(1) noalias %a, p
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_prefetch_b8 v1, s[2:3] offset:4096 scope:SCOPE_SE
-; GFX1250-NEXT:    s_clause 0x3
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    global_load_b32 v3, v0, s[0:1] offset:1024 scale_offset
+; GFX1250-NEXT:    global_prefetch_b8 v1, s[2:3] offset:4096 scope:SCOPE_SE
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v4, v0, s[0:1] offset:2048 scale_offset
 ; GFX1250-NEXT:    global_load_b32 v5, v0, s[0:1] offset:3072 scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -45,10 +46,11 @@ define amdgpu_kernel void @prefetch_between_loads(ptr addrspace(1) noalias %a, p
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_prefetch_data s[2:3], 0x1000, null, 0
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    global_load_b32 v2, v0, s[0:1] offset:1024
+; GFX12-NEXT:    s_prefetch_data s[2:3], 0x1000, null, 0
+; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b32 v3, v0, s[0:1] offset:2048
 ; GFX12-NEXT:    global_load_b32 v4, v0, s[0:1] offset:3072
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -64,25 +66,28 @@ define amdgpu_kernel void @prefetch_between_loads(ptr addrspace(1) noalias %a, p
 ; GFX1250-SI-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SI-NEXT:    v_nop
 ; GFX1250-SI-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SI-NEXT:    s_clause 0x1
 ; GFX1250-SI-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1250-SI-NEXT:    s_mov_b32 s6, 0x3ff
-; GFX1250-SI-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SI-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s6, v0 bitop3:0x40
-; GFX1250-SI-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SI-NEXT:    global_prefetch_b8 v1, s[2:3] offset:4096 scope:SCOPE_SE
-; GFX1250-SI-NEXT:    s_clause 0x3
-; GFX1250-SI-NEXT:    global_load_b32 v2, v0, s[0:1] offset:3072 scale_offset
-; GFX1250-SI-NEXT:    global_load_b32 v3, v0, s[0:1] offset:2048 scale_offset
-; GFX1250-SI-NEXT:    global_load_b32 v4, v0, s[0:1] offset:1024 scale_offset
-; GFX1250-SI-NEXT:    global_load_b32 v5, v0, s[0:1] scale_offset
+; GFX1250-SI-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
 ; GFX1250-SI-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SI-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
-; GFX1250-SI-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SI-NEXT:    v_dual_add_f32 v2, v3, v2 :: v_dual_add_f32 v3, v5, v4
-; GFX1250-SI-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SI-NEXT:    v_add_f32_e32 v2, v3, v2
+; GFX1250-SI-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX1250-SI-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SI-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX1250-SI-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SI-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
+; GFX1250-SI-NEXT:    s_clause 0x1
+; GFX1250-SI-NEXT:    global_load_b32 v1, v0, s[0:1] offset:1024 scale_offset
+; GFX1250-SI-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset
+; GFX1250-SI-NEXT:    global_prefetch_b8 v3, s[2:3] offset:4096 scope:SCOPE_SE
+; GFX1250-SI-NEXT:    s_clause 0x1
+; GFX1250-SI-NEXT:    global_load_b32 v4, v0, s[0:1] offset:2048 scale_offset
+; GFX1250-SI-NEXT:    global_load_b32 v5, v0, s[0:1] offset:3072 scale_offset
+; GFX1250-SI-NEXT:    s_wait_loadcnt 0x2
+; GFX1250-SI-NEXT:    v_add_f32_e32 v1, v2, v1
+; GFX1250-SI-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-SI-NEXT:    v_add_f32_e32 v2, v4, v5
+; GFX1250-SI-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SI-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX1250-SI-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
 ; GFX1250-SI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p0 = getelementptr inbounds float, ptr addrspace(1) %a, i32 %tid
@@ -103,7 +108,9 @@ define amdgpu_kernel void @prefetch_between_loads(ptr addrspace(1) noalias %a, p
   ret void
 }
 
-; A prefetch after the last load does not wait for the loads.
+; A prefetch after the last load stays after both loads. On gfx1250, VOPD
+; pairing puts its address computation into the add of the loaded values, so
+; the prefetch also waits for the loads.
 define amdgpu_kernel void @prefetch_after_loads(ptr addrspace(1) noalias %a, ptr addrspace(1) noalias %q, ptr addrspace(1) noalias %out) {
 ; GFX1250-LABEL: prefetch_after_loads:
 ; GFX1250:       ; %bb.0:
@@ -119,10 +126,9 @@ define amdgpu_kernel void @prefetch_after_loads(ptr addrspace(1) noalias %a, ptr
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v1, v0, s[0:1] scale_offset
 ; GFX1250-NEXT:    global_load_b32 v2, v0, s[0:1] offset:1024 scale_offset
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; GFX1250-NEXT:    global_prefetch_b8 v3, s[2:3] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v3, 2, v0 :: v_dual_add_f32 v1, v1, v2
+; GFX1250-NEXT:    global_prefetch_b8 v3, s[2:3] scope:SCOPE_SE
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -149,20 +155,18 @@ define amdgpu_kernel void @prefetch_after_loads(ptr addrspace(1) noalias %a, ptr
 ; GFX1250-SI-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SI-NEXT:    v_nop
 ; GFX1250-SI-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SI-NEXT:    s_clause 0x1
 ; GFX1250-SI-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1250-SI-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
 ; GFX1250-SI-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250-SI-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SI-NEXT:    s_clause 0x1
 ; GFX1250-SI-NEXT:    global_load_b32 v1, v0, s[0:1] offset:1024 scale_offset
 ; GFX1250-SI-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset
-; GFX1250-SI-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; GFX1250-SI-NEXT:    global_prefetch_b8 v3, s[2:3] scope:SCOPE_SE
-; GFX1250-SI-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SI-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; GFX1250-SI-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SI-NEXT:    v_add_f32_e32 v1, v2, v1
-; GFX1250-SI-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SI-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; GFX1250-SI-NEXT:    v_dual_lshlrev_b32 v3, 2, v0 :: v_dual_add_f32 v1, v2, v1
+; GFX1250-SI-NEXT:    global_prefetch_b8 v3, s[2:3] scope:SCOPE_SE
+; GFX1250-SI-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
 ; GFX1250-SI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p0 = getelementptr inbounds float, ptr addrspace(1) %a, i32 %tid
@@ -178,8 +182,8 @@ define amdgpu_kernel void @prefetch_after_loads(ptr addrspace(1) noalias %a, ptr
 }
 
 ; One prefetch per copy of an unrolled loop body with stores. The loads of all
-; four copies are issued before the first wait, and each prefetch stays ahead
-; of the load of its copy.
+; four copies are issued before the first wait, and the prefetches and loads
+; keep their program order.
 define amdgpu_kernel void @prefetch_unrolled_loop(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out, i64 %n) {
 ; GFX1250-SDAG-LABEL: prefetch_unrolled_loop:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
@@ -206,13 +210,12 @@ define amdgpu_kernel void @prefetch_unrolled_loop(ptr addrspace(1) noalias %in, 
 ; GFX1250-SDAG-NEXT:    v_cmp_le_u64_e32 vcc_lo, s[6:7], v[0:1]
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[2:3]
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:32768 scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:65536 scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:98304 scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    s_clause 0x3
 ; GFX1250-SDAG-NEXT:    global_load_b32 v6, v[4:5], off
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:32768 scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    global_load_b32 v7, v[4:5], off offset:32768
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:65536 scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    global_load_b32 v8, v[4:5], off offset:65536
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v[4:5], off offset:98304 scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    global_load_b32 v9, v[4:5], off offset:98304
 ; GFX1250-SDAG-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x2
@@ -257,13 +260,12 @@ define amdgpu_kernel void @prefetch_unrolled_loop(ptr addrspace(1) noalias %in, 
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, v4, v6
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:32768 scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:65536 scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:98304 scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    s_clause 0x3
 ; GFX1250-GISEL-NEXT:    global_load_b32 v10, v[8:9], off
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:32768 scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    global_load_b32 v11, v[8:9], off offset:32768
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:65536 scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    global_load_b32 v12, v[8:9], off offset:65536
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v[8:9], off offset:98304 scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    global_load_b32 v13, v[8:9], off offset:98304
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, v5, v7, s0
 ; GFX1250-GISEL-NEXT:    s_or_b32 s1, vcc_lo, s1
@@ -353,13 +355,12 @@ define amdgpu_kernel void @prefetch_unrolled_loop(ptr addrspace(1) noalias %in, 
 ; GFX1250-SI-NEXT:    v_cmp_le_u64_e32 vcc_lo, s[6:7], v[0:1]
 ; GFX1250-SI-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[2:3]
 ; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off scope:SCOPE_SE
-; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:32768 scope:SCOPE_SE
-; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:65536 scope:SCOPE_SE
-; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:98304 scope:SCOPE_SE
-; GFX1250-SI-NEXT:    s_clause 0x3
 ; GFX1250-SI-NEXT:    global_load_b32 v6, v[4:5], off
+; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:32768 scope:SCOPE_SE
 ; GFX1250-SI-NEXT:    global_load_b32 v7, v[4:5], off offset:32768
+; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:65536 scope:SCOPE_SE
 ; GFX1250-SI-NEXT:    global_load_b32 v8, v[4:5], off offset:65536
+; GFX1250-SI-NEXT:    global_prefetch_b8 v[4:5], off offset:98304 scope:SCOPE_SE
 ; GFX1250-SI-NEXT:    global_load_b32 v9, v[4:5], off offset:98304
 ; GFX1250-SI-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX1250-SI-NEXT:    s_wait_loadcnt 0x2
@@ -418,7 +419,8 @@ exit:
   ret void
 }
 
-; A scalar prefetch stays ahead of the later scalar and vector loads.
+; A scalar prefetch stays after the earlier vector load and ahead of the later
+; scalar and vector loads.
 define amdgpu_ps float @s_prefetch_before_loads(ptr addrspace(4) inreg %p, ptr addrspace(1) inreg %g, i32 %idx) {
 ; GFX1250-LABEL: s_prefetch_before_loads:
 ; GFX1250:       ; %bb.0:
@@ -441,16 +443,15 @@ define amdgpu_ps float @s_prefetch_before_loads(ptr addrspace(4) inreg %p, ptr a
 ; GFX12-LABEL: s_prefetch_before_loads:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX12-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, s2, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b32 v2, v[0:1], off
+; GFX12-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:256
+; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_f32_e32 v1, s0, v2
@@ -465,9 +466,8 @@ define amdgpu_ps float @s_prefetch_before_loads(ptr addrspace(4) inreg %p, ptr a
 ; GFX1250-SI-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SI-NEXT:    v_nop
 ; GFX1250-SI-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SI-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; GFX1250-SI-NEXT:    s_clause 0x1
 ; GFX1250-SI-NEXT:    global_load_b32 v1, v0, s[2:3] scale_offset
+; GFX1250-SI-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SI-NEXT:    global_load_b32 v2, v0, s[2:3] offset:256 scale_offset
 ; GFX1250-SI-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
 ; GFX1250-SI-NEXT:    s_wait_loadcnt 0x1
