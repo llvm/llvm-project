@@ -581,6 +581,18 @@ TEST_F(LexerTest, AvoidPastEndOfStringDereference03) {
   EXPECT_TRUE(Lex("#include <\\\\\n").empty());
 }
 
+// Clangd uses single-file-parse mode in preamble scan on a truncated buffer.
+// An unclosed paren after an undefined identifier must not lex past the eod.
+TEST_F(LexerTest, SingleFileUnclosedParenUndefinedId01) {
+  PPOpts.SingleFileParseMode = true;
+  EXPECT_TRUE(Lex("#if (defined(FOO)\n").empty());
+}
+
+TEST_F(LexerTest, SingleFileUnclosedParenUndefinedId02) {
+  PPOpts.SingleFileParseMode = true;
+  EXPECT_TRUE(Lex("#if (FOO\n").empty());
+}
+
 TEST_F(LexerTest, StringizingRasString) {
   // For "std::string Lexer::Stringify(StringRef Str, bool Charify)".
   std::string String1 = R"(foo
