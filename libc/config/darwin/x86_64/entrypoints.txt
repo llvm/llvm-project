@@ -205,6 +205,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.lroundl
     #libc.src.math.ldexp
     #libc.src.math.ldexpf
+    #libc.src.math.ldexpf128
     #libc.src.math.ldexpl
     #libc.src.math.log10f
     #libc.src.math.log1pf
@@ -244,6 +245,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.roundf
     #libc.src.math.roundf128
     #libc.src.math.roundl
+    #libc.src.math.scalblnf128
+    #libc.src.math.scalbnf128
     #libc.src.math.sincosf
     #libc.src.math.sinhf
     #libc.src.math.sinf
