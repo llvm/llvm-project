@@ -35,6 +35,7 @@
 // CHECK-NEXT:     fp8dot4             FEAT_FP8DOT4                                           Enable FP8 4-way dot instructions
 // CHECK-NEXT:     fp8fma              FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     fprcvt              FEAT_FPRCVT                                            Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of different input and output sizes
+// CHECK-NEXT:     fpv2                FEAT_FPv2                                              Enable IEEE 754-2019 floating-point standard alignment instructions
 // CHECK-NEXT:     fp16                FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     gcie                FEAT_GCIE                                              Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension
 // CHECK-NEXT:     gcs                 FEAT_GCS                                               Enable Armv9.4-A Guarded Call Stack Extension

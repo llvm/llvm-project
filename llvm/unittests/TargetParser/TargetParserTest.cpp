@@ -1528,7 +1528,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
       AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
       AArch64::AEK_SVE_LRCPC,    AArch64::AEK_SVE_PERM256,
-      AArch64::AEK_SME_F16F8F16,
+      AArch64::AEK_SME_F16F8F16, AArch64::AEK_FPV2,
   };
 
   std::vector<StringRef> Features;
@@ -1658,6 +1658,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-lrcpc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-perm256"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f16f8f16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fpv2"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1844,6 +1845,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve-lrcpc", "nosve-lrcpc", "+sve-lrcpc", "-sve-lrcpc"},
       {"sve-perm256", "nosve-perm256", "+sve-perm256", "-sve-perm256"},
       {"sme-f16f8f16", "nosme-f16f8f16", "+sme-f16f8f16", "-sme-f16f8f16"},
+      {"fpv2", "nofpv2", "+fpv2", "-fpv2"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2306,6 +2308,9 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
+
+        // fp16 -> fpv2
+        {AArch64::ARMV8A, {"nofp16", "fpv2"}, {"fullfp16", "fpv2"}, {}},
 
         // mtetc -> mte
         {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
