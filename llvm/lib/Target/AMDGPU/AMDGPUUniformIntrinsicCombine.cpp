@@ -128,10 +128,9 @@ static bool optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI) {
   Value *X;
   IntrinsicInst *RFL;
   if (!match(&Cmp,
-             m_c_ICmp(m_CombineAnd(
-                          m_Intrinsic<Intrinsic::amdgcn_readfirstlane>(
-                              m_Value(X)),
-                          m_AnyIntrinsic(RFL)),
+             m_c_ICmp(m_CombineAnd(m_Intrinsic<Intrinsic::amdgcn_readfirstlane>(
+                                       m_Value(X)),
+                                   m_AnyIntrinsic(RFL)),
                       m_Deferred(X))))
     return false;
 
