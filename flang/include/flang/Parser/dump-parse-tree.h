@@ -225,6 +225,7 @@ public:
   NODE(parser, CommonStmt)
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
+  NODE(CompilerDirective, Align)
   NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
   NODE(CompilerDirective, Inline)
