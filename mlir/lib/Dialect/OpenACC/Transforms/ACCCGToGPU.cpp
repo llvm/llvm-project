@@ -87,6 +87,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -2454,7 +2455,15 @@ void ACCCGToGPULowering::processPredicateRegion(
     }
   }
 
-  if (Value predicate = emitPredicate(loc, parDimsPair.second)) {
+  Value predicate = emitPredicate(loc, parDimsPair.second);
+  // With one thread per block nothing is predicated, but a block-level
+  // reduction store below must still become a cross-block atomic.
+  if (!predicate && llvm::all_of(computeRegion.getLaunchParDims(),
+                                 [](mlir::acc::GPUParallelDimAttr pd) {
+                                   return pd.isAnyBlock();
+                                 }))
+    predicate = arith::ConstantIntOp::create(rewriter, loc, 1, 1);
+  if (predicate) {
     LLVM_DEBUG(llvm::dbgs() << "predicate: " << predicate << "\n");
     bool isInsideThreadXLoop = false;
     bool isInsideThreadYLoop = false;
@@ -2601,7 +2610,35 @@ void ACCCGToGPULowering::processPredicateRegion(
                 insertBefore = parOp.getOperation();
                 return WalkResult::interrupt();
               });
-              if (insertBefore)
+              // The identity must be ordered before the atomics of every
+              // block, so store it from a launch ahead of this one when the
+              // address does not depend on the launch.
+              std::function<bool(Value)> fromLaunch = [&](Value v) -> bool {
+                if (auto arg = dyn_cast<BlockArgument>(v))
+                  return launch->isAncestor(arg.getOwner()->getParentOp());
+                Operation *def = v.getDefiningOp();
+                if (!launch->isAncestor(def) ||
+                    def->hasTrait<OpTrait::ConstantLike>())
+                  return false;
+                // Ids and dims such as gpu.grid_dim take no operands.
+                return def->getNumOperands() == 0 ||
+                       llvm::any_of(def->getOperands(), fromLaunch);
+              };
+              if (!fromLaunch(memref) &&
+                  llvm::none_of(initIndices, fromLaunch)) {
+                rewriter.setInsertionPoint(launch);
+                Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+                Value token = launch.getAsyncToken();
+                auto initLaunch = gpu::LaunchOp::create(
+                    rewriter, loc, one, one, one, one, one, one,
+                    /*dynamicSharedMemorySize=*/nullptr,
+                    token ? token.getType() : Type(),
+                    launch.getAsyncDependencies());
+                rewriter.setInsertionPointToStart(
+                    &initLaunch.getBody().front());
+                rewriter.setInsertionPoint(
+                    gpu::TerminatorOp::create(rewriter, loc));
+              } else if (insertBefore)
                 rewriter.setInsertionPoint(insertBefore);
               else
                 rewriter.setInsertionPointToStart(&launchBody);
@@ -3531,8 +3568,38 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
     bool isPerThreadPrivateTarget) {
   gpu::AllReduceOperationAttr attr = gpu::AllReduceOperationAttr::get(
       computeRegion->getContext(), getAllReduceOperation(kind));
-  auto allReduceOp = gpu::AllReduceOp::create(rewriter, loc, input, attr, true);
-  mlir::acc::setParDimsAttr(allReduceOp, parDimsAttr);
+  auto emitAllReduce = [&](Value operand) -> Value {
+    auto allReduceOp =
+        gpu::AllReduceOp::create(rewriter, loc, operand, attr, true);
+    mlir::acc::setParDimsAttr(allReduceOp, parDimsAttr);
+    return allReduceOp;
+  };
+
+  Value reducedValue;
+  if (auto complexType = dyn_cast<ComplexType>(input.getType())) {
+    // gpu.all_reduce takes only integers and floats, so a complex value has to
+    // go through as components. Addition is the one operator reaching here
+    // where that is equivalent: multiplication mixes the components, and
+    // min/max have no ordering on complex at all.
+    if (kind != arith::AtomicRMWKind::addf) {
+      std::string msg;
+      llvm::raw_string_ostream os(msg);
+      os << "reduction: " << arith::stringifyAtomicRMWKind(kind) << " of "
+         << complexType << " across threads";
+      (void)accSupport.emitNYI(loc, os.str());
+      hasFailed = true;
+      return;
+    }
+    Type elementType = complexType.getElementType();
+    Value realResult =
+        emitAllReduce(complex::ReOp::create(rewriter, loc, elementType, input));
+    Value imagResult =
+        emitAllReduce(complex::ImOp::create(rewriter, loc, elementType, input));
+    reducedValue = complex::CreateOp::create(rewriter, loc, complexType,
+                                             realResult, imagResult);
+  } else {
+    reducedValue = emitAllReduce(input);
+  }
   // Predicate the store on the thread-level dimensions being reduced so that
   // only one thread per reduced group writes the result. Only dimensions in
   // parDimsAttr are included; sweeping over all dimensions between the highest
@@ -3576,13 +3643,13 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
     Block &thenBlock = thenRegion.back();
     rewriter.setInsertionPoint(thenBlock.getTerminator());
   }
-  memref::StoreOp::create(rewriter, loc, allReduceOp, memref, indices);
+  memref::StoreOp::create(rewriter, loc, reducedValue, memref, indices);
   if (predicate && !isPerThreadPrivate)
     rewriter.setInsertionPointAfter(ifOp);
   // A later block combine reuses this instead of reloading the slot. This only
   // applies to scalar accumulators; array elements are indexed individually.
   if (indices.empty())
-    reductionAccumValue[memref] = allReduceOp;
+    reductionAccumValue[memref] = reducedValue;
 }
 
 void ACCCGToGPULowering::postprocessAccumulateOp(
@@ -3629,6 +3696,10 @@ void ACCCGToGPULowering::postprocessAccumulateOp(
   } else if (hasThreadDim) {
     createGPUAllReduceOp(loc, op.getValue(), op.getMemref(), *kind,
                          op.getParDims());
+    // Nothing replaced the accumulate, so leave it in place rather than
+    // erasing it below.
+    if (hasFailed)
+      return;
   } else {
     // Block-only: no gpu.all_reduce needed (all threads have the same
     // value after broadcast).  Just store the value to the memref.
@@ -4344,6 +4415,11 @@ class ACCCGToGPU : public acc::impl::ACCCGToGPUBase<ACCCGToGPU> {
 public:
   using acc::impl::ACCCGToGPUBase<ACCCGToGPU>::ACCCGToGPUBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCCGToGPUBase<ACCCGToGPU>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *context = funcOp->getContext();
@@ -4391,5 +4467,4 @@ public:
     }
   }
 };
-
 } // namespace

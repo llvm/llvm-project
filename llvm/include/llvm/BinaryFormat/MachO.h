@@ -183,44 +183,40 @@ enum SectionType : uint32_t {
   LAST_KNOWN_SECTION_TYPE = S_INIT_FUNC_OFFSETS
 };
 
-enum : uint32_t {
-  // Constant masks for the "flags[31:24]" field in llvm::MachO::section and
-  // llvm::MachO::section_64 (mask "flags" with SECTION_ATTRIBUTES_USR)
+// Constant masks for the "flags[31:24]" field in llvm::MachO::section and
+// llvm::MachO::section_64 (mask "flags" with SECTION_ATTRIBUTES_USR)
 
-  /// S_ATTR_PURE_INSTRUCTIONS - Section contains only true machine
-  /// instructions.
-  S_ATTR_PURE_INSTRUCTIONS = 0x80000000u,
-  /// S_ATTR_NO_TOC - Section contains coalesced symbols that are not to be
-  /// in a ranlib table of contents.
-  S_ATTR_NO_TOC = 0x40000000u,
-  /// S_ATTR_STRIP_STATIC_SYMS - Ok to strip static symbols in this section
-  /// in files with the MY_DYLDLINK flag.
-  S_ATTR_STRIP_STATIC_SYMS = 0x20000000u,
-  /// S_ATTR_NO_DEAD_STRIP - No dead stripping.
-  S_ATTR_NO_DEAD_STRIP = 0x10000000u,
-  /// S_ATTR_LIVE_SUPPORT - Blocks are live if they reference live blocks.
-  S_ATTR_LIVE_SUPPORT = 0x08000000u,
-  /// S_ATTR_SELF_MODIFYING_CODE - Used with i386 code stubs written on by
-  /// dyld.
-  S_ATTR_SELF_MODIFYING_CODE = 0x04000000u,
-  /// S_ATTR_DEBUG - A debug section.
-  S_ATTR_DEBUG = 0x02000000u,
+/// Section contains only true machine instructions.
+constexpr uint32_t S_ATTR_PURE_INSTRUCTIONS = 0x80000000u;
+/// Section contains coalesced symbols that are not to be in a ranlib table of
+/// contents.
+constexpr uint32_t S_ATTR_NO_TOC = 0x40000000u;
+/// Ok to strip static symbols in this section in files with the MY_DYLDLINK
+/// flag.
+constexpr uint32_t S_ATTR_STRIP_STATIC_SYMS = 0x20000000u;
+/// No dead stripping.
+constexpr uint32_t S_ATTR_NO_DEAD_STRIP = 0x10000000u;
+/// Blocks are live if they reference live blocks.
+constexpr uint32_t S_ATTR_LIVE_SUPPORT = 0x08000000u;
+/// Used with i386 code stubs written on by dyld.
+constexpr uint32_t S_ATTR_SELF_MODIFYING_CODE = 0x04000000u;
+/// A debug section.
+constexpr uint32_t S_ATTR_DEBUG = 0x02000000u;
 
-  // Constant masks for the "flags[23:8]" field in llvm::MachO::section and
-  // llvm::MachO::section_64 (mask "flags" with SECTION_ATTRIBUTES_SYS)
+// Constant masks for the "flags[23:8]" field in llvm::MachO::section and
+// llvm::MachO::section_64 (mask "flags" with SECTION_ATTRIBUTES_SYS)
 
-  /// S_ATTR_SOME_INSTRUCTIONS - Section contains some machine instructions.
-  S_ATTR_SOME_INSTRUCTIONS = 0x00000400u,
-  /// S_ATTR_EXT_RELOC - Section has external relocation entries.
-  S_ATTR_EXT_RELOC = 0x00000200u,
-  /// S_ATTR_LOC_RELOC - Section has local relocation entries.
-  S_ATTR_LOC_RELOC = 0x00000100u,
+/// Section contains some machine instructions.
+constexpr uint32_t S_ATTR_SOME_INSTRUCTIONS = 0x00000400u;
+/// Section has external relocation entries.
+constexpr uint32_t S_ATTR_EXT_RELOC = 0x00000200u;
+/// Section has local relocation entries.
+constexpr uint32_t S_ATTR_LOC_RELOC = 0x00000100u;
 
-  // Constant masks for the value of an indirect symbol in an indirect
-  // symbol table
-  INDIRECT_SYMBOL_LOCAL = 0x80000000u,
-  INDIRECT_SYMBOL_ABS = 0x40000000u
-};
+// Constant masks for the value of an indirect symbol in an indirect symbol
+// table.
+constexpr uint32_t INDIRECT_SYMBOL_LOCAL = 0x80000000u;
+constexpr uint32_t INDIRECT_SYMBOL_ABS = 0x40000000u;
 
 enum DataRegionType {
   // Constants for the "kind" field in a data_in_code_entry structure

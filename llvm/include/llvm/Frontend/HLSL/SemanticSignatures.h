@@ -34,6 +34,9 @@ namespace hlsl {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
+// For now just use the DXIL ABI enums directly. This may change in the future.
+using dxbc::PSV::InterpolationMode;
+
 // Definitions of the in-memory data layout structures
 
 // Bitmask denoting whether a semantic is an input, output, inout or a value
@@ -48,6 +51,60 @@ enum class IOType {
 
   LLVM_MARK_AS_BITMASK_ENUM(PatchConstantOrPrimitive),
 };
+
+// Keywords written on a declaration, before sampling-location precedence and
+// stage/type defaults are applied.
+enum class InterpolationModifier : uint32_t {
+  None = 0,
+  NoInterpolation = 1 << 0,
+  Linear = 1 << 1,
+  NoPerspective = 1 << 2,
+  // Sampling-location bits are ordered by increasing precedence for min/max.
+  Center = 1 << 3,
+  Centroid = 1 << 4,
+  Sample = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Sample),
+};
+
+static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
+                  InterpolationModifier::Center <
+                      InterpolationModifier::Centroid &&
+                  InterpolationModifier::Centroid <
+                      InterpolationModifier::Sample,
+              "sampling-location bits must increase in precedence");
+
+// SPIR-V Decoration enumerants that bind an interface variable to a builtin or
+// a user location. The values match the SPIR-V specification.
+enum class SPIRVInterfaceDecoration : uint32_t {
+  BuiltIn = 11,
+  Location = 30,
+};
+
+// SPIR-V Decoration enumerants that control how a fragment shader input is
+// interpolated. The values match the SPIR-V specification.
+enum class SPIRVInterpolationMode : uint32_t {
+  NoPerspective = 13,
+  Flat = 14,
+  Centroid = 16,
+  Sample = 17,
+};
+
+// Select the highest-precedence sampling-location bit (sample > centroid >
+// center), ignoring other modifiers. Returns None if no location is explicit,
+// keeping it distinct from Center so diagnostics can detect location overrides.
+LLVM_ABI InterpolationModifier
+getInterpolationSamplingLocation(InterpolationModifier Modifiers);
+
+// Returns Invalid for nointerpolation combined with any other modifier.
+LLVM_ABI dxbc::PSV::InterpolationMode
+getInterpolationMode(InterpolationModifier Modifiers);
+
+// Apply component-type defaults and SV_Position's noperspective requirement.
+// Vertex outputs carry interpolation modes so they pack compatibly with pixel
+// inputs; other signature points do not use interpolation modes.
+LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage, IOType IO);
 
 enum class SemanticInterpretation {
   Invalid,
@@ -84,7 +141,10 @@ struct SemanticSignatureElement {
   uint8_t Cols;
   uint32_t StartRow = UnallocatedRow;
   uint8_t StartCol = UnallocatedCol;
+  // Register-relative components accessed by the shader, including conditional
+  // accesses. Input program signatures call this field AlwaysReads.
   uint8_t UsageMask = 0;
+  // Element-relative dynamically indexed components, as in DXIL and PSV.
   uint8_t DynIndexMask = 0;
   uint32_t GSStream = 0;
 
@@ -110,7 +170,7 @@ struct SemanticSignatureElement {
   uint8_t getAlwaysReadsMask() const { return UsageMask; }
 
   uint8_t getNeverWritesMask() const {
-    return static_cast<uint8_t>(~UsageMask & getDeclaredMask());
+    return static_cast<uint8_t>(~UsageMask & 0xF);
   }
 
   dxbc::SigMinPrecision getMinPrecision(bool UseMinPrecision) const {

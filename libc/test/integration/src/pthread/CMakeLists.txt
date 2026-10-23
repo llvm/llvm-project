@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-pthread-integration-tests)
+add_libc_testsuite(libc-pthread-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   pthread_mutex_test
@@ -217,6 +217,7 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_join
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(

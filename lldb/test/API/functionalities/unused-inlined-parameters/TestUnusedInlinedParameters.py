@@ -3,11 +3,13 @@ Test that unused inlined parameters are displayed.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class TestUnusedInlinedParameters(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_unused_inlined_parameters(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
