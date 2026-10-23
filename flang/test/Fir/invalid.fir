@@ -1400,3 +1400,11 @@ func.func @allocmem_bad_alignment() -> !fir.heap<!fir.array<10xf32>> {
   %0 = fir.allocmem !fir.array<10xf32> {alignment = 3 : i64}
   return %0 : !fir.heap<!fir.array<10xf32>>
 }
+
+// -----
+
+func.func @box_set_addr_not_a_box(%p : !fir.ptr<i64>, %r : !fir.ref<i64>) {
+  // expected-error@+1 {{'fir.box_set_addr' op box_ref must be a reference to a fir.box or fir.class}}
+  fir.box_set_addr %p to %r : !fir.ptr<i64>, !fir.ref<i64>
+  return
+}
