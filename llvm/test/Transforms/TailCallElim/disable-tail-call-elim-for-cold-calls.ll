@@ -137,6 +137,43 @@ exit:
   ret void
 }
 
+; The hot attribute takes precedence over the profile, so a call inside a
+; function with a cold entry count (function_entry_count = 0) IS marked as tail
+; when the function is annotated hot.
+define void @test_hot_attr_cold_block() hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_cold_block(
+; CHECK: tail call void @normal_callee()
+  call void @normal_callee()
+  ret void
+}
+
+; Same, when the callee is cold.
+define void @test_hot_attr_cold_callee() hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_cold_callee(
+; CHECK: tail call void @cold_callee()
+  call void @cold_callee()
+  ret void
+}
+
+; Tail recursion elimination is likewise still performed in a function with a
+; cold entry count that is annotated hot.
+define i32 @test_hot_attr_recursive(i32 %X) hot !prof !14 {
+; CHECK-LABEL: @test_hot_attr_recursive(
+; CHECK: tailrecurse:
+; CHECK-NOT: call i32 @test_hot_attr_recursive(
+entry:
+  %cmp = icmp eq i32 %X, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i32 0
+
+if.else:
+  %dec = sub i32 %X, 1
+  %call = call i32 @test_hot_attr_recursive(i32 %dec)
+  ret i32 %call
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

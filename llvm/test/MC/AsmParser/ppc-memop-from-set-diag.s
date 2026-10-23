@@ -1,3 +1,4 @@
+# REQUIRES: powerpc-registered-target
 # RUN: not llvm-mc -triple ppc64-unknown-elf %s 2>&1 | FileCheck %s
 .set SP,r1
 .set SP2,%r1
