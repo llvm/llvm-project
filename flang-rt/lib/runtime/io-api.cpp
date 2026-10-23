@@ -1128,23 +1128,25 @@ bool IODEF(InputInteger)(Cookie cookie, std::int64_t &n, int kind) {
 }
 
 bool IODEF(InputReal32)(Cookie cookie, float &x) {
-  if (!cookie->CheckFormattedStmtType<Direction::Input>("InputReal32")) {
-    return false;
+  IoStatementState &io{*cookie};
+  if (io.BeginReadingRecord()) {
+    if (auto edit{io.GetNextDataEdit()}) {
+      return edit->descriptor == DataEdit::ListDirectedNullValue ||
+          EditRealInput<4>(io, *edit, reinterpret_cast<void *>(&x));
+    }
   }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(TypeCategory::Real, 4, reinterpret_cast<void *>(&x), 0);
-  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
+  return false;
 }
 
 bool IODEF(InputReal64)(Cookie cookie, double &x) {
-  if (!cookie->CheckFormattedStmtType<Direction::Input>("InputReal64")) {
-    return false;
+  IoStatementState &io{*cookie};
+  if (io.BeginReadingRecord()) {
+    if (auto edit{io.GetNextDataEdit()}) {
+      return edit->descriptor == DataEdit::ListDirectedNullValue ||
+          EditRealInput<8>(io, *edit, reinterpret_cast<void *>(&x));
+    }
   }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(TypeCategory::Real, 8, reinterpret_cast<void *>(&x), 0);
-  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
+  return false;
 }
 
 bool IODEF(InputComplex32)(Cookie cookie, float z[2]) {
@@ -1183,13 +1185,29 @@ bool IODEF(OutputCharacter)(
 
 bool IODEF(InputCharacter)(
     Cookie cookie, char *x, std::size_t length, int kind) {
-  if (!cookie->CheckFormattedStmtType<Direction::Input>("InputCharacter")) {
-    return false;
+  IoStatementState &io{*cookie};
+  if (io.BeginReadingRecord()) {
+    if (auto edit{io.GetNextDataEdit()}) {
+      if (edit->descriptor == DataEdit::ListDirectedNullValue) {
+        return true;
+      }
+      switch (kind) {
+      case 1:
+        return EditCharacterInput(io, *edit, x, length);
+      case 2:
+        return EditCharacterInput(
+            io, *edit, reinterpret_cast<char16_t *>(x), length);
+      case 4:
+        return EditCharacterInput(
+            io, *edit, reinterpret_cast<char32_t *>(x), length);
+      default:
+        io.GetIoErrorHandler().Crash(
+            "InputCharacter: bad character kind %d", kind);
+        return false;
+      }
+    }
   }
-  StaticDescriptor<0> staticDescriptor;
-  Descriptor &descriptor{staticDescriptor.descriptor()};
-  descriptor.Establish(kind, length, reinterpret_cast<void *>(x), 0);
-  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
+  return false;
 }
 
 bool IODEF(InputAscii)(Cookie cookie, char *x, std::size_t length) {
