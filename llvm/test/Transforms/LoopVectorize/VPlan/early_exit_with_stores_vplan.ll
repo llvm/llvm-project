@@ -21,7 +21,6 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
@@ -44,17 +43,16 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<[[VP14]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -110,7 +108,6 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
@@ -133,17 +130,16 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<[[VP14]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -195,7 +191,6 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
@@ -220,10 +215,9 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part ir<%data>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-lane vp<[[VP12]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = add vp<[[VP15]]>, vp<[[VP14]]>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = icmp eq vp<[[VP16]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = icmp eq vp<[[VP15]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP16]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
@@ -231,7 +225,7 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP15]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -287,7 +281,6 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.ptr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%ee.ptr>, ir<1>
@@ -313,17 +306,16 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = add vp<[[VP15]]>, vp<[[VP14]]>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = icmp eq vp<[[VP16]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = icmp eq vp<[[VP15]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP16]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP15]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
