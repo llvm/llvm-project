@@ -19,7 +19,6 @@
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/fp_bitwise.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -126,9 +125,13 @@ LIBC_MATH_SMALL_TABLES_INLINE double exp_pm_eval(double x, bool is_sinh) {
   FPBits xbits(x);
   double x_a = xbits.abs().get_val();
 
-  double x_scaled = x_a * LOG2_E.hi;
-  double kd = fputil::nearest_integer(x_scaled);
-  int k = static_cast<int>(kd);
+  // Using ROUND_BIAS, ROUND_SHIFT, and ROUND_MASK (see exp_utils.h), we compute
+  // k_biased = fma(x_a, LOG2_E.hi, ROUND_BIAS) and extract in parallel:
+  //   kd = (k_biased & ROUND_MASK) - ROUND_SHIFT
+  //   k  = (k_bits >> 32) & 0x3'ffff.
+  double k_biased = fputil::multiply_add(x_a, LOG2_E.hi, ROUND_BIAS);
+  double kd = fputil::fp_and(k_biased, ROUND_MASK) - ROUND_SHIFT;
+  int k = static_cast<int>(cpp::bit_cast<uint64_t>(k_biased) >> 32) & 0x3'ffff;
 
   // Secondary scale factor:
   //   m_m = (-/+ 1) * 2^(-2 * k)   for k < 27
