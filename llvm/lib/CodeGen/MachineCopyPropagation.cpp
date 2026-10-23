@@ -1337,6 +1337,23 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   // If a COPY's Source has use or def until next COPY defines the Source,
   // we put the COPY in this set to keep property#2.
   DenseSet<const MachineInstr *> CopySourceInvalid;
+  // Track uses of a register as a source for a previous COPY. This avoids
+  // situations where COPY's outside of the chain use an original value that
+  // gets lost when eliminating the chain.
+  DenseMap<const MachineInstr *, SmallVector<const MachineInstr *>>
+      CopySourceDefCopies;
+
+  auto HasUnexpectedCopySourceDef = [&](const MachineInstr *Copy,
+                                        const MachineInstr *ExpectedDef) {
+    auto CopySouceDefPair = CopySourceDefCopies.find(Copy);
+    if (CopySouceDefPair == CopySourceDefCopies.end())
+      return false;
+
+    for (const MachineInstr *DefCopy : CopySouceDefPair->second)
+      if (DefCopy != ExpectedDef)
+        return true;
+    return false;
+  };
 
   auto TryFoldSpillageCopies =
       [&, this](const SmallVectorImpl<MachineInstr *> &SC,
@@ -1375,6 +1392,23 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
               MO.setReg(New->getReg());
           }
         };
+
+        // Do not fold across an unexpected COPY def of a chains copy's source.
+        // The paired reload may be needed to restore the original source value.
+        // More info: https://github.com/llvm/llvm-project/issues/206839
+        //
+        // Spills are checked against against the previous spill
+        for (size_t I = 1; I < SC.size(); ++I) {
+          if (HasUnexpectedCopySourceDef(SC[I], SC[I - 1]))
+            return;
+        }
+        // Reloads are checked against the next reload. The final reload is
+        // skipped as this will have no corresponding outer reload to compare
+        // against.
+        for (size_t I = 0; I + 1 < RC.size(); ++I) {
+          if (HasUnexpectedCopySourceDef(RC[I], RC[I + 1]))
+            return;
+        }
 
         DestSourcePair InnerMostSpillCopy =
             *isCopyInstr(*SC[0], *TII, UseCopyInstr);
@@ -1495,6 +1529,11 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     }
 
     auto [Dst, Src] = getDstSrcMCRegs(*CopyOperands);
+    // Track potential unexpected COPY def's that use a source in the chain.
+    // These cannot be folded across to preserve the original source value.
+    if (MachineInstr *LastUseCopy = Tracker.findLastSeenUseInCopy(Dst, *TRI)) {
+      CopySourceDefCopies[LastUseCopy].push_back(&MI);
+    }
     // Check if we can find a pair spill-reload copy.
     LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
     LLVM_DEBUG(MI.dump());
