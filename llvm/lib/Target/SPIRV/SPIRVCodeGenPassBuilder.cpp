@@ -8,6 +8,8 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "SPIRVAsmPrinter.h"
+#include "SPIRVModuleAnalysis.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
@@ -70,6 +72,12 @@ public:
   Error addFastRegAlloc(PassManagerWrapper &PMW) override;
 
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
+
+  void addPreEmitPass2(PassManagerWrapper &PMW) override;
+
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
@@ -135,7 +143,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
   flushFPMsToMPM(PMW);
-  addModulePass(SPIRVLegalizeImplicitBindingPass(), PMW);
+  addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
   addModulePass(SPIRVCBufferAccessPass(), PMW);
   addModulePass(SPIRVPushConstantAccessPass(getTM()), PMW);
@@ -151,14 +159,13 @@ Error SPIRVCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerCombiner when it has been
-  // ported.
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPreLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(SPIRVPreLegalizerPass(), PMW);
 }
 
 Error SPIRVCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LegalizerPass(), PMW);
-  // TODO(boomanaiden154): Add SPIRVPostLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPostLegalizerPass(), PMW);
   return Error::success();
 }
 
@@ -169,7 +176,9 @@ Error SPIRVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addGlobalInstructionSelect(
     PassManagerWrapper &PMW) {
-  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  addMachineFunctionPass(
+      InstructionSelectPass(getOptLevel(), /*RequireRegBankSelection=*/false),
+      PMW);
   return Error::success();
 }
 
@@ -180,6 +189,28 @@ Error SPIRVCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   return Error::success();
+}
+
+void SPIRVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(SPIRVPrepareModuleAnalysisPass(), PMW);
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
+  addModulePass(SPIRVAsmPrinterBeginPass(), PMW);
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
+  // SPIRVModuleAnalysis needs every MachineFunction before printing starts.
+  if (CompletesPipeline) {
+    flushFPMsToMPM(PMW);
+    addModulePass(RequireAnalysisPass<SPIRVModuleAnalysis, Module>(), PMW,
+                  /*Force=*/true);
+  }
+  addMachineFunctionPass(SPIRVAsmPrinterPass(), PMW);
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
+  addModulePass(SPIRVAsmPrinterEndPass(), PMW);
 }
 
 } // namespace

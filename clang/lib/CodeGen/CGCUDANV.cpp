@@ -31,7 +31,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -335,6 +334,7 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
           dyn_cast<llvm::GlobalVariable>(KernelHandles[CGF.CurFn->getName()])) {
     GV->setLinkage(CGF.CurFn->getLinkage());
     GV->setInitializer(CGF.CurFn);
+    CGM.setDSOLocal(GV);
   }
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
@@ -1380,7 +1380,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
       B.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
     B.CreateRetVoid();
-    llvm::appendToGlobalCtors(M, CtorFn, /*Priority=*/65535);
+    CGM.AddGlobalCtor(CtorFn);
   }
 }
 
@@ -1491,8 +1491,7 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (!CGM.getLangOpts().CUDANVCCABI &&
-      (CGM.getLangOpts().OffloadViaLLVM ||
-       (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode)))
+      (CGM.getLangOpts().OffloadViaLLVM || RelocatableDeviceCode))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();
@@ -1533,8 +1532,8 @@ llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
       CGM.getMangledName(
           GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel)));
   Var->setAlignment(CGM.getPointerAlign().getAsAlign());
-  Var->setDSOLocal(F->isDSOLocal());
   Var->setVisibility(F->getVisibility());
+  CGM.setDSOLocal(Var);
   auto *FD = cast<FunctionDecl>(GD.getDecl());
   auto *FT = FD->getPrimaryTemplate();
   if (!FT || FT->isThisDeclarationADefinition())

@@ -162,21 +162,12 @@ void StructuredData::String::Serialize(json::OStream &s) const {
 
 void StructuredData::Dictionary::Serialize(json::OStream &s) const {
   s.objectBegin();
-
-  // To ensure the output format is always stable, we sort the dictionary by key
-  // first.
-  using Entry = std::pair<llvm::StringRef, ObjectSP>;
-  std::vector<Entry> sorted_entries;
-  for (const auto &pair : m_dict)
-    sorted_entries.push_back({pair.first(), pair.second});
-
-  llvm::sort(sorted_entries);
-
-  for (const auto &pair : sorted_entries) {
-    s.attributeBegin(pair.first);
-    pair.second->Serialize(s);
+  ForEachSorted([&s](llvm::StringRef key, Object *object) {
+    s.attributeBegin(key);
+    object->Serialize(s);
     s.attributeEnd();
-  }
+    return true;
+  });
   s.objectEnd();
 }
 
@@ -238,32 +229,26 @@ void StructuredData::Array::GetDescription(lldb_private::Stream &s) const {
 
 void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
   size_t indentation_level = s.GetIndentLevel();
+  const size_t num_entries = GetSize();
+  size_t entry_index = 0;
 
-  // To ensure the output format is always stable, we sort the dictionary by key
-  // first.
-  using Entry = std::pair<llvm::StringRef, ObjectSP>;
-  std::vector<Entry> sorted_entries;
-  for (const auto &pair : m_dict)
-    sorted_entries.push_back({pair.first(), pair.second});
+  ForEachSorted([&](llvm::StringRef key, Object *object) {
+    const bool is_last = ++entry_index == num_entries;
 
-  llvm::sort(sorted_entries);
-
-  for (auto iter = sorted_entries.begin(); iter != sorted_entries.end();
-       iter++) {
     // Sanitize.
-    if (iter->first.empty() || !iter->second)
-      continue;
+    if (key.empty() || !object)
+      return true;
 
     // Reset original indentation level.
     s.SetIndentLevel(indentation_level);
     s.Indent();
 
     // Print key.
-    s.Format("{0}:", iter->first);
+    s.Format("{0}:", key);
 
     // Return to new line and increase indentation if value is record type.
     // Otherwise add spacing.
-    bool should_indent = IsRecordType(iter->second);
+    bool should_indent = IsRecordType(object->shared_from_this());
     if (should_indent) {
       s.EOL();
       s.IndentMore();
@@ -272,14 +257,15 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
     }
 
     // Print value and new line if now last pair.
-    iter->second->GetDescription(s);
-    if (std::next(iter) != sorted_entries.end())
+    object->GetDescription(s);
+    if (!is_last)
       s.EOL();
 
     // Reset indentation level if it was incremented previously.
     if (should_indent)
       s.IndentLess();
-  }
+    return true;
+  });
 }
 
 void StructuredData::Null::GetDescription(lldb_private::Stream &s) const {

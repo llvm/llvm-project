@@ -3,7 +3,7 @@
 ```{toctree}
 :glob: true
 :maxdepth: 2
-:numbered: true
+:numbered:
 
 *
 ```

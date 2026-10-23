@@ -49,7 +49,7 @@ func.func @worker_divergent_subgroup_barrier() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

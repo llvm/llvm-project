@@ -62,6 +62,9 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 const Action::OffloadKind DeviceOffloadingKind) const override;
 
+protected:
+  Tool *buildLinker() const override;
+
 private:
   const ToolChain &HostTC;
   SYCLInstallationDetector SYCLInstallation;

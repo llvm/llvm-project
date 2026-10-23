@@ -77,6 +77,6 @@ func.func @combine_region_private_dest(%arg: memref<i32>) {
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
     }
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }

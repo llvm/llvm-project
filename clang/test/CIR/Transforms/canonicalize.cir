@@ -28,6 +28,20 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  // The branch operands replace the arguments of the merged blocks.
+  cir.func @redundant_br_block_args(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    cir.br ^bb1(%arg0, %arg1 : !s32i, !s32i)
+  ^bb1(%0: !s32i, %1: !s32i):  // pred: ^bb0
+    %2 = cir.add %0, %1 : !s32i
+    cir.br ^bb2(%2 : !s32i)
+  ^bb2(%3: !s32i):  // pred: ^bb1
+    cir.return %3 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @redundant_br_block_args(%[[ARG0:.*]]: !s32i, %[[ARG1:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %[[SUM:.*]] = cir.add %[[ARG0]], %[[ARG1]] : !s32i
+  // CHECK-NEXT:   cir.return %[[SUM]] : !s32i
+  // CHECK-NEXT: }
+
   cir.func @scope_yield_value_fold() -> !u32i {
     %0 = cir.const #cir.int<7> : !u32i
     %1 = cir.scope {

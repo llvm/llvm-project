@@ -258,6 +258,9 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
     } else if (Op.isTargetIndex()) {
       DbgValueLocEntries.push_back(
           DbgValueLocEntry(TargetIndexLocation(Op.getIndex(), Op.getOffset())));
+    } else if (Op.isGlobal()) {
+      DbgValueLocEntries.push_back(DbgValueLocEntry(
+          GlobalAddressLocation(Op.getGlobal(), Op.getOffset())));
     } else if (Op.isImm())
       DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getImm()));
     else if (Op.isFPImm())
@@ -423,7 +426,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
+  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
 
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.
@@ -1014,9 +1017,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (PhysRegCalleeOperand) {
         bool Scalable = false;
         const MachineOperand *BaseOp = nullptr;
-        const TargetRegisterInfo &TRI =
-            *Asm->MF->getSubtarget().getRegisterInfo();
-        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable)) {
           if (BaseOp && BaseOp->isReg() && !Scalable)
             CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
         }
@@ -1371,6 +1372,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
+    TheCU.constructPropertyForwardDIEs();
 
     // Add CU specific attributes if we need to add any.
     // If we're splitting the dwarf out now that we've got the entire
@@ -1784,9 +1786,12 @@ static bool validThroughout(LexicalScopes &LScopes,
   // throughout the function. This is a hack, presumably for DWARF v2 and not
   // necessarily correct. It would be much better to use a dbg.declare instead
   // if we know the constant is live throughout the scope.
+  // The address of a global is a link-time constant, so for those this is not
+  // a hack: the location genuinely does describe the variable throughout.
   if (MBB->pred_empty() &&
-      all_of(DbgValue->debug_operands(),
-             [](const MachineOperand &Op) { return Op.isImm(); }))
+      all_of(DbgValue->debug_operands(), [](const MachineOperand &Op) {
+        return Op.isImm() || Op.isGlobal();
+      }))
     return true;
 
   // Test if the location terminates before the end of the scope.
@@ -2723,10 +2728,9 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // We only need to the predecessors of MBBs that could have is_stmt set by
   // this logic.
   SmallDenseSet<MachineBasicBlock *, 4> PredMBBsToExamine;
-  SmallDenseMap<MachineBasicBlock *, MachineInstr *> PotentialIsStmtMBBInstrs;
-  // We use const_cast even though we won't actually modify MF, because some
-  // methods we need take a non-const MBB.
-  for (auto &MBB : *const_cast<MachineFunction *>(MF)) {
+  SmallDenseMap<const MachineBasicBlock *, const MachineInstr *>
+      PotentialIsStmtMBBInstrs;
+  for (const auto &MBB : *MF) {
     if (MBB.empty() || MBB.pred_empty())
       continue;
     for (auto &MI : MBB) {
@@ -2744,11 +2748,12 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
   // multiple branches that each have their own source location); otherwise we
   // just use the last line in the block.
   for (auto *MBB : PredMBBsToExamine) {
-    auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
+    auto CheckMBBEdge = [&](const MachineBasicBlock *Succ,
+                            unsigned OutgoingLine) {
       auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
       if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
         return;
-      MachineInstr *MI = MBBInstrIt->second;
+      const MachineInstr *MI = MBBInstrIt->second;
       if (MI->getDebugLoc()->getLine() == OutgoingLine)
         return;
       PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
@@ -2770,10 +2775,10 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     // If we can't determine what DLs this branch's successors use, just treat
     // all the successors as coming from the last DebugLoc.
-    SmallVector<MachineBasicBlock *, 2> SuccessorBBs;
+    SmallVector<const MachineBasicBlock *, 2> SuccessorBBs;
     auto MIIt = MBB->rbegin();
     {
-      MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+      const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;
       bool AnalyzeFailed = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
       // For a conditional branch followed by unconditional branch where the
@@ -3265,6 +3270,15 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
+
+  // Determine if a global address can be expressed before emitting
+  // anything.
+  if (!DwarfExpr.canAddGlobalAddress() &&
+      any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
+        return Entry.isGlobalAddress();
+      }))
+    return;
+
   DwarfExpr.addFragmentOffset(DIExpr);
 
   // If the DIExpr is an Entry Value, we want to follow the same code path
@@ -3282,7 +3296,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Location.getReg()))
       return;
-    return DwarfExpr.addExpression(std::move(ExprCursor));
+    DwarfExpr.addExpression(std::move(ExprCursor));
+    return;
   }
 
   // Regular entry.
@@ -3341,6 +3356,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       // WebAssembly-specific encoding is supported.
       assert(AP.TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+    } else if (Entry.isGlobalAddress()) {
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
+        return false;
     } else if (Entry.isConstantFP()) {
       if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&
           !Cursor) {

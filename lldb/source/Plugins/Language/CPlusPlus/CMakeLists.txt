@@ -53,6 +53,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStlVariant.cpp
   MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp
+  VectorIterator.cpp
 
   LINK_COMPONENTS
     Support

@@ -3,7 +3,7 @@
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; CHECK: DW_TAG_array_type
-; CHECK-TYPE: DW_AT_type{{.*}}"unsigned int"
+; CHECK-NEXT: DW_AT_type{{.*}}"unsigned int"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_subrange_type
 ; CHECK-NOT: NULL

@@ -3,15 +3,15 @@
 
 define void @foo(i8 %v) {
 ; CHECK: -- Region --
-; CHECK-NEXT:  %add0 = add i8 %v, 0, !sandboxvec !0 {{.*}}
+; CHECK-NEXT:  %add0 = add i8 %v, 0, !sandboxvec !{{[0-9]+}} {{.*}}
 ; CHECK: -- Region --
-; CHECK-NEXT:  %add1 = add i8 %v, 1, !sandboxvec !1 {{.*}}
-; CHECK-NEXT:  %add2 = add i8 %v, 2, !sandboxvec !1 {{.*}}
-; CHECK-NEXT:  %add3 = add i8 %v, 3, !sandboxvec !1, !sandboxaux !2 {{.*}}
-; CHECK-NEXT:  %add4 = add i8 %v, 4, !sandboxvec !1, !sandboxaux !3 {{.*}}
+; CHECK-NEXT:  %add1 = add i8 %v, 1, !sandboxvec !{{[0-9]+}} {{.*}}
+; CHECK-NEXT:  %add2 = add i8 %v, 2, !sandboxvec !{{[0-9]+}} {{.*}}
+; CHECK-NEXT:  %add3 = add i8 %v, 3, !sandboxvec !{{[0-9]+}}, !sandboxaux !{{[0-9]+}} {{.*}}
+; CHECK-NEXT:  %add4 = add i8 %v, 4, !sandboxvec !{{[0-9]+}}, !sandboxaux !{{[0-9]+}} {{.*}}
 ; CHECK: Aux:
-; CHECK-NEXT:  %add3 = add i8 %v, 3, !sandboxvec !1, !sandboxaux !2 {{.*}}
-; CHECK-NEXT:  %add4 = add i8 %v, 4, !sandboxvec !1, !sandboxaux !3 {{.*}}
+; CHECK-NEXT:  %add3 = add i8 %v, 3, !sandboxvec !{{[0-9]+}}, !sandboxaux !{{[0-9]+}} {{.*}}
+; CHECK-NEXT:  %add4 = add i8 %v, 4, !sandboxvec !{{[0-9]+}}, !sandboxaux !{{[0-9]+}} {{.*}}
   %add0 = add i8 %v, 0, !sandboxvec !0
   %add1 = add i8 %v, 1, !sandboxvec !1
   %add2 = add i8 %v, 2, !sandboxvec !1

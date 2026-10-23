@@ -18,6 +18,10 @@
 #include <memory>
 #include <string>
 
+namespace mlir {
+class SymbolTableCollection;
+} // namespace mlir
+
 namespace fir {
 
 class LLVMTypeConverter;
@@ -90,14 +94,21 @@ using LLVMIRLoweringPrinter =
 
 /// Convert the LLVM IR dialect to LLVM-IR proper
 std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
-    llvm::raw_ostream &output,
-    LLVMIRLoweringPrinter printer =
-        [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
+    llvm::raw_ostream &output, LLVMIRLoweringPrinter printer =
+                                   [](llvm::Module &m, llvm::raw_ostream &out) {
+                                     m.renumberMetadataForAssembly();
+                                     m.print(out, nullptr);
+                                   });
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
+/// With \p symbolTables, the patterns resolve symbols through the collection
+/// instead of walking the module, and keep it current; the caller must have
+/// built the tables with fir::buildSymbolTables (FIROpPatterns.h) before
+/// applying the conversion.
 void populateFIRToLLVMConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
-    fir::FIRToLLVMPassOptions &options);
+    fir::FIRToLLVMPassOptions &options,
+    mlir::SymbolTableCollection *symbolTables = nullptr);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
 void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,

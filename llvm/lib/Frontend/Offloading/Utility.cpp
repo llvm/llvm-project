@@ -16,7 +16,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
-#include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -191,8 +190,9 @@ std::pair<Constant *, Constant *> offloading::getOffloadEntryArray(Module &M) {
     Type *Int32Ty = Type::getInt32Ty(M.getContext());
     Constant *Indices[] = {ConstantInt::get(Int32Ty, 0),
                            ConstantInt::get(Int32Ty, COFFSentinelEntryCount)};
-    Constant *BeginAfterSentinel = ConstantExpr::getInBoundsGetElementPtr(
-        EntriesB->getValueType(), EntriesB, Indices);
+    Constant *BeginAfterSentinel = ConstantExpr::getGetElementPtr(
+        M.getDataLayout(), EntriesB->getValueType(), EntriesB, Indices,
+        GEPNoWrapFlags::inBounds());
     return std::make_pair(BeginAfterSentinel, EntriesE);
   }
 

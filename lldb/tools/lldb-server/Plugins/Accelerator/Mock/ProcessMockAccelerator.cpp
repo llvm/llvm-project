@@ -13,6 +13,8 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "llvm/Support/Error.h"
 
+#include <cstring>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::lldb_server;
@@ -62,8 +64,18 @@ Status ProcessMockAccelerator::Kill() { return Status(); }
 Status ProcessMockAccelerator::ReadMemory(const ProcessAddress &process_addr,
                                           void *buf, size_t size,
                                           size_t &bytes_read) {
-  bytes_read = 0;
-  return Status::FromErrorString("unimplemented");
+  // No real memory to read, so synthesize bytes that identify the address the
+  // request arrived with: byte 0 is the address space and byte 1 is the thread
+  // (zero when the read was not thread specific). That lets a test tell reads
+  // of the same numeric address apart.
+  uint8_t *bytes = static_cast<uint8_t *>(buf);
+  std::memset(bytes, 0, size);
+  if (size > 0)
+    bytes[0] = static_cast<uint8_t>(process_addr.GetAddressSpace());
+  if (size > 1)
+    bytes[1] = static_cast<uint8_t>(process_addr.GetThreadID().value_or(0));
+  bytes_read = size;
+  return Status();
 }
 
 Status ProcessMockAccelerator::DoWriteMemory(lldb::addr_t addr, const void *buf,
@@ -111,4 +123,9 @@ Status
 ProcessMockAccelerator::GetFileLoadAddress(const llvm::StringRef &file_name,
                                            lldb::addr_t &load_addr) {
   return Status::FromErrorString("unimplemented");
+}
+
+std::vector<AddressSpaceInfo> ProcessMockAccelerator::GetAddressSpaces() {
+  return {{"global", 1, /*is_thread_specific=*/false},
+          {"local", 2, /*is_thread_specific=*/true}};
 }

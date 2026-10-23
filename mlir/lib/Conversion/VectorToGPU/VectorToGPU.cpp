@@ -210,8 +210,7 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
 
   MLIRContext *ctx = writeOp.getContext();
   AffineExpr innerDim = getAffineDimExpr(permutationMap.getNumDims() - 1, ctx);
-  // TODO: Support transpose once it is added to GPU dialect ops.
-  return permutationMap.getResult(1) == innerDim;
+  return llvm::is_contained(permutationMap.getResults(), innerDim);
 }
 
 /// Return true if the constant is a splat to a 2D vector so that it can be
@@ -325,48 +324,6 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
   return elementwiseSupportsMMAMatrixType(op);
 }
 
-/// Return an unsorted slice handling scf.for region differently than
-/// `getSlice`. In scf.for we only want to include as part of the slice elements
-/// that are part of the use/def chain.
-static SetVector<Operation *>
-getSliceContract(Operation *op,
-                 const BackwardSliceOptions &backwardSliceOptions,
-                 const ForwardSliceOptions &forwardSliceOptions) {
-  SetVector<Operation *> slice;
-  slice.insert(op);
-  unsigned currentIndex = 0;
-  SetVector<Operation *> backwardSlice;
-  SetVector<Operation *> forwardSlice;
-  while (currentIndex != slice.size()) {
-    auto *currentOp = (slice)[currentIndex];
-    // Compute and insert the backwardSlice starting from currentOp.
-    backwardSlice.clear();
-    LogicalResult result =
-        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    assert(result.succeeded() && "expected a backward slice");
-    (void)result;
-    slice.insert_range(backwardSlice);
-
-    // Compute and insert the forwardSlice starting from currentOp.
-    forwardSlice.clear();
-    // Special case for ForOp, we don't want to include the whole region but
-    // only the value using the region arguments.
-    // TODO: We should refine this to only care about the region arguments being
-    // converted to matrix type.
-    if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
-      for (Value forOpResult : forOp.getResults())
-        getForwardSlice(forOpResult, &forwardSlice, forwardSliceOptions);
-      for (BlockArgument &arg : forOp.getRegionIterArgs())
-        getForwardSlice(arg, &forwardSlice, forwardSliceOptions);
-    } else {
-      getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    }
-    slice.insert_range(forwardSlice);
-    ++currentIndex;
-  }
-  return slice;
-}
-
 // Analyze slice of operations based on convert op to figure out if the whole
 // slice can be converted to MMA operations.
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
@@ -383,20 +340,77 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
   ForwardSliceOptions forwardSliceOptions;
   forwardSliceOptions.filter = hasVectorSrc;
 
+  DenseMap<Operation *, SmallVector<Operation *>> backwardSliceCache;
+  DenseMap<Operation *, SmallVector<Operation *>> forwardSliceCache;
+  DenseMap<Operation *, bool> supportsMMAMatrixTypeCache;
+
+  auto getCachedBackwardSlice =
+      [&](Operation *currentOp) -> ArrayRef<Operation *> {
+    auto [it, inserted] = backwardSliceCache.try_emplace(currentOp);
+    if (!inserted)
+      return it->second;
+
+    SetVector<Operation *> backwardSlice;
+    LogicalResult result =
+        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
+    it->second = backwardSlice.takeVector();
+    return it->second;
+  };
+
+  auto getCachedForwardSlice =
+      [&](Operation *currentOp) -> ArrayRef<Operation *> {
+    auto [it, inserted] = forwardSliceCache.try_emplace(currentOp);
+    if (!inserted)
+      return it->second;
+
+    SetVector<Operation *> forwardSlice;
+    // Special case for ForOp, we don't want to include the whole region but
+    // only the value using the region arguments.
+    // TODO: We should refine this to only care about the region arguments being
+    // converted to matrix type.
+    if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
+      for (Value forOpResult : forOp.getResults())
+        getForwardSlice(forOpResult, &forwardSlice, forwardSliceOptions);
+      for (BlockArgument &arg : forOp.getRegionIterArgs())
+        getForwardSlice(arg, &forwardSlice, forwardSliceOptions);
+    } else {
+      getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
+    }
+    it->second = forwardSlice.takeVector();
+    return it->second;
+  };
+
+  auto cachedSupportsMMAMatrixType = [&](Operation *currentOp) {
+    auto [it, inserted] =
+        supportsMMAMatrixTypeCache.try_emplace(currentOp, false);
+    if (inserted)
+      it->second = supportsMMaMatrixType(currentOp, useNvGpu);
+    return it->second;
+  };
+
   SetVector<Operation *> opToConvert;
   op->walk([&](Operation *nestedOp) {
     if (!isa<vector::ContractionOp>(nestedOp) &&
         !elementwiseSupportsMMAMatrixType(nestedOp))
       return;
-    if (opToConvert.contains(nestedOp))
+    if (backwardSliceCache.contains(nestedOp))
       return;
-    SetVector<Operation *> dependentOps =
-        getSliceContract(nestedOp, backwardSliceOptions, forwardSliceOptions);
+
+    SetVector<Operation *> dependentOps;
+    dependentOps.insert(nestedOp);
+    unsigned currentIndex = 0;
+    while (currentIndex != dependentOps.size()) {
+      Operation *currentOp = dependentOps[currentIndex++];
+      dependentOps.insert_range(getCachedBackwardSlice(currentOp));
+      dependentOps.insert_range(getCachedForwardSlice(currentOp));
+    }
     // If any instruction cannot use MMA matrix type drop the whole
     // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
-    if (llvm::any_of(dependentOps, [useNvGpu](Operation *op) {
-          if (!supportsMMaMatrixType(op, useNvGpu)) {
+    if (llvm::any_of(dependentOps, [&](Operation *op) {
+          if (!cachedSupportsMMAMatrixType(op)) {
             LDBG() << "cannot convert op: " << *op;
             return true;
           }
@@ -529,7 +543,9 @@ struct CombineTransferReadOpTranspose final
         result = arith::ExtUIOp::create(rewriter, loc, op.getType(), result)
                      .getResult();
       else
-        result = arith::ExtFOp::create(rewriter, loc, op.getType(), result)
+        result = arith::ExtFOp::create(rewriter, loc, TypeRange{op.getType()},
+                                       ValueRange{result},
+                                       arith::ExtFOp::Properties{})
                      .getResult();
     }
 
@@ -553,10 +569,8 @@ static const char *inferFragType(Operation *op) {
       return inferFragType(userOp);
   }
 
-  for (Operation *users : op->getUsers()) {
-    auto contract = dyn_cast<vector::ContractionOp>(users);
-    if (!contract)
-      continue;
+  for (auto contract :
+       llvm::make_isa_range<vector::ContractionOp>(op->getUsers())) {
     assert(op->getNumResults() == 1);
     if (contract.getLhs() == op->getResult(0))
       return "AOp";
@@ -623,12 +637,18 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   rewriter.setInsertionPoint(op);
 
   assert(transferWriteSupportsMMAMatrixType(op));
+  AffineMap permutationMap = op.getPermutationMap();
   std::optional<int64_t> stride =
-      getStaticallyKnownRowStride(op.getShapedType(), op.getPermutationMap());
+      getStaticallyKnownRowStride(op.getShapedType(), permutationMap);
   if (!stride.has_value()) {
     LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
   }
+
+  // As for transfer_read, transferWriteSupportsMMAMatrixType ensures that
+  // either of the map results is the most minor dimension, so the first result
+  // being that dimension means a transposed store.
+  const bool isTranspose = isFirstResultLastMapDimension(permutationMap);
 
   auto it = valueMapping.find(op.getVector());
   if (it == valueMapping.end()) {
@@ -639,7 +659,8 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   Value matrix = it->second;
   auto store = gpu::SubgroupMmaStoreMatrixOp::create(
       rewriter, op.getLoc(), matrix, op.getBase(), op.getIndices(),
-      rewriter.getIndexAttr(*stride), /*transpose=*/UnitAttr());
+      rewriter.getIndexAttr(*stride),
+      isTranspose ? rewriter.getUnitAttr() : UnitAttr());
   (void)store;
 
   LDBG() << "transfer write to: " << store;

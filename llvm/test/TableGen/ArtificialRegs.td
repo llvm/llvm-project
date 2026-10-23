@@ -25,7 +25,7 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // Make sure there are no DA_and_RA and DA_with_hi kind of
 // classes that only contain artificial registers or are inferred
 // copies of already existing register classes that only differ
-// in the presence of artificial regsiters.
+// in the presence of artificial registers.
 //
 // CHECK-LABEL: RegisterClass RA:
 // CHECK-NEXT: SpillSize:

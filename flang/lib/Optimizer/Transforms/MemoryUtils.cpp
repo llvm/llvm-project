@@ -350,12 +350,17 @@ static bool isDeviceCode(mlir::Operation *func, mlir::ModuleOp mod) {
 }
 
 bool fir::promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
-                                                  mlir::Operation *func) {
+                                                  mlir::Operation *func,
+                                                  bool stackArrays) {
   auto mod = func->getParentOfType<mlir::ModuleOp>();
   if (!mod)
     return false;
   fir::CudaHeapAllocMode mode = fir::getCudaHeapAllocMode(mod);
   if (mode == fir::CudaHeapAllocMode::None || isDeviceCode(func, mod))
+    return false;
+  // The stack is device accessible under unified memory, so -fstack-arrays can
+  // be honored there. Under managed memory only the allocator can be.
+  if (stackArrays && mode == fir::CudaHeapAllocMode::Unified)
     return false;
 
   bool changed = false;

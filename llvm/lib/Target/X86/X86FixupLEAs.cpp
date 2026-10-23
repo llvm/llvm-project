@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -33,6 +34,12 @@ using namespace llvm;
 #define DEBUG_TYPE FIXUPLEA_NAME
 
 STATISTIC(NumLEAs, "Number of LEA instructions created");
+
+static cl::opt<unsigned> SearchALUInstrDistanceThreshold(
+    "x86-fixup-leas-search-distance-threshold", cl::Hidden,
+    cl::desc("Maximum instruction distance when searching for an ADD or SUB "
+             "after a LEA"),
+    cl::init(5));
 
 namespace {
 class FixupLEAsImpl {
@@ -217,7 +224,7 @@ FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
     // These instructions are all fine to convert.
     break;
   }
-  return TII->convertToThreeAddress(MI, nullptr, nullptr);
+  return TII->convertToThreeAddress(MI, /*LIS=*/nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAsLegacyPass() {
@@ -385,6 +392,18 @@ static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
   }
 }
 
+static inline unsigned getSUBriFromLEA(unsigned LEAOpcode) {
+  switch (LEAOpcode) {
+  default:
+    llvm_unreachable("Unexpected LEA instruction");
+  case X86::LEA32r:
+  case X86::LEA64_32r:
+    return X86::SUB32ri;
+  case X86::LEA64r:
+    return X86::SUB64ri32;
+  }
+}
+
 static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
   switch (LEAOpcode) {
   default:
@@ -400,45 +419,44 @@ static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
 MachineBasicBlock::iterator
 FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
                              MachineBasicBlock &MBB) const {
-  const int InstrDistanceThreshold = 5;
-  int InstrDistance = 1;
-  MachineBasicBlock::iterator CurInst = std::next(I);
+  unsigned InstrDistance = 1;
 
   unsigned LEAOpcode = I->getOpcode();
   unsigned AddOpcode = getADDrrFromLEA(LEAOpcode);
   unsigned SubOpcode = getSUBrrFromLEA(LEAOpcode);
   Register DestReg = I->getOperand(0).getReg();
 
-  while (CurInst != MBB.end()) {
-    if (CurInst->isCall() || CurInst->isInlineAsm())
+  for (MachineInstr &CurInst : instructionsWithoutDebug(
+           std::next(I), MBB.end(), /*SkipPseudoOp=*/false)) {
+    if (CurInst.isCall() || CurInst.isInlineAsm())
       break;
-    if (InstrDistance > InstrDistanceThreshold)
+    if (InstrDistance > SearchALUInstrDistanceThreshold)
       break;
 
     // Check if the lea dest register is used in an add/sub instruction only.
-    for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
-      MachineOperand &Opnd = CurInst->getOperand(I);
+    for (unsigned I = 0, E = CurInst.getNumOperands(); I != E; ++I) {
+      MachineOperand &Opnd = CurInst.getOperand(I);
       if (Opnd.isReg()) {
         if (Opnd.getReg() == DestReg) {
           if (Opnd.isDef() || !Opnd.isKill())
             return MachineBasicBlock::iterator();
 
-          unsigned AluOpcode = CurInst->getOpcode();
+          unsigned AluOpcode = CurInst.getOpcode();
           if (AluOpcode != AddOpcode && AluOpcode != SubOpcode)
             return MachineBasicBlock::iterator();
 
-          MachineOperand &Opnd2 = CurInst->getOperand(3 - I);
-          MachineOperand AluDest = CurInst->getOperand(0);
+          MachineOperand &Opnd2 = CurInst.getOperand(3 - I);
+          MachineOperand AluDest = CurInst.getOperand(0);
           if (Opnd2.getReg() != AluDest.getReg())
             return MachineBasicBlock::iterator();
 
           // X - (Y + Z) may generate different flags than (X - Y) - Z when
           // there is overflow. So we can't change the alu instruction if the
           // flags register is live.
-          if (!CurInst->registerDefIsDead(X86::EFLAGS, TRI))
+          if (!CurInst.registerDefIsDead(X86::EFLAGS, TRI))
             return MachineBasicBlock::iterator();
 
-          return CurInst;
+          return CurInst.getIterator();
         }
         if (TRI->regsOverlap(DestReg, Opnd.getReg()))
           return MachineBasicBlock::iterator();
@@ -446,7 +464,6 @@ FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
     }
 
     InstrDistance++;
-    ++CurInst;
   }
   return MachineBasicBlock::iterator();
 }
@@ -850,6 +867,15 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
             getINCDECFromLEA(MI.getOpcode(), Offset.getImm() == 1);
         NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
                     .addReg(DestReg);
+        LLVM_DEBUG(NewMI->dump(););
+      } else if (Offset.isImm() && Offset.getImm() == 128) {
+        // ADD of +128 needs a 32-bit immediate, while SUB of -128 fits the
+        // sign-extended 8-bit form, three bytes shorter. EFLAGS was proved
+        // dead above, so the different flag results don't matter.
+        unsigned NewOpc = getSUBriFromLEA(MI.getOpcode());
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                    .addReg(DestReg)
+                    .addImm(-128);
         LLVM_DEBUG(NewMI->dump(););
       } else {
         unsigned NewOpc = getADDriFromLEA(MI.getOpcode(), Offset);

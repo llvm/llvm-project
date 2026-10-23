@@ -1248,7 +1248,7 @@ define i1 @load_fold_icmp1(ptr %p) {
 ; CHECK-O0-LABEL: load_fold_icmp1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    subq $15, %rax
+; CHECK-O0-NEXT:    cmpq $15, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1266,7 +1266,7 @@ define i1 @load_fold_icmp2(ptr %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_icmp2:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    subq %rsi, %rax
+; CHECK-O0-NEXT:    cmpq %rsi, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1285,14 +1285,14 @@ define i1 @load_fold_icmp3(ptr %p1, ptr %p2) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
-; CHECK-O0-NEXT:    subq %rcx, %rax
+; CHECK-O0-NEXT:    cmpq %rcx, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp3:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq (%rsi), %rax
-; CHECK-O3-NEXT:    cmpq %rax, (%rdi)
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    cmpq (%rsi), %rax
 ; CHECK-O3-NEXT:    sete %al
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8
@@ -1422,17 +1422,17 @@ define void @rmw_fold_mul2(ptr %p, i64 %v) {
 define void @rmw_fold_sdiv1(ptr %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_sdiv1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rcx
-; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rdx # imm = 0x8888888888888889
-; CHECK-O0-NEXT:    movq %rcx, %rax
-; CHECK-O0-NEXT:    imulq %rdx
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
+; CHECK-O0-NEXT:    imulq %rcx
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-O0-NEXT:    addq %rax, %rdx
 ; CHECK-O0-NEXT:    movq %rdx, %rax
-; CHECK-O0-NEXT:    addq %rcx, %rax
-; CHECK-O0-NEXT:    movq %rax, %rcx
-; CHECK-O0-NEXT:    shrq $63, %rcx
-; CHECK-O0-NEXT:    sarq $3, %rax
-; CHECK-O0-NEXT:    addq %rcx, %rax
-; CHECK-O0-NEXT:    movq %rax, (%rdi)
+; CHECK-O0-NEXT:    shrq $63, %rax
+; CHECK-O0-NEXT:    sarq $3, %rdx
+; CHECK-O0-NEXT:    addq %rax, %rdx
+; CHECK-O0-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: rmw_fold_sdiv1:
@@ -1550,13 +1550,12 @@ define void @rmw_fold_srem1(ptr %p, i64 %v) {
 ; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
 ; CHECK-O0-NEXT:    imulq %rcx
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-O0-NEXT:    addq %rax, %rdx
 ; CHECK-O0-NEXT:    movq %rdx, %rcx
-; CHECK-O0-NEXT:    addq %rax, %rcx
-; CHECK-O0-NEXT:    movq %rcx, %rdx
-; CHECK-O0-NEXT:    shrq $63, %rdx
-; CHECK-O0-NEXT:    sarq $3, %rcx
-; CHECK-O0-NEXT:    addq %rdx, %rcx
-; CHECK-O0-NEXT:    leaq (%rcx,%rcx,4), %rcx
+; CHECK-O0-NEXT:    shrq $63, %rcx
+; CHECK-O0-NEXT:    sarq $3, %rdx
+; CHECK-O0-NEXT:    addq %rcx, %rdx
+; CHECK-O0-NEXT:    leaq (%rdx,%rdx,4), %rcx
 ; CHECK-O0-NEXT:    leaq (%rcx,%rcx,2), %rcx
 ; CHECK-O0-NEXT:    subq %rcx, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)

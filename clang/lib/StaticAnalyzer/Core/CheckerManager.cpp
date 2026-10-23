@@ -536,38 +536,46 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
+namespace {
+
+struct CheckEndFunctionContext {
+  using CheckersTy = std::vector<CheckerManager::CheckEndFunctionFunc>;
+
+  const CheckersTy &Checkers;
+  const ReturnStmt *RS;
+  ExprEngine &Eng;
+
+  CheckEndFunctionContext(const CheckersTy &Checkers, const ReturnStmt *RS,
+                          ExprEngine &Eng)
+      : Checkers(Checkers), RS(RS), Eng(Eng) {}
+
+  CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+  CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
+  void runChecker(CheckerManager::CheckEndFunctionFunc checkFn,
+                  ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+    llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
+    const ProgramPoint &L =
+        FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
+    CheckerContext C(Eng, Pred, Dst, L);
+
+    checkFn(RS, C);
+  }
+};
+
+} // namespace
+
 /// Run checkers for end of a function (either the entrypoint or another
-/// function that was inlined). Note that this function places the
-/// checker activations on separate execution paths:
-///        /-[checker1]-> N1 ...
-///   Pred --[checker2]-> N2 ...
-///        \-[checker3]-> N3 ...
-/// (If none of the checkers produce a transition, we continue with 'Pred'.)
-///
-/// This differs from the handling of all the other checker callbacks, where
-/// the checker activations are chained sequentially on a single path:
-///   Pred --[checker1]-> N1 --[checker2]-> N2 --[checker3]-> N3 ...
-///
-/// This difference has historical reasons: originally this callback was called
-/// 'EndPath' and only activated at the end of an execution paths, and
-/// (according to an old comment) those 'EndPath' checkers expected that they
-/// create an "end of path" node which will be final.
-/// TODO: Check whether this exceptional behavior is still justified.
+/// function that was inlined).
 void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
-  // By default, continue from 'Pred' -- this will be removed from 'Dst' if any
-  // checker generates a transition from it.
-  Dst.insert(Pred);
-
-  for (const auto &checkFn : EndFunctionCheckers) {
-    const ProgramPoint &L =
-        FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
-    CheckerContext C(Eng, Pred, Dst, L);
-    llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
-    checkFn(RS, C);
-  }
+  ExplodedNodeSet Src;
+  Src.insert(Pred);
+  CheckEndFunctionContext C(EndFunctionCheckers, RS, Eng);
+  llvm::TimeTraceScope TimeScope("CheckerManager::runCheckersForEndFunction");
+  expandGraphWithCheckers(C, Dst, Src);
 }
 
 namespace {

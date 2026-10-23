@@ -9,60 +9,32 @@
 #include "Descriptor.h"
 #include "Boolean.h"
 #include "Char.h"
+#include "ExprConstShared.h"
 #include "FixedPoint.h"
 #include "Floating.h"
+#include "Integral.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Reflect.h"
 #include "Source.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-template <typename T> static constexpr bool needsCtor() {
-  if constexpr (std::is_same_v<T, Char<true>> ||
-                std::is_same_v<T, Char<false>> ||
-                std::is_same_v<T, Integral<16, true>> ||
-                std::is_same_v<T, Integral<16, false>> ||
-                std::is_same_v<T, Integral<32, true>> ||
-                std::is_same_v<T, Integral<32, false>> ||
-                std::is_same_v<T, Integral<64, true>> ||
-                std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, IntegralAP<true>> ||
-                std::is_same_v<T, IntegralAP<false>> ||
-                std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
-    return false;
-
-  return true;
-}
-
-template <typename T>
-static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
-                   const Descriptor *) {
-  static_assert(needsCtor<T>());
-  new (Ptr) T();
+template <typename T> static constexpr bool needsDtor() {
+  return std::is_same_v<T, Pointer> || std::is_same_v<T, MemberPointer>;
 }
 
 template <typename T>
 static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
-  static_assert(needsCtor<T>());
+  static_assert(needsDtor<T>());
   reinterpret_cast<T *>(Ptr)->~T();
-}
-
-template <typename T>
-static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
-                        const Descriptor *D) {
-  new (Ptr) InitMapPtr();
-
-  if constexpr (needsCtor<T>()) {
-    Ptr += sizeof(InitMapPtr);
-    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-      new (&reinterpret_cast<T *>(Ptr)[I]) T();
-    }
-  }
 }
 
 template <typename T>
@@ -70,9 +42,9 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
   InitMapPtr &IMP = *reinterpret_cast<InitMapPtr *>(Ptr);
   IMP.deleteInitMap();
 
-  if constexpr (needsCtor<T>()) {
+  if constexpr (needsDtor<T>()) {
     Ptr += sizeof(InitMapPtr);
-    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+    for (unsigned I = 0, NE = D->getNumElems(); I != NE; ++I) {
       reinterpret_cast<T *>(Ptr)[I].~T();
     }
   }
@@ -243,18 +215,6 @@ static bool needsRecordDtor(const Record *R) {
   return false;
 }
 
-static BlockCtorFn getCtorPrim(PrimType T) {
-  switch (T) {
-  case PT_Ptr:
-    return ctorTy<PrimConv<PT_Ptr>::T>;
-  case PT_MemberPtr:
-    return ctorTy<PrimConv<PT_MemberPtr>::T>;
-  default:
-    return nullptr;
-  }
-  llvm_unreachable("Unhandled PrimType");
-}
-
 static BlockDtorFn getDtorPrim(PrimType T) {
   switch (T) {
   case PT_Ptr:
@@ -267,11 +227,67 @@ static BlockDtorFn getDtorPrim(PrimType T) {
   llvm_unreachable("Unhandled PrimType");
 }
 
+// NOTE: The following #if-ed out code is for calling constructors of primitive
+// types. It is currently not needed but I'm not sure if it will stay this way
+// forever so I'm leaving it here for now.
+#if 0
+template <typename T> static constexpr bool needsCtor() {
+  return false;
+  if constexpr (std::is_same_v<T, Char<true>> ||
+                std::is_same_v<T, Char<false>> ||
+                std::is_same_v<T, Integral<16, true>> ||
+                std::is_same_v<T, Integral<16, false>> ||
+                std::is_same_v<T, Integral<32, true>> ||
+                std::is_same_v<T, Integral<32, false>> ||
+                std::is_same_v<T, Integral<64, true>> ||
+                std::is_same_v<T, Integral<64, false>> ||
+                std::is_same_v<T, IntegralAP<true>> ||
+                std::is_same_v<T, IntegralAP<false>> ||
+                std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
+    return false;
+
+  return true;
+}
+
+
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {
   TYPE_SWITCH(Type, if constexpr (!needsCtor<T>()) return nullptr;
               return ctorArrayTy<T>);
   llvm_unreachable("unknown Expr");
 }
+static BlockCtorFn getCtorPrim(PrimType T) {
+  return nullptr;
+  switch (T) {
+  // case PT_Ptr:
+    // return ctorTy<PrimConv<PT_Ptr>::T>;
+  // case PT_MemberPtr:
+    // return ctorTy<PrimConv<PT_MemberPtr>::T>;
+  default:
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled PrimType");
+}
+
+
+template <typename T>
+static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
+                        const Descriptor *D) {
+  new (Ptr) InitMapPtr();
+
+  if constexpr (needsCtor<T>()) {
+    Ptr += sizeof(InitMapPtr);
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      new (&reinterpret_cast<T *>(Ptr)[I]) T();
+    }
+  }
+}
+template <typename T>
+static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
+                   const Descriptor *) {
+  static_assert(needsCtor<T>());
+  new (Ptr) T();
+}
+#endif
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
   TYPE_SWITCH(Type, return dtorArrayTy<T>);
@@ -285,7 +301,7 @@ Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
       AllocSize(align(ElemSize)), PrimT(Type), IsConst(IsConst),
       IsMutable(IsMutable), IsTemporary(IsTemporary), IsVolatile(IsVolatile),
-      CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)) {
+      CtorFn(nullptr), DtorFn(getDtorPrim(Type)) {
   assert(Source && "Missing source");
 }
 
@@ -297,7 +313,7 @@ Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
       Size(ElemSize * NumElems), AllocSize(align(Size) + sizeof(InitMapPtr)),
       PrimT(Type), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), IsVolatile(IsVolatile), IsArray(true),
-      CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)) {
+      CtorFn(nullptr), DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
 }
@@ -308,8 +324,7 @@ Descriptor::Descriptor(DeclOrExpr D, PrimType Type, bool IsConst,
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       AllocSize(sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
       IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(getCtorArrayPrim(Type)),
-      DtorFn(getDtorArrayPrim(Type)) {
+      IsArray(true), CtorFn(nullptr), DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
@@ -444,27 +459,10 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     return ElemType;
   };
 
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return MakeArrayType(E->getType()->getPointeeType());
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return MakeArrayType(E->getType()->getPointeeType());
-    return E->getType();
-  }
+  if (isDynAlloc())
+    return MakeArrayType(asExpr()->getType()->getPointeeType());
 
   return getType();
-}
-
-SourceLocation Descriptor::getLocation() const {
-  if (auto *D = Source.asDecl())
-    return D->getLocation();
-  if (auto *E = Source.asExpr())
-    return E->getExprLoc();
-  llvm_unreachable("Invalid descriptor type");
 }
 
 SourceInfo Descriptor::getLoc() const {
@@ -500,4 +498,24 @@ unsigned Descriptor::getElemDataSize() const {
     FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
   return ElemSize;
+}
+
+DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
+  // new or new[] expression
+  if (const auto *NE = dyn_cast<CXXNewExpr>(E))
+    return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
+  // std::allocator::allocate call
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+      ME && ME->getRecordDecl()->getName() == "allocator" &&
+      ME->getMethodDecl()->getName() == "allocate")
+    return DynAllocKind::StdAllocator;
+  // __builtin_operator_new call
+  if (const auto *CE = dyn_cast<CallExpr>(E);
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+    return DynAllocKind::BuiltinOperatorNew;
+  return DynAllocKind::None;
+}
+
+CharUnits Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
+  return GetAlignOfDynamicAlloc(Ctx, getDataType(Ctx), getDynAllocKind());
 }

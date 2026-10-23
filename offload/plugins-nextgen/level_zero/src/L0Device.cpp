@@ -159,7 +159,8 @@ void L0DeviceTy::reportDeviceInfo() const {
   });
 }
 
-Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
+Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
+                           GenericProfilerTy *ProfilerPtr) {
   const auto &Options = getPlugin().getOptions();
 
   uint32_t Count = 1;
@@ -173,6 +174,13 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   CALL_ZE_RET_ERROR(zeDeviceGetModuleProperties, zeDevice, &ModuleProperties);
 
   DeviceName = std::string(DeviceProperties.name);
+  MaxBlockSharedMemSize = getMaxSharedLocalMemory();
+
+  // Adjust the static SPIR-V grid values based on the device's reported limits.
+  if (uint32_t MaxGroupSize = std::min(getMaxGroupSizeX(), getMaxGroupSize()))
+    GridValues.GV_Max_WG_Size = MaxGroupSize;
+  if (uint32_t SIMDWidth = getSIMDWidth())
+    GridValues.GV_Warp_Size = SIMDWidth;
 
   ODBG(OLDT_Device) << "Found a GPU device, Name = " << DeviceProperties.name;
 
@@ -197,7 +205,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
 
-  if (auto Err = MemAllocator.initDevicePools(*this, Options))
+  if (auto Err = MemAllocator.initDevicePools(*this, Options,
+                                              L0Context.getZeContext()))
     return Err;
   L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
@@ -213,28 +222,31 @@ Error L0DeviceTy::deinitImpl() {
 
 Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                           int32_t ImageId) {
-  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
+                           int32_t ImageId, PluginContextTy *UserCtx) {
+  auto &Ctx = UserCtx ? static_cast<LevelZeroPluginContextTy &>(*UserCtx)
+                      : L0Context.getDefaultUserCtx();
+  auto ZeContext = Ctx.getZeContext();
+
+  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef(), ZeContext);
   if (PGM) {
     // Program already exists.
     return PGM;
   }
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Device %" PRId32 ": Loading binary from " DPxMOD "\n", getDeviceId(),
-       DPxPTR(TgtImage->getBufferStart()));
+  ODBG(OLDT_Module) << "Device " << getDeviceId() << ": Loading binary from "
+                    << static_cast<const void *>(TgtImage->getBufferStart());
 
   const auto &Options = getPlugin().getOptions();
   std::string CompilationOptions(Options.CompilationOptions);
   CompilationOptions += " " + Options.UserCompilationOptions;
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Base L0 module compilation options: %s\n", CompilationOptions.c_str());
+  ODBG(OLDT_Module) << "Base L0 module compilation options: "
+                    << CompilationOptions;
 
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
 
-  L0ProgramBuilderTy Builder(*this, std::move(TgtImage));
+  L0ProgramBuilderTy Builder(*this, ZeContext, std::move(TgtImage));
   if (auto Err = Builder.buildModules(CompilationOptions))
     return std::move(Err);
 
@@ -287,7 +299,6 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
-    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 
@@ -322,7 +333,6 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
-    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 
@@ -428,12 +438,6 @@ const char *L0DeviceTy::getArchCStr() const {
   }
 }
 
-static const char *DriverVersionToStrTable[] = {
-    "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
-    "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};
-constexpr size_t DriverVersionToStrTableSize =
-    sizeof(DriverVersionToStrTable) / sizeof(DriverVersionToStrTable[0]);
-
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
@@ -442,22 +446,18 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
-  auto DriverVersion = getDriverAPIVersion();
-  if (DriverVersion < DriverVersionToStrTableSize)
-    Info.add("Driver Version", DriverVersionToStrTable[DriverVersion], "",
-             DeviceInfo::DRIVER_VERSION);
-  else
-    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+  Info.add("Driver Version", L0Context.getDriverVersion(), "",
+           DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
   Info.add("Number of total EUs", getNumEUs(), "",
            DeviceInfo::NUM_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
-  Info.add("EU SIMD width", getSIMDWidth(), "", DeviceInfo::NUM_LANES);
+  Info.add("EU SIMD width", getWarpSize(), "", DeviceInfo::NUM_LANES);
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());
-  Info.add("Max Group size", getMaxGroupSize(), "",
+  Info.add("Max Group size", getThreadLimit(), "",
            DeviceInfo::MAX_WORK_GROUP_SIZE);
   auto &MaxGroupSize =
       *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
@@ -473,7 +473,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   MaxSize.add("y", getMaxGroupSizeY() * getMaxGroupCountY());
   MaxSize.add("z", getMaxGroupSizeZ() * getMaxGroupCountZ());
 
-  Info.add("Local memory size (bytes)", getMaxSharedLocalMemory(), "",
+  Info.add("Local memory size (bytes)", getMaxBlockSharedMemSize(), "",
            DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
   Info.add("Global memory size (bytes)", getGlobalMemorySize(), "",
            DeviceInfo::GLOBAL_MEM_SIZE);

@@ -592,6 +592,142 @@ TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
   EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
 }
 
+/// Utility classes to setup casting functionality.
+struct Shape {
+  enum ShapeKind { SK_Circle, SK_Square };
+  const ShapeKind Kind;
+  Shape(ShapeKind Kind) : Kind(Kind) {}
+};
+template <Shape::ShapeKind K> struct ShapeImpl : Shape {
+  ShapeImpl() : Shape(K) {}
+  static bool classof(const Shape *S) { return S->Kind == K; }
+};
+struct Circle : ShapeImpl<Shape::SK_Circle> {};
+struct Square : ShapeImpl<Shape::SK_Square> {};
+
+TEST(STLExtrasTest, MakeIsaRangePointers) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(Shapes);
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle *>);
+  EXPECT_THAT(Circles, ElementsAre(&C0, &C1));
+  EXPECT_THAT(make_isa_range<Square>(Shapes), ElementsAre(&S));
+
+  // Ranges without any element of the requested type are empty.
+  std::vector<Shape *> OnlyCircles = {&C0, &C1};
+  EXPECT_TRUE(make_isa_range<Square>(OnlyCircles).empty());
+
+  // Ranges dereferencing to `Shape *const &`, like ArrayRef, work as well.
+  ArrayRef<Shape *> ShapesRef = Shapes;
+  auto RefCircles = make_isa_range<Circle>(ShapesRef);
+  static_assert(std::is_same_v<decltype(*RefCircles.begin()), Circle *>);
+  EXPECT_THAT(RefCircles, ElementsAre(&C0, &C1));
+
+  // The same holds for ranges returning their elements by value.
+  auto ByValue = map_range(Shapes, [](Shape *S) { return S; });
+  auto ValueCircles = make_isa_range<Circle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ValueCircles.begin()), Circle *>);
+  EXPECT_THAT(ValueCircles, ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(ConstShapes);
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle *>);
+  EXPECT_THAT(ConstCircles, ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeReferences) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(make_pointee_range(Shapes));
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle &>);
+  EXPECT_THAT(map_range(Circles, [](Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(make_pointee_range(ConstShapes));
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle &>);
+  EXPECT_THAT(map_range(ConstCircles, [](const Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeEarlyIncrement) {
+  Circle C0, C1;
+  Square S;
+  std::list<Shape *> Shapes = {&C0, &S, &C1};
+
+  for (Circle *C : make_early_inc_range(make_isa_range<Circle>(Shapes)))
+    Shapes.remove(C);
+  EXPECT_THAT(Shapes, ElementsAre(&S));
+}
+
+/// A value-typed handle hierarchy that casts by value.
+struct HandleImpl {
+  unsigned Kind;
+};
+
+struct Handle {
+public:
+  Handle(const HandleImpl *Impl = nullptr) : Impl(Impl) {}
+  const HandleImpl *getImpl() const { return Impl; }
+  bool operator==(const Handle &Other) const { return Impl == Other.Impl; }
+
+protected:
+  const HandleImpl *Impl;
+};
+
+struct FooHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 0; }
+};
+
+struct BarHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 1; }
+};
+} // namespace
+
+namespace llvm {
+/// Casts take and return the handle by value.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<std::is_base_of_v<Handle, std::decay_t<From>>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  static bool isPossible(Handle H) { return To::classof(H); }
+  static To doCast(Handle H) { return To(H.getImpl()); }
+};
+} // namespace llvm
+
+namespace {
+TEST(STLExtrasTest, MakeIsaRangeValueTypes) {
+  HandleImpl FooImpl0 = {0}, BarImpl = {1}, FooImpl1 = {0};
+  std::vector<Handle> Handles = {Handle(&FooImpl0), Handle(&BarImpl),
+                                 Handle(&FooImpl1)};
+
+  // Casting a handle yields a handle by value, not a reference.
+  auto Foos = make_isa_range<FooHandle>(Handles);
+  static_assert(std::is_same_v<decltype(*Foos.begin()), FooHandle>);
+  EXPECT_THAT(Foos, ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+  EXPECT_THAT(make_isa_range<BarHandle>(Handles),
+              ElementsAre(BarHandle(&BarImpl)));
+
+  // Ranges that only materialize the handles as temporaries work as well,
+  // because the cast does not refer back to the element.
+  auto ByValue = map_range(Handles, [](Handle H) { return H; });
+  auto ByValueFoos = make_isa_range<FooHandle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ByValueFoos.begin()), FooHandle>);
+  EXPECT_THAT(ByValueFoos,
+              ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }

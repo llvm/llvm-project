@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorResolutionGenerator.h"
 
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "orc"

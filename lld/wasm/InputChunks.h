@@ -232,8 +232,8 @@ class SyntheticMergedChunk : public InputChunk {
 public:
   SyntheticMergedChunk(StringRef name, uint32_t alignment, uint32_t flags)
       : InputChunk(nullptr, InputChunk::MergedChunk, name, alignment, flags),
-        builder(llvm::StringTableBuilder::RAW, llvm::Align(1ULL << alignment)) {
-  }
+        builder(llvm::StringTableBuilder::RAW,
+                llvm::Align::fromLog2(alignment)) {}
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::MergedChunk;
@@ -352,13 +352,13 @@ public:
     return c->kind() == SyntheticDataSegment;
   }
 
-  void setSize(uint64_t s) { size = s; }
+  void setSize(uint32_t s) { size = s; }
   uint32_t getSize() const { return size; }
 
   void writeTo(uint8_t *buf) const;
 
 private:
-  uint64_t size = 0;
+  uint32_t size = 0;
 };
 
 // Represents a single Wasm Section within an input file.

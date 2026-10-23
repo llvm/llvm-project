@@ -80,6 +80,7 @@ namespace format {
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(EnumUnderlyingTypeColon)                                                \
+  TYPE(ExportLBrace)                                                           \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -932,6 +933,10 @@ public:
 
   /// Returns \c true if this token ends a block indented initializer list.
   [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
+
+  /// Returns \c true if a newline should exist between this token and a
+  /// preceding attribute.
+  [[nodiscard]] bool mustBreakAfterAttributes(const FormatStyle &Style) const;
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
