@@ -12,6 +12,7 @@ if(TARGET libc.src.ucontext.getcontext)
       libc.src.ucontext.setcontext
       libc.src.signal.sigemptyset
       libc.src.signal.sigaddset
+      libc.src.signal.sigismember
       libc.src.signal.sigprocmask
   )
 endif()
