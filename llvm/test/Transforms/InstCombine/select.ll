@@ -6002,6 +6002,25 @@ define i32 @and_or_subset_multiuse(i32 %a, i32 %b) {
   ret i32 %sel
 }
 
+; The compare has an extra use, so it is not canonicalized to 'eq' first and
+; the 'ne' form reaches the fold.
+define i32 @and_or_subset_ne_cmp_multiuse(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_ne_cmp_multiuse(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  call void @use(i1 %cmp)
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
 ; Negative: the compare is against an unrelated value, so no subset is proven.
 define i32 @and_or_subset_neg_wrong_cmp(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define i32 @and_or_subset_neg_wrong_cmp(
