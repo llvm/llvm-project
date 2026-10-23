@@ -5157,8 +5157,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
           "UserVF ignored because it may be larger than the maximal safe VF",
           "InvalidUserVF", ORE, OrigLoop);
     } else {
-      assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
-             "VF needs to be a power of two");
+      assert(UserVF.isPowerOf2() && "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM->collectNonVectorizedAndSetWideningDecisions(UserVF);
@@ -6194,6 +6193,18 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
+
+  // Without -vplan-outer-loop-legality-checks, trust the explicit vectorization
+  // pragma that vectorizing the outer loop is safe.
+  if (!IsInnerLoop && Opts.vplan_outer_loop_legality_checks &&
+      !proveOuterLoopMemorySafety(*VPlan0, PSE, *Legal->getAA(), VPDT,
+                                  OrigLoop)) {
+    reportVectorizationFailure(
+        "Cannot prove outer loop memory accesses safe",
+        "cannot prove memory accesses in outer loop are safe to vectorize",
+        "CantProveOuterLoopMemSafety", ORE, OrigLoop);
+    return nullptr;
+  }
 
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
@@ -7946,8 +7957,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ++LoopsVectorized;
   }
 
+#ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
+#endif
 
   return true;
 }
@@ -8012,6 +8025,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
   // Verify once per function rather than once per processed loop, which would
   // make the pass quadratic in the number of loops.
+  assert((!Changed || DT->verify(DominatorTree::VerificationLevel::Fast)) &&
+         "DT not preserved correctly");
   assert((!Changed || !verifyFunction(F, &dbgs())) &&
          "Invalid IR produced by LoopVectorize");
 

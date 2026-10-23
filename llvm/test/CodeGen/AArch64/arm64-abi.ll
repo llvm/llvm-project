@@ -63,6 +63,59 @@ entry:
   ret i32 %conv
 }
 
+define i64 @i8i16callee_agg(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, { i8, i16, i8, i8 } %b) nounwind readnone noinline {
+entry:
+; CHECK-LABEL: i8i16callee_agg:
+; CHECK-DAG: ldrsb {{x[0-9]+}}, [sp, #5]
+; CHECK-DAG: ldrsb {{x[0-9]+}}, [sp, #4]
+; CHECK-DAG: ldrsh {{x[0-9]+}}, [sp, #2]
+; CHECK-DAG: ldrsb {{x[0-9]+}}, [sp]
+; FAST-LABEL: i8i16callee_agg:
+; FAST-DAG: ldrb {{w[0-9]+}}, [sp, #5]
+; FAST-DAG: ldrb {{w[0-9]+}}, [sp, #4]
+; FAST-DAG: ldrh {{w[0-9]+}}, [sp, #2]
+; FAST-DAG: ldrb {{w[0-9]+}}, [sp]
+; GISEL-LABEL: i8i16callee_agg:
+; GISEL-DAG: ldrb {{w[0-9]+}}, [sp, #5]
+; GISEL-DAG: ldrb {{w[0-9]+}}, [sp, #4]
+; GISEL-DAG: ldrh {{w[0-9]+}}, [sp, #2]
+; GISEL-DAG: ldrb {{w[0-9]+}}, [sp]
+  %b1 = extractvalue { i8, i16, i8, i8 } %b, 0
+  %b2 = extractvalue { i8, i16, i8, i8 } %b, 1
+  %b3 = extractvalue { i8, i16, i8, i8 } %b, 2
+  %b4 = extractvalue { i8, i16, i8, i8 } %b, 3
+  %conv1 = sext i8 %b1 to i64
+  %conv2 = sext i16 %b2 to i64
+  %conv3 = sext i8 %b3 to i64
+  %conv4 = sext i8 %b4 to i64
+  %add1 = add i64 %conv1, %conv2
+  %add2 = add i64 %add1, %conv3
+  %add3 = add i64 %add2, %conv4
+  ret i64 %add3
+}
+
+define i64 @i8i16caller_agg() nounwind readnone {
+entry:
+; CHECK-LABEL: i8i16caller_agg
+; CHECK-DAG: stur {{w[0-9]+}}, [sp, #2]
+; CHECK-DAG: strb {{w[0-9]+}}, [sp]
+; CHECK: bl
+; FAST-LABEL: i8i16caller_agg
+; FAST-DAG: strb {{w[0-9]+}}, [x[[ADDR:[0-9]+]], #5]
+; FAST-DAG: strb {{w[0-9]+}}, [x[[ADDR]], #4]
+; FAST-DAG: strh {{w[0-9]+}}, [x[[ADDR]], #2]
+; FAST-DAG: strb {{w[0-9]+}}, [x[[ADDR]]]
+; FAST: bl
+; GISEL-LABEL: i8i16caller_agg
+; GISEL-DAG: strb {{w[0-9]+}}, [sp]
+; GISEL-DAG: strh {{w[0-9]+}}, [sp, #2]
+; GISEL-DAG: strb {{w[0-9]+}}, [sp, #4]
+; GISEL-DAG: strb {{w[0-9]+}}, [sp, #5]
+; GISEL: bl
+  %call = tail call i64 @i8i16callee_agg(i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, { i8, i16, i8, i8 } { i8 97, i16 98, i8 99, i8 100 })
+  ret i64 %call
+}
+
 ; rdar://12651543
 define double @circle_center([2 x float] %a) nounwind ssp {
   %call = tail call double @ext([2 x float] %a) nounwind

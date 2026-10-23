@@ -139,30 +139,133 @@ TEST(LlvmLibcRegexMatcherTest, WildcardMatchingAndNewlineFlag) {
   EXPECT_EQ(match(pool, *nl_pat, "a\nc"), MatchResult::NoMatch);
 }
 
+TEST(LlvmLibcRegexMatcherTest, AnchorMatchingAndFlags) {
+  ExprPool pool;
+  ErrorOr<ExprId> pat = parse_ere("^foo$", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat.has_value());
+  EXPECT_LE(pool.size(), size_t(12));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+
+  EXPECT_EQ(match(pool, *pat, "foo"), MatchResult::Match);
+  const size_t warm_nodes = pool.size();
+  const size_t warm_bytes = pool.allocated_bytes();
+  EXPECT_EQ(match(pool, *pat, "foo"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+  EXPECT_EQ(pool.allocated_bytes(), warm_bytes);
+
+  // Near-miss negative checks for ^foo$.
+  EXPECT_EQ(match(pool, *pat, "xfoo"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foox"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo\nbar"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, ""), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo", 0, REG_NOTBOL), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo", 0, REG_NOTEOL), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "bar\nfoo\nbaz", REG_NEWLINE, 0),
+            MatchResult::Match);
+
+  // Empty-line and multi-anchor patterns.
+  ErrorOr<ExprId> empty_line = parse_ere("^$", REG_EXTENDED, pool);
+  ErrorOr<ExprId> multi_bol = parse_ere("^^ab$$", REG_EXTENDED, pool);
+  ErrorOr<ExprId> mid_bol = parse_ere("a^b", REG_EXTENDED, pool);
+  ErrorOr<ExprId> nl_bol = parse_ere("\n^b", REG_EXTENDED, pool);
+  ASSERT_TRUE(empty_line.has_value());
+  ASSERT_TRUE(multi_bol.has_value());
+  ASSERT_TRUE(mid_bol.has_value());
+  ASSERT_TRUE(nl_bol.has_value());
+
+  EXPECT_EQ(match(pool, *empty_line, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *empty_line, "a"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *empty_line, "\n"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *empty_line, "a\n\nb", REG_NEWLINE, 0),
+            MatchResult::Match);
+  EXPECT_EQ(match(pool, *empty_line, "a\nb", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+
+  EXPECT_EQ(match(pool, *multi_bol, "ab"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_bol, "xab"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *multi_bol, "abx"), MatchResult::NoMatch);
+
+  EXPECT_EQ(match(pool, *mid_bol, "ab"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *mid_bol, "a^b"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *nl_bol, "\nb"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *nl_bol, "\nb", REG_NEWLINE, 0), MatchResult::Match);
+}
+
+TEST(LlvmLibcRegexMatcherTest, StarMatchingAndStabilization) {
+  ExprPool pool;
+  ErrorOr<ExprId> pat = parse_ere("ab*c", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat.has_value());
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+
+  EXPECT_EQ(match(pool, *pat, "ac"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "abc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "abbbc"), MatchResult::Match);
+  // Near-miss negative checks for ab*c.
+  EXPECT_EQ(match(pool, *pat, "abbd"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "bbbc"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "abXc"), MatchResult::NoMatch);
+
+  // State-space stabilization canary: scanning "a.*c" across a 10,000-byte
+  // input must converge to a small fixed set of canonical derivative states
+  // within the initial 1 KiB pool.
+  ExprPool star_pool;
+  ErrorOr<ExprId> dot_star = parse_ere("a.*c", REG_EXTENDED, star_pool);
+  ASSERT_TRUE(dot_star.has_value());
+  char long_input[10000];
+  long_input[0] = 'a';
+  for (size_t i = 1; i < 9999; ++i)
+    long_input[i] = 'b';
+  long_input[9999] = 'c';
+  EXPECT_EQ(match(star_pool, *dot_star, string_view(long_input, 10000)),
+            MatchResult::Match);
+  EXPECT_LE(star_pool.size(), size_t(16));
+  EXPECT_LE(star_pool.allocated_bytes(), size_t(1024));
+
+  ErrorOr<ExprId> nl_dot_star =
+      parse_ere("a.*c", REG_EXTENDED | REG_NEWLINE, star_pool);
+  ASSERT_TRUE(nl_dot_star.has_value());
+  EXPECT_EQ(match(star_pool, *nl_dot_star, "abbc", REG_NEWLINE, 0),
+            MatchResult::Match);
+  EXPECT_EQ(match(star_pool, *nl_dot_star, "a\nc", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+}
+
 TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   ExprPool pool;
   ErrorOr<ExprId> escaped_dot = parse_ere(R"(a\.b)", REG_EXTENDED, pool);
   ErrorOr<ExprId> escaped_star = parse_ere(R"(a\*b)", REG_EXTENDED, pool);
   ErrorOr<ExprId> escaped_slash = parse_ere(R"(a\\b)", REG_EXTENDED, pool);
+  ErrorOr<ExprId> escaped_anchors = parse_ere(R"(a\^b\$c)", REG_EXTENDED, pool);
   ASSERT_TRUE(escaped_dot.has_value());
   ASSERT_TRUE(escaped_star.has_value());
   ASSERT_TRUE(escaped_slash.has_value());
+  ASSERT_TRUE(escaped_anchors.has_value());
 
   EXPECT_EQ(match(pool, *escaped_dot, "a.b"), MatchResult::Match);
   EXPECT_EQ(match(pool, *escaped_dot, "axb"), MatchResult::NoMatch);
   EXPECT_EQ(match(pool, *escaped_star, "a*b"), MatchResult::Match);
   EXPECT_EQ(match(pool, *escaped_slash, R"(a\b)"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_anchors, "a^b$c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_anchors, "axb$c"), MatchResult::NoMatch);
 
   ErrorOr<ExprId> trailing_escape = parse_ere(R"(abc\)", REG_EXTENDED, pool);
   ASSERT_FALSE(trailing_escape.has_value());
   EXPECT_EQ(trailing_escape.error(), REG_EESCAPE);
 
+  const string_view bad_rpt_patterns[] = {"*",   "+",   "?",    "{1}", "^*",
+                                          "^+",  "^?",  "^{1}", "$*",  "a**",
+                                          "a*+", "a*?", "a*{1}"};
+  for (string_view bad_rpt : bad_rpt_patterns) {
+    ErrorOr<ExprId> err = parse_ere(bad_rpt, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_BADRPT);
+  }
+
   const string_view bad_patterns[] = {
-      "^",     "$",     "*",     "+",     "?",     "(",     ")",
-      "[",     "{",     "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)",
-      R"(\5)", R"(\6)", R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)",
-      R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')", R"(\w)",
-      R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
+      "a+",    "a?",    "a{1}",  "{",     "(",     ")",     "[",     "|",
+      R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
+      R"(\9)", R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)",
+      R"(\')", R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -178,11 +281,12 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   const ExprId lit_c = *pool.make_lit('c');
 
   const ExprId ab = *pool.make_concat(lit_a, lit_b);
+  const ExprId ac = *pool.make_concat(lit_a, lit_c);
   const ExprId opt_a = *pool.make_alt(lit_a, empty_str);
-  const ExprId opt_ab = *pool.make_concat(opt_a, lit_b);
-  // D_a(((a | "") . b) . c) = b . c, which requires interning Concat(b, c).
-  const ExprId need_bc = *pool.make_concat(opt_ab, lit_c);
-  const ExprId concat_left_fail = *pool.make_concat(need_bc, lit_a);
+  // D_a((a . b) | (a . c)) = b | c, and D_a((a . b)*) = b . (a . b)*.
+  const ExprId need_bc = *pool.make_alt(ab, ac);
+  const ExprId star_ab = *pool.make_star(ab);
+  const ExprId concat_left_fail = *pool.make_concat(need_bc, lit_c);
   const ExprId concat_right_fail = *pool.make_concat(opt_a, need_bc);
   const ExprId alt_right_fail = *pool.make_alt(lit_a, need_bc);
   const ExprId lit_d = *pool.make_lit('d');
@@ -193,9 +297,9 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   while (pool.size() < 10000)
     chain = *pool.make_concat(lit_a, chain);
 
-  const ExprId exhausted_exprs[] = {need_bc, concat_left_fail,
-                                    concat_right_fail, alt_left_fail,
-                                    alt_right_fail};
+  const ExprId exhausted_exprs[] = {need_bc,          star_ab,
+                                    concat_left_fail, concat_right_fail,
+                                    alt_left_fail,    alt_right_fail};
   for (ExprId expr : exhausted_exprs) {
     ErrorOr<ExprId> err = derivative(expr, 'a', pool);
     ASSERT_FALSE(err.has_value());

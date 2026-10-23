@@ -90,6 +90,12 @@ static Error validateSemanticType(const SemanticSignatureElement &E) {
       return signatureError(
           "SV_InstanceID requires a scalar 16- or 32-bit unsigned integer");
     break;
+  case dxbc::PSV::SemanticKind::ShadingRate:
+    if (E.Rows != 1 || E.Cols != 1 ||
+        (E.CompType != ElementType::U16 && E.CompType != ElementType::U32))
+      return signatureError(
+          "SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer");
+    break;
   default:
     break;
   }
@@ -238,10 +244,7 @@ static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   auto *ID = dyn_cast<ConstantInt>(I.getArgOperand(0));
   auto *Col = dyn_cast<ConstantInt>(I.getArgOperand(2));
   StringRef Category = Input ? "input" : "output";
-  if (!ID)
-    return signatureError(Category +
-                          " signature: signature access requires a constant "
-                          "element ID");
+  assert(ID && "signature ID is marked as ImmArg and must be constant");
   if (ID->getZExtValue() >= Elements.size())
     return signatureError(Category +
                           " signature: signature access has an invalid element "
@@ -476,6 +479,8 @@ static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
     return dxbc::D3DSystemValue::CullDistance;
   case KindTy::Target:
     return dxbc::D3DSystemValue::Target;
+  case KindTy::ShadingRate:
+    return dxbc::D3DSystemValue::ShadingRate;
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
@@ -504,6 +509,8 @@ static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
     return "SV_CullDistance";
   case Kind::Target:
     return "SV_Target";
+  case Kind::ShadingRate:
+    return "SV_ShadingRate";
   default:
     llvm_unreachable("validated vertex/pixel signature semantic");
   }
