@@ -1344,6 +1344,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, RoundedTy,  Legal);
 
       setOperationAction(ISD::FROUND,            RoundedTy,  Custom);
+      setOperationAction(ISD::FMODF, RoundedTy, Expand);
     }
 
     setOperationAction(ISD::SMAX,               MVT::v16i8, Legal);
@@ -1450,6 +1451,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FABS,              VT, Custom);
       setOperationAction(ISD::FCOPYSIGN,         VT, Custom);
       setOperationAction(ISD::FCANONICALIZE,     VT, Expand);
+      setOperationAction(ISD::FMODF, VT, Expand);
       SetFPMinMaxAction(VT);
     }
 
@@ -1950,6 +1952,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
       setOperationAction(ISD::FROUND,            VT, Custom);
+      setOperationAction(ISD::FMODF, VT, Expand);
     }
 
     for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
@@ -2347,6 +2350,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
       setOperationAction(ISD::FROUND,             VT, Custom);
+      setOperationAction(ISD::FMODF, VT, Expand);
 
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
@@ -2507,6 +2511,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::FMODF, VT, Expand);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
@@ -2549,6 +2554,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
         setOperationAction(Opc, MVT::v32bf16, Expand);
     }
+    setOperationAction(ISD::FMODF, MVT::v32bf16, Expand);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {

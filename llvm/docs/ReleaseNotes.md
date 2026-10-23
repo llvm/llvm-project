@@ -374,6 +374,9 @@ Makes programs 10x faster by doing Special New Thing.
   argument. Before, each one could read and write any memory, so loads of
   loop-invariant values weren't hoisted out of loops of tile operations.
 
+* Lower scalar and vector `llvm.modf` to inline instructions on SSE4.1, AVX,
+  AVX-512, and AVX10 targets where hardware truncation is supported.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on
