@@ -727,18 +727,19 @@ TEST_F(AMDGPUOptimizeVGPREncodingTest, VOPDSecondComponentOprd) {
 
 /// Registers whose class is confined to the first 256 VGPRs cannot leave the
 /// first MSB group so they are pinned. %lo256's and %moveTo1's neighbors are
-/// all in group 1, but only %moveTo1 should move there.
+/// all in group 1, but only %moveTo1 should move there, despite another
+/// physical register being free in group 1.
 TEST_F(AMDGPUOptimizeVGPREncodingTest, Lo256RegsArePinned) {
   SmallVector<VirtVGPRDef> VirtDefs{
       {"%lo256:vgpr_32_lo256", 0, 0},
       {"%moveTo1:vgpr_32", 0, 1},
   };
   SmallVector<ModeUsingInstr> Instructions{
-      ModeUsingInstr::createVOP1("$vgpr256", "$vgpr256"),
+      ModeUsingInstr::createVOP1("$vgpr509", "$vgpr509"),
       ModeUsingInstr::createVOP1("%lo256:vgpr_32_lo256", "%moveTo1"),
-      ModeUsingInstr::createVOP1("$vgpr256", "$vgpr256"),
+      ModeUsingInstr::createVOP1("$vgpr509", "$vgpr509"),
   };
-  ASSERT_TRUE(createMIRAndAssign(VirtDefs, {"$vgpr256"}, {&Instructions}, 2));
+  ASSERT_TRUE(createMIRAndAssign(VirtDefs, {"$vgpr509"}, {&Instructions}, 3));
   runPass();
   expectAssignmentChanges({{"%moveTo1", 1}}, /*Exhaustive=*/true);
 }
@@ -765,6 +766,28 @@ TEST_F(AMDGPUOptimizeVGPREncodingTest, AntiHintPreventsReassign) {
   Register DoNotMove = Register::index2VirtReg(0),
            Anti = Register::index2VirtReg(1);
   MRI->addRegAllocationAntiHint(DoNotMove, Anti);
+  runPass();
+  expectAssignmentChanges({}, /*Exhaustive=*/true);
+}
+
+/// Registers must not be re-assigned to a physical register outside the VGPR
+/// budget of the function's current occupancy. The function uses VGPRs up to
+/// $vgpr335, the maximum for an occupancy of 3. %doNotMove is in group 0 and
+/// its neighbors are all in group 1. It could be re-assigned to one of the many
+/// free registers from $vgpr336 in group 1 but that would drop occupancy to 2,
+/// so the pass does not re-assign it.
+TEST_F(AMDGPUOptimizeVGPREncodingTest, OccupancyBudgetPreventsReassign) {
+  SmallVector<VirtVGPRDef> VirtDefs{
+      {"%doNotMove:vgpr_32", 0, 0},
+  };
+  SmallVector<ModeUsingInstr> Instructions{
+      ModeUsingInstr::createVOP1("$vgpr335", "$vgpr335"),
+      ModeUsingInstr::createVOP1("$vgpr335", "%doNotMove"),
+      ModeUsingInstr::createVOP1("$vgpr335", "$vgpr335"),
+  };
+  ASSERT_TRUE(createMIRAndAssign(VirtDefs, {"$vgpr335"}, {&Instructions}, 177));
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  ASSERT_EQ(336u, ST.getMaxNumVGPRs(3, 0));
   runPass();
   expectAssignmentChanges({}, /*Exhaustive=*/true);
 }

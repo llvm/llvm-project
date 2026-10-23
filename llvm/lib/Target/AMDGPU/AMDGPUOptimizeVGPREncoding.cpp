@@ -24,6 +24,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -679,6 +680,12 @@ private:
   RegisterClassInfo RCI;
   const VirtRegMap &VRM;
   const SIRegisterInfo &TRI;
+
+  /// Number of VGPRs allowed to maintain the function's currently achievable
+  /// occupancy. No re-assignment to a VGPR whose hardware index is at or above
+  /// this budget should take place in order to avoid lowering function
+  /// occupancy.
+  unsigned VGPRBudget;
 };
 
 class AMDGPUOptimizeVGPREncoding {
@@ -1472,11 +1479,31 @@ bool MaxHeap::siftDown(unsigned HeapIdx) {
   return Moved;
 }
 
+/// Returns the number of 32-bit lanes of registers in \p RC.
+static unsigned getNumLanes(const TargetRegisterClass &RC) {
+  return divideCeil(RC.getSizeInBits(), 32);
+}
+
 VirtRegReMap::VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
                            const MachineFunction &MF, const VirtRegMap &VRM)
     : LRM(LRM), LIS(LIS), VRM(VRM),
       TRI(*static_cast<const SIRegisterInfo *>(&VRM.getTargetRegInfo())) {
   RCI.runOnMachineFunction(MF);
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
+
+  // The function's current occupancy is the lowest of the recorded occupancy
+  // and the one allowed by non-reserved VGPRs currently in use, which may
+  // already exceed the recorded occupancy's budget.
+  unsigned Occupancy =
+      std::min(MFI.getOccupancy(),
+               ST.getOccupancyWithNumVGPRs(
+                   TRI.getNumNeededRegs(AMDGPU::VGPR_32RegClass, RCI, LRM, MRI),
+                   DynamicVGPRBlockSize));
+  VGPRBudget = ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize);
 }
 
 void VirtRegReMap::getAntiHintRegUnits(Register VirtReg,
@@ -1501,6 +1528,7 @@ bool VirtRegReMap::tryReAssign(OptReg &Reg,
   MCRegister OriginalPhys = VRM.getPhys(VirtReg);
   const MachineRegisterInfo &MRI = VRM.getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(VirtReg);
+  const unsigned NumLanes = getNumLanes(*RC);
 
   // When the currently assigned physical register crosses into the next MSB
   // group and that group is a target group, we have to unassign the original
@@ -1519,6 +1547,12 @@ bool VirtRegReMap::tryReAssign(OptReg &Reg,
   getAntiHintRegUnits(VirtReg, AntiHintUnits);
 
   for (MCPhysReg CandPhysReg : RCI.getOrder(RC)) {
+    // The candidate must be in the current occupancy's VGPR budget.
+    if (TRI.getHWRegIndex(CandPhysReg) + NumLanes > VGPRBudget)
+      continue;
+
+    // The candidate must be in the target group, not anti-hinted, and available
+    // over the register's live interval.
     MSBGroup CandGroup = getVGPRGroup(CandPhysReg, VRM);
     if (!TargetGroups.test(CandGroup) ||
         isAntiHinted(CandPhysReg, AntiHintUnits) ||
@@ -1540,7 +1574,7 @@ bool VirtRegReMap::tryReAssign(OptReg &Reg,
 
 bool VirtRegReMap::regCrossesGroupBoundary(
     MCRegister PhysReg, const TargetRegisterClass &RC) const {
-  unsigned NumLanes = divideCeil(RC.getSizeInBits(), 32);
+  const unsigned NumLanes = getNumLanes(RC);
   if (NumLanes == 1)
     return false;
 
