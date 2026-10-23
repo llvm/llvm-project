@@ -68,6 +68,8 @@ constexpr bool is_unimplemented_ere_escape(char c) {
 ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
   cpp::string_view close_delim = rem.starts_with("[.") ? ".]" : "=]";
   rem.remove_prefix(2);
+  // TODO: Adopt cpp::string_view::find once implemented in
+  // src/__support/CPP/string_view.h.
   size_t delim_pos = 0;
   while (delim_pos + 2 <= rem.size() &&
          !rem.substr(delim_pos).starts_with(close_delim))
@@ -97,15 +99,10 @@ ErrorOr<uint8_t> parse_bracket_elem(cpp::string_view &rem) {
 // Parses a POSIX bracket expression [...], returning a ByteSet node.
 ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
                                    ExprPool &pool) {
-  if (rem.empty())
-    return Error(REG_EBRACK);
-
   bool negate = false;
   if (rem.starts_with('^')) {
     negate = true;
     rem.remove_prefix(1);
-    if (rem.empty())
-      return Error(REG_EBRACK);
   }
 
   ByteSet bs;

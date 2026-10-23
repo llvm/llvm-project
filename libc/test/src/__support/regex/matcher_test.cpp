@@ -261,7 +261,8 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_BADRPT);
   }
 
-  const string_view ebrack_patterns[] = {"[abc", "[]", "a[[.x", "a[[.x."};
+  const string_view ebrack_patterns[] = {"[",  "[^",    "[abc",
+                                         "[]", "a[[.x", "a[[.x."};
   for (string_view pat : ebrack_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());

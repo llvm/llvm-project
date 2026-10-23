@@ -292,7 +292,8 @@ TEST(LlvmLibcRegexTest, BracketExpressionsAndRanges) {
   LIBC_NAMESPACE::regfree(&preg);
 
   // Bracket error conditions.
-  const char *const ebrack_patterns[] = {"[abc", "[]", "a[[.x", "a[[.x."};
+  const char *const ebrack_patterns[] = {"[",  "[^",    "[abc",
+                                         "[]", "a[[.x", "a[[.x."};
   for (const char *pat : ebrack_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_EBRACK);
     LIBC_NAMESPACE::regfree(&preg);
