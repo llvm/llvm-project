@@ -63,10 +63,10 @@ subroutine target_scope_private()
 
   !$omp target
     ! CHECK: omp.target kernel_type(generic) {
-    ! CHECK:   %[[IALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFtarget_scope_privateEi"}
-    ! CHECK:   %[[IDECL:.*]]:2 = hlfir.declare %[[IALLOCA]] {uniq_name = "_QFtarget_scope_privateEi"}
+    ! CHECK:   %[[IALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", pinned, uniq_name = "_QFtarget_scope_privateEi"}>
+    ! CHECK:   %[[IDECL:.*]]:2 = hlfir.declare %[[IALLOCA]] uniq_name("_QFtarget_scope_privateEi")
     ! CHECK:   omp.scope private(@_QFtarget_scope_privateEi_private_i32 %[[IDECL]]#0 -> %[[PRIV:.*]] : !fir.ref<i32>) {
-    ! CHECK:     %[[PDECL:.*]]:2 = hlfir.declare %[[PRIV]] {uniq_name = "_QFtarget_scope_privateEi"}
+    ! CHECK:     %[[PDECL:.*]]:2 = hlfir.declare %[[PRIV]] uniq_name("_QFtarget_scope_privateEi")
     !$omp scope private(i)
     ! CHECK:     hlfir.assign %{{.*}} to %[[PDECL]]#0 : i32, !fir.ref<i32>
     i = 42

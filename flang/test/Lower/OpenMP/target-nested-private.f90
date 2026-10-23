@@ -16,7 +16,7 @@ end subroutine
 ! CHECK: omp.map.info {{.*}} name("i")
 ! CHECK-NOT: omp.map.info {{.*}} name("k")
 ! CHECK: omp.target
-! CHECK: fir.alloca i32 {bindc_name = "k", pinned, uniq_name = "_QFtarget_nested_teams_distribute_privateEk"}
+! CHECK: fir.alloca i32 <{bindc_name = "k", pinned, uniq_name = "_QFtarget_nested_teams_distribute_privateEk"}>
 ! CHECK: omp.teams
 ! CHECK: omp.distribute private({{.*}}@_QFtarget_nested_teams_distribute_privateEk_private_i32
 
@@ -49,7 +49,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtarget_nested_parallel_private
 ! CHECK-NOT: omp.map.info {{.*}} name("k")
 ! CHECK: omp.target
-! CHECK: fir.alloca i32 {bindc_name = "k", pinned, uniq_name = "_QFtarget_nested_parallel_privateEk"}
+! CHECK: fir.alloca i32 <{bindc_name = "k", pinned, uniq_name = "_QFtarget_nested_parallel_privateEk"}>
 ! CHECK: omp.parallel private({{.*}}@_QFtarget_nested_parallel_privateEk_private_i32
 
 subroutine target_nested_parallel_private_num_threads(k)
