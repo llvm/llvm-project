@@ -523,10 +523,15 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
 endif()
 
 option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
+option(LIBC_INCLUDE_SIZE_CHECKS
+  "Add the check-libc-size target that checks the binary size of libc objects" OFF)
 
 include(LLVMLibCCheckCpuFeatures)
 include(CheckCompilerFeatures)
 include(LLVMLibCRules)
+if(LIBC_INCLUDE_SIZE_CHECKS)
+  include(LLVMLibCSizeCheckRules)
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS "")
 set(TARGET_LIBC_ENTRYPOINTS "")
@@ -603,6 +608,9 @@ add_subdirectory(lib)
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(fuzzing)
+  if(TARGET check-libc AND TARGET check-libc-size)
+    add_dependencies(check-libc check-libc-size)
+  endif()
 endif()
 
 add_subdirectory(benchmarks)
