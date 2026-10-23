@@ -487,9 +487,9 @@ template <class ELFT> void ICF<ELFT>::run() {
   //
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
-  uint32_t uniqueId = 0;
+  uint32_t uniqueId = 1;
   ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
-      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
+      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = uniqueId++; });
 
   // Assign a temporary class ID (eqClassBase) to eligible sections and assign
   // unique IDs to ineligible sections. Use eqClassBase as the base for class
@@ -497,7 +497,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   constexpr size_t chunkSize = 1024;
   ArrayRef<InputSectionBase *> inputs = ctx.inputSections;
   size_t numInputChunks = divideCeil(inputs.size(), chunkSize);
-  uint32_t eqClassBase = uniqueId + inputs.size() + 1;
+  uint32_t eqClassBase = uniqueId + inputs.size();
   SmallVector<uint32_t, 0> offsets(numInputChunks);
   parallelFor(0, numInputChunks, [&](size_t c) {
     size_t begin = c * chunkSize,
@@ -510,7 +510,7 @@ template <class ELFT> void ICF<ELFT>::run() {
           s->eqClass[0] = eqClassBase;
           ++n;
         } else {
-          s->eqClass[0] = s->eqClass[1] = uniqueId + 1 + i;
+          s->eqClass[0] = s->eqClass[1] = uniqueId + i;
         }
       }
     }
