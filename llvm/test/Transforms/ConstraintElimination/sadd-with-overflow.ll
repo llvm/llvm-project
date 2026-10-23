@@ -318,3 +318,542 @@ then:
 else:
   ret i8 0
 }
+
+define void @sadd_sum_of_difference_assume(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_assume(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_sum_of_difference_branch(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_branch(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    br i1 [[NONNEG]], label %[[B1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[B1]]:
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    br i1 [[ORDERED]], label %[[BODY:.*]], label %[[EXIT]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  br i1 %nonneg, label %b1, label %exit
+b1:
+  %ordered = icmp sge i8 %end, %start
+  br i1 %ordered, label %body, label %exit
+body:
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  br label %exit
+exit:
+  ret void
+}
+
+define void @sadd_sum_of_difference_commuted(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_commuted(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %d, i8 %start)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_sum_of_difference_nsw_any_sign(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_nsw_any_sign(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %d = sub nsw i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_sum_of_difference_neg_start(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_neg_start(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[END]], [[START]]
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[START]], i8 [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_sum_of_difference_unordered(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_unordered(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[END]], [[START]]
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[START]], i8 [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smin_side(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smin_side(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[D]], i8 5)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %m = call i8 @llvm.smin.i8(i8 %d, i8 5)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smax_side_neg(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smax_side_neg(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[D]], i8 5)
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[START]], i8 [[M]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %m = call i8 @llvm.smax.i8(i8 %d, i8 5)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smax_clamp(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smax_clamp(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[NOTSTART:%.*]] = xor i8 [[START]], -1
+; CHECK-NEXT:    [[X:%.*]] = add nsw i8 [[END]], [[NOTSTART]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[START]], [[M]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i8 [[TMP0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[LT]])
+; CHECK-NEXT:    [[GT:%.*]] = icmp slt i8 [[END]], [[TMP0]]
+; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %notstart = xor i8 %start, -1
+  %x = add nsw i8 %end, %notstart
+  %m = call i8 @llvm.smax.i8(i8 %x, i8 0)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  %new = extractvalue { i8, i1 } %r, 0
+  %lt = icmp slt i8 %new, %start
+  call void @use(i1 %lt)
+  %gt = icmp slt i8 %end, %new
+  call void @use(i1 %gt)
+  ret void
+}
+
+define void @sadd_smax_clamp_unordered(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smax_clamp_unordered(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NOTSTART:%.*]] = xor i8 [[START]], -1
+; CHECK-NEXT:    [[X:%.*]] = add nsw i8 [[END]], [[NOTSTART]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[START]], [[M]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i8 [[TMP0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[LT]])
+; CHECK-NEXT:    [[GT:%.*]] = icmp slt i8 [[END]], [[TMP0]]
+; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %notstart = xor i8 %start, -1
+  %x = add nsw i8 %end, %notstart
+  %m = call i8 @llvm.smax.i8(i8 %x, i8 0)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  %new = extractvalue { i8, i1 } %r, 0
+  %lt = icmp slt i8 %new, %start
+  call void @use(i1 %lt)
+  %gt = icmp slt i8 %end, %new
+  call void @use(i1 %gt)
+  ret void
+}
+
+define void @sadd_sum_of_difference_i128(i128 %start, i128 %end) {
+; CHECK-LABEL: define void @sadd_sum_of_difference_i128(
+; CHECK-SAME: i128 [[START:%.*]], i128 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i128 [[END]], [[START]]
+; CHECK-NEXT:    [[R:%.*]] = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 [[START]], i128 [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i128, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %d = sub nsw i128 %end, %start
+  %r = call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %start, i128 %d)
+  %ov = extractvalue { i128, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smax_clamp_i256(i256 %start, i256 %end) {
+; CHECK-LABEL: define void @sadd_smax_clamp_i256(
+; CHECK-SAME: i256 [[START:%.*]], i256 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i256 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[NOTSTART:%.*]] = xor i256 [[START]], -1
+; CHECK-NEXT:    [[X:%.*]] = add nsw i256 [[END]], [[NOTSTART]]
+; CHECK-NEXT:    [[M:%.*]] = call i256 @llvm.smax.i256(i256 [[X]], i256 0)
+; CHECK-NEXT:    [[R:%.*]] = call { i256, i1 } @llvm.sadd.with.overflow.i256(i256 [[START]], i256 [[M]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i256, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ordered = icmp sge i256 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %notstart = xor i256 %start, -1
+  %x = add nsw i256 %end, %notstart
+  %m = call i256 @llvm.smax.i256(i256 %x, i256 0)
+  %r = call { i256, i1 } @llvm.sadd.with.overflow.i256(i256 %start, i256 %m)
+  %ov = extractvalue { i256, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_repeated_variable_cancels(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_repeated_variable_cancels(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    [[E:%.*]] = add nsw i8 [[D]], [[START]]
+; CHECK-NEXT:    [[F:%.*]] = sub nsw i8 [[E]], [[START]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %d = sub nsw i8 %end, %start
+  %e = add nsw i8 %d, %start
+  %f = sub nsw i8 %e, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %f)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_repeated_variable_nonzero(i8 %start) {
+; CHECK-LABEL: define void @sadd_repeated_variable_nonzero(
+; CHECK-SAME: i8 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[START]], [[START]]
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 [[START]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = add nsw i8 %start, %start
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %start)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_cancels_to_constant(i8 %x) {
+; CHECK-LABEL: define void @sadd_cancels_to_constant(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[N:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n = sub nsw i8 0, %x
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %n)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smin_second_operand(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smin_second_operand(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 5, i8 [[D]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub nsw i8 %end, %start
+  %m = call i8 @llvm.smin.i8(i8 5, i8 %d)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_vector_not_folded(<2 x i8> %start, <2 x i8> %end) {
+; CHECK-LABEL: define void @sadd_vector_not_folded(
+; CHECK-SAME: <2 x i8> [[START:%.*]], <2 x i8> [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw <2 x i8> [[END]], [[START]]
+; CHECK-NEXT:    [[R:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.sadd.with.overflow.v2i8(<2 x i8> [[START]], <2 x i8> [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[R]], 1
+; CHECK-NEXT:    call void @use.vec(<2 x i1> [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %d = sub nsw <2 x i8> %end, %start
+  %r = call { <2 x i8>, <2 x i1> } @llvm.sadd.with.overflow.v2i8(<2 x i8> %start, <2 x i8> %d)
+  %ov = extractvalue { <2 x i8>, <2 x i1> } %r, 1
+  call void @use.vec(<2 x i1> %ov)
+  ret void
+}
+
+; Negative: the coefficients of %x add up to 4 * 2^61 = 2^63, which does not fit
+; the 64-bit coefficients, so the decomposition is given up on.
+define void @sadd_coefficient_overflow(i64 %x, i64 %y) {
+; CHECK-LABEL: define void @sadd_coefficient_overflow(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 [[X]], 2305843009213693952
+; CHECK-NEXT:    [[B:%.*]] = add nsw i64 [[A]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nsw i64 [[B]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = add nsw i64 [[C]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[D]], i64 [[Y]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = mul nsw i64 %x, 2305843009213693952
+  %b = add nsw i64 %a, %a
+  %c = add nsw i64 %b, %a
+  %d = add nsw i64 %c, %a
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %d, i64 %y)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_umax_not_split(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_umax_not_split(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[START]], i8 [[END]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %m = call i8 @llvm.umax.i8(i8 %end, i8 0)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @slt_coefficient_overflow(i64 %x, i64 %y) {
+; CHECK-LABEL: define void @slt_coefficient_overflow(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 [[X]], 2305843009213693952
+; CHECK-NEXT:    [[B:%.*]] = add nsw i64 [[A]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nsw i64 [[B]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = add nsw i64 [[C]], [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[D]], [[Y]]
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = mul nsw i64 %x, 2305843009213693952
+  %b = add nsw i64 %a, %a
+  %c = add nsw i64 %b, %a
+  %d = add nsw i64 %c, %a
+  %cmp = icmp slt i64 %d, %y
+  call void @use(i1 %cmp)
+  ret void
+}
+
+define void @sadd_smax_three_levels(i8 %start, i8 %end) {
+; CHECK-LABEL: define void @sadd_smax_three_levels(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[END:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[END]], i8 0)
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 1)
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M2]], i8 2)
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[START]], i8 [[M3]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %m1 = call i8 @llvm.smax.i8(i8 %end, i8 0)
+  %m2 = call i8 @llvm.smax.i8(i8 %m1, i8 1)
+  %m3 = call i8 @llvm.smax.i8(i8 %m2, i8 2)
+  %r = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %start, i8 %m3)
+  %ov = extractvalue { i8, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_offset_overflow(i64 %x, i64 %y) {
+; CHECK-LABEL: define void @sadd_offset_overflow(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[X]], 9223372036854775806
+; CHECK-NEXT:    [[B:%.*]] = add nsw i64 [[Y]], 5
+; CHECK-NEXT:    [[R:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = add nsw i64 %x, 9223372036854775806
+  %b = add nsw i64 %y, 5
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+define void @sadd_smax_substitute_overflow(i64 %x, i64 %z, i64 %y) {
+; CHECK-LABEL: define void @sadd_smax_substitute_overflow(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Z:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 [[X]], 1099511627776
+; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smax.i64(i64 [[A]], i64 [[Z]])
+; CHECK-NEXT:    [[D:%.*]] = mul nsw i64 [[M]], 1073741824
+; CHECK-NEXT:    [[R:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[D]], i64 [[Y]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[R]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = mul nsw i64 %x, 1099511627776
+  %m = call i64 @llvm.smax.i64(i64 %a, i64 %z)
+  %d = mul nsw i64 %m, 1073741824
+  %r = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %d, i64 %y)
+  %ov = extractvalue { i64, i1 } %r, 1
+  call void @use(i1 %ov)
+  ret void
+}
+
+declare void @use.vec(<2 x i1>)
