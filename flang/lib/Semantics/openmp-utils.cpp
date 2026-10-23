@@ -2353,7 +2353,8 @@ std::optional<bool> EvaluateUserCondition(
     return *constVal != 0;
 
   if (auto logicalVal =
-          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
+              evaluate::LogicalResultKind, foldedExpr))
     return logicalVal->IsTrue();
 
   return std::nullopt;
