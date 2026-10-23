@@ -317,7 +317,6 @@ int main(int argc, char **argv) {
   bool isOutputingMLIR = emitAction <= Action::DumpMLIRLLVM;
   if (isOutputingMLIR) {
     module->print(llvm::errs());
-    llvm::errs() << "\n";
     return 0;
   }
 

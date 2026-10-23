@@ -859,6 +859,10 @@ void MemRefDependenceGraph::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MemRefDependenceGraph::dump() const { print(llvm::errs()); }
+#endif
+
 void mlir::affine::getAffineForIVs(Operation &op,
                                    SmallVectorImpl<AffineForOp> *loops) {
   auto *currOp = op.getParentOp();

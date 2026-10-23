@@ -265,7 +265,7 @@ public:
   void print(raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 
   /// The block for which this graph is created to perform fusion.

@@ -96,7 +96,7 @@ public:
   /// Print the location.
   void print(raw_ostream &os) const { impl.print(os); }
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const { impl.dump(); }
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 
   friend ::llvm::hash_code hash_value(Location arg);

@@ -310,7 +310,6 @@ static llvm::LogicalResult processPayloadBuffer(
   // If requested, dump the combined transform module.
   if (clOptions->dumpLibraryModule) {
     transformRoot->print(os);
-    os << "\n";
   }
 
   // Find the entry point symbol. Even if it had originally been in the payload
