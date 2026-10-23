@@ -147,6 +147,16 @@ builtins_lit_source_dir = get_required_attr(config, "builtins_lit_source_dir")
 extra_link_flags = ["-nodefaultlibs"]
 
 target_cflags = [get_required_attr(config, "target_cflags")]
+
+# On Windows, when testing i386 architecture, explicitly pass the target triple
+# to ensure clang compiles for i386 instead of defaulting to x64.
+# This is necessary because the test runner links against clang_rt.builtins-i386.lib
+# which requires i386 object files.
+target_arch = get_required_attr(config, "target_arch")
+if config.target_os == "Windows" and target_arch == "i386":
+    # Use explicit target triple for i386 on Windows
+    target_cflags += ["--target=i386-pc-windows-msvc"]
+
 target_cflags += ["-fno-builtin", "-I", builtins_source_dir]
 target_cflags += extra_link_flags
 target_cxxflags = config.cxx_mode_flags + target_cflags
