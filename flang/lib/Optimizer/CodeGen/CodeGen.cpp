@@ -29,7 +29,6 @@
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/CUDA/descriptor.h"
-#include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
@@ -64,6 +63,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -1874,11 +1874,6 @@ genCUFAllocDescriptor(mlir::Location loc,
 
 static bool isUsedByGPULaunchFunc(mlir::Value val);
 
-static bool
-isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
-                   llvm::StringRef cudaDescriptorAllocFunction = {},
-                   mlir::SymbolTableCollection *symbolTables = nullptr);
-
 /// Get the address of the type descriptor global variable that was created by
 /// lowering for derived type \p recType.
 template <typename ModOpTy>
@@ -2401,11 +2396,7 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
            "fir.embox codegen of derived with length parameters");
       return mlir::failure();
     }
-    bool needsDeviceAlloc =
-        isDeviceAllocation(embox.getMemref(), adaptor.getMemref(),
-                           this->options.cudaDescriptorAllocFunction,
-                           this->symbolTables) ||
-        isUsedByGPULaunchFunc(embox);
+    bool needsDeviceAlloc = isUsedByGPULaunchFunc(embox);
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy,
                                                dest, needsDeviceAlloc);
     rewriter.replaceOp(embox, result);
@@ -2413,8 +2404,30 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   }
 };
 
-/// Return true if any user of \p val is a gpu.launch_func operation,
-/// indicating the descriptor must be in device-accessible memory.
+/// Return true if \p use passes a descriptor to a device dummy of a BIND(C)
+/// procedure. Foreign code may launch a kernel on the descriptor as is.
+static bool isPassedToBindCDeviceDummy(mlir::OpOperand &use) {
+  auto call = mlir::dyn_cast<fir::CallOp>(use.getOwner());
+  if (!call || !call.getArgAttrsAttr() || !call.getProcedureAttrs() ||
+      !fir::bitEnumContainsAny(*call.getProcedureAttrs(),
+                               fir::FortranProcedureFlagsEnum::bind_c))
+    return false;
+  // An indirect call's first operand is the callee, not an argument.
+  unsigned firstArg = call.getCallee() ? 0 : 1;
+  unsigned argIdx = use.getOperandNumber() - firstArg;
+  mlir::ArrayAttr argAttrs = call.getArgAttrsAttr();
+  if (use.getOperandNumber() < firstArg || argIdx >= argAttrs.size())
+    return false;
+  auto dataAttr = mlir::cast<mlir::DictionaryAttr>(argAttrs[argIdx])
+                      .getAs<cuf::DataAttributeAttr>(cuf::getDataAttrName());
+  return dataAttr && dataAttr.getValue() != cuf::DataAttribute::Pinned &&
+         dataAttr.getValue() != cuf::DataAttribute::Unified;
+}
+
+/// Return true if \p val may reach a gpu.launch_func operand or a BIND(C)
+/// device dummy, indicating the descriptor must be in device-accessible memory.
+/// Values are followed through conversions, selects and branches (e.g. the
+/// fir.if around an OPTIONAL argument).
 static bool isUsedByGPULaunchFunc(mlir::Value val) {
   llvm::SmallPtrSet<mlir::Value, 4> visited;
   llvm::SmallVector<mlir::Value, 4> worklist{val};
@@ -2423,103 +2436,19 @@ static bool isUsedByGPULaunchFunc(mlir::Value val) {
     if (!visited.insert(current).second)
       continue;
 
-    for (auto *user : current.getUsers()) {
-      if (mlir::isa<mlir::gpu::LaunchFuncOp>(user))
+    for (mlir::OpOperand &use : current.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      if (mlir::isa<mlir::gpu::LaunchFuncOp>(user) ||
+          isPassedToBindCDeviceDummy(use))
         return true;
-      if (auto convert = mlir::dyn_cast<fir::ConvertOp>(user))
-        worklist.push_back(convert.getResult());
+      if (mlir::isa<fir::ConvertOp, mlir::arith::SelectOp>(user))
+        worklist.push_back(user->getResult(0));
+      else if (auto branch = mlir::dyn_cast<mlir::BranchOpInterface>(user))
+        if (std::optional<mlir::BlockArgument> arg =
+                branch.getSuccessorBlockArgument(use.getOperandNumber()))
+          worklist.push_back(*arg);
     }
   }
-  return false;
-}
-
-/// Return true if any user of \p val is an OpenACC data-clause operation (an op
-/// from the `acc` dialect, e.g. `acc.present`, `acc.copyin`, `acc.create`).
-///
-/// Such a box is host-side descriptor metadata for the OpenACC data clause: the
-/// data-clause result carries the device data, so the box itself does not need
-/// to be device-accessible. It must therefore NOT be placed in managed memory
-/// even when the data it describes is device-resident: a managed descriptor
-/// created here is never freed and leaves a stale descriptor behind when its
-/// address is later reused.
-static bool isUsedByOpenACCDataClause(mlir::Value val) {
-  for (auto *user : val.getUsers())
-    if (mlir::isa_and_nonnull<mlir::acc::OpenACCDialect>(user->getDialect()))
-      return true;
-  return false;
-}
-
-static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
-                               llvm::StringRef cudaDescriptorAllocFunction,
-                               mlir::SymbolTableCollection *symbolTables) {
-  if (val.getDefiningOp() &&
-      val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return false;
-  // Check if the global symbol is in the device module.
-  if (auto addr = mlir::dyn_cast_or_null<fir::AddrOfOp>(val.getDefiningOp()))
-    if (auto gpuMod = fir::lookupSymbolIn<mlir::gpu::GPUModuleOp>(
-            addr->getParentOfType<mlir::ModuleOp>(), cudaDeviceModuleName,
-            symbolTables))
-      if (fir::lookupSymbolIn<mlir::LLVM::GlobalOp>(gpuMod, addr.getSymbol(),
-                                                    symbolTables) ||
-          fir::lookupSymbolIn<fir::GlobalOp>(gpuMod, addr.getSymbol(),
-                                             symbolTables))
-        return true;
-
-  if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
-    return isDeviceAllocation(loadOp.getMemref(), {},
-                              cudaDescriptorAllocFunction, symbolTables);
-  if (auto boxAddrOp =
-          mlir::dyn_cast_or_null<fir::BoxAddrOp>(val.getDefiningOp()))
-    return isDeviceAllocation(boxAddrOp.getVal(), {},
-                              cudaDescriptorAllocFunction, symbolTables);
-  if (auto convertOp =
-          mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
-    return isDeviceAllocation(convertOp.getValue(), {},
-                              cudaDescriptorAllocFunction, symbolTables);
-  // fir.declare, and the fircg.ext_declare it becomes when debug info keeps it
-  // alive until codegen, are pass-through on their memref operand. The adaptor
-  // value is forwarded too so a declared dummy argument stays recognizable.
-  if (auto declareOp =
-          mlir::dyn_cast_or_null<fir::DeclareOp>(val.getDefiningOp()))
-    return isDeviceAllocation(declareOp.getMemref(), adaptorVal,
-                              cudaDescriptorAllocFunction, symbolTables);
-  if (auto xDeclareOp =
-          mlir::dyn_cast_or_null<fir::cg::XDeclareOp>(val.getDefiningOp()))
-    return isDeviceAllocation(xDeclareOp.getMemref(), adaptorVal,
-                              cudaDescriptorAllocFunction, symbolTables);
-  if (!val.getDefiningOp() && adaptorVal) {
-    if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(adaptorVal)) {
-      if (blockArg.getOwner() && blockArg.getOwner()->getParentOp() &&
-          blockArg.getOwner()->isEntryBlock()) {
-        if (auto func = mlir::dyn_cast_or_null<mlir::FunctionOpInterface>(
-                *blockArg.getOwner()->getParentOp())) {
-          auto argAttrs = func.getArgAttrs(blockArg.getArgNumber());
-          for (auto attr : argAttrs) {
-            if (attr.getName().getValue().ends_with(cuf::getDataAttrName())) {
-              auto dataAttr =
-                  mlir::dyn_cast<cuf::DataAttributeAttr>(attr.getValue());
-              if (dataAttr.getValue() != cuf::DataAttribute::Pinned &&
-                  dataAttr.getValue() != cuf::DataAttribute::Unified)
-                return true;
-            }
-          }
-        }
-      }
-    }
-  }
-  if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
-    if (callOp.getCallee()) {
-      llvm::StringRef calleeName =
-          callOp.getCallee().value().getRootReference().getValue();
-      llvm::StringRef allocDescName = cudaDescriptorAllocFunction.empty()
-                                          ? RTNAME_STRING(CUFAllocDescriptor)
-                                          : cudaDescriptorAllocFunction;
-      if (calleeName.starts_with(RTNAME_STRING(CUFMemAlloc)) ||
-          calleeName.starts_with(allocDescName) ||
-          calleeName == "__tgt_acc_get_deviceptr")
-        return true;
-    }
   return false;
 }
 
@@ -2556,11 +2485,7 @@ struct CreateBoxOpConversion : public EmboxCommonConversion<fir::CreateBoxOp> {
     }
     dest = insertBaseAddress(rewriter, loc, dest, adaptor.getMemref());
 
-    bool needsDeviceAlloc =
-        isDeviceAllocation(createBox.getMemref(), adaptor.getMemref(),
-                           this->options.cudaDescriptorAllocFunction,
-                           this->symbolTables) ||
-        isUsedByGPULaunchFunc(createBox);
+    bool needsDeviceAlloc = isUsedByGPULaunchFunc(createBox);
     mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
                                                       dest, needsDeviceAlloc);
     rewriter.replaceOp(createBox, result);
@@ -2756,12 +2681,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     dest = insertBaseAddress(rewriter, loc, dest, base);
     if (fir::isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
-    bool needsDeviceAlloc =
-        isUsedByGPULaunchFunc(xbox) ||
-        (isDeviceAllocation(xbox.getMemref(), adaptor.getMemref(),
-                            this->options.cudaDescriptorAllocFunction,
-                            this->symbolTables) &&
-         !isUsedByOpenACCDataClause(xbox));
+    bool needsDeviceAlloc = isUsedByGPULaunchFunc(xbox);
     mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
                                                       dest, needsDeviceAlloc);
     rewriter.replaceOp(xbox, result);
@@ -2879,12 +2799,7 @@ private:
       dest = insertStride(rewriter, loc, dest, dim, std::get<1>(iter.value()));
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
-    bool needsDeviceAlloc =
-        isUsedByGPULaunchFunc(rebox) ||
-        (isDeviceAllocation(rebox.getBox(), adaptor.getBox(),
-                            this->options.cudaDescriptorAllocFunction,
-                            this->symbolTables) &&
-         !isUsedByOpenACCDataClause(rebox));
+    bool needsDeviceAlloc = isUsedByGPULaunchFunc(rebox);
     mlir::Value result = placeInMemoryIfNotGlobalInit(
         rewriter, rebox.getLoc(), destBoxTy, dest, needsDeviceAlloc);
     rewriter.replaceOp(rebox, result);

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -69,6 +70,8 @@ STATISTIC(NumImportedCriticalFunctionsThinLink,
 STATISTIC(NumImportedGlobalVarsThinLink,
           "Number of global variables thin link decided to import");
 STATISTIC(NumImportedFunctions, "Number of functions imported in backend");
+STATISTIC(NumImportedFunctionDecls,
+          "Number of function declarations imported in backend");
 STATISTIC(NumImportedGlobalVars,
           "Number of global variables imported in backend");
 STATISTIC(NumImportedModules, "Number of modules imported from");
@@ -2004,6 +2007,9 @@ Expected<bool> FunctionImporter::importFunctions(
 
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
+    // Functions (or aliases of functions) to import as declarations, along
+    // with their GUIDs.
+    SmallVector<std::pair<GlobalValue *, GlobalValue::GUID>> DeclsToImport;
     {
       llvm::TimeTraceScope functionsScope("Functions");
       for (Function &F : *SrcModule) {
@@ -2041,6 +2047,9 @@ Expected<bool> FunctionImporter::importFunctions(
                                            SrcModule->getSourceFileName())}));
           }
           GlobalsToImport.insert(&F);
+        } else if (MaybeImportType) {
+          assert(*MaybeImportType == GlobalValueSummary::Declaration);
+          DeclsToImport.push_back({&F, GUID});
         }
       }
     }
@@ -2114,6 +2123,10 @@ Expected<bool> FunctionImporter::importFunctions(
                                            SrcModule->getSourceFileName())}));
           }
           GlobalsToImport.insert(Fn);
+        } else if (MaybeImportType) {
+          assert(*MaybeImportType == GlobalValueSummary::Declaration);
+          if (isa<FunctionType>(GA.getValueType()))
+            DeclsToImport.push_back({&GA, GUID});
         }
       }
     }
@@ -2132,6 +2145,35 @@ Expected<bool> FunctionImporter::importFunctions(
     renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
                            &GlobalsToImport);
 
+    // Record the information needed to create the declarations to import,
+    // after any promotion and renaming above, since the source module is
+    // consumed by the IRMover below.
+    struct DeclInfo {
+      std::string Name;
+      FunctionType *Ty;
+      unsigned AddrSpace;
+      CallingConv::ID CC;
+      AttributeList Attrs;
+      GlobalValue::VisibilityTypes Visibility;
+      bool DSOLocal;
+      GlobalValue::GUID GUID;
+    };
+    SmallVector<DeclInfo> DeclInfos;
+    for (auto [GV, GUID] : DeclsToImport) {
+      assert(!GV->hasLocalLinkage() &&
+             "Expected imported declaration to be promoted");
+      const Function *F = dyn_cast<Function>(GV);
+      if (!F)
+        F = dyn_cast_or_null<Function>(
+            cast<GlobalAlias>(GV)->getAliaseeObject());
+      if (!F)
+        continue;
+      DeclInfos.push_back({GV->getName().str(), F->getFunctionType(),
+                           F->getAddressSpace(), F->getCallingConv(),
+                           F->getAttributes(), GV->getVisibility(),
+                           GV->isDSOLocal(), GUID});
+    }
+
     if (PrintImports) {
       for (const auto *GV : GlobalsToImport)
         dbgs() << DestModule.getSourceFileName() << ": Import " << GV->getName()
@@ -2147,6 +2189,40 @@ Expected<bool> FunctionImporter::importFunctions(
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;
+
+    // Now create the declarations to import, if they don't already exist in
+    // the destination module. Declarations of direct callees will typically
+    // already exist, either because the call is in the destination module or
+    // because the IRMover created them when linking an imported definition
+    // that references them. Callees reached only via indirect calls (e.g.
+    // from value profile or MemProf call edges in the summary) have no such IR
+    // reference, so this is mainly where declarations of those are created.
+    //
+    // We create these declarations by hand rather than via the IRMover: the
+    // IRMover only creates declarations as a side effect of mapping references
+    // from linked IR, it creates attribute-less declarations for aliases, and
+    // it does not copy metadata from source definitions.
+    for (auto &DI : DeclInfos) {
+      if (DestModule.getNamedValue(DI.Name))
+        continue;
+      Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
+                                     DI.AddrSpace, DI.Name, &DestModule);
+      F->setCallingConv(DI.CC);
+      F->setAttributes(DI.Attrs);
+      // Note that the visibility must be set before dso_local, since
+      // setDSOLocal(false) is not allowed on an implicitly dso_local value.
+      F->setVisibility(DI.Visibility);
+      F->setDSOLocal(DI.DSOLocal);
+      // Record the GUID of the original value, which may differ from the GUID
+      // computed from the current name if it was a promoted local. This allows
+      // the declaration to be located via the GUID, e.g. by MemProf ICP.
+      F->setMetadata(LLVMContext::MD_guid,
+                     MDNode::get(DestModule.getContext(),
+                                 {ConstantAsMetadata::get(ConstantInt::get(
+                                     Type::getInt64Ty(DestModule.getContext()),
+                                     DI.GUID))}));
+      NumImportedFunctionDecls++;
+    }
   }
 
   internalizeGVsAfterImport(DestModule);
