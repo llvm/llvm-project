@@ -2164,3 +2164,152 @@ exit:
   %ind.incoming.next = add i64 %ind.incoming, 1
   br label %ph
 }
+
+define i64 @strided_load_interleaved_factor5(ptr %a) vscale_range(2, 1024) {
+; CHECK-LABEL: define i64 @strided_load_interleaved_factor5(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 32
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 40
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP6]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP8]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP10]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP12]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP14]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP18:%.*]] = add <vscale x 2 x i64> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 2 x i64> [[TMP18]], [[TMP11]]
+; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 2 x i64> [[TMP19]], [[TMP13]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], [[TMP15]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i64 [[TMP22]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP23]]
+;
+; CHECK-UF2-LABEL: define i64 @strided_load_interleaved_factor5(
+; CHECK-UF2-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-UF2-NEXT:  [[ENTRY:.*]]:
+; CHECK-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; CHECK-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-UF2:       [[VECTOR_PH]]:
+; CHECK-UF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
+; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; CHECK-UF2-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-UF2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-UF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-UF2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-UF2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i64 32
+; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-UF2:       [[VECTOR_BODY]]:
+; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-UF2-NEXT:    [[TMP8:%.*]] = mul i64 [[INDEX]], 40
+; CHECK-UF2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP8]]
+; CHECK-UF2-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP2]], 40
+; CHECK-UF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP10]]
+; CHECK-UF2-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP11]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-UF2-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP8]]
+; CHECK-UF2-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP2]], 40
+; CHECK-UF2-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP14]]
+; CHECK-UF2-NEXT:    [[TMP16:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP15]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-UF2-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP8]]
+; CHECK-UF2-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP2]], 40
+; CHECK-UF2-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP18]]
+; CHECK-UF2-NEXT:    [[TMP20:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP19]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-UF2-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP6]], i64 [[TMP8]]
+; CHECK-UF2-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP2]], 40
+; CHECK-UF2-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP21]], i64 [[TMP22]]
+; CHECK-UF2-NEXT:    [[TMP24:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP23]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-UF2-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[TMP8]]
+; CHECK-UF2-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP2]], 40
+; CHECK-UF2-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[TMP26]]
+; CHECK-UF2-NEXT:    [[TMP28:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP27]], i64 40, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-UF2-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-UF2-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK-UF2:       [[MIDDLE_BLOCK]]:
+; CHECK-UF2-NEXT:    [[TMP30:%.*]] = add <vscale x 2 x i64> [[TMP12]], [[TMP16]]
+; CHECK-UF2-NEXT:    [[TMP31:%.*]] = add <vscale x 2 x i64> [[TMP30]], [[TMP20]]
+; CHECK-UF2-NEXT:    [[TMP32:%.*]] = add <vscale x 2 x i64> [[TMP31]], [[TMP24]]
+; CHECK-UF2-NEXT:    [[TMP33:%.*]] = add <vscale x 2 x i64> [[TMP32]], [[TMP28]]
+; CHECK-UF2-NEXT:    [[TMP34:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-UF2-NEXT:    [[TMP35:%.*]] = mul nuw i32 [[TMP34]], 2
+; CHECK-UF2-NEXT:    [[TMP36:%.*]] = sub i32 [[TMP35]], 1
+; CHECK-UF2-NEXT:    [[TMP37:%.*]] = extractelement <vscale x 2 x i64> [[TMP33]], i32 [[TMP36]]
+; CHECK-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; CHECK-UF2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-UF2:       [[SCALAR_PH]]:
+; CHECK-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-UF2-NEXT:    br label %[[LOOP:.*]]
+; CHECK-UF2:       [[LOOP]]:
+; CHECK-UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-UF2-NEXT:    [[BASE:%.*]] = getelementptr [5 x i64], ptr [[A]], i64 [[IV]]
+; CHECK-UF2-NEXT:    [[V0:%.*]] = load i64, ptr [[BASE]], align 8
+; CHECK-UF2-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 8
+; CHECK-UF2-NEXT:    [[V1:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-UF2-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[BASE]], i64 16
+; CHECK-UF2-NEXT:    [[V2:%.*]] = load i64, ptr [[P2]], align 8
+; CHECK-UF2-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[BASE]], i64 24
+; CHECK-UF2-NEXT:    [[V3:%.*]] = load i64, ptr [[P3]], align 8
+; CHECK-UF2-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[BASE]], i64 32
+; CHECK-UF2-NEXT:    [[V4:%.*]] = load i64, ptr [[P4]], align 8
+; CHECK-UF2-NEXT:    [[ADD0:%.*]] = add i64 [[V0]], [[V1]]
+; CHECK-UF2-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[V2]]
+; CHECK-UF2-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[V3]]
+; CHECK-UF2-NEXT:    [[ADD3:%.*]] = add i64 [[ADD2]], [[V4]]
+; CHECK-UF2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-UF2-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-UF2-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK-UF2:       [[EXIT]]:
+; CHECK-UF2-NEXT:    [[ADD3_LCSSA:%.*]] = phi i64 [ [[ADD3]], %[[LOOP]] ], [ [[TMP37]], %[[MIDDLE_BLOCK]] ]
+; CHECK-UF2-NEXT:    ret i64 [[ADD3_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr [5 x i64], ptr %a, i64 %iv
+  %v0 = load i64, ptr %base, align 8
+  %p1 = getelementptr i8, ptr %base, i64 8
+  %v1 = load i64, ptr %p1, align 8
+  %p2 = getelementptr i8, ptr %base, i64 16
+  %v2 = load i64, ptr %p2, align 8
+  %p3 = getelementptr i8, ptr %base, i64 24
+  %v3 = load i64, ptr %p3, align 8
+  %p4 = getelementptr i8, ptr %base, i64 32
+  %v4 = load i64, ptr %p4, align 8
+  %add0 = add i64 %v0, %v1
+  %add1 = add i64 %add0, %v2
+  %add2 = add i64 %add1, %v3
+  %add3 = add i64 %add2, %v4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i64 %add3
+}
