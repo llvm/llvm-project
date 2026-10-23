@@ -165,6 +165,25 @@ TEST(LlvmLibcRegexTest, AnchorsAndFlags) {
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a\nb", 0, nullptr, 0), REG_NOMATCH);
 }
 
+TEST(LlvmLibcRegexTest, KleeneStarAndBadRpt) {
+  regex_t preg;
+  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "ab*c", REG_EXTENDED | REG_NOSUB),
+            0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "ac", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abc", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abbbc", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abbd", 0, nullptr, 0), REG_NOMATCH);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "bbbc", 0, nullptr, 0), REG_NOMATCH);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abXc", 0, nullptr, 0), REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+
+  const char *const bad_rpt[] = {"*", "+", "?", "{1}", "^*", "$*", "a**"};
+  for (const char *pat : bad_rpt) {
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADRPT);
+    LIBC_NAMESPACE::regfree(&preg);
+  }
+}
+
 TEST(LlvmLibcRegexTest, EscapedMetacharacters) {
   regex_t preg;
   ASSERT_EQ(
@@ -194,9 +213,9 @@ TEST(LlvmLibcRegexTest, UnimplementedSyntaxAndFlags) {
   LIBC_NAMESPACE::regfree(&preg);
 
   // Unimplemented ERE metacharacters and special escapes return REG_BADPAT.
-  const char *const bad_patterns[] = {"a*",    "a+",    "a?",    "(a)",
-                                      "[a]",   "a{1}",  "a|b",   R"(\1)",
-                                      R"(\b)", R"(\w)", R"(\s)", R"(\d)"};
+  const char *const bad_patterns[] = {"a+",    "a?",    "(a)",   "[a]",
+                                      "a{1}",  "a|b",   R"(\1)", R"(\b)",
+                                      R"(\w)", R"(\s)", R"(\d)"};
   for (const char *pat : bad_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADPAT);
     LIBC_NAMESPACE::regfree(&preg);

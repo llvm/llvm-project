@@ -76,6 +76,7 @@
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
+; O0-NEXT:     pseudo-probe-inserter
 ; O0-NEXT:     unpack-mi-bundles
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
@@ -206,6 +207,7 @@
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
+; O2-NEXT:     pseudo-probe-inserter
 ; O2-NEXT:     unpack-mi-bundles
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
@@ -282,6 +284,7 @@
 ; O0-WINDOWS-NEXT:     cfguard-longjmp
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
+; O0-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O0-WINDOWS-NEXT:     unpack-mi-bundles
 ; O0-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT:     verify
@@ -416,6 +419,7 @@
 ; O3-WINDOWS-NEXT:     cfguard-longjmp
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
+; O3-WINDOWS-NEXT:     pseudo-probe-inserter
 ; O3-WINDOWS-NEXT:     unpack-mi-bundles
 ; O3-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT:     verify

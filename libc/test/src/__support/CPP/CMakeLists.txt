@@ -1,4 +1,4 @@
-add_custom_target(libc-cpp-utils-tests)
+add_libc_testsuite(libc-cpp-utils-tests PARENT libc-support-tests)
 
 add_libc_test(
   algorithm_test

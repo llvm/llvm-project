@@ -787,11 +787,15 @@ KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
-                               const KnownFPClass &KnownRHS,
-                               const KnownFPClass &KnownAddend,
+KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
+                               const KnownFPClass &KnownRHS_,
+                               const KnownFPClass &KnownAddend_,
                                DenormalMode Mode) {
-  KnownFPClass Mul = fmul(KnownLHS, KnownRHS, Mode);
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+  KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
+
+  KnownFPClass Mul = fmul(KnownLHS, KnownRHS, DenormalMode::getIEEE());
 
   // FMA differs from the base fmul + fadd handling only in the treatment of -0
   // results.
@@ -805,7 +809,7 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
       KnownAddend.isKnownNever(fcSNan))
     Known.knownNot(fcSNan);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fmuladd(const KnownFPClass &KnownLHS,
@@ -819,10 +823,13 @@ KnownFPClass KnownFPClass::fmuladd(const KnownFPClass &KnownLHS,
   return FMA.intersectWith(MulAdd);
 }
 
-KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
-                                      const KnownFPClass &KnownAddend,
+KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared_,
+                                      const KnownFPClass &KnownAddend_,
                                       DenormalMode Mode) {
-  KnownFPClass Squared = square(KnownSquared, Mode);
+  KnownFPClass KnownSquared = applyInputDenormalMode(KnownSquared_, Mode);
+  KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
+
+  KnownFPClass Squared = square(KnownSquared, DenormalMode::getIEEE());
   KnownFPClass Known = fadd_impl(Squared, KnownAddend, /*IsFMA=*/true);
 
   // Since we know the squared input must be positive, the add of opposite sign
@@ -836,7 +843,7 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
 
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fmuladd_square(const KnownFPClass &KnownSquared,

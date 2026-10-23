@@ -2924,6 +2924,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
   mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr flattenedCoroutineNameAttr =
+      getFlattenedCoroutineAttrName(state.name);
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
@@ -2941,6 +2943,10 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
           parser.parseOptionalKeyword(coroutineNameAttr.strref())))
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
 
+  if (::mlir::succeeded(
+          parser.parseOptionalKeyword(flattenedCoroutineNameAttr.strref())))
+    state.addAttribute(flattenedCoroutineNameAttr,
+                       parser.getBuilder().getUnitAttr());
   // Parse optional inline kind attribute
   cir::InlineKindAttr inlineKindAttr;
   if (failed(parseInlineKindAttr(parser, inlineKindAttr)))
@@ -3285,6 +3291,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getCoroutine())
     p << " coroutine";
+
+  if (getFlattenedCoroutine())
+    p << " flattened_coroutine";
 
   printInlineKindAttr(p, getInlineKindAttr());
 

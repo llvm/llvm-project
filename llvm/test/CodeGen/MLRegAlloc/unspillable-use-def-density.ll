@@ -19,6 +19,15 @@
 ; CHECK-NEXT: mask: 1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 ; CHECK:      use_def_density: 1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0
 
+;; Evicting an equal cascade asserts in greedy.
+; RUN: %python %t.rundir/interactive_main.py %t.channel-basename.cascade \
+; RUN:    llc -mtriple=amdgpu9.00 -start-before=greedy,0 -stop-after=virt-reg-rewriter,2 \
+; RUN:    -regalloc-enable-advisor=release -mlregalloc-num-allocatable-regs=256 \
+; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename.cascade \
+; RUN:    %S/../AMDGPU/illegal-eviction-assert.mir -o /dev/null 2>&1 | \
+; RUN:    FileCheck %s --check-prefix=CASCADE
+; CASCADE: error: <unknown>:0:0: ran out of registers during register allocation
+
 define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
   %tmp = insertelement <2 x i32> poison, i32 %v0, i32 0
