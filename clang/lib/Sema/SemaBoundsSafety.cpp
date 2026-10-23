@@ -243,10 +243,16 @@ bool Sema::ValidateBoundsAttrPosition(BoundsAttributedType::BoundsAttrKind Kind,
 bool Sema::ValidateBoundsAttrTypeForTypePosition(
     QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
     SourceRange AttrRange, unsigned PointerNestLevel, bool OnReturnType,
-    BoundsAttrFlags &Flags) {
+    BoundsAttrFlags &Flags, bool IsParameter) {
   Flags = BoundsAttrFlags::get(AttrKind);
 
-  if (!ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Flags,
+  // An array parameter decays to a pointer, which is what the attribute
+  // describes. Whether the array may have a size is checked on the parameter.
+  QualType ShapeTy = Ty;
+  if (IsParameter && Ty->isArrayType())
+    ShapeTy = getASTContext().getArrayDecayedType(Ty);
+
+  if (!ValidateBoundsAttrTypeShape(ShapeTy, AttrLoc, AttrRange, Flags,
                                    /*AttrSpelling=*/{}, /*AllowRedecl=*/false,
                                    /*AttrArg=*/nullptr, /*UpdateFlags=*/false))
     return false;
@@ -269,6 +275,26 @@ bool Sema::ValidateBoundsAttrTypeForTypePosition(
     }
 
   return true;
+}
+
+/// The checks shared by the counts of fields and parameters: \p E must be a
+/// non-boolean integer and a plain reference to a declaration. Returns that
+/// declaration, or null after diagnosing.
+static ValueDecl *checkCountRefersToDecl(Sema &S, Expr *E, unsigned Kind) {
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    S.Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+
+  auto *DRE = dyn_cast<DeclRefExpr>(E);
+  if (!DRE) {
+    S.Diag(E->getBeginLoc(),
+           diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+  return DRE->getDecl();
 }
 
 bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
@@ -295,23 +321,11 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  // Validate the expression type
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
-        << Kind << E->getSourceRange();
+  ValueDecl *CountDecl = checkCountRefersToDecl(*this, E, Kind);
+  if (!CountDecl)
     return true;
-  }
-
-  auto *DRE = dyn_cast<DeclRefExpr>(E);
-  if (!DRE) {
-    Diag(E->getBeginLoc(),
-         diag::err_count_attr_only_support_simple_decl_reference)
-        << Kind << E->getSourceRange();
-    return true;
-  }
 
   // Validate count field references
-  auto *CountDecl = DRE->getDecl();
   FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
   if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
     CountFD = IFD->getAnonField();
@@ -348,6 +362,46 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     }
   }
   return false;
+}
+
+bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
+                                     bool CountInBytes, bool OrNull) {
+  // An invalid count was already diagnosed.
+  if (E->containsErrors())
+    return true;
+
+  // An array parameter decays to a pointer, which the count then describes.
+  // An array with an explicit size is not supported: in the -fbounds-safety
+  // programming model, its size becomes that pointer's count.
+  const unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  if (ParamTy->isArrayType() && !ParamTy->isIncompleteArrayType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_on_sized_array_param) << Kind;
+    return true;
+  }
+
+  ValueDecl *CountDecl = checkCountRefersToDecl(*this, E, Kind);
+  if (!CountDecl)
+    return true;
+
+  // The parameters of an enclosing function declarator are in scope too.
+  if (!isa<ParmVarDecl>(CountDecl)) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_non_param)
+        << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+void Sema::AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                       const CountAttributedType *CATy) {
+  if (!CATy->desugar()->isArrayType())
+    return;
+  // The parameter's type is already adjusted, with the qualifiers written
+  // outside the count moved to the element (C99 6.7.3p8), but the decayed
+  // pointer does not carry the count. Put it back on the pointer.
+  PVD->setType(Context.getCountAttributedType(
+      PVD->getType(), CATy->getCountExpr(), CATy->isCountInBytes(),
+      CATy->isOrNull(), CATy->getCoupledDecls()));
 }
 
 static void EmitIncompleteCountedByPointeeNotes(Sema &S,

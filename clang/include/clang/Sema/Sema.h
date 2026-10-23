@@ -2562,13 +2562,14 @@ public:
   /// array declarator chunks enclosing the attribute, up to the nearest
   /// function chunk. \p OnReturnType is true if a function chunk encloses it,
   /// i.e. the attribute is in a function's return type.
+  /// \p IsParameter is set for a count in a parameter's declarator.
   ///
   /// \returns false after diagnosing an attribute that must be dropped (see
   /// ValidateBoundsAttrTypeShape).
   bool ValidateBoundsAttrTypeForTypePosition(
       QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
       SourceRange AttrRange, unsigned PointerNestLevel, bool OnReturnType,
-      BoundsAttrFlags &Flags);
+      BoundsAttrFlags &Flags, bool IsParameter);
 
   /// Check where a counted_by-family attribute of kind \p Kind sits in its
   /// declarator, as described by \p PointerNestLevel and \p OnReturnType (see
@@ -2636,6 +2637,18 @@ public:
   /// false if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
+
+  /// Check that \p E is a valid count for a counted_by-family attribute on
+  /// \p ParamTy, the type of a parameter.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,
+                                 bool OrNull);
+
+  /// A parameter declared as an array decays to a pointer to its element type.
+  /// Move the valid count \p CATy on the array to that pointer.
+  void AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                   const CountAttributedType *CATy);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.

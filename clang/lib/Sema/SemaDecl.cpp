@@ -15928,6 +15928,27 @@ static void CheckExplicitObjectParameter(Sema &S, ParmVarDecl *P,
     LSI->ExplicitObjectParameter = P;
 }
 
+/// Return the CountAttributedType at the top of \p T, looking through only
+/// parentheses, type attributes, and macro qualifiers. Return null otherwise.
+/// A count inside a typedef or `__typeof__` belongs to another declaration.
+static const CountAttributedType *getWrittenCountAttributedType(QualType T) {
+  const Type *Ty = T.getTypePtr();
+  while (true) {
+    if (const auto *CATy = dyn_cast<CountAttributedType>(Ty))
+      return CATy;
+    if (const auto *A = dyn_cast<AttributedType>(Ty))
+      Ty = A->getModifiedType().getTypePtr();
+    else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *P = dyn_cast<ParenType>(Ty))
+      Ty = P->getInnerType().getTypePtr();
+    else if (const auto *M = dyn_cast<MacroQualifiedType>(Ty))
+      Ty = M->getUnderlyingType().getTypePtr();
+    else
+      return nullptr;
+  }
+}
+
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
                                  SourceLocation ExplicitThisLoc) {
   const DeclSpec &DS = D.getDeclSpec();
@@ -16049,6 +16070,14 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
     IdResolver.AddDecl(New);
 
   ProcessDeclAttributes(S, New, D);
+
+  // A count written on an array parameter, also under other type attributes
+  // written with it, moves to the pointer the parameter decays to; it was
+  // checked where it was applied. One that comes with the array's type through
+  // a typedef or `__typeof__` belongs to another declaration and stays behind.
+  if (const CountAttributedType *CATy =
+          getWrittenCountAttributedType(TInfo->getType()))
+    AdjustCountedArrayParamType(New, CATy);
 
   if (D.getDeclSpec().isModulePrivateSpecified())
     Diag(New->getLocation(), diag::err_module_private_local)
