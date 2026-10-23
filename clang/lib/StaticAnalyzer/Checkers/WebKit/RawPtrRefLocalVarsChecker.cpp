@@ -149,7 +149,7 @@ private:
     auto *VarRef = dyn_cast<DeclRefExpr>(Arg);
     if (!VarRef || VarRef->getDecl() != Guardian)
       return false;
-    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isPointerType())
+    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isAnyPointerType())
       return false;
     if (IsAddressOf) {
       if (!ArgType->isPointerType())
@@ -536,6 +536,17 @@ public:
       return false;
 
     QualType GuardianType = MaybeGuardian->getType();
+    // The collection of a fast enumeration is evaluated before the loop body is
+    // entered and keeps its elements alive. A raw pointer local variable or
+    // parameter holding the collection is checked on its own, so it only needs
+    // to be left untouched by the loop body.
+    if (auto *FCS = findObjCForCollectionStmtOfElement(V);
+        FCS && !GuardianType.isNull() && GuardianType->isAnyPointerType() &&
+        (MaybeGuardian->isLocalVarDecl() || isa<ParmVarDecl>(MaybeGuardian))) {
+      GuardianVisitor Visitor(MaybeGuardian, /*GuardianIsRawPtrOrRef=*/true);
+      return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+    }
+
     if (!GuardianType.isNull()) {
       if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
         if (MaybeGuardian->isLocalVarDecl() &&

@@ -1663,6 +1663,7 @@ struct RegGroupInfo {
   }
 
   Register getAsMultiVectorRegister() const {
+    assert(Type == ZPR && isGrouped() && "Expected ZPR register group");
     return (isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
            (Reg2 - AArch64::Z0);
   }
@@ -1917,7 +1918,6 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     [[maybe_unused]] bool RegsOrdered =
         all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
           return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
-
                  CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
         });
     assert(RegsOrdered && "Out of order callee saved regs!");
