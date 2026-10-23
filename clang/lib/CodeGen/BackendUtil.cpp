@@ -537,6 +537,7 @@ getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   // if LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
   Options.EmitNotes = !CodeGenOpts.CoverageNotesFile.empty();
+  Options.UseAbsolutePathsInNotes = CodeGenOpts.UseAbsolutePathsInNotesFile;
   Options.EmitData = !CodeGenOpts.CoverageDataFile.empty();
   llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
