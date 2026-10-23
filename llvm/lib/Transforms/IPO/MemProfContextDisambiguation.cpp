@@ -250,7 +250,8 @@ static cl::opt<bool> MemProfRequireDefinitionForPromotion(
 // summary. Note that unlike regular ICP, which by default requires the
 // target's definition (see -icp-allow-decls), MemProf ICP can promote to a
 // declaration of the target (see -memprof-require-definition-for-promotion),
-// since the purpose is to call the assigned clone rather than to inline.
+// since the purpose is to call the assigned clone rather than to inline. This
+// is therefore not done under -memprof-require-definition-for-promotion.
 static cl::opt<bool> MemProfImportClonedIndirectTargets(
     "memprof-import-cloned-indirect-targets", cl::init(true), cl::Hidden,
     cl::desc("Import at least a declaration of the indirect call targets of "
@@ -6566,8 +6567,10 @@ void MemProfContextDisambiguation::run(
   }
   // Note this must be done after the CCG is destroyed, which is when the
   // callsite records synthesized for missing tail call frames are added to the
-  // function summaries.
-  if (Changed && MemProfImportClonedIndirectTargets)
+  // function summaries. Importing declarations is only useful if MemProf ICP
+  // is allowed to promote to a declaration of the target.
+  if (Changed && MemProfImportClonedIndirectTargets &&
+      !MemProfRequireDefinitionForPromotion)
     updateClonedCalleeEdgesForImport(Index, isPrevailing);
 }
 

@@ -118,6 +118,30 @@
 ; NOT-EXPORTED-NOT: _ZN1A8PushSlowEv
 ; NOT-EXPORTED: T main
 
+;; With -memprof-require-definition-for-promotion, MemProf ICP can't promote to
+;; a declaration, so the declaration is not imported, and the target is not
+;; exported.
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:	-import-instr-limit=1 \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t/foo.o,_Z3fooPv,plx \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_Z3fooPv, \
+; RUN:  -r=%t/main.o,_ZN1A8PushSlowEv,pl \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:  -memprof-require-definition-for-promotion \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
+; RUN:  -pass-remarks-missed=memprof-context-disambiguation \
+; RUN:  -o %t.reqdef.out 2>&1 | FileCheck %s --check-prefix=REQDEF
+; RUN: llvm-nm %t.reqdef.out.1 | FileCheck %s --check-prefix=NOT-EXPORTED
+
+; REQDEF: Memprof cannot promote indirect call: target with md5sum 17285164559125343003 not found
+;; The stats are printed after the remarks.
+; REQDEF-NOT: Number of function declarations
+; REQDEF-NOT: requiring a declaration import
+
 ;--- foo.ll
 source_filename = "foo.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
