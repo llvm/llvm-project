@@ -246,13 +246,12 @@ int SBCommandInterpreter::HandleCompletion(
       matches, dummy_descriptions);
 }
 
-int SBCommandInterpreter::HandleCompletionWithDescriptions(
-    const char *current_line, const char *cursor, const char *last_char,
-    int match_start_point, int max_return_elements, SBStringList &matches,
-    SBStringList &descriptions) {
-  LLDB_INSTRUMENT_VA(this, current_line, cursor, last_char, match_start_point,
-                     max_return_elements, matches, descriptions);
-
+static int HandleCompletionImpl(lldb_private::CommandInterpreter &interpreter,
+                                const char *current_line, const char *cursor,
+                                const char *last_char, int max_return_elements,
+                                const ExecutionContextRef *exe_ctx_ref,
+                                lldb_private::StringList &lldb_matches,
+                                lldb_private::StringList &lldb_descriptions) {
   // Sanity check the arguments that are passed in: cursor & last_char have to
   // be within the current_line.
   if (current_line == nullptr || cursor == nullptr || last_char == nullptr)
@@ -266,18 +265,19 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
       last_char - current_line > static_cast<ptrdiff_t>(current_line_size))
     return 0;
 
-  if (!IsValid())
-    return 0;
-
   if (max_return_elements == 0)
     return 0;
 
-  lldb_private::StringList lldb_matches, lldb_descriptions;
   CompletionResult result;
   CompletionRequest request(current_line, cursor - current_line, result);
   if (max_return_elements > 0)
     request.SetMaxReturnElements(max_return_elements);
-  m_opaque_ptr->HandleCompletion(request);
+
+  if (exe_ctx_ref)
+    interpreter.HandleCompletion(request, exe_ctx_ref->Lock(true));
+  else
+    interpreter.HandleCompletion(request);
+
   result.GetMatches(lldb_matches);
   result.GetDescriptions(lldb_descriptions);
 
@@ -318,10 +318,25 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
     lldb_descriptions.InsertStringAtIndex(0, "");
   }
 
-  SBStringList temp_matches_list(&lldb_matches);
-  matches.AppendList(temp_matches_list);
-  SBStringList temp_descriptions_list(&lldb_descriptions);
-  descriptions.AppendList(temp_descriptions_list);
+  return number_of_matches;
+}
+
+int SBCommandInterpreter::HandleCompletionWithDescriptions(
+    const char *current_line, const char *cursor, const char *last_char,
+    int match_start_point, int max_return_elements, SBStringList &matches,
+    SBStringList &descriptions) {
+  LLDB_INSTRUMENT_VA(this, current_line, cursor, last_char, match_start_point,
+                     max_return_elements, matches, descriptions);
+
+  if (!IsValid())
+    return 0;
+
+  lldb_private::StringList lldb_matches, lldb_descriptions;
+  int number_of_matches = HandleCompletionImpl(
+      *m_opaque_ptr, current_line, cursor, last_char, max_return_elements,
+      /*exe_ctx_ref=*/nullptr, lldb_matches, lldb_descriptions);
+  matches.AppendList(lldb_matches);
+  descriptions.AppendList(lldb_descriptions);
   return number_of_matches;
 }
 
@@ -332,11 +347,38 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   LLDB_INSTRUMENT_VA(this, current_line, cursor_pos, match_start_point,
                      max_return_elements, matches, descriptions);
 
+  if (current_line == nullptr)
+    return 0;
+
   const char *cursor = current_line + cursor_pos;
   const char *last_char = current_line + strlen(current_line);
+
   return HandleCompletionWithDescriptions(
       current_line, cursor, last_char, match_start_point, max_return_elements,
       matches, descriptions);
+}
+
+int SBCommandInterpreter::HandleCompletionWithDescriptions(
+    const char *current_line, uint32_t cursor_pos, int max_return_elements,
+    SBExecutionContext &exe_ctx, SBStringList &matches,
+    SBStringList &descriptions) {
+  LLDB_INSTRUMENT_VA(this, current_line, cursor_pos, max_return_elements,
+                     exe_ctx, matches, descriptions);
+
+  if (current_line == nullptr || !IsValid())
+    return 0;
+
+  const char *cursor = current_line + cursor_pos;
+  const char *last_char = current_line + strlen(current_line);
+
+  lldb_private::StringList lldb_matches, lldb_descriptions;
+  int number_of_matches = HandleCompletionImpl(
+      *m_opaque_ptr, current_line, cursor, last_char, max_return_elements,
+      exe_ctx.get(), lldb_matches, lldb_descriptions);
+
+  matches.AppendList(lldb_matches);
+  descriptions.AppendList(lldb_descriptions);
+  return number_of_matches;
 }
 
 int SBCommandInterpreter::HandleCompletion(const char *current_line,
@@ -346,6 +388,9 @@ int SBCommandInterpreter::HandleCompletion(const char *current_line,
                                            lldb::SBStringList &matches) {
   LLDB_INSTRUMENT_VA(this, current_line, cursor_pos, match_start_point,
                      max_return_elements, matches);
+
+  if (current_line == nullptr)
+    return 0;
 
   const char *cursor = current_line + cursor_pos;
   const char *last_char = current_line + strlen(current_line);

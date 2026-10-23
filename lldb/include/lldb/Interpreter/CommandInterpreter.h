@@ -435,6 +435,11 @@ public:
   // This handles command line completion.
   void HandleCompletion(CompletionRequest &request);
 
+  /// Same as HandleCompletion, but completes using the `override_context`
+  /// instead of the selected one.
+  void HandleCompletion(CompletionRequest &request,
+                        const ExecutionContext &override_context);
+
   // This version just returns matches, and doesn't compute the substring. It
   // is here so the Help command can call it for the first argument.
   void HandleCompletionMatches(CompletionRequest &request);
