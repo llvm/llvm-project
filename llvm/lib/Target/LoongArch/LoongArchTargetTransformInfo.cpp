@@ -73,6 +73,8 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
     [[fallthrough]];
   case TargetTransformInfo::RGK_ScalableVector:
     return DefSize;
+  case TargetTransformInfo::RGK_AnyVector:
+    break;
   }
 
   llvm_unreachable("Unsupported register kind");
