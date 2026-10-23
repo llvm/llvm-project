@@ -337,6 +337,25 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
     return Response::ChangeDecl(Function->getLexicalDeclContext());
   }
 
+  // Find the friend declaration among the primary template's redeclarations.
+  if (Pattern && !Pattern->getLexicalDeclContext()->isFileContext() &&
+      Function->getNonTransparentDeclContext()->isFileContext()) {
+    if (const FunctionTemplateDecl *Primary = Function->getPrimaryTemplate()) {
+      if (const FunctionTemplateDecl *PatternFTD =
+              Pattern->getDescribedFunctionTemplate()) {
+        for (const RedeclarableTemplateDecl *R : Primary->redecls()) {
+          const auto *Redecl = cast<FunctionTemplateDecl>(R);
+          if (Redecl->getFriendObjectKind() &&
+              !Redecl->getLexicalDeclContext()->isFileContext()) {
+            if (Redecl->getInstantiatedFromMemberTemplate() == PatternFTD ||
+                Redecl == PatternFTD)
+              return Response::ChangeDecl(Redecl->getLexicalDeclContext());
+          }
+        }
+      }
+    }
+  }
+
   if (ForConstraintInstantiation && Function->getFriendObjectKind())
     return Response::ChangeDecl(Function->getLexicalDeclContext());
   return Response::UseNextDecl(Function);
