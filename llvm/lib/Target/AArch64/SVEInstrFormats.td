@@ -6372,6 +6372,7 @@ class sve_fp_2op_p_zds_minmax<bits<2> sz, bits<1> op, bits<2> opc, string asm,
   let Constraints = "$Zdn = $_Zdn";
   let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
+  let mayRaiseFPException = 1;
   let Uses = [ FPCR ];
 }
 
