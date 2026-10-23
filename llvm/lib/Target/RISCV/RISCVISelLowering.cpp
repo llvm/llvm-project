@@ -21212,29 +21212,6 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT OpVT = N0.getValueType();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  bool IsVL = N->getOpcode() == RISCVISD::SETCC_VL;
-  if (DCI.isAfterLegalizeDAG() && VT.isVector() && OpVT.isInteger() &&
-      (!IsVL || N->getOperand(3).isUndef())) {
-    // Recover a mask NOT when the inverse comparison is already shared. Use a
-    // target node so the generic combine does not duplicate the comparison.
-    // SETCC_VL additionally requires matching masks and vector lengths, and an
-    // undef passthru since the NOT also flips masked-off lanes.
-    ISD::CondCode InverseCC = ISD::getSetCCInverse(Cond, OpVT);
-    SmallVector<SDValue, 6> Ops(N->op_values());
-    Ops[2] = DAG.getCondCode(InverseCC);
-    SDNode *Inverse = DAG.getNodeIfExists(N->getOpcode(), N->getVTList(), Ops);
-    if (Inverse && !Inverse->use_empty() && !Inverse->hasOneUse()) {
-      SDValue VL = IsVL ? N->getOperand(5)
-                        : DAG.getRegister(RISCV::X0, Subtarget.getXLenVT());
-      SDValue Mask = getAllOnesMask(VT.getSimpleVT(), VL, dl, DAG);
-      return DAG.getNode(RISCVISD::VMXOR_VL, dl, VT, SDValue(Inverse, 0), Mask,
-                         VL);
-    }
-  }
-
-  if (IsVL)
-    return SDValue();
-
   if (SDValue V =
           canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG, DCI))
     return V;
@@ -25576,7 +25553,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return expandVectorMatch(N, DAG);
     return SDValue();
   case ISD::SETCC:
-  case RISCVISD::SETCC_VL:
     return performSETCCCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
     return performSIGN_EXTEND_INREGCombine(N, DCI, Subtarget);
