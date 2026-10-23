@@ -1498,10 +1498,12 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
     return declareOp.getBase();
   };
 
+  // A temporary created from an aligned variable keeps its alignment.
+  std::optional<std::int64_t> alignment = hlfir::getDeclaredAlignment(mold);
   auto [base, isHeapAlloc] = builder.createAndDeclareTemp(
       loc, mold.getElementOrSequenceType(), shape, extents, lenParams,
       genTempDeclareOp, mold.isPolymorphic() ? mold.getBase() : nullptr,
-      useStack, tmpName);
+      useStack, tmpName, alignment);
   return {hlfir::Entity{base}, isHeapAlloc};
 }
 
@@ -1514,6 +1516,8 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
   mlir::Value alloc;
   mlir::Value shape{};
   fir::FortranVariableFlagsAttr declAttrs;
+  // A temporary created from an aligned variable keeps its alignment.
+  std::optional<std::int64_t> alignment = hlfir::getDeclaredAlignment(mold);
 
   if (mold.isPolymorphic()) {
     // genAllocatableApplyMold does heap allocation
@@ -1523,16 +1527,20 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
         hlfir::getFortranElementOrSequenceType(mold.getType());
     shape = hlfir::genShape(loc, builder, mold);
     auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    alloc =
-        builder.createTemporary(loc, sequenceType, tmpName, extents, lenParams);
+    alloc = builder.createTemporary(loc, sequenceType, tmpName, extents,
+                                    lenParams, /*attrs=*/{},
+                                    /*cudaAttr=*/std::nullopt, alignment);
   } else {
     alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape=*/{}, lenParams);
+                                    /*shape=*/{}, lenParams, /*attrs=*/{},
+                                    /*cudaAttr=*/std::nullopt, alignment);
   }
   auto declareOp =
       hlfir::DeclareOp::create(builder, loc, alloc, tmpName, shape, lenParams,
                                /*dummy_scope=*/nullptr, /*storage=*/nullptr,
                                /*storage_offset=*/0, declAttrs);
+  if (alignment)
+    declareOp.setAlignment(*alignment);
   return hlfir::Entity{declareOp.getBase()};
 }
 

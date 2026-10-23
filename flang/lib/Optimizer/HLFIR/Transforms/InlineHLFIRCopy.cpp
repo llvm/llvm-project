@@ -114,6 +114,10 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   if (copyOut.getVar())
     return rewriter.notifyMatchFailure(copyIn, "CopyIn needs a copy-out");
 
+  // A buffer copied from an aligned variable keeps that variable's alignment.
+  std::optional<std::int64_t> alignment =
+      hlfir::getDeclaredAlignment(copyIn.getVar());
+
   inputVariable =
       hlfir::derefPointersAndAllocatables(loc, builder, inputVariable);
   mlir::Type sequenceType =
@@ -151,16 +155,21 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
             llvm::StringRef tmpName{".tmp.copy_in"};
             llvm::SmallVector<mlir::Value> lenParams;
             mlir::Value alloc =
-                useStack ? builder.createTemporary(loc, sequenceType, tmpName,
-                                                   extents, lenParams)
-                         : builder.createHeapTemporary(
-                               loc, sequenceType, tmpName, extents, lenParams);
+                useStack
+                    ? builder.createTemporary(
+                          loc, sequenceType, tmpName, extents, lenParams,
+                          /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment)
+                    : builder.createHeapTemporary(loc, sequenceType, tmpName,
+                                                  extents, lenParams,
+                                                  /*attrs=*/{}, alignment);
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
                                                       tmpName, shape, lenParams,
                                                       /*dummy_scope=*/nullptr,
                                                       /*storage=*/nullptr,
                                                       /*storage_offset=*/0);
+            if (alignment)
+              declareOp.setAlignment(*alignment);
             hlfir::Entity temp{declareOp.getBase()};
             hlfir::LoopNest loopNest =
                 hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,

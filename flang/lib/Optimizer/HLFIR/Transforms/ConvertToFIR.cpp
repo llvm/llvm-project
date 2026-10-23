@@ -292,6 +292,10 @@ public:
     hlfir::genLengthParameters(loc, builder, inputEntity, typeParams);
     const bool useStack =
         fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
+    // A buffer copied from an aligned variable keeps that variable's
+    // alignment.
+    std::optional<std::int64_t> alignment =
+        hlfir::getDeclaredAlignment(inputVariable);
 
     mlir::Value addr =
         builder
@@ -303,13 +307,17 @@ public:
               llvm::StringRef tmpName{".tmp.copy_in"};
               mlir::Value allocation =
                   useStack
-                      ? builder.createTemporary(loc, sequenceType, tmpName,
-                                                extents, typeParams)
+                      ? builder.createTemporary(
+                            loc, sequenceType, tmpName, extents, typeParams,
+                            /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment)
                       : builder.createHeapTemporary(loc, sequenceType, tmpName,
-                                                    extents, typeParams);
+                                                    extents, typeParams,
+                                                    /*attrs=*/{}, alignment);
               mlir::Value declared = fir::FirOpBuilder::genTempDeclareOp(
                   builder, loc, allocation, tmpName, shape, typeParams,
                   fir::FortranVariableFlagsAttr{});
+              if (alignment)
+                hlfir::setDeclaredAlignment(declared, *alignment);
 
               bool useDynamicType =
                   fir::isBoxedRecordType(inputVariable.getType());

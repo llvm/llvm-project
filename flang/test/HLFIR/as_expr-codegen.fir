@@ -54,6 +54,21 @@ func.func @shape_from_type(%arg0 : !fir.ref<!fir.array<10x20xi32>>) {
 // CHECK:    %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x20xi32>>, i1>, !fir.heap<!fir.array<10x20xi32>>) -> tuple<!fir.heap<!fir.array<10x20xi32>>, i1>
 
 
+// The temporary copied from an aligned variable inherits its alignment, on the
+// allocation and on its own declare.
+func.func @aligned_mold(%arg0 : !fir.ref<!fir.array<10x20xi32>>) {
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %sh = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+  %0:2 = hlfir.declare %arg0(%sh) uniq_name("a") alignment(64) : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>)
+  %expr = hlfir.as_expr %0#0 : (!fir.ref<!fir.array<10x20xi32>>) -> !hlfir.expr<10x20xi32>
+  return
+}
+// CHECK-LABEL:   func.func @aligned_mold(
+// CHECK:    %[[VAL_4:.*]] = fir.allocmem !fir.array<10x20xi32> <{alignment = 64 : i64, bindc_name = ".tmp", uniq_name = ""}>
+// CHECK:    %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%{{.*}}) uniq_name(".tmp") alignment(64) : (!fir.heap<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<10x20xi32>>, !fir.heap<!fir.array<10x20xi32>>)
+// CHECK:    hlfir.assign %{{.*}} to %[[VAL_6]]#0 temporary_lhs
+
 func.func @shape_from_box(%arg0 : !fir.box<!fir.array<10x?xi32>>) {
   %expr = hlfir.as_expr %arg0 : (!fir.box<!fir.array<10x?xi32>>) -> !hlfir.expr<10x?xi32>
   return
