@@ -103,6 +103,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
       .customFor({s32, p0})
       .clampScalar(0, s32, s32);
 
+  // The IRTranslator emits this for constants that ConstantHoisting has
+  // hoisted. InstructionSelect removes it, so it only has to survive until
+  // then.
+  getActionDefinitionsBuilder(G_CONSTANT_FOLD_BARRIER)
+      .legalFor({s32})
+      .clampScalar(0, s32, s32);
+
   getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_ICMP)
