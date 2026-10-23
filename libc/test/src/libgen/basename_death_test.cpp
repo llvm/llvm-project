@@ -15,6 +15,10 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcBasenameTest, ModifyReturnValue) {
-  char *r = LIBC_NAMESPACE::basename(nullptr);
-  ASSERT_DEATH([r]() { r[0] = 'a'; }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(
+      []() {
+        char *r = LIBC_NAMESPACE::basename(nullptr);
+        r[0] = 'a';
+      },
+      WITH_SIGNAL(-1));
 }
