@@ -2751,10 +2751,15 @@ private:
         std::string Brace;
         if (BraceCount < 0) {
           assert(BraceCount == -1);
+          // Keep the marker so that the parser doesn't mark the token again in
+          // a later run.
+          if (Token->LBraceInserted)
+            continue;
           if (!Line->Affected)
             break;
           Brace = Token->is(tok::comment) ? "\n{" : "{";
           ++OpeningBraceSurplus;
+          Token->LBraceInserted = true;
         } else {
           if (OpeningBraceSurplus == 0)
             break;
@@ -2762,8 +2767,8 @@ private:
             BraceCount = OpeningBraceSurplus;
           Brace = '\n' + std::string(BraceCount, '}');
           OpeningBraceSurplus -= BraceCount;
+          Token->BraceCount = 0;
         }
-        Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
       }
