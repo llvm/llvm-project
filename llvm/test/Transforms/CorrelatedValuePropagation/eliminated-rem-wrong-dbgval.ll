@@ -1,14 +1,16 @@
 ; RUN: opt < %s -passes=correlated-propagation -S | FileCheck %s
 
+; When removing srem/urem instructions, any debug values need to be updated correctly
+; to the value they would have had (or be poisoned)
+; See issues #218631 and #218633
+
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @srem_elide(i32 noundef %x) #0 !dbg !9 {
-; CHECK:      #dbg_value(i32 %x, [[META14:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
-; CHECK-NEXT: #dbg_value(i32 %x, [[META16:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META15]])
+; CHECK:      #dbg_value(i32 %x, [[META16:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META15:![0-9]+]])
 ; CHECK-NEXT: %0 = add i32 %x, 41
 ;
 entry:
-    #dbg_value(i32 %x, !14, !DIExpression(), !15)
-  %rem1 = srem i32 %x, 42, !dbg !16
+  %rem1 = srem i32 %x, 42
     #dbg_value(i32 %rem1, !17, !DIExpression(), !15)
   %0 = add i32 %x, 41
   %spec.select = icmp ult i32 %0, 83
@@ -18,27 +20,15 @@ entry:
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @urem_elide(i32 noundef %x) #0 !dbg !23 {
-; CHECK:      #dbg_value(i32 %x, [[META26:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
-; CHECK-NEXT: #dbg_value(i32 poison, [[META28:![0-9]+]], !DIExpression(), [[META27]])
+; CHECK:      #dbg_value(i32 poison, [[META28:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
 ; CHECK-NEXT: %cmp = icmp ult i32 %x, 42
 ;
 entry:
-    #dbg_value(i32 %x, !27, !DIExpression(), !28)
-  %rem = urem i32 %x, 42, !dbg !29
+  %rem = urem i32 %x, 42
     #dbg_value(i32 %rem, !30, !DIExpression(), !28)
   %cmp = icmp ult i32 %x, 42
   %rem. = select i1 %cmp, i32 %rem, i32 24
   ret i32 %rem.
-}
-
-; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @main() #0 {
-entry:
-  %call = call i32 @srem_elide(i32 noundef 42)
-  %call1 = call i32 @urem_elide(i32 noundef 42)
-  %cmp = icmp ne i32 %call, %call1
-  %conv = zext i1 %cmp to i32
-  ret i32 %conv
 }
 
 attributes #0 = { noinline nounwind uwtable }
@@ -54,15 +44,11 @@ attributes #0 = { noinline nounwind uwtable }
 !11 = !{!12, !12}
 !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !13 = !{}
-!14 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 3, type: !12)
 !15 = !DILocation(line: 0, scope: !9)
-!16 = !DILocation(line: 4, column: 15, scope: !9)
 !17 = !DILocalVariable(name: "rem", scope: !9, file: !1, line: 4, type: !12)
 !23 = distinct !DISubprogram(name: "urem_elide", scope: !1, file: !1, line: 8, type: !24, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13)
 !24 = !DISubroutineType(types: !25)
 !25 = !{!26, !26}
 !26 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
-!27 = !DILocalVariable(name: "x", arg: 1, scope: !23, file: !1, line: 8, type: !26)
 !28 = !DILocation(line: 0, scope: !23)
-!29 = !DILocation(line: 9, column: 30, scope: !23)
 !30 = !DILocalVariable(name: "remainder", scope: !23, file: !1, line: 9, type: !26)
