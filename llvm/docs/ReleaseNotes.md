@@ -423,7 +423,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Deprecated `LLVMCreateBuilderInContext()` in favor of
   `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
-  `LLVMContextRef`.
+  `LLVMContextRef`. When using the old API, an insertion point (connected to a
+  module) must be set using a `LLVMPositionBuilder*()` API before building any
+  instructions, otherwise an error will be generated.
 
 ### Changes to the CodeGen infrastructure
 
