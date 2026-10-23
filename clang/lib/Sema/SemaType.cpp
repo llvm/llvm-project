@@ -9149,7 +9149,12 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
   if (!CountExpr)
     return;
 
+  // Counts are not supported on K&R parameter declarations, which C23
+  // removed; drop the count.
   const Declarator &D = State.getDeclarator();
+  if (D.getContext() == DeclaratorContext::KNRTypeList)
+    return;
+
   unsigned chunkIndex = State.getCurrentChunkIndex();
 
   Sema::BoundsAttrFlags Flags;
@@ -9157,6 +9162,16 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
           CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
           getPointerNestLevel(D, chunkIndex),
           isOnFunctionReturnType(D, chunkIndex), Flags)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  // A parameter's count is checked before the type is built, and dropped if
+  // invalid.
+  if ((D.getContext() == DeclaratorContext::Prototype ||
+       D.getContext() == DeclaratorContext::ObjCParameter) &&
+      S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
+                                  Flags.OrNull)) {
     Attr.setInvalid();
     return;
   }

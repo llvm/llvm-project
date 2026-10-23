@@ -30,12 +30,7 @@ struct nested_record_declspec_attr {
 // rather than silently building a null-count type.
 void fwd_ref_param(int *__counted_by(n) p, // expected-error {{use of undeclared identifier 'n'}}
                    int n);
-
-// FIXME: counted_by on a function parameter isn't supported yet; the eager
-// decl-attribute path rejects it. What matters for this regression is that it
-// is diagnosed here, not left as an unfinished type for a later crash.
-void bwd_ref_param(int n,
-                   int *__counted_by(n) p); // expected-error {{'counted_by' attribute only applies to non-static data members}}
+void bwd_ref_param(int n, int *__counted_by(n) p);
 
 // A declaration-specifier-position attribute is shared by every declarator in
 // the declaration, and ConvertDeclSpecToType walks the DeclSpec's late-attribute
