@@ -2637,6 +2637,13 @@ public:
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
 
+  /// Check that \p E is a valid count for a counted_by-family attribute on
+  /// \p ParamTy, the type of a parameter.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,
+                                 bool OrNull);
+
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
   ///
