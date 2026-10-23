@@ -1,4 +1,5 @@
-! REQUIRES: flang, amdgpu
+! REQUIRES: flang, flang-rt, libc, amdgpu
+! UNSUPPORTED: apu
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 ! A section of the second dimension has gaps between the (k, s) slices.

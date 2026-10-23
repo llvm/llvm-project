@@ -1,4 +1,5 @@
-! REQUIRES: flang, amdgpu
+! REQUIRES: flang, flang-rt, libc, amdgpu
+! UNSUPPORTED: apu
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 ! Empty dimensions must remain empty when contiguous dimensions are merged.

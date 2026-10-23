@@ -1,4 +1,5 @@
 ! REQUIRES: flang, amdgpu
+! UNSUPPORTED: apu
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 ! Assumed-length character bounds count code units, not bytes. Check every

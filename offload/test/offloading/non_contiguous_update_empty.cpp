@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// UNSUPPORTED: apu
 
 #include <cassert>
 #include <climits>

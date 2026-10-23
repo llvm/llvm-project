@@ -1,5 +1,6 @@
 ! Check whole-array and noncontiguous updates of a character-array component.
-! REQUIRES: flang, amdgpu
+! REQUIRES: flang, flang-rt, libc, amdgpu
+! UNSUPPORTED: apu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
