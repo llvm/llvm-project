@@ -271,7 +271,8 @@ def FeatureISA2_06 : SubtargetFeature<"isa-v206-instructions", "IsISA2_06",
                                       "Enable instructions in ISA 2.06.">;
 def FeatureISA2_07 : SubtargetFeature<"isa-v207-instructions", "IsISA2_07",
                                       "true",
-                                      "Enable instructions in ISA 2.07.">;
+                                      "Enable instructions in ISA 2.07.",
+                                      [FeatureISA2_06]>;
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
                                      "Enable instructions in ISA 3.0.",
