@@ -609,8 +609,9 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     return false;
 
   const DataLayout &DL = InnerLoop->getHeader()->getDataLayout();
-  unsigned AllocSize =
-      std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
+  unsigned SrcSize = DL.getTypeAllocSize(SrcTy);
+  unsigned SinkSize = DL.getTypeAllocSize(DstTy);
+  unsigned AllocSize = std::max(SrcSize, SinkSize);
 
   // Only matching constant steps matching the AllocSize are supported at the
   // moment. This simplifies the difference computation. Can be extended in the
@@ -618,8 +619,11 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (Step->getAPInt().abs() != AllocSize)
     return false;
 
+  // An access narrower than the step is strided and may be reordered across
+  // lanes, e.g. by interleave groups, so rule out conflicts in both directions.
+  bool MayReorderLanes = SrcSize != SinkSize;
   // When counting down, the dependence distance needs to be swapped.
-  if (Step->getValue()->isNegative())
+  if (!MayReorderLanes && Step->getValue()->isNegative())
     std::swap(SinkStart, SrcStart);
 
   const SCEV *SinkStartInt = SE->getPtrToAddrExpr(SinkStart);
@@ -653,8 +657,26 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
                     << "SrcStart: " << *SrcStartInt << '\n'
                     << "SinkStartInt: " << *SinkStartInt << '\n');
-  DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
-                          Src->NeedsFreeze || Sink->NeedsFreeze);
+  bool NeedsFreeze = Src->NeedsFreeze || Sink->NeedsFreeze;
+  if (!MayReorderLanes) {
+    DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize, NeedsFreeze);
+    return true;
+  }
+
+  // If lanes may be reordered, check for overlap in both directions. Let D =
+  // SinkStart - SrcStart. The accesses in either direction overlap  only if -Lo
+  // < D < Hi, with Lo/Hi = (VF * IC - 1) * AllocSize + SinkSize/SrcSize. To
+  // directly re-use the existing codegen, we shift the size adjustment to the
+  // SinkStart/ScrStart value and generate this as D - SinkSize/SrcSize < (VF *
+  // IC) * AllocSize.
+  auto Shift = [&](const SCEV *Start, unsigned Size) {
+    return SE->getMinusSCEV(
+        Start, SE->getConstant(Start->getType(), AllocSize - Size));
+  };
+  DiffChecks.emplace_back(Shift(SrcStartInt, SrcSize), SinkStartInt, AllocSize,
+                          NeedsFreeze);
+  DiffChecks.emplace_back(Shift(SinkStartInt, SinkSize), SrcStartInt, AllocSize,
+                          NeedsFreeze);
   return true;
 }
 
