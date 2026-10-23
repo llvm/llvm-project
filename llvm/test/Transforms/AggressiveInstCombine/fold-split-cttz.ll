@@ -277,16 +277,10 @@ entry:
 define i32 @split_cttz_select_zero_defined(i64 %val) {
 ; CHECK-LABEL: @split_cttz_select_zero_defined(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV1]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i64 [[VAL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 32, i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP3]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.cttz.i64(i64 [[VAL1:%.*]], i1 true)
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL1]], 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[TMP2]], i32 32, i32 [[CONV1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -307,16 +301,10 @@ entry:
 define i32 @split_cttz_select_zero_defined_ne(i64 %val) {
 ; CHECK-LABEL: @split_cttz_select_zero_defined_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CONV1]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i64 [[VAL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VAL]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 [[TMP2]], i32 32
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[TMP3]], i32 [[ADD]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.cttz.i64(i64 [[VAL1:%.*]], i1 true)
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL1]], 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[TMP2]], i32 32, i32 [[CONV1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -337,16 +325,10 @@ entry:
 define i32 @split_cttz_select_zero_defined_guard_hi(i64 %val) {
 ; CHECK-LABEL: @split_cttz_select_zero_defined_guard_hi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV1]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i64 [[VAL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[CONV]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 32, i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP3]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.cttz.i64(i64 [[VAL1:%.*]], i1 true)
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL1]], 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[TMP2]], i32 32, i32 [[CONV1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -367,16 +349,10 @@ entry:
 define i32 @split_cttz_select_zero_defined_guard_shr(i64 %val) {
 ; CHECK-LABEL: @split_cttz_select_zero_defined_guard_shr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV1]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i64 [[VAL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV]], i1 true)
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.cttz.i64(i64 [[SHR:%.*]], i1 true)
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[SHR]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 32, i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP3]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[TMP1]], i32 32, i32 [[CONV1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -397,16 +373,10 @@ entry:
 define i32 @split_cttz_select_zero_defined_other_const(i64 %val) {
 ; CHECK-LABEL: @split_cttz_select_zero_defined_other_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV1]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i64 [[VAL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHR]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP0]], 32
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i32 42, i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.cttz.i32(i32 [[CONV1]], i1 true)
-; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[TMP3]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @llvm.cttz.i64(i64 [[VAL1:%.*]], i1 true)
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[VAL1]], 0
+; CHECK-NEXT:    [[RETVAL:%.*]] = select i1 [[TMP2]], i32 42, i32 [[CONV1]]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
