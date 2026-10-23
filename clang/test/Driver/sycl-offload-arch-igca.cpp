@@ -31,5 +31,11 @@
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa --offload-arch=igca_20ca \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
 // CHK-AMDGPU: error: unsupported HIP gpu architecture: igca_20ca
 // CHK-AMDGPU-NOT: llvm-offload-binary
