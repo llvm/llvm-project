@@ -10,8 +10,6 @@
 
 // "support/constexpr_hash.h"
 
-// Not very portable
-
 #include "constexpr_hash.h"
 
 #include <cassert>
