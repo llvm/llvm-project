@@ -644,7 +644,7 @@ typename Tr::RegionT *RegionInfoBase<Tr>::createRegion(BlockT *entry,
 
   region->verifyRegion();
 
-  updateStatistics(region);
+  Tr::updateStatistics(region);
   return region;
 }
 

@@ -276,6 +276,41 @@ GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
       response.GetStringRef(), llvm::toString(actions.takeError()));
 }
 
+std::optional<LLDBSettings> GDBRemoteCommunicationClient::GetLLDBSettings() {
+  if (m_supports_lldb_settings == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  if (m_supports_lldb_settings != eLazyBoolYes)
+    return std::nullopt;
+  if (m_lldb_settings)
+    return m_lldb_settings;
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jLLDBSettings", response) !=
+      PacketResult::Success)
+    return std::nullopt;
+
+  if (response.IsUnsupportedResponse()) {
+    m_supports_lldb_settings = eLazyBoolNo;
+    return std::nullopt;
+  }
+  if (response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<LLDBSettings> settings =
+      llvm::json::parse<LLDBSettings>(response.Peek(), "LLDBSettings");
+  if (!settings) {
+    Log *log = GetLog(GDBRLog::Process);
+    LLDB_LOG_ERROR(log, settings.takeError(),
+                   "malformed jLLDBSettings response '{1}': {0}",
+                   response.GetStringRef());
+    return std::nullopt;
+  }
+
+  m_lldb_settings = std::move(*settings);
+  return m_lldb_settings;
+}
+
 llvm::Expected<AcceleratorBreakpointHitResponse>
 GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
     const AcceleratorBreakpointHitArgs &args) {
@@ -406,6 +441,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_reverse_continue = eLazyBoolCalculate;
     m_supports_reverse_step = eLazyBoolCalculate;
     m_supports_accelerator_plugins = eLazyBoolCalculate;
+    m_supports_lldb_settings = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
     m_supports_qUserName = true;
@@ -445,6 +481,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
   // our inferior process execs
   m_qProcessInfo_is_valid = eLazyBoolCalculate;
   m_process_arch.Clear();
+  m_lldb_settings.reset();
 }
 
 void GDBRemoteCommunicationClient::GetRemoteQSupported() {
@@ -469,6 +506,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multi_mem_read = eLazyBoolNo;
   m_supports_multi_breakpoint = eLazyBoolNo;
   m_supports_accelerator_plugins = eLazyBoolNo;
+  m_supports_lldb_settings = eLazyBoolNo;
   m_supports_wasm_instance = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
@@ -539,6 +577,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_breakpoint = eLazyBoolYes;
       else if (x == "accelerator-plugins+")
         m_supports_accelerator_plugins = eLazyBoolYes;
+      else if (x == "lldb-settings+")
+        m_supports_lldb_settings = eLazyBoolYes;
       else if (x == "qWasmInstance+")
         m_supports_wasm_instance = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.

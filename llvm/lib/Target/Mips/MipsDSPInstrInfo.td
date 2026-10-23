@@ -1363,15 +1363,15 @@ class DSPSetCCPat<Instruction Cmp, Instruction Pick, ValueType ValTy,
                   CondCode CC> :
   DSPPat<(ValTy (MipsSETCC_DSP ValTy:$a, ValTy:$b, CC)),
          (ValTy (Pick (ValTy (Cmp ValTy:$a, ValTy:$b)),
-                      (ValTy (COPY_TO_REGCLASS (ADDiu ZERO, -1), DSPR)),
-                      (ValTy ZERO)))>;
+                      (ValTy (COPY_TO_REGCLASS (ADDiu R0, -1), DSPR)),
+                      (ValTy R0)))>;
 
 class DSPSetCCPatInv<Instruction Cmp, Instruction Pick, ValueType ValTy,
                      CondCode CC> :
   DSPPat<(ValTy (MipsSETCC_DSP ValTy:$a, ValTy:$b, CC)),
          (ValTy (Pick (ValTy (Cmp ValTy:$a, ValTy:$b)),
-                      (ValTy ZERO),
-                      (ValTy (COPY_TO_REGCLASS (ADDiu ZERO, -1), DSPR))))>;
+                      (ValTy R0),
+                      (ValTy (COPY_TO_REGCLASS (ADDiu R0, -1), DSPR))))>;
 
 class DSPSelectCCPat<Instruction Cmp, Instruction Pick, ValueType ValTy,
                      CondCode CC> :

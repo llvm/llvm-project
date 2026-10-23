@@ -1701,6 +1701,7 @@ if (current_toolchain == default_toolchain) {
       "cuchar",
       "cwchar",
       "cwctype",
+      "debugging",
       "deque",
       "errno.h",
       "exception",

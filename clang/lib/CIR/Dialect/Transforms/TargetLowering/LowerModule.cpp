@@ -55,6 +55,7 @@ createTargetLoweringInfo(LowerModule &lm) {
     return createNVPTXTargetLoweringInfo();
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
+    return createCommonSPIRTargetLoweringInfo();
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:

@@ -1050,6 +1050,8 @@ public:
   }
 
   void returnFromCallee() {
+    if (hasProgramExited())
+      return;
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
@@ -1856,10 +1858,9 @@ public:
         return AnyValue::poison();
 
       const APInt &Cnt = Args[0].asInteger();
-      const uint64_t VF = VFC->getZExtValue();
-      const bool Scalable = ScalableC->isOne();
-
-      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+      uint64_t MaxLanes = VFC->getZExtValue();
+      if (ScalableC->isOne())
+        MaxLanes *= Ctx.getVScale();
 
       uint64_t Res = 0;
       if (!Cnt.isZero()) {
@@ -1893,7 +1894,7 @@ public:
         case BooleanKind::False:
           break;
         case BooleanKind::Poison:
-          return AnyValue::poison();
+          return AnyValue::getPoisonValue(Ctx, RetTy);
         }
       }
 
@@ -1991,8 +1992,8 @@ public:
       return AnyValue();
     }
 
-    if (auto LibCallRes =
-            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+    if (auto LibCallRes = Lib.executeLibcall(LF, CB.getName(),
+                                             CB.getFunctionType(), CalleeArgs))
       return *LibCallRes;
 
     if (ExitInfo)
@@ -2142,6 +2143,7 @@ public:
       Value *CalledOperand = CB.getCalledOperand();
       if (isNoopInlineAsm(CalledOperand, CB.getType())) {
         CurrentFrame->ResolvedCallee = nullptr;
+        CurrentFrame->CalleeRetVal = AnyValue();
         returnFromCallee();
         return;
       }
@@ -2898,6 +2900,35 @@ public:
     Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
                 Bytes);
     setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitBitInsertInst(BitInsertInst &BII) {
+    ByteValue Res = getValue(BII.getOperand(0)).asByte();
+    auto &Val = getValue(BII.getOperand(1));
+    auto &Offset = getValue(BII.getOperand(2));
+    Type *ValTy = BII.getOperand(1)->getType();
+    uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
+      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
+      return;
+    }
+    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+    setResult(BII, std::move(Res));
+  }
+
+  void visitBitExtractInst(BitExtractInst &BEI) {
+    auto &Src = getValue(BEI.getOperand(0)).asByte();
+    auto &Offset = getValue(BEI.getOperand(1));
+    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
+      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
+      return;
+    }
+    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
   }
 
   void visitFreezeInst(FreezeInst &FI) {

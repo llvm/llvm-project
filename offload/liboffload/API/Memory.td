@@ -291,6 +291,24 @@ def olMemUnregister : Function {
   let returns = [];
 }
 
+def olMemIsAccessible : Function {
+  let desc = "Checks whether the device can directly access memory at the given address.";
+  let details = [
+    "The memory does not need to have been allocated through liboffload; "
+    "any host or device pointer may be queried.",
+    "If `Context` is not NULL, allocations made in `Context` are also considered "
+    "and `Device` must belong to it."
+  ];
+  let params = [
+    Param<"ol_context_handle_t", "Context", "handle of the context the allocation may have been made in, or NULL", PARAM_IN_OPTIONAL>,
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"const void*", "Ptr", "pointer to check", PARAM_IN>,
+    Param<"size_t", "Size", "size in bytes of the range starting at `Ptr` to check", PARAM_IN>,
+    Param<"bool*", "IsAccessible", "output pointer for the accessibility result", PARAM_OUT>
+  ];
+  let returns = [];
+}
+
 def ol_mem_migration_flags_t : Typedef {
   let desc = "Memory migration flags, indicating the direction data is migrated in.";
   let value = "uint32_t";

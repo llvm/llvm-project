@@ -657,6 +657,93 @@ define <8 x i16> @usubw_multi_user(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c, i1 %
   ret <8 x i16> %tmp3
 }
 
+; COST-LABEL: icmp_v2i64
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = icmp sgt <2 x i64> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <2 x i1> %c to <2 x i64>
+; CODE-LABEL: icmp_v2i64
+; CODE:       cmgt v0.2d, v0.2d, v1.2d
+; CODE-NEXT:  ret
+define <2 x i64> @icmp_v2i64(<2 x i64> %a, <2 x i64> %b) {
+  %c = icmp sgt <2 x i64> %a, %b
+  %s = sext <2 x i1> %c to <2 x i64>
+  ret <2 x i64> %s
+}
+
+; COST-LABEL: fcmp_v4f32
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = fcmp olt <4 x float> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <4 x i1> %c to <4 x i32>
+; CODE-LABEL: fcmp_v4f32
+; CODE:       fcmgt v0.4s, v1.4s, v0.4s
+; CODE-NEXT:  ret
+define <4 x i32> @fcmp_v4f32(<4 x float> %a, <4 x float> %b) {
+  %c = fcmp olt <4 x float> %a, %b
+  %s = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %s
+}
+
+; COST-LABEL: icmp_v8i64
+; COST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %c = icmp sgt <8 x i64> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <8 x i1> %c to <8 x i64>
+; CODE-LABEL: icmp_v8i64
+; CODE:       cmgt v2.2d, v2.2d, v6.2d
+; CODE-NEXT:  cmgt v0.2d, v0.2d, v4.2d
+; CODE-NEXT:  cmgt v1.2d, v1.2d, v5.2d
+; CODE-NEXT:  cmgt v3.2d, v3.2d, v7.2d
+; CODE-NEXT:  ret
+define <8 x i64> @icmp_v8i64(<8 x i64> %a, <8 x i64> %b) {
+  %c = icmp sgt <8 x i64> %a, %b
+  %s = sext <8 x i1> %c to <8 x i64>
+  ret <8 x i64> %s
+}
+
+; COST-LABEL: fcmp_v4f16
+; COST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %c = fcmp olt <4 x half> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <4 x i1> %c to <4 x i16>
+; CODE-LABEL: fcmp_v4f16
+; CODE:       fcvtl v0.4s, v0.4h
+; CODE-NEXT:  fcvtl v1.4s, v1.4h
+; CODE-NEXT:  fcmgt v0.4s, v1.4s, v0.4s
+; CODE-NEXT:  xtn v0.4h, v0.4s
+; CODE-NEXT:  ret
+define <4 x i16> @fcmp_v4f16(<4 x half> %a, <4 x half> %b) {
+  %c = fcmp olt <4 x half> %a, %b
+  %s = sext <4 x i1> %c to <4 x i16>
+  ret <4 x i16> %s
+}
+
+; COST-LABEL: icmp_v2i128
+; COST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %c = icmp sgt <2 x i128> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = sext <2 x i1> %c to <2 x i128>
+; CODE-LABEL: icmp_v2i128
+; CODE:       cmp x4, x0
+; CODE-NEXT:  sbcs xzr, x5, x1
+; CODE-NEXT:  csetm x0, lt
+; CODE-NEXT:  cmp x6, x2
+; CODE-NEXT:  sbcs xzr, x7, x3
+; CODE-NEXT:  mov x1, x0
+; CODE-NEXT:  csetm x2, lt
+; CODE-NEXT:  mov x3, x2
+; CODE-NEXT:  ret
+define <2 x i128> @icmp_v2i128(<2 x i128> %a, <2 x i128> %b) {
+  %c = icmp sgt <2 x i128> %a, %b
+  %s = sext <2 x i1> %c to <2 x i128>
+  ret <2 x i128> %s
+}
+
+; COST-LABEL: fcmp_v2f128
+; COST-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %c = fcmp olt <2 x fp128> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = sext <2 x i1> %c to <2 x i128>
+; CODE-LABEL: fcmp_v2f128
+; CODE:       bl __lttf2
+; CODE:       csetm x19, mi
+; CODE-NEXT:  bl __lttf2
+; CODE:       csetm x2, mi
+define <2 x i128> @fcmp_v2f128(<2 x fp128> %a, <2 x fp128> %b) {
+  %c = fcmp olt <2 x fp128> %a, %b
+  %s = sext <2 x i1> %c to <2 x i128>
+  ret <2 x i128> %s
+}
+
 ; COST-LABEL: neg_add_multi_user_not_all_absorbed
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <8 x i8> %a to <8 x i16>
 define <8 x i16> @neg_add_multi_user_not_all_absorbed(<8 x i8> %a, <8 x i16> %b, <8 x i16> %c) {
@@ -675,4 +762,48 @@ define <8 x i16> @neg_sub_multi_user_not_all_absorbed(<8 x i8> %a, <8 x i16> %b,
   %tmp2 = udiv <8 x i16> %c, %tmp0
   %tmp3 = select i1 %flag, <8 x i16> %tmp1, <8 x i16> %tmp2
   ret <8 x i16> %tmp3
+}
+
+; COST-LABEL: neg_icmp_v8i8_to_v8i16
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = icmp ule <8 x i8> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sext <8 x i1> %c to <8 x i16>
+; CODE-LABEL: neg_icmp_v8i8_to_v8i16
+; CODE:       cmhs v0.8b, v1.8b, v0.8b
+; CODE-NEXT:  sshll v0.8h, v0.8b, #0
+define <8 x i16> @neg_icmp_v8i8_to_v8i16(<8 x i8> %a, <8 x i8> %b) {
+  %c = icmp ule <8 x i8> %a, %b
+  %s = sext <8 x i1> %c to <8 x i16>
+  ret <8 x i16> %s
+}
+
+; COST-LABEL: neg_scalar_icmp_i32
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = icmp eq i32 %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sext i1 %c to i32
+; CODE-LABEL: neg_scalar_icmp_i32
+; CODE:       cmp w0, w1
+; CODE-NEXT:  csetm w0, eq
+define i32 @neg_scalar_icmp_i32(i32 %a, i32 %b) {
+  %c = icmp eq i32 %a, %b
+  %s = sext i1 %c to i32
+  ret i32 %s
+}
+
+; COST-LABEL: neg_icmp_v4i32_other_block
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = icmp eq <4 x i32> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %f, label %t, label %e
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sext <4 x i1> %c to <4 x i32>
+; CODE-LABEL: neg_icmp_v4i32_other_block
+; CODE:       cmeq v0.4s, v0.4s, v1.4s
+; CODE:       csetm w8, ne
+; CODE-NEXT:  dup v1.4s, w8
+; CODE-NEXT:  and v0.16b, v0.16b, v1.16b
+define <4 x i32> @neg_icmp_v4i32_other_block(<4 x i32> %a, <4 x i32> %b, i1 %f) {
+entry:
+  %c = icmp eq <4 x i32> %a, %b
+  br i1 %f, label %t, label %e
+t:
+  %s = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %s
+e:
+  ret <4 x i32> zeroinitializer
 }

@@ -9,6 +9,13 @@
 ; RUN: FileCheck --input-file %t1.readable %s --check-prefixes=CHECK,NOML
 ; RUN: diff %t1.readable %S/Inputs/reference-log-noml.txt
 
+; The eviction count cap does not constrain the default policy.
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development -mlregalloc-max-eviction-count=0 \
+; RUN:   -regalloc-training-log=%t4 < %S/Inputs/input.ll
+; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t4 > %t4.readable
+; RUN: diff %t1.readable %t4.readable
+
 ; RUN: rm -rf %t_savedmodel %t
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t

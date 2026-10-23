@@ -2814,38 +2814,9 @@ defm V_LDEXP_F16          : VOP2_Real_e32e64_vi <0x33>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
 
-// Aliases to simplify matching of floating-point instructions that
-// are VOP2 on SI and VOP3 on VI.
-class SI2_VI3Alias <string name, VOP3_Real inst> : InstAlias <
-  name#" $dst, $src0, $src1",
-  !if(inst.Pfl.HasOMod,
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0),
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0))
->, PredicateControl {
-  let UseInstAsmMatchConverter = 0;
-  let AsmVariantName = AMDGPUAsmVariants.VOP3;
-}
-
-def : SI2_VI3Alias <"v_ldexp_f32", V_LDEXP_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkaccum_u8_f32", V_CVT_PKACCUM_U8_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_i16_f32", V_CVT_PKNORM_I16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
-
 defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 } // End SubtargetPredicate = isGFX8GFX9
-
-let SubtargetPredicate = isGFX9Only in {
-
-defm : VOP2bInstAliases<V_ADD_U32_e32,     V_ADD_CO_U32_e32_gfx9,     "v_add_co_u32">;
-defm : VOP2bInstAliases<V_ADDC_U32_e32,    V_ADDC_CO_U32_e32_gfx9,    "v_addc_co_u32">;
-defm : VOP2bInstAliases<V_SUB_U32_e32,     V_SUB_CO_U32_e32_gfx9,     "v_sub_co_u32">;
-defm : VOP2bInstAliases<V_SUBB_U32_e32,    V_SUBB_CO_U32_e32_gfx9,    "v_subb_co_u32">;
-defm : VOP2bInstAliases<V_SUBREV_U32_e32,  V_SUBREV_CO_U32_e32_gfx9,  "v_subrev_co_u32">;
-defm : VOP2bInstAliases<V_SUBBREV_U32_e32, V_SUBBREV_CO_U32_e32_gfx9, "v_subbrev_co_u32">;
-
-} // End SubtargetPredicate = isGFX9Only
 
 let SubtargetPredicate = HasDLInsts in {
 
@@ -2930,10 +2901,6 @@ let OtherPredicates = [HasDot4Insts] in {
 let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
-
-let SubtargetPredicate = HasPkFmacF16Inst in {
-defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
 
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16

@@ -3391,7 +3391,11 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
     if (InvertFalseVal)
       D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
-    Value *Select = Builder.CreateSelect(Cond, BitcastB, BitcastD);
+    // The condition here is synthesized and thus we have no way of knowing the
+    // distribution in general. Thus, mark the branch weights of the created
+    // select unknown.
+    Value *Select = Builder.CreateSelectWithUnknownProfile(
+        Cond, BitcastB, BitcastD, DEBUG_TYPE);
     return Builder.CreateBitCast(Select, OrigType);
   }
 

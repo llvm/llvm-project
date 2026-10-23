@@ -4,6 +4,7 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
   ACCDataRuntime.cpp
   ACCExecutableDirectivePatterns.cpp
   ACCHostDataPatterns.cpp
+  ACCKernelLaunchPatterns.cpp
   ACCToLLVMUtils.cpp
   ACCToLLVM.cpp
 
@@ -17,8 +18,10 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
   MLIRArithToLLVM
   MLIRComplexDialect
   MLIRControlFlowToLLVM
+  MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRFunctionInterfaces
+  MLIRGPUDialect
   MLIRIR
   MLIRLLVMCommonConversion
   MLIRLLVMDialect

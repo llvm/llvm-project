@@ -1520,16 +1520,10 @@ protected:
     /// that are missing from the lookup table.
     LLVM_PREFERRED_TYPE(bool)
     mutable uint64_t HasLazyExternalLexicalLookups : 1;
-
-    /// If \c true, lookups should only return identifier from
-    /// DeclContext scope (for example TranslationUnit). Used in
-    /// LookupQualifiedName()
-    LLVM_PREFERRED_TYPE(bool)
-    mutable uint64_t UseQualifiedLookup : 1;
   };
 
   /// Number of bits in DeclContextBitfields.
-  enum { NumDeclContextBits = 13 };
+  enum { NumDeclContextBits = 12 };
 
   /// Stores the bits used by NamespaceDecl.
   /// If modified NumNamespaceDeclBits and the accessor
@@ -2764,14 +2758,6 @@ public:
   bool isDeclInLexicalTraversal(const Decl *D) const {
     return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl ||
                  D == LastDecl);
-  }
-
-  void setUseQualifiedLookup(bool use = true) const {
-    DeclContextBits.UseQualifiedLookup = use;
-  }
-
-  bool shouldUseQualifiedLookup() const {
-    return DeclContextBits.UseQualifiedLookup;
   }
 
   static bool classof(const Decl *D);

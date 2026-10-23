@@ -2395,10 +2395,33 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
-  // TODO: Could make this O(n) as we're merging two sorted lists.
-  for (const auto &I : B.attrs())
-    addAttribute(I);
+  if (B.Attrs.empty())
+    return *this;
 
+  if (Attrs.empty()) {
+    Attrs = B.Attrs;
+    return *this;
+  }
+
+  // Both lists are already sorted by kind. An attribute in B replaces
+  // the attribute of the same kind in this builder.
+  SmallVector<Attribute, 8> Merged;
+  Merged.reserve(Attrs.size() + B.Attrs.size());
+  AttributeComparator Less;
+  auto *I = Attrs.begin(), *E = Attrs.end();
+
+  for (Attribute BAttr : B.Attrs) {
+    while (I != E && Less(*I, BAttr))
+      Merged.push_back(*I++);
+
+    if (I != E && !Less(BAttr, *I))
+      ++I;
+
+    Merged.push_back(BAttr);
+  }
+
+  Merged.append(I, E);
+  Attrs = std::move(Merged);
   return *this;
 }
 

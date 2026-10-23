@@ -319,6 +319,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
         if (Value *M =
                 getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
+            combineMetadataForCSE(cast<Instruction>(M), Load,
+                                  /*DoesKMove=*/false);
             Load->replaceAllUsesWith(M);
             Load->eraseFromParent();
           }
@@ -944,7 +946,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
@@ -1174,6 +1175,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
 
+  // Snapshot the blocks to be cloned after remainder generation, which may
+  // delete blocks from L, but before cloning adds new blocks to L.
+  const std::vector<BasicBlock *> PostRemainderLoopBlocks = L->getBlocks();
+
   // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
   // might break loop-simplified form for these loops (as they, e.g., would
   // share the same exit blocks). We'll keep track of loops for which we can
@@ -1187,7 +1192,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (!I.isDebugOrPseudoInst())
+        if (!isa<PseudoProbeInst>(I))
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
@@ -1392,7 +1397,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
   if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
+    for (auto *BB : PostRemainderLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
       for (auto *ChildDomNode : BBDomNode->children()) {

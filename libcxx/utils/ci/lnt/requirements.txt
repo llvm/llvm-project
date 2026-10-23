@@ -1,3 +1,2 @@
-llvm-lnt
 PyGithub
 tabulate

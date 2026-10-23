@@ -188,6 +188,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.tanf
+    libc.src.__support.math.tanf_float_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

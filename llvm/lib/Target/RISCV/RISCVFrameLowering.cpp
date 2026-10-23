@@ -876,10 +876,11 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     return;
   }
 
+  // The amount of stack that was already allocated before this allocation.
+  uint64_t CFAAdjust = RealStackSize - Offset;
+
   // Unroll the probe loop depending on the number of iterations.
   if (Offset < ProbeSize * 5) {
-    uint64_t CFAAdjust = RealStackSize - Offset;
-
     uint64_t CurrentOffset = 0;
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
@@ -929,7 +930,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   if (EmitCFI) {
     // Set the CFA register to TargetReg.
-    CFIBuilder.buildDefCFA(TargetReg, RoundedSize);
+    CFIBuilder.buildDefCFA(TargetReg, RoundedSize + CFAAdjust);
   }
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
@@ -954,7 +955,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 
   if (EmitCFI)
-    CFIBuilder.buildDefCFAOffset(Offset);
+    CFIBuilder.buildDefCFAOffset(RealStackSize);
 }
 
 static bool isPush(unsigned Opcode) {

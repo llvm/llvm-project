@@ -6,6 +6,7 @@ add_lldb_unittest(SymbolTests
   MangledTest.cpp
   PostfixExpressionTest.cpp
   SymbolLocatorTest.cpp
+  SymbolFileTest.cpp
   SymbolTest.cpp
   SymtabTest.cpp
   SymStoreTest.cpp

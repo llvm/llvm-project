@@ -871,6 +871,14 @@ public:
   /// True if this function needs frame moves for debug or exceptions.
   bool needsFrameMoves() const;
 
+  /// True if this function describes its unwind information with Windows SEH
+  /// unwind opcodes (.seh_* directives, .pdata and .xdata) rather than CFI.
+  bool usesWindowsUnwindInfo() const;
+
+  /// True if this function uses SEH unwind opcodes and needs an unwind table
+  /// entry.
+  bool needsWinCFI() const;
+
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }
   MachineFunctionProperties &getProperties() { return Properties; }

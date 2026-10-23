@@ -19,10 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include <vector>
 
-/// Force setting the no-alias attribute on fuction arguments when possible.
-static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
-                                        llvm::cl::init(true));
-
 /// Disable the use of fake use for arguments.
 static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
                                                   llvm::cl::Hidden,
@@ -93,6 +89,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
+  options.boundsInStackSlots = config.OptLevel == llvm::OptimizationLevel::O0;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }

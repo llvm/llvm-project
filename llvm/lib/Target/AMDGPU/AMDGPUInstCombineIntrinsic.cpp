@@ -1146,12 +1146,11 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   return IC.replaceInstUsesWith(II, Result);
 }
 
-/// Try to fold a constant addition into the accumulator when saturation is
-/// disabled.
-static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
-                                                   unsigned AccIdx,
-                                                   unsigned ClampIdx,
-                                                   InstCombiner &IC) {
+/// Try to fold an addition into the accumulator when saturation is disabled.
+static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
+                                              unsigned AccIdx,
+                                              unsigned ClampIdx,
+                                              InstCombiner &IC) {
   // Reassociating across a saturating accumulation is not valid.
   if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
     return nullptr;
@@ -1164,15 +1163,27 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
   if (!AccumUser)
     return nullptr;
 
-  const APInt *AccumDelta = nullptr;
-  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+  Value *AccumDelta = nullptr;
+  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_Value(AccumDelta))))
     return nullptr;
 
-  Constant *NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+  Value *NewAcc = nullptr;
+  const APInt *AccumDeltaC = nullptr;
+  if (Acc->isZero())
+    NewAcc = AccumDelta;
+  else if (match(AccumDelta, m_APInt(AccumDeltaC)))
+    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDeltaC);
+  else
+    return nullptr;
 
-  IC.replaceInstUsesWith(*AccumUser, &II);
+  Instruction *NewII =
+      IC.InsertNewInstWith(II.clone(), AccumUser->getIterator());
+  NewII->setOperand(AccIdx, NewAcc);
+  NewII->dropPoisonGeneratingAnnotations();
+  NewII->dropUBImplyingAttrsAndMetadata();
+  IC.replaceInstUsesWith(*AccumUser, NewII);
   IC.eraseInstFromFunction(*AccumUser);
-  return IC.replaceOperand(II, AccIdx, NewAcc);
+  return &II;
 }
 
 std::optional<Instruction *>
@@ -1751,7 +1762,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return nullptr;
 
     // TODO: Can raise lower bound by inspecting first argument.
-    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    // Wave64 mbcnt_lo adds at most 32. Otherwise these add at most 31.
+    unsigned MaxCount =
+        IID == Intrinsic::amdgcn_mbcnt_lo && ST->isWave64() ? 32 : 31;
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, MaxCount + 1));
     ConstantRange ComputedRange = AccRange.add(MbcntRange);
     if (ComputedRange.isFullSet())
       return nullptr;
@@ -2029,7 +2043,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(2));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 2, 3, IC))
       return I;
 
     break;
@@ -2054,7 +2068,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(4));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 4, 5, IC))
       return I;
 
     break;
@@ -2155,9 +2169,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceInstUsesWith(II, NewCall);
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
+  case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
+  case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
+  case Intrinsic::amdgcn_struct_ptr_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:

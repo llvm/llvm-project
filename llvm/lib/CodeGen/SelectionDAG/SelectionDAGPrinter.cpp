@@ -281,6 +281,7 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 #endif
 }
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream O(s);
@@ -301,6 +302,7 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   }
   return s;
 }
+#endif
 
 void ScheduleDAGSDNodes::getCustomGraphFeatures(GraphWriter<ScheduleDAG*> &GW) const {
   if (DAG) {

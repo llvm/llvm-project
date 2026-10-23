@@ -4270,6 +4270,27 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_multi_block
+func.func @omp_iterator_multi_block(%a : !llvm.ptr, %b : !llvm.ptr) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[C:.*]] = arith.cmpi eq, %[[IV]], %{{.*}} : index
+  // CHECK:   cf.cond_br %[[C]], ^[[BB1:.*]](%{{.*}} : !llvm.ptr), ^[[BB1]](%{{.*}} : !llvm.ptr)
+  // CHECK: ^[[BB1]](%[[P:.*]]: !llvm.ptr):
+  // CHECK:   omp.yield(%[[P]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %c = arith.cmpi eq, %iv, %lb : index
+    cf.cond_br %c, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
+  ^bb1(%p : !llvm.ptr):
+    omp.yield(%p : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {

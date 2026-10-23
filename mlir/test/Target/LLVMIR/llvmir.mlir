@@ -1688,6 +1688,8 @@ llvm.func @atomicrmw(
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
   %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}
+  %28 = llvm.atomicrmw ignore_denormal_mode fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -1813,6 +1815,18 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
     %2 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
     %3 = llvm.mlir.constant(1 : i32) : i32
     llvm.br ^bb1(%3 : i32)
+}
+
+// -----
+
+module attributes {llvm.data_layout = "P4"} {
+  llvm.func @__gxx_personality_v0(...) -> i32
+
+  // CHECK-LABEL: @personality_program_as
+  // CHECK-SAME: personality ptr addrspace(4) @__gxx_personality_v0
+  llvm.func @personality_program_as() attributes { personality = @__gxx_personality_v0 } {
+    llvm.return
+  }
 }
 
 // -----
@@ -2132,6 +2146,28 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 }
 
 // CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @noundef_load
+llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !noundef ![[NODE:[0-9]+]]
+  %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @range_load
+llvm.func @range_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !range ![[RANGE:[0-9]+]]
+  %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[RANGE]] = !{i32 0, i32 10}
 
 // -----
 

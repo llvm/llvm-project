@@ -1415,19 +1415,21 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const RecordDecl *RD = CurType->getAsRecordDecl();
+      const CXXRecordDecl *RD = CurType->getAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
+        return std::nullopt;
+
+      const CXXRecordDecl *BaseDecl = Entry.RD.getPointer();
+      if (!RD->isDerivedFrom(BaseDecl))
         return std::nullopt;
 
       const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
       if (Entry.RD.getInt())
-        Offset +=
-            Layout.getVBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getVBaseClassOffset(BaseDecl).getQuantity();
       else
-        Offset +=
-            Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getBaseClassOffset(BaseDecl).getQuantity();
 
-      CurType = ASTCtx.getCanonicalTagType(Entry.RD.getPointer());
+      CurType = ASTCtx.getCanonicalTagType(BaseDecl);
     } break;
 
     case PointerPathEntry::Field: {

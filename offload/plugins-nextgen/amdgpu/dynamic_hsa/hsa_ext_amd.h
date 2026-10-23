@@ -108,6 +108,17 @@ hsa_status_t hsa_amd_memory_async_copy(void *dst, hsa_agent_t dst_agent,
                                        const hsa_signal_t *dep_signals,
                                        hsa_signal_t completion_signal);
 
+typedef enum hsa_amd_sdma_engine_id {
+  HSA_AMD_SDMA_ENGINE_0 = 0x1,
+  HSA_AMD_SDMA_ENGINE_1 = 0x2,
+} hsa_amd_sdma_engine_id_t;
+
+hsa_status_t hsa_amd_memory_async_copy_on_engine(
+    void *dst, hsa_agent_t dst_agent, const void *src, hsa_agent_t src_agent,
+    size_t size, uint32_t num_dep_signals, const hsa_signal_t *dep_signals,
+    hsa_signal_t completion_signal, hsa_amd_sdma_engine_id_t engine_id,
+    bool force_copy_on_sdma);
+
 hsa_status_t hsa_amd_agent_memory_pool_get_info(
     hsa_agent_t agent, hsa_amd_memory_pool_t memory_pool,
     hsa_amd_agent_memory_pool_info_t attribute, void *value);

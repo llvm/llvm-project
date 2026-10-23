@@ -90,6 +90,15 @@ LLVM_ABI void encodePayload(ArrayRef<BBAddrMapEntry> Entries,
                             yaml::ContiguousBlobAccumulator &CBA,
                             llvm::endianness Endian, unsigned AddressSize);
 
+/// Decodes the BBAddrMap payload in \p Content into \p Entries and
+/// \p PGOAnalyses. \p AddressSize must be 4 or 8. Returns an error for an
+/// unsupported version or feature. Leaves both outputs untouched if \p Content
+/// cannot be fully decoded.
+LLVM_ABI Error decodePayload(
+    ArrayRef<uint8_t> Content, llvm::endianness Endian, unsigned AddressSize,
+    std::optional<std::vector<BBAddrMapEntry>> &Entries,
+    std::optional<std::vector<PGOAnalysisMapEntry>> &PGOAnalyses);
+
 } // end namespace BBAddrMapYAML
 } // end namespace llvm
 

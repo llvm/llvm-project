@@ -1697,7 +1697,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Check the personality and set it.
   if (func.getPersonality()) {
-    llvm::Type *ty = llvm::PointerType::getUnqual(llvmFunc->getContext());
+    llvm::Type *ty = llvm::PointerType::get(
+        llvmContext, llvmModule->getDataLayout().getProgramAddressSpace());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);

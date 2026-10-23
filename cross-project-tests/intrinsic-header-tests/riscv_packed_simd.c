@@ -12,6 +12,11 @@
 
 #include <riscv_packed_simd.h>
 
+// CHECK-LABEL: test_cls_32:
+// RV32:        cls{{[[:space:]]}}
+// RV64:        clsw
+unsigned test_cls_32(int32_t a) { return __riscv_cls_32(a); }
+
 // Note: RV64 has no 32-bit `rev`; the spec expands it to `rev`+`srai`.
 // CHECK-LABEL: test_rev_32:
 // RV32:        rev{{[[:space:]]}}
@@ -19,11 +24,78 @@
 // RV64-NEXT:   srai
 uint32_t test_rev_32(uint32_t a) { return __riscv_rev_32(a); }
 
+// CHECK-LABEL: test_slx_32:
+// RV32:        slx{{[[:space:]]}}
+// RV64:        andi
+// RV64-NEXT:   slli
+// RV64-NEXT:   slx{{[[:space:]]}}
+uint32_t test_slx_32(uint32_t rd, uint32_t rs1, unsigned shamt) {
+  return __riscv_slx_32(rd, rs1, shamt);
+}
+
+// CHECK-LABEL: test_srx_32:
+// RV32:        srx{{[[:space:]]}}
+// RV64:        ori
+// RV64-NEXT:   slli
+// RV64-NEXT:   srx{{[[:space:]]}}
+uint32_t test_srx_32(uint32_t rd, uint32_t rs1, unsigned shamt) {
+  return __riscv_srx_32(rd, rs1, shamt);
+}
+
 #if __riscv_xlen == 64
+// RV64-LABEL: test_cls_64:
+// RV64:        cls{{[[:space:]]}}
+unsigned test_cls_64(int64_t a) { return __riscv_cls_64(a); }
+
 // RV64-LABEL: test_rev_64:
 // RV64:        rev{{[[:space:]]}}
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
+
+// RV64-LABEL: test_rev16_64:
+// RV64:        rev16{{[[:space:]]}}
+uint64_t test_rev16_64(uint64_t a) { return __riscv_rev16_64(a); }
+
+// RV64-LABEL: test_slx_64:
+// RV64:        slx{{[[:space:]]}}
+uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
+  return __riscv_slx_64(rd, rs1, shamt);
+}
+
+// RV64-LABEL: test_srx_64:
+// RV64:        srx{{[[:space:]]}}
+uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
+  return __riscv_srx_64(rd, rs1, shamt);
+}
 #endif
+
+// Scalar averaging addition and subtraction
+// CHECK-LABEL: test_aadd_i32:
+// RV32:        aadd{{[[:space:]]}}
+// RV64:        paadd.w
+int32_t test_aadd_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_aadd_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_aaddu_u32:
+// RV32:        aaddu{{[[:space:]]}}
+// RV64:        paaddu.w
+uint32_t test_aaddu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_aaddu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asub_i32:
+// RV32:        asub{{[[:space:]]}}
+// RV64:        pasub.w
+int32_t test_asub_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_asub_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asubu_u32:
+// RV32:        asubu{{[[:space:]]}}
+// RV64:        pasubu.w
+uint32_t test_asubu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_asubu_u32(rs1, rs2);
+}
 
 // CHECK-LABEL: test_sadd_i32:
 // RV32:        sadd{{[[:space:]]}}
@@ -2211,7 +2283,7 @@ uint16x4_t test_pabdu_u16x4(uint16x4_t a, uint16x4_t b) {
 
 // CHECK-LABEL: test_predsum_i8x4_i32:
 // RV32:        predsum.bs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsum.bs
 int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
   return __riscv_predsum_i8x4_i32(a, b);
@@ -2219,7 +2291,7 @@ int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
 
 // CHECK-LABEL: test_predsumu_u8x4_u32:
 // RV32:        predsumu.bs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsumu.bs
 uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
   return __riscv_predsumu_u8x4_u32(a, b);
@@ -2227,7 +2299,7 @@ uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
 
 // CHECK-LABEL: test_predsum_i16x2_i32:
 // RV32:        predsum.hs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsum.hs
 int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
   return __riscv_predsum_i16x2_i32(a, b);
@@ -2235,7 +2307,7 @@ int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
 
 // CHECK-LABEL: test_predsumu_u16x2_u32:
 // RV32:        predsumu.hs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsumu.hs
 uint32_t test_predsumu_u16x2_u32(uint16x2_t a, uint32_t b) {
   return __riscv_predsumu_u16x2_u32(a, b);
@@ -3050,6 +3122,64 @@ int32_t test_mulhrsu_i32(int32_t rs1, uint32_t rs2) {
   return __riscv_mulhrsu_i32(rs1, rs2);
 }
 
+// Scalar multiply high accumulate
+// CHECK-LABEL: test_mhacc_i32:
+// RV32:        mhacc{{[[:space:]]}}
+// RV64:        pmhacc.w
+int32_t test_mhacc_i32(int32_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mhacc_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhracc_i32:
+// RV32:        mhracc{{[[:space:]]}}
+// RV64:        pmhracc.w
+int32_t test_mhracc_i32(int32_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mhracc_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccu_u32:
+// RV32:        mhaccu{{[[:space:]]}}
+// RV64:        pmhaccu.w
+uint32_t test_mhaccu_u32(uint32_t rd, uint32_t rs1, uint32_t rs2) {
+  return __riscv_mhaccu_u32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhraccu_u32:
+// RV32:        mhraccu{{[[:space:]]}}
+// RV64:        pmhraccu.w
+uint32_t test_mhraccu_u32(uint32_t rd, uint32_t rs1, uint32_t rs2) {
+  return __riscv_mhraccu_u32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccsu_i32:
+// RV32:        mhaccsu{{[[:space:]]}}
+// RV64:        pmhaccsu.w
+int32_t test_mhaccsu_i32(int32_t rd, int32_t rs1, uint32_t rs2) {
+  return __riscv_mhaccsu_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhraccsu_i32:
+// RV32:        mhraccsu{{[[:space:]]}}
+// RV64:        pmhraccsu.w
+int32_t test_mhraccsu_i32(int32_t rd, int32_t rs1, uint32_t rs2) {
+  return __riscv_mhraccsu_i32(rd, rs1, rs2);
+}
+
+// Scalar "Q-format" multiplication
+// CHECK-LABEL: test_mulq_i32:
+// RV32:        mulq{{[[:space:]]}}
+// RV64:        pmulq.w
+int32_t test_mulq_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulq_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_mulqr_i32:
+// RV32:        mulqr{{[[:space:]]}}
+// RV64:        pmulqr.w
+int32_t test_mulqr_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulqr_i32(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pmulh_i16x2:
 // CHECK:       pmulh.h
 int16x2_t test_pmulh_i16x2(int16x2_t rs1, int16x2_t rs2) {
@@ -3340,7 +3470,7 @@ uint32x2_t test_prev_u32x2(uint32x2_t a) { return __riscv_prev_u32x2(a); }
 
 // CHECK-LABEL: test_pabdsumu_u8x4_u32:
 // RV32:        pabdsumu.b
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pabdsumu.b
 uint32_t test_pabdsumu_u8x4_u32(uint8x4_t a, uint8x4_t b) {
   return __riscv_pabdsumu_u8x4_u32(a, b);
@@ -3348,7 +3478,7 @@ uint32_t test_pabdsumu_u8x4_u32(uint8x4_t a, uint8x4_t b) {
 
 // CHECK-LABEL: test_pabdsumau_u8x4_u32:
 // RV32:        pabdsumau.b
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pabdsumau.b
 uint32_t test_pabdsumau_u8x4_u32(uint32_t rd, uint8x4_t a, uint8x4_t b) {
   return __riscv_pabdsumau_u8x4_u32(rd, a, b);
@@ -3654,6 +3784,62 @@ int16x4_t test_ppairo_i16x4(int16x4_t rs1, int16x4_t rs2) {
 // RV64:        ppairo.h
 uint16x4_t test_ppairo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
   return __riscv_ppairo_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_i32x2:
+// RV32:        mv
+// RV64:        pack
+int32x2_t test_ppaire_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaire_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u32x2:
+// RV32:        mv
+// RV64:        pack
+uint32x2_t test_ppaire_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaire_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i32x2:
+// RV32:        mv
+// RV64:        ppaireo.w
+int32x2_t test_ppaireo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppaireo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u32x2:
+// RV32:        mv
+// RV64:        ppaireo.w
+uint32x2_t test_ppaireo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppaireo_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i32x2:
+// RV32:        mv
+// RV64:        ppairoe.w
+int32x2_t test_ppairoe_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairoe_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u32x2:
+// RV32:        mv
+// RV64:        ppairoe.w
+uint32x2_t test_ppairoe_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairoe_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i32x2:
+// RV32:        mv
+// RV64:        ppairo.w
+int32x2_t test_ppairo_i32x2(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_ppairo_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u32x2:
+// RV32:        mv
+// RV64:        ppairo.w
+uint32x2_t test_ppairo_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_ppairo_u32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_psext_b_i16x2:

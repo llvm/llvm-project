@@ -2891,6 +2891,24 @@ LLVM_C_ABI void LLVMSetUnnamedAddress(LLVMValueRef Global,
                                       LLVMUnnamedAddr UnnamedAddr);
 
 /**
+ * Returns whether the global value is marked as dso_local, i.e. whether it
+ * will resolve to a symbol within the same linkage unit.
+ *
+ * @see llvm::GlobalValue::isDSOLocal()
+ */
+LLVM_C_ABI LLVMBool LLVMIsDSOLocal(LLVMValueRef Global);
+
+/**
+ * Sets whether the global value is marked as dso_local.
+ *
+ * Note that globals with local linkage or non-default visibility are always
+ * implicitly dso_local.
+ *
+ * @see llvm::GlobalValue::setDSOLocal()
+ */
+LLVM_C_ABI void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal);
+
+/**
  * Returns the "value type" of a global value.  This differs from the formal
  * type of a global value which is always a pointer type.
  *

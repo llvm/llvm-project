@@ -621,6 +621,51 @@ TEST(SessionTest, TryCreateServiceFailure) {
   EXPECT_THAT_EXPECTED(S.tryCreateService<ConfigurableService>(true), Failed());
 }
 
+TEST(SessionTest, InstanceSymbolsAddAndLookup) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  int Foo = 0, Bar = 0;
+
+  // Add Foo from a range of pairs, and Bar from a SimpleSymbolTable.
+  std::pair<SymbolNameSpec, const void *> FooEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &Foo}};
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(FooEntry), Succeeded());
+
+  SimpleSymbolTable BarTable;
+  std::pair<SymbolNameSpec, const void *> BarEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Bar"), &Bar}};
+  ASSERT_THAT_ERROR(BarTable.addUnique(BarEntry), Succeeded());
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(std::move(BarTable)), Succeeded());
+
+  auto Addrs = S.lookupInstanceSymbols(
+      {{"orc_rt_test_Foo", SymbolLookupFlags::RequiredSymbol},
+       {"orc_rt_test_Bar", SymbolLookupFlags::RequiredSymbol}});
+  ASSERT_EQ(Addrs.size(), 2U);
+  EXPECT_THAT(Addrs[0], Optional(Eq(&Foo)));
+  EXPECT_THAT(Addrs[1], Optional(Eq(&Bar)));
+}
+
+TEST(SessionTest, InstanceSymbolsConflictingAddFails) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  int Foo = 0, OtherFoo = 0, Bar = 0;
+  std::pair<SymbolNameSpec, const void *> FooEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &Foo}};
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(FooEntry), Succeeded());
+
+  // A batch containing one conflicting definition should be rejected as a
+  // whole: neither the conflicting Foo nor the otherwise-valid Bar is added.
+  std::pair<SymbolNameSpec, const void *> Batch[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &OtherFoo},
+      {SymbolNameSpec::linker("orc_rt_test_Bar"), &Bar}};
+  EXPECT_THAT_ERROR(S.addInstanceSymbols(Batch), Failed());
+
+  auto Addrs = S.lookupInstanceSymbols(
+      {{"orc_rt_test_Foo", SymbolLookupFlags::RequiredSymbol},
+       {"orc_rt_test_Bar", SymbolLookupFlags::RequiredSymbol}});
+  ASSERT_EQ(Addrs.size(), 2U);
+  EXPECT_THAT(Addrs[0], Optional(Eq(&Foo)));
+  EXPECT_FALSE(Addrs[1].has_value());
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.

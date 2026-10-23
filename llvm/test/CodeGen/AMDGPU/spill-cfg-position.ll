@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 -stress-regalloc=6 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 -stress-regalloc=6 < %s | FileCheck %s
 
 ; Inline spiller can decide to move a spill as early as possible in the basic block.
 ; It will skip phis and label, but we also need to make sure it skips instructions
@@ -15,25 +15,27 @@
 
 define amdgpu_kernel void @spill_cfg_position(ptr addrspace(1) nocapture %arg) {
 bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %arg.tid = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tid
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %tmp14 = load i32, ptr addrspace(1) %arg, align 4
-  %tmp15 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 1
+  %tmp14 = load i32, ptr addrspace(1) %arg.tid, align 4
+  %tmp15 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 1
   %tmp16 = load i32, ptr addrspace(1) %tmp15, align 4
-  %tmp17 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 2
+  %tmp17 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 2
   %tmp18 = load i32, ptr addrspace(1) %tmp17, align 4
-  %tmp19 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 3
+  %tmp19 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 3
   %tmp20 = load i32, ptr addrspace(1) %tmp19, align 4
-  %tmp21 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 4
+  %tmp21 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 4
   %tmp22 = load i32, ptr addrspace(1) %tmp21, align 4
-  %tmp23 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 5
+  %tmp23 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 5
   %tmp24 = load i32, ptr addrspace(1) %tmp23, align 4
-  %tmp25 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 6
+  %tmp25 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 6
   %tmp26 = load i32, ptr addrspace(1) %tmp25, align 4
-  %tmp27 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 7
+  %tmp27 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 7
   %tmp28 = load i32, ptr addrspace(1) %tmp27, align 4
-  %tmp29 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 8
+  %tmp29 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i64 8
   %tmp30 = load i32, ptr addrspace(1) %tmp29, align 4
-  %tmp33 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp1
+  %tmp33 = getelementptr inbounds i32, ptr addrspace(1) %arg.tid, i32 %tmp1
   %tmp34 = load i32, ptr addrspace(1) %tmp33, align 4
   %tmp35 = icmp eq i32 %tmp34, 0
   br i1 %tmp35, label %bb44, label %bb36
