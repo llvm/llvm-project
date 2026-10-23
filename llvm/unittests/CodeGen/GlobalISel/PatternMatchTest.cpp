@@ -990,6 +990,32 @@ TEST_F(AArch64GISelMITest, DeferredMatching) {
                        m_GAdd(m_Reg(X), m_GSub(m_Reg(), m_DeferredReg(X)))));
 }
 
+TEST_F(AArch64GISelMITest, MatchCopyWithIntConstantOrPhys) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  LLT s64 = LLT::scalar(64);
+  auto Cst = B.buildConstant(s64, 42);
+  auto CopyCst = B.buildCopy(s64, Cst);
+  Register PhysReg = MCRegister::FirstPhysicalReg;
+  B.buildCopy(PhysReg, Cst);
+  B.buildCopy(PhysReg, Cst);
+  auto CopyPhys = B.buildCopy(s64, PhysReg);
+  int64_t CstVal;
+  bool match = mi_match(CopyCst.getReg(0), *MRI, m_Copy(m_ICst(CstVal)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(CstVal, 42);
+  // If the copy source happens to be a physical register, the match should
+  // fail (and we should not assert in getVRegDef).
+  Register X;
+  match = mi_match(CopyPhys.getReg(0), *MRI, m_Copy(m_Reg(X)));
+  EXPECT_TRUE(match);
+  EXPECT_TRUE(X.isPhysical());
+  EXPECT_EQ(X, PhysReg);
+  match = mi_match(CopyPhys.getReg(0), *MRI, m_Copy(m_ICst(CstVal)));
+  EXPECT_FALSE(match);
+}
+
 TEST_F(AArch64GISelMITest, AddLike) {
   setUp();
   if (!TM)
