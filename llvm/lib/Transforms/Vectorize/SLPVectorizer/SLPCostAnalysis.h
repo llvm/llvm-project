@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 
+#include "SLPCompatibilityAnalysis.h"
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -68,6 +69,16 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of one vector node vectorizing the lanes \p VL with the
+/// opcode of \p S, or an invalid cost if that node kind is not modelled here.
+/// Estimated from the lanes rather than a tree entry, so it can compare the
+/// merged-inputs shape against the natural one before either is built.
+InstructionCost
+getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
+                         const InstructionsState &S, ArrayRef<Value *> VL,
+                         Type *ScalarTy,
+                         TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the cast between the widened strided access type and
 /// the entry vector type.
