@@ -1480,16 +1480,24 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   Value *B = Cmp->getOperand(1);
 
   // Normalize "A - B" as the true value of the select.
-  if (match(FI, m_Sub(m_Specific(A), m_Specific(B)))) {
+  if (match(FI, m_Sub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))) ||
+      match(FI, m_Sub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B))))) {
     std::swap(FI, TI);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
+  
   // With any pair of no-wrap subtracts:
   // (A > B) ? (A - B) : (B - A) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_Sub(m_Specific(A), m_Specific(B))) &&
-      match(FI, m_Sub(m_Specific(B), m_Specific(A))) &&
+  bool unsignedMatch = ((Pred == CmpInst::ICMP_UGT) &&
+    match(TI, m_Sub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))) &&
+    match(FI, m_Sub(m_ZExtOrSelf(m_Specific(B)), m_ZExtOrSelf(m_Specific(A)))));
+  
+  bool signedMatch = ((Pred == CmpInst::ICMP_SGT) &&
+    match(TI, m_Sub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B)))) &&
+    match(FI, m_Sub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A)))));
+
+  if ((unsignedMatch || signedMatch) &&
       (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap()) &&
       (FI->hasNoSignedWrap() || FI->hasNoUnsignedWrap())) {
     // The remaining subtract is not "nuw" any more.
@@ -1505,32 +1513,52 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   }
 
   // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+  unsignedMatch = ((Pred == CmpInst::ICMP_UGT) &&
+    match(TI, m_NSWSub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))));
+  
+  signedMatch = ((Pred == CmpInst::ICMP_SGT) &&
+    match(TI, m_NSWSub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B)))));
+  
+  if ((unsignedMatch || signedMatch) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (0 - (A - B)) : (A - B) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SLT &&
-      match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+  unsignedMatch = ((Pred == CmpInst::ICMP_ULT) &&
+    match(FI, m_NSWSub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))));
+  
+  signedMatch = ((Pred == CmpInst::ICMP_SLT) &&
+    match(FI, m_NSWSub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B)))));
+  
+  if ((unsignedMatch || signedMatch) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A > B) ? (0 - (B - A)) : (B - A) --> abs(B - A)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+  unsignedMatch = ((Pred == CmpInst::ICMP_UGT) &&
+    match(FI, m_NSWSub(m_ZExtOrSelf(m_Specific(B)), m_ZExtOrSelf(m_Specific(A)))));
+  
+  signedMatch = ((Pred == CmpInst::ICMP_SGT) &&
+    match(FI, m_NSWSub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A)))));
+  
+  if ((unsignedMatch || signedMatch) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (B - A) : (0 - (B - A)) --> abs(B - A)
-  if (Pred == CmpInst::ICMP_SLT &&
-      match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+  unsignedMatch = ((Pred == CmpInst::ICMP_ULT) &&
+    match(TI, m_NSWSub(m_ZExtOrSelf(m_Specific(B)), m_ZExtOrSelf(m_Specific(A)))));
+  
+  signedMatch = ((Pred == CmpInst::ICMP_SLT) &&
+    match(TI, m_NSWSub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A)))));
+  
+  if ((unsignedMatch || signedMatch) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
