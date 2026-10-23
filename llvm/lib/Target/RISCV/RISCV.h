@@ -224,6 +224,7 @@ FunctionPass *createRISCVQCRelaxMarkingPass();
 void initializeRISCVQCRelaxMarkingPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
+
 } // namespace llvm
 
 #endif
