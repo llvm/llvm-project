@@ -6484,6 +6484,30 @@ private:
     }
   }
 
+  void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
+                                     const Fortran::semantics::Scope &scope) {
+    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+      return;
+    const auto *assumptionScopeEnd =
+        &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    for (const auto *assumptionScope = &scope;
+         !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
+         assumptionScope = &assumptionScope->parent()) {
+      if (const auto *symbol = assumptionScope->symbol();
+          !symbol ||
+          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
+        continue;
+      llvm::SmallVector<mlir::Attribute> llvmAttrs;
+      if (auto existing =
+              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+        llvm::append_range(llvmAttrs, existing);
+      llvmAttrs.push_back(
+          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
+      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
+      break;
+    }
+  }
+
   /// Start translation of a function.
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
@@ -6509,26 +6533,7 @@ private:
     builder->setFPMaxminBehavior(
         bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
-    const auto &langOptions = bridge.getSemanticsContext().langOptions();
-    const auto *assumptionScopeEnd =
-        &Fortran::semantics::omp::GetProgramUnit(scope).parent();
-    for (const auto *assumptionScope = &scope;
-         !langOptions.OpenMPSimd && !assumptionScope->IsGlobal() &&
-         assumptionScope != assumptionScopeEnd;
-         assumptionScope = &assumptionScope->parent()) {
-      const auto *symbol = assumptionScope->symbol();
-      if (!symbol ||
-          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        continue;
-      llvm::SmallVector<mlir::Attribute> llvmAttrs;
-      if (auto existing =
-              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
-        llvm::append_range(llvmAttrs, existing);
-      llvmAttrs.push_back(
-          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
-      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
-      break;
-    }
+    setOpenMPAssumptionAttributes(func, scope);
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
       // risks, but giving global linkage to internal procedure will break the
