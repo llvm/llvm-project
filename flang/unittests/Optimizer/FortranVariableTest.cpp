@@ -53,7 +53,7 @@ TEST_F(FortranVariableTest, SimpleScalar) {
       /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{},
-      /*dummy_arg_no=*/mlir::IntegerAttr{});
+      /*dummy_arg_no=*/mlir::IntegerAttr{}, /*alignment=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -81,7 +81,7 @@ TEST_F(FortranVariableTest, CharacterScalar) {
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{},
-      /*dummy_arg_no=*/mlir::IntegerAttr{});
+      /*dummy_arg_no=*/mlir::IntegerAttr{}, /*alignment=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -114,7 +114,7 @@ TEST_F(FortranVariableTest, SimpleArray) {
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{},
-      /*dummy_arg_no=*/mlir::IntegerAttr{});
+      /*dummy_arg_no=*/mlir::IntegerAttr{}, /*alignment=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -147,7 +147,7 @@ TEST_F(FortranVariableTest, CharacterArray) {
       /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{},
-      /*dummy_arg_no=*/mlir::IntegerAttr{});
+      /*dummy_arg_no=*/mlir::IntegerAttr{}, /*alignment=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -219,7 +219,8 @@ TEST_F(FortranVariableTest, OptionalBoxThroughAssert) {
         builder->getStringAttr("x"),
         fir::FortranVariableFlagsAttr::get(&context, flags),
         /*data_attr=*/cuf::DataAttributeAttr{},
-        /*dummy_arg_no=*/mlir::IntegerAttr{});
+        /*dummy_arg_no=*/mlir::IntegerAttr{},
+        /*alignment=*/mlir::IntegerAttr{});
     auto guard = fir::AssertOp::create(*builder, loc, condition,
         fir::RuntimeCheckKind::conformance, "mismatch", mlir::ValueRange{},
         mlir::ValueRange{declare});

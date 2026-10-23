@@ -162,3 +162,11 @@ func.func @vars_within_physical_storage() {
   %8 = fir.declare %7 storage (%1[4]) uniq_name("b") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
   return
 }
+
+func.func @aligned_declare(%arg0: !fir.ref<f32>) {
+  %0 = fir.declare %arg0 uniq_name("a") alignment(64) : (!fir.ref<f32>) -> !fir.ref<f32>
+  return
+}
+// CHECK-LABEL:   func.func @aligned_declare(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<f32>) {
+// CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("a") alignment(64) : (!fir.ref<f32>) -> !fir.ref<f32>

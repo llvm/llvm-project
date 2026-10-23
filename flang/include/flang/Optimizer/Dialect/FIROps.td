@@ -205,6 +205,11 @@ def fir_AllocaOp : fir_Op<"alloca", [
 
     The pinned attribute is used to flag fir.alloca operation in a specific
     region and avoid them being hoisted in an alloca hoisting pass.
+
+    The optional alignment attribute requests a minimum byte alignment for
+    the allocation, as `fir.allocmem` and `fir.global` do. It must be a
+    positive power of two. Code generation never lowers the alignment below
+    the ABI alignment of the allocated type.
   }];
 
   let arguments = (ins
@@ -213,7 +218,8 @@ def fir_AllocaOp : fir_Op<"alloca", [
     OptionalAttr<StrAttr>:$bindc_name,
     UnitAttr:$pinned,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let results =
@@ -3387,6 +3393,12 @@ def fir_DeclareOp
     If these operands are absent, then the storage of the declared variable
     is only known to start where the memref operand points to.
 
+    The optional alignment attribute records the byte alignment requested
+    for the variable (e.g. by a compiler directive). For a variable whose
+    storage is allocated by the compiler it is a fact about that storage;
+    for a variable represented by a descriptor it is only the policy for
+    future allocations and must not be turned into an alignment assumption.
+
     Example:
 
     CHARACTER(n), OPTIONAL, TARGET :: c(10:, 20:)
@@ -3413,7 +3425,8 @@ def fir_DeclareOp
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
       OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
-      OptionalAttr<UI32Attr>:$dummy_arg_no);
+      OptionalAttr<UI32Attr>:$dummy_arg_no,
+      OptionalAttr<I64Attr>:$alignment);
 
   let results = (outs AnyRefOrBox);
 
@@ -3424,6 +3437,7 @@ def fir_DeclareOp
     `uniq_name` `(` $uniq_name `)`
     (`fortran_attrs` `` $fortran_attrs^)?
     (`data_attr` `(` qualified($data_attr)^ `)`)?
+    (`alignment` `(` $alignment^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 

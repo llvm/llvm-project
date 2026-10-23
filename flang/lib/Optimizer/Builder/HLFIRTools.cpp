@@ -1536,6 +1536,31 @@ hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
   return hlfir::Entity{declareOp.getBase()};
 }
 
+std::optional<std::int64_t> hlfir::getDeclaredAlignment(mlir::Value var) {
+  while (var) {
+    mlir::Operation *defOp = var.getDefiningOp();
+    if (!defOp)
+      return std::nullopt;
+    if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(defOp))
+      return declare.getAlignment();
+    if (auto declare = mlir::dyn_cast<fir::DeclareOp>(defOp))
+      return declare.getAlignment();
+    if (auto designate = mlir::dyn_cast<hlfir::DesignateOp>(defOp)) {
+      var = designate.getMemref();
+      continue;
+    }
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+void hlfir::setDeclaredAlignment(mlir::Value var, std::int64_t alignment) {
+  if (auto declare = var.getDefiningOp<hlfir::DeclareOp>())
+    declare.setAlignment(alignment);
+  else if (auto declare = var.getDefiningOp<fir::DeclareOp>())
+    declare.setAlignment(alignment);
+}
+
 hlfir::EntityWithAttributes
 hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
                             hlfir::Entity scalarChar, int toKind) {

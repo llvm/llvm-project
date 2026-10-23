@@ -104,7 +104,8 @@ def hlfir_DeclareOp
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
       OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
-      OptionalAttr<UnitAttr>:$skip_rebox, OptionalAttr<UI32Attr>:$dummy_arg_no);
+      OptionalAttr<UnitAttr>:$skip_rebox, OptionalAttr<UI32Attr>:$dummy_arg_no,
+      OptionalAttr<I64Attr>:$alignment);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
@@ -116,6 +117,7 @@ def hlfir_DeclareOp
     `uniq_name` `(` $uniq_name `)`
     (`fortran_attrs` `` $fortran_attrs^)?
     (`data_attr` `(` qualified($data_attr)^ `)`)?
+    (`alignment` `(` $alignment^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 

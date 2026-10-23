@@ -463,7 +463,7 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
       /*dummy_scope=*/nullptr,
       /*storage=*/nullptr,
       /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{},
-      /*dummy_arg_no=*/mlir::IntegerAttr{});
+      /*dummy_arg_no=*/mlir::IntegerAttr{}, /*alignment=*/mlir::IntegerAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
