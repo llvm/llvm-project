@@ -648,51 +648,84 @@ def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    def SYNC_VAL_COMPARE_AND_SWAP_#MemSize : RuntimeLibcall;
-    def SYNC_LOCK_TEST_AND_SET_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_ADD_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_SUB_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_AND_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_OR_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_XOR_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_NAND_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_MAX_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_UMAX_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_MIN_#MemSize : RuntimeLibcall;
-    def SYNC_FETCH_AND_UMIN_#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def SYNC_VAL_COMPARE_AND_SWAP_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, IntTy.Type]>;
+    def SYNC_LOCK_TEST_AND_SET_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_ADD_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_SUB_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_AND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_OR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_XOR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_NAND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_MAX_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_UMAX_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_MIN_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
+    def SYNC_FETCH_AND_UMIN_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type]>;
   }
 }
 
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
-  foreach MemSize = ["", "_1", "_2", "_4", "_8", "_16"] in {
-    def ATOMIC_EXCHANGE#MemSize : RuntimeLibcall;
-    def ATOMIC_COMPARE_EXCHANGE#MemSize : RuntimeLibcall;
+  def ATOMIC_EXCHANGE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Ptr, Int]>;
+  def ATOMIC_COMPARE_EXCHANGE
+      : RuntimeLibcall<Bool, [SizeT, Ptr, Ptr, Ptr, Int, Int]>;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_EXCHANGE_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_COMPARE_EXCHANGE_#IntTy.Suffix
+        : RuntimeLibcall<Bool, [Ptr, Ptr, IntTy.Type, Int, Int]>;
   }
 
   def ATOMIC_LOAD : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
   def ATOMIC_STORE : RuntimeLibcall<Void, [SizeT, Ptr, Ptr, Int]>;
-  foreach MemSize = ["_1", "_2", "_4", "_8", "_16"] in {
-    def ATOMIC_LOAD#MemSize : RuntimeLibcall;
-    def ATOMIC_STORE#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_LOAD_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [Ptr, Int]>;
+    def ATOMIC_STORE_#IntTy.Suffix
+        : RuntimeLibcall<Void, [Ptr, IntTy.Type, Int]>;
   }
 
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    def ATOMIC_FETCH_ADD_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_SUB_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_AND_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_OR_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_XOR_#MemSize : RuntimeLibcall;
-    def ATOMIC_FETCH_NAND_#MemSize : RuntimeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    def ATOMIC_FETCH_ADD_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_SUB_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_AND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_OR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_XOR_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
+    def ATOMIC_FETCH_NAND_#IntTy.Suffix
+        : RuntimeLibcall<IntTy.Type, [Ptr, IntTy.Type, Int]>;
   }
 }
 
-multiclass AtomicOrderSizeLibcall {
-  def _RELAX : RuntimeLibcall;
-  def _ACQ : RuntimeLibcall;
-  def _REL : RuntimeLibcall;
-  def _ACQ_REL : RuntimeLibcall;
+multiclass AtomicOrderSizeLibcall<FuncArgType RetType,
+                                  list<FuncArgType> ArgTypes> {
+  def _RELAX : RuntimeLibcall<RetType, ArgTypes>;
+  def _ACQ : RuntimeLibcall<RetType, ArgTypes>;
+  def _REL : RuntimeLibcall<RetType, ArgTypes>;
+  def _ACQ_REL : RuntimeLibcall<RetType, ArgTypes>;
 }
 
 multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
@@ -704,13 +737,21 @@ multiclass AtomicOrderSizeLibcallImpl<string ProvidesBase> {
 
 // Out-of-line atomics libcalls
 defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
-  foreach MemSize = [1, 2, 4, 8, 16] in {
-    defm OUTLINE_ATOMIC_CAS#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_SWP#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDADD#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDSET#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDCLR#MemSize : AtomicOrderSizeLibcall;
-    defm OUTLINE_ATOMIC_LDEOR#MemSize : AtomicOrderSizeLibcall;
+  foreach IntTy = [TypeSuffix<"1", Int8>, TypeSuffix<"2", Int16>,
+                  TypeSuffix<"4", Int32>, TypeSuffix<"8", Int64>,
+                  TypeSuffix<"16", Int128>] in {
+    defm OUTLINE_ATOMIC_CAS#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_SWP#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDADD#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDSET#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDCLR#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
+    defm OUTLINE_ATOMIC_LDEOR#IntTy.Suffix
+        : AtomicOrderSizeLibcall<IntTy.Type, [IntTy.Type, Ptr]>;
   }
 }
 
