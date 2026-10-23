@@ -1474,7 +1474,7 @@ std::vector<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscripts(
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
   // A scalar CHARACTER part with a triplet denotes a substring, even when
   // its parent is array-valued. Substrings cannot specify a stride.
-  if (const Symbol * symbol{parser::GetLastName(ae.Base()).symbol}) {
+  if (const Symbol *symbol{parser::GetLastName(ae.Base()).symbol}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     const auto *type{ultimate.GetType()};
     if (ultimate.Rank() == 0 && type &&
