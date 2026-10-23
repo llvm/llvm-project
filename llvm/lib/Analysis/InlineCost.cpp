@@ -390,6 +390,11 @@ protected:
   bool HasUninlineableIntrinsic = false;
   bool InitsVargArgs = false;
 
+  /// The callee's single return instruction, if applicable.
+  /// This value is null for functions that do not return
+  /// or have multiple return statements.
+  ReturnInst *SingleReturn = nullptr;
+
   /// Number of bytes allocated statically by the callee.
   uint64_t AllocatedSize = 0;
   unsigned NumInstructions = 0;
@@ -464,6 +469,9 @@ protected:
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
   ConstantInt *stripAndComputeInBoundsConstantOffsets(Value *&V);
   bool isLoweredToCall(Function *F, CallBase &Call);
+
+  /// Check if the callee can be jump threaded into the caller after inlining.
+  bool canJumpThreadIntoCaller();
 
   /// Return true if the given argument to the function being considered for
   /// inlining has the given attribute set either at the call site or the
@@ -1095,6 +1103,13 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         NumLoops++;
       }
       addCost(NumLoops * InlineConstants::LoopPenalty);
+    }
+
+    // Apply a discount if the callee can trivially be jump threaded
+    // into the caller CFG. This discount represents a redundant conditional
+    // br found in the caller.
+    if (canJumpThreadIntoCaller()) {
+      addCost(-InstrCost);
     }
 
     // We applied the maximum possible vector bonus at the beginning. Now,
@@ -2566,6 +2581,7 @@ bool CallAnalyzer::visitReturnInst(ReturnInst &RI) {
   // At least one return instruction will be free after inlining.
   bool Free = !HasReturn;
   HasReturn = true;
+  SingleReturn = Free ? &RI : nullptr;
   return Free;
 }
 
@@ -2903,6 +2919,73 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
             NewDead.push_back(S);
     }
   }
+}
+
+bool CallAnalyzer::canJumpThreadIntoCaller() {
+  if (!SingleReturn)
+    return false;
+
+  // Check if the callee returns an i1
+  auto *RV = SingleReturn->getReturnValue();
+  if (F.getReturnType() != llvm::Type::getInt1Ty(F.getContext()))
+    return false;
+
+  // Check the sink node's predecessors.
+  const auto *RBB = SingleReturn->getParent();
+  bool FoundEntry = false;
+  unsigned SC = 0;
+  for (const auto *P : predecessors(RBB)) {
+    if (P->isEntryBlock())
+      FoundEntry = true;
+    else if (DeadBlocks.contains(P))
+      continue;
+    else if (KnownSuccessors.contains(P) || P->getUniqueSuccessor())
+      // Ensure that any predecessors do not have an extra outgoing edge
+      // that might prevent the callee and caller CFGs from cleanly merging.
+      SC++;
+    else
+      return false;
+  }
+
+  // Check if we're returning a known constant value.
+  if (getDirectOrSimplifiedValue<Constant>(RV)) {
+    // No further checks needed
+  } else if (auto *PI = dyn_cast<PHINode>(RV)) {
+    // Check if the return value is a PHI of constants.
+    for (unsigned I = 0; I < PI->getNumIncomingValues(); I++) {
+      if (!DeadBlocks.contains(PI->getIncomingBlock(I)) &&
+          !getDirectOrSimplifiedValue<Constant>(PI->getIncomingValue(I)))
+        return false;
+    }
+  } else if (auto *I = dyn_cast<Instruction>(RV)) {
+    // Check if the return value is defined in the entry block.
+    if (!I->getParent()->isEntryBlock())
+      return false;
+
+    // Only consider cases where the one predecessor is the entry block
+    // and the other (if present) is a block with a single known successor.
+    // This ensures that all paths from the sink to the entry block are
+    // disjoint.
+    if (SC > 1 || !FoundEntry)
+      return false;
+
+    // Check if the return value is used as the condition for a conditional
+    // break instruction inside the entry block.
+    auto *CI = dyn_cast<CondBrInst>(I->getParent()->getTerminator());
+    if (!CI || CI->getCondition() != I)
+      return false;
+  } else {
+    return false;
+  }
+
+  // Check if the caller uses the callee result in a conditional br
+  for (const auto *U : CandidateCall.users()) {
+    // Only scan the call's parent block for conditional breaks
+    if (U->getParent() == CandidateCall.getParent() && isa<CondBrInst>(U))
+      return true;
+  }
+
+  return false;
 }
 
 /// Analyze a call site for potential inlining.
