@@ -402,7 +402,7 @@ bool LanaiMemAluCombinerImpl::combineMemAluInBasicBlock(MachineBasicBlock *BB) {
 // machine function
 bool LanaiMemAluCombinerImpl::runOnMachineFunction(MachineFunction &MF) {
   const LanaiSubtarget &STI = MF.getSubtarget<LanaiSubtarget>();
-  if (!STI.getCLOpts().mem_alu_combiner)
+  if (!STI.getCLOpts().enable_mem_alu_combiner)
     return false;
 
   TII = STI.getInstrInfo();

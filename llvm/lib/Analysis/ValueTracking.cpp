@@ -5479,7 +5479,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
         break;
 
       const bool IsFMA = IID == Intrinsic::fma;

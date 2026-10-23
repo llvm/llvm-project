@@ -1388,7 +1388,7 @@ define i64 @test_sati_i64_w64(i64 %a) {
 define i64 @test_usati_u64_w0(i64 %a) {
 ; CHECK-LABEL: test_usati_u64_w0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    usati a0, a0, 0
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.riscv.usati.i64(i64 %a, i32 0)
   ret i64 %res

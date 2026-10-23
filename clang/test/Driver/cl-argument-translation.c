@@ -65,7 +65,8 @@
 // RUN:   --check-prefix=GNU
 // RUN: %clang --target=x86_64-w64-windows-gnu -c -### -DFOO#7 -- %s 2>&1 | FileCheck %s --check-prefix=GNU
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu /EP /DFOO#7 /DTRANSLATION_CHECK -- %s | FileCheck \
+// Use the configured target because this RUN executes the frontend.
+// RUN: %clang_cl --target=%target_triple /EP /DFOO#7 /DTRANSLATION_CHECK -- %s | FileCheck \
 // RUN:   %s --check-prefix=PREPROCESS
 // PREPROCESS: 7
 #ifdef TRANSLATION_CHECK

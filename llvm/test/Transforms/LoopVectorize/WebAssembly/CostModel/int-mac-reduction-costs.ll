@@ -903,3 +903,221 @@ for.body:
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define hidden i64 @i64_mac_u8_u8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
+; CHECK-LABEL: 'i64_mac_u8_u8'
+; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%add>
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%0> = load vp<[[VP6:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%1> = load vp<[[VP7:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
+; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv3> = zext nneg ir<%mul> to i64
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; CHECK:  Cost for VF 2: 13 (Estimated cost per lane: 6.5)
+; CHECK:  LV: Selecting VF: 2.
+;
+; MAX-LABEL: 'i64_mac_u8_u8'
+; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%add>
+; MAX:  Cost of 3 for VF 2: WIDEN ir<%0> = load vp<[[VP6:%[0-9]+]]>
+; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 3 for VF 2: WIDEN ir<%1> = load vp<[[VP7:%[0-9]+]]>
+; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv3> = zext nneg ir<%mul> to i64
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 2: 13 (Estimated cost per lane: 6.5)
+; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv3> = zext nneg ir<%mul> to i64
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 4: 15 (Estimated cost per lane: 3.75)
+; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 4 for VF 8: WIDEN-CAST ir<%conv3> = zext nneg ir<%mul> to i64
+; MAX:  Cost of 4 for VF 8: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 8: 24 (Estimated cost per lane: 3)
+; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 16: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; MAX:  Cost of 2 for VF 16: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv2> = zext ir<%1> to i32
+; MAX:  Cost of 4 for VF 16: WIDEN ir<%mul> = mul nuw nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 8 for VF 16: WIDEN-CAST ir<%conv3> = zext nneg ir<%mul> to i64
+; MAX:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 16: 40 (Estimated cost per lane: 2.5)
+; MAX:  LV: Selecting VF: 16.
+;
+entry:
+  %cmp7.not = icmp eq i32 %N, 0
+  br i1 %cmp7.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  %res.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+  ret i64 %res.0.lcssa
+
+for.body:
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %res.08 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i32 %i.09
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  %arrayidx1 = getelementptr inbounds nuw i8, ptr %b, i32 %i.09
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv2 = zext i8 %1 to i32
+  %mul = mul nuw nsw i32 %conv2, %conv
+  %conv3 = zext nneg i32 %mul to i64
+  %add = add nsw i64 %conv3, %res.08
+  %inc = add nuw i32 %i.09, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define hidden i64 @i64_mac_s8_s8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
+; CHECK-LABEL: 'i64_mac_s8_s8'
+; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%add>
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%0> = load vp<[[VP6:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%1> = load vp<[[VP7:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
+; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv3> = sext ir<%mul> to i64
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; CHECK:  Cost for VF 2: 13 (Estimated cost per lane: 6.5)
+; CHECK:  LV: Selecting VF: 2.
+;
+; MAX-LABEL: 'i64_mac_s8_s8'
+; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%add>
+; MAX:  Cost of 3 for VF 2: WIDEN ir<%0> = load vp<[[VP6:%[0-9]+]]>
+; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; MAX:  Cost of 3 for VF 2: WIDEN ir<%1> = load vp<[[VP7:%[0-9]+]]>
+; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%conv3> = sext ir<%mul> to i64
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 2: 13 (Estimated cost per lane: 6.5)
+; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv3> = sext ir<%mul> to i64
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 4: 15 (Estimated cost per lane: 3.75)
+; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 4 for VF 8: WIDEN-CAST ir<%conv3> = sext ir<%mul> to i64
+; MAX:  Cost of 4 for VF 8: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 8: 24 (Estimated cost per lane: 3)
+; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%res.08> = phi (add) vp<[[VP3]]>, ir<%add>
+; MAX:  Cost of 2 for VF 16: WIDEN ir<%0> = load vp<[[VP6]]>
+; MAX:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv> = sext ir<%0> to i32
+; MAX:  Cost of 2 for VF 16: WIDEN ir<%1> = load vp<[[VP7]]>
+; MAX:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv2> = sext ir<%1> to i32
+; MAX:  Cost of 4 for VF 16: WIDEN ir<%mul> = mul nsw ir<%conv2>, ir<%conv>
+; MAX:  Cost of 8 for VF 16: WIDEN-CAST ir<%conv3> = sext ir<%mul> to i64
+; MAX:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%conv3>, ir<%res.08>
+; MAX:  Cost for VF 16: 40 (Estimated cost per lane: 2.5)
+; MAX:  LV: Selecting VF: 16.
+;
+entry:
+  %cmp7.not = icmp eq i32 %N, 0
+  br i1 %cmp7.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  %res.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+  ret i64 %res.0.lcssa
+
+for.body:
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %res.08 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i32 %i.09
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sext i8 %0 to i32
+  %arrayidx1 = getelementptr inbounds nuw i8, ptr %b, i32 %i.09
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv2 = sext i8 %1 to i32
+  %mul = mul nsw i32 %conv2, %conv
+  %conv3 = sext i32 %mul to i64
+  %add = add nsw i64 %conv3, %res.08
+  %inc = add nuw i32 %i.09, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define hidden i64 @u64_mac_u8(ptr noundef readonly captures(none) %arg, i32 noundef %arg1) {
+; CHECK-LABEL: 'u64_mac_u8'
+; CHECK:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%i6> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%i12>
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%i8> = load vp<[[VP6:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%i9> = zext ir<%i8> to i32
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%i10> = mul nuw nsw ir<%i9>, ir<%i9>
+; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%i11> = zext nneg ir<%i10> to i64
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%i12> = add ir<%i6>, ir<%i11>
+; CHECK:  Cost for VF 2: 10 (Estimated cost per lane: 5)
+; CHECK:  LV: Selecting VF: 2.
+;
+; MAX-LABEL: 'u64_mac_u8'
+; MAX:  Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%i6> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%i12>
+; MAX:  Cost of 3 for VF 2: WIDEN ir<%i8> = load vp<[[VP6:%[0-9]+]]>
+; MAX:  Cost of 0 for VF 2: WIDEN-CAST ir<%i9> = zext ir<%i8> to i32
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%i10> = mul nuw nsw ir<%i9>, ir<%i9>
+; MAX:  Cost of 1 for VF 2: WIDEN-CAST ir<%i11> = zext nneg ir<%i10> to i64
+; MAX:  Cost of 1 for VF 2: WIDEN ir<%i12> = add ir<%i6>, ir<%i11>
+; MAX:  Cost for VF 2: 10 (Estimated cost per lane: 5)
+; MAX:  Cost of 1 for VF 4: WIDEN-REDUCTION-PHI ir<%i6> = phi (add) vp<[[VP3]]>, ir<%i12>
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%i8> = load vp<[[VP6]]>
+; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%i9> = zext ir<%i8> to i32
+; MAX:  Cost of 1 for VF 4: WIDEN ir<%i10> = mul nuw nsw ir<%i9>, ir<%i9>
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%i11> = zext nneg ir<%i10> to i64
+; MAX:  Cost of 2 for VF 4: WIDEN ir<%i12> = add ir<%i6>, ir<%i11>
+; MAX:  Cost for VF 4: 12 (Estimated cost per lane: 3)
+; MAX:  Cost of 1 for VF 8: WIDEN-REDUCTION-PHI ir<%i6> = phi (add) vp<[[VP3]]>, ir<%i12>
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%i8> = load vp<[[VP6]]>
+; MAX:  Cost of 3 for VF 8: WIDEN-CAST ir<%i9> = zext ir<%i8> to i32
+; MAX:  Cost of 2 for VF 8: WIDEN ir<%i10> = mul nuw nsw ir<%i9>, ir<%i9>
+; MAX:  Cost of 4 for VF 8: WIDEN-CAST ir<%i11> = zext nneg ir<%i10> to i64
+; MAX:  Cost of 4 for VF 8: WIDEN ir<%i12> = add ir<%i6>, ir<%i11>
+; MAX:  Cost for VF 8: 19 (Estimated cost per lane: 2.38)
+; MAX:  Cost of 1 for VF 16: WIDEN-REDUCTION-PHI ir<%i6> = phi (add) vp<[[VP3]]>, ir<%i12>
+; MAX:  Cost of 2 for VF 16: WIDEN ir<%i8> = load vp<[[VP6]]>
+; MAX:  Cost of 6 for VF 16: WIDEN-CAST ir<%i9> = zext ir<%i8> to i32
+; MAX:  Cost of 4 for VF 16: WIDEN ir<%i10> = mul nuw nsw ir<%i9>, ir<%i9>
+; MAX:  Cost of 8 for VF 16: WIDEN-CAST ir<%i11> = zext nneg ir<%i10> to i64
+; MAX:  Cost of 8 for VF 16: WIDEN ir<%i12> = add ir<%i6>, ir<%i11>
+; MAX:  Cost for VF 16: 32 (Estimated cost per lane: 2)
+; MAX:  LV: Selecting VF: 16.
+;
+bb:
+  %i = icmp eq i32 %arg1, 0
+  br i1 %i, label %bb2, label %bb4
+
+bb2:
+  %i3 = phi i64 [ 0, %bb ], [ %i12, %bb4 ]
+  ret i64 %i3
+
+bb4:
+  %i5 = phi i32 [ %i13, %bb4 ], [ 0, %bb ]
+  %i6 = phi i64 [ %i12, %bb4 ], [ 0, %bb ]
+  %i7 = getelementptr inbounds nuw i8, ptr %arg, i32 %i5
+  %i8 = load i8, ptr %i7, align 1
+  %i9 = zext i8 %i8 to i32
+  %i10 = mul nuw nsw i32 %i9, %i9
+  %i11 = zext nneg i32 %i10 to i64
+  %i12 = add i64 %i6, %i11
+  %i13 = add nuw i32 %i5, 1
+  %i14 = icmp eq i32 %i13, %arg1
+  br i1 %i14, label %bb2, label %bb4
+}

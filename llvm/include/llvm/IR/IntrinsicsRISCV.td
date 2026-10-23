@@ -2211,6 +2211,14 @@ class RVPBinaryIntrinsic
   def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_mulqr_i32 : RVPScalarBinaryIntrinsic;
 
+  // Scalar "Q-format" Multiply with Widening Accumulate.
+  class RVPScalarQFormatWideningAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mqwacc_i64  : RVPScalarQFormatWideningAccIntrinsic;
+  def int_riscv_mqrwacc_i64 : RVPScalarQFormatWideningAccIntrinsic;
+
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;
   def int_riscv_pmhracc   : RVPTernaryIntrinsic;
@@ -2326,6 +2334,19 @@ class RVPBinaryIntrinsic
   def int_riscv_pm2wsub    : RVPHorizontalMulIntrinsic;
   def int_riscv_pm2wsub_x  : RVPHorizontalMulIntrinsic;
   def int_riscv_pm2waddsu  : RVPHorizontalMulIntrinsic;
+
+  // Packed Multiplication with Widening Horizontal Addition and Accumulate.
+  class RVPHorizontalMulAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm2wadda   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wadda_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddau  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2wsuba_x : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2waddasu : RVPHorizontalMulAccIntrinsic;
 
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.

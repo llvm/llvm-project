@@ -1942,8 +1942,14 @@ def riscv_pmqrwacc_h
     : RVSDNode<"PMQRWACC_H", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2wadda
     : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wadda_x
+    : RVSDNode<"PM2WADDA_X", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddau
     : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wsuba
+    : RVSDNode<"PM2WSUBA", SDT_RISCVPackedWideningAcc>;
+def riscv_pm2wsuba_x
+    : RVSDNode<"PM2WSUBA_X", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddasu
     : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningAcc>;
 
@@ -2006,6 +2012,9 @@ def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
 def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
 
+// ComplexPattern for instruction that use 8-bit signed shift amounts like SSHL.
+def shiftMask256 : ComplexPattern<XLenVT, 1, "selectShiftMask<256>", [], [], 0>;
+
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPairNoX0, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
@@ -2063,6 +2072,16 @@ def riscv_pm2sub    : RVSDNode<"PM2SUB", SDT_RISCVHorizontalMul>;
 def riscv_pm2sub_x  : RVSDNode<"PM2SUB_X", SDT_RISCVHorizontalMul>;
 def riscv_pm4addsu  : RVSDNode<"PM4ADDSU", SDT_RISCVHorizontalMul>;
 def riscv_pm2addsu  : RVSDNode<"PM2ADDSU", SDT_RISCVHorizontalMul>;
+
+// Horizontal-multiply-and-accumulate internal helpers, used only to
+// synthesize the public pm2wadda(_x)/au/asu intrinsics on RV64 (never
+// exposed as IR intrinsics themselves).
+def SDT_RISCVHorizontalMulAcc
+    : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisVec<2>,
+                           SDTCisSameAs<2, 3>]>;
+def riscv_pm4adda   : RVSDNode<"PM4ADDA", SDT_RISCVHorizontalMulAcc>;
+def riscv_pm4addau  : RVSDNode<"PM4ADDAU", SDT_RISCVHorizontalMulAcc>;
+def riscv_pm4addasu : RVSDNode<"PM4ADDASU", SDT_RISCVHorizontalMulAcc>;
 
 // "Q-format" multiplication
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
@@ -2209,6 +2228,19 @@ class PatHorizontalMul<SDPatternOperator OpNode, RVInst Inst,
                        ValueType ResultVT, ValueType SrcVT>
     : Pat<(ResultVT (OpNode (SrcVT GPR:$rs1), (SrcVT GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
+
+class PatHorizontalMulAcc<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (OpNode (ResultVT GPR:$rd), (SrcVT GPR:$rs1),
+                            (SrcVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+class PatHorizontalMulAdd<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (add (ResultVT GPR:$rd),
+                        (binop_oneuse<OpNode> (SrcVT GPR:$rs1),
+                                              (SrcVT GPR:$rs2)))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
 class PatPSh1Add<RVInst Inst, ValueType vt>
@@ -2445,20 +2477,13 @@ let Predicates = [HasStdExtP] in {
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
-  def : Pat<(XLenVecI8VT (riscv_ppaire (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
-            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI8VT (riscv_ppaireo (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
-            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI8VT (riscv_ppairoe (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
-            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI8VT (riscv_ppairo (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
-            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_ppaireo (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
-            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_ppairoe (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
-            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_ppairo (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
-            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_ppaire,  PPAIRE_B,  XLenVecI8VT>;
+  def : PatGprGpr<riscv_ppaireo, PPAIREO_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_ppairoe, PPAIROE_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_ppairo,  PPAIRO_B,  XLenVecI8VT>;
+  def : PatGprGpr<riscv_ppaireo, PPAIREO_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_ppairoe, PPAIROE_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_ppairo,  PPAIRO_H,  XLenVecI16VT>;
 
   // 16-bit multiply high accumulate patterns
   def : Pat<(XLenVecI16VT (riscv_mhacc_half_0 GPR:$rd, GPR:$rs1,
@@ -2556,9 +2581,9 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
-  def : PatGprGpr<sshlsat, SSHA>;
-  def : PatGprGpr<ushlsat, SSHL>;
-  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  def : PatGprShiftMask<sshlsat, SSHA, shiftMask256>;
+  def : PatGprShiftMask<ushlsat, SSHL, shiftMask256>;
+  def : PatGprImm<sshlsat, SSLAI, uimm5>;
   // No SSLLI
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
@@ -2590,6 +2615,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, i32, v4i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, i32, v2i16>;
@@ -2642,8 +2671,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
-  def : Pat<(v2i16 (riscv_ppaire (v2i16 GPR:$lo), (v2i16 GPR:$hi))),
-            (PACK GPR:$lo, GPR:$hi)>;
+  def : PatGprGpr<riscv_ppaire, PACK, v2i16>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
@@ -2756,9 +2784,18 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (riscv_pm2wadda (v2i32 GPRPair:$rd),
                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wadda_x (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADDA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddau (v2i32 GPRPair:$rd),
                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsuba (v2i32 GPRPair:$rd),
+                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUBA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsuba_x (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUBA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
                                      (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
@@ -2796,22 +2833,14 @@ let append Predicates = [IsRV32] in {
             (WZIP16P GPR:$rs1, GPR:$rs2)>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
-  def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppaireo GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIREO_DB GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppairoe GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIROE_DB GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRO_DB GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRE_DH GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppaireo GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIREO_DH GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppairoe GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIROE_DH GPRPair:$rs1, GPRPair:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
-            (PPAIRO_DH GPRPair:$rs1, GPRPair:$rs2)>;
+  def : PatGprPairGprPair<riscv_ppaire, PPAIRE_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_ppaireo, PPAIREO_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_ppairoe, PPAIROE_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_ppairo, PPAIRO_DB, v8i8>;
+  def : PatGprPairGprPair<riscv_ppaire, PPAIRE_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_ppaireo, PPAIREO_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_ppairoe, PPAIROE_DH, v4i16>;
+  def : PatGprPairGprPair<riscv_ppairo, PPAIRO_DH, v4i16>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -3429,6 +3458,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, v2i32, v8i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, v2i32, v4i16>;
@@ -3454,6 +3487,9 @@ let append Predicates = [IsRV64] in {
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4adda, PM4ADDA_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4addau, PM4ADDAU_H, i64, v4i16>;
+  def : PatHorizontalMulAcc<riscv_pm4addasu, PM4ADDASU_H, i64, v4i16>;
 
   // 8/16/32-bit multiply low patterns
   // FIXME custom lower
@@ -3632,14 +3668,10 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (zext_invec (v4i16 GPR:$rs))), (ZIP16P GPR:$rs, (v4i16 X0))>;
 
   // Packed unzip.
-  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (UNZIP8P GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (UNZIP8HP GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (UNZIP16P GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (UNZIP16HP GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_punzipe, UNZIP8P,   v8i8>;
+  def : PatGprGpr<riscv_punzipo, UNZIP8HP,  v8i8>;
+  def : PatGprGpr<riscv_punzipe, UNZIP16P,  v4i16>;
+  def : PatGprGpr<riscv_punzipo, UNZIP16HP, v4i16>;
 
   // Match undef to X0 to avoid false dependency.
   // FIXME: Match operand 0 too?
@@ -3654,21 +3686,14 @@ let append Predicates = [IsRV64] in {
             (UNZIP16HP GPR:$rs1, (v4i16 X0))>;
 
   // Packed zip.
-  def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (ZIP8P GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pzip (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (ZIP16P GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_pzip, ZIP8P,  v8i8>;
+  def : PatGprGpr<riscv_pzip, ZIP16P, v4i16>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
-  def : Pat<(v2i32 (riscv_ppaire (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-            (PACK GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_ppaireo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-            (PPAIREO_W GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_ppairoe (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-            (PPAIROE_W GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_ppairo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-            (PPAIRO_W GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_ppaire,  PACK,      v2i32>;
+  def : PatGprGpr<riscv_ppaireo, PPAIREO_W, v2i32>;
+  def : PatGprGpr<riscv_ppairoe, PPAIROE_W, v2i32>;
+  def : PatGprGpr<riscv_ppairo,  PPAIRO_W,  v2i32>;
+  def : PatGprGpr<riscv_ppaire,  PPAIRE_H,  v4i16>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
