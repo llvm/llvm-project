@@ -3769,6 +3769,7 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"cflt"}, {AArch64::FeatureCFLT}},
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
     {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
+    {{"sve-perm256"}, {AArch64::FeatureSVE_PERM256}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
