@@ -2528,31 +2528,6 @@ public:
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
-        QualType destType = ECE->getType();
-
-        if (!isa<PointerType>(destType))
-          return;
-        destType = destType.getTypePtr()->getPointeeType();
-
-        // If destination type is incomplete or dependent, it is unsafe to cast
-        // to anyway, no need to check its type:
-        if (!destType->isIncompleteType() && !destType->isDependentType()) {
-          const uint64_t dSize = Ctx.getTypeSize(destType);
-          QualType srcType = ECE->getSubExpr()->getType();
-
-          assert(srcType->isPointerType());
-
-          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
-
-          // Check if source type is incomplete or dependent as well:
-          if (!srcPointeeType->isIncompleteType() &&
-              !srcPointeeType->isDependentType()) {
-            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
-
-            if (sSize >= dSize)
-              return;
-          }
-        }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
           D = CE->getMethodDecl();

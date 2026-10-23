@@ -2404,21 +2404,16 @@ public:
     auto *CE = dyn_cast<ExplicitCastExpr>(S);
     if (!CE)
       return false;
-    for (auto *Child : CE->children()) {
-      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Child);
-          MCE && isDataFunction(MCE)) {
-        Result.addNode(OpTag, DynTypedNode::create(*CE));
-        return true;
-      }
-      if (auto *Paren = dyn_cast<ParenExpr>(Child)) {
-        if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Paren->getSubExpr());
-            MCE && isDataFunction(MCE)) {
-          Result.addNode(OpTag, DynTypedNode::create(*CE));
-          return true;
-        }
-      }
-    }
-    return false;
+    const Expr *Operand = CE->getSubExpr();
+    if (auto *Paren = dyn_cast<ParenExpr>(Operand))
+      Operand = Paren->getSubExpr();
+    auto *MCE = dyn_cast<CXXMemberCallExpr>(Operand);
+    if (!MCE || !isDataFunction(MCE))
+      return false;
+    if (!isUnsafeCast(CE, Ctx))
+      return false;
+    Result.addNode(OpTag, DynTypedNode::create(*CE));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -2444,6 +2439,32 @@ private:
                            method->getParent()->getName()))
       return true;
     return false;
+  }
+
+  // Returns true if `CE` casts the pointer returned by `data()` to a pointer to
+  // a larger type, or if the size of either pointee type cannot be determined.
+  static bool isUnsafeCast(const ExplicitCastExpr *CE, const ASTContext &Ctx) {
+    QualType DestType = CE->getType();
+    if (!isa<PointerType>(DestType))
+      return false;
+    QualType DestPointeeType = DestType->getPointeeType();
+
+    // If destination type is incomplete or dependent, it is unsafe to cast
+    // to anyway, no need to check its type:
+    if (DestPointeeType->isIncompleteType() ||
+        DestPointeeType->isDependentType())
+      return true;
+
+    QualType SrcType = CE->getSubExpr()->getType();
+    if (!SrcType->isPointerType())
+      return false;
+    QualType SrcPointeeType = SrcType->getPointeeType();
+
+    // Check if source type is incomplete or dependent as well:
+    if (SrcPointeeType->isIncompleteType() || SrcPointeeType->isDependentType())
+      return true;
+
+    return Ctx.getTypeSize(SrcPointeeType) < Ctx.getTypeSize(DestPointeeType);
   }
 
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
