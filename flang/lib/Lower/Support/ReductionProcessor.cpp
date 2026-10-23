@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/openmp-utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -220,6 +221,18 @@ std::string
 ReductionProcessor::getReductionName(llvm::StringRef name,
                                      const fir::KindMapping &kindMap,
                                      mlir::Type ty, bool isByRef) {
+  // Volatile reductions must get their own declaration, distinct from the
+  // non-volatile one for the same operator/element type. The two would
+  // otherwise deduplicate to the same name (e.g. add_reduction_f32), but the
+  // non-volatile declaration's atomic region is typed with a non-volatile
+  // reference (!fir.ref<f32>) while the volatile operand is !fir.ref<f32,
+  // volatile>; sharing that declaration fails verification. A separate name
+  // keeps the volatile declaration apart and (being left non-atomic) safe.
+  // Check volatility before unwrapping the reference, which drops the flag.
+  llvm::StringRef volatileAddition{""};
+  if (fir::isa_volatile_type(ty))
+    volatileAddition = "_volatile";
+
   ty = fir::unwrapRefType(ty);
 
   // extra string to distinguish reduction functions for variables passed by
@@ -228,7 +241,8 @@ ReductionProcessor::getReductionName(llvm::StringRef name,
   if (isByRef)
     byrefAddition = "_byref";
 
-  return fir::getTypeAsString(ty, kindMap, (name + byrefAddition).str());
+  return fir::getTypeAsString(ty, kindMap,
+                              (name + volatileAddition + byrefAddition).str());
 }
 
 std::string
@@ -707,6 +721,119 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   return decl;
 }
 
+// Map an intrinsic reduction operator + scalar type to the llvm.atomicrmw
+// bin-op used here, or nullopt for unsupported combinations (e.g. multiply,
+// .eqv., complex, logicals). LLVM may expand atomicrmw to a CAS loop; a native
+// hardware atomic is not required. Unsupported combinations leave the atomic
+// region empty and the host runtime falls back to the critical/tree method.
+static std::optional<mlir::LLVM::AtomicBinOp>
+getAtomicReductionBinOp(ReductionProcessor::ReductionIdentifier redId,
+                        mlir::Type valTy) {
+  using BinOp = mlir::LLVM::AtomicBinOp;
+  const bool isInt = mlir::isa<mlir::IntegerType>(valTy);
+  const bool isFloat = mlir::isa<mlir::FloatType>(valTy);
+  // Restrict to widths llvm.atomicrmw lowers cleanly on common targets:
+  // integer 8/16/32/64 and float 32/64 (skips i128, f16/f80/f128, etc.).
+  if (isInt) {
+    unsigned w = valTy.getIntOrFloatBitWidth();
+    if (w != 8 && w != 16 && w != 32 && w != 64)
+      return std::nullopt;
+  } else if (isFloat) {
+    unsigned w = valTy.getIntOrFloatBitWidth();
+    if (w != 32 && w != 64)
+      return std::nullopt;
+  }
+  switch (redId) {
+  case ReductionProcessor::ADD:
+    if (isInt)
+      return BinOp::add;
+    if (isFloat)
+      return BinOp::fadd;
+    break;
+  case ReductionProcessor::IAND:
+    if (isInt)
+      return BinOp::_and;
+    break;
+  case ReductionProcessor::IOR:
+    if (isInt)
+      return BinOp::_or;
+    break;
+  case ReductionProcessor::IEOR:
+    if (isInt)
+      return BinOp::_xor;
+    break;
+  case ReductionProcessor::MAX:
+    if (isInt)
+      return BinOp::max; // Fortran integers are signed
+    if (isFloat)
+      return BinOp::fmax;
+    break;
+  case ReductionProcessor::MIN:
+    if (isInt)
+      return BinOp::min;
+    if (isFloat)
+      return BinOp::fmin;
+    break;
+  default:
+    break;
+  }
+  return std::nullopt;
+}
+
+// Populate the `atomic` region of a declare-reduction op for supported
+// by-value scalar intrinsic reductions. This exposes the barrier-free atomic
+// reduction method to the OpenMP runtime (notably valuable under `nowait`).
+// Unsupported cases leave the region empty (fallback to critical/tree).
+static void
+genAtomicReductionRegion(fir::FirOpBuilder &builder, mlir::Location loc,
+                         ReductionProcessor::ReductionIdentifier redId,
+                         mlir::Type type, mlir::omp::DeclareReductionOp decl) {
+  mlir::Type valTy = fir::unwrapRefType(type);
+  if (!fir::isa_trivial(valTy))
+    return;
+  // Volatile reduction variables keep the existing critical/tree path: an
+  // in-place atomicrmw would have to drop the volatile qualifier (and the
+  // declaration's accumulator type must match the volatile variable). Leaving
+  // the atomic region empty is a safe fallback.
+  if (fir::isa_volatile_type(type))
+    return;
+  // Device atomic reductions are deferred: when compiling for the target
+  // device leave the atomic region empty so the OpenMP device runtime uses its
+  // existing buffered cross-team path. The host keeps the barrier-free
+  // atomic fast path.
+  if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
+          *builder.getModule()))
+    if (offloadMod.getIsTargetDevice())
+      return;
+  std::optional<mlir::LLVM::AtomicBinOp> binOp =
+      getAtomicReductionBinOp(redId, valTy);
+  if (!binOp)
+    return;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::Type refTy = fir::ReferenceType::get(valTy);
+  mlir::Block *block = builder.createBlock(
+      &decl.getAtomicReductionRegion(), decl.getAtomicReductionRegion().end(),
+      {refTy, refTy}, {loc, loc});
+  builder.setInsertionPointToEnd(block);
+  mlir::Value lhsAddr = block->getArgument(0);
+  mlir::Value rhsAddr = block->getArgument(1);
+  mlir::Value rhsVal = fir::LoadOp::create(builder, loc, rhsAddr);
+  mlir::Type llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  mlir::Value lhsPtr = builder.createConvert(loc, llvmPtrTy, lhsAddr);
+  // ignoreDenormalMode is one of the AMD atomic-control knobs (with
+  // fine-grained/remote memory, see omp::AtomicControlAttr) and only affects
+  // GPU backends; it is inert on the host. This path is host-only (device
+  // returns early above), so leave it false. Wiring the atomic-control
+  // attributes for device reductions is deferred to the device work.
+  mlir::LLVM::AtomicRMWOp::create(builder, loc, *binOp, lhsPtr, rhsVal,
+                                  mlir::LLVM::AtomicOrdering::monotonic,
+                                  /*syncscope=*/llvm::StringRef(),
+                                  /*alignment=*/0, /*isVolatile=*/false,
+                                  /*ignoreDenormalMode=*/false);
+  mlir::omp::YieldOp::create(builder, loc, mlir::ValueRange{});
+}
+
 template <typename OpType>
 OpType ReductionProcessor::createDeclareReduction(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
@@ -726,9 +853,19 @@ OpType ReductionProcessor::createDeclareReduction(
     genCombiner<OpType>(builder, loc, redId, type, op1, op2, isByRef);
   };
 
-  return createDeclareReductionHelper<OpType>(converter, reductionOpName, type,
-                                              loc, isByRef, genCombinerCB,
-                                              genInitValueCB);
+  OpType decl = createDeclareReductionHelper<OpType>(
+      converter, reductionOpName, type, loc, isByRef, genCombinerCB,
+      genInitValueCB);
+  // The barrier-free atomic reduction method is an OpenMP-runtime concept
+  // (valuable under nowait), so only expose it for OpenMP reductions. Leave
+  // DO CONCURRENT (fir.declare_reduction) reductions unchanged. Idempotent:
+  // only populate when the region is still empty (createDeclareReductionHelper
+  // dedups and may return an existing op).
+  if constexpr (std::is_same_v<OpType, mlir::omp::DeclareReductionOp>)
+    if (!isByRef && decl.getAtomicReductionRegion().empty())
+      genAtomicReductionRegion(converter.getFirOpBuilder(), loc, redId, type,
+                               decl);
+  return decl;
 }
 
 bool ReductionProcessor::doReductionByRef(mlir::Type reductionType) {
