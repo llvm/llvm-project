@@ -207,6 +207,13 @@ def int_agx_rsqrt_special : AGXFloatUnaryIntrinsic;
 // Sine building blocks, the argument is in quadrants: see AGXUsage.rst.
 def int_agx_sin_pt_1 : AGXFloatUnaryIntrinsic;
 def int_agx_sin_pt_2 : AGXFloatUnaryIntrinsic;
+// sin, cos, exp2 and log2 as the hardware approximates them (the code of
+// llvm.sin and the others), which LLVM does not evaluate on the host for a
+// constant argument: constant and variable arguments give the same bits.
+def int_agx_sin : AGXFloatUnaryIntrinsic;
+def int_agx_cos : AGXFloatUnaryIntrinsic;
+def int_agx_exp2 : AGXFloatUnaryIntrinsic;
+def int_agx_log2 : AGXFloatUnaryIntrinsic;
 
 // Screen space derivatives, only meaningful in fragment shaders.
 class AGXDerivativeIntrinsic

@@ -581,6 +581,10 @@ static bool isFPArithmetic(const Instruction &I) {
   case Intrinsic::log2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::agx_exp2:
+  case Intrinsic::agx_log2:
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos:
   case Intrinsic::floor:
   case Intrinsic::ceil:
   case Intrinsic::trunc:

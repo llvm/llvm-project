@@ -609,6 +609,11 @@ Supported:
   with a Newton-Raphson step (omitted with ``arcp``/``afn`` and for
   ``half``); ``sin``/``cos`` reduce to quadrants for ``sin_pt_1`` and
   ``sin_pt_2``; ``exp``, ``log`` and ``pow`` go through ``exp2``/``log2``.
+  ``llvm.agx.sin``, ``llvm.agx.cos``, ``llvm.agx.exp2`` and ``llvm.agx.log2``
+  are the code of ``llvm.sin`` and the others (with the same IEEE lowering),
+  which LLVM does not evaluate on the host for a constant argument: a
+  constant gives the bits of the hardware approximation, as a variable does
+  (``llvm.agx.rcp`` and ``llvm.agx.rsqrt.special`` likewise).
   Conversions between 64-bit integers and ``float`` are expanded.
 * Device memory loads and stores of 8 to 64 bits with folded base, scaled
   index and constant offsets; threadgroup and stack memory; memory

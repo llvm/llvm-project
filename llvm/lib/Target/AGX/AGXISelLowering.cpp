@@ -740,6 +740,17 @@ SDValue AGXTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getUNDEF(MVT::i32);
     return DAG.getCopyFromReg(DAG.getEntryNode(), DL, VReg, MVT::i32);
   }
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos:
+  case Intrinsic::agx_exp2:
+  case Intrinsic::agx_log2: {
+    // the nodes of llvm.sin and the others, which the DAG does not fold
+    unsigned Opc = IID == Intrinsic::agx_sin   ? ISD::FSIN
+                   : IID == Intrinsic::agx_cos ? ISD::FCOS
+                   : IID == Intrinsic::agx_exp2 ? ISD::FEXP2
+                                                : ISD::FLOG2;
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1));
+  }
   case Intrinsic::agx_simd_ballot:
   case Intrinsic::agx_quad_ballot: {
     SDValue Cond = DAG.getZExtOrTrunc(Op.getOperand(1), DL, MVT::i32);

@@ -751,6 +751,10 @@ static bool producesArithmeticNaN(const Instruction &I) {
   case Intrinsic::log2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::agx_exp2:
+  case Intrinsic::agx_log2:
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos:
   case Intrinsic::floor:
   case Intrinsic::ceil:
   case Intrinsic::trunc:
@@ -1024,7 +1028,8 @@ static bool lowerIEEE(Instruction &I) {
   }
   case Intrinsic::agx_rcp:
   case Intrinsic::agx_rsqrt:
-  case Intrinsic::log2: {
+  case Intrinsic::log2:
+  case Intrinsic::agx_log2: {
     // Denormal operands are scaled by 2^64 first.
     Value *X = II->getArgOperand(0);
     SmallVector<Use *, 4> Uses;
@@ -1045,7 +1050,8 @@ static bool lowerIEEE(Instruction &I) {
       U->set(R);
     return true;
   }
-  case Intrinsic::exp2: {
+  case Intrinsic::exp2:
+  case Intrinsic::agx_exp2: {
     // 2^x = 2^f * 2^n with n = floor(x): the hardware computes 2^f in
     // [1, 2), and the scaling by 2^n is exact (rounded once for denormal
     // results), so integral x give exact powers of 2.
@@ -1060,7 +1066,7 @@ static bool lowerIEEE(Instruction &I) {
     XC = B.CreateBinaryIntrinsic(Intrinsic::minnum, XC, SF.fconst(160.0f));
     Value *N = B.CreateUnaryIntrinsic(Intrinsic::floor, XC);
     Value *Frac = B.CreateFSub(XC, N);
-    Value *P = B.CreateIntrinsic(Intrinsic::exp2, {B.getFloatTy()}, {Frac});
+    Value *P = B.CreateIntrinsic(ID, {B.getFloatTy()}, {Frac});
     Term T = SF.unpack(SF.bits(P), false);
     T.E = B.CreateAdd(T.E, B.CreateFPToSI(N, B.getInt32Ty()));
     Value *R = SF.flt(SF.convert(T));
@@ -1073,7 +1079,9 @@ static bool lowerIEEE(Instruction &I) {
     return true;
   }
   case Intrinsic::sin:
-  case Intrinsic::cos: {
+  case Intrinsic::cos:
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos: {
     // Below 2^-12, sin x and cos x round to x and 1 (the hardware flushes
     // denormal operands and loses the sign of zero).
     Value *X = II->getArgOperand(0);
@@ -1084,7 +1092,8 @@ static bool lowerIEEE(Instruction &I) {
     SoftFloat SF(B);
     Value *Small = B.CreateFCmpOLT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
                                    SF.fconst(0x1p-12f));
-    Value *R = B.CreateSelect(Small, ID == Intrinsic::sin ? X : SF.fconst(1.0f), &I);
+    bool Sin = ID == Intrinsic::sin || ID == Intrinsic::agx_sin;
+    Value *R = B.CreateSelect(Small, Sin ? X : SF.fconst(1.0f), &I);
     for (Use *U : Uses)
       U->set(R);
     return true;
