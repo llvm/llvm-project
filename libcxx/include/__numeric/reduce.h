@@ -27,8 +27,12 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Tp, class _BinaryOp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
+reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b) {
+  if constexpr (__has_random_access_iterator_category<_InputIterator>::value) {
+    for (; __last - __first >= 4; __first += 4)
+      __init = __b(std::move(__init), __b(__b(__first[0], __first[1]), __b(__first[2], __first[3])));
+  }
   for (; __first != __last; ++__first)
     __init = __b(std::move(__init), *__first);
   return __init;
