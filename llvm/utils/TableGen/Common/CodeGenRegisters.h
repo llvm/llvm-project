@@ -494,6 +494,10 @@ public:
   bool hasSuperRegClass(const CodeGenSubRegIndex *SubIdx,
                         const CodeGenRegisterClass *RC) const;
 
+  /// Checks if there is a super-register class for any SubIdx of this class
+  /// containing RC register class.
+  bool hasSuperRegClass(const CodeGenRegisterClass *RC) const;
+
   // getSuperRegClasses - Returns a bit vector of all register classes
   // containing only SubIdx super-registers of this class.
   void getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
