@@ -252,6 +252,28 @@ public:
   MachineFunctionProperties getClearedProperties() const override {
     return MachineFunctionProperties().setIsSSA();
   }
+
+protected:
+  // For subclasses that register under a different pass ID.
+  SIWholeQuadModeLegacy(char &PassID) : MachineFunctionPass(PassID) {}
+};
+
+/// SSA-form version of SIWholeQuadModeLegacy.  Inherits the full
+/// implementation but does not clear the IsSSA property, so subsequent
+/// SSA-form passes continue to see a valid SSA representation.
+class AMDGPUSSAWholeQuadModeLegacy : public SIWholeQuadModeLegacy {
+public:
+  static char ID;
+
+  AMDGPUSSAWholeQuadModeLegacy() : SIWholeQuadModeLegacy(ID) {}
+
+  StringRef getPassName() const override {
+    return "AMDGPU SSA Whole Quad Mode";
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties(); // preserve IsSSA
+  }
 };
 } // end anonymous namespace
 
@@ -266,6 +288,18 @@ INITIALIZE_PASS_END(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
                     false, false)
 
 char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
+
+char AMDGPUSSAWholeQuadModeLegacy::ID = 0;
+
+INITIALIZE_PASS_BEGIN(AMDGPUSSAWholeQuadModeLegacy, "amdgpu-ssa-wqm",
+                      "AMDGPU SSA Whole Quad Mode", false, false)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(AMDGPUSSAWholeQuadModeLegacy, "amdgpu-ssa-wqm",
+                    "AMDGPU SSA Whole Quad Mode", false, false)
+
+char &llvm::AMDGPUSSAWholeQuadModeID = AMDGPUSSAWholeQuadModeLegacy::ID;
 
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {

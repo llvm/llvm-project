@@ -675,6 +675,11 @@ static cl::opt<bool>
                            cl::desc("Use the machine scheduler in SSA mode."),
                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUSSAWholeQuadMode(
+    "amdgpu-enable-ssa-whole-quad-mode",
+    cl::desc("Run whole quad mode analysis in SSA mode."), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -742,6 +747,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
+  initializeAMDGPUSSAWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholeLegacyPass(*PR);
   initializeSILateBranchLoweringLegacyPass(*PR);
@@ -1874,9 +1880,16 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(EndOfPreRA, &GCNPreRAOptimizationsID);
 
-  // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
-  // instructions that cause scheduling barriers.
-  insertPass(EndOfPreRA, &SIWholeQuadModeID);
+  // Allow the scheduler to run before WQM inserts exec manipulation
+  // instructions that cause scheduling barriers.  When the SSA machine
+  // scheduler is active and the SSA WQM pass is requested, insert the SSA
+  // variant after the SSA scheduler (before PHI elimination).  In all other
+  // cases — including the degenerate case where SSA WQM is requested but the
+  // SSA scheduler is disabled — fall back to the normal SIWholeQuadMode pass.
+  if (UseSSAMachineScheduler && EnableAMDGPUSSAWholeQuadMode)
+    insertPass(&SSAMachineSchedulerID, &AMDGPUSSAWholeQuadModeID);
+  else
+    insertPass(EndOfPreRA, &SIWholeQuadModeID);
 
   if (OptExecMaskPreRA)
     insertPass(EndOfPreRA, &SIOptimizeExecMaskingPreRAID);
