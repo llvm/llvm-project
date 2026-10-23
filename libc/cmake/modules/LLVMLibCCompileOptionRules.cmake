@@ -246,7 +246,7 @@ function(_get_common_compile_options_impl output_var)
         # -ffreestanding, which in turn includes <stdlib.h>. Suppress it by
         # defining its header guard.
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-           (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+          (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
           list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
         endif()
       endif()
