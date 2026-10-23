@@ -2543,10 +2543,6 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
                           std::inserter(Intersection, Intersection.begin()),
                           deref<std::less<>>());
 
-    // Skip disjoint class pairs.
-    if (Intersection.empty())
-      continue;
-
     // Skip casses where the intersection is composed of artificial
     // registers.
     if (llvm::all_of(Intersection, [](const CodeGenRegister *Reg) {
