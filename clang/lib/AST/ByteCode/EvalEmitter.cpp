@@ -325,7 +325,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
-  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+  if (!EvalResult.checkFullyInitialized(S, Ptr))
     return false;
   if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;

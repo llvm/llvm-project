@@ -312,21 +312,17 @@ exit:
 define void @call_deactivation_symbol_operand_bundle(ptr %dst) {
 ; CHECK-LABEL: define void @call_deactivation_symbol_operand_bundle(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x ptr>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x ptr> @bar_v4(<4 x ptr> [[WIDE_LOAD]]) [ "deactivation-symbol"(ptr @sym) ]
-; CHECK-NEXT:    store <4 x ptr> [[TMP1]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[S:%.*]] = notail call ptr @bar(ptr [[L]]) [ "deactivation-symbol"(ptr @sym) ]
+; CHECK-NEXT:    store ptr [[S]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

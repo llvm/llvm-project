@@ -551,6 +551,19 @@ static bool canVectorizeSwiftErrorUses(Instruction &I,
   return false;
 }
 
+/// Calls with operand bundles other than llvm.assume cannot be widened.
+static bool canVectorizeOperandBundles(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB || !CB->hasOperandBundles() || isa<AssumeInst>(CB))
+    return true;
+  reportVectorizationFailure("Found a call with operand bundles",
+                             "call with operand bundles cannot be vectorized",
+                             "CantVectorizeOperandBundles", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -561,10 +574,12 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
-    // Uses of swifterror values must remain scalar.
+    // Uses of swifterror values must remain scalar. Calls with operand bundles
+    // cannot be widened.
     for (Instruction &I : *BB) {
       if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
-          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop) &&
+          canVectorizeOperandBundles(I, ORE, TheLoop))
         continue;
       if (!DoExtraAnalysis)
         return false;
@@ -710,6 +725,28 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
   }
 
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
+}
+
+bool LoopVectorizationLegality::addConditionalInduction(
+    PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
+  DenseMap<Value *, const SCEVAddRecExpr *> CompressedPtrsForCondID;
+  if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
+                             *PSE.getSE())) {
+    reportVectorizationFailure(
+        "Unsupported user of conditional induction found",
+        "UnsupportedConditionalInductionUse", ORE, TheLoop);
+    return false;
+  }
+
+  ConditionalInductions[Phi] = CondID;
+
+  for (auto [Ptr, PtrAddRec] : CompressedPtrsForCondID) {
+    LLVM_DEBUG(dbgs() << "LV: Found compressed pointer: " << *Ptr << '\n');
+    assert(PtrAddRec->isAffine() && "Expected affine SCEVAddRecExpr");
+    CompressedPtrs[Ptr] = CompressedPtrInfo{Phi, PtrAddRec};
+  }
+
+  return true;
 }
 
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
@@ -871,6 +908,13 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
+    ConditionalInductionDescriptor CondID;
+    if (Opts.lv_compressing_patterns &&
+        ConditionalInductionDescriptor::isConditionalInductionPHI(
+            Phi, TheLoop, CondID, *PSE.getSE())) {
+      return addConditionalInduction(Phi, CondID);
+    }
+
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
       FixedOrderRecurrences.insert(Phi);
       return true;
@@ -892,7 +936,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     return false;
   } // end of PHI handling
 
-  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop) ||
+      !canVectorizeOperandBundles(I, ORE, TheLoop))
     return false;
 
   // We handle calls that:
@@ -1750,6 +1795,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   bool HasSideEffects = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I))
+        continue;
       if (I.mayWriteToMemory()) {
         if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
           HasSideEffects = true;
@@ -1893,6 +1940,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
+      // Pseudo-probes are placeholders with no real memory
+      // access, so they cannot alias the exit condition load and do not need
+      // to be masked.
+      if (isa<PseudoProbeInst>(I))
+        continue;
+
       if (I.mayReadOrWriteMemory()) {
         // We need to mask all other memory ops.
         ConditionallyExecutedOps.insert(&I);
@@ -2005,6 +2058,17 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
+  }
+
+  if (hasConditionalInductions()) {
+    reportVectorizationFailure(
+        "We can vectorize this loop with a compressstore or expandload, but "
+        "vectorization support is not implemented yet.",
+        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
   }
 
   if (Result) {

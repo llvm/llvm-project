@@ -34,3 +34,4 @@ def X86System : SystemRuntimeLibrary<isX86, (add Libc)>;
 // CHECK: if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
 // CHECK-NEXT: setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-NOT: setAvailableLibFuncs_ext(
+// CHECK: no system runtime library applied to target
