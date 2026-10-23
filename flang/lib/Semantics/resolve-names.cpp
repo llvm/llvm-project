@@ -11479,6 +11479,11 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
         }
       }
     }
+  } else if (std::holds_alternative<parser::CompilerDirective::Align>(x.u)) {
+    // The parser recognizes !DIR$ ALIGN, but nothing acts on it yet. Say so
+    // rather than letting the directive be accepted and silently ignored.
+    context().Warn(common::UsageWarning::IgnoredDirective, x.source,
+        "!DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored"_warn_en_US);
   } else if (const auto *inlineAlways{
                  std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {
     if (!inlineAlways->v.has_value()) {
