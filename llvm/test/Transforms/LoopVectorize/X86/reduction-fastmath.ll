@@ -63,8 +63,8 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP7]] = fadd fast <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[TMP6]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP7]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -114,8 +114,8 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6]] = fadd reassoc <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP7]] = fadd reassoc <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[TMP6]] = call reassoc <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP7]] = call reassoc <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -165,8 +165,8 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6]] = fadd reassoc contract <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP7]] = fadd reassoc contract <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[TMP6]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP7]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[WIDE_LOAD2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

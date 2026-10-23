@@ -43,7 +43,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP5]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP8]], %[[PRED_SDIV_IF1]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i32> [[TMP9]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP10]], <2 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP11]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP11]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v2i32(<2 x i32> [[VEC_PHI]], <2 x i32> [[PREDPHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -73,7 +73,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    [[TMP33:%.*]] = call <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> [[WIDE_MASKED_LOAD]], <8 x i32> [[BROADCAST_SPLAT2]], <8 x i1> [[BROADCAST_SPLAT]])
 ; SINK-GATHER-NEXT:    [[TMP34:%.*]] = add nsw <8 x i32> [[TMP33]], [[WIDE_LOAD]]
 ; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <8 x i32> [[TMP34]], <8 x i32> [[WIDE_LOAD]]
-; SINK-GATHER-NEXT:    [[TMP35]] = add <8 x i32> [[VEC_PHI]], [[PREDPHI]]
+; SINK-GATHER-NEXT:    [[TMP35]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[PREDPHI]])
 ; SINK-GATHER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SINK-GATHER-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; SINK-GATHER-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -153,7 +153,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK:       [[PRED_UDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP6]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP12]], %[[PRED_UDIV_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP13]], <2 x i32> [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP14]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP14]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v2i32(<2 x i32> [[VEC_PHI]], <2 x i32> [[PREDPHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -208,7 +208,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[WIDE_GEP]], <8 x i1> [[BROADCAST_SPLAT1]], <8 x i32> poison)
 ; SINK-GATHER-NEXT:    [[TMP48:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[WIDE_MASKED_GATHER]], <8 x i32> [[BROADCAST_SPLAT]], <8 x i1> [[BROADCAST_SPLAT1]])
 ; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <8 x i32> [[TMP48]], <8 x i32> [[BROADCAST_SPLAT]]
-; SINK-GATHER-NEXT:    [[TMP49]] = add <8 x i32> [[VEC_PHI]], [[PREDPHI]]
+; SINK-GATHER-NEXT:    [[TMP49]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[PREDPHI]])
 ; SINK-GATHER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SINK-GATHER-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; SINK-GATHER-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

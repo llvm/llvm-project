@@ -49,7 +49,7 @@ define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
 ; CHECK:       [[PRED_UDIV_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i64> [ [[TMP8]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP14]], %[[PRED_UDIV_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP15]], <2 x i64> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP16]] = add <2 x i64> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP16]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI]], <2 x i64> [[PREDPHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

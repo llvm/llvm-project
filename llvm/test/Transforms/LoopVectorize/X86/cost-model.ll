@@ -635,13 +635,13 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4]] = add <2 x i64> [[VEC_PHI]], splat (i64 1)
-; CHECK-NEXT:    [[TMP5]] = add <2 x i64> [[VEC_PHI2]], splat (i64 1)
-; CHECK-NEXT:    [[TMP6]] = add <2 x i64> [[VEC_PHI3]], splat (i64 1)
-; CHECK-NEXT:    [[TMP7]] = add <2 x i64> [[VEC_PHI4]], splat (i64 1)
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP5]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI1]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP6]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI2]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP7]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI3]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]

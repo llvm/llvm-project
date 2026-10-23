@@ -721,8 +721,8 @@ define void @int_float_struct(ptr nocapture readonly %p) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <vscale x 4 x i32> [[TMP4]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[TMP6]] = add <vscale x 4 x i32> [[TMP3]], [[VEC_PHI1]]
-; CHECK-NEXT:    [[TMP7]] = fadd fast <vscale x 4 x float> [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32(<vscale x 4 x i32> [[VEC_PHI1]], <vscale x 4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP7]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv4f32(<vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
@@ -874,7 +874,7 @@ define i32 @PR27626_1(ptr %p, i64 %n) #1 {
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC1]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0
-; CHECK-NEXT:    [[TMP10]] = add <vscale x 4 x i32> [[TMP9]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP10]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1016,7 +1016,7 @@ define i32 @PR27626_3(ptr %p, i64 %n, i32 %z) #1 {
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC1]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0
-; CHECK-NEXT:    [[TMP11]] = add <vscale x 4 x i32> [[TMP10]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[TMP10]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
