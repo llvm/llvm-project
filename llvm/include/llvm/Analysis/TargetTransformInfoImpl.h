@@ -676,7 +676,8 @@ public:
   }
 
   virtual bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+                                Type *ElementTy) const {
     return false;
   }
 
