@@ -828,10 +828,10 @@ static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
 static uint32_t
 getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
   // Envar to set the default number of blocks per compute unit for a kernel in
-  // Generic-SPMD mode on AMDGPU devices. Zero uses the default number of blocks
-  // of other kernels.
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
   static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6);
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
 
   if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
       !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
