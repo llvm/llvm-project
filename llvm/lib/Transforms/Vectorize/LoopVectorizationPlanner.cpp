@@ -120,11 +120,11 @@ bool VFSelectionContext::supportsScalableVectors() const {
 }
 
 bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
-  TargetTransformInfo::RegisterKind RegKind =
-      IsScalable ? TargetTransformInfo::RGK_ScalableVector
-                 : TargetTransformInfo::RGK_FixedWidthVector;
+  TargetTransformInfo::VectorKind VectorKind =
+      IsScalable ? TargetTransformInfo::VectorKind::Scalable
+                 : TargetTransformInfo::VectorKind::FixedWidth;
   return valueOr(Opts.vectorizer_maximize_bandwidth,
-                 TTI.shouldMaximizeVectorBandwidth(RegKind) ||
+                 TTI.shouldMaximizeVectorBandwidth(VectorKind) ||
                      (Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
                       Legal->hasVectorCallVariants()));
 }
@@ -479,7 +479,7 @@ VFSelectionContext::getTypeWidthsForVFSelection() const {
     // Note: -vectorizer-maximize-bandwidth overrides the target preference.
     if (!valueOr(Opts.vectorizer_maximize_bandwidth,
                  TTI.shouldMaximizeVectorBandwidth(
-                     TargetTransformInfo::RGK_AnyVector, T)))
+                     TargetTransformInfo::VectorKind::FixedOrScalable, T)))
       return;
 
     MinWidthForMaxBandwidth = std::min<unsigned>(

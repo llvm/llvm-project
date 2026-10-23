@@ -870,7 +870,7 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K, Type *ElementTy) const {
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
   return TTIImpl->shouldMaximizeVectorBandwidth(K, ElementTy);
 }
 

@@ -157,7 +157,7 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::VectorKind K,
                                      Type *ElementTy) const override;
 
   /// Try to return an estimate cost factor that can be used as a multiplier
