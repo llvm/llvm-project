@@ -668,9 +668,8 @@ public:
     return std::nullopt;
   }
 
-  virtual bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
-                                Type *ElementTy) const {
+  virtual bool shouldMaximizeVectorBandwidth(TargetTransformInfo::VectorKind K,
+                                             Type *ElementTy) const {
     return false;
   }
 
