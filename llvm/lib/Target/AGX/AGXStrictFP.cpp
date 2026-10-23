@@ -37,6 +37,8 @@
 #include "AGXSoftF64.h"
 #include "AGXSubtarget.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -45,6 +47,7 @@
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -1519,11 +1522,16 @@ static Constant *evaluateAssuming(Value *V, PHINode *P, Constant *C,
   return R ? ConstantFoldBinaryOpOperands(BO->getOpcode(), L, R, DL) : nullptr;
 }
 
+static cl::opt<bool> FoldModePhis(
+    "agx-fold-mode-phis", cl::init(true), cl::Hidden,
+    cl::desc("Fold the FP mode phis of loops that set the mode and restore "
+             "it to the constant they always hold"));
+
 /// The constant that integer phi P always holds: the one constant among its
 /// incoming values that every other incoming value gives back when P holds
 /// it (by induction over the executions of P).
 static Constant *constantModePhi(PHINode &P) {
-  if (!P.getType()->isIntegerTy())
+  if (!FoldModePhis || !P.getType()->isIntegerTy())
     return nullptr;
   Constant *C = nullptr;
   for (Value *In : P.incoming_values())
@@ -1539,6 +1547,82 @@ static Constant *constantModePhi(PHINode &P) {
     if (!isa<Constant>(In) && evaluateAssuming(In, &P, C, DL) != C)
       return nullptr;
   return C;
+}
+
+/// Whether the sign bit of V (a float or its bits) is clear: constants,
+/// bitcasts, selects of such values, masks without the sign bit, fabs, and
+/// maximumnum with a non-negative operand (it returns the other operand of
+/// a NaN and orders -0 below +0). ZLUDA's emulation of ftz and of NaN
+/// results is selects of bit patterns, which ValueTracking does not follow.
+static bool signBitClear(const Value *V, unsigned Depth = 0) {
+  if (Depth > 8)
+    return false;
+  if (auto *C = dyn_cast<ConstantFP>(V))
+    return !C->isNegative();
+  if (auto *C = dyn_cast<ConstantInt>(V))
+    return !C->isNegative();
+  if (auto *BC = dyn_cast<BitCastInst>(V))
+    return signBitClear(BC->getOperand(0), Depth + 1);
+  if (auto *S = dyn_cast<SelectInst>(V))
+    return signBitClear(S->getTrueValue(), Depth + 1) &&
+           signBitClear(S->getFalseValue(), Depth + 1);
+  if (auto *BO = dyn_cast<BinaryOperator>(V);
+      BO && BO->getOpcode() == Instruction::And)
+    return signBitClear(BO->getOperand(0), Depth + 1) ||
+           signBitClear(BO->getOperand(1), Depth + 1);
+  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (II->getIntrinsicID() == Intrinsic::fabs)
+      return true;
+    if (II->getIntrinsicID() == Intrinsic::maximumnum)
+      return signBitClear(II->getArgOperand(0), Depth + 1) ||
+             signBitClear(II->getArgOperand(1), Depth + 1);
+  }
+  return false;
+}
+
+/// CUDA's roundf: trunc(x + copysign(0.5, x)) with the addition rounded
+/// toward zero (add.rz.ftz.f32, then cvt.rzi), or trunc(x + 0.5) once the
+/// sign of x is known. That is round(x), half away from zero, for every x:
+/// the rounding toward zero never carries x + 0.5 past the next integer,
+/// from 2^23 on x is an integer that the addition gives back, and zeros,
+/// flushed denormals, infinities and NaN agree, except that -0 + 0.5 gives
+/// +0 (where the sign of x is not known to be clear, round(x) + 0). Applies
+/// when the truncations of the addition are its only users.
+static Value *lowerRoundf(ConstrainedFPIntrinsic &CI, Value *Rounding,
+                          IRBuilderBase &B) {
+  auto *RC = dyn_cast<ConstantInt>(Rounding);
+  if (!RC || RC->getZExtValue() != RoundTowardZero ||
+      CI.getIntrinsicID() != Intrinsic::experimental_constrained_fadd ||
+      !CI.getType()->isFloatTy() || CI.use_empty())
+    return nullptr;
+  for (User *U : CI.users()) {
+    auto *II = dyn_cast<IntrinsicInst>(U);
+    if (!II || (II->getIntrinsicID() != Intrinsic::trunc &&
+                II->getIntrinsicID() !=
+                    Intrinsic::experimental_constrained_trunc))
+      return nullptr;
+  }
+  auto IsHalf = [](const Value *V) {
+    auto *C = dyn_cast<ConstantFP>(V);
+    return C && (C->isExactlyValue(0.5) || C->isExactlyValue(-0.5));
+  };
+  for (unsigned I : {0u, 1u}) {
+    Value *X = CI.getArgOperand(I), *H = CI.getArgOperand(1 - I);
+    auto *C = dyn_cast<IntrinsicInst>(H);
+    bool Copysign = C && C->getIntrinsicID() == Intrinsic::copysign &&
+                    C->getArgOperand(1) == X && IsHalf(C->getArgOperand(0));
+    auto *K = dyn_cast<ConstantFP>(H);
+    bool PlusHalf = K && K->isExactlyValue(0.5);
+    if (!Copysign && !PlusHalf)
+      continue;
+    // copysign(0.5, -0) + -0 is -0.5, which truncates to -0 as round(-0)
+    if (Copysign || signBitClear(X))
+      return B.CreateUnaryIntrinsic(Intrinsic::round, X);
+    if (cannotBeOrderedLessThanZero(X, SimplifyQuery(CI.getDataLayout())))
+      return B.CreateFAdd(B.CreateUnaryIntrinsic(Intrinsic::round, X),
+                          ConstantFP::get(X->getType(), 0.0));
+  }
+  return nullptr;
 }
 
 bool AGXLowerFPEnv::runOnFunction(Function &F) {
@@ -1645,6 +1729,12 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
       Rounding = B.getInt32(roundingCode(*RM));
     else
       Rounding = B.CreateAnd(ResHalf ? B.CreateLShr(Env, ModeHalfShift) : Env, 3);
+    if (Value *R = lowerRoundf(*CI, Rounding, B)) {
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+      continue;
+    }
     bool HasFPOperand = OpTy->isFloatingPointTy();
     Type *FlushTy = HasFPOperand ? OpTy : ResTy;
     bool FlushFloat = FlushTy->isFloatTy();

@@ -145,8 +145,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, VT, Custom);
     setOperationAction({ISD::FSUB, ISD::SELECT_CC,
                         ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FSINCOS, ISD::FROUND},
+                        ISD::FMAXNUM_IEEE, ISD::FSINCOS},
                        VT, Expand);
+    setOperationAction(ISD::FROUND, VT, Custom);
     // Conditions without a direct hardware condition.
     setCondCodeAction({ISD::SETONE, ISD::SETUEQ, ISD::SETO, ISD::SETUO}, VT,
                       Expand);
@@ -512,6 +513,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerFREM(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
+  case ISD::FROUND:
+    return lowerFROUND(Op, DAG);
   case ISD::FSIN:
   case ISD::FCOS:
     return lowerTrig(Op, DAG);
@@ -1173,6 +1176,25 @@ SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
   SDValue S = DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, Sign),
                           DAG.getConstant(SignMask, DL, IntVT));
   return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, IntVT, M, S));
+}
+
+/// round(x), half away from zero (no libm on AGX): t = trunc(x), plus one
+/// away from zero when |x - t| >= 0.5, with the sign of x (round(-0.3) and
+/// round(-0) are -0). x - t is exact, and so is t + 1 for every x that is not
+/// an integer; infinities give x - t = NaN, so t, and NaN stays NaN.
+SDValue AGXTargetLowering::lowerFROUND(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue X = Op.getOperand(0);
+  SDValue T = DAG.getNode(ISD::FTRUNC, DL, VT, X);
+  SDValue D =
+      DAG.getNode(ISD::FABS, DL, VT, DAG.getNode(ISD::FSUB, DL, VT, X, T));
+  SDValue One = DAG.getNode(ISD::FCOPYSIGN, DL, VT,
+                            DAG.getConstantFP(1.0, DL, VT), X);
+  SDValue Step = DAG.getSelectCC(DL, D, DAG.getConstantFP(0.5, DL, VT), One,
+                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETOGE);
+  return DAG.getNode(ISD::FCOPYSIGN, DL, VT,
+                     DAG.getNode(ISD::FADD, DL, VT, T, Step), X);
 }
 
 /// float to bfloat bits, rounded to nearest even: (x + 0x7fff + lsb) >> 16,
