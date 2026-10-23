@@ -845,6 +845,16 @@ Fortran::lower::genCallOpAndResult(
       callResult = call.getResult(0);
   }
 
+  // A POINTER or ALLOCATABLE dummy that is not INTENT(IN) may associate,
+  // allocate, or deallocate the actual argument. When the actual argument
+  // names a CUDA global whose descriptor has a device copy, that copy must be
+  // synchronized with the host descriptor the callee may have updated.
+  if (!mlir::isa<cuf::KernelLaunchOp>(callOp) &&
+      !cuf::isCUDADeviceContext(builder.getRegion()))
+    for (const auto &arg : caller.getPassedArguments())
+      if (arg.passBy == PassBy::MutableBox && arg.mayBeModifiedByCall())
+        cuf::genPointerSync(loc, caller.getInput(arg), builder);
+
   std::optional<Fortran::evaluate::DynamicType> retTy =
       caller.getCallDescription().proc().GetType();
   // With HLFIR lowering, isElemental must be set to true

@@ -299,6 +299,10 @@ def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulqr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 
+// Scalar "Q-format" Multiply with Widening Accumulate
+def mqwacc_i64 : RISCVBuiltin<"int64_t(int64_t, int32_t, int32_t)">;
+def mqrwacc_i64 : RISCVBuiltin<"int64_t(int64_t, int32_t, int32_t)">;
+
 // Packed Multiply High (32-bit)
 def pmulh_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
 def pmulhr_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
