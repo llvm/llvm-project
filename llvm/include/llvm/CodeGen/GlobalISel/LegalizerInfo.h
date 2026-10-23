@@ -1119,6 +1119,11 @@ public:
                     scalarWiderThan(TypeIdx, Ty.getSizeInBits()),
                     changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
+  LegalizeRuleSet &maxScalar(bool Pred, unsigned TypeIdx, const LLT Ty) {
+    if (!Pred)
+      return *this;
+    return maxScalar(TypeIdx, Ty);
+  }
 
   /// Conditionally limit the maximum size of the scalar.
   /// For example, when the maximum size of one type depends on the size of
