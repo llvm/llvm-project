@@ -107,9 +107,6 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
       Subtarget(TT, CPU, FS, *this) {
   if (!DisableRequireStructuredCFG)
     setRequiresStructuredCFG(true);
-  // NVPTX does not produce verifier-clean MIR yet; see isMachineVerifierClean()
-  // for the legacy pass manager equivalent.
-  setEnableDefaultMachineVerifier(false);
   initAsmInfo();
 }
 
