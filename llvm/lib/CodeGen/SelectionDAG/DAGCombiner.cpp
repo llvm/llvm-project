@@ -10679,13 +10679,12 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                     ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
                     : VT;
     KeepNotOfSetCC =
-        (OpVT.isVector() || (!VT.isVector() && XorVT != MVT::i1 &&
-                             TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        (OpVT.isVector() ||
+         (XorVT != MVT::i1 && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
         TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
   }
-  if (TLI.isConstTrueVal(N1) &&
+  if (!KeepNotOfSetCC && TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
-      !KeepNotOfSetCC &&
       !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
         N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
