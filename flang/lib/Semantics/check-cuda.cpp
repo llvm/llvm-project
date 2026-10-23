@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -73,7 +74,7 @@ static const llvm::StringSet<> inlinePointerFunctions_ = {"c_associated_c_ptr",
     "c_associated_c_funptr", "__builtin_c_ptr_eq", "__builtin_c_ptr_ne",
     "__builtin_c_devptr_eq", "__builtin_c_devptr_ne", "__builtin_c_funloc"};
 
-enum class CallContext { Device, HostDevice, GuardedHostDevice };
+enum class CallContext { Host, Device, HostDevice, GuardedHostDevice };
 
 // Match the BIND(C) intrinsic-module procedure intercepted by CUDA lowering,
 // including calls through a USE rename. A user procedure named ON_DEVICE is
@@ -128,6 +129,7 @@ private:
     if (IsOnDevice(x)) {
       return {};
     }
+    common::CUDASubprogramAttrs calleeAttrs{common::CUDASubprogramAttrs::Host};
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
       const Symbol &ultimate{sym->GetUltimate()};
       const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
@@ -142,6 +144,7 @@ private:
           return (*this)(*stmtFunction);
         }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
+          calleeAttrs = *attrs;
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
             if (warpFunctions_.contains(sym->name().ToString()) &&
@@ -152,7 +155,7 @@ private:
             }
             if (*attrs == common::CUDASubprogramAttrs::Device &&
                 callContext_ == CallContext::HostDevice) {
-              return CallError(x, true);
+              return CallError(x, calleeAttrs);
             }
             return {};
           }
@@ -186,31 +189,36 @@ private:
     if (callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
-    return CallError(x, false);
+    return CallError(x, calleeAttrs);
   }
 
   SemanticsContext &context_;
   CallContext callContext_;
 
 private:
-  static Result CallError(
-      const evaluate::ProcedureDesignator &proc, bool inHostCode) {
+  Result CallError(const evaluate::ProcedureDesignator &proc,
+      common::CUDASubprogramAttrs calleeAttrs) const {
+    const std::string procedureType{
+        calleeAttrs == common::CUDASubprogramAttrs::HostDevice
+            ? "HOST,DEVICE"
+            : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
+    const char *codeContext{callContext_ == CallContext::Host ? "host"
+            : callContext_ == CallContext::Device             ? "device"
+                                                              : "HOST,DEVICE"};
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
               ? specific->GetUltimate().name().ToString()
               : proc.GetName()};
       if (*generic != specificName) {
-        return parser::MessageFormattedText(inHostCode
-                ? "'%s' (specific procedure '%s') may not be called in host code"_err_en_US
-                : "'%s' (specific procedure '%s') may not be called in device code"_err_en_US,
-            *generic, specificName);
+        return parser::MessageFormattedText(
+            "'%s' (specific procedure '%s'), a procedure with the %s attribute, may not be called from %s code"_err_en_US,
+            *generic, specificName, procedureType, codeContext);
       }
     }
-    return parser::MessageFormattedText(inHostCode
-            ? "'%s' may not be called in host code"_err_en_US
-            : "'%s' may not be called in device code"_err_en_US,
-        proc.GetName());
+    return parser::MessageFormattedText(
+        "'%s', a procedure with the %s attribute, may not be called from %s code"_err_en_US,
+        proc.GetName(), procedureType, codeContext);
   }
 };
 

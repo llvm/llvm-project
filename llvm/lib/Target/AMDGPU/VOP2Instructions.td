@@ -1395,6 +1395,13 @@ class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
                      $src)
 >;
 
+class ZExt_i16_i1_Pat_t16 <SDNode ext> : GCNPat <
+  (i16 (ext i1:$src)),
+  (V_CNDMASK_B16_t16_e64 0/*src0mod*/, 0/*src0*/,
+                     0/*src1mod*/, 1/*src1*/,
+                     $src)
+>;
+
 let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (and i16:$src0, i16:$src1),
@@ -1455,15 +1462,30 @@ defm : Arithmetic_i16_0Hi_Pats<cashr_rev_16, V_ASHRREV_I16_e64>;
 
 }  // End Predicates = [Has16BitInsts, isGFX8GFX9]
 
-let Predicates = [Has16BitInsts] in {
+let OtherPredicates = [Has16BitInsts] in {
 
+let True16Predicate = NotUseRealTrue16Insts in {
 def : ZExt_i16_i1_Pat<zext>;
 def : ZExt_i16_i1_Pat<anyext>;
+}
 
+let True16Predicate = UseRealTrue16Insts in {
+def : ZExt_i16_i1_Pat_t16<zext>;
+def : ZExt_i16_i1_Pat_t16<anyext>;
+}
+
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <
   (i16 (sext i1:$src)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), $src)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i16 (sext i1:$src)),
+  (V_CNDMASK_B16_t16_e64 /*src0mod*/0, /*src0*/0,
+                     /*src1mod*/0, /*src1*/-1, $src)
 >;
 
 } // End Predicates = [Has16BitInsts]
@@ -2818,17 +2840,6 @@ defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 } // End SubtargetPredicate = isGFX8GFX9
 
-let SubtargetPredicate = isGFX9Only in {
-
-defm : VOP2bInstAliases<V_ADD_U32_e32,     V_ADD_CO_U32_e32_gfx9,     "v_add_co_u32">;
-defm : VOP2bInstAliases<V_ADDC_U32_e32,    V_ADDC_CO_U32_e32_gfx9,    "v_addc_co_u32">;
-defm : VOP2bInstAliases<V_SUB_U32_e32,     V_SUB_CO_U32_e32_gfx9,     "v_sub_co_u32">;
-defm : VOP2bInstAliases<V_SUBB_U32_e32,    V_SUBB_CO_U32_e32_gfx9,    "v_subb_co_u32">;
-defm : VOP2bInstAliases<V_SUBREV_U32_e32,  V_SUBREV_CO_U32_e32_gfx9,  "v_subrev_co_u32">;
-defm : VOP2bInstAliases<V_SUBBREV_U32_e32, V_SUBBREV_CO_U32_e32_gfx9, "v_subbrev_co_u32">;
-
-} // End SubtargetPredicate = isGFX9Only
-
 let SubtargetPredicate = HasDLInsts in {
 
 defm V_FMAC_F32 : VOP2_Real_e32e64_vi <0x3b>;
@@ -2912,10 +2923,6 @@ let OtherPredicates = [HasDot4Insts] in {
 let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
-
-let SubtargetPredicate = HasPkFmacF16Inst in {
-defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
 
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16

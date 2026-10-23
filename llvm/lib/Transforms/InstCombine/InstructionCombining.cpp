@@ -83,6 +83,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -3176,9 +3177,17 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          LocalDoesConsume, Depth);
       DoesConsume = LocalDoesConsume;
-      if (IsLogical)
-        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
-      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+      if (!Builder)
+        return NonNull;
+      if (IsLogical) {
+        Value *InvertedLogicalOp = Builder->CreateLogicalOp(
+            Opcode, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : dyn_cast<SelectInst>(V));
+        if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
+          SI->swapProfMetadata();
+        return InvertedLogicalOp;
+      }
+      return Builder->CreateBinOp(Opcode, NotA, NotB);
     }
 
     return nullptr;
@@ -4282,7 +4291,7 @@ Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
+    } while (BBI != FirstInstr && isa<PseudoProbeInst>(BBI));
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -5376,8 +5385,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore =
-        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
   } else {
     auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBeforeOpt)
@@ -6167,10 +6175,10 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         }
       }
 
-      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // Skip processing pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst.isDebugOrPseudoInst()) {
+      if (!isa<PseudoProbeInst>(Inst)) {
         InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
@@ -6269,7 +6277,8 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
+  const auto &CLOpts =
+      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);
