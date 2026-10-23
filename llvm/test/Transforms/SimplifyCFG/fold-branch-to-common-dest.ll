@@ -1437,10 +1437,9 @@ define void @cond_is_intrinsic(i8 %v0, <4 x i1> %v1) {
 ; CHECK-LABEL: @cond_is_intrinsic(
 ; CHECK-NEXT:  pred:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[V1:%.*]])
-; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       final_left:
