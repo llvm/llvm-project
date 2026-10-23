@@ -126,6 +126,20 @@ def SubsetExtractionOpInterface
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
+          Return "true" if this extraction and the given insertion have compatible
+          value types and op-specific properties.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isCompatibleWithInsertion",
+        /*args=*/(ins "::mlir::SubsetInsertionOpInterface":$insertion),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return $_op->getResult(0).getType() ==
+                 insertion.getSourceOperand().get().getType();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Return the source tensor operand.
         }],
         /*retType=*/"::mlir::OpOperand &",
