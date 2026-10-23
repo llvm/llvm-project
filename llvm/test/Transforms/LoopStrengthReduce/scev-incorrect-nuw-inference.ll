@@ -32,7 +32,8 @@ define noundef i64 @test() {
 ; CHECK-NEXT:    [[ICMP12:%.*]] = icmp ult i32 [[LSR_IV_NEXT]], 1210
 ; CHECK-NEXT:    br i1 [[ICMP12]], label [[BB3]], label [[BB13:%.*]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    ret i64 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT_LCSSA1:%.*]] = phi i64 [ [[ZEXT]], [[BB10]] ]
+; CHECK-NEXT:    ret i64 [[ZEXT_LCSSA1]]
 ;
 bb2:
   br label %bb3

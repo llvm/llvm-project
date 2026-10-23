@@ -48,6 +48,9 @@
 ; LAXX-NEXT:       Scalar Evolution Analysis
 ; LAXX-NEXT:       Loop Pass Manager
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
+; LAXX-NEXT:       LCSSA Verifier
+; LAXX-NEXT:       Loop-Closed SSA Form Pass
+; LAXX-NEXT:       Loop Pass Manager
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
 ; LAXX-NEXT:       Lower Garbage Collection Instructions

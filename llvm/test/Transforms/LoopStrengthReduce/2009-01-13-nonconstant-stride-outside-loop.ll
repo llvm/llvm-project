@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -S | grep phi | count 1
+; RUN: opt < %s -loop-reduce -S | grep phi | count 2
 ; RUN: opt < %s -loop-reduce -S | grep mul | count 1
 ; ModuleID = '<stdin>'
 ; Make sure examining a fuller expression outside the loop doesn't cause us to create a second

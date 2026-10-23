@@ -44,6 +44,9 @@
 ; CHECK-NEXT:       Canonicalize natural loops
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Canonicalize Freeze Instructions in Loops
+; CHECK-NEXT:       LCSSA Verifier
+; CHECK-NEXT:       Loop-Closed SSA Form Pass
+; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Induction Variable Users
 ; CHECK-NEXT:         Loop Strength Reduction
 ; CHECK-NEXT:       Lower Garbage Collection Instructions

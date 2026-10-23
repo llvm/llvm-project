@@ -470,8 +470,6 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 ; ENABLE-V5T-NEXT:    mov r8, r8
 ; ENABLE-V5T-NEXT:    @ InlineAsm End
 ; ENABLE-V5T-NEXT:    pop {r4, pc}
-; ENABLE-V5T-NEXT:  LBB3_3: @ %for.end
-; ENABLE-V5T-NEXT:    bx lr
 ;
 ; DISABLE-V4T-LABEL: freqSaveAndRestoreOutsideLoop2:
 ; DISABLE-V4T:       @ %bb.0: @ %entry

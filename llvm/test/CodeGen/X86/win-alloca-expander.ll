@@ -72,9 +72,7 @@ entry:
 
 bb1:
   %p1 = alloca %struct.S
-; The entry offset is unknown; touch-and-sub.
-; CHECK: pushl %eax
-; CHECK: subl $1020, %esp
+; CHECK: subl $1024, %esp
   br label %loop1
 
 loop1:
