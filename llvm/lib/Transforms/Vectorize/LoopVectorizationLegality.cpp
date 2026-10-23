@@ -92,7 +92,6 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
       return ForceScalableOpt;
 
     // Then, infer scalability from a preferred VF.
-    assert(ForceScalableOpt == SK_Unspecified);
     if (ForceWidthOpt.isScalable())
       return SK_AlwaysScalable;
     if (ForceWidth)
