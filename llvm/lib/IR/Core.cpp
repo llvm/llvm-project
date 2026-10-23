@@ -50,6 +50,8 @@ using namespace llvm;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OperandBundleDef, LLVMOperandBundleRef)
 
+static IRBuilder<> *unwrap(LLVMBuilderRef Ref);
+
 inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
   return reinterpret_cast<BasicBlock **>(BBs);
 }
@@ -3465,10 +3467,56 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
 
 /*===-- Instruction builders ----------------------------------------------===*/
 
+/// If the IRBuilder is created via LLVMCreateBuilderInContext(), the actual
+/// creation is delayed until the insertion point is first set using
+/// LLVMPositionBuilder() or similar, at which point we can use the Module of
+/// the insertion point.
+struct DelayedIRBuilder {
+  std::optional<IRBuilder<>> Builder;
+
+  DelayedIRBuilder() = default;
+  DelayedIRBuilder(Module &M) { Builder.emplace(M); }
+
+  void initUsingInsertionBlock(BasicBlock *BB) {
+    if (Builder)
+      return;
+
+    if (BB) {
+      if (Function *F = BB->getParent()) {
+        if (Module *M = F->getParent()) {
+          Builder.emplace(*M);
+          return;
+        }
+      }
+    }
+
+    reportFatalUsageError(
+        "Cannot set insertion point that is not connected to a Module for a "
+        "builder that has no known Module. Use LLVMCreateBuilderForModule "
+        "instead of LLVMCreateBuilderInContext.");
+  }
+};
+
+static LLVMBuilderRef wrap(DelayedIRBuilder *B) {
+  return reinterpret_cast<LLVMBuilderRef>(B);
+}
+
+static DelayedIRBuilder *unwrapDelayed(LLVMBuilderRef Ref) {
+  return reinterpret_cast<DelayedIRBuilder *>(Ref);
+}
+
+static IRBuilder<> *unwrap(LLVMBuilderRef Ref) {
+  DelayedIRBuilder *DB = unwrapDelayed(Ref);
+  if (!DB->Builder)
+    reportFatalUsageError(
+        "Cannot use Builder without known module. "
+        "Use LLVMCreateBuilderForModule instead of LLVMCreateBuilderInContext, "
+        "or make sure that the insertion point is set first.");
+  return &*DB->Builder;
+}
+
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  return wrap(new IRBuilder<>(*unwrap(C)));
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+  return wrap(new DelayedIRBuilder);
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
@@ -3476,43 +3524,46 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
 }
 
 LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M) {
-  return wrap(new IRBuilder<>(*unwrap(M)));
+  return wrap(new DelayedIRBuilder(*unwrap(M)));
 }
 
-static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,
+static void LLVMPositionBuilderImpl(DelayedIRBuilder *DB, BasicBlock *Block,
                                     Instruction *Instr, bool BeforeDbgRecords) {
   BasicBlock::iterator I = Instr ? Instr->getIterator() : Block->end();
   I.setHeadBit(BeforeDbgRecords);
-  Builder->SetInsertPoint(I);
+  DB->initUsingInsertionBlock(I.getNodeParent());
+  DB->Builder->SetInsertPoint(I);
 }
 
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr) {
-  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+  return LLVMPositionBuilderImpl(unwrapDelayed(Builder), unwrap(Block),
                                  unwrap<Instruction>(Instr), false);
 }
 
 void LLVMPositionBuilderBeforeDbgRecords(LLVMBuilderRef Builder,
                                          LLVMBasicBlockRef Block,
                                          LLVMValueRef Instr) {
-  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+  return LLVMPositionBuilderImpl(unwrapDelayed(Builder), unwrap(Block),
                                  unwrap<Instruction>(Instr), true);
 }
 
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr) {
   Instruction *I = unwrap<Instruction>(Instr);
-  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, false);
+  return LLVMPositionBuilderImpl(unwrapDelayed(Builder), I->getParent(), I,
+                                 false);
 }
 
 void LLVMPositionBuilderBeforeInstrAndDbgRecords(LLVMBuilderRef Builder,
                                                  LLVMValueRef Instr) {
   Instruction *I = unwrap<Instruction>(Instr);
-  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, true);
+  return LLVMPositionBuilderImpl(unwrapDelayed(Builder), I->getParent(), I,
+                                 true);
 }
 
 void LLVMPositionBuilderAtEnd(LLVMBuilderRef Builder, LLVMBasicBlockRef Block) {
   BasicBlock *BB = unwrap(Block);
-  unwrap(Builder)->SetInsertPoint(BB);
+  return LLVMPositionBuilderImpl(unwrapDelayed(Builder), BB, nullptr, false);
 }
 
 LLVMBasicBlockRef LLVMGetInsertBlock(LLVMBuilderRef Builder) {
@@ -3533,7 +3584,7 @@ void LLVMInsertIntoBuilderWithName(LLVMBuilderRef Builder, LLVMValueRef Instr,
 }
 
 void LLVMDisposeBuilder(LLVMBuilderRef Builder) {
-  delete unwrap(Builder);
+  delete unwrapDelayed(Builder);
 }
 
 /*--.. Metadata builders ...................................................--*/

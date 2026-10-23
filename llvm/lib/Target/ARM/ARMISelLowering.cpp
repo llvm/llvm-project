@@ -21165,23 +21165,25 @@ bool ARM::isBitFieldInvertedMask(unsigned v) {
   return isShiftedMask_32(~v);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                     bool ForCodeSize) const {
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                  bool ForCodeSize) const {
   if (!Subtarget->hasVFP3Base())
-    return false;
+    return FPImmAction::ConstantPool;
   if (VT == MVT::f16 && Subtarget->hasFullFP16())
-    return ARM_AM::getFP16Imm(Imm) != -1;
+    return ARM_AM::getFP16Imm(Imm) != -1 ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
   if (VT == MVT::f32 && Subtarget->hasFullFP16() &&
       ARM_AM::getFP32FP16Imm(Imm) != -1)
-    return true;
+    return FPImmAction::Legal;
   if (VT == MVT::f32)
-    return ARM_AM::getFP32Imm(Imm) != -1;
+    return ARM_AM::getFP32Imm(Imm) != -1 ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
   if (VT == MVT::f64 && Subtarget->hasFP64())
-    return ARM_AM::getFP64Imm(Imm) != -1;
-  return false;
+    return ARM_AM::getFP64Imm(Imm) != -1 ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
 }
 
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as

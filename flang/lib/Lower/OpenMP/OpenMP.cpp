@@ -6738,8 +6738,8 @@ static void genOpenMPDeclareReductionImpl(
                         // name the op identically.
                         const semantics::Symbol *redSymPtr = symOpt;
                         if (!redSymPtr) {
-                          parser::CharBlock mangledOpName = semantics::omp::
-                              MangledIntrinsicOperatorReductionName(
+                          parser::CharBlock mangledOpName =
+                              semantics::MakeNameFromOperator(
                                   ReductionProcessor::toParserIntrinsicOperator(
                                       intrOp),
                                   semaCtx);

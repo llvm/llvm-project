@@ -658,15 +658,16 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   endif()
 endfunction()
 
-# CMake's set_target_properties() doesn't allow to pass lists for RPATH
-# properties directly (error: "called with incorrect number of arguments").
-# Instead of defining two list variables each time, use this helper function.
-function(lldb_setup_rpaths name)
+function(lldb_add_rpaths name)
   cmake_parse_arguments(LIST "" "" "BUILD_RPATH;INSTALL_RPATH" ${ARGN})
-  set_target_properties(${name} PROPERTIES
+  set_property(TARGET ${name} PROPERTY
     BUILD_WITH_INSTALL_RPATH OFF
-    BUILD_RPATH "${LIST_BUILD_RPATH}"
-    INSTALL_RPATH "${LIST_INSTALL_RPATH}"
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
+    BUILD_RPATH ${LIST_BUILD_RPATH}
+  )
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH ${LIST_INSTALL_RPATH}
   )
 endfunction()
 
