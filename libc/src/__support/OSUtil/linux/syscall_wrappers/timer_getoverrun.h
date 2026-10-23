@@ -25,11 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> timer_getoverrun(timer_t timerid) {
-#ifdef SYS_timer_getoverrun
   return syscall_checked<int>(SYS_timer_getoverrun, timerid);
-#else
-#error "SYS_timer_getoverrun syscall not available."
-#endif
 }
 
 } // namespace linux_syscalls
