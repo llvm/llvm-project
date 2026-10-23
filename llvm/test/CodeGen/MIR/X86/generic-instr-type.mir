@@ -13,6 +13,10 @@
     ret void
   }
 
+  define void @test_multiple_defs() {
+    ret void
+  }
+
 ...
 
 ---
@@ -60,4 +64,21 @@ body: |
 
     ; CHECK:      G_BR %bb.0
     G_BR  %bb.0
+...
+
+---
+name:            test_multiple_defs
+body: |
+  bb.0:
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-LABEL: name: test_multiple_defs
+    ; CHECK: %2:_(s32), %3:_ = G_SDIVREM %0, %1
+    ; CHECK-NEXT: %4:_(s32), %5:_ = G_UDIVREM %0, %1
+    ; CHECK-NEXT: %6:_(s32), %7:_ = G_FMODF %0
+    ; CHECK-NEXT: %8:_(s32), %9:_ = G_FSINCOS %0
+    %2:_(s32), %3:_(s32) = G_SDIVREM %0, %1
+    %4:_(s32), %5:_(s32) = G_UDIVREM %0, %1
+    %6:_(s32), %7:_(s32) = G_FMODF %0
+    %8:_(s32), %9:_(s32) = G_FSINCOS %0
 ...
