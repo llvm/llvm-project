@@ -573,6 +573,7 @@ exit:
   ret void
 }
 
+; Test a single iteration loop where the backedge update is removed from the conditional induction.
 define void @compress_store_single_iteration(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
 ; CHECK-LABEL: define void @compress_store_single_iteration(
 ; CHECK-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]]) {
