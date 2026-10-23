@@ -136,7 +136,7 @@ gpu.module @test {
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<128xf32, 3>
 // CHECK: %[[MDESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<128xf32, 3> -> !xegpu.mem_desc<128xf32>
-// CHECK: %[[LOAD:.*]] = xegpu.load_matrix %[[MDESC]][%[[C0]]] <{layout = #xegpu.layout<inst_data = [1], lane_layout = [1], lane_data = [1]>}> : !xegpu.mem_desc<128xf32>, index -> vector<16xf32>
+// CHECK: %[[LOAD:.*]] = xegpu.load_matrix %[[MDESC]][%[[C0]]] <{contiguity = 16 : i64, layout = #xegpu.layout<inst_data = [1], lane_layout = [1], lane_data = [1]>}> : !xegpu.mem_desc<128xf32>, index -> vector<16xf32>
 // CHECK: %[[BCAST:.*]] = vector.broadcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>} : vector<16xf32> to vector<16x16xf32>
 // CHECK: %[[TRANS:.*]] = vector.transpose %[[BCAST]], [1, 0] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf32> to vector<16x16xf32>
 // CHECK: %[[EXP:.*]] = math.exp %[[TRANS]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf32>
@@ -207,7 +207,7 @@ func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: m
 
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{contiguity = 1024 : i64, layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} : vector<1024xf16> to vector<8x8x16xf16>
 // CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
 // CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<16xf16>
@@ -268,13 +268,14 @@ func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(%arg0: memref
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_and_merge(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>} dense<true> : vector<256xi1>
-// CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>} : vector<256xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
+// The step offsets are contiguous, so the load takes its consumer's lane_data.
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} dense<true> : vector<256xi1>
+// CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} : vector<256xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{contiguity = 256 : i64, layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
 // CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 32], lane_layout = [1, 1, 16], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
 // CHECK: %[[CAST_1:.*]] = vector.shape_cast %[[CAST_0]] {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>} : vector<2x4x32xf16> to vector<1x256xf16>
 // CHECK: %[[CAST_2:.*]] = vector.shape_cast %[[CAST_1]] {layout_result_0 = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>} : vector<1x256xf16> to vector<256xf16>
-// CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+// CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{contiguity = 256 : i64, layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
 func.func @vector_shape_cast_expand_and_merge(%arg0: memref<256xf16>, %arg1: memref<256xf16>) {
     %cst = arith.constant dense<true> : vector<256xi1>
     %0 = vector.step : vector<256xindex>
@@ -784,6 +785,258 @@ func.func @shape_cast_insert_unit_dim_replicated_lanes() {
   %1 = xegpu.convert_layout %0
      <{target_layout = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>}>
      : vector<8x1x32xf16>
+  return
+}
+}
+
+// -----
+// The analysis stamps `contiguity` on the matrix ops from the mem_desc layout,
+// and the store turns it into lane_data: a row-major 64-wide row lets each lane
+// write 4 neighbours.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_row_major_contiguity(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 64 : i64, layout = #xegpu.layout<inst_data = [1, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
+func.func @store_matrix_row_major_contiguity(%m: !xegpu.mem_desc<16x64xf32>) {
+  %cst = arith.constant dense<1.0> : vector<16x64xf32>
+  xegpu.store_matrix %cst, %m[0, 0] : vector<16x64xf32>, !xegpu.mem_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// Column-major: neighbours along the inner dim are apart in SLM, so no
+// contiguity and one element per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_col_major_no_contiguity(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_col_major_no_contiguity(
+    %m: !xegpu.mem_desc<16x64xf32, #xegpu.mem_layout<stride = [1, 16]>>) {
+  %cst = arith.constant dense<1.0> : vector<16x64xf32>
+  xegpu.store_matrix %cst, %m[0, 0]
+      : vector<16x64xf32>, !xegpu.mem_desc<16x64xf32, #xegpu.mem_layout<stride = [1, 16]>>
+  return
+}
+}
+
+// -----
+// A contiguous load_matrix takes the lane_data its consumer asks for.
+gpu.module @test {
+// CHECK-LABEL: func.func @load_store_matrix_row_major_contiguity(
+// CHECK: %[[LOAD:.*]] = xegpu.load_matrix %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK: %[[EXP:.*]] = math.exp %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK: xegpu.store_matrix %[[EXP]], %{{.*}}[0, 32] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @load_store_matrix_row_major_contiguity(%src: !xegpu.mem_desc<16x64xf32>,
+    %dst: !xegpu.mem_desc<16x64xf32>) {
+  %v = xegpu.load_matrix %src[0, 0] : !xegpu.mem_desc<16x64xf32> -> vector<16x32xf32>
+  %e = math.exp %v : vector<16x32xf32>
+  xegpu.store_matrix %e, %dst[0, 32] : vector<16x32xf32>, !xegpu.mem_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// A column-major load_matrix stays at one element per lane even when its
+// consumer asks for two.
+gpu.module @test {
+// CHECK-LABEL: func.func @load_matrix_col_major_capped(
+// CHECK: %[[LOAD:.*]] = xegpu.load_matrix %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK: xegpu.store_matrix %[[LOAD]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @load_matrix_col_major_capped(
+    %src: !xegpu.mem_desc<16x64xf32, #xegpu.mem_layout<stride = [1, 16]>>,
+    %dst: !xegpu.mem_desc<16x64xf32>) {
+  %v = xegpu.load_matrix %src[0, 0]
+      : !xegpu.mem_desc<16x64xf32, #xegpu.mem_layout<stride = [1, 16]>> -> vector<16x32xf32>
+  xegpu.store_matrix %v, %dst[0, 0] : vector<16x32xf32>, !xegpu.mem_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// Contiguous gather/scatter offsets with a uniform mask: two elements per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @gather_scatter_uniform_mask_contiguity(
+// CHECK: %[[LOAD:.*]] = xegpu.load %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}>
+// CHECK: xegpu.store %[[LOAD]], %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>}>
+func.func @gather_scatter_uniform_mask_contiguity(%src: memref<256xf32>, %dst: memref<256xf32>) {
+  %offsets = vector.step : vector<32xindex>
+  %mask = arith.constant dense<true> : vector<32xi1>
+  %v = xegpu.load %src[%offsets], %mask
+      : memref<256xf32>, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+  xegpu.store %v, %dst[%offsets], %mask
+      : vector<32xf32>, memref<256xf32>, vector<32xindex>, vector<32xi1>
+  return
+}
+}
+
+// -----
+// Same offsets, but the mask is not known to be uniform. The lowering gates a
+// lane's whole access on one mask bit, so each lane takes one element.
+gpu.module @test {
+// CHECK-LABEL: func.func @gather_scatter_non_uniform_mask(
+// CHECK: %[[LOAD:.*]] = xegpu.load %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}>
+// CHECK: xegpu.store %[[LOAD]], %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}>
+func.func @gather_scatter_non_uniform_mask(%src: memref<256xf32>, %dst: memref<256xf32>,
+    %mask: vector<32xi1>) {
+  %offsets = vector.step : vector<32xindex>
+  %v = xegpu.load %src[%offsets], %mask
+      : memref<256xf32>, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+  xegpu.store %v, %dst[%offsets], %mask
+      : vector<32xf32>, memref<256xf32>, vector<32xindex>, vector<32xi1>
+  return
+}
+}
+
+// -----
+// Runs of 16 (the block width) and 6 elements per lane: the chunk must tile
+// both, so each lane writes 2 elements, never 6 across a block edge.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_chunk_tiles_blocks(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 16 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_chunk_tiles_blocks(
+    %m: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>) {
+  %cst = arith.constant dense<1.0> : vector<8x96xf32>
+  xegpu.store_matrix %cst, %m[0, 0]
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>
+  return
+}
+}
+
+// -----
+// Runs of 3 and a consumer asking for 2 elements per lane: no chunk above 1
+// tiles both, so the load takes 1 element per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @load_matrix_chunk_tiles_runs(
+// CHECK: xegpu.load_matrix %{{.*}}[0, 0] <{contiguity = 3 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @load_matrix_chunk_tiles_runs(
+    %src: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>,
+    %dst: !xegpu.mem_desc<8x96xf32>) {
+  %v = xegpu.load_matrix %src[0, 0]
+      : !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>> -> vector<8x96xf32>
+  xegpu.store_matrix %v, %dst[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32>
+  return
+}
+}
+
+// -----
+// The stored value comes from a dpas through elementwise ops only. The dpas
+// result layout is fixed, so widening the store would need a lane_data repack:
+// the store keeps one element per lane despite its contiguity.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_dpas_no_widening(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK: xegpu.store_matrix %[[EXP]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_dpas_no_widening(%a: vector<8x16xf16>, %b: vector<16x32xf16>,
+    %m: !xegpu.mem_desc<8x64xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %e = math.exp %c : vector<8x32xf32>
+  xegpu.store_matrix %e, %m[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
+
+// -----
+// A broadcast can take any lane_data, so the walk stops there and the store
+// widens.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_broadcast_widens(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK: xegpu.store_matrix %[[EXP]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_after_broadcast_widens(%s: vector<8x1xf32>,
+    %m: !xegpu.mem_desc<8x64xf32>) {
+  %b = vector.broadcast %s : vector<8x1xf32> to vector<8x32xf32>
+  %e = math.exp %b : vector<8x32xf32>
+  xegpu.store_matrix %e, %m[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
+
+// -----
+// A packed 8-bit load_nd holds 2 elements per lane. The store takes the same
+// lane_data, so no lane_data repack is needed.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_matches_packed_load_nd(
+// CHECK: %[[EXT:.*]] = arith.extsi %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK: xegpu.store_matrix %[[EXT]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_matches_packed_load_nd(%src: memref<8x32xi8>, %dst: !xegpu.mem_desc<8x32xi16>) {
+  %td = xegpu.create_nd_tdesc %src : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
+  %v = xegpu.load_nd %td[0, 0] <{layout = #xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>}> : !xegpu.tensor_desc<8x32xi8> -> vector<8x32xi8>
+  %w = arith.extsi %v : vector<8x32xi8> to vector<8x32xi16>
+  xegpu.store_matrix %w, %dst[0, 0] : vector<8x32xi16>, !xegpu.mem_desc<8x32xi16>
+  return
+}
+}
+
+// -----
+// Without an anchor layout, the load_nd's native lane_data for 8 bits is 2, so
+// the store takes 2 and the load_nd gets a layout it can deliver.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_matches_native_load_nd(
+// CHECK: xegpu.load_nd %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_matches_native_load_nd(%src: memref<8x32xi8>, %dst: !xegpu.mem_desc<8x32xi16>) {
+  %td = xegpu.create_nd_tdesc %src : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
+  %v = xegpu.load_nd %td[0, 0] : !xegpu.tensor_desc<8x32xi8> -> vector<8x32xi8>
+  %w = arith.extsi %v : vector<8x32xi8> to vector<8x32xi16>
+  xegpu.store_matrix %w, %dst[0, 0] : vector<8x32xi16>, !xegpu.mem_desc<8x32xi16>
+  return
+}
+}
+
+// -----
+// The scatter store follows the same rule: its value comes from a dpas, so it
+// keeps the dpas result's one element per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_scatter_after_dpas_no_widening(
+// CHECK: xegpu.store %{{.*}}, %{{.*}}[%{{.*}}], %{{.*}} <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_scatter_after_dpas_no_widening(%a: vector<8x16xf16>, %b: vector<16x32xf16>, %dst: memref<256xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %e = math.exp %c : vector<8x32xf32>
+  %step = vector.step : vector<32xindex>
+  %offsets = vector.broadcast %step : vector<32xindex> to vector<8x32xindex>
+  %mask = arith.constant dense<true> : vector<8x32xi1>
+  xegpu.store %e, %dst[%offsets], %mask : vector<8x32xf32>, memref<256xf32>, vector<8x32xindex>, vector<8x32xi1>
+  return
+}
+}
+
+// -----
+// One input of the add is a dpas, the other a load_matrix that could follow any
+// layout. The dpas decides.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_mixed_inputs(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_mixed_inputs(%a: vector<8x16xf16>, %b: vector<16x32xf16>, %src: !xegpu.mem_desc<8x64xf32>, %dst: !xegpu.mem_desc<8x64xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %l = xegpu.load_matrix %src[0, 0] : !xegpu.mem_desc<8x64xf32> -> vector<8x32xf32>
+  %s = arith.addf %l, %c : vector<8x32xf32>
+  xegpu.store_matrix %s, %dst[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
+
+// -----
+// A dpas_mx result is fixed like a dpas result.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_dpas_mx_no_widening(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_dpas_mx_no_widening(%arg0: memref<16x1024xf8E5M2>, %arg1: memref<1024x32xf8E5M2>,
+    %arg3: memref<16x32xf8E8M0FNU>, %arg4: memref<32x32xf8E8M0FNU>, %dst: !xegpu.mem_desc<16x64xbf16>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<16x32xbf16>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x1024xf8E5M2> -> !xegpu.tensor_desc<16x1024xf8E5M2>
+  %1 = xegpu.create_nd_tdesc %arg1 : memref<1024x32xf8E5M2> -> !xegpu.tensor_desc<1024x32xf8E5M2>
+  %2 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x1024xf8E5M2> -> vector<16x1024xf8E5M2>
+  %3 = xegpu.load_nd %1[0, 0] : !xegpu.tensor_desc<1024x32xf8E5M2> -> vector<1024x32xf8E5M2>
+  %4 = xegpu.create_nd_tdesc %arg3 : memref<16x32xf8E8M0FNU> -> !xegpu.tensor_desc<16x32xf8E8M0FNU>
+  %5 = xegpu.load_nd %4[0, 0] : !xegpu.tensor_desc<16x32xf8E8M0FNU> -> vector<16x32xf8E8M0FNU>
+  %6 = xegpu.create_nd_tdesc %arg4 : memref<32x32xf8E8M0FNU> -> !xegpu.tensor_desc<32x32xf8E8M0FNU>
+  %7 = xegpu.load_nd %6[0, 0] : !xegpu.tensor_desc<32x32xf8E8M0FNU> -> vector<32x32xf8E8M0FNU>
+  %8 = xegpu.dpas_mx %2, %3, %cst scale_a = %5 scale_b = %7 : (vector<16x1024xf8E5M2>, vector<1024x32xf8E5M2>, vector<16x32xbf16>, vector<16x32xf8E8M0FNU>, vector<32x32xf8E8M0FNU>) -> vector<16x32xbf16>
+  %9 = math.exp %8 : vector<16x32xbf16>
+  xegpu.store_matrix %9, %dst[0, 0] : vector<16x32xbf16>, !xegpu.mem_desc<16x64xbf16>
   return
 }
 }
