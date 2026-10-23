@@ -34,6 +34,7 @@ FunctionPass *createAGXSoftF64Pass();
 FunctionPass *createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM = nullptr);
 FunctionPass *createAGXAnnotateControlFlowPass();
 FunctionPass *createAGXSinkAddressesPass();
+FunctionPass *createAGXThreadgroupAddressesPass();
 FunctionPass *createAGXLowerGenericAddressesPass();
 
 // Replaces recursive functions by state machines over an explicit stack
@@ -59,6 +60,7 @@ void initializeAGXSoftF64Pass(PassRegistry &);
 void initializeAGXExpandWideAtomicsPass(PassRegistry &);
 void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXSinkAddressesPass(PassRegistry &);
+void initializeAGXThreadgroupAddressesPass(PassRegistry &);
 void initializeAGXLowerGenericAddressesPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);

@@ -576,6 +576,18 @@ lines and pages (ptx-re-blockers B33). The vectorizer runs after checked mode,
 so the checks see the accesses the source wrote. Vector arithmetic is still
 scalar.
 
+Threadgroup and private addresses that PTX computes in integers (``inttoptr``
+of an integer expression) are first written as a constant offset from the
+address without its constant terms, rebuilt from the instructions already
+there (``AGXThreadgroupAddresses``, ``-agx-threadgroup-address-offsets``), so
+that the vectorizer sees ``a[k]`` and ``a[k + 1]`` as one base at offsets 0
+and 4. Loops with a known trip count whose threadgroup loads read the 4 or 8
+bytes by which their address advances each iteration are unrolled until those
+reads cover 16 bytes (``-agx-threadgroup-unroll``: 0, the default, for that;
+1 for no unrolling; N for up to N copies of every single-block loop that
+loads threadgroup memory): the inner loop of a matrix product over a tile
+then loads ``xyzw``.
+
 Memory loads, stack loads and atomics complete asynchronously. A ``wait`` is
 inserted before the first instruction that reads or overwrites a pending
 result, before barriers and at the end of each block.
