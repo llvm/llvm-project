@@ -854,6 +854,14 @@ def ElementwiseMappableOp : TEST_Op<"elementwise_mappable",
   let results = (outs Variadic<AnyType>);
 }
 
+def PureElementwiseRegionOp : TEST_Op<"pure_elementwise_region",
+    [Elementwise, RecursivelySpeculatable, RecursiveMemoryEffects, SingleBlock]> {
+  let summary = "elementwise region op that can capture external values";
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs AnyType);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 def ArgAndResHaveFixedElementTypesOp :
     TEST_Op<"arg_and_res_have_fixed_element_types",
       [PredOpTrait<"fixed type combination",

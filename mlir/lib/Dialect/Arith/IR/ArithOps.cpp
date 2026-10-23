@@ -22,11 +22,13 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -3128,6 +3130,156 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
   }
 };
 
+///   select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n))
+///     -> F(select(M, a0, b0), select(M, a1, b1), ...) for pure and
+///   elementwise F.
+///
+/// Correctness provement:
+///
+///   Let's discuss the cases ignoring poison first.
+///
+///   As F is elementwise, we have
+///
+///      F(a1, a2, ..., a_n)[p] = F(a1[p], a2[p], ..., a_n[p])
+///
+///   then for
+///
+///      L = select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n))
+///      R = F(select(M, a0, b0), select(M, a1, b1), ....)
+///
+///   for any position p, we have:
+///
+///      if M[p] == true, then L[p] == F(a)[p] == F(a[p]) == F(select(true, a[p], b[p])) == R[p]
+///      if M[p] == false, then L[p] == F(b)[p] == F(b[p]) == F(select(false, a[p], b[p])) == R[p]
+///
+///   And F is pure, so that we can move and reduce F.
+///   So select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n)) is equal to
+///   F(select(M, a0, b0), select(M, a1, b1), ...) ignoring poison.
+///
+///   Let's consider the poison value now. ArithBase.td says:
+///
+///       Unless otherwise stated, the operations within this dialect
+///       propagate poison values, i.e., if any of its inputs are poison, then the
+///       output is poison.
+///
+///   So most F, F(poison) = poison
+///
+///   Then for any position p, if a[p] is poison
+///
+///       if M[p] == true, L[p] == f(a[p]) == poison == F(select(true, a[p], b[p])) == R[p]
+///       if M[p] == false, L[p] == f(b[p]) == F(select(false, a[p], b[p])) == R[p]
+///       if M[p] == P, L[p] == poison == F(select(P, a, b)) == R[p]
+///
+///   Then the transformation doesn't change poison propagation.
+///
+///   For F which doesn't meet the assumption, this transformation may change the
+///   poison propagation, but the language allows us to replace poison with a undef
+///   or any value with the same type. So this is still valid transformation.
+struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *lhs = op.getTrueValue().getDefiningOp();
+    Operation *rhs = op.getFalseValue().getDefiningOp();
+    if (!lhs || !rhs || lhs == rhs)
+      return failure();
+
+    for (Operation *producer : {lhs, rhs}) {
+      // Conservative design. The motivation is we don't want to transfer:
+      //
+      //  x = F(a)
+      //  y = F(b)
+      //  for i:
+      //      r = select(c[i], x, y)
+      //
+      // into:
+      //
+      // for i:
+      //    s = select(c[i], a, b)
+      //    r = F(s)
+      //
+      // TODO: maybe we can handle other cases by introducing more CFG/Loop
+      // related analysis.
+      if (producer->getBlock() != op->getBlock())
+        return failure();
+
+      // Skipping hard cases.
+      //
+      // For regions, a counter example is,
+      //
+      //   lhs = F(a) { v -> v + k0 }
+      //   rhs = F(b) { v -> v + k1 }
+      //   r = select(c, lhs, rhs)
+      //
+      // We can't rewrite this. The following check `isEquivalentTo` won't reject
+      // this as we passed ignoreValueEquivalence.
+      if (producer->getNumResults() != 1 || !producer->hasOneUse() ||
+          producer->getNumRegions() != 0 || producer->getNumSuccessors() != 0 ||
+          !producer->hasTrait<OpTrait::Elementwise>() || !isPure(producer))
+        return failure();
+    }
+
+    // Check if the lhs and the rhs are the same kind of op, have the
+    // same structure of inputs, types, and attributes.
+    if (!OperationEquivalence::isEquivalentTo(
+            lhs, rhs, OperationEquivalence::ignoreValueEquivalence, nullptr,
+            OperationEquivalence::IgnoreLocations))
+      return failure();
+
+    DenseMap<std::pair<Value, Value>, Value> selected;
+    SmallVector<Operation *> createdSelects;
+    SmallVector<Value> operands;
+    Type conditionType = op.getCondition().getType();
+    for (auto [a, b] : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
+      // For select(c, F(a, k), F(b, k)), we should transform it into
+      // F(select(c, a, b), k) instead of F(select(c, a, b), select(c, k, k))
+      if (a == b) {
+        operands.push_back(a);
+        continue;
+      }
+      if (!conditionType.isSignlessInteger(1) &&
+          (!isa<VectorType, TensorType>(a.getType()) ||
+           cast<ShapedType>(a.getType()).clone(rewriter.getI1Type()) !=
+               conditionType)) {
+
+        for (Operation *created : llvm::reverse(createdSelects))
+          rewriter.eraseOp(created);
+        return failure();
+      }
+
+      // If we always create new pair, we may transfer
+      //
+      //   select(c, F(a, a, a), F(b, b, b))
+      //
+      // into
+      //
+      //   s0 = select(c, a, b)
+      //   s1 = select(c, a, b)
+      //   s2 = select(c, a, b)
+      //   F(s0, s1, s2)
+      //
+      // instead of
+      //
+      //   s = select(c, a, b)
+      //   F = (s, s, s)
+      auto [it, inserted] = selected.try_emplace(std::make_pair(a, b));
+      if (inserted) {
+        auto select = arith::SelectOp::create(rewriter, op.getLoc(),
+                                             op.getCondition(), a, b);
+        it->second = select;
+        createdSelects.push_back(select);
+      }
+      operands.push_back(it->second);
+    }
+
+    Operation *common = rewriter.clone(*lhs);
+    common->setOperands(operands);
+    rewriter.replaceOp(op, common->getResults());
+    return success();
+  }
+};
+
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RedundantSelectFalse, RedundantSelectTrue, SelectNotCond,
@@ -3138,6 +3290,7 @@ void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
               SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
               SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
       context);
+  results.add<SelectCommonElementwiseOp>(context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
