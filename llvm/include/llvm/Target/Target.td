@@ -1187,6 +1187,11 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // If set, getBinaryCodeForInstr encodes through a bytecode table and an
+  // interpreter loop instead of a switch over every opcode. Ignored for
+  // variable-length encodings; getOperandBitOffset stays a switch.
+  bit UseBytecodeEncoder = false;
 }
 
 // Standard Pseudo Instructions.
