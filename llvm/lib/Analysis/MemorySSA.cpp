@@ -1507,6 +1507,16 @@ void MemorySSA::placePHINodes(
     createMemoryPhi(BB);
 }
 
+/// Allocate a MemoryUse or MemoryDef from \p Allocator, with its operands in
+/// front of it like User::operator new.
+template <typename AccessT, typename AllocatorT, typename... ArgTs>
+static AccessT *allocateUseOrDef(AllocatorT &Allocator, ArgTs &&...Args) {
+  size_t OpsSize = sizeof(Use) * OperandTraits<AccessT>::operands(nullptr);
+  char *Mem = static_cast<char *>(
+      Allocator.Allocate(OpsSize + sizeof(AccessT), alignof(AccessT)));
+  return ::new (Mem + OpsSize) AccessT(std::forward<ArgTs>(Args)...);
+}
+
 template <typename IterT>
 void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // We create an access to represent "live on entry", for things like
@@ -1516,8 +1526,9 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
   BasicBlock &StartingPoint = *Blocks.begin();
-  LiveOnEntryDef.reset(new MemoryDef(StartingPoint.getContext(), nullptr,
-                                     nullptr, &StartingPoint, NextID++));
+  LiveOnEntryDef.reset(
+      allocateUseOrDef<MemoryDef>(UseOrDefAllocator, StartingPoint.getContext(),
+                                  nullptr, nullptr, &StartingPoint, NextID++));
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1815,9 +1826,11 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   MemoryUseOrDef *MUD;
   if (Def) {
-    MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
+    MUD = allocateUseOrDef<MemoryDef>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent(), NextID++);
   } else {
-    MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+    MUD = allocateUseOrDef<MemoryUse>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent());
     if (isUseTriviallyOptimizableToLiveOnEntry(*AAP, I)) {
       MemoryAccess *LiveOnEntry = getLiveOnEntryDef();
       MUD->setOptimized(LiveOnEntry);
@@ -2621,11 +2634,11 @@ void MemoryPhi::deleteMe(DerivedUser *Self) {
 }
 
 void MemoryDef::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryDef *>(Self);
+  static_cast<MemoryDef *>(Self)->~MemoryDef();
 }
 
 void MemoryUse::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryUse *>(Self);
+  static_cast<MemoryUse *>(Self)->~MemoryUse();
 }
 
 bool upward_defs_iterator::IsGuaranteedLoopInvariant(const Value *Ptr) const {
