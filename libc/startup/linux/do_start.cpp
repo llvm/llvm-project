@@ -16,6 +16,7 @@
 #include "hdr/types/struct_link_map.h"
 #include "hdr/types/struct_r_debug.h"
 #include "src/__support/OSUtil/linux/auxv.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h"
@@ -83,7 +84,7 @@ static TLSDescriptor tls;
 [[noreturn]] void do_start() {
   auto tid = syscall_impl<long>(SYS_gettid);
   if (tid <= 0)
-    syscall_impl<long>(SYS_exit, 1);
+    linux_syscalls::exit_group(1);
   main_thread_attrib.tid = static_cast<int>(tid);
   main_thread_attrib.platform_data = &main_thread_clear_tid;
   main_thread_attrib.detach_state =
@@ -202,7 +203,7 @@ static TLSDescriptor tls;
   // capture the context.
   init_tls(tls);
   if (!set_thread_ptr(tls.tp))
-    syscall_impl<long>(SYS_exit, 1);
+    linux_syscalls::exit_group(1);
 
   get_tcb(tls.tp)->attrib = &main_thread_attrib;
 

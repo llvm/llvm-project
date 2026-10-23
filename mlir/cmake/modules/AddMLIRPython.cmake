@@ -1137,9 +1137,12 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     # python.h, so that the release python library would be used).
     # Since mlir uses nanobind, we can leverage their workaround by never directly
     # pyconfig.h or python.h and instead relying on the nanobind headers to include the
-    # necessary python headers. This results in mlir always linking against the
+    # necessary python headers. For non-stable ABI builds, link against the
     # release python library via the (undocumented) cmake property Python3_LIBRARY_RELEASE.
-    target_link_libraries(${libname} PRIVATE ${Python3_LIBRARY_RELEASE})
+    # nanobind already links stable ABI targets against Python::SABIModule.
+    if(NOT MLIR_ENABLE_PYTHON_STABLE_ABI OR NB_ABI MATCHES "[0-9]t")
+      target_link_libraries(${libname} PRIVATE ${Python3_LIBRARY_RELEASE})
+    endif()
   endif()
 
   ################################################################################

@@ -178,6 +178,7 @@ void ClangHighlighter::Highlight(const HighlightStyle &options,
   Opts.ObjC = true;
   // FIXME: This should probably set CPlusPlus, CPlusPlus11, ... too
   Opts.CPlusPlus17 = true;
+  Opts.AllowLiteralDigitSeparator = true;
   Opts.LineComment = true;
 
   Lexer lex(FID, buf->getMemBufferRef(), SM, Opts);

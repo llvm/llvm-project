@@ -1687,7 +1687,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // However, load and store *are* legal.
     setOperationAction(ISD::LOAD, MVT::v2i32, Legal);
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
 
     // And we need to promote i64 loads/stores into vector load/store
@@ -3169,6 +3169,26 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Idx = Op.getOperand(1);
+  assert(Vec.getSimpleValueType() == MVT::v2i32 && "Unexpected vector type");
+
+  // Constant indices are handled by the TableGen patterns.
+  if (isa<ConstantSDNode>(Idx))
+    return Op;
+
+  EVT VT = Op.getValueType();
+  EVT IdxVT = Idx.getValueType();
+  SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(0, DL, IdxVT));
+  SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                             DAG.getConstant(1, DL, IdxVT));
+  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, IdxVT), Elt0, Elt1,
+                         ISD::SETEQ);
+}
+
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -3239,6 +3259,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
@@ -3708,16 +3730,19 @@ bool SparcTargetLowering::isFNegFree(EVT VT) const {
   return false;
 }
 
-bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
+    return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
-    return true;
+    return FPImmAction::Legal;
   if (Subtarget->isVIS3())
     return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-           Imm.getExactLog2Abs() == -1;
-  return false;
+                   Imm.getExactLog2Abs() == -1
+               ? FPImmAction::Legal
+               : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

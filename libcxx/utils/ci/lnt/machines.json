@@ -1,68 +1,73 @@
 [
   {
-    "lnt-machine": "macos-26.6.2-arm64-20260924",
-    "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
-    "cxx": "clang++",
-    "xcode-version": "26.6",
-    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
-    "build": {
-      "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake"
+    "lnt-machine": "macos-26.6.2-arm64-2026-10-16",
+    "pr-benchmarks": true,
+    "setup": {
+      "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
+      "cxx": "clang++",
+      "xcode-version": "26.6",
+      "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",
+      "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
+      "lit-params": ["std=c++26", "optimization=speed"],
+      "test-config": "installed-libc++.cfg.in"
     },
-    "lit-params": ["std=c++26", "optimization=speed"],
-    "test-config": "installed-libc++.cfg.in",
     "coverage": {
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "lnt-url": "https://lnt.llvm.org"
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {
-    "lnt-machine": "macos-26.6.2-arm64-hardenedfast-20260924",
-    "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
-    "cxx": "clang++",
-    "xcode-version": "26.6",
-    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
-    "build": {
-      "cmake-cache": "libcxx/utils/ci/lnt/cmake/hardened-fast.cmake"
+    "lnt-machine": "macos-26.6.2-arm64-hardenedfast-2026-10-16",
+    "pr-benchmarks": true,
+    "setup": {
+      "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
+      "cxx": "clang++",
+      "xcode-version": "26.6",
+      "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",
+      "cmake-cache": "libcxx/utils/ci/lnt/cmake/hardened-fast.cmake",
+      "lit-params": ["std=c++26", "optimization=speed"],
+      "test-config": "installed-libc++.cfg.in"
     },
-    "lit-params": ["std=c++26", "optimization=speed"],
-    "test-config": "installed-libc++.cfg.in",
     "coverage": {
       "since": "2023-12-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "lnt-url": "https://lnt.llvm.org"
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {
-    "lnt-machine": "linux-x86_64-20260924",
-    "runner": "llvm-premerge-libcxx-runners",
-    "cxx": "clang++-22",
-    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
-    "build": {
-      "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake"
+    "lnt-machine": "linux-x86_64-2026-10-16",
+    "pr-benchmarks": true,
+    "setup": {
+      "runner": "llvm-premerge-linux-32-runners",
+      "container": "ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830",
+      "cxx": "clang++-22",
+      "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",
+      "cmake-cache": "libcxx/utils/ci/lnt/cmake/generic.cmake",
+      "lit-params": ["std=c++26", "optimization=speed"],
+      "test-config": "installed-libc++.cfg.in"
     },
-    "lit-params": ["std=c++26", "optimization=speed"],
-    "test-config": "installed-libc++.cfg.in",
     "coverage": {
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
-      "lnt-url": "https://lnt.llvm.org"
+      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
     }
   },
   {
-    "lnt-machine": "macos-26.6.2-arm64-libstdcxx16-20260925",
-    "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
-    "cxx": "clang++",
-    "xcode-version": "26.6",
-    "benchmark-suite-version": "4ebb19efe952ded7f9d937731418baf3b28babd0",
-    "brew-packages": ["gcc@16"],
-    "lit-params": ["std=c++26", "optimization=speed", "libstdcxx_compiler=g++-16"],
-    "test-config": "stdlib-libstdc++.cfg.in"
+    "lnt-machine": "macos-26.6.2-arm64-libstdcxx-2026-10-16",
+    "pr-benchmarks": false,
+    "setup": {
+      "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
+      "cxx": "clang++",
+      "xcode-version": "26.6",
+      "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",
+      "lit-params": ["std=c++26", "optimization=speed"]
+    }
   }
 ]

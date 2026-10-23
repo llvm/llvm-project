@@ -119,14 +119,9 @@ def N3Write_2c_1V1  : SchedWriteRes<[N3UnitV1]>  { let Latency = 2; }
 def N3Write_5c_1V   : SchedWriteRes<[N3UnitV]>   { let Latency = 5; }
 def N3Write_1c_1L01 : SchedWriteRes<[N3UnitL01]> { let Latency = 1; }
 
-def N3Write_12c_1M0_12 : SchedWriteRes<[N3UnitM0]> {
-    let Latency = 12;
-    let ReleaseAtCycles = [12];
-}
-
-def N3Write_20c_1M0_20 : SchedWriteRes<[N3UnitM0]> {
-    let Latency = 20;
-    let ReleaseAtCycles = [20];
+def N3Write_7c_1M0_7 : SchedWriteRes<[N3UnitM0]> {
+    let Latency = 7;
+    let ReleaseAtCycles = [7];
 }
 
 //===----------------------------------------------------------------------===//
@@ -757,10 +752,10 @@ def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
 // subsequent divide operations until complete.
 
 // Divide, W-form
-def : SchedAlias<WriteID32, N3Write_12c_1M0_12>;
+def : SchedAlias<WriteID32, N3Write_7c_1M0_7>;
 
 // Divide, X-form
-def : SchedAlias<WriteID64, N3Write_20c_1M0_20>;
+def : SchedAlias<WriteID64, N3Write_7c_1M0_7>;
 
 def N3Wr_IM   : SchedWriteRes<[N3UnitM]>  { let Latency = 2; }
 def N3Wr_IMA  : SchedWriteRes<[N3UnitM0]> { let Latency = 2; }

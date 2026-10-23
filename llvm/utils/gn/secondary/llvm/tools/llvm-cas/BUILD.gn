@@ -13,4 +13,12 @@ executable("llvm-cas") {
     "//llvm/lib/Support",
   ]
   sources = [ "llvm-cas.cpp" ]
+
+  # Support plugins.
+  # FIXME: Disable dead stripping once other binaries are dead-stripped.
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }
