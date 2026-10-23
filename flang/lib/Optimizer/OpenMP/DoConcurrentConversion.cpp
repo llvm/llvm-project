@@ -325,6 +325,13 @@ inlineCopyRegionToLoopBody(mlir::ConversionPatternRewriter &rewriter,
   return mlir::success();
 }
 
+/// Returns true if \p value is an integer constant, possibly wrapped in
+/// `fir.convert` ops.
+static bool isIntConstant(mlir::Value value) {
+  while (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
+    value = convertOp.getValue();
+  return fir::getIntIfConstant(value).has_value();
+}
 } // namespace looputils
 
 class DoConcurrentConversion
@@ -362,10 +369,6 @@ private:
                      mlir::dyn_cast_if_present<fir::ShiftOp>(shapeDefOp)) {
         startIndices.assign(shiftOp.getOrigins().begin(),
                             shiftOp.getOrigins().end());
-      } else {
-        TODO(liveIn.getLoc(), "Shapes not defined by `fir.shape`, "
-                              "`fir.shape_shift` or `fir.shift` ops are not "
-                              "supported yet.");
       }
     }
 
@@ -925,6 +928,17 @@ private:
     if (fir::isa_ref_type(liveInType))
       liveInType = fir::unwrapRefType(liveInType);
 
+    // Constants are left for `cloneOrMapRegionOutsiders` to rematerialize
+    // inside the target region instead of being mapped through a temporary.
+    auto mapShapeValue = [&](mlir::Value value, llvm::StringRef kind,
+                             size_t dim) -> mlir::Value {
+      if (looputils::isIntConstant(value))
+        return value;
+      return Fortran::utils::openmp::mapTemporaryValue(
+          builder, targetOp, value,
+          liveInName + "." + kind.str() + ".dim" + std::to_string(dim));
+    };
+
     if (targetShapeCreationInfo.isShiftedValue()) {
       // A `fir.shift` is only valid on a box value. Box live-ins are mapped
       // through a temporary, so load the box before re-declaring it.
@@ -935,9 +949,7 @@ private:
       llvm::SmallVector<mlir::Value> origins;
       for (auto [idx, startIndex] :
            llvm::enumerate(targetShapeCreationInfo.startIndices))
-        origins.push_back(Fortran::utils::openmp::mapTemporaryValue(
-            builder, targetOp, startIndex,
-            liveInName + ".start_idx.dim" + std::to_string(idx)));
+        origins.push_back(mapShapeValue(startIndex, "start_idx", idx));
       auto shiftType =
           fir::ShiftType::get(builder.getContext(), origins.size());
       mlir::Value shift =
@@ -958,13 +970,9 @@ private:
              llvm::zip_equal(targetShapeCreationInfo.startIndices,
                              targetShapeCreationInfo.extents)) {
           shapeShiftOperands.push_back(
-              Fortran::utils::openmp::mapTemporaryValue(
-                  builder, targetOp, startIndex,
-                  liveInName + ".start_idx.dim" + std::to_string(shapeIdx)));
+              mapShapeValue(startIndex, "start_idx", shapeIdx));
           shapeShiftOperands.push_back(
-              Fortran::utils::openmp::mapTemporaryValue(
-                  builder, targetOp, extent,
-                  liveInName + ".extent.dim" + std::to_string(shapeIdx)));
+              mapShapeValue(extent, "extent", shapeIdx));
           ++shapeIdx;
         }
 
@@ -977,9 +985,7 @@ private:
       llvm::SmallVector<mlir::Value> shapeOperands;
       size_t shapeIdx = 0;
       for (auto extent : targetShapeCreationInfo.extents) {
-        shapeOperands.push_back(Fortran::utils::openmp::mapTemporaryValue(
-            builder, targetOp, extent,
-            liveInName + ".extent.dim" + std::to_string(shapeIdx)));
+        shapeOperands.push_back(mapShapeValue(extent, "extent", shapeIdx));
         ++shapeIdx;
       }
 
