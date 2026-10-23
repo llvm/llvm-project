@@ -1,37 +1,38 @@
-.. Polly documentation master file
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+% Polly documentation master file
+% You can adapt this file completely to your liking, but it should at least
+% contain the root `toctree` directive.
 
-.. title:: Welcome to Polly's documentation!
+```{title} Welcome to Polly's documentation!
+```
 
-.. toctree::
-   :maxdepth: 1
+```{toctree}
+:maxdepth: 1
+```
 
-Upcoming Release
-================
+# Upcoming Release
 
-.. toctree::
-   :maxdepth: 2
+```{toctree}
+:maxdepth: 2
 
-   ReleaseNotes
+ReleaseNotes
+```
 
-Using Polly
-===========
+# Using Polly
 
-.. toctree::
-   :maxdepth: 2
+```{toctree}
+:maxdepth: 2
 
-   Architecture
-   UsingPollyWithClang
-   HowToManuallyUseTheIndividualPiecesOfPolly
-   TipsAndTricks
-   Performance
+Architecture
+UsingPollyWithClang
+HowToManuallyUseTheIndividualPiecesOfPolly
+TipsAndTricks
+Performance
+```
 
-* `A list of Polly passes <http://polly.llvm.org/documentation/passes.html>`_
+- [A list of Polly passes](http://polly.llvm.org/documentation/passes.html)
 
-Indices and tables
-==================
+# Indices and tables
 
-* :ref:`genindex`
-* :ref:`search`
+- {ref}`genindex`
+- {ref}`search`
 
