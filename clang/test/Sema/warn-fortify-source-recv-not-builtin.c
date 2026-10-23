@@ -19,17 +19,29 @@ struct sockaddr;
 #ifdef MISMATCHED_SIG
 #ifdef __cplusplus
 extern "C" {
-#endif
 int recv(int fd, void *buf, size_t len);
 int recvfrom(int fd, void *buf, size_t len, int flags);
-#ifdef __cplusplus
 }
+#else
+int recv(int fd, void *buf, size_t len);
+typedef union {
+  int *ip;
+  long *lp;
+} bad_sockaddr_tu __attribute__((__transparent_union__));
+ssize_t recvfrom(int fd, void *buf, size_t len, int flags,
+                 bad_sockaddr_tu addr, socklen_t *addrlen);
 #endif
 
-void call_mismatched_recv(int fd) {
+void call_mismatched_recv(int fd, int *p, socklen_t *len) {
   char buf[10];
   (void)recv(fd, buf, 20);
+#ifdef __cplusplus
+  (void)p;
+  (void)len;
   (void)recvfrom(fd, buf, 20, 0);
+#else
+  (void)recvfrom(fd, buf, 20, 0, p, len);
+#endif
 }
 #else
 static ssize_t recv(int fd, void *buf, size_t len, int flags) {

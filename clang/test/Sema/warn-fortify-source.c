@@ -40,7 +40,16 @@ typedef unsigned int nfds_t;
 #else
 void *memcpy(void *dst, const void *src, size_t c);
 ssize_t recv(int, void *, size_t, int);
+#ifndef __cplusplus
+struct sockaddr_in;
+typedef union {
+  struct sockaddr_in *__sockaddr_in__;
+  struct sockaddr *__sockaddr__;
+} __SOCKADDR_ARG __attribute__((__transparent_union__));
+ssize_t recvfrom(int, void *, size_t, int, __SOCKADDR_ARG, socklen_t *);
+#else
 ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+#endif
 typedef unsigned long nfds_t;
 #endif
 int poll(struct pollfd *, nfds_t, int);
