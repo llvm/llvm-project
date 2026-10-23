@@ -377,8 +377,9 @@ public:
   /// needs i.e., one past the highest hardware index of a used non-reserved
   /// register, or 0 if none are used.
   unsigned getNumNeededRegs(const TargetRegisterClass &RC,
-                         const RegisterClassInfo &RCI, const LiveRegMatrix &LRM,
-                         const MachineRegisterInfo &MRI) const;
+                            const RegisterClassInfo &RCI,
+                            const LiveRegMatrix &LRM,
+                            const MachineRegisterInfo &MRI) const;
 
   void filterAndSortForAntiHintedRegs(
       Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,

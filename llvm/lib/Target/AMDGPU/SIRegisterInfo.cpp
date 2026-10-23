@@ -4411,10 +4411,9 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
          MaxVGPRsForCurrentOccupancy;
 }
 
-unsigned SIRegisterInfo::getNumNeededRegs(const TargetRegisterClass &RC,
-                                       const RegisterClassInfo &RCI,
-                                       const LiveRegMatrix &LRM,
-                                       const MachineRegisterInfo &MRI) const {
+unsigned SIRegisterInfo::getNumNeededRegs(
+    const TargetRegisterClass &RC, const RegisterClassInfo &RCI,
+    const LiveRegMatrix &LRM, const MachineRegisterInfo &MRI) const {
   unsigned MaxIdx = 0;
   for (MCPhysReg Reg : RCI.getOrder(&RC)) {
     if (LRM.isPhysRegUsed(Reg) ||
