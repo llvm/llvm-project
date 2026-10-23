@@ -47,6 +47,37 @@ protected:
   }
 };
 
+TEST_F(ABITypesTest, OpaqueFloat8Properties) {
+  const llvm::abi::OpaqueFloat8Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
+
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getKind(), llvm::abi::TypeKind::OpaqueFloat8);
+  EXPECT_EQ(MFP8->getSizeInBits(), TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getABISizeInBits(), 8u);
+  EXPECT_EQ(MFP8->getAlignment(), Align(1));
+  EXPECT_TRUE(llvm::isa<llvm::abi::OpaqueFloat8Type>(MFP8));
+}
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+TEST_F(ABITypesTest, OpaqueFloat8IsNotAVectorElement) {
+  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
+  EXPECT_DEATH(
+      (void)TB.getVectorType(MFP8, ElementCount::getFixed(16), Align(16)),
+      "opaque 8-bit float is not a valid vector element type");
+  EXPECT_DEATH((void)VectorType(MFP8, ElementCount::getFixed(16), Align(16)),
+               "opaque 8-bit float is not a valid vector element type");
+}
+#else
+TEST_F(ABITypesTest, OpaqueFloat8IsNotAVectorElement) {
+  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
+  EXPECT_EQ(TB.getVectorType(MFP8, ElementCount::getFixed(16), Align(16)),
+            nullptr);
+}
+#endif
+
 TEST_F(ABITypesTest, AtomicTypeProperties) {
   const llvm::abi::Type *Value =
       TB.getIntegerType(24, Align(1), /*Signed=*/false);

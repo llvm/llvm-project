@@ -286,14 +286,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getScalablePredicateOrCountVectorType(
         getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
 
-  // TODO: __mfp8 has no floating-point semantics of its own, so representing
-  // it needs a decision about how the ABI library should model opaque
-  // floating-point data. As an mfloat8 vector element it is treated as an
-  // 8-bit integer, but that is not right for the scalar type, which is passed
-  // in a floating-point register.
+  // __mfp8 is an opaque 8-bit float. Vector elements stay 8-bit
+  // integers, which is also their representation in LLVM IR.
   case BuiltinType::MFloat8:
-    llvm::reportFatalInternalError(
-        "__mfp8 is not yet supported in the ABI lowering library");
+    return Builder.getOpaqueFloat8Type(getTypeAlign(QT));
 
     // Target-specific vector/matrix types — not yet implemented.
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
@@ -364,7 +360,12 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
 }
 
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
-  const llvm::abi::Type *ElementType = convertType(VT->getElementType());
+  // Vectors of __mfp8 are stored as 8-bit integers. The scalar type is
+  // mapped separately as an opaque float.
+  const llvm::abi::Type *ElementType =
+      VT->getElementType()->isMFloat8Type()
+          ? Builder.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+          : convertType(VT->getElementType());
   QualType VectorQualType(VT, 0);
 
   unsigned NElems = VT->getNumElements();

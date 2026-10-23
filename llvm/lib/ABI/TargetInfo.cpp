@@ -23,8 +23,8 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
     return isAggregateTypeForABI(AT->getValueType());
 
   // Check for fundamental scalar types.
-  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector() ||
-      Ty->isTuple())
+  if (Ty->isInteger() || Ty->isFloat() || Ty->isOpaqueFloat8() ||
+      Ty->isPointer() || Ty->isVector() || Ty->isTuple())
     return false;
 
   // A matrix type is modeled as an array but lowers to a single flattened
