@@ -43,3 +43,26 @@ def AVR_SWAP : TargetBuiltin {
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned char(unsigned char)";
 }
+
+// TODO:
+// Fractional multiply
+// BUILTIN(__builtin_avr_fmul, "UiUcUc", "nc")
+// BUILTIN(__builtin_avr_fmuls, "SiScSc", "nc")
+// BUILTIN(__builtin_avr_fmulsu, "SiScUc", "nc")
+
+// Delay cycles
+// BUILTIN(__builtin_avr_delay_cycles, "vULi", "n")
+
+// Emit N NOP instructions
+// BUILTIN(__builtin_avr_nops, "vUi", "n")
+
+// Bit manipulation
+// BUILTIN(__builtin_avr_insert_bits, "UcULiUcUc", "nc")
+
+// Flash segment query
+// BUILTIN(__builtin_avr_flash_segment, "ScvC*", "nc")
+
+// __builtin_avr_mask1
+// __builtin_avr_strlen_flash
+// __builtin_avr_strlen_flashx
+// __builtin_avr_strlen_memx
