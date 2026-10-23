@@ -245,7 +245,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Haiku:
       return std::make_unique<HaikuTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::NintendoOS:
-      return std::make_unique<NintendoOSTargetInfo<ARMleTargetInfo>>(Triple, Opts);
+      return std::make_unique<NintendoOSTargetInfo<ARMleTargetInfo>>(Triple,
+                                                                     Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::Cygnus:
