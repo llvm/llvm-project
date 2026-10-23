@@ -126,7 +126,10 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   // current properties.
   // TODO: Maybe we should use a more robust check for intrinsics than just
   // matching on the name?
-  if (isDeclaration() || isa<GlobalAlias>(this) ||
+  // GlobalAlias and GlobalIFunc are not GlobalObjects and so cannot carry
+  // GUID metadata (see getGUIDMetadata()); always compute their GUID
+  // on the fly.
+  if (isDeclaration() || isa<GlobalAlias>(this) || isa<GlobalIFunc>(this) ||
       getName().starts_with("llvm.")) {
     return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
   }
