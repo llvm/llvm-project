@@ -19922,21 +19922,22 @@ bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return TargetLowering::useLoadStackGuardNode(M);
 }
 
-bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                     bool ForCodeSize) const {
+TargetLowering::FPImmAction
+PPCTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                  bool ForCodeSize) const {
   if (!VT.isSimple() || !Subtarget.hasVSX())
-    return false;
+    return FPImmAction::ConstantPool;
 
   switch(VT.getSimpleVT().SimpleTy) {
   default:
     // For FP types that are currently not supported by PPC backend, return
     // false. Examples: f16, f80.
-    return false;
+    return FPImmAction::ConstantPool;
   case MVT::f32:
   case MVT::f64: {
     if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
-      return true;
+      return FPImmAction::Legal;
     }
     bool IsExact;
     APSInt IntResult(16, false);
@@ -19945,11 +19946,11 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     Imm.convertToInteger(IntResult, APFloat::rmTowardZero, &IsExact);
     // For exact values in the range [-16, 15] we can materialize the float.
     if (IsExact && IntResult <= 15 && IntResult >= -16)
-      return true;
-    return Imm.isZero();
+      return FPImmAction::Legal;
+    return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
   case MVT::ppcf128:
-    return Imm.isPosZero();
+    return Imm.isPosZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
 }
 

@@ -538,15 +538,19 @@ void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
 }
 
 /// Whether this translation unit has anything for the CUDA runtime to register.
-/// These are the same two attributes LoweringPrepare collects to decide whether
-/// to build a module ctor, so both sides answer the question from one source.
+/// Like LoweringPrepare, count only kernel stub definitions and device
+/// variables carrying registration metadata, not kernel declarations or
+/// launch-site calls.
 static bool hasEntitiesToRegister(mlir::ModuleOp module) {
   // A walk, not a scan of the module body, so this stays in agreement with the
   // recursive walk LoweringPrepare collects them with.
   return module
       ->walk([](mlir::Operation *op) {
-        if (op->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()) ||
-            op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
+        if (auto fn = mlir::dyn_cast<cir::FuncOp>(op);
+            fn && !fn.isDeclaration() &&
+            fn->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()))
+          return mlir::WalkResult::interrupt();
+        if (op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })

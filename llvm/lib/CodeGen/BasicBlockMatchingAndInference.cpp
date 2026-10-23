@@ -171,11 +171,8 @@ BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
   // identified by their base IDs. The counts of clones in the profile are
   // attributed to the original block.
   DenseMap<unsigned, MachineBasicBlock *> BaseIDToMBB;
-  for (auto &MBB : MF) {
-    unsigned BaseID = MBB.getBBID() ? MBB.getBBID()->BaseID
-                                    : static_cast<unsigned>(MBB.getNumber());
-    BaseIDToMBB[BaseID] = &MBB;
-  }
+  for (auto &MBB : MF)
+    BaseIDToMBB[MBB.getBBID()->BaseID] = &MBB;
   auto FindMBB = [&](const UniqueBBID &BBID) {
     return BaseIDToMBB.lookup(BBID.BaseID);
   };

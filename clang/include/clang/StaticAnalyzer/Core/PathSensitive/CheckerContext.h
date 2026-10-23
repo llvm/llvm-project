@@ -251,10 +251,8 @@ public:
   /// passed to the constructor of CheckerContext) to its 'Pred' argument and
   /// not returning its result.
   ///
-  /// FIXME: The argument 'Tag' is ignored (and no caller specifies it).
   /// FIXME: This should be unified with generateSink().
-  void addSink(ProgramStateRef State = nullptr,
-               const ProgramPointTag *Tag = nullptr) {
+  void addSink(ProgramStateRef State = nullptr) {
     generateSink(State, getPredecessor());
   }
 

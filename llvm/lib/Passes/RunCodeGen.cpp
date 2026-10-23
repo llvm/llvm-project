@@ -67,9 +67,9 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   Opt.DisableVerify = DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions(&M.getContext().getLibraryOptions());
-  TargetMachine *TMPointer = &TM;
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC, VFS);
+  const auto &LibraryOptions = M.getContext().getLibraryOptions();
+  PipelineTuningOptions PTOptions(&LibraryOptions);
+  PassBuilder PB(M.getContext(), &TM, PTOptions, std::nullopt, &PIC, VFS);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);

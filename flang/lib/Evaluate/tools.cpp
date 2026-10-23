@@ -2949,7 +2949,9 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
-      !(derived && derived->IsVectorType());
+      !(derived && derived->IsVectorType()) &&
+      !(derived &&
+          derived->typeSymbol().get<DerivedTypeDetails>().isEnumerationType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

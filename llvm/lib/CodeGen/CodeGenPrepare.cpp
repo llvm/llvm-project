@@ -7278,6 +7278,12 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     MadeChange = true;
   }
 
+  // The uses rewritten above read trunc(I), which equals Src only where I isn't
+  // poison. A poison-generating flag such as zext nneg can only hold under a
+  // guard, such as a sign check of Src, that itself is one of those uses.
+  if (MadeChange)
+    I->dropPoisonGeneratingFlags();
+
   return MadeChange;
 }
 
@@ -8956,6 +8962,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     }
     return AnyChange;
   }
+
+  // Try to fold some cross-lane vector operations if in a loop.
+  if (I->getType()->isVectorTy() &&
+      TLI->optimizeVectorCrossLaneOperation(I, LI->getLoopFor(I->getParent())))
+    return true;
 
   if (tryToSinkFreeOperands(I))
     return true;
