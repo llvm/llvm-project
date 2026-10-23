@@ -23,7 +23,8 @@ define noundef i64 @test() {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP5]], [[ICMP6]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB10]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i32 [ [[LSR_IV]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV_LCSSA]], 1
 ; CHECK-NEXT:    call void @foo(i32 [[TMP1]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb10:

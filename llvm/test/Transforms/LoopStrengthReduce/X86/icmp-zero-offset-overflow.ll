@@ -23,8 +23,9 @@ define i16 @test(i16 %start) #0 {
 ; CHECK-NEXT:    [[IV1_CMP:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 65532
 ; CHECK-NEXT:    br i1 [[IV1_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[START]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[LSR_IV_NEXT_LCSSA]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP4]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
@@ -59,7 +60,8 @@ define i16 @test2(i16 %arg1, i16 %arg2) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i16 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i16 [[LSR_IV_NEXT]]
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i16 [ [[LSR_IV_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i16 [[LSR_IV_NEXT_LCSSA]]
 ;
 entry:
   %start = add i16 %arg1, %arg2

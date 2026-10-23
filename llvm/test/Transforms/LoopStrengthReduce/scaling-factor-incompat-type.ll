@@ -27,7 +27,8 @@ define void @foo() {
 ; CHECK-NEXT:    [[T10:%.*]] = icmp eq i16 [[T9]], 1
 ; CHECK-NEXT:    br i1 [[T10]], label [[BB11:%.*]], label [[BB13]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[T12:%.*]] = udiv i16 1, [[LSR_IV]]
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i16 [ [[LSR_IV]], [[BB4]] ]
+; CHECK-NEXT:    [[T12:%.*]] = udiv i16 1, [[LSR_IV_LCSSA]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb13:
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB4]]

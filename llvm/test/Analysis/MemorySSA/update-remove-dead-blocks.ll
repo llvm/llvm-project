@@ -16,22 +16,15 @@ define ptr @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[FOR_BODY3SPLIT:%.*]]
-; CHECK-NEXT:      i32 2, label [[FOR_COND2_2_FOR_BODY3_CRIT_EDGE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ 0, [[ENTRY_SPLIT]] ], [ [[INC7:%.*]], [[FOR_COND]] ]
-; CHECK-NEXT:    [[INC7]] = add nsw i64 [[STOREMERGE]], 1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_COND]] ], [ @c, [[ENTRY_SPLIT]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 4
 ; CHECK-NEXT:    br label [[FOR_COND]]
-; CHECK:       for.body3split:
-; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
-; CHECK:       for.cond2.2.for.body3_crit_edge:
-; CHECK-NEXT:    br label [[FOR_BODY3]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[STOREMERGE_LCSSA:%.*]] = phi i64 [ poison, [[FOR_COND2_2_FOR_BODY3_CRIT_EDGE]] ], [ poison, [[FOR_BODY3SPLIT]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], ptr @c, i64 0, i64 [[STOREMERGE_LCSSA]]
-; CHECK-NEXT:    ret ptr [[ARRAYIDX]]
+; CHECK-NEXT:    ret ptr poison
 ;
 entry:                                                ; preds = %entry
   br label %for.cond

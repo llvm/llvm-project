@@ -24,14 +24,16 @@ define i64 @invalid_offset_outside_loop(ptr %ptr.arg, i64 %iv.arg) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], -3
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[LSR_IV_LCSSA2:%.*]] = phi i64 [ [[LSR_IV]], %[[LOOP_INC]] ], [ [[LSR_IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_LCSSA:%.*]] = phi ptr [ [[PTR]], %[[LOOP_INC]] ], [ [[PTR]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_LCSSA2]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[TMP1]], [[IV_ARG]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[LSR_IV_LCSSA2]], -1
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i64 1, i64 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i64 [[SEL1]], i64 3
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR_LCSSA]], i64 8
 ; CHECK-NEXT:    store i64 [[SEL2]], ptr [[GEP]], align 8
-; CHECK-NEXT:    ret i64 [[LSR_IV]]
+; CHECK-NEXT:    ret i64 [[LSR_IV_LCSSA2]]
 ;
 entry:
   br label %loop
@@ -114,7 +116,8 @@ define i32 @illegal_formula_after_merge(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[N]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[IV_NEXT]], 2
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[IV_NEXT_LCSSA]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0_LOAD]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 1610612864
 ; CHECK-NEXT:    [[VALFAR:%.*]] = load i32, ptr [[SCEVGEP1]], align 4

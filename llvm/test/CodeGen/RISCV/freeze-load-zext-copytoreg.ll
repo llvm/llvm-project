@@ -81,17 +81,34 @@ ret1:
 define i32 @freeze_i8_load_loop(ptr %p, i32 %n) {
 ; CHECK-LABEL: freeze_i8_load_loop:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    lbu a2, 0(a2)
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:  .LBB1_1: # %loop
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    lbu a0, 0(a0)
+; CHECK-NEXT:    sext.w s0, a1
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    srli a1, a0, 32
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    bgtz s0, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    call __muldi3
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:  .LBB1_3: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addiw a3, a3, 1
-; CHECK-NEXT:    addw a0, a0, a2
-; CHECK-NEXT:    blt a3, a1, .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    addiw a1, a1, 1
+; CHECK-NEXT:    blt a1, s0, .LBB1_3
+; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %load = load i8, ptr %p
   %freeze = freeze i8 %load

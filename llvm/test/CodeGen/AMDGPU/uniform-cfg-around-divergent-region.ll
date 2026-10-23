@@ -152,20 +152,20 @@ define amdgpu_cs void @uniform_around_nonuniform_loop(i32 inreg %u1, i32 inreg %
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB2_3: ; %L.preheader
-; CHECK-NEXT:    s_mov_b32 s1, -1
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:  .LBB2_4: ; %L
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_add_i32 s2, s1, 2
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_add_i32 s1, s1, 1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s1, v0
 ; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execnz .LBB2_4
 ; CHECK-NEXT:  ; %bb.5: ; %L.end.loopexit
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
+; CHECK-NEXT:    v_sub_nc_u32_e64 v0, v0, 1 clamp
+; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
 ; CHECK-NEXT:  .LBB2_6: ; %L.end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
