@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -187,7 +188,7 @@ struct ReplacementIRBuilder
       : IRBuilder(
             I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+    if (I->getFunction()->hasFnAttribute(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
@@ -274,7 +275,7 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return Alignment >= Size && Size <= MaxSize;
+  return Size <= MaxSize && TLI->isAtomicAlignmentSupported(Alignment, Size);
 }
 
 template <typename Inst>
@@ -284,7 +285,7 @@ static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < Size) {
+  if (!TLI->isAtomicAlignmentSupported(Alignment, Size)) {
     OS << "instruction alignment " << Alignment.value()
        << " is smaller than the required " << Size
        << "-byte alignment for this atomic operation";
@@ -397,8 +398,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(LI, isAcquireOrStronger(LI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(LI));
 
     MadeChange |= tryExpandAtomicLoad(LI);
     return MadeChange;
@@ -420,8 +422,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(SI, isReleaseOrStronger(SI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(SI));
 
     MadeChange |= tryExpandAtomicStore(SI);
     return MadeChange;
@@ -2388,14 +2391,23 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
+  // The ordering arguments are C ints, which may need to be extended.
+  // FIXME: Once runtime libcall attribute derivation is centralized in
+  // RuntimeLibcalls, TargetLibraryInfo should not be used here.
+  Attribute::AttrKind OrderingExt =
+      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
+
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
+  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val)
+  if (Ordering2Val) {
     Args.push_back(Ordering2Val);
+    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  }
 
-  // Now, the return type.
+  // Now, the return type.  FIXME: Properly add extension attributes.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
     Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
