@@ -57,22 +57,12 @@ namespace shifts {
                   // cxx17-warning {{shift count >= width of type}} \
                   // ref-warning {{shift count >= width of type}} \
                   // ref-cxx17-warning {{shift count >= width of type}}
-    c <<= __CHAR_BIT__; // expected-warning {{shift count >= width of type}} \
-                        // cxx17-warning {{shift count >= width of type}} \
-                        // ref-warning {{shift count >= width of type}} \
-                        // ref-cxx17-warning {{shift count >= width of type}}
-    c >>= __CHAR_BIT__; // expected-warning {{shift count >= width of type}} \
-                        // cxx17-warning {{shift count >= width of type}} \
-                        // ref-warning {{shift count >= width of type}} \
-                        // ref-cxx17-warning {{shift count >= width of type}}
-    c <<= __CHAR_BIT__+1; // expected-warning {{shift count >= width of type}} \
-                          // cxx17-warning {{shift count >= width of type}} \
-                          // ref-warning {{shift count >= width of type}} \
-                          // ref-cxx17-warning {{shift count >= width of type}}
-    c >>= __CHAR_BIT__+1; // expected-warning {{shift count >= width of type}} \
-                          // cxx17-warning {{shift count >= width of type}} \
-                          // ref-warning {{shift count >= width of type}} \
-                          // ref-cxx17-warning {{shift count >= width of type}}
+        // These don't warn because the shift count is checked against the promoted
+        // left operand's width. The compound and regular shifts act in the same way.
+    c <<= __CHAR_BIT__;
+    c >>= __CHAR_BIT__;
+    c <<= __CHAR_BIT__+1;
+    c >>= __CHAR_BIT__+1;
     (void)((long)c << __CHAR_BIT__);
 
     c = 1 << (int)INT_MIN; // all-warning {{shift count is negative}}
