@@ -326,8 +326,8 @@
     descriptor::Clause(
       "default-variant",
       {
-        {Version(50), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
       }
     ),
   },
