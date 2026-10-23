@@ -48,6 +48,8 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
     return TypeSize::getFixed(getST()->hasSIMD128() ? 128 : 64);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
+  case TargetTransformInfo::RGK_AnyVector:
+    break;
   }
 
   llvm_unreachable("Unsupported register kind");

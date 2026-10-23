@@ -271,6 +271,8 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
                                                                 : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
+  case TargetTransformInfo::RGK_AnyVector:
+    break;
   }
   llvm_unreachable("Unsupported register kind");
 }
