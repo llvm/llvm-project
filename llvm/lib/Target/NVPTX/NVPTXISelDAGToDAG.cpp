@@ -970,7 +970,7 @@ static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
   // space.
   return Subtarget.hasLDG() && CodeAddrSpace == NVPTX::AddressSpace::Global &&
-         N.isInvariant();
+         N.isInvariant() && N.isSimple();
 }
 
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
