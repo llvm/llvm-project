@@ -5,15 +5,16 @@ define void @sink_interleave4_to_loop(<8 x i16> %src0, <8 x i16> %src1, <8 x i16
 ; CHECK-LABEL: define void @sink_interleave4_to_loop(
 ; CHECK-SAME: <8 x i16> [[SRC0:%.*]], <8 x i16> [[SRC1:%.*]], <8 x i16> [[SRC2:%.*]], <8 x i16> [[SRC3:%.*]], ptr [[DST0:%.*]], ptr [[DST1:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INTERLEAVE1:%.*]] = tail call <32 x i16> @llvm.vector.interleave4.v32i16(<8 x i16> [[SRC0]], <8 x i16> [[SRC1]], <8 x i16> [[SRC2]], <8 x i16> [[SRC3]])
 ; CHECK-NEXT:    [[INTERLEAVE2:%.*]] = tail call <32 x i16> @llvm.vector.interleave4.v32i16(<8 x i16> [[SRC0]], <8 x i16> [[SRC1]], <8 x i16> [[SRC2]], <8 x i16> [[SRC3]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <32 x i16>, ptr [[DST0]], i64 [[IV]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr <32 x i16>, ptr [[DST1]], i64 [[IV]]
+; CHECK-NEXT:    [[INTERLEAVE1:%.*]] = tail call <32 x i16> @llvm.vector.interleave4.v32i16(<8 x i16> [[SRC0]], <8 x i16> [[SRC1]], <8 x i16> [[SRC2]], <8 x i16> [[SRC3]])
 ; CHECK-NEXT:    store <32 x i16> [[INTERLEAVE1]], ptr [[PTR0]], align 64
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVE1]], ptr [[PTR1]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i16> @llvm.vector.interleave4.v32i16(<8 x i16> [[SRC0]], <8 x i16> [[SRC1]], <8 x i16> [[SRC2]], <8 x i16> [[SRC3]])
+; CHECK-NEXT:    store <32 x i16> [[TMP1]], ptr [[PTR1]], align 64
 ; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -48,14 +49,14 @@ define void @sink_interleave4_to_loop_scalable(<vscale x 8 x i16> %src0, <vscale
 ; CHECK-LABEL: define void @sink_interleave4_to_loop_scalable(
 ; CHECK-SAME: <vscale x 8 x i16> [[SRC0:%.*]], <vscale x 8 x i16> [[SRC1:%.*]], <vscale x 8 x i16> [[SRC2:%.*]], <vscale x 8 x i16> [[SRC3:%.*]], ptr [[DST0:%.*]], ptr [[DST1:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> [[SRC0]], <vscale x 8 x i16> [[SRC1]], <vscale x 8 x i16> [[SRC2]], <vscale x 8 x i16> [[SRC3]])
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> [[SRC0]], <vscale x 8 x i16> [[SRC1]], <vscale x 8 x i16> [[SRC2]], <vscale x 8 x i16> [[SRC3]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <vscale x 32 x i16>, ptr [[DST0]], i64 [[IV]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr <vscale x 32 x i16>, ptr [[DST1]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> [[SRC0]], <vscale x 8 x i16> [[SRC1]], <vscale x 8 x i16> [[SRC2]], <vscale x 8 x i16> [[SRC3]])
 ; CHECK-NEXT:    store <vscale x 32 x i16> [[TMP0]], ptr [[PTR0]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> [[SRC0]], <vscale x 8 x i16> [[SRC1]], <vscale x 8 x i16> [[SRC2]], <vscale x 8 x i16> [[SRC3]])
 ; CHECK-NEXT:    store <vscale x 32 x i16> [[TMP1]], ptr [[PTR1]], align 64
 ; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N]]

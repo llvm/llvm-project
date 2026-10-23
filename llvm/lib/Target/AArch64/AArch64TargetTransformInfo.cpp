@@ -15,6 +15,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -8054,6 +8055,19 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   };
 
   switch (I->getOpcode()) {
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(I);
+    auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
+    if (!SI->isSimple() || !II)
+      break;
+
+    unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+    if (Factor >= 2 && Factor <= 4) {
+      Ops.push_back(&SI->getOperandUse(0));
+      return true;
+    }
+    break;
+  }
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:
