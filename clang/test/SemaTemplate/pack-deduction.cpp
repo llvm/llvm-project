@@ -258,3 +258,11 @@ template <int... Args> using Alias = Nttp<1, 2, 3>::B<Args...>;
 }
 
 }
+
+namespace ExpandedPackDeducedEmpty {
+template <int...> struct X {};
+template <typename... Ts> struct A {
+  template <int N, Ts... Ns> A(X<N>, X<Ns...>);
+};
+A<> a{X<1>{}, X<>{}};
+}

@@ -629,3 +629,57 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+namespace GH193217 {
+
+template <auto...> struct X {};
+
+template <typename T, typename... Ts> struct A {
+  template <Ts... Ns, T *...Ps> A(X<Ps...>, Ts (*...qs)[Ns]);
+};
+
+template <class T = int, class U = T> using AA = A<U>; // #GH193217_AA
+
+AA a{};
+// expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'AA'}}
+// expected-note@#GH193217_AA 2{{candidate function template not viable}}
+// expected-note@#GH193217_AA 2{{implicit deduction guide declared as}}
+
+int *p;
+AA a1{X<&p>{}};
+static_assert(__is_same(decltype(a1), A<int *>));
+
+template <class T = int, class U = T> using AB = A<U, int>;
+int arr[3];
+AB b{X<&p>{}, &arr};
+static_assert(__is_same(decltype(b), A<int *, int>));
+
+template <class T = int, class U = T> using AC = A<U, int, long>;
+long arr2[4];
+AC c{X<&p>{}, &arr, &arr2};
+static_assert(__is_same(decltype(c), A<int *, int, long>));
+
+template <auto, class> struct Y {};
+template <class T, class... Ts> struct B {
+  template <Ts... Ns> B(T, Y<Ns, Ts>...);
+};
+template <class U> using BB = B<U>;
+BB bb{0};
+static_assert(__is_same(decltype(bb), B<int>));
+
+template <class, class> struct P {};
+template <class T, class... Ts> struct C {
+  template <class... Us> C(T, P<Ts, Us>...);
+};
+template <class U> using CC = C<U>;
+CC cc{0};
+static_assert(__is_same(decltype(cc), C<int>));
+
+template <class T, class... Ts> struct D {
+  template <template <Ts> class... TTs> D(T);
+};
+template <class U> using DD = D<U>;
+DD dd{0};
+static_assert(__is_same(decltype(dd), D<int>));
+
+} // namespace GH193217
