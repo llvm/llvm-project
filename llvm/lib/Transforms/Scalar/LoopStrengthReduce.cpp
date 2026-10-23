@@ -2496,8 +2496,8 @@ ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
   auto *TermBr = cast<CondBrInst>(ExitingBlock->getTerminator());
   bool TrueContinues = L->contains(TermBr->getSuccessor(0));
   bool FalseContinues = L->contains(TermBr->getSuccessor(1));
-  if (TrueContinues == FalseContinues)
-    return Cond;
+  assert(TrueContinues != FalseContinues &&
+         "Expected exactly one in-loop successor");
 
   auto Pred = TrueContinues ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
   auto *NewCond = new ICmpInst(TermBr->getIterator(), Pred, IV,
