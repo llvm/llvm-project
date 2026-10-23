@@ -42,22 +42,22 @@ RecordsEntry::RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
     : Dump(std::move(Dump)) {}
 
 namespace llvm {
-struct SubClassReference {
+struct ParentClassReference {
   SMRange RefRange;
   const Record *Rec = nullptr;
   SmallVector<const ArgumentInit *, 4> TemplateArgs;
 
-  SubClassReference() = default;
+  ParentClassReference() = default;
 
   bool isInvalid() const { return Rec == nullptr; }
 };
 
-struct SubMultiClassReference {
+struct ParentMultiClassReference {
   SMRange RefRange;
   MultiClass *MC = nullptr;
   SmallVector<const ArgumentInit *, 4> TemplateArgs;
 
-  SubMultiClassReference() = default;
+  ParentMultiClassReference() = default;
 
   bool isInvalid() const { return MC == nullptr; }
   void dump() const;
@@ -65,7 +65,7 @@ struct SubMultiClassReference {
 } // end namespace llvm
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
+LLVM_DUMP_METHOD void ParentMultiClassReference::dump() const {
   errs() << "Multiclass:\n";
 
   MC->dump();
@@ -347,27 +347,28 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   return false;
 }
 
-/// AddSubClass - Add SubClass as a subclass to CurRec, resolving its template
-/// args as SubClass's template arguments.
-bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
-  const Record *SC = SubClass.Rec;
+/// AddParentClass - Add ParentClass as a parent class of CurRec, resolving
+/// its template args as ParentClass's template arguments.
+bool TGParser::AddParentClass(Record *CurRec,
+                              ParentClassReference &ParentClass) {
+  const Record *SC = ParentClass.Rec;
   MapResolver R(CurRec);
 
-  // Loop over all the subclass record's fields. Add regular fields to the new
-  // record.
+  // Loop over all the parent class record's fields. Add regular fields to the
+  // new record.
   for (const RecordVal &Field : SC->getValues())
     if (!Field.isTemplateArg())
-      if (AddValue(CurRec, SubClass.RefRange.Start, Field, SC))
+      if (AddValue(CurRec, ParentClass.RefRange.Start, Field, SC))
         return true;
 
-  if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
-                              SubClass.RefRange.Start))
+  if (resolveArgumentsOfClass(R, SC, ParentClass.TemplateArgs,
+                              ParentClass.RefRange.Start))
     return true;
 
-  // Copy the subclass record's assertions to the new record.
+  // Copy the parent class record's assertions to the new record.
   CurRec->appendAssertions(SC);
 
-  // Copy the subclass record's dumps to the new record.
+  // Copy the parent class record's dumps to the new record.
   CurRec->appendDumps(SC);
 
   const Init *Name;
@@ -383,44 +384,45 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
   if (CurRec->isSubClassOf(SC))
-    return Error(SubClass.RefRange.Start,
+    return Error(ParentClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, ParentClass.RefRange);
   return false;
 }
 
-bool TGParser::AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass) {
+bool TGParser::AddParentClass(RecordsEntry &Entry,
+                              ParentClassReference &ParentClass) {
   if (Entry.Rec)
-    return AddSubClass(Entry.Rec.get(), SubClass);
+    return AddParentClass(Entry.Rec.get(), ParentClass);
 
   if (Entry.Assertion)
     return false;
 
   for (auto &E : Entry.Loop->Entries) {
-    if (AddSubClass(E, SubClass))
+    if (AddParentClass(E, ParentClass))
       return true;
   }
 
   return false;
 }
 
-/// AddSubMultiClass - Add SubMultiClass as a subclass to
-/// CurMC, resolving its template args as SubMultiClass's
+/// AddParentMultiClass - Add ParentMultiClass as a parent multiclass of
+/// CurMC, resolving its template args as ParentMultiClass's
 /// template arguments.
-bool TGParser::AddSubMultiClass(MultiClass *CurMC,
-                                SubMultiClassReference &SubMultiClass) {
-  MultiClass *SMC = SubMultiClass.MC;
+bool TGParser::AddParentMultiClass(
+    MultiClass *CurMC, ParentMultiClassReference &ParentMultiClass) {
+  MultiClass *ParentMC = ParentMultiClass.MC;
 
   SubstStack Substs;
   if (resolveArgumentsOfMultiClass(
-          Substs, SMC, SubMultiClass.TemplateArgs,
+          Substs, ParentMC, ParentMultiClass.TemplateArgs,
           VarInit::get(QualifiedNameOfImplicitName(CurMC),
                        StringRecTy::get(Records)),
-          SubMultiClass.RefRange.Start))
+          ParentMultiClass.RefRange.Start))
     return true;
 
-  // Add all of the defs in the subclass into the current multiclass.
-  return resolve(SMC->Entries, Substs, false, &CurMC->Entries);
+  // Add all of the defs in the parent multiclass into the current multiclass.
+  return resolve(ParentMC->Entries, Substs, false, &CurMC->Entries);
 }
 
 /// Add a record, foreach loop, or assertion to the current context.
@@ -795,15 +797,16 @@ MultiClass *TGParser::ParseMultiClassID() {
   return Result;
 }
 
-/// ParseSubClassReference - Parse a reference to a subclass or a
-/// multiclass. This returns a SubClassRefTy with a null Record* on error.
+/// ParseParentClassReference - Parse a reference to a parent class, or to a
+/// multiclass in a defm. This returns a ParentClassReference with a null
+/// Record* on error.
 ///
-///  SubClassRef ::= ClassID
-///  SubClassRef ::= ClassID '<' ArgValueList '>'
+///  ClassRef ::= ClassID
+///  ClassRef ::= ClassID '<' ArgValueList '>'
 ///
-SubClassReference TGParser::ParseSubClassReference(Record *CurRec,
-                                                   bool isDefm) {
-  SubClassReference Result;
+ParentClassReference TGParser::ParseParentClassReference(Record *CurRec,
+                                                         bool isDefm) {
+  ParentClassReference Result;
   Result.RefRange.Start = Lex.getLoc();
 
   if (isDefm) {
@@ -837,16 +840,15 @@ SubClassReference TGParser::ParseSubClassReference(Record *CurRec,
   return Result;
 }
 
-/// ParseSubMultiClassReference - Parse a reference to a subclass or to a
-/// templated submulticlass. This returns a SubMultiClassRefTy with a null
-/// Record* on error.
+/// ParseParentMultiClassReference - Parse a reference to a parent multiclass.
+/// This returns a ParentMultiClassReference with a null MultiClass* on error.
 ///
-///  SubMultiClassRef ::= MultiClassID
-///  SubMultiClassRef ::= MultiClassID '<' ArgValueList '>'
+///  ClassRef ::= MultiClassID
+///  ClassRef ::= MultiClassID '<' ArgValueList '>'
 ///
-SubMultiClassReference
-TGParser::ParseSubMultiClassReference(MultiClass *CurMC) {
-  SubMultiClassReference Result;
+ParentMultiClassReference
+TGParser::ParseParentMultiClassReference(MultiClass *CurMC) {
+  ParentMultiClassReference Result;
   Result.RefRange.Start = Lex.getLoc();
 
   Result.MC = ParseMultiClassID();
@@ -3953,31 +3955,31 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
 /// optional ClassList followed by a Body. CurRec is the current def or class
 /// that is being parsed.
 ///
-///   ObjectBody      ::= BaseClassList Body
-///   BaseClassList   ::= /*empty*/
-///   BaseClassList   ::= ':' BaseClassListNE
-///   BaseClassListNE ::= SubClassRef (',' SubClassRef)*
+///   ObjectBody        ::= ParentClassList Body
+///   ParentClassList   ::= /*empty*/
+///   ParentClassList   ::= ':' ParentClassListNE
+///   ParentClassListNE ::= ClassRef (',' ClassRef)*
 ///
 bool TGParser::ParseObjectBody(Record *CurRec) {
   // An object body introduces a new scope for local variables.
   TGVarScope *ObjectScope = PushScope(CurRec);
-  // If there is a baseclass list, read it.
+  // If there is a parent class list, read it.
   if (consume(tgtok::colon)) {
 
-    // Read all of the subclasses.
-    SubClassReference SubClass = ParseSubClassReference(CurRec, false);
+    // Read all of the parent classes.
+    ParentClassReference ParentClass = ParseParentClassReference(CurRec, false);
     while (true) {
       // Check for error.
-      if (!SubClass.Rec)
+      if (!ParentClass.Rec)
         return true;
 
       // Add it.
-      if (AddSubClass(CurRec, SubClass))
+      if (AddParentClass(CurRec, ParentClass))
         return true;
 
       if (!consume(tgtok::comma))
         break;
-      SubClass = ParseSubClassReference(CurRec, false);
+      ParentClass = ParseParentClassReference(CurRec, false);
     }
   }
 
@@ -4527,25 +4529,25 @@ bool TGParser::ParseMultiClass() {
 
   bool inherits = false;
 
-  // If there are submulticlasses, parse them.
+  // If there are parent multiclasses, parse them.
   if (consume(tgtok::colon)) {
     inherits = true;
 
-    // Read all of the submulticlasses.
-    SubMultiClassReference SubMultiClass =
-        ParseSubMultiClassReference(CurMultiClass);
+    // Read all of the parent multiclasses.
+    ParentMultiClassReference ParentMultiClass =
+        ParseParentMultiClassReference(CurMultiClass);
     while (true) {
       // Check for error.
-      if (!SubMultiClass.MC)
+      if (!ParentMultiClass.MC)
         return true;
 
       // Add it.
-      if (AddSubMultiClass(CurMultiClass, SubMultiClass))
+      if (AddParentMultiClass(CurMultiClass, ParentMultiClass))
         return true;
 
       if (!consume(tgtok::comma))
         break;
-      SubMultiClass = ParseSubMultiClassReference(CurMultiClass);
+      ParentMultiClass = ParseParentMultiClassReference(CurMultiClass);
     }
   }
 
@@ -4597,7 +4599,7 @@ bool TGParser::ParseMultiClass() {
 
 /// ParseDefm - Parse the instantiation of a multiclass.
 ///
-///   DefMInst ::= DEFM ID ':' DefmSubClassRef ';'
+///   DefMInst ::= DEFM ID ':' ParentClassListNE ';'
 ///
 bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
   assert(Lex.getCode() == tgtok::Defm && "Unexpected token!");
@@ -4627,8 +4629,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
   // eat the colon.
   Lex.Lex();
 
-  SMLoc SubClassLoc = Lex.getLoc();
-  SubClassReference Ref = ParseSubClassReference(nullptr, true);
+  SMLoc ParentClassLoc = Lex.getLoc();
+  ParentClassReference Ref = ParseParentClassReference(nullptr, true);
 
   while (true) {
     if (!Ref.Rec)
@@ -4643,11 +4645,11 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 
     SubstStack Substs;
     if (resolveArgumentsOfMultiClass(Substs, MC, Ref.TemplateArgs, DefmName,
-                                     SubClassLoc))
+                                     ParentClassLoc))
       return true;
 
     if (resolve(MC->Entries, Substs, !CurMultiClass && Loops.empty(),
-                &NewEntries, &SubClassLoc))
+                &NewEntries, &ParentClassLoc))
       return true;
 
     if (!consume(tgtok::comma))
@@ -4656,7 +4658,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     if (Lex.getCode() != tgtok::Id)
       return TokError("expected identifier");
 
-    SubClassLoc = Lex.getLoc();
+    ParentClassLoc = Lex.getLoc();
 
     // A defm can inherit from regular classes (non-multiclasses) as
     // long as they come in the end of the inheritance list.
@@ -4665,29 +4667,30 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     if (InheritFromClass)
       break;
 
-    Ref = ParseSubClassReference(nullptr, true);
+    Ref = ParseParentClassReference(nullptr, true);
   }
 
   if (InheritFromClass) {
     // Process all the classes to inherit as if they were part of a
     // regular 'def' and inherit all record values.
-    SubClassReference SubClass = ParseSubClassReference(nullptr, false);
+    ParentClassReference ParentClass =
+        ParseParentClassReference(nullptr, false);
     while (true) {
       // Check for error.
-      if (!SubClass.Rec)
+      if (!ParentClass.Rec)
         return true;
 
       // Get the expanded definition prototypes and teach them about
       // the record values the current class to inherit has
       for (auto &E : NewEntries) {
         // Add it.
-        if (AddSubClass(E, SubClass))
+        if (AddParentClass(E, ParentClass))
           return true;
       }
 
       if (!consume(tgtok::comma))
         break;
-      SubClass = ParseSubClassReference(nullptr, false);
+      ParentClass = ParseParentClassReference(nullptr, false);
     }
   }
 
