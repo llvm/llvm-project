@@ -75,7 +75,6 @@ define void @pr63840_crash(i64 %sext974, i64 %sext982, i8 %x) {
 ; CHECK-NEXT:    br label [[BB1064:%.*]]
 ; CHECK:       bb1059.bb1064_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV_NEXT4_LCSSA6:%.*]] = phi i64 [ [[LSR_IV_NEXT4:%.*]], [[BB1059]] ]
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[ADD1061]], [[BB1059]] ]
 ; CHECK-NEXT:    br label [[BB1064]]
 ; CHECK:       bb1064:
 ; CHECK-NEXT:    [[PHI1065:%.*]] = phi i64 [ [[LSR_IV_NEXT4_LCSSA6]], [[BB1059_BB1064_CRIT_EDGE]] ], [ [[PHI1065_PH]], [[BB1064SPLIT]] ]
