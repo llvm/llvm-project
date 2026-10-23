@@ -111,13 +111,14 @@ struct PluginManager;
 
 struct DeviceTy {
   int32_t DeviceID;
-  GenericPluginTy *RTL;
-  int32_t RTLDeviceID;
+  GenericPluginTy *RTL = nullptr;
+  int32_t RTLDeviceID = -1;
+  ol_platform_handle_t Platform;
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;
   ol_context_handle_t Context = nullptr;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+  DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
            ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
