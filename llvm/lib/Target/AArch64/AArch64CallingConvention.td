@@ -176,6 +176,18 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
   CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
+
+  // The arguments of a variadic function, named ones included, are laid out as
+  // if on a stack whose first 64 bytes are loaded into x0-x7, so a composite is
+  // not kept in one register block: when only x7 is left, its first eight bytes
+  // go in x7 and the rest on the stack. A byval pointer is flagged as a block
+  // when its pointee is an array; it must still be passed by copy.
+  CCIfConsecutiveRegs<CCIf<"!ArgFlags.isByVal()",
+                           CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3,
+                                                          X4, X5, X6, X7]>>>>,
+  CCIfConsecutiveRegs<CCIf<"!ArgFlags.isByVal()",
+                           CCIfType<[i64], CCAssignToStack<8, 8>>>>,
+
   CCDelegateTo<CC_AArch64_Win64PCS>
 ]>;
 
