@@ -16,18 +16,11 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; LEGACYPM:       cond.true.i:
 ; LEGACYPM-NEXT:    br label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE:%.*]]
 ; LEGACYPM:       do.body.i.i.do.body.i.i_crit_edge:
-; LEGACYPM-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ], [ undef, [[COND_TRUE_I]] ]
-; LEGACYPM-NEXT:    [[PGOCOUNT711:%.*]] = phi i64 [ [[TMP0:%.*]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ], [ 0, [[COND_TRUE_I]] ]
-; LEGACYPM-NEXT:    [[TMP0]] = add nuw nsw i64 [[PGOCOUNT711]], 1
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
 ; LEGACYPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE:%.*]], label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]]
 ; LEGACYPM:       do.body.i.i.rdrand_int.exit.i_crit_edge:
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]] ]
-; LEGACYPM-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], undef
 ; LEGACYPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE_FOR_END_CRIT_EDGE:%.*]], label [[FOR_INC:%.*]]
 ; LEGACYPM:       do.body.i.i.rdrand_int.exit.i_crit_edge.for.end_crit_edge:
-; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT_LCSSA]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
-; LEGACYPM-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[TMP1]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
+; LEGACYPM-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i64 [ undef, [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
 ; LEGACYPM-NEXT:    br label [[FOR_END:%.*]]
 ; LEGACYPM:       for.inc:
 ; LEGACYPM-NEXT:    br label [[FOR_COND]]
@@ -51,11 +44,9 @@ define dso_local i32 @test1() local_unnamed_addr {
 ; NEWPM:       do.body.i.i.do.body.i.i_crit_edge:
 ; NEWPM-NEXT:    br i1 true, label [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE:%.*]], label [[DO_BODY_I_I_DO_BODY_I_I_CRIT_EDGE]]
 ; NEWPM:       do.body.i.i.rdrand_int.exit.i_crit_edge:
-; NEWPM-NEXT:    [[TMP0:%.*]] = add i64 1, undef
 ; NEWPM-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_INC:%.*]]
 ; NEWPM:       do.body.i.i.rdrand_int.exit.i_crit_edge.for.end_crit_edge:
 ; NEWPM-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i64 [ undef, [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
-; NEWPM-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[TMP0]], [[DO_BODY_I_I_RDRAND_INT_EXIT_I_CRIT_EDGE]] ]
 ; NEWPM-NEXT:    br label [[FOR_END1:%.*]]
 ; NEWPM:       for.inc:
 ; NEWPM-NEXT:    br label [[FOR_COND]]

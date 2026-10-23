@@ -69,17 +69,11 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[LOOP0:%.*]]
 ; CHECK:       loop0:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[LOOP0]] ], [ -2, [[BB:%.*]] ]
-; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[I0_NEXT:%.*]], [[LOOP0]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[I0_NEXT]] = add i32 [[I0]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP0]], label [[BB0:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[LOOP0]] ]
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ 0, [[BB0]] ], [ [[I1_NEXT:%.*]], [[BB5:%.*]] ]
-; CHECK-NEXT:    [[T0:%.*]] = add i32 [[I0]], [[I1]]
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[LOOP1_BB6_CRIT_EDGE:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB6SPLITSPLIT:%.*]], label [[BB5]]
@@ -88,9 +82,8 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:    br i1 true, label [[BB5_BB6SPLIT_CRIT_EDGE:%.*]], label [[LOOP1]]
 ; CHECK:       bb5.bb6split_crit_edge:
 ; CHECK-NEXT:    [[I1_NEXT_LCSSA:%.*]] = phi i32 [ [[I1_NEXT]], [[BB5]] ]
-; CHECK-NEXT:    [[SPLIT3:%.*]] = phi i32 [ [[T0]], [[BB5]] ]
 ; CHECK-NEXT:    [[SPLIT4:%.*]] = phi i32 [ undef, [[BB5]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT_LCSSA]], [[I1_NEXT_LCSSA]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 -1, [[I1_NEXT_LCSSA]]
 ; CHECK-NEXT:    br label [[BB6SPLIT:%.*]]
 ; CHECK:       bb6splitsplit:
 ; CHECK-NEXT:    [[P8_PH_PH:%.*]] = phi i32 [ undef, [[BB2]] ]

@@ -6113,6 +6113,9 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           if (L->contains(I) && !L->contains(BB))
             InsertedNonLCSSAInsts.insert(I);
 
+        if (auto *OldIncomingInst =
+                dyn_cast<Instruction>(PN->getIncomingValue(i)))
+          DeadInsts.emplace_back(OldIncomingInst);
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
       }
