@@ -2712,7 +2712,7 @@ def TypeNullUnspecified : TypeAttr {
 
 def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Subjects = SubjectList<[Field, ParmVar], ErrorDiag>;
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
@@ -2722,7 +2722,7 @@ def CountedBy : DeclOrTypeAttr {
 
 def CountedByOrNull : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by_or_null">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Subjects = SubjectList<[Field, ParmVar], ErrorDiag>;
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
@@ -2745,7 +2745,7 @@ def PointerFieldProtection : DeclOrTypeAttr {
 
 def SizedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"sized_by">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Subjects = SubjectList<[Field, ParmVar], ErrorDiag>;
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
@@ -2755,7 +2755,7 @@ def SizedBy : DeclOrTypeAttr {
 
 def SizedByOrNull : DeclOrTypeAttr {
   let Spellings = [Clang<"sized_by_or_null">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Subjects = SubjectList<[Field, ParmVar], ErrorDiag>;
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
