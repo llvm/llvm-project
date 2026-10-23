@@ -466,6 +466,9 @@ public:
   }
   common::IgnoreTKRSet ignoreTKR() const { return ignoreTKR_; }
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
+  // Byte alignment requested with !DIR$ ALIGN, if any.
+  std::optional<std::uint64_t> alignment() const { return alignment_; }
+  void set_alignment(std::uint64_t alignment) { alignment_ = alignment; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
   bool IsAssumedShape() const {
@@ -501,6 +504,7 @@ private:
   ArraySpec coshape_;
   std::vector<Bound> droppedBoundsToCheck_;
   common::IgnoreTKRSet ignoreTKR_;
+  std::optional<std::uint64_t> alignment_; // from !DIR$ ALIGN
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;
   bool cudaDataAttrIsImplicit_{false}; // Tracks whether cudaDataAttr_ was

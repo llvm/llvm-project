@@ -1735,6 +1735,10 @@ bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 
 common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
+// The byte alignment requested for an object with !DIR$ ALIGN, if any,
+// resolving use and host association.
+std::optional<std::uint64_t> GetAlignment(const Symbol &);
+
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);

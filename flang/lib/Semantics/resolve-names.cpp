@@ -11551,13 +11551,51 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
         }
       }
     }
-  } else if (std::holds_alternative<parser::CompilerDirective::Align>(x.u)) {
-    // Not context().Warn(): the directive may appear outside any program
-    // unit, where there is no scope to look up.
-    if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+  } else if (const auto *align{
+                 std::get_if<parser::CompilerDirective::Align>(&x.u)}) {
+    // !DIR$ ALIGN(n) :: names -- record the requested alignment on each
+    // named object; applicability is checked in check-declarations.cpp once
+    // the attributes of the objects are known.
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ ALIGN is not yet implemented and was ignored"_warn_en_US)
-          .set_usageWarning(common::UsageWarning::IgnoredDirective);
+          "!DIR$ ALIGN directive must appear in a program unit"_err_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      Say(x.source,
+          "!DIR$ ALIGN directive must appear in the specification part"_err_en_US);
+      return;
+    }
+    constexpr std::uint64_t maxAlignment{std::uint64_t{1} << 28};
+    std::uint64_t value{std::get<std::uint64_t>(align->t)};
+    if (value == 0 || !llvm::isPowerOf2_64(value) || value > maxAlignment) {
+      Say(x.source,
+          "The alignment in !DIR$ ALIGN must be a power of two no greater than %jd"_err_en_US,
+          static_cast<std::intmax_t>(maxAlignment));
+      return;
+    }
+    for (const parser::Name &name :
+        std::get<std::list<parser::Name>>(align->t)) {
+      Symbol *symbol{FindSymbol(name)};
+      if (!symbol) {
+        symbol = &MakeSymbol(name, Attrs{}, ObjectEntityDetails{});
+      }
+      if (symbol->owner() != currScope() || symbol->has<UseDetails>() ||
+          symbol->has<HostAssocDetails>()) {
+        SayWithDecl(name, *symbol,
+            "'%s' must be declared in this scoping unit to be aligned with !DIR$ ALIGN"_err_en_US);
+        continue;
+      }
+      ConvertToObjectEntity(*symbol);
+      auto *object{symbol->detailsIf<ObjectEntityDetails>()};
+      if (!object) {
+        SayWithDecl(name, *symbol,
+            "'%s' must be a variable to be aligned with !DIR$ ALIGN"_err_en_US);
+      } else if (object->alignment() && *object->alignment() != value) {
+        SayWithDecl(name, *symbol,
+            "'%s' already has a different !DIR$ ALIGN alignment"_err_en_US);
+      } else {
+        object->set_alignment(value);
+      }
     }
   } else if (const auto *inlineAlways{
                  std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {

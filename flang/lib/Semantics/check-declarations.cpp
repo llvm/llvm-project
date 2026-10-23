@@ -820,6 +820,49 @@ void CheckHelper::CheckObjectEntity(
   const Symbol *commonBlock{FindCommonBlockContaining(symbol)};
   bool isLocalVariable{!commonBlock && !isComponent && !details.isDummy() &&
       symbol.owner().kind() != Scope::Kind::OtherConstruct};
+  if (details.alignment()) { // !DIR$ ALIGN applicability
+    if (details.isDummy()) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to dummy argument '%s'"_err_en_US,
+          symbol.name());
+    } else if (IsFunctionResult(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to function result '%s'"_err_en_US,
+          symbol.name());
+    } else if (commonBlock || FindEquivalenceSet(symbol)) {
+      Warn(common::UsageWarning::IgnoredDirective,
+          "!DIR$ ALIGN is ignored for '%s' because it is in COMMON or EQUIVALENCE storage"_warn_en_US,
+          symbol.name());
+    } else if (IsAllocatableOrPointer(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN is not yet supported for ALLOCATABLE or POINTER '%s'"_err_en_US,
+          symbol.name());
+    } else if (IsNamedConstant(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to named constant '%s'"_err_en_US,
+          symbol.name());
+    } else if (symbol.attrs().test(Attr::BIND_C)) {
+      messages_.Say(
+          "!DIR$ ALIGN is not yet supported for BIND(C) variable '%s'"_err_en_US,
+          symbol.name());
+    } else if (details.cudaDataAttr()) {
+      messages_.Say(
+          "!DIR$ ALIGN is not yet supported for CUDA Fortran variable '%s'"_err_en_US,
+          symbol.name());
+    } else if (evaluate::IsCoarray(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to coarray '%s'"_err_en_US, symbol.name());
+    } else if (symbol.test(Symbol::Flag::CrayPointee)) {
+      messages_.Say("!DIR$ ALIGN may not apply to Cray pointee '%s'"_err_en_US,
+          symbol.name());
+    } else {
+      // Accepted, but lowering does not act on it yet: say so rather than
+      // letting the directive be silently ignored.
+      Warn(common::UsageWarning::IgnoredDirective,
+          "!DIR$ ALIGN on '%s' is not yet honored by this compiler"_warn_en_US,
+          symbol.name());
+    }
+  }
   if (int corank{evaluate::GetCorank(symbol)}; corank > 0) { // it's a coarray
     bool isDeferredCoshape{details.coshape().CanBeDeferredShape()};
     if (IsAllocatable(symbol)) {
