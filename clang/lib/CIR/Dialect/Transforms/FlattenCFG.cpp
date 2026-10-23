@@ -2324,8 +2324,7 @@ public:
     // The coroutine regions have been flattened, so the original coroutine
     // attribute no longer verifies. Preserve the information that this function
     // originated from a coroutine for LLVM lowering.
-    func.setCoroutine(false);
-    func.setFlattenedCoroutine(true);
+    func.setCoroutineKind(cir::CoroutineKind::FlattenedCoroutine);
 
     rewriter.eraseOp(coroOp);
     return mlir::success();
