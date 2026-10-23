@@ -15344,6 +15344,65 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
                      "}");
 }
 
+// Even when both short functions and short if statements are enabled, a
+// function body consisting of `if (x) return y;` is parsed as two unwrapped
+// lines (`if (x)` and `return y;`), so `tryMergeSimpleBlock` does not merge
+// the function onto a single line.
+//
+// FIXME: The desired output is `void f() { if (x) return y; }`.
+TEST_F(FormatTest, ShortIfInShortFunction) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  verifyFormat("void f() {\n"
+               "  if (x) return y;\n"
+               "}",
+               Style);
+}
+
+// Even when a lambda in a function body formats onto a single line, the
+// non-BK_BracedInit check in `tryMergeSimpleBlock` prevents merging the outer
+// function onto a single line.
+//
+// FIXME: The desired output is `void f() { [] { return y; }(); }`.
+TEST_F(FormatTest, ShortLambdaInShortFunction) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void f() {\n"
+               "  [] { return y; }();\n"
+               "}",
+               Style);
+}
+
+// Function bodies containing multi-line braced blocks should not merge onto a
+// single line.
+TEST_F(FormatTest, BracesInBodyPreventMerging) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void f() {\n"
+               "  if (x) {\n"
+               "    return y;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // Even when both short if statements and short blocks are enabled so the
+  // inner `if` formats onto one line, `tryMergeSimpleBlock` rejects merging the
+  // outer function.
+  //
+  // FIXME: The desired output is `void f() { if (x) { return y; } }`.
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("void f() {\n"
+               "  if (x) { return y; }\n"
+               "}",
+               Style);
+}
+
+// Braced init lists are excluded from the brace check -- they should still
+// allow short function merging.
+TEST_F(FormatTest, BracedInitDoesNotPreventMerging) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void f() { S s = {1}; }", Style);
+}
+
 TEST_F(FormatTest, PullEmptyFunctionDefinitionsIntoSingleLine) {
   FormatStyle MergeEmptyOnly = getLLVMStyle();
   MergeEmptyOnly.AllowShortFunctionsOnASingleLine =
