@@ -928,9 +928,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // inserted.
     AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
 
-    // Reassociating into the loop reorders the operands, so flags from the
-    // original order (nsw/nuw/exact/...) may no longer hold.
-    AccRecInstr->dropPoisonGeneratingFlags();
+    // Reassociating into the loop reorders the operands, so poison-generating
+    // flags (nsw/nuw/exact/...), attributes (range/nonnull/...) and metadata
+    // (!range/...) from the original order may no longer hold.
+    AccRecInstr->dropPoisonGeneratingAnnotations();
   }
 
   // Update our return value tracking
@@ -1148,8 +1149,7 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
   MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 

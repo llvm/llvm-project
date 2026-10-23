@@ -42,8 +42,8 @@ aaupov@meta.com (email), [aaupov](https://github.com/aaupov) (GitHub)
 Amir Ayupov
 aaupov@meta.com (email), [aaupov](https://github.com/aaupov) (GitHub)
 
-Paschalis Mpeis
-paschalis.mpeis@arm.com (email), [paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
+Asher Dobrescu
+ash.dobrescu@arm.com (email), [Asher8118](https://github.com/Asher8118) (GitHub)
 
 ### Gadget Scanner
 

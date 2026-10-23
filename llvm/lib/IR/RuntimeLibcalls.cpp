@@ -53,23 +53,22 @@ static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
   llvm_unreachable("no RuntimeLibrary for VectorLibrary");
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
-                                         ExceptionHandling ExceptionModel,
-                                         FloatABI::ABIType FloatABI,
-                                         StringRef ABIName,
-                                         VectorLibrary VecLib) {
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(
+    const Triple &TT, ExceptionHandling ExceptionModel,
+    FloatABI::ABIType FloatABI, std::optional<LongDoubleFormat> LDblFormat,
+    StringRef ABIName, VectorLibrary VecLib)
+    : LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())) {
   // Only an unspecified model resolves to the triple default; None is left as
   // an explicit disable.
   if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
-               TT.getDefaultLongDoubleFormat());
+  initLibcalls(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFmt);
 
   if (VecLib != VectorLibrary::NoLibrary) {
     setAvailableLibraryLibcalls(getVectorRuntimeLibrary(VecLib), TT,
                                 ExceptionModel, FloatABI, ABIName,
-                                TT.getDefaultLongDoubleFormat());
+                                LongDoubleFmt);
   }
 }
 
@@ -77,12 +76,29 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                                          VectorLibrary VecLib)
     : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
-                          M.getFloatABI(), ABIName, VecLib) {}
+                          M.getFloatABI(), M.getLongDoubleFormat(), ABIName,
+                          VecLib) {}
 
 bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
   // every named library is reported as available.
   return true;
+}
+
+void RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
+    const Triple &TT, ExceptionHandling ExceptionModel,
+    FloatABI::ABIType FloatABI, StringRef ABIName,
+    LongDoubleFormat LongDoubleFormat) {
+  CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(
+      TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+  if (DefaultCC != CallingConv::C)
+    llvm::fill(LibcallImplCallingConvs, DefaultCC);
+
+  for (RTLIB::RuntimeLibrary Library : getDefaultRuntimeLibraries(TT)) {
+    if (isLibraryAvailable(Library))
+      setAvailableLibraryLibcalls(Library, TT, ExceptionModel, FloatABI,
+                                  ABIName, LongDoubleFormat);
+  }
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -132,10 +148,26 @@ static constexpr Attribute::AttrKind CommonFnAttrs[] = {
     Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
     Attribute::NoUnwind, Attribute::WillReturn};
 
-static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
-                                                           LLVMContext &Ctx,
-                                                           const DataLayout &DL,
-                                                           unsigned IntBits) {
+static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
+  switch (Format) {
+  case LongDoubleFormat::IEEEsingle:
+    return Type::getFloatTy(Ctx);
+  case LongDoubleFormat::IEEEdouble:
+    return Type::getDoubleTy(Ctx);
+  case LongDoubleFormat::X87DoubleExtended:
+    return Type::getX86_FP80Ty(Ctx);
+  case LongDoubleFormat::IEEEquad:
+    return Type::getFP128Ty(Ctx);
+  case LongDoubleFormat::PPCDoubleDouble:
+    return Type::getPPC_FP128Ty(Ctx);
+  }
+
+  llvm_unreachable("unhandled long double format");
+}
+
+static std::pair<Type *, Attribute>
+convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
+                       unsigned IntBits, LongDoubleFormat LdblFormat) {
 
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
@@ -170,8 +202,9 @@ static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
   case Floating:
     return {Type::getFloatTy(Ctx), Attribute()};
   case Dbl:
-  case LDbl:
     return {Type::getDoubleTy(Ctx), Attribute()};
+  case LDbl:
+    return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
   case Ptr:
     return {PointerType::get(Ctx, 0), Attribute()};
   case V2F32:
@@ -227,7 +260,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   AttributeList Attrs;
 
   auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleFmt);
   if (RetAttr.isValid())
     Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
 
@@ -250,8 +283,8 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       ArgTy = LastTy;
       ArgAttr = LastAttr;
     } else {
-      std::tie(ArgTy, ArgAttr) =
-          convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
+      std::tie(ArgTy, ArgAttr) = convertToIRTypeAndAttr(
+          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleFmt);
       LastTy = ArgTy;
       LastAttr = ArgAttr;
     }

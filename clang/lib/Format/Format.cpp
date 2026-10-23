@@ -1392,6 +1392,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
+    IO.mapOptional("CompactCaseLabels", Style.CompactCaseLabels);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -1970,6 +1971,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
+  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
