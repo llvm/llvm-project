@@ -2465,16 +2465,27 @@ private:
                                  ArrayRef<Value *> Pool,
                                  ArrayRef<ValueList> Operands) const;
 
-  /// \returns true if both input operands of the binary-operator node \p TE
-  /// can be produced, more cheaply than by the natural operand nodes, by a
-  /// single shared operand node holding the union of the unique operand
-  /// values of both input columns. On success, builds the shared operand node
-  /// as operand 0 of \p TE and marks \p TE as a merged-inputs node. On
-  /// failure nothing has been built yet, so the caller just falls through to
-  /// the natural two-operand shape.
+  /// Tries to replace the two operand nodes of the binary-operator node \p TE
+  /// by one shared node holding the union of both input columns. On success
+  /// builds it as operand 0 of \p TE and marks \p TE merged; on failure
+  /// nothing is built and the caller falls through to the natural shape.
   bool tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
                                ArrayRef<Value *> VL,
                                ArrayRef<ValueList> Operands, unsigned Depth);
+
+  /// \returns the mask selecting input column \p Idx of the merged-inputs
+  /// node \p E out of its shared operand vector.
+  SmallVector<int> getMergedInputMask(const TreeEntry &E, unsigned Idx) const;
+
+  /// \returns the cost of the shuffles producing both input operands of the
+  /// merged-inputs node \p E from its shared operand vector.
+  InstructionCost
+  getMergedInputOperandsCost(const TreeEntry &E, Type *ScalarTy,
+                             TTI::TargetCostKind CostKind) const;
+
+  /// Emits both input vectors of the merged-inputs node \p E as shuffles of
+  /// its shared operand vector.
+  std::pair<Value *, Value *> vectorizeMergedInputOperands(TreeEntry *E);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a
@@ -2885,12 +2896,10 @@ private:
     /// True if the node does not require scheduling.
     bool DoesNotNeedToSchedule = false;
 
-    /// Per-lane values of the two original input columns of a binary-operator
-    /// node whose inputs were merged. Operand 0 of such a node is the single
-    /// shared node holding the union of both columns; these columns record
-    /// which of its values feeds each lane of each input vector. Empty for
-    /// every other node, so it carries no inline storage.
-    SmallVector<ValueList, 0> MergedInputColumns;
+    /// Per-lane values of the two input columns of a binary-operator node
+    /// whose inputs were merged into the shared node at operand 0. Empty for
+    /// every other node.
+    SmallVector<ValueList> MergedInputColumns;
 
     /// Set this bundle's \p OpIdx'th operand to \p OpVL.
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
@@ -2918,18 +2927,15 @@ private:
     /// scheduling.
     bool doesNotNeedToSchedule() const { return DoesNotNeedToSchedule; }
 
-    /// Marks this binary-operator node as having both input operands produced
-    /// by the single shared operand node stored as operand 0. \p Columns are
-    /// the original per-lane values of the two input columns.
+    /// Marks this node as having both input operands produced by the shared
+    /// node at operand 0. \p Columns are the original input columns.
     void setMergedInputOperands(ArrayRef<ValueList> Columns) {
       assert(Columns.size() == 2 && "Expected two input columns.");
       MergedInputColumns.assign(Columns.begin(), Columns.end());
     }
-    /// True if both input operands are produced by a single shared operand
-    /// node, stored as operand 0.
+    /// True if both input operands come from the shared node at operand 0.
     bool hasMergedInputOperands() const { return !MergedInputColumns.empty(); }
-    /// \returns the per-lane values of input column \p Idx of a node whose
-    /// input operands were merged.
+    /// \returns the per-lane values of input column \p Idx.
     ArrayRef<Value *> getMergedInputColumn(unsigned Idx) const {
       assert(hasMergedInputOperands() && "Not a merged-inputs node.");
       return MergedInputColumns[Idx];
@@ -4948,9 +4954,8 @@ private:
               // available earlier through the pointer's select.
               bool IsBlended = Bundle->getTreeEntry()->State ==
                                TreeEntry::BlendedLoadVectorize;
-              // A merged-inputs node collapses both operand columns into a
-              // single shared operand node; the lane operands are the IR
-              // operands of the lane instruction.
+              // A merged-inputs node has one shared operand column, so the
+              // lane operands come from the lane instruction itself.
               bool IsMerged = Bundle->getTreeEntry()->hasMergedInputOperands();
               for (unsigned OpIdx : seq<unsigned>(
                        IsMerged ? In->getNumOperands()
@@ -12383,46 +12388,25 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
                          NumBroadcastOrConstCols, -NumUniqueValues);
 }
 
-/// \returns the cost of a single vector node of \p NumLanes lanes for the
-/// opcode of \p S, or an invalid cost if that node kind is not modelled here.
-static InstructionCost
-getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
-                         const InstructionsState &S, Type *ScalarTy,
-                         unsigned NumLanes, TTI::TargetCostKind CostKind) {
-  Instruction *MainOp = S.getMainOp();
-  const unsigned Opcode = S.getOpcode();
-  auto *VecTy = getWidenedType(ScalarTy, NumLanes);
-  if (auto *LI = dyn_cast<LoadInst>(MainOp))
-    return TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                               LI->getPointerAddressSpace(), CostKind);
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode))
-    return TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
-  if (Instruction::isCast(Opcode))
-    return TTI.getCastInstrCost(
-        Opcode, VecTy,
-        getWidenedType(MainOp->getOperand(0)->getType(), NumLanes),
-        TTI::CastContextHint::None, CostKind);
-  return InstructionCost::getInvalid();
-}
-
 bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
                                         ArrayRef<Value *> Pool,
                                         ArrayRef<ValueList> Operands) const {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   Type *ScalarTy = Pool.front()->getType();
-  if (!isValidElementType(ScalarTy, Opts.slp_revec))
+  // The costs below widen ScalarTy to a plain vector type, which rules out
+  // the aggregates that isValidElementType() otherwise accepts.
+  if (isa<StructType>(ScalarTy) ||
+      !isValidElementType(ScalarTy, Opts.slp_revec))
     return false;
   const unsigned NumLanes = Pool.size();
   auto *WideTy = cast<VectorType>(getWidenedType(ScalarTy, NumLanes));
 
-  // Both shapes compute the same values and feed the same two input vectors;
-  // they differ only in how the input columns are produced. The merged shape
-  // builds one node as wide as the user and permutes it twice, the natural
-  // shape builds one narrow node per column and widens each back to the user
-  // width. Costs below the operand nodes are ignored: the merged shape also
-  // widens those, so leaving them out only underestimates its benefit.
+  // Both shapes feed the same two input vectors and differ only in how the
+  // columns are produced: one user-wide node permuted twice, against one
+  // narrow node per column widened back. Costs below the operand nodes are
+  // ignored; both shapes pay them.
   InstructionCost MergedCost =
-      getMergeInputOpsNodeCost(*TTI, PoolS, ScalarTy, NumLanes, CostKind);
+      ::getMergeInputOpsNodeCost(*TTI, PoolS, Pool, ScalarTy, CostKind);
   if (!MergedCost.isValid())
     return false;
   InstructionCost NaturalCost = 0;
@@ -12442,8 +12426,8 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
     InstructionsState ColumnS = getSameOpcode(Unique, *TLI);
     if (!ColumnS)
       return false;
-    InstructionCost ColumnCost = getMergeInputOpsNodeCost(
-        *TTI, ColumnS, ScalarTy, Unique.size(), CostKind);
+    InstructionCost ColumnCost =
+        ::getMergeInputOpsNodeCost(*TTI, ColumnS, Unique, ScalarTy, CostKind);
     if (!ColumnCost.isValid())
       return false;
     NaturalCost += ColumnCost;
@@ -12462,6 +12446,31 @@ bool BoUpSLP::isMergeInputOpsProfitable(const InstructionsState &PoolS,
   return MergedCost < NaturalCost;
 }
 
+SmallVector<int> BoUpSLP::getMergedInputMask(const TreeEntry &E,
+                                             unsigned Idx) const {
+  const TreeEntry *PoolTE = getOperandEntry(&E, 0);
+  ArrayRef<Value *> Column = E.getMergedInputColumn(Idx);
+  return map_to_vector(seq<unsigned>(E.Scalars.size()), [&](unsigned Lane) {
+    return static_cast<int>(PoolTE->findLaneForValue(Column[Lane]));
+  });
+}
+
+InstructionCost
+BoUpSLP::getMergedInputOperandsCost(const TreeEntry &E, Type *ScalarTy,
+                                    TTI::TargetCostKind CostKind) const {
+  auto *PoolVecTy = cast<VectorType>(
+      getWidenedType(ScalarTy, getOperandEntry(&E, 0)->getVectorFactor()));
+  InstructionCost Cost = 0;
+  for (unsigned Idx : seq<unsigned>(2)) {
+    SmallVector<int> Mask = getMergedInputMask(E, Idx);
+    if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+      continue;
+    Cost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, PoolVecTy,
+                             CostKind, Mask);
+  }
+  return Cost;
+}
+
 bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
                                       ArrayRef<Value *> VL,
                                       ArrayRef<ValueList> Operands,
@@ -12470,29 +12479,24 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
       S.areInstructionsWithCopyableElements() || S.isAltShuffle())
     return false;
   // Only plain same-opcode binary operators: alternate and interchangeable
-  // lanes carry per-lane operand data that a single shared operand edge
-  // cannot express.
+  // lanes carry per-lane operand data a single shared edge cannot express.
   if (any_of(VL, [&](Value *V) {
         auto *I = dyn_cast<Instruction>(V);
         return !I || !isa<BinaryOperator>(I) || I->getOpcode() != S.getOpcode();
       }))
     return false;
   const unsigned NumLanes = VL.size();
-  // 2-lane nodes are better handled by the natural operand nodes: the
-  // shuffle overhead is not worth merging.
+  // Below 4 lanes the shuffle overhead outweighs the saved node.
   if (PowerOf2Ceil(NumLanes) < 4)
     return false;
-  // Merging pays off only when each input column leaves at least half of its
-  // lanes to repeated values. Such a column is built as a node narrower than
-  // the user plus a widening shuffle, and it is those narrow nodes that the
-  // single shared node replaces. A column with more distinct values is
-  // already (close to) full width and has nothing to fuse.
+  // Merging only pays off when a column repeats at least half of its lanes:
+  // such a column is a narrow node plus a widening shuffle, and those narrow
+  // nodes are what the shared node replaces. A column with more distinct
+  // values is already near full width and has nothing to fuse.
   const unsigned MaxDistinctPerColumn = NumLanes / 2;
-  // The shared operand node holds the union of the unique operand values of
-  // both input columns. Restrict to unions exactly as wide as the node
-  // itself: the shared operand column then has the same size and vector
-  // factor as any natural operand column, so the reorder machinery permutes
-  // it in sync with the shared operand node, just like for a natural node.
+  // Restrict the union to exactly the node width: the shared operand column
+  // is then the same size as a natural one, so the reorder machinery permutes
+  // it in sync with the shared node.
   SmallVector<Value *> Pool;
   SmallPtrSet<Value *, 16> Seen;
   for (ArrayRef<Value *> Column : Operands) {
@@ -12505,12 +12509,10 @@ bool BoUpSLP::tryToMergeInputOperands(TreeEntry *TE, const InstructionsState &S,
   }
   if (Pool.size() != NumLanes)
     return false;
-  // The pool must be vectorizable as a single node on its own. Pools with
-  // constants or copyable lanes are rejected here: constants fail the opcode
-  // check, and copyable lanes would need per-edge scheduling data that the
-  // single shared edge does not carry. Alternate pools are rejected too: the
-  // merged node would compute both halves of the alternate opcode over all
-  // lanes and throw away the ones it does not use.
+  // The pool must vectorize as a node on its own. Constants fail the opcode
+  // check; copyable lanes would need per-edge scheduling data the single
+  // shared edge does not carry; an alternate pool would compute both opcodes
+  // over all lanes and discard half.
   InstructionsState PoolS = getSameOpcode(Pool, *TLI);
   if (!PoolS || PoolS.isAltShuffle() ||
       PoolS.areInstructionsWithCopyableElements())
@@ -13280,12 +13282,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[0] = Ops.getVL(0);
         Operands[1] = Ops.getVL(1);
       }
-      // Merging consumes the canonicalized columns, so that it composes with
-      // the operand reordering above instead of disabling it. A flattened
-      // node always has more than the two columns merging needs, so this only
-      // ever fires on the natural shape; keep the two shapes exclusive
-      // explicitly, as a node carrying both would vectorize as a flattened
-      // one while its operands describe the merged shape.
+      // Merging consumes the canonicalized columns so that it composes with
+      // the reordering above instead of disabling it. A flattened node has
+      // more than the two columns merging needs, so keep the shapes
+      // exclusive: a node carrying both would vectorize as flattened while
+      // its operands describe the merged shape.
       if (ReassocScalars.empty() &&
           tryToMergeInputOperands(TE, S, VL, Operands, Depth))
         return;
@@ -18019,7 +18020,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       SmallVector<const Value *, 2> Operands;
       if (E->hasMergedInputOperands()) {
         // Operand 0 is the shared node, so the per-lane operands come from
-        // the recorded input columns instead.
+        // the recorded input columns.
         Op1 = E->getMergedInputColumn(0)[Lane];
         Op2 = E->getMergedInputColumn(1)[Lane];
         Operands.append({Op1, Op2});
@@ -18074,8 +18075,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info;
       TTI::OperandValueInfo Op2Info;
       if (E->hasMergedInputOperands()) {
-        // Operand 0 is the shared node, so the per-lane operand properties
-        // come from the recorded input columns instead.
+        // Operand 0 is the shared node, so the operand properties come from
+        // the recorded input columns.
         Op1Info = TTI::getOperandInfo(E->getMergedInputColumn(0));
         Op2Info = TTI::getOperandInfo(E->getMergedInputColumn(1));
       } else {
@@ -18103,27 +18104,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
         }
       }
-      if (E->hasMergedInputOperands()) {
-        // Both operand vectors are shuffles of the single shared operand
-        // vector.
-        const TreeEntry *PoolTE = getOperandEntry(E, 0);
-        auto *PoolVecTy = cast<VectorType>(
-            getWidenedType(ScalarTy, PoolTE->getVectorFactor()));
-        SmallVector<int> Mask0;
-        SmallVector<int> Mask1;
-        for (unsigned Lane : seq<unsigned>(E->Scalars.size())) {
-          Mask0.push_back(
-              PoolTE->findLaneForValue(E->getMergedInputColumn(0)[Lane]));
-          Mask1.push_back(
-              PoolTE->findLaneForValue(E->getMergedInputColumn(1)[Lane]));
-        }
-        for (ArrayRef<int> Mask : {Mask0, Mask1}) {
-          if (ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
-            continue;
-          Cost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, PoolVecTy,
-                                   CostKind, Mask);
-        }
-      }
+      if (E->hasMergedInputOperands())
+        Cost += getMergedInputOperandsCost(*E, ScalarTy, CostKind);
       return Cost + CommonCost;
     };
     return GetCostDiffWithPeeled(GetScalarCost, GetVectorCost);
@@ -24297,6 +24279,22 @@ static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   return llvm::propagateMetadata(Inst, Insts);
 }
 
+std::pair<Value *, Value *>
+BoUpSLP::vectorizeMergedInputOperands(TreeEntry *E) {
+  Value *Pool = vectorizeOperand(E, 0);
+  auto SelectLanes = [&](unsigned Idx) {
+    SmallVector<int> Mask = getMergedInputMask(*E, Idx);
+    if (cast<FixedVectorType>(Pool->getType())->getNumElements() ==
+            Mask.size() &&
+        ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+      return Pool;
+    return Builder.CreateShuffleVector(Pool, Mask);
+  };
+  Value *LHS = SelectLanes(0);
+  Value *RHS = SelectLanes(1);
+  return {LHS, RHS};
+}
+
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilderBase::InsertPointGuard Guard(Builder);
 
@@ -25472,28 +25470,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       if (E->hasMergedInputOperands()) {
-        // Both input operands are selected from the single shared operand
-        // vector by masks derived from the lane mapping of the shared
-        // operand node.
-        TreeEntry *PoolTE = getOperandEntry(E, 0);
-        Value *Pool = vectorizeOperand(E, 0);
-        SmallVector<int> Mask0;
-        SmallVector<int> Mask1;
-        for (unsigned Lane : seq<unsigned>(E->Scalars.size())) {
-          Mask0.push_back(
-              PoolTE->findLaneForValue(E->getMergedInputColumn(0)[Lane]));
-          Mask1.push_back(
-              PoolTE->findLaneForValue(E->getMergedInputColumn(1)[Lane]));
-        }
-        auto SelectLanes = [&](ArrayRef<int> Mask) {
-          if (cast<FixedVectorType>(Pool->getType())->getNumElements() ==
-                  Mask.size() &&
-              ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
-            return Pool;
-          return Builder.CreateShuffleVector(Pool, Mask);
-        };
-        Value *LHS = SelectLanes(Mask0);
-        Value *RHS = SelectLanes(Mask1);
+        auto [LHS, RHS] = vectorizeMergedInputOperands(E);
+        // Both inputs come out of operand 0, so they share its signedness.
         if (LHS->getType() != VecTy)
           LHS = Builder.CreateIntCast(LHS, VecTy, GetOperandSignedness(0));
         if (RHS->getType() != VecTy)
