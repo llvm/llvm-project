@@ -20,7 +20,6 @@ struct DirectXMCOptions;
 
 std::unique_ptr<MCObjectTargetWriter>
 createDXContainerTargetObjectWriter(const DirectXMCOptions &CLOpts);
-
 }
 
 #endif // LLVM_DIRECTX_DIRECTXCONTAINEROBJECTWRITER_H
