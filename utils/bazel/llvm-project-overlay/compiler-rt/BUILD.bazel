@@ -113,6 +113,26 @@ cc_library(
 )
 
 cc_library(
+    name = "FuzzerMain",
+    srcs = glob(
+        ["lib/fuzzer/Fuzzer*.cpp"],
+        exclude = ["lib/fuzzer/FuzzerInterceptors.cpp"],
+    ),
+    hdrs = glob(["lib/fuzzer/Fuzzer*.h"]),
+    copts = select({
+        "@rules_cc//cc/compiler:clang": [
+            # Not using no-sanitize=address per https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow#false-positives
+            "-fno-sanitize=memory,thread,undefined",
+            "-fsanitize-coverage=0",
+        ],
+        "//conditions:default": [],
+    }),
+    includes = ["lib/fuzzer"],
+    linkstatic = True,
+    textual_hdrs = glob(["lib/fuzzer/Fuzzer*.def"]),
+)
+
+cc_library(
     name = "orc_rt_common_headers",
     hdrs = [
         "lib/orc/adt.h",
