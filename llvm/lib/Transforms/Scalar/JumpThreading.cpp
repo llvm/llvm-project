@@ -3060,6 +3060,9 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
         setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
                                                     DEBUG_TYPE);
       }
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
+                                                  DEBUG_TYPE);
     }
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.

@@ -1286,9 +1286,6 @@ bool TargetPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(createRegAllocPass(false));
 
-  // Allow targets to change the register assignments after
-  // fast register allocation.
-  addPostFastRegAllocRewrite();
   return true;
 }
 
@@ -1334,18 +1331,10 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   addPass(&ProcessImplicitDefsID);
 
-  // LiveVariables currently requires pure SSA form.
-  //
-  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-  // LiveVariables can be removed completely, and LiveIntervals can be directly
-  // computed. (We still either need to regenerate kill flags after regalloc, or
-  // preferably fix the scavenger to not depend on them).
-  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
-  // When LiveVariables is removed this has to be removed/moved either.
+  // LiveIntervals requires pure SSA form and no unreachable blocks.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
   addPass(&UnreachableMachineBlockElimID);
-  addPass(&LiveVariablesID);
 
   // Run SSA machine scheduler runs just before PHI elimination.
   if (EnableSSAMachineScheduler) {

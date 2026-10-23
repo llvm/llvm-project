@@ -89,13 +89,13 @@ private:
   void segregate(size_t begin, size_t end, uint32_t eqClassBase, bool constant);
 
   template <class RelTy>
+  bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
+                  const InputSection *b, Relocs<RelTy> relsB);
+
+  template <class RelTy>
   void hashRelocs(const InputSection &sec, uint64_t &h,
                   SmallVectorImpl<uint32_t> &edges, uint32_t eqClassBase,
                   Relocs<RelTy> rels);
-
-  template <class RelTy>
-  bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
-                  const InputSection *b, Relocs<RelTy> relsB);
 
   template <class RelTy>
   bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
@@ -249,39 +249,6 @@ static std::optional<uint64_t> getMergeOffset(const Defined &d,
   return ms.getOffset(addend);
 }
 
-// Hash what constantEq compares, plus the class of a non-candidate target,
-// which never changes. Candidate targets are recorded as edges instead.
-template <class ELFT>
-template <class RelTy>
-void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
-                           SmallVectorImpl<uint32_t> &edges,
-                           uint32_t eqClassBase, Relocs<RelTy> rels) {
-  for (RelTy rel : rels) {
-    h = mix(h, rel.r_offset);
-    h = mix(h, rel.getType(ctx.arg.isMips64EL));
-    uint64_t addend = getAddend<ELFT>(rel);
-    Symbol &sym = sec.file->getRelocTargetSym(rel);
-    Defined *d = getComparableDef(sym);
-    if (!d) {
-      h = mix(h, xxh3_64bits(sym.getName()));
-      h = mix(h, addend);
-      continue;
-    }
-    if (isa_and_nonnull<MergeInputSection>(d->section)) {
-      h = mix(h, getMergeOffset(*d, addend).value_or(-1));
-      continue;
-    }
-    h = mix(h, d->value + addend);
-    auto *is = dyn_cast_or_null<InputSection>(d->section);
-    if (!is)
-      continue;
-    if (is->eqClass[0] >= eqClassBase)
-      edges.push_back(is->eqClass[0] - eqClassBase);
-    else
-      h = mix(h, is->eqClass[0]);
-  }
-}
-
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
@@ -340,6 +307,40 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
   }
 
   return true;
+}
+
+// Hash what constantEq compares, plus the class of a non-candidate target,
+// which never changes. Candidate targets are recorded as edges instead.
+template <class ELFT>
+template <class RelTy>
+void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
+                           SmallVectorImpl<uint32_t> &edges,
+                           uint32_t eqClassBase, Relocs<RelTy> rels) {
+  for (const RelTy &rel : rels) {
+    h = mix(h, rel.r_offset);
+    h = mix(h, rel.getType(ctx.arg.isMips64EL));
+    uint64_t addend = getAddend<ELFT>(rel);
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
+    Defined *d = getComparableDef(sym);
+    if (!d) {
+      h = mix(h, xxh3_64bits(sym.getName()));
+      h = mix(h, addend);
+      continue;
+    }
+    if (isa_and_nonnull<MergeInputSection>(d->section)) {
+      h = mix(h, getMergeOffset(*d, addend).value_or(-1));
+      continue;
+    }
+    h = mix(h, d->value + addend);
+    auto *is = dyn_cast_or_null<InputSection>(d->section);
+    if (!is)
+      continue;
+    // A candidate's eqClass[0] - eqClassBase is its index in sections.
+    if (is->eqClass[0] >= eqClassBase)
+      edges.push_back(is->eqClass[0] - eqClassBase);
+    else
+      h = mix(h, is->eqClass[0]);
+  }
 }
 
 // Compare "non-moving" part of two InputSections, namely everything
@@ -510,14 +511,14 @@ template <class ELFT> void ICF<ELFT>::run() {
   parallelFor(0, numSections,
               [&](size_t i) { sections[i]->eqClass[0] = eqClassBase + i; });
 
-  // Hash sections in chunks. Each chunk appends its sections' edges to its own
-  // buffer; edgeEnd[i] is where section i's edges end.
+  // Hash sections in chunks. An edge is a relocation to a candidate, recorded
+  // as the target's index. Each chunk appends its sections' edges to its own
+  // buffer; edgeEnd[i] is where section i's edges end within that buffer.
   constexpr size_t chunkSize = 1024;
   size_t numChunks = divideCeil(numSections, chunkSize);
-  SmallVector<uint64_t, 0> hashes, nextHashes;
+  SmallVector<uint64_t, 0> hashes;
   SmallVector<uint32_t, 0> edgeEnd;
   hashes.resize_for_overwrite(numSections);
-  nextHashes.resize_for_overwrite(numSections);
   edgeEnd.resize_for_overwrite(numSections);
   SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numChunks);
   parallelFor(0, numChunks, [&](size_t c) {
@@ -533,8 +534,10 @@ template <class ELFT> void ICF<ELFT>::run() {
     }
   });
 
-  // Each round saves up to one segregate() pass. 7 is empirical: even Chromium
-  // then needs just two passes.
+  // Propagate hashes over edges for 7 rounds. Each round saves up to one
+  // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  SmallVector<uint64_t, 0> nextHashes;
+  nextHashes.resize_for_overwrite(numSections);
   for (int round = 7; round--;) {
     parallelFor(0, numChunks, [&](size_t c) {
       ArrayRef<uint32_t> edges = chunkEdges[c];
@@ -551,8 +554,8 @@ template <class ELFT> void ICF<ELFT>::run() {
     std::swap(hashes, nextHashes);
   }
 
-  // From now on, sections in Sections vector are ordered so that sections
-  // in the same equivalence class are consecutive in the vector.
+  // Order sections so that those in the same equivalence class are
+  // consecutive.
   SmallVector<uint64_t, 0> keys;
   keys.resize_for_overwrite(numSections);
   parallelFor(0, numSections, [&](size_t i) {

@@ -1087,6 +1087,24 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }
 
+TEST(TargetParserTest, ARMParseBranchProtectionDefaultKey) {
+  // AArch64 Windows and UEFI only support B key return address signing, so it
+  // is the default there; everywhere else the A key is.
+  for (const auto &[TripleName, ExpectedKey] :
+       {std::pair{"aarch64-unknown-linux-gnu", "a_key"},
+        std::pair{"aarch64-pc-windows-msvc", "b_key"},
+        std::pair{"aarch64-unknown-uefi", "b_key"}}) {
+    const Triple T(TripleName);
+    for (StringRef Spec : {"standard", "pac-ret", "pac-ret+leaf+bti"}) {
+      ARM::ParsedBranchProtection PBP;
+      StringRef Err;
+      EXPECT_TRUE(ARM::parseBranchProtection(Spec, PBP, Err, T))
+          << TripleName << " " << Spec;
+      EXPECT_EQ(PBP.Key, ExpectedKey) << TripleName << " " << Spec;
+    }
+  }
+}
+
 struct AArch64CPUTestParams
     : public ARMCPUTestParams<AArch64::ExtensionBitset> {
   AArch64CPUTestParams(StringRef CPUName, StringRef ExpectedArch)
@@ -1509,6 +1527,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
       AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
+      AArch64::AEK_SVE_LRCPC,
   };
 
   std::vector<StringRef> Features;
@@ -1635,6 +1654,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-lrcpc"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1818,6 +1838,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"hinte", "nohinte", "+hinte", "-hinte"},
       {"cflt", "nocflt", "+cflt", "-cflt"},
       {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
+      {"sve-lrcpc", "nosve-lrcpc", "+sve-lrcpc", "-sve-lrcpc"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2124,7 +2145,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"noaes", "sve-aes"}, {"aes", "sve-aes"}, {}},
         {AArch64::ARMV8A, {"sve-aes", "noaes"}, {}, {"aes", "sve-aes"}},
 
-        // sve2 -> {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes}
+        // sve2 ->
+        // {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes, sve-lrcpc}
         {AArch64::ARMV8A, {"nosve2", "sve2p1"}, {"sve2", "sve2p1"}, {}},
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
@@ -2149,6 +2171,9 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2-sm4", "nosve2"}, {}, {"sve2", "sve2-sm4"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-aes"}, {"sve2", "sve2-aes"}, {}},
         {AArch64::ARMV8A, {"sve2-aes", "nosve2"}, {}, {"sve2", "sve2-aes"}},
+
+        {AArch64::ARMV8A, {"nosve2", "sve-lrcpc"}, {"sve2", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "nosve2"}, {}, {"sve2", "sve-lrcpc"}},
 
         // sve-b16b16 -> {sme-b16b16}
         {AArch64::ARMV9_4A,
@@ -2286,6 +2311,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // rcpc -> rcpc3
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
+
+        // rcpc3 -> sve-lrcpc
+        {AArch64::ARMV8A, {"norcpc3", "sve-lrcpc"}, {"rcpc3", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "norcpc3"}, {}, {"rcpc3", "sve-lrcpc"}},
 
         // sve-aes -> {ssve-aes, sve2-aes}
         {AArch64::ARMV9_6A,
@@ -3653,10 +3682,9 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
   using namespace AMDGPU;
 
   // Existing SRAMECC targets retain their selectable modes, including generic
-  // targets and gfx12.5, where XNACK is hardwired on.
+  // targets.
   for (StringRef GPU :
-       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
-        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic"}) {
     SCOPED_TRACE(GPU);
     GPUKind Kind = parseArchAMDGCN(GPU);
     const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
@@ -3702,6 +3730,24 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
     EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
                   .getSramEccSetting(),
               TargetIDSetting::Unsupported);
+  }
+
+  // gfx12.5 hardwires SRAMECC on, so the modifier is rejected.
+  for (StringRef GPU :
+       {"gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_FALSE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(), TargetIDSetting::On);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "-sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::On);
   }
 }
 
