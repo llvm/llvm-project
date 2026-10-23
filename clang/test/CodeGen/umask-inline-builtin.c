@@ -15,6 +15,6 @@ int call_umask(int m) {
 // CHECK:    [[CALL:%.*]] = call preserve_mostcc i32 @umask.inline(i32 noundef [[TMP0:%.*]]) #[[ATTR3:[0-9]+]]
 //
 //
-// CHECK: Function Attrs: alwaysinline nounwind
-// CHECK-LABEL: define internal i32 @umask.inline(
-// CHECK-SAME: i32 [[M:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK: Function Attrs: alwaysinline nobuiltin nounwind
+// CHECK-LABEL: define internal preserve_mostcc i32 @umask.inline(
+// CHECK-SAME: i32 noundef [[M:%.*]]) #[[ATTR2:[0-9]+]] {
