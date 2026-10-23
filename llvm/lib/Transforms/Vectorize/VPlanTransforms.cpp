@@ -1382,6 +1382,12 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       A->getScalarType() == Def->getScalarType())
     return A;
 
+  // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
+  // scalar canonical IV.
+  VPWidenIntOrFpInductionRecipe *WidenIV;
+  if (match(Def, m_ExtractLane(m_ZeroInt(), m_CanonicalWidenIV(WidenIV))))
+    return WidenIV->getRegion()->getCanonicalIV();
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan.isUnrolled())
@@ -1392,12 +1398,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       all_equal(drop_begin(Def->operands())) &&
       vputils::isSingleScalar(Def->getOperand(1)))
     return Def->getOperand(1);
-
-  // Replace extract-lane(0, canonical-WIDEN-INDUCTION) with the region's
-  // scalar canonical IV.
-  VPWidenIntOrFpInductionRecipe *WidenIV;
-  if (match(Def, m_ExtractLane(m_ZeroInt(), m_CanonicalWidenIV(WidenIV))))
-    return WidenIV->getRegion()->getCanonicalIV();
 
   // Simplify unrolled VectorPointer without offset, or with zero offset, to
   // just the pointer operand.
