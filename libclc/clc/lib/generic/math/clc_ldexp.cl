@@ -60,10 +60,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   uint val = sign | ((uint)exponent << 23) | mant;
   int ex1 = __clc_clamp(1 - exponent, 1, 25);
   uint full_mant = mant | 0x00800000;
-  val_ui = full_mant >> ex1;
-  uint guard = (full_mant >> (ex1 - 1)) & 1u;
-  uint sticky = (full_mant & ((1u << (ex1 - 1)) - 1u)) != 0u;
-  val_ui += guard & (sticky | (val_ui & 1u));
+  val_ui =
+      (full_mant + ((1u << (ex1 - 1)) - 1u) + ((full_mant >> ex1) & 1u)) >> ex1;
   val_ui = exponent > 0 ? val : val_ui;
   val_ui = exponent > 254 ? 0x7f800000 : val_ui; /*overflow*/
   val_ui = exponent < -multiplier ? 0 : val_ui;  /*underflow*/
