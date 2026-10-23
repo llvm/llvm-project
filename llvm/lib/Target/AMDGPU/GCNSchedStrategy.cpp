@@ -1991,8 +1991,16 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
 
+  bool UnifiedVGPRFile = ST.hasGFX90AInsts();
+  unsigned VectorCriticalLimit =
+      UnifiedVGPRFile ? S.UnifiedVGPRCriticalLimit : S.VGPRCriticalLimit;
+  // Fitting the combined occupancy budget does not rule out spilling in one
+  // bank. Keep the per-bank excess checks before taking this early exit.
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
-      PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
+      PressureAfter.getVGPRNum(UnifiedVGPRFile) <= VectorCriticalLimit &&
+      (!UnifiedVGPRFile ||
+       (PressureAfter.getArchVGPRNum() <= S.VGPRExcessLimit &&
+        PressureAfter.getAGPRNum() <= S.AGPRExcessLimit))) {
     DAG.Pressure[RegionIdx] = PressureAfter;
 
     // Early out if we have achieved the occupancy target.
