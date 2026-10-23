@@ -74,13 +74,6 @@ public:
     Index.Index = RawIndex;
     return Index;
   }
-  void addOffset(IndexType Offset) {
-    if (*this) {
-      assert(InIndex < std::numeric_limits<IndexType>::max() - Offset &&
-             "Hit maximum index limit!");
-      Index += Offset;
-    }
-  }
 
   friend inline hash_code hash_value(const FLIndex<IndexedType> &Idx) {
     return hash_value(Idx.asRaw());
