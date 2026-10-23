@@ -7,9 +7,10 @@
 define i32 @add_twice(i32 %n) {
 ; CHECK-LABEL: add_twice:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    addl %eax, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # freeze: $ecx
+; CHECK-NEXT:    leal (%rdi,%rcx), %eax
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retq
   %w = freeze i32 poison
   %a = add i32 %n, %w
@@ -21,8 +22,10 @@ define i32 @add_twice(i32 %n) {
 define i32 @ashr_mul(i32 %x) {
 ; CHECK-LABEL: ashr_mul:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # freeze: $ecx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    sarl $3, %eax
-; CHECK-NEXT:    imull %eax, %eax
+; CHECK-NEXT:    imull %ecx, %eax
 ; CHECK-NEXT:    retq
   %p = ashr i32 %x, 32
   %w = freeze i32 %p
@@ -35,14 +38,14 @@ define i32 @ashr_mul(i32 %x) {
 define i32 @cross_block(i1 %c, i32 %x) {
 ; CHECK-LABEL: cross_block:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %t
-; CHECK-NEXT:    addl %esi, %eax
-; CHECK-NEXT:    subl %eax, %eax
-; CHECK-NEXT:    retq
+; CHECK-NEXT:    # freeze: $ecx
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:  .LBB2_2: # %e
-; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
   %w = freeze i32 poison
@@ -59,9 +62,12 @@ e:
 define i32 @across_call() nounwind {
 ; CHECK-LABEL: across_call:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    # freeze: $ebx
+; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %w = freeze i32 poison
   call void @use(i32 %w)
@@ -72,9 +78,12 @@ define i32 @across_call() nounwind {
 define <4 x i32> @vec_across_call() nounwind {
 ; CHECK-LABEL: vec_across_call:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    # freeze: $xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq usev@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %w = freeze <4 x i32> poison
   call void @usev(<4 x i32> %w)

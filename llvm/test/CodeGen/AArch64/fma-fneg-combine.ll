@@ -15,7 +15,8 @@ define float @positive_case_fma(float %a0, float %a1, float %a2) {
 define float @negative_case_fma(float %a0, float %a1) {
 ; CHECK-LABEL: negative_case_fma:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fnmadd s0, s0, s1, s0
+; CHECK-NEXT:    // freeze: $s2
+; CHECK-NEXT:    fnmadd s0, s0, s1, s2
 ; CHECK-NEXT:    ret
   %fma = call float @llvm.fma.f32(float %a0, float %a1, float poison)
   %freeze = freeze float %fma
@@ -37,7 +38,8 @@ define float @positive_case_fmad(float %a0, float %a1, float %a2) {
 define float @negative_case_fmad(float %a0, float %a1) {
 ; CHECK-LABEL: negative_case_fmad:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fnmadd s0, s0, s1, s0
+; CHECK-NEXT:    // freeze: $s2
+; CHECK-NEXT:    fnmadd s0, s0, s1, s2
 ; CHECK-NEXT:    ret
   %fmad = call float @llvm.fmuladd.f32(float %a0, float %a1, float poison)
   %freeze = freeze float %fmad

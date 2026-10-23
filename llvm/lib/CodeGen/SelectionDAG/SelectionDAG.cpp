@@ -1051,19 +1051,34 @@ bool SDNodeKeyInfo::isEqual(const SDNodeKey &Key, const SDNode &N) {
 //                              SelectionDAG Class
 //===----------------------------------------------------------------------===//
 
+/// Return true if \p Opc is a freeze, before or after instruction selection.
+static bool isFreeze(unsigned Opc) {
+  return Opc == ISD::FREEZE || Opc == ~(unsigned)TargetOpcode::FREEZE;
+}
+
+/// Return true if \p Opc with operand \p Op is a freeze of undef.
+static bool isFreezeOfUndef(unsigned Opc, SDValue Op) {
+  if (!isFreeze(Opc))
+    return false;
+  return Op.isUndef() || (Op.isMachineOpcode() &&
+                          Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF);
+}
+
 /// doNotCSE - Return true if CSE should not be performed for this node.
 static bool doNotCSE(SDNode *N) {
   if (N->getValueType(0) == MVT::Glue)
     return true; // Never CSE anything that produces a glue result.
+
+  // Each freeze of undef may have its own value.
+  if (N->getNumOperands() == 1 &&
+      isFreezeOfUndef(N->getOpcode(), N->getOperand(0)))
+    return true;
 
   switch (N->getOpcode()) {
   default: break;
   case ISD::HANDLENODE:
   case ISD::EH_LABEL:
     return true;   // Never CSE these nodes.
-  case ISD::FREEZE:
-    // Each freeze of undef may have its own value.
-    return N->getOperand(0).isUndef();
   }
 
   // Check that remaining values produced are not flags.
@@ -1386,7 +1401,8 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
 SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op,
                                            FoldingSetInsertToken &InsertToken) {
   // Whether a freeze is CSE'd depends on its operand, so check the new one.
-  if (N->getOpcode() == ISD::FREEZE ? Op.isUndef() : doNotCSE(N))
+  if (isFreeze(N->getOpcode()) ? isFreezeOfUndef(N->getOpcode(), Op)
+                               : doNotCSE(N))
     return nullptr;
 
   SDValue Ops[] = { Op };
@@ -1423,7 +1439,8 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
 SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
                                            FoldingSetInsertToken &InsertToken) {
   // Whether a freeze is CSE'd depends on its operand, so check the new one.
-  if (N->getOpcode() == ISD::FREEZE ? Ops[0].isUndef() : doNotCSE(N))
+  if (isFreeze(N->getOpcode()) ? isFreezeOfUndef(N->getOpcode(), Ops[0])
+                               : doNotCSE(N))
     return nullptr;
 
   SDNodeKey ID(N->getOpcode(), N->getVTList(), Ops);
@@ -7639,7 +7656,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
   // Don't CSE glue producing nodes or freezes of undef.
-  if (VT != MVT::Glue && !(Opcode == ISD::FREEZE && N1.isUndef())) {
+  if (VT != MVT::Glue && !isFreezeOfUndef(Opcode, N1)) {
     SDNodeKey ID(Opcode, VTs, Ops);
     FoldingSetInsertToken InsertToken;
     if (SDNode *E = lookupNode(ID, DL, InsertToken)) {
@@ -12789,7 +12806,8 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
                                   SDVTList VTs, ArrayRef<SDValue> Ops) {
   // If an identical node already exists, use it.
   FoldingSetInsertToken InsertToken;
-  if (VTs.VTs[VTs.NumVTs-1] != MVT::Glue) {
+  if (VTs.VTs[VTs.NumVTs - 1] != MVT::Glue &&
+      !(Ops.size() == 1 && isFreezeOfUndef(Opc, Ops[0]))) {
     SDNodeKey ID(Opc, VTs, Ops);
     AddNodeIDCustom(ID.Tail, N, Opc);
     if (SDNode *ON = lookupNode(ID, SDLoc(N), InsertToken))
@@ -12977,7 +12995,8 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &dl,
 MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
                                             SDVTList VTs,
                                             ArrayRef<SDValue> Ops) {
-  bool DoCSE = VTs.VTs[VTs.NumVTs-1] != MVT::Glue;
+  bool DoCSE = VTs.VTs[VTs.NumVTs - 1] != MVT::Glue &&
+               !(Ops.size() == 1 && isFreezeOfUndef(~Opcode, Ops[0]));
   MachineSDNode *N;
   FoldingSetInsertToken InsertToken;
 

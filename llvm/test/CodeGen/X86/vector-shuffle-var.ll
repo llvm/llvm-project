@@ -618,8 +618,8 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE41-NEXT:    subq $136, %rsp
 ; SSE41-NEXT:    pextrw $7, %xmm2, %eax
 ; SSE41-NEXT:    pextrw $6, %xmm2, %ecx
-; SSE41-NEXT:    pextrw $4, %xmm2, %esi
-; SSE41-NEXT:    pextrw $5, %xmm2, %edx
+; SSE41-NEXT:    pextrw $4, %xmm2, %edx
+; SSE41-NEXT:    pextrw $5, %xmm2, %esi
 ; SSE41-NEXT:    pextrw $3, %xmm2, %edi
 ; SSE41-NEXT:    pextrw $2, %xmm2, %r8d
 ; SSE41-NEXT:    movd %xmm2, %r9d
@@ -648,10 +648,10 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE41-NEXT:    pinsrd $2, -64(%rsp,%r8,4), %xmm0
 ; SSE41-NEXT:    andl $3, %edi
 ; SSE41-NEXT:    pinsrd $3, 96(%rsp,%rdi,4), %xmm0
-; SSE41-NEXT:    andl $3, %edx
 ; SSE41-NEXT:    andl $3, %esi
+; SSE41-NEXT:    andl $3, %edx
 ; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-NEXT:    pinsrd $1, (%rsp,%rdx,4), %xmm1
+; SSE41-NEXT:    pinsrd $1, (%rsp,%rsi,4), %xmm1
 ; SSE41-NEXT:    andl $3, %ecx
 ; SSE41-NEXT:    pinsrd $2, 32(%rsp,%rcx,4), %xmm1
 ; SSE41-NEXT:    andl $3, %eax

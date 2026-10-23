@@ -357,10 +357,10 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    umov.h w9, v1[0]
 ; CHECK-NEXT:    umov.h w10, v1[1]
 ; CHECK-NEXT:    umov.h w11, v1[2]
-; CHECK-NEXT:    bfi x8, x9, #1, #1
 ; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    add x9, x9, x10
+; CHECK-NEXT:    and x12, x9, #0x1
+; CHECK-NEXT:    bfi x8, x9, #1, #1
+; CHECK-NEXT:    add x9, x12, x10
 ; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    and x11, x11, #0x1
 ; CHECK-NEXT:    bfi x10, x9, #1, #2
@@ -390,10 +390,10 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
 ; CHECK-NEXT:    umov.h w9, v1[0]
 ; CHECK-NEXT:    umov.h w10, v1[1]
 ; CHECK-NEXT:    umov.h w11, v1[2]
-; CHECK-NEXT:    bfi x8, x9, #1, #1
 ; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    add x9, x9, x10
+; CHECK-NEXT:    and x12, x9, #0x1
+; CHECK-NEXT:    bfi x8, x9, #1, #1
+; CHECK-NEXT:    add x9, x12, x10
 ; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    and x11, x11, #0x1
 ; CHECK-NEXT:    bfi x10, x9, #1, #2

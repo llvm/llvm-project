@@ -7,13 +7,14 @@
 define i32 @partial_vector(i32 %x) {
 ; CHECK-LABEL: partial_vector:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # freeze: $x10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    add a0, a0, a0
+; CHECK-NEXT:    subw a0, a1, a0
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x i32> poison, i32 %x, i32 0
   %w = freeze <4 x i32> %v
@@ -29,11 +30,20 @@ define i32 @partial_vector(i32 %x) {
 define <4 x i32> @vec_across_call() nounwind {
 ; CHECK-LABEL: vec_across_call:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    # freeze: $v8
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    call usev
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
   %w = freeze <4 x i32> poison
   call void @usev(<4 x i32> %w)
