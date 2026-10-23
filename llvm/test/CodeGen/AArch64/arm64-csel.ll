@@ -585,8 +585,8 @@ define i32 @selor32(i32 %num, i32 %x) {
 ; CHECK-GI-LABEL: selor32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xff00
-; CHECK-GI-NEXT:    cmp w1, #0
 ; CHECK-GI-NEXT:    orr w9, w8, #0x1
+; CHECK-GI-NEXT:    cmp w1, #0
 ; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -601,8 +601,8 @@ define i32 @selor32_2(i32 %num, i32 %x) {
 ; CHECK-LABEL: selor32_2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xff00
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    orr w9, w8, #0x2
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, w9, w8, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -624,8 +624,8 @@ define i64 @selor64(i64 %num, i64 %x) {
 ; CHECK-GI-LABEL: selor64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and x8, x0, #0xff00
-; CHECK-GI-NEXT:    cmp x1, #0
 ; CHECK-GI-NEXT:    orr x9, x8, #0x1
+; CHECK-GI-NEXT:    cmp x1, #0
 ; CHECK-GI-NEXT:    csel x0, x9, x8, ne
 ; CHECK-GI-NEXT:    ret
 entry:

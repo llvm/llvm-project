@@ -68,13 +68,13 @@ define i4 @func3(i4 %x, i4 %y) {
 ;
 ; CHECK-GI-LABEL: func3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0xf
-; CHECK-GI-NEXT:    and w10, w1, #0xf
-; CHECK-GI-NEXT:    mov w8, #15 // =0xf
-; CHECK-GI-NEXT:    mul w9, w9, w10
-; CHECK-GI-NEXT:    lsr w9, w9, #2
-; CHECK-GI-NEXT:    cmp w9, #15
-; CHECK-GI-NEXT:    csel w0, w9, w8, lo
+; CHECK-GI-NEXT:    and w8, w0, #0xf
+; CHECK-GI-NEXT:    and w9, w1, #0xf
+; CHECK-GI-NEXT:    mul w8, w8, w9
+; CHECK-GI-NEXT:    mov w9, #15 // =0xf
+; CHECK-GI-NEXT:    lsr w8, w8, #2
+; CHECK-GI-NEXT:    cmp w8, #15
+; CHECK-GI-NEXT:    csel w0, w8, w9, lo
 ; CHECK-GI-NEXT:    ret
   %tmp = call i4 @llvm.umul.fix.sat.i4(i4 %x, i4 %y, i32 2)
   ret i4 %tmp
@@ -138,12 +138,12 @@ define i4 @func6(i4 %x, i4 %y) {
 ;
 ; CHECK-GI-LABEL: func6:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0xf
-; CHECK-GI-NEXT:    and w10, w1, #0xf
-; CHECK-GI-NEXT:    mov w8, #15 // =0xf
-; CHECK-GI-NEXT:    mul w9, w9, w10
-; CHECK-GI-NEXT:    cmp w9, #15
-; CHECK-GI-NEXT:    csel w0, w9, w8, lo
+; CHECK-GI-NEXT:    and w8, w0, #0xf
+; CHECK-GI-NEXT:    and w9, w1, #0xf
+; CHECK-GI-NEXT:    mul w8, w8, w9
+; CHECK-GI-NEXT:    mov w9, #15 // =0xf
+; CHECK-GI-NEXT:    cmp w8, #15
+; CHECK-GI-NEXT:    csel w0, w8, w9, lo
 ; CHECK-GI-NEXT:    ret
   %tmp = call i4 @llvm.umul.fix.sat.i4(i4 %x, i4 %y, i32 0)
   ret i4 %tmp

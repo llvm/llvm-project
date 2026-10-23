@@ -638,10 +638,10 @@ define i32 @test_eq0_multi_use_cmp_i32(i32 %x0, i32 %x1) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    sub w8, w8, #1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w19, wzr, w8, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    bl use_i1
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
@@ -670,8 +670,8 @@ define i32 @test_eq0_multi_use_add_i32(i32 %x0, i32 %x1) {
 ; CHECK-NEXT:    bl use_i32
 ; CHECK-NEXT:    sub w8, w20, #1
 ; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x1, 0
@@ -687,8 +687,8 @@ define i32 @test_eq1_sub_add_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_eq1_sub_add_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #1
 ; CHECK-NEXT:    sub w8, w8, #2
+; CHECK-NEXT:    cmp w1, #1
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x1, 1
@@ -704,8 +704,8 @@ define i32 @test_ugtsmax_sub_add_i32(i32 %x0, i32 %x1) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    add w9, w0, w1
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, wzr, w8, mi
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x1, 2147483647
@@ -720,8 +720,8 @@ define i32 @test_eq_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_eq_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    sub w8, w8, #2
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x1, 0
@@ -736,8 +736,8 @@ define i32 @test_ne_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_ne_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    sub w8, w8, #2
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, w8, wzr, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i32 %x1, 0
@@ -752,8 +752,8 @@ define i32 @test_ult7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_ult7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    sub w8, w8, #8
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x1, 7
@@ -768,8 +768,8 @@ define i32 @test_ule7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_ule7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #8
 ; CHECK-NEXT:    sub w8, w8, #6
+; CHECK-NEXT:    cmp w1, #8
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i32 %x1, 7
@@ -784,8 +784,8 @@ define i32 @test_ugt7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_ugt7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    sub w8, w8, #6
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csel w0, wzr, w8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x1, 7
@@ -800,8 +800,8 @@ define i32 @test_uge7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_uge7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #6
 ; CHECK-NEXT:    sub w8, w8, #8
+; CHECK-NEXT:    cmp w1, #6
 ; CHECK-NEXT:    csel w0, wzr, w8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i32 %x1, 7
@@ -816,8 +816,8 @@ define i32 @test_slt7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_slt7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    sub w8, w8, #8
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csel w0, wzr, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %x1, 7
@@ -832,8 +832,8 @@ define i32 @test_sle7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_sle7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #8
 ; CHECK-NEXT:    sub w8, w8, #6
+; CHECK-NEXT:    cmp w1, #8
 ; CHECK-NEXT:    csel w0, wzr, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i32 %x1, 7
@@ -848,8 +848,8 @@ define i32 @test_sgt7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_sgt7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    sub w8, w8, #6
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csel w0, wzr, w8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %x1, 7
@@ -864,8 +864,8 @@ define i32 @test_sge7_const_mismatch_i32(i32 %x0, i32 %x1) {
 ; CHECK-LABEL: test_sge7_const_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, #6
 ; CHECK-NEXT:    sub w8, w8, #8
+; CHECK-NEXT:    cmp w1, #6
 ; CHECK-NEXT:    csel w0, wzr, w8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %x1, 7
@@ -880,8 +880,8 @@ define i32 @test_unrelated_add_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_unrelated_add_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w2
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    sub w8, w8, #1
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x1, 0
@@ -911,11 +911,11 @@ define i16 @test_eq0_sub_add_i16(i16 %x0, i16 %x1) {
 define i8 @test_eq_nonconst_sub_add_i8(i8 %x0, i8 %x1, i8 %x2) {
 ; CHECK-LABEL: test_eq_nonconst_sub_add_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    add w9, w0, w1
-; CHECK-NEXT:    sub w9, w9, w2
-; CHECK-NEXT:    cmp w8, w2, uxtb
-; CHECK-NEXT:    csel w0, wzr, w9, eq
+; CHECK-NEXT:    add w8, w0, w1
+; CHECK-NEXT:    and w9, w1, #0xff
+; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    cmp w9, w2, uxtb
+; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i8 %x1, %x2
   %add = add nuw i8 %x0, %x1
@@ -1089,8 +1089,8 @@ define i32 @test_ult_nonconst_op_mismatch_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ult_nonconst_op_mismatch_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
 ; CHECK-NEXT:    add w8, w8, w2
+; CHECK-NEXT:    cmp w1, w2
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x1, %x2
@@ -1105,8 +1105,8 @@ define i32 @test_ult_nonconst_unrelated_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) 
 ; CHECK-LABEL: test_ult_nonconst_unrelated_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
 ; CHECK-NEXT:    sub w8, w8, w3
+; CHECK-NEXT:    cmp w1, w2
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x1, %x2
@@ -1121,8 +1121,8 @@ define i32 @test_ult_nonconst_unrelated_2_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3
 ; CHECK-LABEL: test_ult_nonconst_unrelated_2_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
 ; CHECK-NEXT:    sub w8, w8, w3
+; CHECK-NEXT:    cmp w2, w1
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x2, %x1

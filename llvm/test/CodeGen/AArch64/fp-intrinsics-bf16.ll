@@ -324,13 +324,13 @@ define bfloat @sitofp_bf16_i64(i64 %x) #0 {
 ; CHECK-NOBF16-LABEL: sitofp_bf16_i64:
 ; CHECK-NOBF16:       // %bb.0:
 ; CHECK-NOBF16-NEXT:    cmp x0, #0
-; CHECK-NOBF16-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NOBF16-NEXT:    cneg x9, x0, mi
 ; CHECK-NOBF16-NEXT:    lsr x10, x9, #53
+; CHECK-NOBF16-NEXT:    and x11, x9, #0xfffffffffffff000
 ; CHECK-NOBF16-NEXT:    cmp x10, #0
-; CHECK-NOBF16-NEXT:    and x10, x9, #0xfffffffffffff000
-; CHECK-NOBF16-NEXT:    csel x10, x10, x9, ne
+; CHECK-NOBF16-NEXT:    csel x10, x11, x9, ne
+; CHECK-NOBF16-NEXT:    and x11, x0, #0x8000000000000000
 ; CHECK-NOBF16-NEXT:    scvtf d0, x10
 ; CHECK-NOBF16-NEXT:    cset w10, ne
 ; CHECK-NOBF16-NEXT:    tst x9, #0xfff
@@ -358,8 +358,8 @@ define bfloat @sitofp_bf16_i64(i64 %x) #0 {
 ; CHECK-BF16-NEXT:    cmp x9, #0
 ; CHECK-BF16-NEXT:    csel x9, x10, x8, ne
 ; CHECK-BF16-NEXT:    and x10, x0, #0x8000000000000000
-; CHECK-BF16-NEXT:    cset w11, ne
 ; CHECK-BF16-NEXT:    scvtf d0, x9
+; CHECK-BF16-NEXT:    cset w11, ne
 ; CHECK-BF16-NEXT:    tst x8, #0xfff
 ; CHECK-BF16-NEXT:    fmov x9, d0
 ; CHECK-BF16-NEXT:    orr x8, x9, x10
@@ -377,10 +377,10 @@ define bfloat @uitofp_bf16_i64(i64 %x) #0 {
 ; CHECK-NOBF16-LABEL: uitofp_bf16_i64:
 ; CHECK-NOBF16:       // %bb.0:
 ; CHECK-NOBF16-NEXT:    lsr x9, x0, #53
+; CHECK-NOBF16-NEXT:    and x10, x0, #0xfffffffffffff000
 ; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NOBF16-NEXT:    cmp x9, #0
-; CHECK-NOBF16-NEXT:    and x9, x0, #0xfffffffffffff000
-; CHECK-NOBF16-NEXT:    csel x9, x9, x0, ne
+; CHECK-NOBF16-NEXT:    csel x9, x10, x0, ne
 ; CHECK-NOBF16-NEXT:    ucvtf d0, x9
 ; CHECK-NOBF16-NEXT:    cset w9, ne
 ; CHECK-NOBF16-NEXT:    tst x0, #0xfff

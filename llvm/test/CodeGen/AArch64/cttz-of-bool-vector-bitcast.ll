@@ -589,11 +589,11 @@ define i32 @cttz_v32i8(<32 x i8> %v) {
 ; CHECK-LE-NEXT:    mov x8, v0.d[1]
 ; CHECK-LE-NEXT:    fmov x9, d0
 ; CHECK-LE-NEXT:    rbit x10, x9
-; CHECK-LE-NEXT:    cmp x9, #0
 ; CHECK-LE-NEXT:    rbit x8, x8
 ; CHECK-LE-NEXT:    clz x10, x10
 ; CHECK-LE-NEXT:    clz x8, x8
 ; CHECK-LE-NEXT:    add x8, x8, #64
+; CHECK-LE-NEXT:    cmp x9, #0
 ; CHECK-LE-NEXT:    csel x8, x10, x8, ne
 ; CHECK-LE-NEXT:    lsr x0, x8, #2
 ; CHECK-LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -613,9 +613,9 @@ define i32 @cttz_v32i8(<32 x i8> %v) {
 ; CHECK-BE-NEXT:    mov x8, v0.d[1]
 ; CHECK-BE-NEXT:    fmov x9, d0
 ; CHECK-BE-NEXT:    clz x10, x9
-; CHECK-BE-NEXT:    cmp x9, #0
 ; CHECK-BE-NEXT:    clz x8, x8
 ; CHECK-BE-NEXT:    add x8, x8, #64
+; CHECK-BE-NEXT:    cmp x9, #0
 ; CHECK-BE-NEXT:    csel x8, x10, x8, ne
 ; CHECK-BE-NEXT:    lsr x0, x8, #2
 ; CHECK-BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -640,11 +640,11 @@ define i32 @cttz_v32i16(<32 x i16> %v) {
 ; CHECK-LE-NEXT:    mov x8, v0.d[1]
 ; CHECK-LE-NEXT:    fmov x9, d0
 ; CHECK-LE-NEXT:    rbit x10, x9
-; CHECK-LE-NEXT:    cmp x9, #0
 ; CHECK-LE-NEXT:    rbit x8, x8
 ; CHECK-LE-NEXT:    clz x10, x10
 ; CHECK-LE-NEXT:    clz x8, x8
 ; CHECK-LE-NEXT:    add x8, x8, #64
+; CHECK-LE-NEXT:    cmp x9, #0
 ; CHECK-LE-NEXT:    csel x8, x10, x8, ne
 ; CHECK-LE-NEXT:    lsr x0, x8, #2
 ; CHECK-LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -672,9 +672,9 @@ define i32 @cttz_v32i16(<32 x i16> %v) {
 ; CHECK-BE-NEXT:    mov x8, v0.d[1]
 ; CHECK-BE-NEXT:    fmov x9, d0
 ; CHECK-BE-NEXT:    clz x10, x9
-; CHECK-BE-NEXT:    cmp x9, #0
 ; CHECK-BE-NEXT:    clz x8, x8
 ; CHECK-BE-NEXT:    add x8, x8, #64
+; CHECK-BE-NEXT:    cmp x9, #0
 ; CHECK-BE-NEXT:    csel x8, x10, x8, ne
 ; CHECK-BE-NEXT:    lsr x0, x8, #2
 ; CHECK-BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
