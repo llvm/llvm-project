@@ -1380,12 +1380,14 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
 
   const FunctionProtoType *fpt = d->getType()->castAs<FunctionProtoType>();
 
-  assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
+  EvaluationOrder order = e->isListInitialization()
+                              ? EvaluationOrder::ForceLeftToRight
+                              : EvaluationOrder::Default;
 
   if (auto inherited = d->getInheritedConstructor();
       !inherited || cgm.getTypes().inheritingCtorHasParams(inherited, type))
     emitCallArgs(args, fpt, e->arguments(), e->getConstructor(),
-                 /*ParamsToSkip=*/0);
+                 /*ParamsToSkip=*/0, order);
 
   assert(!cir::MissingFeatures::sanitizers());
   emitCXXConstructorCall(d, type, forVirtualBase, delegating, thisAddr, args,

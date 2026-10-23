@@ -1,9 +1,12 @@
 !RUN: rm -rf %t && mkdir -p %t
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=1 -J%t %s
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=2 -J%t %s
-!RUN: not %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=3 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-PRIVTYPE %s
-!RUN: not %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=4 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-LEAK %s
-!RUN: %flang_fc1 -fenumeration-type -fsyntax-only -DSTEP=5 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=1 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=2 -J%t %s
+!RUN: not %flang_fc1 -fsyntax-only -DSTEP=3 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-PRIVTYPE %s
+!RUN: not %flang_fc1 -fsyntax-only -DSTEP=4 -J%t %s 2>&1 | FileCheck --check-prefix=CHECK-LEAK %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=5 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=6 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=7 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=8 -J%t %s
 
 ! Enumerator accessibility must survive being written to a module file and read
 ! back: each using unit below is compiled in a SEPARATE invocation that reloads
@@ -78,5 +81,49 @@ end subroutine
 ! written to the module file, not the module-original name 'color'.
 subroutine use_renamed
   use m7d, only: v
+end subroutine
+#endif
+
+#if STEP == 6
+! Producer for the declaration forms of an enumeration type that reach a
+! module file: TYPE() dummies, TYPEOF() of an enumeration entity, and a
+! component with an enumerator default.
+module m8
+  enumeration type :: state
+    enumerator :: off, on
+  end enumeration type
+  type :: holder
+    type(state) :: s = on
+  end type
+contains
+  subroutine show(x)
+    type(state), intent(in) :: x
+  end subroutine
+  subroutine show_typeof(x, y)
+    type(state), intent(in) :: x
+    typeof(x), intent(in) :: y
+  end subroutine
+  subroutine show_poly(u)
+    class(*), intent(in) :: u
+    select type (u)
+    type is (state)
+    end select
+  end subroutine
+end module
+#endif
+
+#if STEP == 7
+subroutine use_enumerator_only
+  use m8, only: on
+end subroutine
+#endif
+
+#if STEP == 8
+subroutine use_all
+  use m8
+  type(holder) :: h
+  call show(on)
+  call show_typeof(off, h%s)
+  call show_poly(on)
 end subroutine
 #endif

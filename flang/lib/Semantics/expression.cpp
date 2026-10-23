@@ -1472,6 +1472,24 @@ std::vector<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscripts(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
+  // A scalar CHARACTER part with a triplet denotes a substring, even when
+  // its parent is array-valued. Substrings cannot specify a stride.
+  if (const Symbol *symbol{parser::GetLastName(ae.Base()).symbol}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    const auto *type{ultimate.GetType()};
+    if (ultimate.Rank() == 0 && type &&
+        type->category() == semantics::DeclTypeSpec::Character &&
+        !semantics::IsProcedure(ultimate) && ae.Subscripts().size() == 1) {
+      if (const auto *triplet{std::get_if<parser::SubscriptTriplet>(
+              &ae.Subscripts().front().u)}) {
+        if (const auto &stride{std::get<2>(triplet->t)}) {
+          Say(stride->thing.thing.value().source,
+              "A substring cannot have a stride"_err_en_US);
+          return std::nullopt;
+        }
+      }
+    }
+  }
   MaybeExpr baseExpr;
   {
     auto restorer{AllowWholeAssumedSizeArray()};
@@ -3003,7 +3021,7 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
-static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
+static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
   std::vector<int> perArg;
@@ -4646,6 +4664,15 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
   if (!name->symbol) {
     return false;
   } else if (name->symbol->Rank() == 0) {
+    // The OpenMP special variables in DECLARE REDUCTION combiners and
+    // initializers are data objects, so a parenthesized reference to one
+    // of them can only be an (invalid) array element reference.
+    if (name->symbol->test(Symbol::Flag::OmpInVar) ||
+        name->symbol->test(Symbol::Flag::OmpOutVar) ||
+        name->symbol->test(Symbol::Flag::OmpPrivVar) ||
+        name->symbol->test(Symbol::Flag::OmpOrigVar)) {
+      return true;
+    }
     if (const Symbol *function{
             semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)}) {
       auto &msg{context.Say(funcRef.source,

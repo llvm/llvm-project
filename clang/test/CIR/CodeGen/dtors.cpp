@@ -319,8 +319,8 @@ int test_temp_in_condition(G &obj) {
 }
 
 // CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
-// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_G>
@@ -358,11 +358,11 @@ int test_temp_in_condition(G &obj) {
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define {{.*}} i32 @_Z22test_temp_in_conditionR1G(ptr {{.*}} %[[ARG0:.*]])
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32
+// LLVM:   %[[OBJ:.*]] = alloca ptr
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.G
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.G
 // LLVM:   %[[TMP_RESULT:.*]] = alloca i8
-// LLVM:   %[[OBJ:.*]] = alloca ptr
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32
 // LLVM:   store ptr %[[ARG0]], ptr %[[OBJ]]
 // LLVM:   br label %[[SCOPE_BEGIN:.*]]
 // LLVM: [[SCOPE_BEGIN]]:

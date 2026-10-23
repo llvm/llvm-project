@@ -403,7 +403,10 @@ defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 // Vulkan/Shader support requires emitting explicit layout decorations on the
 // Message Type, which is not yet implemented.
 defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
-defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
+// SPV_KHR_poison_freeze is limited to OpenCL until a Vulkan extension enables
+// it. The SPIR-V Environment appendix of the Vulkan specification does not list
+// it, so VUID-VkShaderModuleCreateInfo-pCode-08741 forbids declaring it.
+defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
@@ -500,6 +503,7 @@ defm GroupNonUniformShuffle : CapabilityOperand<65, 0x10300, 0, [], [GroupNonUni
 defm GroupNonUniformShuffleRelative : CapabilityOperand<66, 0x10300, 0, [], [GroupNonUniform]>;
 defm GroupNonUniformClustered : CapabilityOperand<67, 0x10300, 0, [], [GroupNonUniform]>;
 defm GroupNonUniformQuad : CapabilityOperand<68, 0x10300, 0, [], [GroupNonUniform]>;
+defm FragmentShadingRateKHR : CapabilityOperand<4422, 0, 0, [SPV_KHR_fragment_shading_rate], [Shader]>;
 defm SubgroupBallotKHR : CapabilityOperand<4423, 0, 0, [SPV_KHR_shader_ballot], []>;
 defm DrawParameters : CapabilityOperand<4427, 0x10300, 0, [SPV_KHR_shader_draw_parameters], [Shader]>;
 defm SubgroupVoteKHR : CapabilityOperand<4431, 0, 0, [SPV_KHR_subgroup_vote], []>;
@@ -1518,6 +1522,8 @@ defm SubgroupLtMask : BuiltInOperand<4420, 0, 0, [], [SubgroupBallotKHR, GroupNo
 defm BaseVertex : BuiltInOperand<4424, 0, 0, [], [DrawParameters]>;
 defm BaseInstance : BuiltInOperand<4425, 0, 0, [], [DrawParameters]>;
 defm DrawIndex : BuiltInOperand<4426, 0, 0, [], [DrawParameters, MeshShadingNV]>;
+defm PrimitiveShadingRateKHR : BuiltInOperand<4432, 0, 0, [], [FragmentShadingRateKHR]>;
+defm ShadingRateKHR : BuiltInOperand<4444, 0, 0, [], [FragmentShadingRateKHR]>;
 defm DeviceIndex : BuiltInOperand<4438, 0, 0, [], [DeviceGroup]>;
 defm ViewIndex : BuiltInOperand<4440, 0, 0, [], [MultiView]>;
 defm BaryCoordNoPerspAMD : BuiltInOperand<4492, 0, 0, [], []>;

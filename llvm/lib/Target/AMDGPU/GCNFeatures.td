@@ -366,6 +366,11 @@ defm NSAClauseBug : AMDGPUSubtargetFeature<"nsa-clause-bug",
   /*GenPredicate=*/0
 >;
 
+defm MixedLoadStoreClauses : AMDGPUSubtargetFeature<"mixed-load-store-clauses",
+  "Loads, stores and atomics of the same memory class share one S_CLAUSE type",
+  /*GenPredicate=*/0
+>;
+
 defm FlatSegmentOffsetBug : AMDGPUSubtargetFeature<"flat-segment-offset-bug",
   "GFX10 bug where inst_offset is ignored when flat instructions access global memory",
   /*GenPredicate=*/0
@@ -1415,6 +1420,11 @@ defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts"
   GenPredicate=false
 >;
 
+defm CacheFillSize : AMDGPUSubtargetFeature<"cache-fill-size",
+  "Has a cache fill size field in VMEM instructions indicating how much data is fetched on a cache miss",
+  /*GenPredicate=*/0
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1907,6 +1917,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureExtendedImageInsts,
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
+   FeatureMixedLoadStoreClauses,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
@@ -1915,7 +1926,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2206,7 +2217,8 @@ def FeatureISAVersion10_Common : FeatureSet<
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
-    [FeatureLDSAllocGranularity512,
+    [FeatureMixedLoadStoreClauses,
+     FeatureLDSAllocGranularity512,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
@@ -2523,7 +2535,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureSRAMECCOnOffModes,
+   FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
    FeatureAsynccnt,
@@ -2580,7 +2592,6 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
@@ -2591,6 +2602,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2618,7 +2630,6 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureBlock16ConversionScaleInsts,
    FeatureFP8E5M3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
@@ -2628,6 +2639,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2660,7 +2672,6 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureBlock16ConversionScaleInsts,
    FeatureFP8E5M3Insts,
-   FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
    FeatureTransCoexecutionHazard,
@@ -2668,6 +2679,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2693,6 +2705,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
