@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements memory slot interface models for
-// `vector.transfer_read` and `vector.transfer_write`. These models implement
-// `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
-// and definitions of a vector SSA value. The models for `memref.subview`
-// live in the MemRef dialect.
+// This file implements memory slot interface models for `vector.load`,
+// `vector.store`, `vector.transfer_read`, and `vector.transfer_write`.
+// These models implement `PromotableMemOpInterface` so Mem2Reg can replace
+// vector accesses with uses and definitions of a vector SSA value. The
+// models for `memref.subview` live in the MemRef dialect.
 //
 // A read uses the slot's current value; a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
@@ -20,6 +20,9 @@
 // pad lanes outside the runtime extent, and writes preserve the previous value
 // of those lanes. `arith.select` implements this behavior and also handles
 // lanes disabled by a transfer's mask operand.
+//
+// Plain loads and stores require whole-slot accesses at zero indices. Dynamic
+// subviews are not supported for these operations.
 //
 // Transfers wrapped in `vector.mask` prevent promotion because that op does
 // not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
@@ -44,6 +47,41 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
+/// Checks that the sole blocking use is the slot's base, the vector type
+/// matches the slot value type, and all access indices are constant zero.
+/// The allocation or alias model determines the slot value type; matching it
+/// alone does not guarantee an in-bounds access through a dynamic subview.
+template <typename VectorAccessOpTy>
+static bool
+isWholeSlotAccessAtZero(VectorAccessOpTy op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
+      op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
+    return false;
+
+  for (Value index : op.getIndices()) {
+    std::optional<int64_t> constIndex = getConstantIntValue(index);
+    if (!constIndex || *constIndex != 0)
+      return false;
+  }
+  return true;
+}
+
+/// Load/store accesses must cover the slot from its origin with an exactly
+/// matching vector type. Dynamic subviews are not supported.
+template <typename LoadStoreOpTy>
+static bool
+isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
+                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (!isWholeSlotAccessAtZero(op, slot, blockingUses))
+    return false;
+
+  // A dynamic subview's slot holds the whole parent vector, which may be
+  // larger than the view. Matching that type does not prove a whole-view
+  // access, and plain loads/stores do not have transfer padding/mask semantics.
+  return !memref::isDynamicSubViewSlot(slot.ptr);
+}
+
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
 /// value. The transfer's memref base must be the slot pointer, its vector type
 /// must equal `slot.valueType`, its indices must be zero, and its permutation
@@ -55,27 +93,12 @@ using namespace mlir::vector;
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The transfer's memref base must be the slot pointer.
-  if (blockingUses.size() != 1)
-    return false;
-  Value blockingUse = (*blockingUses.begin())->get();
-  if (blockingUse != slot.ptr || xferOp.getBase() != slot.ptr)
+  if (!isWholeSlotAccessAtZero(xferOp, slot, blockingUses))
     return false;
 
   // Reject the tensor form (already implied, since slot pointers are memrefs).
   if (!isa<MemRefType>(xferOp.getBase().getType()))
     return false;
-
-  // Exact type match pins rank/extents/element type/scalable dims.
-  if (xferOp.getVectorType() != slot.valueType)
-    return false;
-
-  // Access must start at the buffer origin in every dimension.
-  for (Value index : xferOp.getIndices()) {
-    std::optional<int64_t> constIndex = getConstantIntValue(index);
-    if (!constIndex || *constIndex != 0)
-      return false;
-  }
 
   // Identity map: no broadcast or transpose.
   if (!xferOp.getPermutationMap().isIdentity())
@@ -93,6 +116,67 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 namespace {
+struct LoadOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<LoadOpMemOpModel,
+                                                     vector::LoadOp> {
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const {
+    return cast<vector::LoadOp>(op).getBase() == slot.ptr;
+  }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const { return false; }
+
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    llvm_unreachable("getStored should not be called on LoadOp");
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    return isPromotableLoadStore(cast<vector::LoadOp>(op), slot, blockingUses);
+  }
+
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    cast<vector::LoadOp>(op).getResult().replaceAllUsesWith(reachingDefinition);
+    return DeletionKind::Delete;
+  }
+};
+
+struct StoreOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<StoreOpMemOpModel,
+                                                     vector::StoreOp> {
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const { return false; }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const {
+    return cast<vector::StoreOp>(op).getBase() == slot.ptr;
+  }
+
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    return cast<vector::StoreOp>(op).getValueToStore();
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    return isPromotableLoadStore(cast<vector::StoreOp>(op), slot, blockingUses);
+  }
+
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    return DeletionKind::Delete;
+  }
+};
+
 /// `PromotableMemOpInterface` model for `vector.transfer_read`.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
@@ -197,6 +281,8 @@ struct TransferWriteOpMemOpModel
 
 void mlir::vector::registerMemorySlotExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    LoadOp::attachInterface<LoadOpMemOpModel>(*ctx);
+    StoreOp::attachInterface<StoreOpMemOpModel>(*ctx);
     TransferReadOp::attachInterface<TransferReadOpMemOpModel>(*ctx);
     TransferWriteOp::attachInterface<TransferWriteOpMemOpModel>(*ctx);
   });
