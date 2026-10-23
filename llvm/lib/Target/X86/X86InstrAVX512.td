@@ -5837,6 +5837,11 @@ defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, null_frag, HasDQI,
                                SchedWriteFLogicSizes, 1>;
 }
 
+defm : avx512_binary_lowering<"VADDPH", fadd, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VSUBPH", fsub, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VMULPH", fmul, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VDIVPH", fdiv, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {

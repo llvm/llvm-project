@@ -2441,6 +2441,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
 
+    // Without VLX, these are widened to 512-bit ops during isel.
+    for (auto VT : {MVT::v8f16, MVT::v16f16})
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+        setOperationAction(Opc, VT, Legal);
+
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
       setGroup(MVT::v16f16);
