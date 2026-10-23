@@ -913,10 +913,13 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
         CheckElemType = true;
       } else {
         FirstIndex += AccessIndex * calcArraySize(CTy, 0);
+        BaseTy = stripQualifiers(CTy->getBaseType());
       }
     }
 
-    if (CheckElemType) {
+    // A chain ending at a subarray already has its index in units of the
+    // innermost element. Use that element to find the relocation root.
+    if (CheckElemType || CallStack.empty()) {
       auto *CTy = dyn_cast<DICompositeType>(BaseTy);
       if (!CTy) {
         if (HasPreserveFieldInfoCall(CallStack))
