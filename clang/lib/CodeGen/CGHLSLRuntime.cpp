@@ -24,6 +24,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -1093,40 +1094,12 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
   return B.CreateTrunc(B.CreateCall(F, {B.getInt32(0)}), Ty);
 }
 
-static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn,
-                                      bool NeedsFlat = false) {
-  LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(*GV->getParent());
-  // Emit all decorations as a single spirv.Decorations node.
-  SmallVector<Metadata *, 2> Decorations;
-  Decorations.push_back(MDNode::get(
-      Ctx,
-      {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-       ConstantAsMetadata::get(B.getInt32(BuiltIn))}));
-  if (NeedsFlat)
-    Decorations.push_back(
-        MDNode::get(Ctx, {ConstantAsMetadata::get(
-                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
-  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
-}
-
-static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
-  LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(*GV->getParent());
-  MDNode *Operands =
-      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
-                        ConstantAsMetadata::get(B.getInt32(Location))});
-  MDNode *Decoration = MDNode::get(Ctx, {Operands});
-  GV->addMetadata("spirv.Decorations", *Decoration);
-}
-
 // A fragment shader input interface variable whose base type is an integer or
 // a 64-bit float (double) cannot be interpolated by the rasterizer. The Vulkan
 // specification requires these variables to be decorated with Flat (see
 // VUID-StandaloneSpirv-Flat-04744). Arrays and vectors are unwrapped to inspect
 // their base scalar type.
-static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
+static bool requiresFlatInterpolation(llvm::Type *Ty) {
   while (true) {
     if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
       Ty = AT->getElementType();
@@ -1141,52 +1114,89 @@ static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
   return Ty->isIntegerTy() || Ty->isDoubleTy();
 }
 
-static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
-                                           llvm::Type *Ty, const Twine &Name,
-                                           unsigned BuiltInID,
-                                           bool NeedsFlat = false) {
+static llvm::hlsl::InterpolationMode
+getSPIRVInterpolationMode(llvm::hlsl::InterpolationMode InterpMode,
+                          llvm::Type *Ty, llvm::Triple::EnvironmentType Stage,
+                          llvm::hlsl::IOType IO) {
+  using llvm::hlsl::InterpolationMode;
+  if (!((Stage == llvm::Triple::Pixel && IO == llvm::hlsl::IOType::In) ||
+        (Stage == llvm::Triple::Vertex && IO == llvm::hlsl::IOType::Out)))
+    return InterpolationMode::Undefined;
+  if (InterpMode == InterpolationMode::Undefined &&
+      requiresFlatInterpolation(Ty))
+    return InterpolationMode::Constant;
+  return InterpMode;
+}
+
+static void
+addSPIRVInterfaceDecorations(llvm::GlobalVariable *GV,
+                             llvm::hlsl::SPIRVInterfaceDecoration Decoration,
+                             unsigned Operand,
+                             llvm::hlsl::InterpolationMode InterpMode =
+                                 llvm::hlsl::InterpolationMode::Undefined) {
+  using llvm::hlsl::InterpolationMode;
+  using llvm::hlsl::SPIRVInterpolationMode;
+
+  LLVMContext &Ctx = GV->getContext();
+  IRBuilder<> B(*GV->getParent());
+  SmallVector<Metadata *, 3> Decorations;
+  Decorations.push_back(MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Decoration))),
+       ConstantAsMetadata::get(B.getInt32(Operand))}));
+  auto Add = [&](SPIRVInterpolationMode InterpolationDecoration) {
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(
+                             llvm::to_underlying(InterpolationDecoration)))}));
+  };
+  switch (InterpMode) {
+  case InterpolationMode::Undefined:
+  case InterpolationMode::Linear:
+    break;
+  case InterpolationMode::Constant:
+    Add(SPIRVInterpolationMode::Flat);
+    break;
+  case InterpolationMode::LinearNoperspective:
+    Add(SPIRVInterpolationMode::NoPerspective);
+    break;
+  case InterpolationMode::LinearNoperspectiveCentroid:
+    Add(SPIRVInterpolationMode::NoPerspective);
+    [[fallthrough]];
+  case InterpolationMode::LinearCentroid:
+    Add(SPIRVInterpolationMode::Centroid);
+    break;
+  case InterpolationMode::LinearNoperspectiveSample:
+    Add(SPIRVInterpolationMode::NoPerspective);
+    [[fallthrough]];
+  case InterpolationMode::LinearSample:
+    Add(SPIRVInterpolationMode::Sample);
+    break;
+  default:
+    llvm_unreachable("invalid interpolation mode");
+  }
+  // The backend consumes one decoration list per global, including both the
+  // Location or BuiltIn and any interpolation decorations.
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
+}
+
+static llvm::Value *createSPIRVInputLoad(
+    IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty, const Twine &Name,
+    llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
+    llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVBuiltinDecoration(GV, BuiltInID, NeedsFlat);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  return B.CreateLoad(Ty, GV);
-}
-
-static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
-                                            llvm::Type *Ty, unsigned Location,
-                                            StringRef Name, bool NeedsFlat) {
-  auto *GV = new llvm::GlobalVariable(
-      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
-      llvm::GlobalVariable::GeneralDynamicTLSModel,
-      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-
-  // Emit all decorations as a single `spirv.Decorations` node. Attaching
-  // multiple `spirv.Decorations` metadata nodes to the same global is not
-  // supported by the SPIR-V backend and results in all but one being dropped.
-  LLVMContext &Ctx = GV->getContext();
-  SmallVector<Metadata *, 2> Decorations;
-  Decorations.push_back(
-      MDNode::get(Ctx, {ConstantAsMetadata::get(
-                            B.getInt32(/* SPIRV::Decoration::Location */ 30)),
-                        ConstantAsMetadata::get(B.getInt32(Location))}));
-  if (NeedsFlat)
-    Decorations.push_back(
-        MDNode::get(Ctx, {ConstantAsMetadata::get(
-                             B.getInt32(/* SPIRV::Decoration::Flat */ 14))}));
-  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
-
+  addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   return B.CreateLoad(Ty, GV);
 }
 
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
-    llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
-    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index) {
+    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
+    llvm::hlsl::InterpolationMode InterpMode) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
@@ -1200,34 +1210,30 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
 
-  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-  bool NeedsFlat =
-      ShaderAttr &&
-      ShaderAttr->getType() == llvm::Triple::EnvironmentType::Pixel &&
-      inputRequiresFlatDecoration(Type);
-
-  return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
-                                 VariableName.str(), NeedsFlat);
+  return createSPIRVInputLoad(B, CGM.getModule(), Type, VariableName.str(),
+                              llvm::hlsl::SPIRVInterfaceDecoration::Location,
+                              Location, InterpMode);
 }
 
-static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
-                                     llvm::Value *Source, unsigned Location,
-                                     StringRef Name) {
+static void createSPIRVOutputStore(
+    IRBuilder<> &B, llvm::Module &M, llvm::Value *Source, const Twine &Name,
+    llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
+    llvm::hlsl::InterpolationMode InterpMode) {
   auto *GV = new llvm::GlobalVariable(
       M, Source->getType(), /* isConstant= */ false,
       llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  addLocationDecoration(GV, Location);
+  addSPIRVInterfaceDecorations(GV, Decoration, Operand, InterpMode);
   B.CreateStore(Source, GV);
 }
 
 void CGHLSLRuntime::emitSPIRVUserSemanticStore(
     llvm::IRBuilder<> &B, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index) {
+    std::optional<unsigned> Index, llvm::hlsl::InterpolationMode InterpMode) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
@@ -1240,16 +1246,29 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
   llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedOutputSemanticLocation += ElementCount;
-  createSPIRVLocationStore(B, CGM.getModule(), Source, Location,
-                           VariableName.str());
+  createSPIRVOutputStore(B, CGM.getModule(), Source, VariableName.str(),
+                         llvm::hlsl::SPIRVInterfaceDecoration::Location,
+                         Location, InterpMode);
 }
 
 namespace {
 // Describes how a semantic leaf lowers to signature rows
 struct SemanticShape {
-  SmallVector<unsigned> Dimensions; // Empty dims denotes a scalar
+  // Array length followed by matrix major-axis length.
+  SmallVector<unsigned> Dimensions;
   unsigned Cols;
   QualType RowType;
+  bool IsMatrix = false;
+  bool IsRowMajor = false;
+
+  // Direct matrix arguments/results use column-major flattened vectors even
+  // when their signature (and aggregate memory representation) is row-major.
+  unsigned getMatrixElementIndex(unsigned Row, unsigned Col) const {
+    assert(IsMatrix);
+    unsigned MatrixRow = Row % Dimensions.back();
+    return IsRowMajor ? Col * Dimensions.back() + MatrixRow
+                      : MatrixRow * Cols + Col;
+  }
 
   unsigned getNumRows() const {
     unsigned Rows = 1;
@@ -1280,8 +1299,8 @@ static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
   return Decl->getType();
 }
 
-// Walks through the surrounding constant array types of \p Ty, collecting their
-// dimensions until reaching a scalar, vector, or matrix leaf.
+// Collects array dimensions and, for a matrix leaf, its major-axis dimension.
+// RowType is the scalar or vector transferred by each signature load/store.
 static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
   SemanticShape Shape{{}, 1, Ty};
   while (const ConstantArrayType *CAT =
@@ -1294,10 +1313,12 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
     Shape.Cols = VT->getNumElements();
   } else if (const auto *MT =
                  Shape.RowType->getAs<clang::ConstantMatrixType>()) {
-    // FIXME: a matrix leaf lowers to one row per matrix row but if column_major
-    // is specified we transpose the num rows and num cols, this depends on
-    // #211977 to resolve
-    Shape.Cols = MT->getNumColumns();
+    Shape.IsMatrix = true;
+    Shape.IsRowMajor = isMatrixRowMajor(Ctx.getLangOpts(), Shape.RowType);
+    Shape.Dimensions.push_back(Shape.IsRowMajor ? MT->getNumRows()
+                                                : MT->getNumColumns());
+    Shape.Cols = Shape.IsRowMajor ? MT->getNumColumns() : MT->getNumRows();
+    Shape.RowType = Ctx.getExtVectorType(MT->getElementType(), Shape.Cols);
   }
 
   return Shape;
@@ -1307,8 +1328,6 @@ static llvm::dxil::ElementType getSignatureComponentType(CodeGenModule &CGM,
                                                          QualType Ty) {
   if (const auto *VT = Ty->getAs<clang::VectorType>())
     Ty = VT->getElementType();
-  else if (const auto *MT = Ty->getAs<clang::ConstantMatrixType>())
-    Ty = MT->getElementType();
 
   llvm::Type *IRTy = CGM.getTypes().ConvertTypeForMem(Ty);
   bool IsSigned = Ty->isSignedIntegerOrEnumerationType();
@@ -1358,13 +1377,15 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  bool IsMatrixValue = Shape.IsMatrix && Type->isVectorTy();
+  llvm::Type *LeafTy = Shape.IsMatrix && !IsMatrixValue
+                           ? RowTy
+                           : CGM.getTypes().ConvertType(Shape.RowType);
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
   const unsigned NumRows = Shape.getNumRows();
 
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
     std::array<Value *, 4> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
@@ -1381,8 +1402,16 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
           Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
     }
 
-    Result =
-        Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    if (IsMatrixValue) {
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Result =
+            B.CreateInsertElement(Result, B.CreateExtractElement(Value, Col),
+                                  Shape.getMatrixElementIndex(Row, Col));
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Result =
+          Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+    }
   }
   return Result;
 }
@@ -1411,11 +1440,19 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
+  bool IsMatrixValue = Shape.IsMatrix && Source->getType()->isVectorTy();
   const unsigned NumRows = Shape.getNumRows();
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
-    llvm::Value *Val =
-        Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    llvm::Value *Val;
+    if (IsMatrixValue) {
+      SmallVector<int, 4> Mask;
+      for (unsigned Col = 0; Col < Shape.Cols; ++Col)
+        Mask.push_back(Shape.getMatrixElementIndex(Row, Col));
+      Val = B.CreateShuffleVector(Source, Mask);
+    } else {
+      SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+      Val = Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+    }
 
     // Booleans use their memory representation in DXIL signatures, but direct
     // function results use their value representation.
@@ -1433,11 +1470,12 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
-    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
-    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index, SemanticSignatures &Signature) {
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticLoad(B, FD, Type, Decl, Semantic, Index);
+    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                     InterpMode);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature);
@@ -1445,13 +1483,13 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
   llvm_unreachable("Unsupported target for user-semantic load.");
 }
 
-void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
-                                          const clang::DeclaratorDecl *Decl,
-                                          HLSLAppliedSemanticAttr *Semantic,
-                                          std::optional<unsigned> Index,
-                                          SemanticSignatures &Signature) {
+void CGHLSLRuntime::emitUserSemanticStore(
+    IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index);
+    return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index,
+                                      InterpMode);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index,
@@ -1465,7 +1503,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     HLSLAppliedSemanticAttr *Semantic,
     llvm::dxbc::PSV::SemanticKind SemanticKind,
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
@@ -1542,9 +1580,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "FIXME: loading SV_Position is not yet implemented for this "
            "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::FragCoord */ 15);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* FragCoord */ 15, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1554,9 +1593,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_VertexID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::VertexIndex */ 42);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* VertexIndex */ 42, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1566,9 +1606,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_InstanceID is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::InstanceIndex */ 43);
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* InstanceIndex */ 43, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1584,11 +1625,10 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "FIXME: loading SV_ShadingRate is not yet implemented for this "
            "shader stage");
     if (CGM.getTarget().getTriple().isSPIRV())
-      // Non-float pixel inputs cannot be interpolated and must be Flat.
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    Semantic->getAttrName()->getName(),
-                                    /* BuiltIn::ShadingRateKHR */ 4444,
-                                    inputRequiresFlatDecoration(Type));
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* ShadingRateKHR */ 4444, InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1601,26 +1641,12 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
-static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
-                                    llvm::Value *Source, const Twine &Name,
-                                    unsigned BuiltInID) {
-  auto *GV = new llvm::GlobalVariable(
-      M, Source->getType(), /* isConstant= */ false,
-      llvm::GlobalValue::ExternalLinkage,
-      /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
-      llvm::GlobalVariable::GeneralDynamicTLSModel,
-      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
-  addSPIRVBuiltinDecoration(GV, BuiltInID);
-  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  B.CreateStore(Source, GV);
-}
-
 void CGHLSLRuntime::emitSystemSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
     llvm::dxbc::PSV::SemanticKind SemanticKind,
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::Position:
     assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
@@ -1638,9 +1664,10 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
-                              Semantic->getAttrName()->getName(),
-                              /* BuiltIn::Position */ 0);
+      createSPIRVOutputStore(B, CGM.getModule(), Source,
+                             Semantic->getAttrName()->getName(),
+                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                             /* Position */ 0, InterpMode);
       return;
     }
     break;
@@ -1648,7 +1675,8 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     assert(Stage == llvm::Triple::Pixel &&
            "SV_Target is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
+                          InterpMode);
     return;
   case llvm::dxbc::PSV::SemanticKind::ShadingRate:
     assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
@@ -1666,9 +1694,13 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVBuiltinStore(B, CGM.getModule(), Source,
-                              Semantic->getAttrName()->getName(),
-                              /* BuiltIn::PrimitiveShadingRateKHR */ 4432);
+      // Matches DXC: the PrimitiveShadingRateKHR built-in output does not
+      // carry the Flat decoration implied for integer vertex outputs.
+      createSPIRVOutputStore(B, CGM.getModule(), Source,
+                             Semantic->getAttrName()->getName(),
+                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                             /* PrimitiveShadingRateKHR */ 4432,
+                             llvm::hlsl::InterpolationMode::Undefined);
       return;
     }
     break;
@@ -1683,7 +1715,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
 llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    SemanticSignatures &Signature) {
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
@@ -1695,18 +1727,21 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
                                         llvm::hlsl::IOType::In);
   assert(Interpretation != llvm::hlsl::SemanticInterpretation::Invalid &&
          "invalid semantic should have been diagnosed by Sema");
+  if (CGM.getTarget().getTriple().isSPIRV())
+    InterpMode = getSPIRVInterpolationMode(
+        InterpMode, Type, ShaderAttr->getType(), llvm::hlsl::IOType::In);
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
-    return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
+    return emitUserSemanticLoad(B, Type, Decl, Semantic, Index, Signature,
+                                InterpMode);
   return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind,
-                                ShaderAttr->getType(), Index, Signature);
+                                ShaderAttr->getType(), Index, Signature,
+                                InterpMode);
 }
 
-void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
-                                              const FunctionDecl *FD,
-                                              llvm::Value *Source,
-                                              const clang::DeclaratorDecl *Decl,
-                                              HLSLAppliedSemanticAttr *Semantic,
-                                              SemanticSignatures &Signature) {
+void CGHLSLRuntime::handleScalarSemanticStore(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
@@ -1718,11 +1753,16 @@ void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
                                         llvm::hlsl::IOType::Out);
   assert(Interpretation != llvm::hlsl::SemanticInterpretation::Invalid &&
          "invalid semantic should have been diagnosed by Sema");
+  if (CGM.getTarget().getTriple().isSPIRV())
+    InterpMode = getSPIRVInterpolationMode(InterpMode, Source->getType(),
+                                           ShaderAttr->getType(),
+                                           llvm::hlsl::IOType::Out);
 
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
-    return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+    return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
+                                 InterpMode);
   emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind,
-                          ShaderAttr->getType(), Index, Signature);
+                          ShaderAttr->getType(), Index, Signature, InterpMode);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
@@ -1804,16 +1844,16 @@ CGHLSLRuntime::handleSemanticLoad(
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
   size_t PreviousSize = Signature.size();
+  auto InterpMode = llvm::hlsl::getInterpolationMode(Modifiers);
   llvm::Value *Value =
-      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature);
+      handleScalarSemanticLoad(B, FD, Type, Decl, Attr, Signature, InterpMode);
   // Intrinsic-only system values and SPIR-V loads do not add DXIL signature
   // elements. Non-pixel inputs retain Undefined.
   if (Signature.size() != PreviousSize) {
     auto &Element = Signature.back();
     Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
-        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
-        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
-        llvm::hlsl::IOType::In);
+        InterpMode, Element.CompType, Element.SemanticKind,
+        FD->getAttr<HLSLShaderAttr>()->getType(), llvm::hlsl::IOType::In);
   }
   return std::make_pair(Value, AttrBegin);
 }
@@ -1838,13 +1878,13 @@ CGHLSLRuntime::handleSemanticStore(
   HLSLAppliedSemanticAttr *Attr = *AttrBegin;
   ++AttrBegin;
   size_t PreviousSize = Signature.size();
-  handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature);
+  auto InterpMode = llvm::hlsl::getInterpolationMode(Modifiers);
+  handleScalarSemanticStore(B, FD, Source, Decl, Attr, Signature, InterpMode);
   if (Signature.size() != PreviousSize) {
     auto &Element = Signature.back();
     Element.InterpMode = llvm::hlsl::normalizeInterpolationMode(
-        llvm::hlsl::getInterpolationMode(Modifiers), Element.CompType,
-        Element.SemanticKind, FD->getAttr<HLSLShaderAttr>()->getType(),
-        llvm::hlsl::IOType::Out);
+        InterpMode, Element.CompType, Element.SemanticKind,
+        FD->getAttr<HLSLShaderAttr>()->getType(), llvm::hlsl::IOType::Out);
   }
   return AttrBegin;
 }
@@ -2133,9 +2173,11 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinInputAttr>())
-    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+    addSPIRVInterfaceDecorations(
+        GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, Attr->getBuiltIn());
   if (auto Attr = VD->getAttr<HLSLVkExtBuiltinOutputAttr>())
-    addSPIRVBuiltinDecoration(GV, Attr->getBuiltIn());
+    addSPIRVInterfaceDecorations(
+        GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn, Attr->getBuiltIn());
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

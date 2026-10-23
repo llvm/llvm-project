@@ -244,10 +244,7 @@ static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   auto *ID = dyn_cast<ConstantInt>(I.getArgOperand(0));
   auto *Col = dyn_cast<ConstantInt>(I.getArgOperand(2));
   StringRef Category = Input ? "input" : "output";
-  if (!ID)
-    return signatureError(Category +
-                          " signature: signature access requires a constant "
-                          "element ID");
+  assert(ID && "signature ID is marked as ImmArg and must be constant");
   if (ID->getZExtValue() >= Elements.size())
     return signatureError(Category +
                           " signature: signature access has an invalid element "

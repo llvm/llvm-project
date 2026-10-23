@@ -247,8 +247,8 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     y                    0.910     'Y' ('Base Y' (CHERI))
+// CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
