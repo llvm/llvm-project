@@ -233,6 +233,8 @@ private:
           ++__current();
           if (__current() == __end)
             __trailing_empty_ = true;
+          else if constexpr (!forward_range<_View>)
+            __trailing_empty_ = true;
         }
 
       } else {
