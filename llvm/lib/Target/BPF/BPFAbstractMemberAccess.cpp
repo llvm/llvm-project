@@ -78,6 +78,7 @@
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -183,8 +184,13 @@ private:
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
-  MDNode *computeAccessKey(CallInst *Call, CallInfo &CInfo,
-                           std::string &AccessKey, bool &IsInt32Ret);
+  struct EnumAccess {
+    size_t Index;
+    StringRef Value;
+  };
+  static EnumAccess computeEnumAccess(const CallInst *Call, const DIType *Ty);
+  MDNode *computeAccessKey(CallInst *Call, const CallInfo &CInfo,
+                           std::string &AccessKey);
   bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
 };
 
@@ -997,65 +1003,61 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   return Base;
 }
 
+BPFAbstractMemberAccess::EnumAccess
+BPFAbstractMemberAccess::computeEnumAccess(const CallInst *Call,
+                                           const DIType *Ty) {
+  // The argument can be a global or a GEP into a global.
+  const auto *GV =
+      cast<GlobalVariable>(Call->getArgOperand(1)->stripPointerCasts());
+  assert(GV->hasInitializer());
+  const auto *DA = cast<ConstantDataArray>(GV->getInitializer());
+  assert(DA->isString());
+  StringRef ValueStr = DA->getAsString();
+  size_t Separator = ValueStr.find(':');
+  StringRef Enumerator = ValueStr.substr(0, Separator);
+  StringRef Value = ValueStr.substr(Separator + 1);
+
+  const auto *CTy = cast<DICompositeType>(stripQualifiers(Ty));
+  assert(CTy->getTag() == dwarf::DW_TAG_enumeration_type);
+  for (auto [Index, Element] : enumerate(CTy->getElements()))
+    if (cast<DIEnumerator>(Element)->getName() == Enumerator)
+      return {Index, Value};
+  return {0, Value};
+}
+
 MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
-                                                  CallInfo &CInfo,
-                                                  std::string &AccessKey,
-                                                  bool &IsInt32Ret) {
+                                                  const CallInfo &CInfo,
+                                                  std::string &AccessKey) {
   DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata), false);
   assert(!Ty->getName().empty());
 
-  int64_t PatchImm;
-  std::string AccessStr("0");
-  if (CInfo.AccessIndex == BTF::TYPE_EXISTENCE ||
-      CInfo.AccessIndex == BTF::TYPE_MATCH) {
-    PatchImm = 1;
-  } else if (CInfo.AccessIndex == BTF::TYPE_SIZE) {
+  int64_t PatchImm = 1;
+  size_t AccessIndex = 0;
+  switch (CInfo.AccessIndex) {
+  case BTF::TYPE_EXISTENCE:
+  case BTF::TYPE_MATCH:
+    break;
+  case BTF::TYPE_SIZE:
     // typedef debuginfo type has size 0, get the eventual base type.
-    DIType *BaseTy = stripQualifiers(Ty, true);
-    PatchImm = BaseTy->getSizeInBits() / 8;
-  } else {
-    // ENUM_VALUE_EXISTENCE and ENUM_VALUE
-    IsInt32Ret = false;
-
-    // The argument could be a global variable or a getelementptr with base to
-    // a global variable depending on whether the clang option `opaque-options`
-    // is set or not.
-    const GlobalVariable *GV =
-        cast<GlobalVariable>(Call->getArgOperand(1)->stripPointerCasts());
-    assert(GV->hasInitializer());
-    const ConstantDataArray *DA = cast<ConstantDataArray>(GV->getInitializer());
-    assert(DA->isString());
-    StringRef ValueStr = DA->getAsString();
-
-    // ValueStr format: <EnumeratorStr>:<Value>
-    size_t Separator = ValueStr.find_first_of(':');
-    StringRef EnumeratorStr = ValueStr.substr(0, Separator);
-
-    // Find enumerator index in the debuginfo
-    DIType *BaseTy = stripQualifiers(Ty, true);
-    const auto *CTy = cast<DICompositeType>(BaseTy);
-    assert(CTy->getTag() == dwarf::DW_TAG_enumeration_type);
-    int EnumIndex = 0;
-    for (const auto Element : CTy->getElements()) {
-      const auto *Enum = cast<DIEnumerator>(Element);
-      if (Enum->getName() == EnumeratorStr) {
-        AccessStr = std::to_string(EnumIndex);
-        break;
-      }
-      EnumIndex++;
-    }
-
-    if (CInfo.AccessIndex == BTF::ENUM_VALUE) {
-      StringRef EValueStr = ValueStr.substr(Separator + 1);
-      PatchImm = std::stoll(std::string(EValueStr));
-    } else {
-      PatchImm = 1;
-    }
+    PatchImm = stripQualifiers(Ty)->getSizeInBits() / 8;
+    break;
+  case BTF::ENUM_VALUE_EXISTENCE:
+    AccessIndex = computeEnumAccess(Call, Ty).Index;
+    break;
+  case BTF::ENUM_VALUE: {
+    auto [Index, Value] = computeEnumAccess(Call, Ty);
+    PatchImm = std::stoll(Value.str());
+    AccessIndex = Index;
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected BPF type relocation kind");
   }
 
   AccessKey = "llvm." + Ty->getName().str() + ":" +
               std::to_string(CInfo.AccessIndex) + std::string(":") +
-              std::to_string(PatchImm) + std::string("$") + AccessStr;
+              std::to_string(PatchImm) + std::string("$") +
+              std::to_string(AccessIndex);
 
   return Ty;
 }
@@ -1067,11 +1069,9 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   std::string AccessKey;
   MDNode *TypeMeta;
   Value *Base = nullptr;
-  bool IsInt32Ret;
 
-  IsInt32Ret = CInfo.Kind == BPFPreserveFieldInfoAI;
   if (CInfo.Kind == BPFPreserveFieldInfoAI && CInfo.Metadata) {
-    TypeMeta = computeAccessKey(Call, CInfo, AccessKey, IsInt32Ret);
+    TypeMeta = computeAccessKey(Call, CInfo, AccessKey);
   } else {
     Base = computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
     if (!Base)
@@ -1080,6 +1080,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
 
   BasicBlock *BB = Call->getParent();
   GlobalVariable *GV;
+  bool IsInt32Ret = Call->getType()->isIntegerTy(32);
 
   if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
     IntegerType *VarType;

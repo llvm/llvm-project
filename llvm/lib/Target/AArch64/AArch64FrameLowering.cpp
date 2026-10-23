@@ -346,12 +346,11 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  // TODO: Should this include targets like UEFI (which use Windows CFI)?
-  // Note: Currently, there is not AArch64 support for UEFI. The value returned
-  // here must align with the predicate used for returning the list of callee
-  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
-  // invalidateWindowsRegisterPairing() where appropriate.
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+  // Note: UEFI follows the Windows ARM64 ABI and uses Windows CFI. The value
+  // returned here must align with the predicate used for returning the list of
+  // callee saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we
+  // use invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -600,7 +599,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
 
   // These OSes require the frame chain is valid, even if the current frame does
   // not use a frame pointer.
-  if (TT.isOSDarwin() || TT.isOSWindows())
+  if (TT.isOSDarwin() || TT.isOSWindowsOrUEFI())
     return true;
 
   // If the function has a frame pointer, it is reserved.
@@ -867,7 +866,7 @@ bool AArch64FrameLowering::windowsRequiresStackProbe(
   const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
   // TODO: When implementing stack protectors, take that into account
   // for the probe threshold.
-  return Subtarget.isTargetWindows() && MFI.hasStackProbing() &&
+  return Subtarget.isTargetWindowsOrUEFI() && MFI.hasStackProbing() &&
          StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
 }
 
@@ -1632,10 +1631,19 @@ struct RegGroupInfo {
 
   bool isPaired() const { return getNumRegs() == 2; }
 
+  bool isQuad() const { return getNumRegs() == 4; }
+
+  bool isGrouped() const { return isPaired() || isQuad(); }
+
   unsigned getNumRegs() const {
     if (!Reg2.isValid())
       return 1;
-    return 2;
+    if (Type != ZPR)
+      return 2;
+    // ZPR groups are contiguous with Reg2 holding the lower register.
+    unsigned NumRegs = (Reg1 - Reg2) + 1;
+    assert(NumRegs == 2 || NumRegs == 4);
+    return NumRegs;
   }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
@@ -1643,11 +1651,21 @@ struct RegGroupInfo {
   SmallVector<Register, 4> getRegisters() const {
     if (isPaired())
       return {Reg1, Reg2};
+    if (isQuad()) {
+      assert(Reg1 - 3 == Reg2 && "Quad not contiguous");
+      return {Reg1, Reg1 - 1, Reg1 - 2, Reg1 - 3};
+    }
     return {Reg1};
   }
 
   auto getFrameIndexes() const {
     return seq(FrameIdx, FrameIdx + int(getNumRegs()));
+  }
+
+  Register getAsMultiVectorRegister() const {
+    assert(Type == ZPR && isGrouped() && "Expected ZPR register group");
+    return (isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
+           (Reg2 - AArch64::Z0);
   }
 
   void dump(const TargetRegisterInfo *TRI) const {
@@ -1838,25 +1856,54 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
         break;
       case RegGroupInfo::PPR:
         break;
-      case RegGroupInfo::ZPR:
+      case RegGroupInfo::ZPR: {
         // Windows support is possible but the order requirement is reversed.
         // Also, WinCFI has no support for group ZPR loads/stores yet.
         if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
           break;
-        // We expect to see pairs in decending order (e.g. [z9, z8]).
-        // We ensure this in `orderZPRCalleeSavesForGroups()`. This is required
-        // as (for Linux) StackFillDir is negative (so we start at higher
-        // addresses) and we need to ensure the lower register in the pair has
-        // the lower address to store the registers in the correct order.
-        if (((NextReg - AArch64::Z0) % 2 == 0) && (NextReg + 1 == RGI.Reg1)) {
-          const int NumRegs = 2;
-          int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
 
-          // Note: ST1B has the same offset constraints.
-          if (isValidMemOpOffset(TII, AArch64::LD1B_2Z_IMM, Offset))
-            RGI.Reg2 = NextReg;
+        // We expect to see pairs and quads in descending order (e.g. [z7, z6,
+        // z5, z4]). We ensure this in `orderZPRCalleeSavesForGroups()`. This
+        // is required as (for Linux) StackFillDir is negative (so we start at
+        // higher addresses) and we need to ensure the lower register in the
+        // pair has the lower address to store the registers in the correct
+        // order.
+        auto GetZPRTupleLowestReg =
+            [&](unsigned NumRegs) -> std::optional<Register> {
+          // Check Reg1 is the last register in a tuple.
+          if (RGI.Reg1 % NumRegs != NumRegs - 1)
+            return std::nullopt;
+
+          // Check there's enough registers for the tuple.
+          if (i + RegInc * NumRegs > Count)
+            return std::nullopt;
+
+          for (unsigned Idx = 1; Idx < NumRegs; ++Idx) {
+            Register Reg = CSI[i + RegInc * Idx].getReg();
+            Register ExpectedReg = RGI.Reg1 - Idx;
+            if (Reg != ExpectedReg)
+              return std::nullopt;
+          }
+
+          return RGI.Reg1 - NumRegs + 1;
+        };
+
+        for (unsigned TupleSize : {4, 2}) {
+          if (auto LowReg = GetZPRTupleLowestReg(TupleSize)) {
+            // Note: ST1B has the same offset constraints.
+            unsigned Opcode =
+                TupleSize == 4 ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM;
+            const int Offset =
+                (ScalableByteOffset + StackFillDir * TupleSize * Scale);
+            if (isValidMemOpOffset(TII, Opcode, Offset)) {
+              RGI.Reg2 = *LowReg;
+              break;
+            }
+          }
         }
+
         break;
+      }
       case RegGroupInfo::VG:
         break;
       }
@@ -1871,10 +1918,12 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     [[maybe_unused]] bool RegsOrdered =
         all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
           return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
-
                  CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
         });
     assert(RegsOrdered && "Out of order callee saved regs!");
+
+    assert((!RGI.isQuad() || RGI.Type == RegGroupInfo::ZPR) &&
+           "Currently only ZPR's support four-register spills");
 
     assert((!RGI.isPaired() || !NeedsFrameRecord || RGI.Reg2 != AArch64::FP ||
             RGI.Reg1 == AArch64::LR) &&
@@ -1952,12 +2001,15 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
          (IsWindows && RGI.Reg2 == AArch64::LR)))
       Offset += 8;
 
-    assert((!RGI.isPaired() || RGI.Type != RegGroupInfo::ZPR ||
-            isValidMemOpOffset(TII, AArch64::LD1B_2Z_IMM, Offset)) &&
-           "Offset invalid for LD1B/ST1B pair variant immediate");
+    assert(
+        (!RGI.isGrouped() || RGI.Type != RegGroupInfo::ZPR ||
+         isValidMemOpOffset(
+             TII, (RGI.isQuad() ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM),
+             Offset)) &&
+        "Offset invalid for LD1B/ST1B pair/quad variant immediate");
 
     RGI.Offset = Offset / Scale;
-    assert((!RGI.isPaired() ||
+    assert((!RGI.isGrouped() || RGI.Type == RegGroupInfo::ZPR ||
             (!RGI.isScalable() && RGI.Offset >= -64 && RGI.Offset <= 63) ||
             (RGI.isScalable() && RGI.Offset >= -256 && RGI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
@@ -2062,7 +2114,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       StrOpc = RGI.isPaired() ? AArch64::STPQi : AArch64::STRQui;
       break;
     case RegGroupInfo::ZPR:
-      StrOpc = RGI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI;
+      StrOpc = RGI.isQuad()
+                   ? AArch64::ST1B_4Z_IMM
+                   : (RGI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI);
       break;
     case RegGroupInfo::PPR:
       StrOpc = AArch64::STR_PXI;
@@ -2124,7 +2178,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     unsigned PnReg = AFI->getPredicateRegForFillSpill();
 
-    if (!PTrueCreated && RGI.isPaired() && RGI.isScalable()) {
+    if (!PTrueCreated && RGI.isGrouped() && RGI.isScalable()) {
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
           MF.getSubtarget<AArch64Subtarget>();
       assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
@@ -2140,9 +2194,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg);
 
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
-    if (RGI.isPaired() && RGI.isScalable()) {
+    if (RGI.isGrouped() && RGI.isScalable()) {
       assert(!isTargetWindows(MF) &&
-             "Scalable register groups are not supported by Windows WinCFI");
+             "Scalable register groups are not supported by Windows CFI yet");
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegGroupInfo &c) {
         return c.Type == RegGroupInfo::PPR;
@@ -2155,8 +2209,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert(!(PPRBegin < ZPRBegin) &&
              "Expected callee save predicate to be handled first");
 #endif
+
       assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
-      MIB.addReg(AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0));
+      MIB.addReg(RGI.getAsMultiVectorRegister());
 
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
@@ -2263,7 +2318,9 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       LdrOpc = RGI.isPaired() ? AArch64::LDPQi : AArch64::LDRQui;
       break;
     case RegGroupInfo::ZPR:
-      LdrOpc = RGI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI;
+      LdrOpc = RGI.isQuad()
+                   ? AArch64::LD1B_4Z_IMM
+                   : (RGI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI);
       break;
     case RegGroupInfo::PPR:
       LdrOpc = AArch64::LDR_PXI;
@@ -2278,7 +2335,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     unsigned PnReg = AFI->getPredicateRegForFillSpill();
 
-    if (!PTrueCreated && RGI.isPaired() && RGI.isScalable()) {
+    if (!PTrueCreated && RGI.isGrouped() && RGI.isScalable()) {
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
           MF.getSubtarget<AArch64Subtarget>();
       assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
@@ -2289,7 +2346,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-    if (RGI.isPaired() && RGI.isScalable()) {
+    if (RGI.isGrouped() && RGI.isScalable()) {
       assert(!isTargetWindows(MF) &&
              "Scalable register groups are not supported by Windows CFI yet");
 #ifdef EXPENSIVE_CHECKS
@@ -2297,8 +2354,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
              "Expected callee save predicate to be handled first");
 #endif
       assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
-      MIB.addReg(AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0),
-                 getDefRegState(true));
+      MIB.addReg(RGI.getAsMultiVectorRegister(), getDefRegState(true));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
           .addImm(RGI.Offset /
@@ -2629,7 +2685,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
-      !Subtarget.isTargetWindows()) {
+      !Subtarget.isTargetWindowsOrUEFI()) {
     // For Windows calling convention on a non-windows OS, where X18 is treated
     // as reserved, back up X18 when entering non-windows code (marked with the
     // Windows calling convention) and restore when returning regardless of

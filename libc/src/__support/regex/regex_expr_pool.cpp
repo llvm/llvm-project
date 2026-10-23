@@ -39,8 +39,14 @@ uint32_t hash_expr(const Expr &e) {
   case ExprKind::Literal:
     hasher.update(&e.ch, sizeof(e.ch));
     break;
+  case ExprKind::Anchor:
+    hasher.update(&e.anchor_mask, sizeof(e.anchor_mask));
+    break;
   case ExprKind::ByteSet:
     hasher.update(&e.byte_set_id, sizeof(e.byte_set_id));
+    break;
+  case ExprKind::Star:
+    hasher.update(&e.body, sizeof(e.body));
     break;
   case ExprKind::Concat:
   case ExprKind::Alt:
@@ -226,6 +232,9 @@ ErrorOr<ExprId> ExprPool::empty_str() {
 ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
+ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  return intern(Expr::make_anchor(mask));
+}
 
 ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
   size_t count = 0;
@@ -272,6 +281,18 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
   return id;
 }
 
+ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
+  if (body == INVALID_EXPR_ID)
+    return Error(REG_BADPAT);
+  // Ø* = ε and ε* = ε
+  if (body == EMPTY_SET_ID || body == EMPTY_STR_ID)
+    return empty_str();
+  // (R*)* = R* (Idempotency)
+  if (get(body).kind == ExprKind::Star)
+    return body;
+  return intern(Expr::make_star(body, has_anchors(body)));
+}
+
 ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
     return Error(REG_BADPAT);
@@ -284,8 +305,18 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
     return r;
   if (r == EMPTY_STR_ID)
     return l;
-  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r)));
+  // (A · B) · C = A · (B · C) (Right-associative canonical form)
+  const Expr le = get(l);
+  if (le.kind == ExprKind::Concat) {
+    ErrorOr<ExprId> tail = make_concat(le.bin.right, r);
+    if (!tail.has_value())
+      return tail;
+    return make_concat(le.bin.left, *tail);
+  }
+  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r),
+                                  has_anchors(l) || has_anchors(r)));
 }
+
 ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
     return Error(REG_BADPAT);
@@ -298,9 +329,38 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   // R | R = R (Idempotency)
   if (l == r)
     return l;
-  if (l > r)
-    cpp::swap(l, r);
-  return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r)));
+
+  const Expr le = get(l);
+  const Expr re = get(r);
+  if (le.kind != ExprKind::Alt && re.kind != ExprKind::Alt) {
+    if (l > r)
+      cpp::swap(l, r);
+    return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r),
+                                 has_anchors(l) || has_anchors(r)));
+  }
+
+  // Merge two right-associated sorted Alt spines in ascending ExprId order so
+  // multi-way alternations canonicalize to a single deduplicated tree and
+  // derivative state spaces under '*' stay finite.
+  ExprId hl = (le.kind == ExprKind::Alt) ? le.bin.left : l;
+  ExprId tl = (le.kind == ExprKind::Alt) ? le.bin.right : EMPTY_SET_ID;
+  ExprId hr = (re.kind == ExprKind::Alt) ? re.bin.left : r;
+  ExprId tr = (re.kind == ExprKind::Alt) ? re.bin.right : EMPTY_SET_ID;
+  ExprId head = hl;
+  ErrorOr<ExprId> rest = EMPTY_SET_ID;
+  if (hl == hr) {
+    rest = make_alt(tl, tr);
+  } else if (hl < hr) {
+    rest = make_alt(tl, r);
+  } else {
+    head = hr;
+    rest = make_alt(l, tr);
+  }
+  if (!rest.has_value())
+    return rest;
+  return intern(Expr::make_alt(head, *rest,
+                               is_nullable(head) || is_nullable(*rest),
+                               has_anchors(head) || has_anchors(*rest)));
 }
 
 } // namespace regex

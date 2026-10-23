@@ -4542,9 +4542,11 @@ private:
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                  EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
-            Lane = EI.UserTE->ReorderIndices[Lane];
+            Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                 find(EI.UserTE->ReorderIndices, Lane));
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -4608,9 +4610,11 @@ private:
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+            if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                    EI.UserTE->Scalars[Lane]) &&
                 !EI.UserTE->ReorderIndices.empty())
-              Lane = EI.UserTE->ReorderIndices[Lane];
+              Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                   find(EI.UserTE->ReorderIndices, Lane));
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                    "Couldn't find extract lane");
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -9269,6 +9273,14 @@ static bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
   if (auto *CI = dyn_cast<CallInst>(I)) {
     if (any_of(CI->args(), [&](const Value *Arg) {
           return !isValidElementType(Arg->getType(), Opts.slp_revec);
+        }))
+      return false;
+    // A call, used only as a select operand, may get the values rejected by the
+    // select condition, which the vector library call handles on its slow path.
+    if (!CI->use_empty() && !CI->hasNUsesOrMore(UsesLimit) &&
+        all_of(CI->users(), [&](User *U) {
+          return match(
+              U, m_Select(m_Unless(m_Specific(CI)), m_Value(), m_Value()));
         }))
       return false;
     if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
@@ -19803,7 +19815,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
     if (!Scale)
-      Scale = getEntryEffectiveScale(*TE);
+      Scale = getEntryEffectiveScale(*TE, TE->Idx == 0 ? RdxRoot : nullptr);
     return C * Scale;
   };
   // A splat subtree pays off only if some surviving gather node reuses it and
@@ -20841,10 +20853,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             count_if(Entry->Scalars, [&](Value *V) {
               return ValueToExtUses->contains(V);
             }) <= 2;
+        // The extracted address index hides the consecutive accesses of the
+        // users from the later trees.
+        auto *GEPUser = dyn_cast_if_present<GetElementPtrInst>(EU.User);
+        const bool IsAddressIndex =
+            GEPUser && GEPUser->getPointerOperand() != EU.Scalar;
         if (IsProfitablePHIUser) {
           KeepScalar = true;
         } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
                    ExtraCost - ScalarCost <= TTI::TCC_Basic &&
+                   !IsAddressIndex &&
                    (!GatheredLoadsEntriesFirst.has_value() ||
                     Entry->Idx < *GatheredLoadsEntriesFirst)) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
@@ -28086,9 +28104,11 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertElementInst, InsertValueInst>(
+                  EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
-            Lane = EI.UserTE->ReorderIndices[Lane];
+            Lane = std::distance(EI.UserTE->ReorderIndices.begin(),
+                                 find(EI.UserTE->ReorderIndices, Lane));
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
                  "Couldn't find extract lane");
           auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
@@ -28993,6 +29013,15 @@ bool BoUpSLP::collectValuesToDemote(
         ToDemote.push_back(E.Idx);
         return IsProfitableToDemote;
       };
+  // The operand count is not always two: a flattened node has one entry per
+  // reassociated column. Collect the entries by the actual number of operand
+  // columns.
+  auto GetOperandEntries = [&]() {
+    return map_to_vector(seq<unsigned>(E.getNumOperands()),
+                         [&](unsigned Idx) -> const TreeEntry * {
+                           return getOperandEntry(&E, Idx);
+                         });
+  };
 
   if (E.State == TreeEntry::SplitVectorize)
     return TryProcessInstruction(
@@ -29045,11 +29074,7 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return TryProcessInstruction(
-        BitWidth, map_to_vector(seq<unsigned>(E.getNumOperands()),
-                                [&](unsigned Idx) -> const TreeEntry * {
-                                  return getOperandEntry(&E, Idx);
-                                }));
+    return TryProcessInstruction(BitWidth, GetOperandEntries());
   }
   case Instruction::Freeze:
     return TryProcessInstruction(BitWidth, getOperandEntry(&E, 0));
@@ -29067,8 +29092,7 @@ bool BoUpSLP::collectValuesToDemote(
         return AmtKnownBits.getMaxValue().ult(BitWidth);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), ShlChecker);
   }
   case Instruction::LShr: {
     // If this is a truncate of a logical shr, we can truncate it to a smaller
@@ -29088,9 +29112,7 @@ bool BoUpSLP::collectValuesToDemote(
                                  SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        LShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), LShrChecker);
   }
   case Instruction::AShr: {
     // If this is a truncate of an arithmetic shr, we can truncate it to a
@@ -29110,9 +29132,7 @@ bool BoUpSLP::collectValuesToDemote(
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        AShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), AShrChecker);
   }
   case Instruction::UDiv:
   case Instruction::URem: {
@@ -29128,8 +29148,7 @@ bool BoUpSLP::collectValuesToDemote(
                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, Checker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), Checker);
   }
 
   // We can demote selects if we can demote their true and false values.
@@ -30917,8 +30936,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType(),
-                              Opts->slp_revec))
+      Type *ValTy = SI->getValueOperand()->getType();
+      if (isa<StructType>(ValTy) || !isValidElementType(ValTy, Opts->slp_revec))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
@@ -33485,7 +33504,8 @@ public:
         }
         V.transformNodes();
         V.computeMinimumValueSizes();
-        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+            VL, cast<Instruction>(ReductionRoot));
         // A negated slice is subtracted in the final combine, it cannot be
         // accumulated lane-wise.
         const bool LoopAccCandidate =
@@ -35780,9 +35800,7 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
 
   Value *Vec = R.vectorizeTree({}, IVI);
   assert(Vec->getType() == FieldsTy && "Expected the vector of the fields.");
-  IRBuilder<TargetFolder> Builder(IVI->getContext(), TargetFolder(DL));
-  Builder.SetInsertPoint(IVI);
-  Builder.SetCurrentDebugLocation(IVI->getDebugLoc());
+  IRBuilder<TargetFolder> Builder(IVI->getIterator(), TargetFolder(DL));
   if (!IsIdentity)
     Vec = Builder.CreateShuffleVector(Vec, OrderMask);
   Value *Packed = Builder.CreateBitCast(Vec, PacksTy);

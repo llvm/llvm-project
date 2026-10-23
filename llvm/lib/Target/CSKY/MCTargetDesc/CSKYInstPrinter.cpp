@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -35,25 +34,22 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "CSKYGenAsmWriter.inc"
 
-static cl::opt<bool>
-    NoAliases("csky-no-aliases",
-              cl::desc("Disable the emission of assembler pseudo instructions"),
-              cl::init(false), cl::Hidden);
+// Set by `-M numeric`. Static because the static getRegisterName reads it.
+static bool ArchRegNames;
 
-static cl::opt<bool>
-    ArchRegNames("csky-arch-reg-names",
-                 cl::desc("Print architectural register names rather than the "
-                          "ABI names (such as r14 instead of sp)"),
-                 cl::init(false), cl::Hidden);
+CSKYInstPrinter::CSKYInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
+                                 const MCRegisterInfo &MRI)
+    : MCInstPrinter(MAI, MII, MRI),
+      CLOpts(CSKY_MC::getCLOpts(MAI.getTargetOptions())) {}
 
-// The command-line flags above are used by llvm-mc and llc. They can be used by
-// `llvm-objdump`, but we override their values here to handle options passed to
-// `llvm-objdump` with `-M` (which matches GNU objdump). There did not seem to
-// be an easier way to allow these options in all these tools, without doing it
-// this way.
+// -csky-no-aliases and -csky-arch-reg-names are used by llvm-mc and llc. They
+// can be used by `llvm-objdump`, but we override their values here to handle
+// options passed to `llvm-objdump` with `-M` (which matches GNU objdump). There
+// did not seem to be an easier way to allow these options in all these tools,
+// without doing it this way.
 bool CSKYInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   if (Opt == "no-aliases") {
-    NoAliases = true;
+    PrintAliases = false;
     return true;
   }
   if (Opt == "numeric") {
@@ -77,7 +73,8 @@ void CSKYInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                 raw_ostream &O) {
   const MCInst *NewMI = MI;
 
-  if (NoAliases || !printAliasInstr(NewMI, Address, STI, O))
+  if (!PrintAliases || CLOpts.no_aliases ||
+      !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
@@ -87,14 +84,14 @@ void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
     O << getRegisterName(Reg, ABIRegNames ? CSKY::ABIRegAltName
                                           : CSKY::NoRegAltName);
   else
-    O << getRegisterName(Reg);
+    O << getRegisterName(CLOpts, Reg);
 }
 
 void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
   if (PrintBranchImmAsAddress)
     O << getRegisterName(RegNo, CSKY::NoRegAltName);
   else
-    O << getRegisterName(RegNo);
+    O << getRegisterName(CLOpts, RegNo);
 }
 
 void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -107,7 +104,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (PrintBranchImmAsAddress)
       useABIName = ABIRegNames;
     else
-      useABIName = !ArchRegNames;
+      useABIName = !(ArchRegNames || CLOpts.arch_reg_names);
 
     if (Reg == CSKY::C)
       O << "";
@@ -258,9 +255,11 @@ void CSKYInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
   }
 }
 
-const char *CSKYInstPrinter::getRegisterName(MCRegister Reg) {
-  return getRegisterName(Reg, ArchRegNames ? CSKY::NoRegAltName
-                                           : CSKY::ABIRegAltName);
+const char *CSKYInstPrinter::getRegisterName(const CSKYMCOptions &CLOpts,
+                                             MCRegister Reg) {
+  return getRegisterName(Reg, ArchRegNames || CLOpts.arch_reg_names
+                                  ? CSKY::NoRegAltName
+                                  : CSKY::ABIRegAltName);
 }
 
 void CSKYInstPrinter::printFPR(const MCInst *MI, unsigned OpNo,

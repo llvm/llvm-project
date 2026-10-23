@@ -821,7 +821,6 @@ define i32 @srxi_i32(i32 %a, i32 %b) {
 define i8 @shlsat_i8(i8 %a, i8 %b) {
 ; RV32-LABEL: shlsat_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.b a1, a1
 ; RV32-NEXT:    slli a0, a0, 24
 ; RV32-NEXT:    ssha a0, a0, a1
 ; RV32-NEXT:    srai a0, a0, 24
@@ -848,7 +847,6 @@ define i8 @shlsat_i8(i8 %a, i8 %b) {
 define i16 @shlsat_i16(i16 %a, i16 %b) {
 ; RV32-LABEL: shlsat_i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    ssha a0, a0, a1
 ; RV32-NEXT:    srai a0, a0, 16
@@ -975,7 +973,6 @@ define i32 @shlsati_i32(i32 %a) {
 define i8 @ushlsat_i8(i8 %a, i8 %b) {
 ; RV32-LABEL: ushlsat_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.b a1, a1
 ; RV32-NEXT:    slli a0, a0, 24
 ; RV32-NEXT:    sshl a0, a0, a1
 ; RV32-NEXT:    srli a0, a0, 24
@@ -999,7 +996,6 @@ define i8 @ushlsat_i8(i8 %a, i8 %b) {
 define i16 @ushlsat_i16(i16 %a, i16 %b) {
 ; RV32-LABEL: ushlsat_i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    sshl a0, a0, a1
 ; RV32-NEXT:    srli a0, a0, 16
@@ -3321,6 +3317,57 @@ define i8 @usati_i8_from_i16(i16 %x) {
   ret i8 %sel
 }
 
+define i32 @test_sati_i32_w1(i32 %a) {
+; RV32-LABEL: test_sati_i32_w1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sati a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sati_i32_w1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psati.w a0, a0, 1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 1)
+  ret i32 %res
+}
+
+define i32 @test_sati_i32_w32(i32 %a) {
+; RV32-LABEL: test_sati_i32_w32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sati a0, a0, 32
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sati_i32_w32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psati.w a0, a0, 32
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sati.i32(i32 %a, i32 32)
+  ret i32 %res
+}
+
+define i32 @test_usati_u32_w0(i32 %a) {
+; CHECK-LABEL: test_usati_u32_w0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 0)
+  ret i32 %res
+}
+
+define i32 @test_usati_u32_w31(i32 %a) {
+; RV32-LABEL: test_usati_u32_w31:
+; RV32:       # %bb.0:
+; RV32-NEXT:    usati a0, a0, 31
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_usati_u32_w31:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pusati.w a0, a0, 31
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 31)
+  ret i32 %res
+}
+
 ; Test that pli.b is rematerialized rather than spilled
 define i32 @test_pli_b_remat(ptr %p) nounwind {
 ; RV32-LABEL: test_pli_b_remat:
@@ -3767,4 +3814,32 @@ define i32 @test_mulqr_i32(i32 %a, i32 %b) {
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.mulqr.i32(i32 %a, i32 %b)
   ret i32 %res
+}
+
+define i64 @test_mqwacc_i64(i64 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: test_mqwacc_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqwacc a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqwacc_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mqacc.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.mqwacc.i64(i64 %rd, i32 %a, i32 %b)
+  ret i64 %res
+}
+
+define i64 @test_mqrwacc_i64(i64 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: test_mqrwacc_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mqrwacc a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_mqrwacc_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mqracc.w00 a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.mqrwacc.i64(i64 %rd, i32 %a, i32 %b)
+  ret i64 %res
 }
