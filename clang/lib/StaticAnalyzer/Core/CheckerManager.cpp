@@ -858,11 +858,21 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
   ++Space;
   bool HasMessage = false;
 
-  // Store the last CheckerTag.
-  const void *LastCT = nullptr;
+  std::vector<CheckerBackend *> CheckerBackends;
   for (const auto &CT : CheckerTags) {
+    CheckerBackend *CB = CT.second.get();
+    CheckerBackends.push_back(CB);
+  }
+  llvm::sort(CheckerBackends,
+             [](const CheckerBackend *First, const CheckerBackend *Last) {
+               return First->getDebugTag() < Last->getDebugTag();
+             });
+
+  // Store the last CheckerBackend.
+  const void *LastCB = nullptr;
+  for (const auto &CB : CheckerBackends) {
     // See whether the current checker has a message.
-    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+    CB->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
 
     if (TempBuf.empty())
       continue;
@@ -872,24 +882,24 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
       HasMessage = true;
     }
 
-    LastCT = &CT;
+    LastCB = &CB;
     TempBuf.clear();
   }
 
-  for (const auto &CT : CheckerTags) {
+  for (const auto &CB : CheckerBackends) {
     // See whether the current checker has a message.
-    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+    CB->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
 
     if (TempBuf.empty())
       continue;
 
-    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
+    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CB->getDebugTag()
                               << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
     Indent(Out, Space, IsDot) << "]}";
 
-    if (&CT != LastCT)
+    if (&CB != LastCB)
       Out << ',';
     Out << NL;
 
