@@ -10666,8 +10666,25 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
+  // Keep a shared comparison instead of materializing both condition codes.
+  // Scalar SETCCs with custom lowering may fold into flag-based instructions.
+  bool KeepNotOfSetCC = false;
+  if (N0Opcode == ISD::SETCC && !N0.hasOneUse()) {
+    EVT OpVT = N0.getOperand(0).getValueType();
+    if (TLI.getTypeAction(*DAG.getContext(), OpVT) ==
+        TargetLowering::TypePromoteInteger)
+      OpVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+    EVT XorVT = VT.isScalarInteger()
+                    ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
+                    : VT;
+    KeepNotOfSetCC =
+        (OpVT.isVector() ||
+         (!VT.isVector() && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
+  }
   if (TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
+      !KeepNotOfSetCC &&
       !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
         N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
