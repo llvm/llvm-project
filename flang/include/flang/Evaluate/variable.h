@@ -401,20 +401,20 @@ public:
   constexpr int kind() const { return kind_; }
 
   CLASS_BOILERPLATE(Designator)
-  template <typename _A>
-  explicit Designator(int kind, const _A &x) : u{x}, kind_{kind} {
+  template <typename A>
+  explicit Designator(int kind, const A &x) : u{x}, kind_{kind} {
     CHECK_KIND(kind, T);
   }
-  template <typename _A, typename = common::NoLvalue<_A>>
-  explicit Designator(int kind, _A &&x) : u(std::move(x)), kind_{kind} {
+  template <typename A, typename = common::NoLvalue<A>>
+  explicit Designator(int kind, A &&x) : u(std::move(x)), kind_{kind} {
     CHECK_KIND(kind, T);
   }
-  template <typename _A, typename U = T,
+  template <typename A, typename U = T,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  explicit Designator(const _A &x) : Designator(0, x) {}
-  template <typename _A, typename U = T, typename = common::NoLvalue<_A>,
+  explicit Designator(const A &x) : Designator(0, x) {}
+  template <typename A, typename U = T, typename = common::NoLvalue<A>,
       typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
-  explicit Designator(_A &&x) : Designator(0, std::move(x)) {}
+  explicit Designator(A &&x) : Designator(0, std::move(x)) {}
   bool operator==(const Designator &) const;
   Designator(int kind, const DataRef &that)
       : u{common::CopyVariant<Variant>(that.u)}, kind_{kind} {
