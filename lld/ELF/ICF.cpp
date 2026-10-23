@@ -497,11 +497,14 @@ template <class ELFT> void ICF<ELFT>::run() {
   constexpr size_t chunkSize = 1024;
   ArrayRef<InputSectionBase *> inputs = ctx.inputSections;
   size_t numInputChunks = divideCeil(inputs.size(), chunkSize);
+  auto chunkRange = [&](size_t c, size_t total) {
+    auto begin = c * chunkSize;
+    return std::make_pair(begin, std::min(begin + chunkSize, total));
+  };
   uint32_t eqClassBase = uniqueId + inputs.size();
   SmallVector<uint32_t, 0> offsets(numInputChunks);
   parallelFor(0, numInputChunks, [&](size_t c) {
-    size_t begin = c * chunkSize,
-           end = std::min(begin + chunkSize, inputs.size());
+    auto [begin, end] = chunkRange(c, inputs.size());
     uint32_t n = 0;
     for (size_t i = begin; i != end; ++i) {
       auto *s = dyn_cast<InputSection>(inputs[i]);
@@ -519,22 +522,21 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Compute the total number of eligible sections and each chunk's left index.
   size_t numSections = 0;
-  for (size_t i = 0; i != numInputChunks; ++i) {
-    auto t = std::exchange(offsets[i], numSections);
-    numSections += t;
+  for (size_t c = 0; c != numInputChunks; ++c) {
+    auto n = std::exchange(offsets[c], numSections);
+    numSections += n;
   }
   sections.resize_for_overwrite(numSections);
   // Update temporary class ID above the unique IDs so that hashRelocs() can
   // tell them apart.
   assert(uint64_t(eqClassBase) + numSections <= UINT32_MAX);
   parallelFor(0, numInputChunks, [&](size_t c) {
-    size_t begin = c * chunkSize,
-           end = std::min(begin + chunkSize, inputs.size());
+    auto [begin, end] = chunkRange(c, inputs.size());
     auto idx = offsets[c];
     for (size_t i = begin; i != end; ++i) {
       auto *s = dyn_cast<InputSection>(inputs[i]);
       if (s && s->eqClass[0] == eqClassBase) {
-        s->eqClass[0] = eqClassBase + idx;
+        s->eqClass[0] += idx;
         sections[idx++] = s;
       }
     }
@@ -545,12 +547,11 @@ template <class ELFT> void ICF<ELFT>::run() {
   // buffer; edgeEnd[i] is where section i's edges end within that buffer.
   size_t numChunks = divideCeil(numSections, chunkSize);
   SmallVector<uint64_t, 0> hashes(numSections, llvm::for_overwrite);
-  SmallVector<uint32_t, 0> edgeEnd(numSections,llvm::for_overwrite);
+  SmallVector<uint32_t, 0> edgeEnd(numSections, llvm::for_overwrite);
   SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numChunks);
   parallelFor(0, numChunks, [&](size_t c) {
     SmallVectorImpl<uint32_t> &edges = chunkEdges[c];
-    size_t begin = c * chunkSize,
-           end = std::min(begin + chunkSize, numSections);
+    auto [begin, end] = chunkRange(c, numSections);
     for (size_t i = begin; i != end; ++i) {
       InputSection *s = sections[i];
       uint64_t h = xxh3_64bits(s->content());
@@ -566,8 +567,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (int round = 7; round--;) {
     parallelFor(0, numChunks, [&](size_t c) {
       ArrayRef<uint32_t> edges = chunkEdges[c];
-      size_t begin = c * chunkSize,
-             end = std::min(begin + chunkSize, numSections);
+      auto [begin, end] = chunkRange(c, numSections);
       size_t j = 0;
       for (size_t i = begin; i != end; ++i) {
         uint64_t h = hashes[i];
