@@ -350,3 +350,85 @@ join:
   store i32 %l, ptr addrspace(1) %out
   ret void
 }
+
+; Two <3 x i16> allocas (8-byte aligned, so each reserves one lane of tail
+; padding) merged by a select, each initialized by an over-wide <4 x i16> store.
+; The padding lane must be represented, giving <4 x i16> per member and a
+; <8 x i16> group; otherwise the 4th store element runs past the member and
+; poisons the whole promoted vector.
+define amdgpu_kernel void @phi_overwide_store_padding(i1 %c, i16 %x, ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @phi_overwide_store_padding(
+; CHECK-SAME: i1 [[C:%.*]], i16 [[X:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = freeze <8 x i16> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> [[A]], i16 1, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 2, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 3, i32 2
+; CHECK-NEXT:    [[BV:%.*]] = insertelement <4 x i16> <i16 poison, i16 22, i16 33, i16 undef>, i16 [[X]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[X]], i32 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 22, i32 5
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 33, i32 6
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 undef, i32 7
+; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 [[C]], i32 0, i32 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 1, [[PROMOTEALLOCA_IDX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i16> [[TMP6]], i32 [[TMP7]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[TMP8]] to i32
+; CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca <3 x i16>, align 8, addrspace(5)
+  %b = alloca <3 x i16>, align 8, addrspace(5)
+  store <4 x i16> <i16 1, i16 2, i16 3, i16 undef>, ptr addrspace(5) %a, align 8
+  %bv = insertelement <4 x i16> <i16 poison, i16 22, i16 33, i16 undef>, i16 %x, i64 0
+  store <4 x i16> %bv, ptr addrspace(5) %b, align 8
+  %p = select i1 %c, ptr addrspace(5) %a, ptr addrspace(5) %b
+  %g = getelementptr <3 x i16>, ptr addrspace(5) %p, i32 0, i32 1
+  %l = load i16, ptr addrspace(5) %g
+  %z = zext i16 %l to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+; Two [3 x float] allocas (alloc size 12, no tail padding) merged by a select,
+; so member b starts at the odd base lane 3 of the <6 x float> group. An
+; over-wide <2 x float> load through the merged pointer must extract elements
+; individually rather than use the pow2 bitcast fast-path, which assumes the
+; base lane is a multiple of the access width and would read lanes 2,3 instead
+; of b's lanes 3,4.
+define amdgpu_kernel void @phi_overwide_load_odd_baselane(i1 %c, float %x, ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @phi_overwide_load_odd_baselane(
+; CHECK-SAME: i1 [[C:%.*]], float [[X:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = freeze <6 x float> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <6 x float> [[A]], float 1.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x float> [[TMP0]], float 2.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x float> [[TMP1]], float 3.000000e+00, i32 2
+; CHECK-NEXT:    [[BV:%.*]] = insertelement <3 x float> <float poison, float 2.200000e+01, float 3.300000e+01>, float [[X]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x float> [[TMP2]], float [[X]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x float> [[TMP3]], float 2.200000e+01, i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x float> [[TMP4]], float 3.300000e+01, i32 5
+; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 [[C]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <6 x float> [[TMP5]], i32 [[PROMOTEALLOCA_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[PROMOTEALLOCA_IDX]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <6 x float> [[TMP5]], i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP7]], float [[TMP9]], i64 1
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[TMP10]], i64 1
+; CHECK-NEXT:    [[Z:%.*]] = fptosi float [[E]] to i32
+; CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca [3 x float], align 8, addrspace(5)
+  %b = alloca [3 x float], align 8, addrspace(5)
+  store <3 x float> <float 1.0, float 2.0, float 3.0>, ptr addrspace(5) %a, align 8
+  %bv = insertelement <3 x float> <float poison, float 22.0, float 33.0>, float %x, i64 0
+  store <3 x float> %bv, ptr addrspace(5) %b, align 8
+  %p = select i1 %c, ptr addrspace(5) %a, ptr addrspace(5) %b
+  %l = load <2 x float>, ptr addrspace(5) %p, align 8
+  %e = extractelement <2 x float> %l, i64 1
+  %z = fptosi float %e to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}

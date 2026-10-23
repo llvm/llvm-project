@@ -814,7 +814,10 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       FixedVectorType *VectorTy = AA.Vector.Ty;
       TypeSize NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
       uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
-      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
+      // For grouped alloca promotion, we do not align the members based on
+      // their alignment. This is good to save some registers. But would break
+      // the alignment.
+      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u) && !AA.isGroup();
       unsigned TotalNumElts = VectorTy->getNumElements();
       bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
       if (!isa<ConstantInt>(Index) &&
@@ -1080,9 +1083,15 @@ static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (AllocaTy->isAggregateType()) {
+  if (AllocaTy->isAggregateType() || VectorTy) {
     uint64_t NumElems = 1;
-    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
+    Type *ElemTy;
+    if (VectorTy) {
+      NumElems = VectorTy->getNumElements();
+      ElemTy = VectorTy->getElementType();
+    } else {
+      ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
+    }
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
@@ -1094,7 +1103,10 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
       unsigned ElementSize = DL.getTypeSizeInBits(ElemTy) / 8;
       if (ElementSize > 0) {
-        unsigned AllocaSize = DL.getTypeStoreSize(AllocaTy);
+        // Use the alloc size to include the tail-padding. For example, in case
+        // of <3 x i16> alloca, it is allowed to store to full <4 x i16>, and
+        // later load from the padding could still get correct value.
+        unsigned AllocaSize = DL.getTypeAllocSize(AllocaTy);
         // Expand vector if required to match padding of inner type,
         // i.e. odd size subvectors.
         // Storage size of new vector must match that of alloca for correct
