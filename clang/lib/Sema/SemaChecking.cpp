@@ -17735,10 +17735,6 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     return ExprError();
   }
 
-  QualType M0ElemTy =
-      M0Ty->getElementType().getUnqualifiedType().getCanonicalType();
-  QualType M1ElemTy =
-      M1Ty->getElementType().getUnqualifiedType().getCanonicalType();
   if (M0Ty->getNumRows() != M2Ty->getNumRows())
     return ExprError(Diag(Loc0, diag::err_coopmat_shapes_incompatible));
   if ((M1Ty->getNumColumns() != M2Ty->getNumColumns()) ||
