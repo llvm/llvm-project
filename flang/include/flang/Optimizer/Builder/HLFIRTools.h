@@ -555,6 +555,15 @@ hlfir::Entity createStackTempFromMold(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::Entity mold);
 
+/// Return the alignment recorded on the hlfir.declare or fir.declare that
+/// defines \p var, if any. A designator of a variable (hlfir.designate) is
+/// looked through to the variable it designates.
+std::optional<std::int64_t> getDeclaredAlignment(mlir::Value var);
+
+/// Record \p alignment on the hlfir.declare or fir.declare defining \p var.
+/// No-op when \p var is not defined by a declare operation.
+void setDeclaredAlignment(mlir::Value var, std::int64_t alignment);
+
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,
                                                  hlfir::Entity scalarChar,

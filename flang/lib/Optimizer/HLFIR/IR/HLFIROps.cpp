@@ -281,7 +281,8 @@ void hlfir::DeclareOp::build(
     argNoAttr = builder.getUI32IntegerAttr(dummy_arg_no);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, storage, storage_offset, nameAttr,
-        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{}, argNoAttr);
+        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{}, argNoAttr,
+        /*alignment=*/mlir::IntegerAttr{});
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {

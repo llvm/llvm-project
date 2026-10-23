@@ -294,3 +294,11 @@ func.func @vars_within_physical_storage() {
 // CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_8]] storage(%[[VAL_2]][4]) uniq_name("b") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
 // CHECK:           return
 // CHECK:         }
+
+func.func @aligned_declare(%arg0: !fir.ref<f32>) {
+  %0:2 = hlfir.declare %arg0 uniq_name("a") alignment(64) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+// CHECK-LABEL:   func.func @aligned_declare(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<f32>) {
+// CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("a") alignment(64) : (!fir.ref<f32>) -> !fir.ref<f32>
