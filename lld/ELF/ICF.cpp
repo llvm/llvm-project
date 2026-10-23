@@ -462,8 +462,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
       if (auto *relSec = dyn_cast_or_null<InputSection>(d->section))
         hash += relSec->eqClass[cnt % 2];
   }
-  // Set MSB to 1 to avoid collisions with unique IDs.
-  isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
+  isec->eqClass[(cnt + 1) % 2] = hash;
 }
 
 // The main function of ICF.
@@ -492,11 +491,11 @@ template <class ELFT> void ICF<ELFT>::run() {
         s->eqClass[0] = s->eqClass[1] = ++uniqueId;
     }
   }
+  uint32_t eqClassBase = ++uniqueId;
 
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {
-    // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
+    s->eqClass[0] = xxh3_64bits(s->content());
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
@@ -528,9 +527,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   sections = std::move(sorted);
 
   // Compare static contents and assign unique equivalence class IDs for each
-  // static content. Use a base offset for these IDs to ensure no overlap with
-  // the unique IDs already assigned.
-  uint32_t eqClassBase = ++uniqueId;
+  // static content.
   parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
