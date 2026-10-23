@@ -37,6 +37,14 @@
 ; CHECK-SPIRV-DAG: [[df:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugFunction
 ; CHECK-SPIRV-DAG: OpExtInst [[void]] [[ext]] DebugLocalVariable [[str_b]] [[enum_BigS]] [[ds]] [[c11]] [[c0]] [[df]] [[c0]]{{$}}
 
+; The metadata of enum Mixed lists a DISubrange beside its one enumerator,
+; Only = 3. The verifier accepts any node in an enum's elements, and the
+; DebugTypeEnum must list only the enumerator.
+; CHECK-SPIRV-DAG: [[str_Mixed:%[0-9]+]] = OpString "Mixed"
+; CHECK-SPIRV-DAG: [[str_Only:%[0-9]+]] = OpString "Only"
+; CHECK-SPIRV-DAG: [[c5:%[0-9]+]] = OpConstant [[i32]] 5{{$}}
+; CHECK-SPIRV-DAG: OpExtInst [[void]] [[ext]] DebugTypeEnum [[str_Mixed]] [[basic_ll]] [[ds]] [[c5]] [[c0]] [[cu]] [[c64]] [[c0]] [[c3]] [[str_Only]]{{$}}
+
 ; The module also has enum Fwd, declared but never defined, so its size is 0,
 ; and a local variable f of type Fwd. DebugTypeEnum needs a size, so neither Fwd
 ; nor f may appear in the debug info. The OpStrings precede every OpExtInst, so
@@ -58,7 +66,7 @@ entry:
 !1 = !{i32 7, !"Dwarf Version", i32 5}
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DIFile(filename: "enum.hlsl", directory: "/src")
-!4 = !{!5, !10, !15}
+!4 = !{!5, !10, !15, !23}
 !5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "BigS", file: !3, line: 2, baseType: !6, size: 64, elements: !7)
 !6 = !DIBasicType(name: "long long", size: 64, encoding: DW_ATE_signed)
 !7 = !{!8, !9}
@@ -76,3 +84,7 @@ entry:
 !20 = !{!21, !22}
 !21 = !DILocalVariable(name: "b", scope: !17, file: !3, line: 11, type: !5)
 !22 = !DILocalVariable(name: "f", scope: !17, file: !3, line: 12, type: !15)
+!23 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Mixed", file: !3, line: 5, baseType: !6, size: 64, elements: !24)
+!24 = !{!25, !26}
+!25 = !DISubrange(count: 4)
+!26 = !DIEnumerator(name: "Only", value: 3)

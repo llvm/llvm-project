@@ -1564,9 +1564,6 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeEnum(
   if (Size == 0 || !isUInt<32>(Size))
     return EmitResult<PreparedScope>::unsupported();
 
-  // The spec formally requires DebugInfoNone for enum E { A }, but HLSL gives
-  // that enum an implied type (usually int, unless the values need something
-  // wider).
   MCRegister UnderlyingReg = CachedDebugInfoNoneReg;
   if (const DIType *BaseTy = ET->getBaseType()) {
     EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
