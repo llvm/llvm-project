@@ -5992,13 +5992,21 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             GEPOperands.size() != 2)
           return false;
 
+        ScalarEvolution &SE = *CostCtx.PSE.getSE();
+        auto IsLoopInvariant = [&](VPValue *V) {
+          Value *UnderlyingV = V->getUnderlyingValue();
+          return UnderlyingV &&
+                 SE.isLoopInvariant(CostCtx.PSE.getSCEV(UnderlyingV),
+                                    CostCtx.L);
+        };
         VPValue *Cond = nullptr, *TrueBase = nullptr, *FalseBase = nullptr;
         if (!match(GEPOperands[0],
                    m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
                             m_VPValue(FalseBase))) ||
             vputils::isSingleScalar(Cond) ||
             !vputils::isSingleScalar(TrueBase) ||
-            !vputils::isSingleScalar(FalseBase))
+            !vputils::isSingleScalar(FalseBase) || !IsLoopInvariant(TrueBase) ||
+            !IsLoopInvariant(FalseBase))
           return false;
 
         Instruction *I = VPI->getUnderlyingInstr();
@@ -6011,11 +6019,18 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return false;
 
         Value *Index = *GEP->idx_begin();
-        ScalarEvolution &SE = *CostCtx.PSE.getSE();
         auto *AR = dyn_cast<SCEVAddRecExpr>(CostCtx.PSE.getSCEV(Index));
-        auto *Step = AR && AR->getLoop() == CostCtx.L
-                         ? dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE))
-                         : nullptr;
+        if (!AR || AR->getLoop() != CostCtx.L)
+          return false;
+        // GEP indices are sign-extended or truncated to the pointer index type.
+        // Make sure the converted recurrence still has unit stride.
+        Type *GEPIndexTy = Plan.getDataLayout().getIndexType(GEP->getType());
+        auto *ExtendedAR = dyn_cast<SCEVAddRecExpr>(
+            SE.getTruncateOrSignExtend(AR, GEPIndexTy));
+        auto *Step =
+            ExtendedAR
+                ? dyn_cast<SCEVConstant>(ExtendedAR->getStepRecurrence(SE))
+                : nullptr;
         if (!Step || !Step->getAPInt().isOne())
           return false;
 
