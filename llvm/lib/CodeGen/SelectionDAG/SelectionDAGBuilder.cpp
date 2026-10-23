@@ -12809,7 +12809,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
                   CurFunc.getParent()->getModuleFlag("cf-protection-branch")))
             HasCFBranch = !CFBranch->isZero();
           if (!HasCFBranch && 
-          !CurFunc.hasFnAttribute("branch-target-enforcement"))
+              !CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 
