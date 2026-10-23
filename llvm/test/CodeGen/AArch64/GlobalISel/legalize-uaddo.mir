@@ -3,6 +3,7 @@
 
 ---
 name:            narrow_scalar_uaddo_s128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_uaddo_s128
@@ -32,6 +33,7 @@ body:             |
 ...
 ---
 name:            narrow_scalar_uaddo_big_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_uaddo_big_nonpow2
@@ -64,6 +66,7 @@ body:             |
 ...
 ---
 name:            test_scalar_uaddo_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_uaddo_small
@@ -94,6 +97,7 @@ body:             |
 ...
 ---
 name:            test_scalar_uaddo_32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_uaddo_32

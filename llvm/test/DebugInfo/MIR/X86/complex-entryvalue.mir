@@ -42,6 +42,7 @@
 ...
 ---
 name:            f
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     DBG_VALUE $edi, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_lit0, DW_OP_plus), debug-location !15

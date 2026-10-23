@@ -6,6 +6,7 @@
 
 ---
 name:            abds_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -48,6 +49,7 @@ body:             |
 ...
 ---
 name:            abds_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -90,6 +92,7 @@ body:             |
 ...
 ---
 name:            abds_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -123,6 +126,7 @@ body:             |
 ...
 ---
 name:            abds_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: abds_i64
@@ -161,6 +165,7 @@ body:             |
 ...
 ---
 name:            abdu_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -203,6 +208,7 @@ body:             |
 ...
 ---
 name:            abdu_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -245,6 +251,7 @@ body:             |
 ...
 ---
 name:            abdu_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -278,6 +285,7 @@ body:             |
 ...
 ---
 name:            abdu_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: abdu_i64

@@ -879,7 +879,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("regBankSelected", MF.RegBankSelected, false);
     YamlIO.mapOptional("selected", MF.Selected, false);
     YamlIO.mapOptional("failedISel", MF.FailedISel, false);
-    YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, false);
+    YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, true);
     YamlIO.mapOptional("hasWinCFI", MF.HasWinCFI, false);
 
     // PHIs must be not be capitalized, since it will clash with the MIR opcode

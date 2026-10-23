@@ -7,6 +7,7 @@ name:            fcmeq
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmeq
@@ -27,6 +28,7 @@ name:            fcmge
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmge
@@ -47,6 +49,7 @@ name:            fcmgt
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmgt
@@ -67,6 +70,7 @@ name:            fcmeqz
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmeqz
@@ -87,6 +91,7 @@ name:            fcmgez
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmgez
@@ -107,6 +112,7 @@ name:            fcmgtz
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmgtz
@@ -127,6 +133,7 @@ name:            fcmlez
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmlez
@@ -147,6 +154,7 @@ name:            fcmltz
 alignment:       4
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fcmltz

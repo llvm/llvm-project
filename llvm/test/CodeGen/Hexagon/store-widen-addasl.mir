@@ -21,6 +21,7 @@
 ...
 ---
 name:            qhl_scalar_dsp_fft_f32
+tracksRegLiveness: false
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

@@ -7,6 +7,7 @@
 # GFX11-NEXT: S_WAITCNT .Lgkmcnt_0
 ---
 name: waitcnt-vscnt
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |

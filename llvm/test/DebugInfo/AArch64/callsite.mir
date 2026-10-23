@@ -42,6 +42,7 @@
   !53 = distinct !DISubprogram(type: !36, unit: !9, retainedNodes: !54)
   !54 = !{}
 name:            aserty
+tracksRegLiveness: false
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
@@ -64,5 +65,6 @@ body:             |
     BL @asdfgh, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit killed $w2, implicit-def $sp,  debug-location !51
 ...
 name:            asdfgh
+tracksRegLiveness: false
 body:             |
   bb.2 (%ir-block.10):

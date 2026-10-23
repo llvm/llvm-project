@@ -3,6 +3,7 @@
 
 ---
 name: no_knownbits
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @no_knownbits
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: zext_insert_subvector
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @zext_insert_subvector
@@ -31,6 +33,7 @@ body: |
 ...
 ---
 name: overwritten_src_ignored
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @overwritten_src_ignored
@@ -51,6 +54,7 @@ body: |
 ...
 ---
 name: intersect_src_and_sub
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @intersect_src_and_sub
@@ -73,6 +77,7 @@ body: |
 ...
 ---
 name: scalable_src_scalable_sub
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @scalable_src_scalable_sub
@@ -89,6 +94,7 @@ body: |
 ...
 ---
 name: scalable_src_fixed_sub
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @scalable_src_fixed_sub

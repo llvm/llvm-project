@@ -11,6 +11,7 @@
 ...
 ---
 name:            test_adc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -45,6 +46,7 @@ body:             |
 ...
 ---
 name:            test_sbb
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -79,6 +81,7 @@ body:             |
 ...
 ---
 name:            test_rcl
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -113,6 +116,7 @@ body:             |
 ...
 ---
 name:            test_rcr
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -147,6 +151,7 @@ body:             |
 ...
 ---
 name:            test_cmov
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -195,6 +200,7 @@ body:             |
 ...
 ---
 name:            test_cfcmov
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $rdi, $rsi
@@ -243,6 +249,7 @@ body:             |
 ...
 ---
 name:            test_ccmp
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -274,6 +281,7 @@ body:             |
 ...
 ---
 name:            test_ctest
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -305,6 +313,7 @@ body:             |
 ...
 ---
 name:            test_evitable_clobber
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -336,6 +345,7 @@ body:             |
 ...
 ---
 name:            test_inevitable_clobber
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -358,6 +368,7 @@ body:             |
 ...
 ---
 name:            test_evitable_clobber_multiple_uses
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -398,6 +409,7 @@ body:             |
 ...
 ---
 name:            test_mixed_clobber
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $edi
@@ -443,6 +455,7 @@ body:             |
 ...
 ---
 name:            test_evitable_clobber_crossbb
+tracksRegLiveness: false
 body:             |
   ; NDD-LABEL: name: test_evitable_clobber_crossbb
   ; NDD: bb.0:
@@ -496,6 +509,7 @@ body:             |
 ...
 ---
 name:            test_inevitable_clobber_crossbb
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: test_inevitable_clobber_crossbb
   ; CHECK: bb.0:
@@ -528,6 +542,7 @@ body:             |
 ...
 ---
 name:            test_evitable_clobber_crossbb_complex
+tracksRegLiveness: false
 body:             |
   ; NDD-LABEL: name: test_evitable_clobber_crossbb_complex
   ; NDD: bb.0:
@@ -607,6 +622,7 @@ body:             |
 ...
 ---
 name:            test_inevitable_clobber_crossbb_complex
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: test_inevitable_clobber_crossbb_complex
   ; CHECK: bb.0:

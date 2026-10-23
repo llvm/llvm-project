@@ -6,6 +6,7 @@
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_merge
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge
@@ -25,6 +26,7 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_merge_3ops
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_3ops
@@ -49,6 +51,7 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_build_vector
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_build_vector
@@ -68,6 +71,7 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_buildvector_3ops
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_buildvector_3ops
@@ -90,6 +94,7 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_concat_vectors
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_concat_vectors
@@ -110,6 +115,7 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_bitcast_merge
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_bitcast_merge
@@ -130,6 +136,7 @@ body:             |
 # the destinations of the unmerge, since the types don't match.
 ---
 name:            test_combine_unmerge_merge_incompatible_types
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types
@@ -155,6 +162,7 @@ body:             |
 # match.
 ---
 name:            test_combine_unmerge_merge_incompatible_types_but_same_size
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types_but_same_size
@@ -182,6 +190,7 @@ body:             |
 # ...
 ---
 name:            test_combine_unmerge_cst
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_cst
@@ -241,6 +250,7 @@ body:             |
 # Constant is a 3 | 2 | 1 in chunks of 13-bit.
 ---
 name:            test_combine_unmerge_cst_36bit
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_cst_36bit
@@ -263,6 +273,7 @@ body:             |
 # Unmerge floating point constant.
 ---
 name:            test_combine_unmerge_fpcst
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_fpcst
@@ -285,6 +296,7 @@ body:             |
 # Transform unmerge into trunc when only the first definition is live.
 ---
 name:            test_combine_unmerge_dead_to_trunc
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc
@@ -299,6 +311,7 @@ body:             |
 # Don't transform unmerge into trunc when middle lanes are live.
 ---
 name:            test_dont_combine_unmerge_dead_to_trunc
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_dont_combine_unmerge_dead_to_trunc
@@ -314,6 +327,7 @@ body:             |
 # if the input and output types are vectors.
 ---
 name:            test_combine_unmerge_dead_to_trunc_vec_in_n_out
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in_n_out
@@ -329,6 +343,7 @@ body:             |
 # if the input type is vector.
 ---
 name:            test_combine_unmerge_dead_to_trunc_vec_in
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in
@@ -342,6 +357,7 @@ body:             |
 
 ---
 name:            test_combine_unmerge_dead_to_trunc_ptr_out
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_out
@@ -355,6 +371,7 @@ body:             |
 
 ---
 name:            test_combine_unmerge_dead_to_trunc_ptr_in
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_in
@@ -372,6 +389,7 @@ body:             |
 # this definition.
 ---
 name:            test_combine_unmerge_zext_to_zext_same_size
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext_same_size
@@ -391,6 +409,7 @@ body:             |
 # of the unmerge. Therefore a G_ZEXT is required.
 ---
 name:            test_combine_unmerge_zext_to_zext
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext
@@ -415,6 +434,7 @@ body:             |
 # of the zext.
 ---
 name:            test_dont_combine_unmerge_zext_to_zext_src_bigger
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_bigger
@@ -438,6 +458,7 @@ body:             |
 # when the input zext deals with a vector type.
 ---
 name:            test_dont_combine_unmerge_zext_to_zext_src_vector
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_vector
@@ -456,6 +477,7 @@ body:             |
 # Check that we unmerge the build vector on the anyext
 ---
 name:            test_anyext_buildvector
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_anyext_buildvector
@@ -485,6 +507,7 @@ body:             |
 # Check that we unmerge the build vector on the anyext and undef
 ---
 name:            test_anyext_buildvector_undef
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_anyext_buildvector_undef
@@ -510,6 +533,7 @@ body:             |
 # Check that we don't unmerge the build vector on the anyext, multi-use
 ---
 name:            test_anyext_buildvector_multi
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_anyext_buildvector_multi
@@ -538,6 +562,7 @@ body:             |
 # Check that we don't unmerge the build vector on the anyext into scalar
 ---
 name:            test_anyext_buildvector_scalar
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_anyext_buildvector_scalar
@@ -564,6 +589,7 @@ body:             |
 # Check that we anyext the merge
 ---
 name:            test_merge_undef
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_merge_undef
@@ -579,6 +605,7 @@ body:             |
 # Check that we don't anyext the merge, multi-use
 ---
 name:            test_merge_undef_multi_use
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_merge_undef_multi_use
@@ -596,6 +623,7 @@ body:             |
 # Check that we zext the merge
 ---
 name:            test_merge_zero
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_merge_zero
@@ -610,6 +638,7 @@ body:             |
 # Check that we still zext the merge, multi-use
 ---
 name:            test_merge_zero_multi_use
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_merge_zero_multi_use
@@ -627,6 +656,7 @@ body:             |
 # Check that we don't zext the merge with one
 ---
 name:            test_merge_one
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_merge_one
