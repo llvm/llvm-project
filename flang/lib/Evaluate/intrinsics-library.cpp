@@ -158,7 +158,8 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
   host::HostType<TR> hostResult{};
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
-      GetScalarConstantValue<typename TA::FortranType>(args[I]).value()...};
+      GetScalarConstantValue<typename TA::FortranType>(TA::kind, args[I])
+          .value()...};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
@@ -826,7 +827,7 @@ static const Expr<SomeType> &GetArg(
 template <typename T>
 static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
   const int kind{expr.kind()};
-  if (auto scalar{GetScalarConstantValue<T>(expr)}) {
+  if (auto scalar{GetScalarConstantValue<T>(kind, expr)}) {
     auto lbValue{
         Scalar<T>::FromInteger(kind, value::IntegerValue{1, lb}).value};
     auto ubValue{
@@ -865,7 +866,7 @@ static bool VerifyStrictlyPositiveIfReal(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
           const int kind{x.kind()};
-          auto scalar{GetScalarConstantValue<T>(x)};
+          auto scalar{GetScalarConstantValue<T>(kind, x)};
           return Satisfies(
               RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar));
         },
@@ -958,7 +959,8 @@ static bool VerifyAtan2LikeArguments(
         [&](const auto &typedExpr) -> bool {
           using T = typename std::decay_t<decltype(typedExpr)>::Result;
           auto x{GetScalarConstantValue<T>(typedExpr)};
-          auto y{GetScalarConstantValue<T>(GetArg(lastArg, args))};
+          auto y{GetScalarConstantValue<T>(
+              typedExpr.kind(), GetArg(lastArg, args))};
           if (x && y) {
             return !(x->IsZero() && y->IsZero());
           }

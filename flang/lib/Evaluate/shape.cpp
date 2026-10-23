@@ -63,10 +63,12 @@ auto GetShapeHelper::AsShapeResult(ExtentExpr &&arrayExpr) const -> Result {
   if (context_) {
     arrayExpr = Fold(*context_, std::move(arrayExpr));
   }
-  if (const auto *constArray{UnwrapConstantValue<ExtentType>(arrayExpr)}) {
+  if (const auto *constArray{
+          UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, arrayExpr)}) {
     return ConstantShape(*constArray);
   }
-  if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(arrayExpr)}) {
+  if (auto *constructor{UnwrapExpr<ArrayConstructor<ExtentType>>(
+          SubscriptIntegerKind, arrayExpr)}) {
     Shape result;
     for (auto &value : *constructor) {
       auto *expr{std::get_if<ExtentExpr>(&value.u)};
@@ -107,7 +109,8 @@ std::optional<Constant<ExtentType>> AsConstantShape(
     FoldingContext &context, const Shape &shape) {
   if (auto shapeArray{AsExtentArrayExpr(shape)}) {
     auto folded{Fold(context, std::move(*shapeArray))};
-    if (auto *p{UnwrapConstantValue<ExtentType>(folded)}) {
+    if (auto *p{
+            UnwrapConstantValue<ExtentType>(SubscriptIntegerKind, folded)}) {
       return std::move(*p);
     }
   }

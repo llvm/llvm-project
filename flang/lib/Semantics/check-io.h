@@ -93,7 +93,7 @@ private:
       if constexpr (std::is_same_v<R, std::string>) {
         if (auto charVal{
                 evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-                    foldExpr)}) {
+                    evaluate::AsciiKind, foldExpr)}) {
           return charVal->AsStdString();
         }
       } else {

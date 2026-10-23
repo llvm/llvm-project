@@ -773,7 +773,7 @@ std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
         semanticsContext.foldingContext(), common::Clone(*expr))};
     if constexpr (std::is_same_v<R, std::string>) {
       return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-          foldExpr);
+          evaluate::AsciiKind, foldExpr);
     }
   }
   return std::nullopt;

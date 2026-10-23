@@ -420,8 +420,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // or error for this case.
   bool volatileOrAsyncNeedsTempDiagnosticIssued{false};
   if (typesCompatible) {
-    if (const auto *constantChar{
-            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+    if (const auto *constantChar{evaluate::UnwrapConstantValue<evaluate::Ascii>(
+            evaluate::AsciiKind, actual)};
         constantChar && constantChar->wasHollerith() &&
         dummy.type.type().IsUnlimitedPolymorphic()) {
       foldingContext.Warn(common::LanguageFeature::HollerithPolymorphic,

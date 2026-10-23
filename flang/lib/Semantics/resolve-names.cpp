@@ -2630,8 +2630,8 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   }
   symbol.SetIsCDefined(isCDefined_);
   std::optional<std::string> label;
-  if (auto charVal{
-          evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)}) {
+  if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+          evaluate::AsciiKind, bindName_)}) {
     label = charVal->AsStdString();
   }
   // 18.9.2(2): discard leading and trailing blanks
@@ -9782,8 +9782,8 @@ public:
   bool Pre(const parser::IoControlSpec::Asynchronous &async) {
     if (auto folded{evaluate::Fold(
             context_.foldingContext(), AnalyzeExpr(context_, async.v))}) {
-      if (auto charVal{
-              evaluate::GetScalarConstantValue<evaluate::Ascii>(*folded)}) {
+      if (auto charVal{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *folded)}) {
         if (auto str{charVal->AsStdString()}) {
           for (char ch : *str) {
             if (ch != ' ') {

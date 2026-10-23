@@ -1023,7 +1023,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::HollerithLiteralConstant &x) {
   int kind{GetDefaultKind(TypeCategory::Character)};
   auto result{AnalyzeString(std::string{x.v}, kind)};
-  if (auto *constant{UnwrapConstantValue<Ascii>(result)}) {
+  if (auto *constant{UnwrapConstantValue<Ascii>(AsciiKind, result)}) {
     constant->set_wasHollerith(true);
   }
   return result;
@@ -5974,7 +5974,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
       // Pad Hollerith actual argument with spaces up to a multiple of 8
       // bytes, in case the data are interpreted as double precision
       // (or a smaller numeric type) by legacy code.
-      if (auto hollerith{UnwrapExpr<Constant<Ascii>>(*argExpr)};
+      if (auto hollerith{UnwrapExpr<Constant<Ascii>>(AsciiKind, *argExpr)};
           hollerith && hollerith->wasHollerith()) {
         auto bytes{hollerith->values()};
         while ((bytes.size() % 8) != 0) {
@@ -6353,7 +6353,7 @@ bool ExprChecker::Pre(const parser::IfConstruct &construct) {
       if (expr) {
         if (auto known{
                 evaluate::GetScalarConstantValue<evaluate::LogicalResult>(
-                    *expr)}) {
+                    evaluate::LogicalResultKind, *expr)}) {
           state = known->IsTrue() ? TrueNow : FalseNow;
           determiner = here;
         }

@@ -539,7 +539,9 @@ private:
         }
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
-      result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
+      result = GetScalarConstantValue<LogicalResult>(LogicalResultKind, folded)
+                   .value()
+                   .IsTrue();
     } else {
       // first unmasked element for MAXLOC/MINLOC - always take it
     }
@@ -1310,9 +1312,9 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
     return FoldLocation<WhichLocation::Minloc, T>(context, std::move(funcRef));
   } else if (name == "mod") {
     bool badPConst{false};
-    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(kind, args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+      if (auto pConst{GetScalarConstantValue<T>(kind, *pExpr)};
           pConst && pConst->IsZero()) {
         context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MOD: P argument is zero"_warn_en_US);
@@ -1336,9 +1338,9 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
             }));
   } else if (name == "modulo") {
     bool badPConst{false};
-    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(kind, args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+      if (auto pConst{GetScalarConstantValue<T>(kind, *pExpr)};
           pConst && pConst->IsZero()) {
         context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MODULO: P argument is zero"_warn_en_US);
@@ -1427,8 +1429,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return MakeConstantExpr<T>(kind, args[0]->Rank());
     }
   } else if (name == "selected_char_kind") {
-    if (const auto *chCon{
-            UnwrapExpr<Constant<Type<TypeCategory::Character>>>(args[0])}) {
+    if (const auto *chCon{UnwrapExpr<Constant<Type<TypeCategory::Character>>>(
+            AsciiKind, args[0])}) {
       if (std::optional<value::CharacterValue> charVal{
               chCon->GetScalarValue()}) {
         int defaultKind{
@@ -1552,9 +1554,9 @@ Expr<Type<TypeCategory::Unsigned>> FoldIntrinsicFunction(
     return MakeConstantExpr<T>(kind, Scalar<T>::Zero(kind).NOT());
   } else if (name == "mod" || name == "modulo") {
     bool badPConst{false};
-    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(kind, args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+      if (auto pConst{GetScalarConstantValue<T>(kind, *pExpr)};
           pConst && pConst->IsZero()) {
         context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "%s: P argument is zero"_warn_en_US, name);
@@ -1644,7 +1646,8 @@ Expr<RankOneBoundElement::Result> FoldOperation(
     FoldingContext &context, RankOneBoundElement &&x) {
   using ResultType = RankOneBoundElement::Result;
   auto folded{Fold(context, Expr<ResultType>{x.base()})};
-  if (auto *c{UnwrapConstantValue<ResultType>(folded)}) {
+  if (auto *c{UnwrapConstantValue<ResultType>(
+          RankOneBoundElement::ResultKind, folded)}) {
     // Base is a constant array; extract the element at dimension_ (0-based).
     ConstantSubscripts at{c->lbounds()};
     at[0] = c->lbounds()[0] + x.dimension();

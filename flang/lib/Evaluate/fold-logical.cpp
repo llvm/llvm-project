@@ -99,8 +99,8 @@ public:
     if (UnwrapExpr<Expr<T>>(kind, hi_)) {
       bool promote{kind < 16};
       Result constResult;
-      if (auto hiV{GetScalarConstantValue<T>(hi_)}) {
-        auto loV{GetScalarConstantValue<T>(lo_)};
+      if (auto hiV{GetScalarConstantValue<T>(kind, hi_)}) {
+        auto loV{GetScalarConstantValue<T>(kind, lo_)};
         CHECK(loV.has_value());
         auto diff{hiV->Subtract(*loV, Rounding{common::RoundingMode::ToZero})};
         promote = promote &&
@@ -871,7 +871,7 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
   using Ty = Type<TypeCategory::Logical>;
   const int kind{x.kind()};
   auto &operand{x.left()};
-  if (auto value{GetScalarConstantValue<Ty>(operand)}) {
+  if (auto value{GetScalarConstantValue<Ty>(kind, operand)}) {
     return MakeConstantExpr<Ty>(kind, !value->IsTrue());
   }
   return Expr<Ty>{x};

@@ -86,10 +86,10 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
     using RealType = typename ComplexType::Part;
     Constant<ComplexType> result{
         kind, Scalar<ComplexType>{folded->first, folded->second}};
-    if (const auto *re{UnwrapConstantValue<RealType>(x.left())};
+    if (const auto *re{UnwrapConstantValue<RealType>(kind, x.left())};
         re && re->result().isFromInexactLiteralConversion()) {
       result.result().set_isFromInexactLiteralConversion();
-    } else if (const auto *im{UnwrapConstantValue<RealType>(x.right())};
+    } else if (const auto *im{UnwrapConstantValue<RealType>(kind, x.right())};
         im && im->result().isFromInexactLiteralConversion()) {
       result.result().set_isFromInexactLiteralConversion();
     }

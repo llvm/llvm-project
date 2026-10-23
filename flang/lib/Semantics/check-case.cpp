@@ -88,7 +88,8 @@ private:
         if (auto converted{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(
                     {T::category, kind_}, SomeExpr{folded}))}) {
-          if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
+          if (auto value{
+                  evaluate::GetScalarConstantValue<T>(kind_, *converted)}) {
             auto back{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(*type, SomeExpr{*converted}))};
             if (back == folded) {

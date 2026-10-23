@@ -232,8 +232,9 @@ template <typename A, typename B> A *UnwrapExpr(B *x) {
 
 /// A variant of UnwrapExpr that also requires a specific kind of the
 /// expression.
-template <typename A, typename B> const A *UnwrapExpr(int kind, const B &x) {
-  const A *result{UnwrapExpr<A>(x)};
+template <typename A, typename B>
+auto UnwrapExpr(int kind, B &x) -> decltype(UnwrapExpr<A>(x)) {
+  auto *result{UnwrapExpr<A>(x)};
   if (result && result->kind() == kind) {
     return result;
   }

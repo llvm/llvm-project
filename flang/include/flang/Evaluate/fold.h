@@ -62,6 +62,16 @@ auto UnwrapConstantValue(EXPR &expr) -> common::Constify<Constant<T>, EXPR> * {
     return nullptr;
   }
 }
+template <typename T, typename EXPR>
+auto UnwrapConstantValue(int kind, EXPR &expr)
+    -> common::Constify<Constant<T>, EXPR> * {
+  if (auto *c{UnwrapConstantValue<T>(expr)}) {
+    if (c->kind() == kind) {
+    return c;
+}
+  }
+  return nullptr;
+}
 
 // GetScalarConstantValue() extracts the known scalar constant value of
 // an expression, if it has one.  The value can be parenthesized.
@@ -116,7 +126,8 @@ std::optional<std::int64_t> ToInt64(const ActualArgument &);
 // When an expression is a constant logical scalar, ToLogical() extracts its
 // value.
 inline std::optional<bool> ToLogical(const Expr<LogicalResult> &expr) {
-  if (auto val{GetScalarConstantValue<LogicalResult>(expr)}) {
+  if (auto val{
+          GetScalarConstantValue<LogicalResult>(LogicalResultKind, expr)}) {
     return val->IsTrue();
   }
   return std::nullopt;

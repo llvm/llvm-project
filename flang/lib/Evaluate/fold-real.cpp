@@ -214,7 +214,7 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
       common::die(" unexpected argument type inside abs");
     }
   } else if (name == "aimag") {
-    if (auto *zExpr{UnwrapExpr<Expr<ComplexT>>(args[0])}) {
+    if (auto *zExpr{UnwrapExpr<Expr<ComplexT>>(kind, args[0])}) {
       return Fold(context, Expr<T>{ComplexComponent{true, std::move(*zExpr)}});
     }
   } else if (name == "aint" || name == "anint") {
@@ -295,9 +295,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   } else if (name == "mod") {
     CHECK(args.size() == 2);
     bool badPConst{false};
-    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(kind, args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+      if (auto pConst{GetScalarConstantValue<T>(kind, *pExpr)};
           pConst && pConst->IsZero()) {
         context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MOD: P argument is zero"_warn_en_US);
@@ -318,9 +318,9 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   } else if (name == "modulo") {
     CHECK(args.size() == 2);
     bool badPConst{false};
-    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(kind, args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+      if (auto pConst{GetScalarConstantValue<T>(kind, *pExpr)};
           pConst && pConst->IsZero()) {
         context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MODULO: P argument is zero"_warn_en_US);

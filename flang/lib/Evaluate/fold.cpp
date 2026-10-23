@@ -28,8 +28,8 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
               -> std::optional<Constant<SubscriptInteger>> {
-            if (const auto *constant{
-                    UnwrapConstantValue<SubscriptInteger>(expr.value())}) {
+            if (const auto *constant{UnwrapConstantValue<SubscriptInteger>(
+                    SubscriptIntegerKind, expr.value())}) {
               return *constant;
             } else {
               return std::nullopt;
@@ -341,8 +341,8 @@ static std::optional<ResolvedConsequent> FoldConditionalArgImpl(
   condArg.condition() = Fold(context, std::move(condArg.condition()));
 
   // Condition is constant - select appropriate branch and recursively fold it.
-  if (auto constCond{
-          GetScalarConstantValue<LogicalResult>(condArg.condition())}) {
+  if (auto constCond{GetScalarConstantValue<LogicalResult>(
+          LogicalResultKind, condArg.condition())}) {
     if (constCond->IsTrue()) {
       // .TRUE. — select this consequent.
       FoldConsequent(context, condArg.consequent());

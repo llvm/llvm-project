@@ -42,7 +42,7 @@ Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
           kind, std::move(conjugates), ConstantSubscripts{va->shape()}};
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
-      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(kind, products))};
       [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
@@ -60,7 +60,8 @@ Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
       Expr<T> conjunctions{Fold(context,
           Expr<T>{LogicalOperation{LogicalOperator::And,
               Expr<T>{Constant<T>{*va}}, Expr<T>{Constant<T>{*vb}}}})};
-      Constant<T> &cConjunctions{DEREF(UnwrapConstantValue<T>(conjunctions))};
+      Constant<T> &cConjunctions{
+          DEREF(UnwrapConstantValue<T>(kind, conjunctions))};
       for (const Element &x : cConjunctions.values()) {
         if (x.IsTrue()) {
           sum = Element{kind, true};
@@ -70,7 +71,7 @@ Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
     } else if constexpr (T::category == TypeCategory::Integer) {
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
-      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(kind, products))};
       for (const Element &x : cProducts.values()) {
         auto next{sum.AddSigned(x)};
         overflow |= next.overflow;
@@ -79,7 +80,7 @@ Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
     } else if constexpr (T::category == TypeCategory::Unsigned) {
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
-      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(kind, products))};
       for (const Element &x : cProducts.values()) {
         sum = sum.AddUnsigned(x).value;
       }
@@ -87,7 +88,7 @@ Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
       static_assert(T::category == TypeCategory::Real);
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
-      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(kind, products))};
       [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
@@ -254,7 +255,7 @@ public:
         PackageRelation(opr_, MakeConstantExpr<T>(kind(), aAt),
             MakeConstantExpr<T>(kind(), element))};
     auto folded{GetScalarConstantValue<LogicalResult>(
-        test.Rewrite(context_, std::move(test)))};
+        LogicalResultKind, test.Rewrite(context_, std::move(test)))};
     CHECK(folded.has_value());
     if (folded->IsTrue()) {
       element = aAt;

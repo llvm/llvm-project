@@ -2034,7 +2034,7 @@ bool MayBePassedAsAbsentOptional(const Expr<SomeType> &expr) {
 static std::optional<std::string> GetScalarConstantValueAsStdString(
     const Expr<SomeType> &expr) {
   if (std::optional<value::CharacterValue> chValue{
-          GetScalarConstantValue<Ascii>(expr)}) {
+          GetScalarConstantValue<Ascii>(AsciiKind, expr)}) {
     return chValue->AsStdString();
   }
   return std::nullopt;
