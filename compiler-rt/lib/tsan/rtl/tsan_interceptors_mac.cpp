@@ -274,14 +274,26 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
   REAL(os_lock_unlock)(lock);
 }
 
+// With ignore_noninstrumented_modules=0 the user asked us not to treat
+// uninstrumented code differently, so every caller counts as instrumented.
+static bool IsCalledFromInstrumentedCode(uptr caller_pc) {
+  return !flags()->ignore_noninstrumented_modules ||
+         libignore()->IsPcInstrumented(caller_pc);
+}
+
 TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   if (!cur_thread()->is_inited || cur_thread()->is_dead) {
     return REAL(os_unfair_lock_lock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock, lock);
-  MutexPreLock(thr, pc, (uptr)lock);
-  REAL(os_unfair_lock_lock)(lock);
-  MutexPostLock(thr, pc, (uptr)lock);
+  if (IsCalledFromInstrumentedCode(GET_CALLER_PC())) {
+    MutexPreLock(thr, pc, (uptr)lock);
+    REAL(os_unfair_lock_lock)(lock);
+    MutexPostLock(thr, pc, (uptr)lock);
+  } else {
+    REAL(os_unfair_lock_lock)(lock);
+    Acquire(thr, pc, (uptr)lock);
+  }
 }
 
 // os_unfair_lock_lock_with_flags was introduced in macOS 15
@@ -297,9 +309,14 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_flags, os_unfair_lock_t lock,
     return REAL(os_unfair_lock_lock_with_flags)(lock, flags);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_flags, lock, flags);
-  MutexPreLock(thr, pc, (uptr)lock);
-  REAL(os_unfair_lock_lock_with_flags)(lock, flags);
-  MutexPostLock(thr, pc, (uptr)lock);
+  if (IsCalledFromInstrumentedCode(GET_CALLER_PC())) {
+    MutexPreLock(thr, pc, (uptr)lock);
+    REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+    MutexPostLock(thr, pc, (uptr)lock);
+  } else {
+    REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+    Acquire(thr, pc, (uptr)lock);
+  }
 }
 #    pragma clang diagnostic pop
 #  endif
@@ -310,9 +327,14 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
     return REAL(os_unfair_lock_lock_with_options)(lock, options);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_options, lock, options);
-  MutexPreLock(thr, pc, (uptr)lock);
-  REAL(os_unfair_lock_lock_with_options)(lock, options);
-  MutexPostLock(thr, pc, (uptr)lock);
+  if (IsCalledFromInstrumentedCode(GET_CALLER_PC())) {
+    MutexPreLock(thr, pc, (uptr)lock);
+    REAL(os_unfair_lock_lock_with_options)(lock, options);
+    MutexPostLock(thr, pc, (uptr)lock);
+  } else {
+    REAL(os_unfair_lock_lock_with_options)(lock, options);
+    Acquire(thr, pc, (uptr)lock);
+  }
 }
 
 TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
@@ -321,8 +343,12 @@ TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_trylock, lock);
   bool result = REAL(os_unfair_lock_trylock)(lock);
-  if (result)
-    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
+  if (result) {
+    if (IsCalledFromInstrumentedCode(GET_CALLER_PC()))
+      MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
+    else
+      Acquire(thr, pc, (uptr)lock);
+  }
   return result;
 }
 
@@ -331,7 +357,17 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_unlock, os_unfair_lock_t lock) {
     return REAL(os_unfair_lock_unlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_unlock, lock);
-  MutexUnlock(thr, pc, (uptr)lock);
+
+  // Some system libraries take locks in a manner that is opaque to TSan. The
+  // deadlock detector will then report 'unlock of an unlocked mutex'. If TSan
+  // was not aware of this lock being taken, then don't report it to the
+  // deadlock detector - instead just mark it as a Release.
+  SyncVar* s = ctx->metamap.GetSyncIfExists((uptr)lock);
+  bool lock_held_by_current_thread = s && s->owner_tid == cur_thread()->tid;
+  if (lock_held_by_current_thread)
+    MutexUnlock(thr, pc, (uptr)lock);
+  else
+    Release(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_unlock)(lock);
 }
 
