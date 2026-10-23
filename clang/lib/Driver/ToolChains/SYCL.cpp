@@ -247,7 +247,8 @@ SYCLToolChain::getDeviceLibs(
                             "libclang_rt.builtins-spirv64.bc");
   }
   if (!getDriver().getVFS().exists(BCPath)) {
-    getDriver().Diag(clang::diag::err_drv_no_compiler_rt_builtins_bc) << BCPath;
+    getDriver().Diag(clang::diag::err_drv_device_lib_not_found)
+        << /*compiler-rt builtins*/ 1 << BCPath;
     return {};
   }
   return {{std::string(BCPath), /*ShouldInternalize=*/true}};

@@ -29,15 +29,29 @@
 // CHECK-NOLIBSYCL: "-triple" "spirv64-unknown-unknown"
 // CHECK-NOLIBSYCL: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}spirv64-unknown-unknown{{[/\\]+}}libclang_rt.builtins.bc"
 
-// Test fallback to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF layout:
+// Test the flat layout used with LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF:
 // lib/<os>/libclang_rt.builtins-spirv64.bc
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   -resource-dir=%S/Inputs/spirv64-sycl-legacy %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-LEGACY-BC
-// CHECK-LEGACY-BC: "-triple" "spirv64-unknown-unknown"
-// CHECK-LEGACY-BC: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}linux{{[/\\]+}}libclang_rt.builtins-spirv64.bc"
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl-flat-layout %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FLAT-LAYOUT-BC
+// CHECK-FLAT-LAYOUT-BC: "-triple" "spirv64-unknown-unknown"
+// CHECK-FLAT-LAYOUT-BC: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}linux{{[/\\]+}}libclang_rt.builtins-spirv64.bc"
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MISSING
 // CHECK-MISSING: error: no compiler-rt builtins bitcode library '{{.*}}libclang_rt.builtins{{.*}}.bc' found in the clang resource directory
+
+// Compilations that stop at or before the compile phase never link bitcode, so
+// a missing builtins library is not an error for them.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -E \
+// RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsyntax-only \
+// RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --precompile \
+// RUN:   -resource-dir=%T/nonexistent -x c++-header %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
+// CHECK-NO-CODEGEN-NOT: error:
+// CHECK-NO-CODEGEN-NOT: "-mlink-builtin-bitcode"
