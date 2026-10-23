@@ -153,8 +153,8 @@ body: |
     ; RA: liveins: $edi, $rsi
     ; RA-NEXT: {{  $}}
     ; RA-NEXT: renamable $edi = KILL $edi, implicit-def $rdi
-    ; RA-NEXT: renamable $rax = FREEZE killed renamable $rdi
-    ; RA-NEXT: MOV64mr killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $rax
+    ; RA-NEXT: renamable $rdi = FREEZE killed renamable $rdi
+    ; RA-NEXT: MOV64mr killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $rdi
     ; RA-NEXT: RET 0
     %0:gr32 = COPY $edi
     %1:gr64 = COPY $rsi
