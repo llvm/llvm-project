@@ -41,13 +41,17 @@ class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
 class LoadInst;
+class Loop;
 class PHINode;
+class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+class SLPAnalysisCache;
 
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
@@ -286,7 +290,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 /// equivalent shuffle mask.
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC);
+                     AssumptionCache *AC, SLPAnalysisCache &Cache);
 
 /// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
@@ -528,6 +532,20 @@ bool isFirstInsertElement(const InsertElementInst *IE1,
 /// \returns the debug location of \p PN, or an unknown location if it has
 /// none.
 DebugLoc getDebugLocFromPHI(const PHINode &PN);
+
+/// \returns the number of elements of the homogeneous aggregate built by
+/// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
+/// a homogeneous aggregate.
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
+/// \returns the innermost loop starting from \p L for which at least one value
+/// in \p VL is not loop-invariant.
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
+
+/// \returns an estimated trip count for \p L, bounded by the loop-aware budget
+/// \p LoopAwareTripCount. Returns 1 when the budget is 0.
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount);
 
 } // namespace llvm::slpvectorizer
 

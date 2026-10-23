@@ -3626,6 +3626,10 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
 static Value *simplifyICmpWithMinMax(CmpPredicate Pred, Value *LHS, Value *RHS,
                                      const SimplifyQuery &Q,
                                      unsigned MaxRecurse) {
+  // All folds below need a min/max operand.
+  if (!isa<MinMaxIntrinsic>(LHS) && !isa<MinMaxIntrinsic>(RHS))
+    return nullptr;
+
   Type *ITy = getCompareTy(LHS); // The return type.
   Value *A, *B;
   CmpInst::Predicate P = CmpInst::BAD_ICMP_PREDICATE;
@@ -3885,12 +3889,18 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isIntPredicate(Pred) && "Not an integer compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      if (Constant *C =
+              ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI))
+        return C;
+      // Constant folding cannot always decide a comparison between constants.
+      // Fall through to the generic logic below, which can still reason about
+      // them with value tracking.
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
   assert(!isa<UndefValue>(LHS) && "Unexpected icmp undef,%X");
 
@@ -5387,7 +5397,11 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     }
   }
 
-  if (!IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
+  // Match the index before stripping the base below, which is more expensive.
+  Value *PtrOp;
+  bool IsNeg = match(Indices.back(), m_Neg(m_PtrToInt(m_Value(PtrOp))));
+  if ((IsNeg || match(Indices.back(), m_Not(m_PtrToInt(m_Value(PtrOp))))) &&
+      !IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
       all_of(Indices.drop_back(1), match_fn(m_Zero()))) {
     unsigned IdxWidth =
         Q.DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace());
@@ -5401,17 +5415,10 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       // a null pointer, which will have incorrect provenance.
 
       // gep (gep V, C), (sub 0, V) -> C
-      if (match(Indices.back(),
-                m_Neg(m_PtrToInt(m_Specific(StrippedBasePtr)))) &&
-          !BasePtrOffset.isZero()) {
-        auto *CI = ConstantInt::get(GEPTy->getContext(), BasePtrOffset);
-        return ConstantExpr::getIntToPtr(CI, GEPTy);
-      }
       // gep (gep V, C), (xor V, -1) -> C-1
-      if (match(Indices.back(),
-                m_Xor(m_PtrToInt(m_Specific(StrippedBasePtr)), m_AllOnes())) &&
-          !BasePtrOffset.isOne()) {
-        auto *CI = ConstantInt::get(GEPTy->getContext(), BasePtrOffset - 1);
+      APInt Offset = IsNeg ? BasePtrOffset : BasePtrOffset - 1;
+      if (PtrOp == StrippedBasePtr && !Offset.isZero()) {
+        auto *CI = ConstantInt::get(GEPTy->getContext(), Offset);
         return ConstantExpr::getIntToPtr(CI, GEPTy);
       }
     }
