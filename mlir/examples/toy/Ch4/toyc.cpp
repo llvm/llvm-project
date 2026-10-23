@@ -141,7 +141,6 @@ static int dumpMLIR() {
   }
 
   module->print(llvm::errs());
-  llvm::errs() << "\n";
   return 0;
 }
 

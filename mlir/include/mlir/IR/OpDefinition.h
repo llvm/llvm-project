@@ -124,7 +124,7 @@ public:
 
   /// Dump this operation.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() { state->dump(); }
+  LLVM_DUMP_METHOD void dump();
 #endif
 
   /// The source location the operation was defined or derived from.
