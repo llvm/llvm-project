@@ -1181,7 +1181,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
       auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
-      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
+      if (!Inserted && It->second != FileIndex && DumpOpts.ShowErrorDetails) {
         warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}] is a "
                           "duplicate of file_names[{2}]\n",
                           *toSectionOffset(Die.find(DW_AT_stmt_list)),
@@ -1245,8 +1245,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  ErrorCategory.ShowDetail(this->DumpOpts.Verbose ||
-                           !this->DumpOpts.ShowAggregateErrors);
+  ErrorCategory.ShowDetail(this->DumpOpts.ShowErrorDetails);
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();
