@@ -20212,8 +20212,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   }
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-  if (Ret.first)
+  if (Ret.first) {
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
+    if (!Subtarget->useRealTrue16Insts() &&
+        TRI->getRegSizeInBits(*Ret.second) == 16)
+      return std::pair(0U, nullptr);
+  }
 
   return Ret;
 }
