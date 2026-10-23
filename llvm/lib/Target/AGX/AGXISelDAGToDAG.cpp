@@ -80,6 +80,7 @@ private:
   bool SelectStackAddr(SDValue Addr, SDValue &Offset);
 
   void selectVectorLoad(SDNode *N, unsigned NumElts);
+  void selectByteVectorLoad(SDNode *N, unsigned NumElts);
   void selectVectorStore(SDNode *N, unsigned NumElts);
   void selectTextureSample(SDNode *N);
 };
@@ -111,6 +112,9 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
   case AGXISD::LOAD_V3:
   case AGXISD::LOAD_V4:
     return selectVectorLoad(N, N->getNumValues() - 1);
+  case AGXISD::LOAD_V2_I8:
+  case AGXISD::LOAD_V4_I8:
+    return selectByteVectorLoad(N, N->getNumValues() - 1);
   case AGXISD::STORE_V2:
   case AGXISD::STORE_V3:
   case AGXISD::STORE_V4:
@@ -191,6 +195,35 @@ void AGXDAGToDAGISel::selectVectorLoad(SDNode *N, unsigned NumElts) {
   for (unsigned I = 0; I < NumElts; ++I)
     ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
                                    SubRegs[I], DL, MVT::i32, SDValue(Load, 0)));
+  ReplaceUses(SDValue(N, NumElts), SDValue(Load, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+/// LOAD_V2_I8 / LOAD_V4_I8: one device_load of the byte format into 2 or 4
+/// consecutive 16-bit register halves (a 32-bit register, or a pair), byte k
+/// zero-extended in half k.
+void AGXDAGToDAGISel::selectByteVectorLoad(SDNode *N, unsigned NumElts) {
+  SDLoc DL(N);
+  auto *M = cast<MemSDNode>(N);
+  SDValue Chain = N->getOperand(0), Addr = N->getOperand(1);
+  SDValue Base, Index, Signed, Shift;
+  SelectDeviceAddr8(Addr, Base, Index, Signed, Shift);
+  SDValue G = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  SDValue Fmt = CurDAG->getTargetConstant(0, DL, MVT::i32); // i8
+  SDValue Mask = CurDAG->getTargetConstant(vectorMask(NumElts), DL, MVT::i32);
+  MachineSDNode *Load = CurDAG->getMachineNode(
+      NumElts == 2 ? AGX::DEVICE_LOAD_32_H16 : AGX::DEVICE_LOAD_64_H16, DL,
+      NumElts == 2 ? MVT::i32 : MVT::Untyped, MVT::Other,
+      {G, Fmt, Mask, Base, Index, Signed, Shift, Chain});
+  CurDAG->setNodeMemRefs(Load, {M->getMemOperand()});
+  for (unsigned I = 0; I < NumElts; ++I) {
+    SDValue Word = SDValue(Load, 0);
+    if (NumElts == 4)
+      Word = CurDAG->getTargetExtractSubreg(SubRegs[I / 2], DL, MVT::i32, Word);
+    ReplaceUses(SDValue(N, I),
+                CurDAG->getTargetExtractSubreg(I % 2 ? AGX::hi16 : AGX::lo16,
+                                               DL, MVT::i16, Word));
+  }
   ReplaceUses(SDValue(N, NumElts), SDValue(Load, 1));
   CurDAG->RemoveDeadNode(N);
 }

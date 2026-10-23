@@ -55,6 +55,18 @@ def AGXload_v3 : SDNode<"AGXISD::LOAD_V3", SDT_AGXLoadV3,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AGXload_v4 : SDNode<"AGXISD::LOAD_V4", SDT_AGXLoadV4,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+// Loads of 2 or 4 consecutive bytes at a 2- or 4-byte aligned device address
+// (PTX ld.v2.u8 / ld.v4.u8), in one device_load of the byte format: each byte
+// zero-extended into its own 16-bit register half.
+def SDT_AGXLoadV2I8 : SDTypeProfile<2, 1, [SDTCisVT<0, i16>, SDTCisVT<1, i16>,
+                                           SDTCisInt<2>]>;
+def SDT_AGXLoadV4I8 : SDTypeProfile<4, 1, [SDTCisVT<0, i16>, SDTCisVT<1, i16>,
+                                           SDTCisVT<2, i16>, SDTCisVT<3, i16>,
+                                           SDTCisInt<4>]>;
+def AGXload_v2i8 : SDNode<"AGXISD::LOAD_V2_I8", SDT_AGXLoadV2I8,
+                          [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AGXload_v4i8 : SDNode<"AGXISD::LOAD_V4_I8", SDT_AGXLoadV4I8,
+                          [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 // llvm.agx.texture.sample with its four channels as i32 results: texture
 // offset, sampler index, x, y and the dimension (a target constant).
 def SDT_AGXTextureSample

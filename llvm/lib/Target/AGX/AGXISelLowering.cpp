@@ -96,6 +96,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
                  MVT::v4f32})
     setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+  // and naturally aligned device loads of 2 or 4 bytes become one access of
+  // the byte format (ReplaceNodeResults)
+  setOperationAction(ISD::LOAD, {MVT::v2i8, MVT::v4i8}, Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -580,6 +583,29 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
         {Sample.getValue(0), Sample.getValue(1), Sample.getValue(2),
          Sample.getValue(3)}));
     Results.push_back(Sample.getValue(4));
+    return;
+  }
+  // Byte vector loads: one access of the byte format, a 16-bit result per
+  // byte. The PTX alignment of ld.v2.u8 / ld.v4.u8 is the vector's size.
+  if (auto *L = dyn_cast<LoadSDNode>(N);
+      L && L->getExtensionType() == ISD::NON_EXTLOAD && !L->isIndexed() &&
+      L->isSimple() && L->getAddressSpace() == AGX::DEVICE_ADDRESS &&
+      (L->getValueType(0) == MVT::v2i8 || L->getValueType(0) == MVT::v4i8) &&
+      L->getAlign() >= Align(L->getValueType(0).getStoreSize())) {
+    SDLoc DL(N);
+    EVT VT = L->getValueType(0);
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<EVT, 5> VTs(NumElts, MVT::i16);
+    VTs.push_back(MVT::Other);
+    SDValue Load = DAG.getMemIntrinsicNode(
+        NumElts == 2 ? AGXISD::LOAD_V2_I8 : AGXISD::LOAD_V4_I8, DL,
+        DAG.getVTList(VTs), {L->getChain(), L->getBasePtr()},
+        L->getMemoryVT(), L->getMemOperand());
+    SmallVector<SDValue, 4> Elts;
+    for (unsigned I = 0; I < NumElts; ++I)
+      Elts.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Load.getValue(I)));
+    Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+    Results.push_back(Load.getValue(NumElts));
     return;
   }
   // Vector loads: one access with a 32-bit result per element.
