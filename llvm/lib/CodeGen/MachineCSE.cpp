@@ -14,6 +14,7 @@
 
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -75,6 +77,7 @@ class MachineCSEImpl {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineDominatorTree *DT = nullptr;
+  std::optional<MachinePostDominatorTree> PDT;
   MachineRegisterInfo *MRI = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
@@ -130,6 +133,8 @@ private:
   bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
                                MachineBasicBlock *MBB, MachineBasicBlock *MBB1);
   void releaseMemory();
+  MachinePostDominatorTree &buildOrGetPDT(MachineFunction &MF);
+  static bool isBlockInACycle(MachineBasicBlock *MBB);
 };
 
 class MachineCSELegacy : public MachineFunctionPass {
@@ -609,9 +614,17 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
     // definition, so it's necessary to use `isConvergent` to prevent illegally
     // CSE-ing the subset of `isConvergent` instructions which do fall into this
     // extended definition.
-    if (MI.isConvergent() && MI.getParent() != CSMI->getParent()) {
-      LLVM_DEBUG(dbgs() << "*** Convergent MI and subexpression exist in "
-                           "different BBs, avoid CSE!\n");
+    if (MI.isConvergent() && MI.getParent() != CSMI->getParent() &&
+        (!(DT->dominates(CSMI, &MI) &&
+           buildOrGetPDT(*MI.getMF())
+               .dominates(MI.getParent(), CSMI->getParent())) ||
+         isBlockInACycle(MI.getParent()) ||
+         isBlockInACycle(CSMI->getParent()))) {
+      LLVM_DEBUG(
+          dbgs()
+          << "*** Convergent MI and subexpression exist in "
+             "different BB where dominance or post-dominance checks fail, "
+             "or either BB is in a cycle, avoid CSE!\n");
       VNT.insert(&MI, CurrVN++);
       Exps.push_back(&MI);
       continue;
@@ -932,6 +945,7 @@ void MachineCSEImpl::releaseMemory() {
   ScopeMap.clear();
   PREMap.clear();
   Exps.clear();
+  PDT.reset();
 }
 
 bool MachineCSEImpl::run(MachineFunction &MF) {
@@ -944,6 +958,20 @@ bool MachineCSEImpl::run(MachineFunction &MF) {
   ChangedCSE = PerformCSE(DT->getRootNode());
   releaseMemory();
   return ChangedPRE || ChangedCSE;
+}
+
+MachinePostDominatorTree &MachineCSEImpl::buildOrGetPDT(MachineFunction &MF) {
+  if (!PDT)
+    PDT.emplace(MF);
+  return *PDT;
+}
+
+bool MachineCSEImpl::isBlockInACycle(MachineBasicBlock *MBB) {
+  for (MachineBasicBlock *postBB : MBB->successors())
+    for (MachineBasicBlock *B : depth_first(postBB))
+      if (B == MBB)
+        return true;
+  return false;
 }
 
 PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
