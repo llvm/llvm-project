@@ -560,6 +560,18 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
   return true;
 }
 
+/// Replace G_UBFX Dst, Src, Lsb, 1, where bit Lsb of Src is a copy of its sign
+/// bit, with a shift of the sign bit into bit 0.
+void applyUBFXSignBitToLShr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  unsigned BitWidth =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits();
+  auto ShiftAmt = B.buildConstant(LLT::integer(64), BitWidth - 1);
+  B.buildLShr(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(), ShiftAmt);
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
