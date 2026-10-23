@@ -19,6 +19,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
@@ -674,14 +675,23 @@ void ValueEnumerator::dropFunctionFromMetadata(
         Worklist.push_back(N);
   };
   push(FirstMD);
-  while (!Worklist.empty())
-    for (const Metadata *Op : Worklist.pop_back_val()->operands()) {
+  while (!Worklist.empty()) {
+    const MDNode *Next = Worklist.pop_back_val();
+    for (const Metadata *Op : Next->operands()) {
       if (!Op)
         continue;
       auto MD = MetadataMap.find(Op);
       if (MD != MetadataMap.end())
         push(*MD);
     }
+    if (auto *FLContext = dyn_cast<MDFunctionLocalContext>(Next)) {
+      SmallVector<const MDNode *> UsedNodes;
+      FLContext->getUsedMDNodes(UsedNodes);
+      for (const Metadata *Op : UsedNodes)
+        if (auto MD = MetadataMap.find(Op); MD != MetadataMap.end())
+          push(*MD);
+    }
+  }
 }
 
 void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
@@ -693,28 +703,68 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
 
   // Start by enumerating MD, and then work through its transitive operands in
   // post-order.  This requires a depth-first search.
-  SmallVector<std::pair<const MDNode *, MDNode::op_iterator>, 32> Worklist;
-  if (const MDNode *N = enumerateMetadataImpl(F, MD))
-    Worklist.push_back(std::make_pair(N, N->op_begin()));
+  SmallVector<std::pair<const MDNode *, size_t>, 32> Worklist;
 
+  if (const MDNode *N = enumerateMetadataImpl(F, MD))
+    Worklist.push_back(std::make_pair(N, 0));
+
+  // Fetching the MDNodes used by an MDFunctionLocalContext is expensive; if we
+  // need to get them at all, do so once in this map and reuse as needed.
+  DenseMap<const MDFunctionLocalContext *, SmallVector<const MDNode *, 0>>
+    FLContextUsedNodes;
   while (!Worklist.empty()) {
     const MDNode *N = Worklist.back().first;
+    size_t &OpNum = Worklist.back().second;
 
     // Enumerate operands until we hit a new node.  We need to traverse these
     // nodes' operands before visiting the rest of N's operands.
-    MDNode::op_iterator I = std::find_if(
-        Worklist.back().second, N->op_end(),
-        [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
-    if (I != N->op_end()) {
-      auto *Op = cast<MDNode>(*I);
-      Worklist.back().second = ++I;
+    if (OpNum < N->getNumOperands()) {
+      MDNode::op_iterator I = std::find_if(
+          N->op_begin() + OpNum, N->op_end(),
+          [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
+      if (I != N->op_end()) {
+        auto *Op = cast<MDNode>(*I);
+        OpNum = I - N->op_begin() + 1;
 
-      // Delay traversing Op if it's a distinct node and N is uniqued.
-      if (Op->isDistinct() && !N->isDistinct())
-        DelayedDistinctNodes.push_back(Op);
-      else
-        Worklist.push_back(std::make_pair(Op, Op->op_begin()));
-      continue;
+        // Delay traversing Op if it's a distinct node and N is uniqued.
+        if (Op->isDistinct() && !N->isDistinct())
+          DelayedDistinctNodes.push_back(Op);
+        else
+          Worklist.push_back(std::make_pair(Op, 0));
+        continue;
+      }
+    }
+    // MDFunctionLocalContext contains MDNode references outside of its
+    // operands, which can be fetched via `getUsedMDNodes()`; OpNum indexes into
+    // this vector if N is an MDFunctionLocalContext.
+    if (auto *FLContext = dyn_cast<MDFunctionLocalContext>(N)) {
+      // Currently, MDFunctionLocalContext has no operands; if it ever does in
+      // future, then we need to account for them by offsetting OpNum by the
+      // operand count. For now, we have an assert to prevent a silent fail from
+      // being introduced.
+      assert(N->getNumOperands() == 0 &&
+        "MDFunctionLocalContext expected to have no operands");
+      auto Result = FLContextUsedNodes.try_emplace(FLContext);
+      auto &UsedMDNodes = Result.first->second;
+      if (Result.second)
+        FLContext->getUsedMDNodes(UsedMDNodes);
+      auto *NextUsed = std::find_if(
+          UsedMDNodes.begin() + OpNum, UsedMDNodes.end(),
+          [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
+      if (NextUsed != UsedMDNodes.end()) {
+        auto *Op = *NextUsed;
+        OpNum = NextUsed - UsedMDNodes.begin() + 1;
+
+        // Delay traversing Op if it's a distinct node and N is uniqued.
+        if (Op->isDistinct() && !N->isDistinct())
+          DelayedDistinctNodes.push_back(Op);
+        else
+          Worklist.push_back(std::make_pair(Op, 0));
+        continue;
+      }
+    } else {
+      assert(OpNum <= N->getNumOperands() &&
+        "Visited past the end of N's operands");
     }
 
     // All the operands have been visited.  Now assign an ID.
@@ -726,7 +776,7 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
     // that are leaves in last uniqued subgraph.
     if (Worklist.empty() || Worklist.back().first->isDistinct()) {
       for (const MDNode *N : DelayedDistinctNodes)
-        Worklist.push_back(std::make_pair(N, N->op_begin()));
+        Worklist.push_back(std::make_pair(N, 0));
       DelayedDistinctNodes.clear();
     }
   }
