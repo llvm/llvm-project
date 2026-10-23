@@ -166,13 +166,16 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
 
   Function &Callee = *CB.getCalledFunction();
   auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+  auto &MSSA = FAM.getResult<MemorySSAAnalysis>(Callee);
+  auto &CallerMSSA = FAM.getResult<MemorySSAAnalysis>(Caller);
   auto GetInlineCost = [&](CallBase &CB) {
     bool RemarksEnabled =
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
                          GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
-                         GetEphValuesCache);
+                         GetEphValuesCache, &MSSA.getMSSA(),
+                         &CallerMSSA.getMSSA());
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,
