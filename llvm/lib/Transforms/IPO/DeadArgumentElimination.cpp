@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -518,6 +519,17 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
   // of them turn out to be live.
   unsigned NumLiveRetVals = 0;
 
+  // Parameters named by an allocsize, on the function or on any call site.
+  SmallSet<unsigned, 4> AllocSizeArgIdxs;
+  auto NoteAllocSizeArgs = [&](AttributeSet FnAttrs) {
+    if (auto Args = FnAttrs.getAllocSizeArgs()) {
+      AllocSizeArgIdxs.insert(Args->first);
+      if (Args->second)
+        AllocSizeArgIdxs.insert(*Args->second);
+    }
+  };
+  NoteAllocSizeArgs(F.getAttributes().getFnAttrs());
+
   // Loop all uses of the function.
   for (const Use &U : F.uses()) {
     // If the function is PASSED IN as an argument, its address has been
@@ -537,6 +549,8 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     }
 
     // If we end up here, we are looking at a direct call to our function.
+
+    NoteAllocSizeArgs(CB->getAttributes().getFnAttrs());
 
     // Now, check how our return value(s) is/are used in this caller. Don't
     // bother checking return values if all of them are live already.
@@ -592,6 +606,11 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
       // from removing arguments entirely, so don't. For example AArch64 handles
       // register and stack HFAs very differently, and this is reflected in the
       // IR which has already been generated.
+      Result = Live;
+    } else if (AllocSizeArgIdxs.contains(ArgI)) {
+      // Dropping this argument would take allocsize with it, since the
+      // verifier rejects an out-of-range index, and the attribute is worth
+      // more.
       Result = Live;
     } else {
       // See what the effect of this use is (recording any uses that cause
@@ -839,9 +858,37 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
 
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
-  // Strip allocsize attributes. They might refer to the deleted arguments.
-  AttributeSet FnAttrs =
-      PAL.getFnAttrs().removeAttribute(F->getContext(), Attribute::AllocSize);
+  // allocsize names parameters by index, so deleting an argument ahead of one
+  // shifts it. surveyFunction() keeps those arguments alive, so the attribute
+  // can be renumbered rather than dropped.
+  auto UpdateAllocSize = [&](AttributeSet FnAttrs) {
+    std::optional<std::pair<unsigned, std::optional<unsigned>>> Args =
+        FnAttrs.getAllocSizeArgs();
+    if (!Args)
+      return FnAttrs;
+
+    auto NewIdx = [&](unsigned Old) {
+      // An index past the parameters names a variadic argument; a vararg
+      // function keeps all of its parameters, so nothing ahead of it moved.
+      if (Old >= ArgAlive.size())
+        return Old;
+      assert(ArgAlive[Old] && "allocsize parameter was not kept alive");
+      return static_cast<unsigned>(
+          std::count(ArgAlive.begin(), ArgAlive.begin() + Old, true));
+    };
+
+    unsigned ElemSizeArg = NewIdx(Args->first);
+    std::optional<unsigned> NumElemsArg;
+    if (Args->second)
+      NumElemsArg = NewIdx(*Args->second);
+
+    FnAttrs = FnAttrs.removeAttribute(F->getContext(), Attribute::AllocSize);
+    AttrBuilder B(F->getContext());
+    B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
+    return FnAttrs.addAttributes(F->getContext(), B);
+  };
+
+  AttributeSet FnAttrs = UpdateAllocSize(PAL.getFnAttrs());
 
   // Reconstruct the AttributesList based on the vector we constructed.
   assert(ArgAttrVec.size() == Params.size());
@@ -916,10 +963,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     // Reconstruct the AttributesList based on the vector we constructed.
     assert(ArgAttrVec.size() == Args.size());
 
-    // Again, be sure to remove any allocsize attributes, since their indices
-    // may now be incorrect.
-    AttributeSet FnAttrs = CallPAL.getFnAttrs().removeAttribute(
-        F->getContext(), Attribute::AllocSize);
+    // Again, renumber allocsize, since its indices may now be incorrect.
+    AttributeSet FnAttrs = UpdateAllocSize(CallPAL.getFnAttrs());
 
     AttributeList NewCallPAL =
         AttributeList::get(F->getContext(), FnAttrs, RetAttrs, ArgAttrVec);
