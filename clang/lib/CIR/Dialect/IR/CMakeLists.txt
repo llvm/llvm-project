@@ -28,5 +28,6 @@ add_clang_library(MLIRCIR
   MLIRFuncDialect
   MLIRLoopLikeInterface
   MLIRPtrMemorySpaceInterfaces
+  MLIRViewLikeInterface
   clangAST
   )
