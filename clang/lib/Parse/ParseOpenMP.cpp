@@ -2729,7 +2729,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
             return TI->Sets.empty();
           }))
-        TraitInfos.push_back(&Actions.getASTContext().getNewOMPTraitInfo());
+        TraitInfos.push_back(&ASTContext.getNewOMPTraitInfo());
 
       // Reuse the normal metadirective variant parse per clause so every
       // variant is a complete directive node with its own body and its own
@@ -2738,18 +2738,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       SmallVector<Stmt *, 4> Variants;
       bool HasError = false;
       for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
-        // Re-parse from the first clause for every variant but the last.
-        std::optional<TentativeParsingAction> VariantTPA;
-        if (I + 1 < TraitInfos.size())
-          VariantTPA.emplace(*this);
-
-        for (unsigned J = 0, E = std::min(I, NumClauses); J != E; ++J) {
-          ConsumeToken();  // Clause name.
-          T.consumeOpen(); // '('
-          SkipUntil(tok::r_paren, StopBeforeMatch);
-          T.consumeClose(); // ')'
-        }
-
         bool HasDirective = false;
         if (I < NumClauses) {
           OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
@@ -2759,27 +2747,37 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             // The selectors were parsed into TraitInfos[I] by the first pass;
             // skip them so their diagnostics are not repeated.
             SkipUntil(tok::colon, StopBeforeMatch);
-            ConsumeToken(); // ':'
+            TryConsumeToken(tok::colon);
           }
-          HasDirective = Tok.isNot(tok::r_paren);
+          HasDirective = Tok.isNot(tok::r_paren) &&
+                         Tok.isNot(tok::annot_pragma_openmp_end);
         }
+        // Re-parse the directive and body for every variant but the last.
+        std::optional<TentativeParsingAction> VariantTPA;
+        if (I + 1 < TraitInfos.size())
+          VariantTPA.emplace(*this, /*Unannotated=*/true);
 
         StmtResult Variant;
         if (HasDirective) {
           Variant = ParseOpenMPDeclarativeOrExecutableDirective(
               StmtCtx, /*ReadDirectiveWithinMetadirective=*/true);
         } else {
-          // No directive variant: the variant is the plain associated
-          // statement.
+          // No directive variant: skip to the end of the pragma.
           while (Tok.isNot(tok::annot_pragma_openmp_end))
             ConsumeAnyToken();
           ConsumeAnnotationToken();
+        }
+        // No directive or 'nothing': the variant is the associated statement.
+        if (!Variant.isInvalid() && !Variant.isUsable()) {
           ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
           Variant = ParseStatement();
         }
 
-        if (VariantTPA)
+        if (VariantTPA) {
           VariantTPA->Revert();
+          SkipUntil(tok::r_paren, StopBeforeMatch);
+          T.consumeClose();
+        }
         if (Variant.isInvalid())
           HasError = true;
         else

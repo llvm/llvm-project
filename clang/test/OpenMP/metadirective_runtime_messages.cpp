@@ -38,3 +38,25 @@ void ternary_in_condition(int a, int b) {
   {
   }
 }
+
+// A 'nothing' variant still consumes the associated statement.
+void nothing_variant(int flag) {
+#pragma omp metadirective \
+  when(user={condition(flag)}: nothing) \
+  otherwise(single)
+  {
+    undeclared3 = 1; // expected-error 2 {{use of undeclared identifier 'undeclared3'}}
+  }
+}
+
+// Each variant resolves names in the associated statement again.
+void local_decl(int flag) {
+#pragma omp metadirective \
+  when(user={condition(flag)}: parallel) \
+  otherwise(single)
+  {
+    struct L { int v; };
+    L l;
+    l.v = 1;
+  }
+}
