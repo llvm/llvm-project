@@ -1003,9 +1003,9 @@ define void @test_gep_zext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[LEFT]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[RIGHT]], align 4
 ; CHECK-NEXT:    [[LI:%.*]] = zext i32 [[L]] to i64
@@ -1015,12 +1015,21 @@ define void @test_gep_zext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LP]], align 4
 ; CHECK-NEXT:    [[RV:%.*]] = load i32, ptr [[RP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[RV]], [[LV]]
-; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]], !prof [[PROF3:![0-9]+]]
 ; CHECK-NEXT:    [[RIGHT_STEP:%.*]] = zext i1 [[CMP]] to i64
-; CHECK-NEXT:    [[RIGHT_NEXT]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 [[RIGHT_STEP]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = xor i1 [[CMP]], true
 ; CHECK-NEXT:    [[LEFT_STEP:%.*]] = zext i1 [[OTHER]] to i64
-; CHECK-NEXT:    [[LEFT_NEXT]] = getelementptr inbounds i32, ptr [[LEFT]], i64 [[LEFT_STEP]]
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[LEFT]], i64 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi i32 [ [[R]], [[SELECT_TRUE_SINK]] ], [ [[L]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[RIGHT_NEXT]] = phi ptr [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[RIGHT]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[LEFT_NEXT]] = phi ptr [ [[LEFT]], [[SELECT_TRUE_SINK]] ], [ [[TMP1]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
 ; CHECK-NEXT:    [[LEFT_MORE:%.*]] = icmp ne ptr [[LEFT_NEXT]], [[LEFT_END:%.*]]
@@ -1069,9 +1078,9 @@ define void @test_gep_sext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[LEFT]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[RIGHT]], align 4
 ; CHECK-NEXT:    [[LI:%.*]] = zext i32 [[L]] to i64
@@ -1081,12 +1090,21 @@ define void @test_gep_sext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LP]], align 4
 ; CHECK-NEXT:    [[RV:%.*]] = load i32, ptr [[RP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[RV]], [[LV]]
-; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]], !prof [[PROF3]]
 ; CHECK-NEXT:    [[RIGHT_STEP:%.*]] = sext i1 [[CMP]] to i64
-; CHECK-NEXT:    [[RIGHT_NEXT]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 [[RIGHT_STEP]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = xor i1 [[CMP]], true
 ; CHECK-NEXT:    [[LEFT_STEP:%.*]] = sext i1 [[OTHER]] to i64
-; CHECK-NEXT:    [[LEFT_NEXT]] = getelementptr inbounds i32, ptr [[LEFT]], i64 [[LEFT_STEP]]
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF3]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[LEFT]], i64 -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi i32 [ [[R]], [[SELECT_TRUE_SINK]] ], [ [[L]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[RIGHT_NEXT]] = phi ptr [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[RIGHT]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[LEFT_NEXT]] = phi ptr [ [[LEFT]], [[SELECT_TRUE_SINK]] ], [ [[TMP1]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
 ; CHECK-NEXT:    [[LEFT_MORE:%.*]] = icmp ne ptr [[LEFT_NEXT]], [[LEFT_END:%.*]]
