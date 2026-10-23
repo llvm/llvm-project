@@ -81,6 +81,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -102,6 +103,21 @@
 
 namespace llvm {
 uint32_t BPFCoreSharedInfo::SeqNum;
+
+BPFCoreSharedInfo::AmaRelocation
+BPFCoreSharedInfo::AmaRelocation::decode(StringRef Name) {
+  // Type names may contain ':' and '$'. Only the suffix has a fixed format.
+  auto [Prefix, AccessString] = Name.rsplit('$');
+  auto [NameAndKind, PatchString] = Prefix.rsplit(':');
+  StringRef KindString = NameAndKind.rsplit(':').second;
+  uint32_t Kind;
+  int64_t PatchImm;
+  if (AccessString.empty() || KindString.getAsInteger(10, Kind) ||
+      PatchString.getAsInteger(10, PatchImm))
+    reportFatalInternalError(Twine("Invalid BPF CO-RE relocation global ") +
+                             Name);
+  return {static_cast<BTF::PatchableRelocKind>(Kind), PatchImm, AccessString};
+}
 
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                                   Instruction *Input,
@@ -146,7 +162,6 @@ private:
   const DataLayout *DL = nullptr;
   Module *M = nullptr;
 
-  static std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index intrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
   // A map to hold all the base preserve_*_access_index intrinsic calls.
@@ -187,19 +202,18 @@ private:
   };
   static std::optional<AccessRoot>
   consumeAccessRoot(SmallVectorImpl<CallInfo> &CallStack);
-  Value *computeBaseAndAccessKey(CallInst *Call, const CallInfo &Terminal,
-                                 std::string &AccessKey, MDNode *&BaseMeta);
+  Value *computeFieldAccess(CallInst *Call, const CallInfo &Terminal,
+                            std::string &RelocSuffix, DIType *&RootType);
   struct EnumAccess {
     size_t Index;
     StringRef Value;
   };
   static EnumAccess computeEnumAccess(const CallInst *Call, const DIType *Ty);
-  MDNode *computeAccessKey(CallInst *Call, const CallInfo &CInfo,
-                           std::string &AccessKey);
+  DIType *computeTypeAccess(CallInst *Call, const CallInfo &CInfo,
+                            std::string &RelocSuffix);
   bool transformGEPChain(CallInst *Call, const CallInfo &CInfo);
 };
 
-std::map<std::string, GlobalVariable *> BPFAbstractMemberAccess::GEPGlobals;
 } // End anonymous namespace
 
 bool BPFAbstractMemberAccess::run(Function &F) {
@@ -886,12 +900,16 @@ BPFAbstractMemberAccess::consumeAccessRoot(
   }
 }
 
-/// Compute the base of the whole preserve_* intrinsics chains, i.e., the base
-/// pointer of the first preserve_*_access_index call, and construct the access
-/// string, which will be the name of a global variable.
-Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(
-    CallInst *Call, const CallInfo &Terminal, std::string &AccessKey,
-    MDNode *&TypeMeta) {
+static std::string formatAmaSuffix(uint32_t Kind, int64_t PatchImm,
+                                   const Twine &AccessString) {
+  return (":" + Twine(Kind) + ":" + Twine(PatchImm) + "$" + AccessString).str();
+}
+
+/// Compute the base pointer, root type and relocation suffix of a field access.
+Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
+                                                   const CallInfo &Terminal,
+                                                   std::string &RelocSuffix,
+                                                   DIType *&RootType) {
   // Put the access chain into a stack with the top as the head of the chain.
   SmallVector<CallInfo, 4> CallStack{Terminal};
   for (auto It = AIChain.find(Call); It != AIChain.end();
@@ -914,7 +932,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(
       IsFieldInfo ? Terminal.AccessIndex : BTF::FIELD_BYTE_OFFSET;
   uint32_t PatchImm =
       Root->Index * (stripQualifiers(Root->Type)->getSizeInBits() >> 3);
-  AccessKey = std::to_string(Root->Index);
+  std::string AccessString = std::to_string(Root->Index);
 
   // Build the access string and compute the local byte offset or requested
   // field property while each access still has its debug type.
@@ -945,7 +963,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(
           ++BTFIndex;
       }
     }
-    AccessKey += ":" + std::to_string(BTFIndex);
+    AccessString += ":" + std::to_string(BTFIndex);
 
     // Earlier accesses contribute byte offsets. Only the final field supplies
     // the property requested by preserve_field_info.
@@ -958,16 +976,8 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(
   if (InfoKind == BTF::FIELD_EXISTENCE)
     PatchImm = 1;
 
-  // Access key is the
-  //   "llvm." + type name + ":" + reloc type + ":" + patched imm + "$" +
-  //   access string,
-  // uniquely identifying one relocation.
-  // The prefix "llvm." indicates this is a temporary global, which should
-  // not be emitted to ELF file.
-  TypeMeta = Root->Type;
-  AccessKey = "llvm." + Root->Type->getName().str() + ":" +
-              std::to_string(InfoKind) + ":" + std::to_string(PatchImm) + "$" +
-              AccessKey;
+  RootType = Root->Type;
+  RelocSuffix = formatAmaSuffix(InfoKind, PatchImm, AccessString);
 
   return Base;
 }
@@ -994,9 +1004,9 @@ BPFAbstractMemberAccess::computeEnumAccess(const CallInst *Call,
   return {0, Value};
 }
 
-MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
-                                                  const CallInfo &CInfo,
-                                                  std::string &AccessKey) {
+DIType *BPFAbstractMemberAccess::computeTypeAccess(CallInst *Call,
+                                                   const CallInfo &CInfo,
+                                                   std::string &RelocSuffix) {
   DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata), false);
   assert(!Ty->getName().empty());
 
@@ -1023,83 +1033,64 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
     llvm_unreachable("Unexpected BPF type relocation kind");
   }
 
-  AccessKey = "llvm." + Ty->getName().str() + ":" +
-              std::to_string(CInfo.AccessIndex) + std::string(":") +
-              std::to_string(PatchImm) + std::string("$") +
-              std::to_string(AccessIndex);
+  RelocSuffix =
+      formatAmaSuffix(CInfo.AccessIndex, PatchImm, Twine(AccessIndex));
 
   return Ty;
+}
+
+static GlobalVariable *getOrCreateAmaGlobal(Module &M, DIType *Root,
+                                            IntegerType *ValueType,
+                                            StringRef RelocSuffix) {
+  const std::string Prefix = ("llvm." + Root->getName()).str();
+  std::string Name = (Twine(Prefix) + RelocSuffix).str();
+  for (unsigned N = 1; GlobalValue *Existing = M.getNamedValue(Name); ++N) {
+    auto *GV = dyn_cast<GlobalVariable>(Existing);
+    if (GV && GV->isDeclaration() && GV->hasExternalLinkage() &&
+        GV->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
+        GV->getValueType() == ValueType &&
+        GV->getMetadata(LLVMContext::MD_preserve_access_index) == Root)
+      return GV;
+    // Same-named roots and different load widths need distinct globals. Keep
+    // the discriminator before the suffix that the backend will decode.
+    Name = (Twine(Prefix) + "." + Twine(N) + RelocSuffix).str();
+  }
+
+  auto *GV = new GlobalVariable(M, ValueType, false,
+                                GlobalValue::ExternalLinkage, nullptr, Name);
+  GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
+  GV->setMetadata(LLVMContext::MD_preserve_access_index, Root);
+  return GV;
 }
 
 /// Call/Kind is the base preserve_*_access_index() call. Attempts to do
 /// transformation to a chain of relocable GEPs.
 bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
                                                 const CallInfo &CInfo) {
-  std::string AccessKey;
-  MDNode *TypeMeta;
+  std::string RelocSuffix;
+  DIType *Root;
   Value *Base = nullptr;
 
-  if (CInfo.Kind == BPFPreserveFieldInfoAI && CInfo.Metadata) {
-    TypeMeta = computeAccessKey(Call, CInfo, AccessKey);
+  const bool IsFieldInfo = CInfo.Kind == BPFPreserveFieldInfoAI;
+  if (IsFieldInfo && CInfo.Metadata) {
+    Root = computeTypeAccess(Call, CInfo, RelocSuffix);
   } else {
-    Base = computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
+    Base = computeFieldAccess(Call, CInfo, RelocSuffix, Root);
     if (!Base)
       return false;
   }
 
   BasicBlock *BB = Call->getParent();
-  GlobalVariable *GV;
-  bool IsInt32Ret = Call->getType()->isIntegerTy(32);
-
-  if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
-    IntegerType *VarType;
-    if (IsInt32Ret)
-      VarType = Type::getInt32Ty(BB->getContext()); // 32bit return value
-    else
-      VarType = Type::getInt64Ty(BB->getContext()); // 64bit ptr or enum value
-
-    GV = new GlobalVariable(*M, VarType, false, GlobalVariable::ExternalLinkage,
-                            nullptr, AccessKey);
-    GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
-    GV->setMetadata(LLVMContext::MD_preserve_access_index, TypeMeta);
-    GEPGlobals[AccessKey] = GV;
-  } else {
-    GV = GEPGlobals[AccessKey];
+  auto *ValueType = IsFieldInfo ? cast<IntegerType>(Call->getType())
+                                : Type::getInt64Ty(Call->getContext());
+  auto *GV = getOrCreateAmaGlobal(*M, Root, ValueType, RelocSuffix);
+  Instruction *Input = new LoadInst(ValueType, GV, "", Call->getIterator());
+  if (!IsFieldInfo) {
+    auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(Call->getContext()),
+                                          Base, Input);
+    GEP->insertBefore(Call->getIterator());
+    Input = GEP;
   }
-
-  if (CInfo.Kind == BPFPreserveFieldInfoAI) {
-    // Load the global variable which represents the returned field info.
-    LoadInst *LDInst;
-    if (IsInt32Ret)
-      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
-                            Call->getIterator());
-    else
-      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
-                            Call->getIterator());
-
-    Instruction *PassThroughInst =
-        BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
-    Call->replaceAllUsesWith(PassThroughInst);
-    Call->eraseFromParent();
-    return true;
-  }
-
-  // For any original GEP Call and Base %2 like
-  //   %4 = bitcast %struct.net_device** %dev1 to i64*
-  // it is transformed to:
-  //   %6 = load llvm.sk_buff:0:50$0:0:0:2:0
-  //   %8 = getelementptr i8, i8* %2, %6
-  //   using %8 instead of %4
-  // The original Call inst is removed.
-
-  // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
-                              Call->getIterator());
-
-  // Generate a GetElementPtr
-  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()), Base,
-                                        LDInst);
-  GEP->insertBefore(Call->getIterator());
 
   // For the following code,
   //    Block0:
@@ -1144,7 +1135,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // This approach is also used in other places when global var
   // representing a relocation is used.
   Instruction *PassThroughInst =
-      BPFCoreSharedInfo::insertPassThrough(M, BB, GEP, Call);
+      BPFCoreSharedInfo::insertPassThrough(M, BB, Input, Call);
   Call->replaceAllUsesWith(PassThroughInst);
   Call->eraseFromParent();
 
