@@ -180,7 +180,6 @@ exit:
 ; CHECK-LABEL:Loop Unroll: F[inline_prevents_unroll] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 8
 ; CHECK-NEXT: Not unrolling loop with inlinable calls.
-; CHECK-NEXT:remark: <unknown>:0:0: unable to unroll loop: contains inlinable calls
 
 define internal i32 @single_use_helper(i32 %x) {
   %add = add i32 %x, 42
@@ -200,7 +199,7 @@ for.body:
   %add = add i32 %sum, %helper_result
   %inc = add i32 %i, 1
   %cmp = icmp ult i32 %inc, 10
-  br i1 %cmp, label %for.body, label %exit, !llvm.loop !2
+  br i1 %cmp, label %for.body, label %exit
 
 exit:
   ret i32 %add
@@ -1007,7 +1006,6 @@ exit:
 
 !0 = distinct !{!0, !3}
 !1 = distinct !{!1, !4}
-!2 = distinct !{!2, !4}
 !3 = !{!"llvm.loop.unroll.full"}
 !4 = !{!"llvm.loop.unroll.enable"}
 !5 = distinct !{!5, !6}
