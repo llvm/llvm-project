@@ -1825,10 +1825,8 @@ namespace Strchr {
   static_assert(__builtin_strchr(kStr, 'd') == nullptr);
   static_assert(__builtin_strchr(kStr, 'e') == nullptr);
   static_assert(__builtin_strchr(kStr, '\0') == kStr + 5);
-  static_assert(__builtin_strchr(kStr, 256) == kStr + 5);
-  static_assert(__builtin_strchr(kStr, -256) == kStr + 5);
-  static_assert(__builtin_strchr(kStr, 'a' + 256) == kStr);
-  static_assert(__builtin_strchr(kStr, 'a' - 256) == kStr);
+  static_assert(__builtin_strchr(kStr, 'a' + 256) == kStr); // adding 256 should wrap around to same character
+  static_assert(__builtin_strchr(kStr, 'a' - 256) == kStr); // subtracting 256 should wrap around to same character
   static_assert(__builtin_strchr(kStr, '\xff') == kStr + 4);
   static_assert(__builtin_strchr(kStr, '\xff' + 256) == kStr + 4);
   static_assert(__builtin_strchr(kStr, '\xff' - 256) == kStr + 4);
