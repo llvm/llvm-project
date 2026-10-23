@@ -226,6 +226,19 @@ tailcall:
   if (vec.empty())
     return;
 
+  // Create singletons in one go instead of doing a tail call per character.
+  if (vec.size() == 1) {
+    const Symbol *sym = vec.front();
+    StringRef suffix = sym->getName().drop_front(lastPos);
+    if (!suffix.empty()) {
+      TrieNode *newNode = makeNode();
+      node->edges.emplace_back(suffix, newNode);
+      node = newNode;
+    }
+    node->info = ExportInfo(*sym, imageBase);
+    return;
+  }
+
   // Partition items so that items in [0, i) are less than the pivot,
   // [i, j) are the same as the pivot, and [j, vec.size()) are greater than
   // the pivot.
@@ -264,6 +277,21 @@ tailcall:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);
     vec = vec.slice(i, j - i);
     ++pos;
+    // Skip the rest of a common prefix instead of doing a tail call per
+    // character.
+    if (vec.size() > 1) {
+      StringRef firstName = vec.front()->getName();
+      size_t commonEnd = firstName.size();
+      for (const Symbol *sym : vec.drop_front()) {
+        StringRef name = sym->getName();
+        commonEnd = std::min(commonEnd, name.size());
+        size_t commonPos = pos;
+        while (commonPos < commonEnd && firstName[commonPos] == name[commonPos])
+          ++commonPos;
+        commonEnd = commonPos;
+      }
+      pos = commonEnd;
+    }
     goto tailcall;
   }
 }
