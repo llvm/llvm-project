@@ -552,3 +552,158 @@ func.func @tracker_inside_nested_region(%a: i32, %b: i32, %c: i32, %cond: i1) {
   memref.store %c, %slot[] : memref<i32>
   return
 }
+
+// -----
+
+// Promote the wrapper as a whole, replacing its load result with the reaching
+// definition.
+
+// CHECK-LABEL: func.func @owning_access_load
+// CHECK-SAME: (%[[A:.*]]: i32) -> i32
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.owning_access
+// CHECK: return %[[A]] : i32
+func.func @owning_access_load(%a: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  %v = test.owning_access {
+    %l = memref.load %slot[] : memref<i32>
+    test.owning_access_yield %l : i32
+  } : i32
+  return %v : i32
+}
+
+// -----
+
+// Attribute the wrapped store to the wrapper's block so ^bb2 gets a block
+// argument that preserves the conditional update.
+
+// CHECK-LABEL: func.func @owning_access_store_defines_block
+// CHECK-SAME: (%[[A:.*]]: i32, %[[COND:.*]]: i1) -> i32
+// CHECK-NOT: test.owning_access
+// CHECK: %[[C42:.*]] = arith.constant 42 : i32
+// CHECK: cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]](%[[C42]] : i32)
+// CHECK: ^[[BB1]]:
+// CHECK:   cf.br ^[[BB2]](%[[A]] : i32)
+// CHECK: ^[[BB2]](%[[MERGE:.*]]: i32):
+// CHECK:   return %[[MERGE]] : i32
+func.func @owning_access_store_defines_block(%a: i32, %cond: i1) -> i32 {
+  %c42 = arith.constant 42 : i32
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %c42, %slot[] : memref<i32>
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  test.owning_access {
+    memref.store %a, %slot[] : memref<i32>
+    test.owning_access_yield
+  }
+  cf.br ^bb2
+^bb2:
+  %v = memref.load %slot[] : memref<i32>
+  return %v : i32
+}
+
+// -----
+
+// Promote a wrapper inside `scf.if`, yielding its stored value.
+
+// CHECK-LABEL: func.func @owning_access_in_scf_if
+// CHECK-SAME: (%[[A:.*]]: i32, %[[COND:.*]]: i1) -> i32
+// CHECK-NOT: test.owning_access
+// CHECK: %[[C42:.*]] = arith.constant 42 : i32
+// CHECK: %[[IF:.*]] = scf.if %[[COND]] -> (i32) {
+// CHECK:   scf.yield %[[A]] : i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[C42]] : i32
+// CHECK: }
+// CHECK: return %[[IF]] : i32
+func.func @owning_access_in_scf_if(%a: i32, %cond: i1) -> i32 {
+  %c42 = arith.constant 42 : i32
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %c42, %slot[] : memref<i32>
+  scf.if %cond {
+    test.owning_access {
+      memref.store %a, %slot[] : memref<i32>
+      test.owning_access_yield
+    }
+  }
+  %v = memref.load %slot[] : memref<i32>
+  return %v : i32
+}
+
+// -----
+
+// Resolve the alias through the wrapped load's operands. The wrapper has no
+// pointer operand; using the root slot would give the f32 load an i32 slot.
+
+// CHECK-LABEL: func.func @owning_access_through_alias
+// CHECK-SAME: (%[[A:.*]]: i32) -> f32
+// CHECK-NOT: test.owning_access
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[A]] : i32 to f32
+// CHECK: return %[[CAST]] : f32
+func.func @owning_access_through_alias(%a: i32) -> f32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  %alias = test.transparent_cast_alias %slot : (memref<i32>) -> memref<f32>
+  %v = test.owning_access {
+    %l = memref.load %alias[] : memref<f32>
+    test.owning_access_yield %l : f32
+  } : f32
+  return %v : f32
+}
+
+// -----
+
+// Keep the slot in memory when the wrapper rejects blocking-use removal.
+
+// CHECK-LABEL: func.func @negative_owning_access_declines
+// CHECK: test.multi_slot_alloca
+// CHECK: test.owning_access decline
+// CHECK:   memref.load
+func.func @negative_owning_access_declines(%a: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  %v = test.owning_access decline {
+    %l = memref.load %slot[] : memref<i32>
+    test.owning_access_yield %l : i32
+  } : i32
+  return %v : i32
+}
+
+// -----
+
+// Keep the slot in memory when the wrapper disowns its embedded uses, leaving
+// the load in an unpromotable region.
+
+// CHECK-LABEL: func.func @negative_owning_access_disowned
+// CHECK: test.multi_slot_alloca
+// CHECK: test.owning_access disown
+// CHECK:   memref.load
+func.func @negative_owning_access_disowned(%a: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  %v = test.owning_access disown {
+    %l = memref.load %slot[] : memref<i32>
+    test.owning_access_yield %l : i32
+  } : i32
+  return %v : i32
+}
+
+// -----
+
+// A wrapper with multiple accesses cannot own their blocking uses.
+
+// CHECK-LABEL: func.func @negative_owning_access_multiple_accesses
+// CHECK: test.multi_slot_alloca
+// CHECK: test.owning_access
+// CHECK:   memref.store
+// CHECK:   memref.load
+func.func @negative_owning_access_multiple_accesses(%a: i32) -> i32 {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  %v = test.owning_access {
+    memref.store %a, %slot[] : memref<i32>
+    %l = memref.load %slot[] : memref<i32>
+    test.owning_access_yield %l : i32
+  } : i32
+  return %v : i32
+}
