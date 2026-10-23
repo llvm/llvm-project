@@ -147,8 +147,8 @@ llvm::Error DeviceTy::init() {
   RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
   // Needs to be initialized before the GeometryProps.
-  if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
-                        sizeof(GeometryProps.Backend), &GeometryProps.Backend))
+  if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                        &Backend))
     Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   getInfoString(DeviceInfo::UID, Uid);
