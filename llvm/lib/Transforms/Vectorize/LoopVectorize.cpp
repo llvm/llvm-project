@@ -7242,7 +7242,8 @@ static void preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      auto *IndR = cast<VPWidenInductionRecipe>(&R);
+      PHINode *IndPhi = IndR->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
       auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IndR);
