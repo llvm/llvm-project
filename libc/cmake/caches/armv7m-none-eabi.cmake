@@ -23,12 +23,12 @@ if(compiler-rt IN_LIST LLVM_ENABLE_RUNTIMES)
 
   # Memory mappings
   set(__boot_flash 0x00000000)
-  set(__boot_flash_size 0x1000)
+  set(__boot_flash_size 0x10000)
   set(__flash 0x21000000)
   set(__flash_size 0x600000)
   set(__ram 0x21600000)
   set(__ram_size 0xA00000)
-  set(__stack_size 0x1000)
+  set(__stack_size 0x20000)
   set(SYMBOLS
     __boot_flash
     __boot_flash_size
