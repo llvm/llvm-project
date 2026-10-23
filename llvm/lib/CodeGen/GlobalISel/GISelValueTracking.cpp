@@ -2256,9 +2256,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     LLT VecTy = MRI.getType(Vec);
 
-    // A result of a different width than the element does not carry the
-    // lane's class.
-    if (VecTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    // A result of a different type than the element does not carry the lane's
+    // class, even at the same width (half and bfloat).
+    if (VecTy.getElementType() != DstTy)
       break;
 
     if (VecTy.isFixedVector()) {
@@ -2294,10 +2294,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
 
-    // An inserted value of a different width than the element does not carry
-    // the lane's class.
-    if (NeedsElt &&
-        MRI.getType(Elt).getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+    // An inserted value of a different type than the element does not carry
+    // the lane's class, even at the same width (half and bfloat).
+    if (NeedsElt && MRI.getType(Elt) != VecTy.getElementType())
       break;
 
     // Do we demand the inserted element?
