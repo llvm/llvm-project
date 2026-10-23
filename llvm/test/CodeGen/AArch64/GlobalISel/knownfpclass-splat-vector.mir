@@ -46,3 +46,15 @@ body:             |
     %c:_(f32) = G_FCONSTANT float 1.0
     %splat:_(<4 x f16>) = G_SPLAT_VECTOR %c(f32)
 ...
+---
+# half and bfloat have the same width but different formats. 0x7C00 is +inf as
+# a half but a normal number as a bfloat.
+name:            splat_fconstant_other_format
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @splat_fconstant_other_format
+  ; CHECK-NEXT: %c:_ FPClasses:(pinf) SignBitKnown:0
+  ; CHECK-NEXT: %splat:_ FPClasses:(all) SignBitKnown:?
+    %c:_(f16) = G_FCONSTANT half 0xH7C00
+    %splat:_(<8 x bf16>) = G_SPLAT_VECTOR %c(f16)
+...

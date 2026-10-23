@@ -2261,10 +2261,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_SPLAT_VECTOR: {
-    // A wider scalar is implicitly truncated, and its low bits are not a value
-    // of the element type.
+    // The class only carries over when the scalar has the element type. A
+    // wider scalar is implicitly truncated, and a scalar of the same width can
+    // have a different format, such as half and bfloat.
     Register Src = MI.getOperand(1).getReg();
-    if (MRI.getType(Src).getScalarSizeInBits() == DstTy.getScalarSizeInBits())
+    if (MRI.getType(Src) == DstTy.getElementType())
       computeKnownFPClass(Src, Known, InterestedClasses, Depth + 1);
     break;
   }
