@@ -24,7 +24,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -32,7 +31,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float16 log1pf16(float16 x) {
-  using namespace math::expxf16_internal;
+  using namespace expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
