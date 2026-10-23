@@ -572,3 +572,51 @@ for.inc:
 exit:
   ret void
 }
+
+define void @compress_store_single_iteration(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
+; CHECK-LABEL: define void @compress_store_single_iteration(
+; CHECK-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> [[WIDE_LOAD]], ptr align 4 [[DST]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[TMP0]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP1]])
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
