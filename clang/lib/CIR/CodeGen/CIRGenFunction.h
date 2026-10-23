@@ -42,10 +42,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 
-namespace {
-class ScalarExprEmitter;
-} // namespace
-
 namespace mlir {
 namespace acc {
 class LoopOp;
@@ -66,7 +62,6 @@ public:
   CIRGenModule &cgm;
 
 private:
-  friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
