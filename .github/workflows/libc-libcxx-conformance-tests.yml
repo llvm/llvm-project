@@ -1,4 +1,4 @@
-name: "[libc++] libc integration conformance tests"
+name: "[libc] libc++ integration conformance tests"
 
 permissions:
   contents: read
@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
      - 'libc/**'
-     - '.github/workflows/libcxx-libc-conformance-tests.yml'
+     - '.github/workflows/libc-libcxx-conformance-tests.yml'
 
 jobs:
   libcxx-libc-integration:
