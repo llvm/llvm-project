@@ -255,6 +255,30 @@ int fallthrough_covered_enums(Enum e) {
 
 // Fallthrough annotations in local classes used to generate "fallthrough
 // annotation does not directly precede switch label" warning.
+
+int fallthrough_attributed_labels(int n) {
+  switch (n) {
+    [[unlikely]] case 0:
+    [[unlikely]] case 1:
+    [[likely]] case 2:
+    case 3:
+    [[unlikely]] default:
+      return 1;
+  }
+  switch (n) {
+    case 4:
+      n++;
+    [[unlikely]] case 5: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+      n++;
+      break;
+    [[unlikely]] case 6:
+      n++;
+    [[unlikely]] default: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+      return 2;
+  }
+  return n;
+}
+
 void fallthrough_in_local_class() {
   class C {
     void f(int x) {
