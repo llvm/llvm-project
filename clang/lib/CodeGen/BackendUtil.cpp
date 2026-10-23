@@ -395,17 +395,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.MCOptions.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
 
-  if (CodeGenOpts.hasSjLjExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-  if (CodeGenOpts.hasSEHExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
-  if (CodeGenOpts.hasDWARFExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
-  if (CodeGenOpts.hasWasmExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
-  if (CodeGenOpts.hasEmscriptenExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::Emscripten;
-
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
@@ -537,6 +526,7 @@ getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   // if LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
   Options.EmitNotes = !CodeGenOpts.CoverageNotesFile.empty();
+  Options.UseAbsolutePathsInNotes = CodeGenOpts.UseAbsolutePathsInNotesFile;
   Options.EmitData = !CodeGenOpts.CoverageDataFile.empty();
   llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
   Options.NoRedZone = CodeGenOpts.DisableRedZone;

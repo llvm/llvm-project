@@ -10645,7 +10645,9 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
           {MOLastUse, "amdgpu-last-use"},
           {MOCooperative, "amdgpu-cooperative"},
           {MOThreadPrivate, "amdgpu-thread-private"},
-      };
+          {MOCFSB0, "amdgpu-cfs0"},
+          {MOCFSB1, "amdgpu-cfs1"},
+  };
 
   return ArrayRef(TargetFlags);
 }

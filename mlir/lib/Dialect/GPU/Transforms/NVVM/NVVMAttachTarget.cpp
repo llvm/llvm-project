@@ -1,36 +1,35 @@
-//===-- XeVMAttachTarget.cpp - Attach an XeVM target ----------------------===//
+//===- NVVMAttachTarget.cpp - Attach an NVVM target -----------------------===//
 //
-// This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the `GpuXeVMAttachTarget` pass, attaching `#xevm.target`
+// This file implements the `GpuNVVMAttachTarget` pass, attaching `#nvvm.target`
 // attributes to GPU modules.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Target/LLVM/XeVM/Target.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_GPUXEVMATTACHTARGET
-#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+#define GEN_PASS_DEF_GPUNVVMATTACHTARGET
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
-using namespace mlir::xevm;
+using namespace mlir::NVVM;
 
 namespace {
-struct XeVMAttachTarget
-    : public mlir::impl::GpuXeVMAttachTargetBase<XeVMAttachTarget> {
+struct NVVMAttachTarget
+    : public impl::GpuNVVMAttachTargetBase<NVVMAttachTarget> {
   using Base::Base;
 
   DictionaryAttr getFlags(OpBuilder &builder) const;
@@ -38,26 +37,36 @@ struct XeVMAttachTarget
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<xevm::XeVMDialect>();
+    registry.insert<NVVM::NVVMDialect>();
   }
 };
 } // namespace
 
-DictionaryAttr XeVMAttachTarget::getFlags(OpBuilder &builder) const {
+DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
+  UnitAttr unitAttr = builder.getUnitAttr();
   SmallVector<NamedAttribute, 3> flags;
+  auto addFlag = [&](StringRef flag) {
+    flags.push_back(builder.getNamedAttr(flag, unitAttr));
+  };
+  if (fastFlag)
+    addFlag("fast");
+  if (ftzFlag)
+    addFlag("ftz");
+  if (compilerDiagnosticsFlag)
+    addFlag("collect-compiler-diagnostics");
+
   // Tokenize and set the optional command line options.
   if (!cmdOptions.empty()) {
-    std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options =
-        gpu::TargetOptions::tokenizeCmdOptions(cmdOptions);
+    auto options = gpu::TargetOptions::tokenizeCmdOptions(cmdOptions);
     if (!options.second.empty()) {
-      llvm::SmallVector<mlir::Attribute> xevmOptionAttrs;
+      llvm::SmallVector<mlir::Attribute> nvvmOptionAttrs;
       for (const char *opt : options.second) {
-        xevmOptionAttrs.emplace_back(
+        nvvmOptionAttrs.emplace_back(
             mlir::StringAttr::get(builder.getContext(), StringRef(opt)));
       }
       flags.push_back(builder.getNamedAttr(
-          "cmd-options",
-          mlir::ArrayAttr::get(builder.getContext(), xevmOptionAttrs)));
+          "ptxas-cmd-options",
+          mlir::ArrayAttr::get(builder.getContext(), nvvmOptionAttrs)));
     }
   }
 
@@ -66,13 +75,14 @@ DictionaryAttr XeVMAttachTarget::getFlags(OpBuilder &builder) const {
   return nullptr;
 }
 
-void XeVMAttachTarget::runOnOperation() {
+void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
-  auto target = builder.getAttr<xevm::XeVMTargetAttr>(
-      optLevel, triple, chip, getFlags(builder),
-      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
+  auto target = builder.getAttr<NVVMTargetAttr>(
+      optLevel, triple, chip, features, getFlags(builder),
+      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink),
+      verifyTarget);
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())

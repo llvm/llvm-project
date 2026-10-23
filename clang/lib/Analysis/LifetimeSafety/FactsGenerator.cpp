@@ -858,6 +858,17 @@ void FactsGenerator::handleExitBlock() {
             FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));
       }
     }
+
+  // Keep the never-expiring `this` origin live at exit: the object outlives
+  // the method, so whatever it holds (e.g. borrows captured via
+  // [[clang::lifetime_capture_by_this]], or loans reachable through its
+  // fields) is considered used after the method returns. This is emitted for
+  // every method with a `this` origin, not only those that capture something.
+  // Destructors are skipped since the object is being destroyed.
+  if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins();
+      ThisOrigins && !IsDestructor)
+    EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
+        (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {

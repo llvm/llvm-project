@@ -3206,6 +3206,7 @@ cc_library(
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:ABI",

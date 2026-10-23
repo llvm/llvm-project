@@ -992,3 +992,20 @@ void invalid_after_ternary_reset(bool flag) {
 }
 
 } // namespace unique_ptr_invalidation
+
+namespace CapturedByThis {
+struct S {
+  void store(const std::string &s [[clang::lifetime_capture_by_this]]);
+
+  void InvalidatedParam(std::string &s) { // expected-warning {{parameter 's' is later invalidated}}
+    store(s);
+    s.clear(); // expected-note {{parameter 's' is invalidated here}}
+  }            // expected-note {{later used here}}
+
+  void InvalidatedLocal() {
+    std::string s;
+    store(s);  // expected-warning {{local variable 's' is later invalidated}}
+    s.clear(); // expected-note {{local variable 's' is invalidated here}}
+  }            // expected-note {{later used here}}
+};
+} // namespace CapturedByThis

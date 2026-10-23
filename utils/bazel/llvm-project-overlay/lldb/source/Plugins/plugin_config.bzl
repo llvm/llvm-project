@@ -70,6 +70,7 @@ DEFAULT_PLUGINS = [
     "ObjectFilePlaceholder",
     "ObjectFileWasm",
     "PlatformAndroid",
+    "PlatformEmscripten",
     "PlatformGDB",
     "PlatformLinux",
     "PlatformMacOSX",

@@ -10115,6 +10115,49 @@ uint32x2_t test_pslide1down_u32x2(uint32x2_t rd, uint32_t rs1) {
   return __riscv_pslide1down_u32x2(rd, rs1);
 }
 
+/* Packed Widening Multiply Accumulate */
+// CHECK-LABEL: define dso_local i64 @test_pwmacc_i32x2(
+// CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.riscv.pwmacc.i32x2.v2i32.v2i16(<2 x i32> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+int32x2_t test_pwmacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pwmacc_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_pwmaccu_u32x2(
+// CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.riscv.pwmaccu.u32x2.v2i32.v2i16(<2 x i32> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+uint32x2_t test_pwmaccu_u32x2(uint32x2_t rd, uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwmaccu_u32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_pwmaccsu_i32x2(
+// CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.riscv.pwmaccsu.i32x2.v2i32.v2i16(<2 x i32> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+int32x2_t test_pwmaccsu_i32x2(int32x2_t rd, int16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwmaccsu_i32x2(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: define dso_local i64 @test_pm2wadd_i64(
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
