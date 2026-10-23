@@ -4968,7 +4968,6 @@ public:
                                     const Iterator> {
     SliceSplitter &SS;
     unsigned Idx;
-    Iterator() = default;
     Iterator(SliceSplitter &SS, bool IsEnd) : SS(SS) {
       Idx = IsEnd ? SS.Splits.size() + 1 : 0;
     }
