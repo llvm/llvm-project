@@ -65,19 +65,24 @@ static bool hasPagecacheTHPSupport() {
   char Buf[64];
 
   int FD = __open("/sys/kernel/mm/transparent_hugepage/enabled",
-                  0 /* O_RDONLY */, 0);
+                  O_CLOEXEC /* O_RDONLY | O_CLOEXEC */, 0);
   if (FD < 0)
     return false;
 
   memset(Buf, 0, sizeof(Buf));
-  const size_t Res = __read(FD, Buf, sizeof(Buf));
-  if (Res < 0)
+  const size_t Res = __read(FD, Buf, sizeof(Buf) - 1);
+  if (static_cast<int64_t>(Res) < 0) {
+    __close(FD);
     return false;
+  }
 
   if (!strStr(Buf, "[always]") && !strStr(Buf, "[madvise]")) {
     DEBUG(report("[hugify] THP support is not enabled.\n");)
+    __close(FD);
     return false;
   }
+
+  __close(FD);
 
   struct KernelVersionTy {
     uint32_t major;
