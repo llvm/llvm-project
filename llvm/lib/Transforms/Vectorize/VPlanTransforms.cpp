@@ -2864,6 +2864,49 @@ void VPlanTransforms::replaceSymbolicStrides(
   }
 }
 
+void VPlanTransforms::materializeVectorStretches(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // TODO-REVEC: handle dyn_cast<VPInstruction>(&R) to support blends.
+      // TODO-REVEC: handle masked memore ops.
+      if (!match(&R, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+        continue;
+
+      // Look for vector values that need to be stretched to match the element
+      // count of R's type.
+      VPValue *Cond = R.getOperand(0);
+      ElementCount ExpectedEC =
+          getElementCount(R.getVPSingleValue()->getScalarType());
+      if (ExpectedEC.isScalar() || vputils::isSingleScalar(Cond))
+        continue;
+
+      unsigned StretchFactor = ExpectedEC.getKnownScalarFactor(
+          getElementCount(Cond->getScalarType()));
+      if (StretchFactor == 1)
+        continue;
+
+      Type *StretchedTy =
+          VectorType::get(Cond->getScalarType()->getScalarType(), ExpectedEC);
+      auto *Stretch =
+          new VPInstruction(VPInstruction::VectorStretch, {Cond}, {}, {},
+                            R.getDebugLoc(), "", StretchedTy);
+      Stretch->insertBefore(&R);
+
+      SmallVector<VPValue *> NewOperands(R.operands());
+      NewOperands[0] = Stretch;
+      assert(isa<VPWidenRecipe>(&R) &&
+             "REVEC: Only expected Widen recipes at this stage.");
+      VPSingleDefRecipe *NewSelect =
+          cast<VPWidenRecipe>(&R)->cloneWithOperands(NewOperands);
+      NewSelect->insertBefore(&R);
+      cast<VPSingleDefRecipe>(&R)->replaceAllUsesWith(NewSelect);
+      R.eraseFromParent();
+    }
+  }
+}
+
 void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   // Collect recipes in the backward slice of `Root` that may generate a poison
   // value that is used after vectorization.

@@ -5669,6 +5669,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::removeRedundantExpandSCEVRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan, VPDominatorTree(BestVPlan));
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
+  if (BestVF.isVector())
+    RUN_VPLAN_PASS(VPlanTransforms::materializeVectorStretches, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
   if (RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
@@ -6552,6 +6554,9 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
 
   if (PlanCM.maskPartialAliasing())
     RUN_VPLAN_PASS(VPlanTransforms::attachAliasMaskToHeaderMask, *Plan);
+
+  if (!Plan->hasScalarVFOnly())
+    RUN_VPLAN_PASS(VPlanTransforms::materializeVectorStretches, *Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

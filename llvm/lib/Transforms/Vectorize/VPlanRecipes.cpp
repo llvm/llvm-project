@@ -654,6 +654,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
+  case VPInstruction::VectorStretch:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
@@ -938,6 +939,18 @@ Value *VPInstruction::generate(VPTransformState &State,
     return broadcastOrRepeatValue(
         Builder, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
         State.VF);
+  }
+  case VPInstruction::VectorStretch: {
+    assert(State.VF.isVector() && "VectorStretch requires a vector VF");
+    Value *V = State.get(getOperand(0));
+    assert(V->getType()->isVectorTy() && "VectorStretch requires a vector");
+    unsigned StretchFactor = getElementCount(getScalarType())
+                                 .getKnownScalarFactor(getElementCount(
+                                     getOperand(0)->getScalarType()));
+    assert(isPowerOf2_32(StretchFactor) && "Unsupported stretch factor");
+    for (; StretchFactor > 1; StretchFactor /= 2)
+      V = Builder.CreateVectorInterleave({V, V}, Name);
+    return V;
   }
   case VPInstruction::BuildVector: {
     assert(!GenerateSingleScalar &&
@@ -1460,13 +1473,29 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
 
   switch (getOpcode()) {
+  case VPInstruction::VectorStretch: {
+    assert(VF.isVector() && "VectorStretch requires a vector VF");
+    unsigned StretchFactor = getElementCount(getScalarType())
+                                 .getKnownScalarFactor(getElementCount(
+                                     getOperand(0)->getScalarType()));
+    if (!isPowerOf2_32(StretchFactor))
+      return InstructionCost::getInvalid();
+
+    auto *SrcTy = toVectorTy(getOperand(0)->getScalarType(), VF);
+    InstructionCost Cost = {};
+    for (; StretchFactor > 1; StretchFactor /= 2) {
+      IntrinsicCostAttributes Attrs(Intrinsic::vector_interleave2,
+                                    toVectorTy(SrcTy, 2), {SrcTy, SrcTy});
+      SrcTy = toVectorTy(SrcTy, 2);
+      Cost += Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+    }
+    return Cost;
+  }
   case Instruction::Select: {
     llvm::CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
     match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
     auto *CondTy = getOperand(0)->getScalarType();
     auto *VecTy = getOperand(1)->getScalarType();
-    assert(!CondTy->isVectorTy() &&
-           "REVEC: Unexpected VPlan-created select at this stage");
     if (!vputils::onlyFirstLaneUsed(this)) {
       CondTy = toVectorTy(CondTy, VF);
       VecTy = toVectorTy(VecTy, VF);
@@ -1772,6 +1801,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Broadcast:
   case VPInstruction::BuildVector:
   case VPInstruction::ConcatVectors:
+  case VPInstruction::VectorStretch:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
@@ -1945,6 +1975,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
+    break;
+  case VPInstruction::VectorStretch:
+    O << "vector-stretch";
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
@@ -3094,17 +3127,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::Select: {
     VPValue *CondOp = getOperand(0);
-    Type *InitialCondTy = CondOp->getScalarType();
-    // REVEC: The initial CondOp might be a vector, so be sure we either
-    // generate a single i1 condition, or an i1 vector with the same EC as the
-    // data inputs.
-    bool BuildScalarCond =
-        vputils::isSingleScalar(CondOp) && InitialCondTy->isIntegerTy(1);
-    unsigned StretchFactor =
-        getElementCount(getScalarType())
-            .getKnownScalarFactor(getElementCount(InitialCondTy));
-    Value *Cond = BuildScalarCond ? State.get(CondOp, true)
-                                  : State.getAndStretch(CondOp, StretchFactor);
+    bool BuildScalarCond = vputils::isSingleScalar(CondOp) &&
+                           CondOp->getScalarType()->isIntegerTy(1);
+    Value *Cond = State.get(CondOp, BuildScalarCond);
     Value *Op0 = State.get(getOperand(1));
     Value *Op1 = State.get(getOperand(2));
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);

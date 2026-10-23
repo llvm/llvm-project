@@ -1361,6 +1361,9 @@ public:
     // 0 or successor 1 based on condition 0.
     BranchOnTwoConds,
     Broadcast,
+    /// Replicates each element of its operand to match the element count of
+    /// the result's type.
+    VectorStretch,
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,

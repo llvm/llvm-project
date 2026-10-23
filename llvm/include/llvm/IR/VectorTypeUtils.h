@@ -23,10 +23,15 @@ inline Type *toVectorTy(Type *Scalar, ElementCount EC) {
     return Scalar;
 
   if (auto *VTy = dyn_cast<VectorType>(Scalar)) {
-    assert(isa<FixedVectorType>(VTy) &&
-           "Unexpected attempt to re-vectorize a scalable vector!");
+    assert(!(VTy->getElementCount().isScalable() && EC.isScalable()) &&
+           "Attempt to create <vscale x vscale x N x elt>!");
+
+    if (auto *FVTy = dyn_cast<FixedVectorType>(VTy))
+      return VectorType::get(VTy->getElementType(),
+                             EC * FVTy->getNumElements());
+
     return VectorType::get(VTy->getElementType(),
-                           EC * VTy->getElementCount().getFixedValue());
+                           VTy->getElementCount() * EC.getKnownMinValue());
   }
 
   return VectorType::get(Scalar, EC);

@@ -226,10 +226,6 @@ struct VPTransformState {
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
 
-  /// Get the generated Value for \p Def, stretched by \p StretchFactor.
-  /// If the latter is 1, then this is equivalent to get(Def).
-  Value *getAndStretch(const VPValue *Def, unsigned StretchFactor);
-
   bool hasVectorValue(const VPValue *Def) {
     return Data.VPV2Vector.contains(Def);
   }

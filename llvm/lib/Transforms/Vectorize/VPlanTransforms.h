@@ -332,6 +332,10 @@ struct VPlanTransforms {
   ///  * Such a widen memory load/store is masked, but not with the header mask.
   static void dropPoisonGeneratingRecipes(VPlan &Plan);
 
+  /// Materialize element replication required by vector-valued selects as
+  /// explicit VectorStretch instructions.
+  static void materializeVectorStretches(VPlan &Plan);
+
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses of the canonical IV except for the canonical IV
   /// increment with a VPCurrentIterationPHIRecipe. The canonical IV is only
