@@ -383,7 +383,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   UseRangesSection = !NoDwarfRangesSection;
 
   if (DwarfSectionsAsReferences != Default)
-    UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
+    UseSectionsAsReferences = (DwarfSectionsAsReferences == Enable);
 
   // Don't generate type units for unsupported object file formats.
   GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
