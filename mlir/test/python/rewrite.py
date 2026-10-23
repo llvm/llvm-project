@@ -88,12 +88,21 @@ def testRewritePattern():
         # CHECK: return %0 : i64
         print(module)
 
+        with InsertionPoint(module.body), Location.unknown():
+            arith.constant(IntegerType.get_signless(64), 1)
+            Operation.create("builtin.unrealized_conversion_cast")
+        walk_and_apply_patterns(module, frozen, allow_unverifiable_ir=True)
+        # CHECK: "arith.constant"() <{value = 2 : i64}> : () -> i64
+        # CHECK: "builtin.unrealized_conversion_cast"() : () -> ()
+        print(module)
+
 
 # CHECK-LABEL: TEST: testGreedyRewriteConfigCreation
 @run
 def testGreedyRewriteConfigCreation():
     # Test basic config creation and destruction
     config = GreedyRewriteConfig()
+    assert not config.allow_unverifiable_ir
     # CHECK: Config created successfully
     print("Config created successfully")
 
@@ -111,6 +120,7 @@ def testGreedyRewriteConfigGetters():
     config.strictness = GreedyRewriteStrictness.EXISTING_AND_NEW_OPS
     config.region_simplification_level = GreedySimplifyRegionLevel.AGGRESSIVE
     config.enable_constant_cse = True
+    config.allow_unverifiable_ir = True
 
     # Test all getter methods and print results
     # CHECK: max_iterations: 5
@@ -134,6 +144,9 @@ def testGreedyRewriteConfigGetters():
     # CHECK: cse_enabled: True
     cse_enabled = config.enable_constant_cse
     print(f"cse_enabled: {cse_enabled}")
+    # CHECK: allow_unverifiable_ir: True
+    allow_unverifiable_ir = config.allow_unverifiable_ir
+    print(f"allow_unverifiable_ir: {allow_unverifiable_ir}")
 
 
 # CHECK-LABEL: TEST: testGreedyRewriteStrictnessEnum

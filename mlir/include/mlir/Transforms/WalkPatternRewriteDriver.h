@@ -30,9 +30,16 @@ namespace mlir {
 /// The driver will skip unreachable blocks.
 ///
 /// Note: Does not apply patterns to the given operation itself.
+/// Note: If `allowUnverifiableIR` is set to true, the IR is allowed to be in an
+/// unverifiable state. Verifiability is only actually checked if the build
+/// option `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is enabled.
 void walkAndApplyPatterns(Operation *op,
                           const FrozenRewritePatternSet &patterns,
-                          RewriterBase::Listener *listener = nullptr);
+                          RewriterBase::Listener *listener = nullptr,
+                          bool allowUnverifiableIR = false);
+void walkAndApplyPatterns(Operation *op,
+                          const FrozenRewritePatternSet &patterns,
+                          bool allowUnverifiableIR);
 
 } // namespace mlir
 

@@ -499,7 +499,8 @@ struct TestGreedyPatternDriver
     config.setUseTopDownTraversal(useTopDownTraversal)
         .setMaxIterations(this->maxIterations)
         .enableFolding(this->fold)
-        .enableConstantCSE(this->cseConstants);
+        .enableConstantCSE(this->cseConstants)
+        .setAllowUnverifiableIR(this->allowUnverifiableIR);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
@@ -520,6 +521,10 @@ struct TestGreedyPatternDriver
   Option<bool> cseConstants{
       *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
       llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
+  Option<bool> allowUnverifiableIR{
+      *this, "allow-unverifiable-ir",
+      llvm::cl::desc("Whether to allow unverifiable IR"),
+      llvm::cl::init(GreedyRewriteConfig().isUnverifiableIRAllowed())};
 };
 
 struct TestStrictPatternDriver
@@ -710,12 +715,17 @@ struct TestWalkPatternDriver final
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),
-                         dumpNotifications ? &dumpListener : nullptr);
+                         dumpNotifications ? &dumpListener : nullptr,
+                         allowUnverifiableIR);
   }
 
   Option<bool> dumpNotifications{
       *this, "dump-notifications",
       llvm::cl::desc("Print rewrite listener notifications"),
+      llvm::cl::init(false)};
+  Option<bool> allowUnverifiableIR{
+      *this, "allow-unverifiable-ir",
+      llvm::cl::desc("Whether to allow unverifiable IR"),
       llvm::cl::init(false)};
 };
 

@@ -118,9 +118,10 @@ struct ErasedOpsListener final : RewriterBase::ForwardingListener {
 
 void walkAndApplyPatterns(Operation *op,
                           const FrozenRewritePatternSet &patterns,
-                          RewriterBase::Listener *listener) {
+                          RewriterBase::Listener *listener,
+                          bool allowUnverifiableIR) {
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (failed(verify(op)))
+  if (!allowUnverifiableIR && failed(verify(op)))
     llvm::report_fatal_error("walk pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
@@ -241,10 +242,16 @@ void walkAndApplyPatterns(Operation *op,
       {op});
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (failed(verify(op)))
+  if (!allowUnverifiableIR && failed(verify(op)))
     llvm::report_fatal_error(
         "walk pattern rewriter result IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+}
+
+void walkAndApplyPatterns(Operation *op,
+                          const FrozenRewritePatternSet &patterns,
+                          bool allowUnverifiableIR) {
+  walkAndApplyPatterns(op, patterns, nullptr, allowUnverifiableIR);
 }
 
 } // namespace mlir

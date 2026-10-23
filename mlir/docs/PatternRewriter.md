@@ -97,7 +97,8 @@ Additionally, there are some best practices that patterns are advised to follow:
 
 **Note:** These restrictions and best practices can be checked at runtime by
 building with `-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally paired
-with ASan).
+with ASan). Rewrite drivers can opt out of the verifiability checks by setting
+`allowUnverifiableIR` to `true`.
 
 
 ### Application Recursion
