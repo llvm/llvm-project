@@ -2235,6 +2235,37 @@ TEST_F(SymbolCollectorTest, ExportedDeclarations) {
                                    qName("ns::h"), qName("ns::not_exported")));
 }
 
+TEST_F(SymbolCollectorTest, ExportedDeclarationsForCodeCompletion) {
+  // Symbols declared in the main file are never used for code completion, so
+  // the exported declarations live in a header included into the purview.
+  InMemoryFileSystem->addFile(testPath("exports.h"), 0,
+                              llvm::MemoryBuffer::getMemBuffer(R"cpp(
+    export void f();
+    export {
+      struct S { void m(); };
+      enum E { A };
+    }
+    namespace ns {
+    export void h();
+    }
+  )cpp"));
+  const char *Main = R"cpp(
+    export module m;
+    #include "exports.h"
+  )cpp";
+
+  runSymbolCollector("", Main,
+                     {"-std=c++20", "-xc++-module", "-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(qName("f"), forCodeCompletion(true)),
+                           AllOf(qName("S"), forCodeCompletion(true)),
+                           AllOf(qName("S::m"), forCodeCompletion(false)),
+                           AllOf(qName("E"), forCodeCompletion(true)),
+                           AllOf(qName("A"), forCodeCompletion(true)),
+                           AllOf(qName("ns"), forCodeCompletion(true)),
+                           AllOf(qName("ns::h"), forCodeCompletion(true))));
+}
+
 TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {
   CollectorOpts.CollectIncludePath = true;
   const std::string Header = R"cpp(#pragma once 

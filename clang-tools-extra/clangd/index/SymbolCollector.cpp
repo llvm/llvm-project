@@ -524,13 +524,12 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
 
   // We want most things but not "local" symbols such as symbols inside
   // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
-  const auto *DeclCtx = ND.getDeclContext();
+  // Transparent contexts (export, extern "C", unscoped enums) are skipped, as
+  // their declarations belong to the enclosing context.
+  const auto *DeclCtx = ND.getNonTransparentDeclContext();
   switch (DeclCtx->getDeclKind()) {
   case Decl::TranslationUnit:
   case Decl::Namespace:
-  case Decl::LinkageSpec:
-  // An export-declaration can only appear at namespace scope.
-  case Decl::Export:
   case Decl::Enum:
   case Decl::ObjCProtocol:
   case Decl::ObjCInterface:
