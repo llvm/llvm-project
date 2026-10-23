@@ -1544,12 +1544,20 @@ bool PreRARematStage::initGCNSchedStage() {
       continue;
 
     // Rematerialization moves the defining instruction into the region of its
-    // use, which may sit under different control dependencies (e.g., across a
+    // uses, which may sit under different control dependencies (e.g., across a
     // change of EXEC). Convergent operations must not be made control-dependent
     // on additional values, so they cannot be safely relocated this way. This
     // mirrors the check MachineSink performs before sinking an instruction.
     if (any_of(CandReg.Defs,
                [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
+      continue;
+
+    // Rematerializing a load into multiple using regions duplicates the
+    // memory access itself. Conservatively restrict rematerialization of loads
+    // to a single region.
+    if (CandReg.Uses.size() > 1 &&
+        any_of(CandReg.Defs,
+               [](const MachineInstr *DefMI) { return DefMI->mayLoad(); }))
       continue;
 
     // We further filter the registers that we can rematerialize based on our
@@ -1658,8 +1666,9 @@ bool PreRARematStage::initGCNSchedStage() {
       CandidateOrder.pop_back();
 
 #ifdef EXPENSIVE_CHECKS
-      // All uses are known to be available / live at the remat points. Thus,
-      // the uses should already be live in to the using regions.
+      // All uses outside the defining region are known to be available / live
+      // at the remat points. Thus, the uses should already be live in to
+      // those using regions.
       for (const MachineInstr *DefMI : Reg.Defs) {
         for (const MachineOperand &MO : DefMI->operands()) {
           // Exclude the defined register. We are rematerializing all
@@ -1678,6 +1687,8 @@ bool PreRARematStage::initGCNSchedStage() {
             LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
           for (const auto &[UseRegion, _] : Reg.Uses) {
+            if (UseRegion == Reg.DefRegion)
+              continue;
             LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
             LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
             // If this register has lanes not covered by the LiveIns, be sure

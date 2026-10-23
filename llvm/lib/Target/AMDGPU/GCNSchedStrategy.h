@@ -562,7 +562,10 @@ public:
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
-/// 4. The register is not used by or using another register that is going to be
+/// 4. The register has at least one user outside its defining region. If
+///    rematerialized, one copy is made per using region and the original
+///    register stays if the defining region has users.
+/// 5. The register is not used by or using another register that is going to be
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
 private:
