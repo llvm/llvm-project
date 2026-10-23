@@ -214,12 +214,9 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
     valuesDefinedAbove.clear();
     mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
 
-    if (!canEmitMaps && !valuesDefinedAbove.empty() && !madeProgress) {
-      assert(false &&
-          "failed to clone all values used in the target region but defined "
-          "above it");
-      break;
-    }
+    assert((canEmitMaps || valuesDefinedAbove.empty() || madeProgress) &&
+        "failed to clone all values used in the target region but defined "
+        "above it");
   }
 }
 
