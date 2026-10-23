@@ -87,16 +87,15 @@ define i32 @freeze_i8_load_loop(ptr %p, i32 %n) {
 ; CHECK-LABEL: freeze_i8_load_loop:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpwi 4, 1
-; CHECK-NEXT:    lbz 5, 0(3)
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    iselgt 3, 4, 3
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    lbz 3, 0(3)
+; CHECK-NEXT:    iselgt 4, 4, 5
+; CHECK-NEXT:    mullw 3, 4, 3
+; CHECK-NEXT:    clrldi 4, 4, 32
+; CHECK-NEXT:    mtctr 4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    add 3, 3, 5
 ; CHECK-NEXT:    bdnz .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    blr

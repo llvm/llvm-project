@@ -17,13 +17,14 @@ define void @fn2(i32 %x) nounwind uwtable {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_COND]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @d, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @d, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TOBOOL26:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL26]], label [[FOR_END5:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[TMP0]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[TMP0]], [[LSR_IV_NEXT_LCSSA]]
 ; CHECK-NEXT:    br label [[FOR_END5]]
 ; CHECK:       for.end5:
 ; CHECK-NEXT:    ret void

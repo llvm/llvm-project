@@ -2143,7 +2143,6 @@ class LSRInstance {
   mutable SCEVExpander Rewriter;
   bool Changed = false;
   bool HardwareLoopProfitable = false;
-  bool ShouldPreserveLCSSA = false;
 
   /// This is the insert position that the current loop's induction variable
   /// increment should be placed. In simple loops, this is the latch block's
@@ -2290,15 +2289,10 @@ class LSRInstance {
   void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution);
 
 public:
-  // TODO(boomanaiden154): The PreserveLCSSA flag is a hack to allow
-  // experimentation with the NewPM which requires LCSSA preservation while
-  // some of the details are worked out in LSR. Eventually it should be set
-  // to true and removed.
   LSRInstance(const ScalarOptions &Opts, Loop *L, IVUsers &IU,
               ScalarEvolution &SE, DominatorTree &DT, LoopInfo &LI,
               const TargetTransformInfo &TTI, AssumptionCache &AC,
-              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU,
-              bool PreserveLCSSA);
+              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU);
 
   bool getChanged() const { return Changed; }
   const SmallVectorImpl<WeakVH> &getScalarEvolutionIVs() const {
@@ -5991,10 +5985,9 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           BasicBlock *NewBB = nullptr;
           if (!Parent->isLandingPad()) {
             CriticalEdgeSplittingOptions SplitOptions(&DT, &LI, MSSAU);
-            SplitOptions =
-                SplitOptions.setMergeIdenticalEdges().setKeepOneInputPHIs();
-            if (ShouldPreserveLCSSA)
-              SplitOptions = SplitOptions.setPreserveLCSSA();
+            SplitOptions = SplitOptions.setMergeIdenticalEdges()
+                               .setKeepOneInputPHIs()
+                               .setPreserveLCSSA();
             NewBB = SplitCriticalEdge(BB, Parent, SplitOptions);
           } else {
             SmallVector<BasicBlock *, 2> NewBBs;
@@ -6250,13 +6243,11 @@ void LSRInstance::ImplementSolution(
 LSRInstance::LSRInstance(const ScalarOptions &Opts, Loop *L, IVUsers &IU,
                          ScalarEvolution &SE, DominatorTree &DT, LoopInfo &LI,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
-                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU,
-                         bool PreserveLCSSA)
+                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
     : Opts(Opts), IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI),
       L(L), MSSAU(MSSAU), AMK(Opts.lsr_preferred_addressing_mode.value_or(
                               TTI.getPreferredAddressingMode(L, &SE))),
-      Rewriter(SE, "lsr", PreserveLCSSA), ShouldPreserveLCSSA(PreserveLCSSA),
-      BaselineCost(Opts, L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr", true), BaselineCost(Opts, L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -7130,7 +7121,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
                                const TargetTransformInfo &TTI,
                                AssumptionCache &AC, TargetLibraryInfo &TLI,
-                               MemorySSA *MSSA, bool PreserveLCSSA) {
+                               MemorySSA *MSSA) {
   const ScalarOptions &Opts = getScalarOptions(*L);
 
   // Debug preservation - before we start removing anything identify which DVI
@@ -7144,8 +7135,8 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
   // Run the main LSR transformation.
-  const LSRInstance &Reducer = LSRInstance(Opts, L, IU, SE, DT, LI, TTI, AC,
-                                           TLI, MSSAU.get(), PreserveLCSSA);
+  const LSRInstance &Reducer =
+      LSRInstance(Opts, L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get());
   Changed |= Reducer.getChanged();
 
   // Remove any extra phis created by processing inner loops.
@@ -7227,16 +7218,14 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   MemorySSA *MSSA = nullptr;
   if (MSSAAnalysis)
     MSSA = &MSSAAnalysis->getMSSA();
-  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA,
-                            /*PreserveLCSSA=*/false);
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA);
 }
 
 PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA,
-                          /*PreserveLCSSA=*/true))
+                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
