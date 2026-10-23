@@ -2257,11 +2257,14 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
       DICompileUnit::NoDebug)
     return false;
 
+  unsigned NumInputDbgValues = 0;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB.instrs())
+      if (MI.isDebugValue())
+        ++NumInputDbgValues;
+
   // Skip functions with no DBG_VALUEs.
-  if (none_of(MF, [](const MachineBasicBlock &MBB) {
-        return any_of(MBB.instrs(),
-                      [](const MachineInstr &MI) { return MI.isDebugValue(); });
-      }))
+  if (!NumInputDbgValues)
     return false;
 
   TRI = MF.getSubtarget().getRegisterInfo();
@@ -2344,19 +2347,11 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
     ++RPONumber;
   }
 
-  if (RPONumber > InputBBLimit) {
-    unsigned NumInputDbgValues = 0;
-    for (auto &MBB : MF)
-      for (auto &MI : MBB)
-        if (MI.isDebugValue())
-          ++NumInputDbgValues;
-    if (NumInputDbgValues > InputDbgValLimit) {
-      LLVM_DEBUG(dbgs() << "Disabling VarLocBasedLDV: " << MF.getName()
-                        << " has " << RPONumber << " basic blocks and "
-                        << NumInputDbgValues
-                        << " input DBG_VALUEs, exceeding limits.\n");
-      return false;
-    }
+  if (RPONumber > InputBBLimit && NumInputDbgValues > InputDbgValLimit) {
+    LLVM_DEBUG(dbgs() << "Disabling VarLocBasedLDV: " << MF.getName() << " has "
+                      << RPONumber << " basic blocks and " << NumInputDbgValues
+                      << " input DBG_VALUEs, exceeding limits.\n");
+    return false;
   }
 
   // This is a standard "union of predecessor outs" dataflow problem.
