@@ -43,17 +43,17 @@ end subroutine
 ! CHECK: omp.map.info {{.*}} name("auto_arr")
 ! CHECK: omp.target
 ! CHECK: omp.teams
-! CHECK: fir.alloca i32 {bindc_name = "s", pinned, uniq_name = "_QFnested_target_teamsEs"}
-! CHECK: fir.alloca !fir.array<10xi32> {bindc_name = "arr", pinned, uniq_name = "_QFnested_target_teamsEarr"}
-! CHECK: fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "alloc", pinned, uniq_name = "_QFnested_target_teamsEalloc"}
-! CHECK: fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", pinned, uniq_name = "_QFnested_target_teamsEptr"}
-! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt{a:i32,b:f32}> {bindc_name = "d", pinned, uniq_name = "_QFnested_target_teamsEd"}
-! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt_alloc{a:!fir.box<!fir.heap<i32>>}> {bindc_name = "da", pinned, uniq_name = "_QFnested_target_teamsEda"}
-! CHECK: fir.alloca !fir.array<?xi32>, %{{.*}} {bindc_name = "assumed", pinned, uniq_name = "_QFnested_target_teamsEassumed"}
-! CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "alloc_arr", pinned, uniq_name = "_QFnested_target_teamsEalloc_arr"}
-! CHECK: fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "ptr_arr", pinned, uniq_name = "_QFnested_target_teamsEptr_arr"}
-! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt_alloc_arr{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "daa", pinned, uniq_name = "_QFnested_target_teamsEdaa"}
-! CHECK: fir.alloca !fir.array<?xi32>, %{{.*}} {bindc_name = "auto_arr", pinned, uniq_name = "_QFnested_target_teamsEauto_arr"}
+! CHECK: fir.alloca i32 <{bindc_name = "s", pinned, uniq_name = "_QFnested_target_teamsEs"}>
+! CHECK: fir.alloca !fir.array<10xi32> <{bindc_name = "arr", pinned, uniq_name = "_QFnested_target_teamsEarr"}>
+! CHECK: fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "alloc", pinned, uniq_name = "_QFnested_target_teamsEalloc"}>
+! CHECK: fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "ptr", pinned, uniq_name = "_QFnested_target_teamsEptr"}>
+! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt{a:i32,b:f32}> <{bindc_name = "d", pinned, uniq_name = "_QFnested_target_teamsEd"}>
+! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt_alloc{a:!fir.box<!fir.heap<i32>>}> <{bindc_name = "da", pinned, uniq_name = "_QFnested_target_teamsEda"}>
+! CHECK: fir.alloca !fir.array<?xi32>, %{{.*}} <{bindc_name = "assumed", pinned, uniq_name = "_QFnested_target_teamsEassumed"}>
+! CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "alloc_arr", pinned, uniq_name = "_QFnested_target_teamsEalloc_arr"}>
+! CHECK: fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> <{bindc_name = "ptr_arr", pinned, uniq_name = "_QFnested_target_teamsEptr_arr"}>
+! CHECK: fir.alloca !fir.type<_QMnested_private_typesTdt_alloc_arr{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}> <{bindc_name = "daa", pinned, uniq_name = "_QFnested_target_teamsEdaa"}>
+! CHECK: fir.alloca !fir.array<?xi32>, %{{.*}} <{bindc_name = "auto_arr", pinned, uniq_name = "_QFnested_target_teamsEauto_arr"}>
 
 subroutine nested_target_parallel(n, assumed)
   use nested_private_types
@@ -278,9 +278,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPnested_target_parallel_both_private
 ! CHECK-NOT: omp.map.info {{.*}} name("k")
 ! CHECK: omp.target kernel_type(generic) private(@_QFnested_target_parallel_both_privateEk_private_i32 %{{.*}}#0 -> %[[TP_K_ARG:arg[0-9]+]] : !fir.ref<i32>) {
-! CHECK: %[[TP_K_DECL:.*]]:2 = hlfir.declare %[[TP_K_ARG]] {uniq_name = "_QFnested_target_parallel_both_privateEk"}
+! CHECK: %[[TP_K_DECL:.*]]:2 = hlfir.declare %[[TP_K_ARG]] uniq_name("_QFnested_target_parallel_both_privateEk")
 ! CHECK: omp.parallel private(@_QFnested_target_parallel_both_privateEk_private_i32 %[[TP_K_DECL]]#0 -> %[[PAR_K_ARG:arg[0-9]+]] : !fir.ref<i32>) {
-! CHECK: hlfir.declare %[[PAR_K_ARG]] {uniq_name = "_QFnested_target_parallel_both_privateEk"}
+! CHECK: hlfir.declare %[[PAR_K_ARG]] uniq_name("_QFnested_target_parallel_both_privateEk")
 
 subroutine nested_target_teams_distribute_both_private()
   integer :: i, k
@@ -298,7 +298,7 @@ end subroutine
 ! CHECK: omp.map.info {{.*}} name("i")
 ! CHECK-NOT: omp.map.info {{.*}} name("k")
 ! CHECK: omp.target {{.*}}private(@_QFnested_target_teams_distribute_both_privateEk_private_i32 %{{.*}}#0 -> %[[TTD_K_ARG:arg[0-9]+]]
-! CHECK: %[[TTD_K_DECL:.*]]:2 = hlfir.declare %[[TTD_K_ARG]] {uniq_name = "_QFnested_target_teams_distribute_both_privateEk"}
+! CHECK: %[[TTD_K_DECL:.*]]:2 = hlfir.declare %[[TTD_K_ARG]] uniq_name("_QFnested_target_teams_distribute_both_privateEk")
 ! CHECK: omp.teams
 ! CHECK: omp.distribute private({{.*}}@_QFnested_target_teams_distribute_both_privateEk_private_i32 %[[TTD_K_DECL]]#0 -> %[[DIST_K_ARG:arg[0-9]+]]
-! CHECK: hlfir.declare %[[DIST_K_ARG]] {uniq_name = "_QFnested_target_teams_distribute_both_privateEk"}
+! CHECK: hlfir.declare %[[DIST_K_ARG]] uniq_name("_QFnested_target_teams_distribute_both_privateEk")

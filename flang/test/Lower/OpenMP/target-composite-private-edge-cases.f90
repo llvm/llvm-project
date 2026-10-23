@@ -101,7 +101,7 @@ end subroutine
 ! CHECK-NOT: omp.map.info {{.*}} name("arr")
 ! CHECK: omp.map.info {{.*}} name("out")
 ! CHECK: omp.target
-! CHECK: fir.alloca !fir.array<4xi32> {bindc_name = "arr", pinned, uniq_name = "_QFtarget_parallel_do_private_array_shapeEarr"}
+! CHECK: fir.alloca !fir.array<4xi32> <{bindc_name = "arr", pinned, uniq_name = "_QFtarget_parallel_do_private_array_shapeEarr"}>
 ! CHECK: omp.wsloop private(
 ! CHECK-SAME: @_QFtarget_parallel_do_private_array_shapeEarr_private_4xi32
 
