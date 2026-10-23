@@ -8,38 +8,46 @@
 
 // UNSUPPORTED: no-rtti
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu1.o -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu2.o -DTU2 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{flags} %{link_flags} -o %t.exe
+// The Microsoft ABI type_info can't be constructed from a name.
+// UNSUPPORTED: msvc
+
+// Test the non-unique (strcmp) type_info comparison with unmerged RTTI,
+// two type_info objects that for the same type whose names are equal strings
+// at different addresses (which occurs with shared library boundaries).
+// Unmerged RTTI is simulated directly here, without any shared library needed.
+
+// RUN: %{cxx} %s %{flags} %{compile_flags} -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>
-#include <typeindex>
-#include <vector>
+#include <cstring>
+#include <typeinfo>
 
-extern std::vector<std::type_index> registry;
+// std::type_info's name constructor is protected, so we derive from it to expose a public constructor.
+struct TypeInfo : std::type_info {
+  explicit TypeInfo(const char* name) : std::type_info(name) {}
+};
 
-void register1();
-void register2();
+static const char external_1[] = "1A";
+static const char external_2[] = "1A";
+static const char internal_1[] = "*N12_GLOBAL__N_11AE";
+static const char internal_2[] = "*N12_GLOBAL__N_11AE";
 
-#if defined(TU1)
-  namespace { struct A { bool x; }; }
-  void register1() { registry.push_back(std::type_index(typeid(A))); }
-#elif defined(TU2)
-  namespace { struct A { int x, y; }; }
-  void register2() { registry.push_back(std::type_index(typeid(A))); }
-#elif defined(MAIN)
-  std::vector<std::type_index> registry;
+int main(int, char**) {
+  // Externally visible type: one type, so copies compare equal by name
+  TypeInfo ext1(external_1);
+  TypeInfo ext2(external_2);
+  assert(ext1 == ext2);
+  assert(!ext1.before(ext2) && !ext2.before(ext1));
 
-  int main(int, char**) {
-    register1();
-    register2();
+  // Internal-linkage type ('*' prefix): equal names does not mean equal type.
+  // so only the RTTI object compares equal.
+  TypeInfo int1(internal_1);
+  TypeInfo int2(internal_2);
+  assert(int1 == int1);
+  assert(int1 != int2);
+  assert(int1.before(int2) != int2.before(int1));
 
-    assert(registry.size() == 2);
-    assert(registry[0] == registry[1]);
-    return 0;
-  }
-#else
-# error
-#endif
+  assert(std::strcmp(int1.name(), "N12_GLOBAL__N_11AE") == 0);
+  return 0;
+}
