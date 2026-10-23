@@ -2761,17 +2761,13 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     MachineRegisterInfo &MRI = MF->getRegInfo();
     assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
 
-    // Look for a single use of the register that is also a subreg.
+    // Look for a single use of the register at the insertion point that is also
+    // a subreg.
     Register RegToFind = Orig.getOperand(0).getReg();
-    MachineOperand *UseMO = nullptr;
-    for (MachineOperand &CandMO : MRI.use_nodbg_operands(RegToFind)) {
-      if (CandMO.isDef() || UseMO) {
-        UseMO = nullptr;
-        break;
-      }
-      UseMO = &CandMO;
-    }
-    if (!UseMO || UseMO->getSubReg() == AMDGPU::NoSubRegister)
+    MachineOperand *UseMO = MRI.getOneNonDBGUse(RegToFind);
+    if (!UseMO ||
+        UseMO != I->findRegisterUseOperand(RegToFind, /*TRI=*/nullptr) ||
+        UseMO->getSubReg() == AMDGPU::NoSubRegister)
       break;
 
     unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
