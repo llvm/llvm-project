@@ -181,6 +181,13 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
+// Bounds attributes of the counted_by family.
+#define COUNTED_BY_TYPE_ATTRS_CASELIST                                         \
+  case ParsedAttr::AT_CountedBy:                                               \
+  case ParsedAttr::AT_CountedByOrNull:                                         \
+  case ParsedAttr::AT_SizedBy:                                                 \
+  case ParsedAttr::AT_SizedByOrNull
+
 namespace {
   /// An object which stores processing state for the entire
   /// GetTypeForDeclarator process.
@@ -4373,6 +4380,41 @@ static bool shouldHaveNullability(QualType T) {
          // from types of declarations can be surprising.
          !isa<RecordType, TemplateSpecializationType>(
              T->getCanonicalTypeInternal());
+}
+
+/// Whether the count on declarator chunk \p ChunkIndex of \p D (on its
+/// declaration specifiers if \p ChunkIndex is the number of chunks) is on the
+/// pointer that a parameter's own pointer or array points to, as for an out
+/// parameter: `int *__counted_by(*len) *buf`. Only that one level may have a
+/// count, so the parameter's own type may not have one too.
+static bool isIndirectParamCount(const Declarator &D, unsigned ChunkIndex) {
+  if (D.getContext() != DeclaratorContext::Prototype)
+    return false;
+
+  auto IsCount = [](const ParsedAttr &A) {
+    switch (A.getKind()) {
+    COUNTED_BY_TYPE_ATTRS_CASELIST:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (llvm::any_of(D.getAttributes(), IsCount))
+    return false;
+
+  unsigned Levels = 0;
+  for (unsigned I = 0; I != ChunkIndex; ++I) {
+    const DeclaratorChunk &Chunk = D.getTypeObject(I);
+    if (Chunk.isParen())
+      continue;
+    if (Chunk.Kind != DeclaratorChunk::Pointer &&
+        Chunk.Kind != DeclaratorChunk::Array)
+      return false;
+    if (llvm::any_of(Chunk.getAttrs(), IsCount))
+      return false;
+    ++Levels;
+  }
+  return Levels == 1;
 }
 
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
@@ -9149,14 +9191,38 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
   if (!CountExpr)
     return;
 
+  // Counts are not supported on K&R parameter declarations, which C23
+  // removed; drop the count.
   const Declarator &D = State.getDeclarator();
+  if (D.getContext() == DeclaratorContext::KNRTypeList)
+    return;
+
   unsigned chunkIndex = State.getCurrentChunkIndex();
+  unsigned PointerNestLevel = getPointerNestLevel(D, chunkIndex);
+
+  // A parameter may point to a counted pointer, as an out parameter does:
+  // `int *__counted_by(*len) *buf`. That count is nested, but allowed.
+  if (PointerNestLevel == 1 && CurType->isPointerType() &&
+      isIndirectParamCount(D, chunkIndex))
+    PointerNestLevel = 0;
+
+  bool IsParameter = D.getContext() == DeclaratorContext::Prototype ||
+                     D.getContext() == DeclaratorContext::ObjCParameter;
 
   Sema::BoundsAttrFlags Flags;
   if (!S.ValidateBoundsAttrTypeForTypePosition(
           CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
-          getPointerNestLevel(D, chunkIndex),
-          isOnFunctionReturnType(D, chunkIndex), Flags)) {
+          PointerNestLevel, isOnFunctionReturnType(D, chunkIndex), Flags,
+          IsParameter)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  // A parameter's count is checked before the type is built, and dropped if
+  // invalid.
+  if (IsParameter &&
+      S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
+                                  Flags.OrNull)) {
     Attr.setInvalid();
     return;
   }
@@ -9185,10 +9251,11 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT,
   if (!LA.TypeToComplete) {
     BoundsAttrFlags Flags;
     // The position is checked per declarator below, so skip it here.
-    if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
-                                               SourceRange(LA.NameLoc),
-                                               /*PointerNestLevel=*/0,
-                                               /*OnReturnType=*/false, Flags)) {
+    // Parameters are not late-parsed.
+    if (!ValidateBoundsAttrTypeForTypePosition(
+            QT, LA.Kind, LA.NameLoc, SourceRange(LA.NameLoc),
+            /*PointerNestLevel=*/0, /*OnReturnType=*/false, Flags,
+            /*IsParameter=*/false)) {
       LA.Invalid = true;
       return false;
     }
@@ -9473,10 +9540,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
 
-    case ParsedAttr::AT_CountedBy:
-    case ParsedAttr::AT_CountedByOrNull:
-    case ParsedAttr::AT_SizedBy:
-    case ParsedAttr::AT_SizedByOrNull:
+    COUNTED_BY_TYPE_ATTRS_CASELIST:
       HandleCountedByAttrOnType(state, type, attr);
       attr.setUsedAsTypeAttr();
       break;
@@ -10209,9 +10273,10 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
 static void
 BuildTypeCoupledDecls(Expr *E,
                       llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
-  // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
-  auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
-  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+  bool IsDeref;
+  DeclRefExpr *DRE = Sema::getCountDeclRef(E, IsDeref);
+  assert(DRE && "count is not a reference");
+  Decls.push_back(TypeCoupledDeclRefInfo(DRE->getDecl(), IsDeref));
 }
 
 bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
@@ -10252,13 +10317,15 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  // Accept any array or pointer type here. For arrays, validation that it's
-  // a flexible array member is deferred until CheckCountedByAttrOnField.
+  // Accept any array or pointer type here. For a field's array, validation that
+  // it's a flexible array member is deferred until CheckCountedByAttrOnField;
+  // a parameter's array is checked by CheckCountedByAttrOnParam.
   assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
 
-  // Reject non-DeclRefExpr early to avoid cast failure in
-  // BuildTypeCoupledDecls.
-  if (!isa<DeclRefExpr>(CountExpr)) {
+  // Reject anything but a reference early, for BuildTypeCoupledDecls. The
+  // checks of the positions that do not allow a dereferenced one reject it.
+  bool IsDeref;
+  if (!getCountDeclRef(CountExpr, IsDeref)) {
     unsigned Kind = getBoundsAttrKind(BoundsAttrFlags{CountInBytes, OrNull});
     Diag(CountExpr->getBeginLoc(),
          diag::err_count_attr_only_support_simple_decl_reference)
