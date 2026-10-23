@@ -100,14 +100,54 @@ TEST(LlvmLibcOptionalTest, ValueOr) {
   EXPECT_EQ(opt_long_full.value_or(42), 100L);
 }
 
-#ifndef NDEBUG
 TEST(LlvmLibcOptionalTest, BadOptionalAccessDeath) {
-  optional<int> opt_empty;
-  ASSERT_DEATH([&] { opt_empty.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(
+      [] {
+        optional<int> opt_empty;
+        (void)opt_empty.value();
+      },
+      WITH_SIGNAL(-1));
 
-  const optional<int> OPT_CONST_EMPTY;
-  ASSERT_DEATH([&] { OPT_CONST_EMPTY.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(
+      [] {
+        const optional<int> OPT_CONST_EMPTY;
+        (void)OPT_CONST_EMPTY.value();
+      },
+      WITH_SIGNAL(-1));
 
-  ASSERT_DEATH([] { optional<int>().value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH([] { (void)optional<int>().value(); }, WITH_SIGNAL(-1));
+}
+
+#ifndef NDEBUG
+TEST(LlvmLibcOptionalTest, UncheckedDerefDeath) {
+  ASSERT_DEATH(
+      [] {
+        optional<int> opt_empty;
+        (void)*opt_empty;
+      },
+      WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(
+      [] {
+        const optional<int> OPT_CONST_EMPTY;
+        (void)*OPT_CONST_EMPTY;
+      },
+      WITH_SIGNAL(-1));
+
+  ASSERT_DEATH([] { (void)*optional<int>(); }, WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(
+      [] {
+        optional<Contrived> opt_empty;
+        (void)opt_empty->get_a();
+      },
+      WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(
+      [] {
+        const optional<int> OPT_CONST_EMPTY;
+        (void)OPT_CONST_EMPTY.operator->();
+      },
+      WITH_SIGNAL(-1));
 }
 #endif // NDEBUG

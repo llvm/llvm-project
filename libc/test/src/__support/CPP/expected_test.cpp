@@ -171,18 +171,92 @@ static_assert(
     !LIBC_NAMESPACE::cpp::is_convertible_v<expected<void, long>, bool>,
     "only explicit conversions allowed");
 
-#ifndef NDEBUG
 TEST(LlvmLibcExpectedTest, BadExpectedAccessDeath) {
-  expected<int, int> u(unexpected(404));
-  ASSERT_DEATH([&] { u.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(([] {
+                 expected<int, int> u(unexpected(404));
+                 (void)u.value();
+               }),
+               WITH_SIGNAL(-1));
 
-  const expected<int, int> CU(unexpected(500));
-  ASSERT_DEATH([&] { CU.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(([] {
+                 const expected<int, int> CU(unexpected(500));
+                 (void)CU.value();
+               }),
+               WITH_SIGNAL(-1));
 
-  expected<void, int> vu(unexpected(404));
-  ASSERT_DEATH([&] { vu.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(([] {
+                 expected<void, int> vu(unexpected(404));
+                 vu.value();
+               }),
+               WITH_SIGNAL(-1));
 
-  const expected<void, int> CVU(unexpected(500));
-  ASSERT_DEATH([&] { CVU.value(); }, WITH_SIGNAL(-1));
+  ASSERT_DEATH(([] {
+                 const expected<void, int> CVU(unexpected(500));
+                 CVU.value();
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 expected<int, int> e(42);
+                 (void)e.error();
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 const expected<int, int> CE(42);
+                 (void)CE.error();
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 expected<void, int> ve;
+                 (void)ve.error();
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 const expected<void, int> CVE;
+                 (void)CVE.error();
+               }),
+               WITH_SIGNAL(-1));
+}
+
+#ifndef NDEBUG
+TEST(LlvmLibcExpectedTest, UncheckedDerefDeath) {
+  ASSERT_DEATH(([] {
+                 expected<int, int> u(unexpected(404));
+                 (void)*u;
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 const expected<int, int> CU(unexpected(500));
+                 (void)*CU;
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 expected<Foo, int> u(unexpected(404));
+                 (void)u->x;
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 const expected<Foo, int> CU(unexpected(500));
+                 (void)CU->x;
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 expected<void, int> vu(unexpected(404));
+                 *vu;
+               }),
+               WITH_SIGNAL(-1));
+
+  ASSERT_DEATH(([] {
+                 const expected<void, int> CVU(unexpected(500));
+                 *CVU;
+               }),
+               WITH_SIGNAL(-1));
 }
 #endif // NDEBUG

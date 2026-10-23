@@ -110,18 +110,14 @@ public:
   LIBC_INLINE constexpr void reset() { storage.reset(); }
 
   LIBC_INLINE constexpr const T &value() const & {
-#ifndef NDEBUG
     if (LIBC_UNLIKELY(!storage.in_use))
       __builtin_trap();
-#endif
     return storage.stored_value;
   }
 
   LIBC_INLINE constexpr T &value() & {
-#ifndef NDEBUG
     if (LIBC_UNLIKELY(!storage.in_use))
       __builtin_trap();
-#endif
     return storage.stored_value;
   }
 
@@ -130,22 +126,44 @@ public:
   }
   LIBC_INLINE constexpr bool has_value() const { return storage.in_use; }
   LIBC_INLINE constexpr const T *operator->() const {
-    return &storage.stored_value;
-  }
-  LIBC_INLINE constexpr T *operator->() { return &storage.stored_value; }
-  LIBC_INLINE constexpr const T &operator*() const & {
-    return storage.stored_value;
-  }
-  LIBC_INLINE constexpr T &operator*() & { return storage.stored_value; }
-
-  LIBC_INLINE constexpr T &&value() && {
 #ifndef NDEBUG
     if (LIBC_UNLIKELY(!storage.in_use))
       __builtin_trap();
 #endif
+    return &storage.stored_value;
+  }
+  LIBC_INLINE constexpr T *operator->() {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return &storage.stored_value;
+  }
+  LIBC_INLINE constexpr const T &operator*() const & {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return storage.stored_value;
+  }
+  LIBC_INLINE constexpr T &operator*() & {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return storage.stored_value;
+  }
+
+  LIBC_INLINE constexpr T &&value() && {
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
     return move(storage.stored_value);
   }
   LIBC_INLINE constexpr T &&operator*() && {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
     return move(storage.stored_value);
   }
 
