@@ -67,18 +67,20 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
 TEST(RuntimeLibcallsTest, DefaultRuntimeLibraries) {
   using Info = RTLIB::RuntimeLibcallsInfo;
   const RTLIB::RuntimeLibrary X86Libs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libc,
-      RTLIB::RuntimeLibrary::libm, RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary AArch64Libs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libc,
-      RTLIB::RuntimeLibrary::libm, RTLIB::RuntimeLibrary::sme,
-      RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc,        RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::sme,         RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary Arm64ECLibs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libc,
-      RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary PPCLibs[] = {
-      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libc,
-      RTLIB::RuntimeLibrary::libm, RTLIB::RuntimeLibrary::unwind};
+      RTLIB::RuntimeLibrary::compiler_rt, RTLIB::RuntimeLibrary::libatomic,
+      RTLIB::RuntimeLibrary::libc, RTLIB::RuntimeLibrary::libm,
+      RTLIB::RuntimeLibrary::unwind};
   const RTLIB::RuntimeLibrary AMDGPULibs[] = {
       RTLIB::RuntimeLibrary::compiler_rt_profile};
   const RTLIB::RuntimeLibrary SPIRVLibs[] = {RTLIB::RuntimeLibrary::libc};
