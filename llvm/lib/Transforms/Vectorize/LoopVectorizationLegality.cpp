@@ -592,8 +592,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // Uses of swifterror values must remain scalar. Calls with operand bundles
     // cannot be widened.
     for (Instruction &I : *BB) {
+
+      // REVEC: Disabled for outer loops until legality checks are harmonised.
       if (canWidenTypes(I, /*AllowStructCalls=*/false,
-                        Opts.vectorize_vector_loops, ORE, TheLoop) &&
+                        /*AllowVectors=*/false, ORE, TheLoop) &&
           canVectorizeSwiftErrorUses(I, ORE, TheLoop) &&
           canVectorizeOperandBundles(I, ORE, TheLoop))
         continue;
