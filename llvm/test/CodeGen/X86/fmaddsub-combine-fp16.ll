@@ -11,10 +11,8 @@ define <8 x half> @mul_addsub_ph128(<8 x half> %A, <8 x half> %B, <8 x half> %C)
 ; NOVLX-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; NOVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLX-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; NOVLX-NEXT:    vsubph %zmm2, %zmm0, %zmm1
-; NOVLX-NEXT:    vaddph %zmm2, %zmm0, %zmm0
-; NOVLX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; NOVLX-NEXT:    vfmaddsub213ph %zmm2, %zmm1, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVLX-NEXT:    vzeroupper
 ; NOVLX-NEXT:    retq
 ;
@@ -35,10 +33,8 @@ define <16 x half> @mul_addsub_ph256(<16 x half> %A, <16 x half> %B, <16 x half>
 ; NOVLX-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; NOVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NOVLX-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; NOVLX-NEXT:    vsubph %zmm2, %zmm0, %zmm1
-; NOVLX-NEXT:    vaddph %zmm2, %zmm0, %zmm0
-; NOVLX-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7],ymm1[8],ymm0[9],ymm1[10],ymm0[11],ymm1[12],ymm0[13],ymm1[14],ymm0[15]
+; NOVLX-NEXT:    vfmaddsub213ph %zmm2, %zmm1, %zmm0
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NOVLX-NEXT:    retq
 ;
 ; VLX-LABEL: mul_addsub_ph256:

@@ -2443,7 +2443,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // Without VLX, these are widened to 512-bit ops during isel.
     for (auto VT : {MVT::v8f16, MVT::v16f16})
-      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
         setOperationAction(Opc, VT, Legal);
 
     if (Subtarget.hasVLX()) {
@@ -58619,6 +58620,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
       !(ScalarVT == MVT::bf16 && Subtarget.hasAVX10_2()))
     return SDValue();
 
+  // Without VLX, strict v8f16/v16f16 FMAs are scalarized, not widened.
+  if (IsStrict && ScalarVT == MVT::f16 && VT.isVector() &&
+      !TLI.isOperationLegal(ISD::STRICT_FMA, VT))
+    return SDValue();
+
   auto invertIfNegative = [&DAG, &TLI, &DCI](SDValue &V) {
     bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
     bool LegalOperations = !DCI.isBeforeLegalizeOps();
@@ -58693,7 +58699,8 @@ static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
   unsigned Opc = N->getOpcode();
   if ((Opc == X86ISD::FMADDSUB || Opc == X86ISD::FMSUBADD) &&
       Subtarget.hasFP16() && N->hasOneUse() &&
-      (VT == MVT::v8f16 || VT == MVT::v16f16 || VT == MVT::v32f16)) {
+      (VT == MVT::v32f16 ||
+       (Subtarget.hasVLX() && (VT == MVT::v8f16 || VT == MVT::v16f16)))) {
     SDValue A, B;
     if (isCFMulFromFMAddSub(SDValue(N, 0), DAG, A, B)) {
       MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);

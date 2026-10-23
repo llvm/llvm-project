@@ -6680,6 +6680,29 @@ defm VFNMADD213   : avx512_fma3p_213_f<0xAC, "vfnmadd213", X86any_Fnmadd,
 defm VFNMSUB213   : avx512_fma3p_213_f<0xAE, "vfnmsub213", X86any_Fnmsub,
                                        X86Fnmsub, X86FnmsubRnd>;
 
+multiclass avx512_fma3p_213_lowering<string InstrStr, SDNode OpNode,
+                                     AVX512VLVectorVTInfo _, Predicate prd> {
+  let Predicates = [prd, NoVLX] in
+  foreach info = [_.info128, _.info256] in
+    def : Pat<(info.VT (OpNode info.RC:$src2, info.RC:$src1, info.RC:$src3)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zr")
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src3,
+                                 info.SubRegIdx)),
+                info.SubRegIdx)>;
+}
+
+defm : avx512_fma3p_213_lowering<"VFMADD213PH", fma, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMSUB213PH", X86Fmsub, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMADDSUB213PH", X86Fmaddsub, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMSUBADD213PH", X86Fmsubadd, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFNMADD213PH", X86Fnmadd, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFNMSUB213PH", X86Fnmsub, avx512vl_f16_info, HasFP16>;
+
 
 multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                SDNode MaskOpNode, X86FoldableSchedWrite sched,

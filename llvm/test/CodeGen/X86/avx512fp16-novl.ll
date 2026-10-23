@@ -469,3 +469,140 @@ define <8 x half> @strict_fadd_v8f16(<8 x half> %x, <8 x half> %y) strictfp {
   %r = call <8 x half> @llvm.experimental.constrained.fadd.v8f16(<8 x half> %x, <8 x half> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret <8 x half> %r
 }
+
+define <8 x half> @fma_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fma_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vfmadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %r = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c)
+  ret <8 x half> %r
+}
+
+define <16 x half> @fma_v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %c) {
+; CHECK-LABEL: fma_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vfmadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
+  %r = call <16 x half> @llvm.fma.v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %c)
+  ret <16 x half> %r
+}
+
+define <8 x half> @fmsub_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fmsub_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vfmsub213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %n = fneg <8 x half> %c
+  %r = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %n)
+  ret <8 x half> %r
+}
+
+define <16 x half> @fnmadd_v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %c) {
+; CHECK-LABEL: fnmadd_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; CHECK-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vfnmadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; CHECK-NEXT:    retq
+  %n = fneg <16 x half> %a
+  %r = call <16 x half> @llvm.fma.v16f16(<16 x half> %n, <16 x half> %b, <16 x half> %c)
+  ret <16 x half> %r
+}
+
+define <8 x half> @fnmsub_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fnmsub_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vfnmsub213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %na = fneg <8 x half> %a
+  %nc = fneg <8 x half> %c
+  %r = call <8 x half> @llvm.fma.v8f16(<8 x half> %na, <8 x half> %b, <8 x half> %nc)
+  ret <8 x half> %r
+}
+
+define <8 x half> @fmsubadd_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fmsubadd_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vfmsubadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %ab = fmul contract <8 x half> %a, %b
+  %add = fadd contract <8 x half> %ab, %c
+  %sub = fsub contract <8 x half> %ab, %c
+  %r = shufflevector <8 x half> %add, <8 x half> %sub, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %r
+}
+
+; Strict FMAs are scalarized, as the upper elements could raise exceptions.
+define <8 x half> @strict_fmsub_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) strictfp {
+; CHECK-LABEL: strict_fmsub_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpxor %xmm3, %xmm2, %xmm3
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vfmadd213sh %xmm4, %xmm5, %xmm6
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; CHECK-NEXT:    vfmadd213sh %xmm4, %xmm5, %xmm7
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vfmadd213sh %xmm5, %xmm6, %xmm7
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm1[1,0]
+; CHECK-NEXT:    vfmadd213sh %xmm5, %xmm6, %xmm8
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm8[0],xmm7[0],xmm8[1],xmm7[1],xmm8[2],xmm7[2],xmm8[3],xmm7[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm5
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm6
+; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm7
+; CHECK-NEXT:    vfmadd213sh %xmm5, %xmm6, %xmm7
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm8 = xmm1[1,1,3,3]
+; CHECK-NEXT:    vfmadd213sh %xmm5, %xmm6, %xmm8
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm8[0],xmm7[0],xmm8[1],xmm7[1],xmm8[2],xmm7[2],xmm8[3],xmm7[3]
+; CHECK-NEXT:    vfmsub231sh %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vfmadd213sh %xmm3, %xmm0, %xmm1
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; CHECK-NEXT:    retq
+  %n = fneg <8 x half> %c
+  %r = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %n, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <8 x half> %r
+}
