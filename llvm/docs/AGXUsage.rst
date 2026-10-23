@@ -588,6 +588,14 @@ reads cover 16 bytes (``-agx-threadgroup-unroll``: 0, the default, for that;
 loads threadgroup memory): the inner loop of a matrix product over a tile
 then loads ``xyzw``.
 
+In a loop that writes no memory and exits only at its latch, a device load in
+a block that runs exactly when ``j != i`` (``i`` loop-invariant, the test run
+every iteration) moves to the loop header when the same address with ``i``
+for ``j`` was loaded before the loop (``AGXHoistGuardedLoads``,
+``-agx-hoist-skipped-loads``): an all-pairs loop that skips its own element
+then issues the loads of its unrolled copies together instead of one after
+another.
+
 Memory loads, stack loads and atomics complete asynchronously. A ``wait`` is
 inserted before the first instruction that reads or overwrites a pending
 result, before barriers and at the end of each block.

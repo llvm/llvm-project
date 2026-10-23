@@ -24,6 +24,7 @@ add_llvm_target(AGXCodeGen
   AGXFoldOperands.cpp
   AGXHoistFromElseFlow.cpp
   AGXFrameLowering.cpp
+  AGXHoistGuardedLoads.cpp
   AGXISelDAGToDAG.cpp
   AGXISelLowering.cpp
   AGXInsertWaits.cpp
