@@ -99,6 +99,20 @@ static char getTypeID(Type *Ty) {
   }
 }
 
+// Return the name to look up F's implementation by in the host process. A
+// leading '\1' tells the code generator to use the rest of the name verbatim
+// as the symbol name, which then includes the target's global prefix (e.g.
+// '_' on Darwin). Neither dlsym() nor the "lle_X_" table expects the escape or
+// that prefix, so drop both.
+static StringRef getExternalName(const Function *F) {
+  StringRef Name = F->getName();
+  if (!Name.consume_front("\1"))
+    return Name;
+  if (char Prefix = F->getDataLayout().getGlobalPrefix())
+    Name.consume_front(Prefix);
+  return Name;
+}
+
 // Try to find address of external function given a Function object.
 // Please note, that interpreter doesn't know how to assemble a
 // real call in general case (this is JIT job), that's why it assumes,
@@ -112,16 +126,17 @@ static ExFunc lookupFunction(const Function *F) {
   ExtName += getTypeID(FT->getReturnType());
   for (Type *T : FT->params())
     ExtName += getTypeID(T);
-  ExtName += ("_" + F->getName()).str();
+  StringRef Name = getExternalName(F);
+  ExtName += ("_" + Name).str();
 
   auto &Fns = getFunctions();
   sys::ScopedLock Writer(Fns.Lock);
   ExFunc FnPtr = Fns.FuncNames[ExtName];
   if (!FnPtr)
-    FnPtr = Fns.FuncNames[("lle_X_" + F->getName()).str()];
+    FnPtr = Fns.FuncNames[("lle_X_" + Name).str()];
   if (!FnPtr)  // Try calling a generic function... if it exists...
     FnPtr = (ExFunc)(intptr_t)sys::DynamicLibrary::SearchForAddressOfSymbol(
-        ("lle_X_" + F->getName()).str());
+        ("lle_X_" + Name).str());
   if (FnPtr)
     Fns.ExportedFunctions.insert(std::make_pair(F, FnPtr)); // Cache for later
   return FnPtr;
@@ -285,8 +300,8 @@ GenericValue Interpreter::callExternalFunction(Function *F,
   std::map<const Function *, RawFunc>::iterator RF = Fns.RawFunctions.find(F);
   RawFunc RawFn;
   if (RF == Fns.RawFunctions.end()) {
-    RawFn = (RawFunc)(intptr_t)
-      sys::DynamicLibrary::SearchForAddressOfSymbol(std::string(F->getName()));
+    RawFn = (RawFunc)(intptr_t)sys::DynamicLibrary::SearchForAddressOfSymbol(
+        getExternalName(F).str());
     if (!RawFn)
       RawFn = (RawFunc)(intptr_t)getPointerToGlobalIfAvailable(F);
     if (RawFn != 0)
