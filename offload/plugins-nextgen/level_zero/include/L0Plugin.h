@@ -50,6 +50,8 @@ public:
                          GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
+  Expected<void *> getNativeHandle() override { return ZeContext; }
+
   /// Get kernel indirect access flags from all allocators in this context.
   ze_kernel_indirect_access_flags_t getIndirectFlags() {
     ze_kernel_indirect_access_flags_t Flags = 0;
@@ -138,9 +140,6 @@ public:
     return false;
   }
 
-  Error flushQueueImpl(omp_interop_val_t *Interop) override;
-  Error syncBarrierImpl(omp_interop_val_t *Interop) override;
-  Error asyncBarrierImpl(omp_interop_val_t *Interop) override;
 
   Expected<bool> isImageCompatible(StringRef Image) const override;
 };

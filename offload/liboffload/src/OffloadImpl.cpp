@@ -576,6 +576,20 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
     return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
+  case OL_DEVICE_INFO_NATIVE_HANDLE:
+  case OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE: {
+    // A size-only query does not need to consult the plugin, which lets the
+    // size be queried on backends that expose no native handle.
+    if (!PropValue)
+      return Info.write<void *>(nullptr);
+    auto Kind = PropName == OL_DEVICE_INFO_NATIVE_HANDLE
+                    ? plugin::NativeHandleKind::Device
+                    : plugin::NativeHandleKind::Platform;
+    auto HandleOrErr = Device->Device->getNativeHandle(Kind);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
 
   default:
     break;
@@ -787,6 +801,14 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    if (!PropValue)
+      return Info.write<void *>(nullptr);
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -1042,6 +1064,15 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     if (auto Err = Pending.takeError())
       return Err;
     return Info.write<bool>(!*Pending);
+  }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    if (!PropValue)
+      return Info.write<void *>(nullptr);
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
