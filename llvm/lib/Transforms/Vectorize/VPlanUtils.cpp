@@ -32,9 +32,42 @@ using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
+bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
+  if (isa<VPBlendRecipe>(U))
+    return true;
+  auto *VPI = dyn_cast<VPInstruction>(U);
+  if (!VPI)
+    return false;
+  unsigned Opcode = VPI->getOpcode();
+  switch (Opcode) {
+  case Instruction::ExtractValue:
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case Instruction::Freeze:
+  case VPInstruction::Not:
+    // TODO: Cover additional opcodes.
+    return true;
+  case VPInstruction::PtrAdd:
+    return Op != VPI->getOperand(0);
+  default:
+    return Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode);
+  }
+}
+
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
-  return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(Def);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    const VPValue *Cur = Worklist[I];
+    for (const VPUser *U : Cur->users()) {
+      if (propagatesFirstLaneUse(U, Cur))
+        Worklist.insert(cast<VPSingleDefRecipe>(U));
+      else if (!U->usesFirstLaneOnly(Cur))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {

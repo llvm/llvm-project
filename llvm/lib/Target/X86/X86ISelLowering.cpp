@@ -2818,6 +2818,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::INSERT_SUBVECTOR,
                        ISD::EXTRACT_SUBVECTOR,
                        ISD::BITCAST,
+                       ISD::MASK_BEFOREFIRST,
                        ISD::VSELECT,
                        ISD::SELECT,
                        ISD::SHL,
@@ -35915,6 +35916,11 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     EVT SrcVT = Src.getValueType();
 
+    // The generic expansion converts f16 without a libcall. This must come
+    // before the soft f16 handling below, which extends to f32.
+    if (VT == MVT::i128 && SrcVT == MVT::f16)
+      return;
+
     SDValue Res;
     if (isBF16orSoftF16(SrcVT, Subtarget)) {
       EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
@@ -36092,9 +36098,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     assert(!VT.isVector() && "Vectors should have been handled above!");
 
-    if ((Subtarget.hasDQI() && VT == MVT::i64 &&
-         (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
-        (Subtarget.hasFP16() && SrcVT == MVT::f16)) {
+    if (VT == MVT::i64 &&
+        ((Subtarget.hasDQI() && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
+         (Subtarget.hasFP16() && SrcVT == MVT::f16))) {
       assert(!Subtarget.is64Bit() && "i64 should be legal");
       unsigned NumElts = Subtarget.hasVLX() ? 2 : 8;
       // If we use a 128-bit result we might need to use a target specific node.
@@ -47217,6 +47223,26 @@ static SDValue combineBitcastToBoolVector(EVT VT, SDValue V, const SDLoc &DL,
       return SDValue(Alt, 0);
 
   return SDValue();
+}
+
+/// Compute MASK_BEFOREFIRST as (x - 1) & ~x in a GPR.
+static SDValue combineMaskBeforeFirst(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (!DCI.isBeforeLegalize() || !isPowerOf2_32(VT.getVectorNumElements()))
+    return SDValue();
+  assert(VT.getVectorElementType() == MVT::i1 && "Expected a mask vector");
+
+  SDLoc DL(N);
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  // Do the arithmetic in at least 32 bits so that ANDN can be used.
+  EVT OpVT = IntVT.getSizeInBits() < 32 ? MVT::i32 : IntVT;
+  SDValue X =
+      DAG.getAnyExtOrTrunc(DAG.getBitcast(IntVT, N->getOperand(0)), DL, OpVT);
+  SDValue Dec =
+      DAG.getNode(ISD::SUB, DL, OpVT, X, DAG.getConstant(1, DL, OpVT));
+  SDValue Res = DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, X, OpVT), Dec);
+  return DAG.getBitcast(VT, DAG.getAnyExtOrTrunc(Res, DL, IntVT));
 }
 
 static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
@@ -64207,6 +64233,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:
   case X86ISD::BLENDV:      return combineSelect(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
+  case ISD::MASK_BEFOREFIRST:
+    return combineMaskBeforeFirst(N, DAG, DCI);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
   case X86ISD::CMP:         return combineCMP(N, DAG, DCI, Subtarget);
   case ISD::ADD:            return combineAdd(N, DAG, DCI, Subtarget);
