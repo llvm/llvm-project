@@ -66,13 +66,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.grp.getgrouplist
     libc.src.grp.getgrnam
     libc.src.grp.getgrnam_r
-    libc.src.grp.initgroups
     libc.src.grp.setgrent
-    libc.src.grp.setgroups
 
     # net/if.h entrypoints
     libc.src.net.if_indextoname
     libc.src.net.if_nametoindex
+
+    # netinet/ether.h entrypoints
+    libc.src.netinet.ether.ether_ntoa
+    libc.src.netinet.ether.ether_ntoa_r
 
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
@@ -325,6 +327,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/file.h entrypoints
     libc.src.sys.file.flock
 
@@ -486,6 +491,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchown
     libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
+    libc.src.unistd.fexecve
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -507,6 +513,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
+    libc.src.unistd.lockf
     libc.src.unistd.lseek
     libc.src.unistd.nice
     libc.src.unistd.pathconf
@@ -519,16 +526,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
-    libc.src.unistd.setgid
     libc.src.unistd.setpgid
-    libc.src.unistd.setregid
-    libc.src.unistd.setreuid
     libc.src.unistd.setsid
-    libc.src.unistd.setuid
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
+    libc.src.unistd.syncfs
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1134,6 +1138,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
@@ -1487,6 +1492,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.fgetpos
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
@@ -1500,6 +1506,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
     libc.src.stdio.fseeko
+    libc.src.stdio.fsetpos
     libc.src.stdio.ftell
     libc.src.stdio.ftello
     libc.src.stdio.funlockfile
@@ -1509,7 +1516,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.pclose
     libc.src.stdio.perror
+    libc.src.stdio.popen
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -1522,6 +1531,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ungetc
 
     # stdlib.h entrypoints
+    libc.src.stdlib.__cxa_thread_atexit_impl
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.at_quick_exit
@@ -1552,6 +1562,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigdelset
     libc.src.signal.sigemptyset
     libc.src.signal.sigfillset
+    libc.src.signal.sigismember
     libc.src.signal.signal
     libc.src.signal.sigprocmask
 
@@ -1628,6 +1639,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timespec_get
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_getoverrun
     libc.src.time.timer_gettime
     libc.src.time.timer_settime
 
@@ -1646,7 +1658,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.confstr
     libc.src.unistd.environ
     libc.src.unistd.execl
+    libc.src.unistd.execlp
     libc.src.unistd.execv
+    libc.src.unistd.execvp
+    libc.src.unistd.execvpe
     libc.src.unistd.fork
     libc.src.unistd.getopt
     libc.src.unistd.optarg
@@ -1701,6 +1716,27 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.glob.glob
       libc.src.glob.globfree
 
+      # grp.h entrypoints
+      libc.src.grp.initgroups
+      libc.src.grp.setgroups
+
+      # libintl.h entrypoints
+      libc.src.libintl.bind_textdomain_codeset
+      libc.src.libintl.bindtextdomain
+      libc.src.libintl.dcgettext
+      libc.src.libintl.dcgettext_l
+      libc.src.libintl.dcngettext
+      libc.src.libintl.dcngettext_l
+      libc.src.libintl.dgettext
+      libc.src.libintl.dgettext_l
+      libc.src.libintl.dngettext
+      libc.src.libintl.dngettext_l
+      libc.src.libintl.gettext
+      libc.src.libintl.gettext_l
+      libc.src.libintl.ngettext
+      libc.src.libintl.ngettext_l
+      libc.src.libintl.textdomain
+
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex
@@ -1713,6 +1749,16 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # sys/ptrace.h entrypoints
       libc.src.sys.ptrace.ptrace
+
+      # unistd.h entrypoints
+      libc.src.unistd.setegid
+      libc.src.unistd.seteuid
+      libc.src.unistd.setgid
+      libc.src.unistd.setregid
+      libc.src.unistd.setresgid
+      libc.src.unistd.setresuid
+      libc.src.unistd.setreuid
+      libc.src.unistd.setuid
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf

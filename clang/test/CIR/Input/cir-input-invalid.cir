@@ -1,6 +1,5 @@
 // Invalid ClangIR input is diagnosed, not crashed on, before any output is
-// produced. Backend outputs, which are not supported from ClangIR input yet,
-// report the same errors.
+// produced. Backend outputs report the same errors.
 
 // RUN: rm -rf %t && split-file %s %t
 
@@ -11,6 +10,8 @@
 // SYNTAX: syntax.cir:2:15: error: expected non-function type
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/verifier.cir -o - 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=VERIFIER --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj %t/verifier.cir -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=VERIFIER --implicit-check-not=error:
 // VERIFIER: verifier.cir:5:5: error: 'cir.return' op returns '!cir.int<s, 64>' but enclosing function returns '!cir.int<s, 32>'
 
@@ -32,6 +33,8 @@
 // NO-TRIPLE: error: missing target triple in ClangIR input
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/mismatch.cir -o - 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISMATCH --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj %t/mismatch.cir -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=MISMATCH --implicit-check-not=error:
 // MISMATCH: error: target triple 'aarch64-unknown-linux-gnu' of ClangIR input does not match the target 'x86_64-unknown-linux-gnu'
 

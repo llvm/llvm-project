@@ -32,6 +32,8 @@ set(ORC_RT_HEADERS
     orc-rt/connect-socket/SocketConnector.h
     orc-rt/connect-socket/SocketHandle.h
     orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect-tcp/TCP.h
+    orc-rt/connect-tcp/TCPConnector.h
     orc-rt/connect/ConnectionSpec.h
     orc-rt/connect/ConnectorRegistry.h
     orc-rt/connect/VettedPeer.h

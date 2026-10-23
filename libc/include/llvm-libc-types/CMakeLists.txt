@@ -30,6 +30,9 @@ function(add_type_header name)
   )
 endfunction()
 
+add_header(sa_family_t HDR sa_family_t.h)
+add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -135,6 +138,7 @@ add_header(nfds_t HDR nfds_t.h)
 add_header(nl_catd HDR nl_catd.h)
 add_header(nl_item HDR nl_item.h)
 add_header(nlink_t HDR nlink_t.h)
+add_header(fpos_t HDR fpos_t.h DEPENDS .off_t .mbstate_t)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
@@ -264,9 +268,7 @@ add_header(
 )
 add_header(wint_t HDR wint_t.h)
 add_header(wctype_t HDR wctype_t.h)
-add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
-add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_addrinfo HDR struct_addrinfo.h DEPENDS .socklen_t .struct_sockaddr)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
 add_header(
@@ -297,7 +299,11 @@ add_header(
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
-add_header(struct_ifreq HDR struct_ifreq.h DEPENDS libc.include.llvm-libc-macros.net_if_macros .struct_sockaddr)
+add_type_header(
+  struct_ifreq
+  HDR
+    struct_ifreq.h
+)
 add_header(struct_if_nameindex HDR struct_if_nameindex.h)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
@@ -306,6 +312,7 @@ add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(struct_mmsghdr HDR struct_mmsghdr.h DEPENDS .struct_msghdr)
 add_header(struct_udphdr HDR struct_udphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(struct_ether_addr HDR struct_ether_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(VISIT HDR VISIT.h)

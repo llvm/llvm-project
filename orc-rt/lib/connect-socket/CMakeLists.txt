@@ -15,12 +15,13 @@ set(ORC_RT_CONNECT_SOCKET_POSIX_SOURCES
   sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
-# TODO: Windows has stubs only. The connector reports the socket transport as
-# unimplemented, SocketHandle does not close the socket it owns, and there is no
-# CA.
+# TODO: Windows has stubs only. The connector and the CA report the socket
+# transport as not yet supported, and SocketHandle does not close the socket it
+# owns.
 set(ORC_RT_CONNECT_SOCKET_WINDOWS_SOURCES
   sys/windows/SocketConnector.cpp
   sys/windows/SocketHandle.cpp
+  sys/windows/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 # Composed the way lib/bedrock/CMakeLists.txt composes its per-system sources;
@@ -61,9 +62,7 @@ target_compile_options(orc-rt-connect-socket-objects
 add_library(orc-rt-connect-socket ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-connect-socket
-  PUBLIC orc-rt-headers orc-rt-connect)
-
-target_link_libraries(orc-rt-connect-socket
+  PUBLIC orc-rt-headers orc-rt-connect
   PRIVATE $<BUILD_INTERFACE:orc-rt-connect-socket-objects>)
 
 # TODO: Use common runtimes infrastructure for output and install paths

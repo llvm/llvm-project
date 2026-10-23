@@ -34,8 +34,10 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -6344,12 +6346,24 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
 
+  LangAS FromAS = From->getType().getAddressSpace();
   if (getLangOpts().HLSL &&
-      From->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      (FromAS == LangAS::hlsl_constant ||
+       (FromAS == LangAS::hlsl_groupshared && Method->isConst()))) {
     QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
     From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
                                     /*BasePath=*/nullptr, VK_PRValue,
                                     FPOptionsOverride());
+  } else if (getLangOpts().HLSL && FromAS == LangAS::hlsl_groupshared) {
+    ASTContext &Ctx = SemaRef.getASTContext();
+    QualType Ty = From->getType().getLocalUnqualifiedType();
+    InitializedEntity TempEntity =
+        InitializedEntity::InitializeTemporary(Ty.getNonLValueExprType(Ctx));
+    ExprResult Res = SemaRef.HLSL().CreateOutArgExpr(
+        From, Ty, Ty, TempEntity, From->getBeginLoc(), /*IsInOut=*/true);
+    if (Res.isInvalid())
+      return ExprError();
+    From = Res.get();
   }
 
   Expr::Classification FromClassification;
@@ -6799,7 +6813,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   else
     Kind = ConstantExprKind::Normal;
 
-  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+  EvalProxy SProxy(*this);
+  if (!E->EvaluateAsMandatedConstantExpr(Eval, Context, SProxy, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
@@ -14374,6 +14389,18 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       }
       // FD has the same CUDA preference than Result. Continue to check
       // constraints.
+
+      // C++ [over.over]p5:
+      //    [...] If more than one function in the set remains, all function
+      //    template specializations in the set are eliminated if the set also
+      //    contains a function that is not a function template specialization.
+      //    [...]
+      if (Result->isFunctionTemplateSpecialization() !=
+          FD->isFunctionTemplateSpecialization()) {
+        if (!FD->isFunctionTemplateSpecialization())
+          FoundBetter();
+        continue;
+      }
 
       // C++ [over.over]p5:
       //    [...] Any given non-template function F0 is eliminated if the set

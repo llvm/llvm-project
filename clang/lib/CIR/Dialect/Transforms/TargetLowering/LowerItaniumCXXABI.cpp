@@ -150,11 +150,21 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
+  case clang::TargetCXXABI::GenericARM:
+  case clang::TargetCXXABI::iOS:
+  case clang::TargetCXXABI::WatchOS:
+  case clang::TargetCXXABI::Fuchsia:
+  case clang::TargetCXXABI::GenericMIPS:
+  case clang::TargetCXXABI::WebAssembly:
+  case clang::TargetCXXABI::XL:
+    // FIXME: these ABIS are not yet implemented by CIR. The error is reported
+    // by consumers of LowerModule/CIRCXXABI when missing CIRCXXABI is
+    // encountered.
+    return nullptr;
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
-  default:
-    llvm_unreachable("Other Itanium ABI?");
   }
+  llvm_unreachable("bad ABI kind");
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {
