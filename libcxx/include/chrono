@@ -449,6 +449,13 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const local_time<Duration>& tp);
 
+// [time.clock.cast], time_point conversions             // C++20
+template<class DestClock, class SourceClock>
+  struct clock_time_conversion;
+
+template<class DestClock, class SourceClock, class Duration>
+  auto clock_cast(const time_point<SourceClock, Duration>& t);
+
 // [time.cal.last] class last_spec    // C++20
 struct last_spec;
 
@@ -1101,6 +1108,7 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 20
 #    include <__chrono/calendar.h>
+#    include <__chrono/clock_cast.h>
 #    include <__chrono/day.h>
 #    include <__chrono/exception.h>
 #    include <__chrono/hh_mm_ss.h>
