@@ -7,9 +7,11 @@ define i64 @samesign_main_cmp(ptr %x, ptr %y) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[Y]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i4 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> <i64 1, i64 0, i64 0, i64 0>, <4 x i64> <i64 0, i64 2, i64 4, i64 8>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP5]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
 entry:
