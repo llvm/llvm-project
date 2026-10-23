@@ -2316,6 +2316,7 @@ public:
   RValue emitCoawaitExpr(const CoawaitExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
+  LValue emitCoawaitLValue(const CoawaitExpr *e);
 
   RValue emitCoyieldExpr(const CoyieldExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),

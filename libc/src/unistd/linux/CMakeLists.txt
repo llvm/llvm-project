@@ -209,7 +209,6 @@ add_entrypoint_object(
   HDRS
     ../execl.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -217,6 +216,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
     libc.src.unistd.environ
+    libc.src.unistd.linux.exec_utils
 )
 
 add_entrypoint_object(
@@ -226,13 +226,13 @@ add_entrypoint_object(
   HDRS
     ../execle.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
+    libc.src.unistd.linux.exec_utils
 )
 
 add_entrypoint_object(
@@ -242,7 +242,6 @@ add_entrypoint_object(
   HDRS
     ../execlp.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
