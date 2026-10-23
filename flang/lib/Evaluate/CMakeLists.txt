@@ -36,7 +36,6 @@ add_flang_library(FortranEvaluate
   check-expression.cpp
   common.cpp
   complex-value.cpp
-  complex-value.cpp
   constant.cpp
   expression.cpp
   fold.cpp
@@ -55,7 +54,6 @@ add_flang_library(FortranEvaluate
   integer-value-impl.cpp
   intrinsics.cpp
   intrinsics-library.cpp
-  logical-value.cpp
   logical-value.cpp
   real.cpp
   real-value.cpp
