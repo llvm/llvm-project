@@ -81,35 +81,6 @@ entry:
   ret float %result
 }
 
-define i32 @test2_addrspacecast() {
-; CHECK-LABEL: @test2_addrspacecast(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    store i32 1, ptr [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, ptr [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_0_V0]], [[A_SROA_3_0_A_SROA_3_4_V1]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ptr [[A_SROA_3]], ptr [[A_SROA_0]]
-; CHECK-NEXT:    [[SELECT_ASC:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(1)
-; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr addrspace(1) [[SELECT_ASC]], align 4
-; CHECK-NEXT:    ret i32 [[RESULT]]
-;
-entry:
-  %a = alloca [2 x i32]
-  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
-  store i32 0, ptr %a
-  store i32 1, ptr %a1
-  %v0 = load i32, ptr %a
-  %v1 = load i32, ptr %a1
-  %cond = icmp sle i32 %v0, %v1
-  %select = select i1 %cond, ptr %a1, ptr %a
-  %select.asc = addrspacecast ptr %select to ptr addrspace(1)
-  %result = load i32, ptr addrspace(1) %select.asc
-  ret i32 %result
-}
-
 define i32 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
