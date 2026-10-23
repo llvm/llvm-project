@@ -118,6 +118,18 @@ public:
       llvm::function_ref<std::optional<std::string>()> getNextName,
       dependencies::DependencyConsumer &DepConsumer);
 
+  /// Find the module maps that define each module in \p ModuleNames, without
+  /// loading or reporting diagnostics about the modules.
+  ///
+  /// \returns a map from each module name that is found to the path of the
+  /// module map that defines it, or std::nullopt if the compiler invocation
+  /// could not be set up.
+  std::optional<llvm::StringMap<std::string>>
+  getModuleMapsForModules(StringRef CWD, ArrayRef<std::string> CommandLine,
+                          DiagnosticConsumer &DiagConsumer,
+                          dependencies::DependencyActionController &Controller,
+                          ArrayRef<StringRef> ModuleNames);
+
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
     return Worker.getTracingVFS();
