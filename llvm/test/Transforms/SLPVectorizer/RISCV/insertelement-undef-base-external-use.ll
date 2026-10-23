@@ -5,7 +5,7 @@ define void @test(ptr %r, ptr %s) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[R:%.*]], ptr [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i24> @llvm.smax.v2i24(<2 x i24> zeroinitializer, <2 x i24> splat (i24 1))
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i24> [[TMP1]], <2 x i24> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i24> <i24 undef, i24 poison>, <2 x i24> [[TMP1]], <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[U:%.*]] = call <2 x i24> @llvm.umin.v2i24(<2 x i24> <i24 0, i24 -1>, <2 x i24> [[TMP2]])
 ; CHECK-NEXT:    store <2 x i24> [[U]], ptr [[R]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i24> [[TMP1]], i64 0

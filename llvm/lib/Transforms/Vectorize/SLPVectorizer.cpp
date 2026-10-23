@@ -19255,11 +19255,11 @@ struct ValueSelect {
 /// Does the analysis of the provided shuffle masks and performs the requested
 /// actions on the vectors with the given shuffle masks. It tries to do it in
 /// several steps.
-/// 1. If the Base vector is not undef vector, resizing the very first mask to
-/// have common VF and perform action for 2 input vectors (including non-undef
+/// 1. If the Base vector is not poison vector, resizing the very first mask to
+/// have common VF and perform action for 2 input vectors (including non-poison
 /// Base). Other shuffle masks are combined with the resulting after the 1 stage
 /// and processed as a shuffle of 2 elements.
-/// 2. If the Base is undef vector and have only 1 shuffle mask, perform the
+/// 2. If the Base is poison vector and have only 1 shuffle mask, perform the
 /// action only for 1 vector with the given mask, if it is not the identity
 /// mask.
 /// 3. If > 2 masks are used, perform the remaining shuffle actions for 2
@@ -19276,12 +19276,13 @@ static T *performExtractsShuffleAction(
   T *Prev = nullptr;
   SmallBitVector UseMask =
       buildUseMask(Mask.size(), Mask, UseMask::UndefsAsMask);
-  SmallBitVector IsBaseUndef = isUndefVector(Base, UseMask);
-  if (!IsBaseUndef.all()) {
-    // Base is not undef, need to combine it with the next subvectors.
+  // The undef elements of the base must be preserved, only the poison base can
+  // be dropped.
+  SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
+  if (!IsBasePoison.all()) {
+    // Base is not poison, need to combine it with the next subvectors.
     std::pair<T *, bool> Res =
         ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
-    SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
       if (Mask[Idx] == PoisonMaskElem)
         Mask[Idx] = IsBasePoison.test(Idx) ? PoisonMaskElem : Idx;
@@ -19293,8 +19294,8 @@ static T *performExtractsShuffleAction(
            "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
   } else if (ShuffleMask.size() == 1) {
-    // Base is undef and only 1 vector is shuffled - perform the action only for
-    // single vector, if the mask is not the identity mask.
+    // Base is poison and only 1 vector is shuffled - perform the action only
+    // for single vector, if the mask is not the identity mask.
     std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask,
                                             /*ForSingleMask=*/true);
     if (Res.second)
@@ -19303,7 +19304,7 @@ static T *performExtractsShuffleAction(
     else
       Prev = Action(Mask, {ShuffleMask.begin()->first});
   } else {
-    // Base is undef and at least 2 input vectors shuffled - perform 2 vectors
+    // Base is poison and at least 2 input vectors shuffled - perform 2 vectors
     // shuffles step by step, combining shuffle between the steps.
     unsigned Vec1VF = GetVF(ShuffleMask.begin()->first);
     unsigned Vec2VF = GetVF(VMIt->first);
@@ -19339,7 +19340,7 @@ static T *performExtractsShuffleAction(
     }
     VMIt = std::next(VMIt);
   }
-  [[maybe_unused]] bool IsBaseNotUndef = !IsBaseUndef.all();
+  [[maybe_unused]] bool IsBaseNotPoison = !IsBasePoison.all();
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
@@ -19348,7 +19349,7 @@ static T *performExtractsShuffleAction(
     ArrayRef<int> SecMask = VMIt->second;
     for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
       if (SecMask[I] != PoisonMaskElem) {
-        assert((Mask[I] == PoisonMaskElem || IsBaseNotUndef) &&
+        assert((Mask[I] == PoisonMaskElem || IsBaseNotPoison) &&
                "Multiple uses of scalars.");
         Mask[I] = (Res.second ? I : SecMask[I]) + VF;
       } else if (Mask[I] != PoisonMaskElem) {
