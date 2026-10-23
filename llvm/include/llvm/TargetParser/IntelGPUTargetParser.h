@@ -58,11 +58,6 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 /// "xe_12.60.0" and "xe_12.60.7" all denote the same device.
 LLVM_ABI GPUKind parseArch(StringRef Name);
 
-/// \return true if \p Name is a well-formed numeric name, e.g. "xe_40.11.0",
-/// whether or not the table knows the device. offload-arch prints one for a
-/// device that has no row yet.
-LLVM_ABI bool isNumericArchName(StringRef Name);
-
 } // namespace IntelGPU
 } // namespace llvm
 

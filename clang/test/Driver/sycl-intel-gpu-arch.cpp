@@ -53,8 +53,7 @@
 // RUN:   | FileCheck -check-prefixes=CHK-CUDA %s
 // CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
 
-/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, "generic", or
-/// the numeric name of a GPU the list does not know yet.
+/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, or "generic".
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s
@@ -67,6 +66,14 @@
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
 // CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
+/// A numeric name names no device unless the list has its GPU IP version.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// CHK-BAD-ARCH-UNLISTED: error: unsupported {{SYCL|offload}} gpu architecture: xe_40.11.0
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-SUFFIX %s
@@ -92,10 +99,5 @@
 // CHK-NOT-CHECKED-NOT: error:
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
-// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-arch=graniterapids --offload-arch=xe_40.11.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
-// CHK-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
-// CHK-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_40.11.0)"
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
+// CHK-GOOD-ARCH: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"

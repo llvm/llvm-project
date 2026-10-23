@@ -101,8 +101,3 @@ GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
       .Default(GK_NONE);
 }
-
-bool llvm::IntelGPU::isNumericArchName(StringRef Name) {
-  uint32_t GPUIPVersion;
-  return parseNumericArchName(Name, GPUIPVersion);
-}
