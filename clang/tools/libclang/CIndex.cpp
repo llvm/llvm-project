@@ -5282,17 +5282,22 @@ static const Decl *getDeclFromExpr(const Stmt *E) {
   return nullptr;
 }
 
-// Resolve a reference through a dependent name, such as 'A<T>::size()' or
-// 'this->size()' in a class template deriving from 'A<T>'. The AST doesn't bind
-// these to a declaration until instantiation, so use the same heuristics as
-// clangd to look the name up in the primary template. Return null unless
-// exactly one declaration is found, since the cursor can only name one.
+// Resolve a reference through a dependent name, such as 'this->size()' in a
+// class template deriving from 'A<T>'. The AST doesn't bind these to a
+// declaration until instantiation, so use the same heuristics as clangd to look
+// the name up in the primary template. Return null unless exactly one
+// declaration is found, since the cursor can only name one.
 static const Decl *getDeclFromDependentExpr(const Expr *E, ASTContext &Ctx) {
+  // Look through a call to its callee, as getDeclFromExpr() does. Only the
+  // dependent names themselves are resolved: HeuristicResolver's handling of
+  // other callees (e.g., returning the class a call returns) doesn't name what
+  // the call refers to.
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    return getDeclFromDependentExpr(CE->getCallee(), Ctx);
+
   HeuristicResolver Resolver(Ctx);
   std::vector<const NamedDecl *> Decls;
-  if (const auto *CE = dyn_cast<CallExpr>(E))
-    Decls = Resolver.resolveCalleeOfCallExpr(CE);
-  else if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E))
+  if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E))
     Decls = Resolver.resolveMemberExpr(ME);
   else if (const auto *RE = dyn_cast<DependentScopeDeclRefExpr>(E))
     Decls = Resolver.resolveDeclRefExpr(RE);

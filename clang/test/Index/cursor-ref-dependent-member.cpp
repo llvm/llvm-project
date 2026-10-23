@@ -31,3 +31,18 @@ public:
 // HeuristicResolver only considers static members for a qualified dependent
 // name, so 'A<T>::size()' isn't resolved yet.
 // CHECK: 19:27: DeclRefExpr= Extent=[19:27 - 19:37]
+
+// Only dependent member names are resolved. A call's callee is looked through
+// as for non-dependent calls, so 'm.make()()' refers to 'make', not to the
+// class it returns. A dependent call found by ADL isn't resolved, since other
+// candidates may be found at instantiation.
+template <typename T> struct Functor { void operator()(); };
+template <typename T> struct Maker { Functor<T> make(); };
+void g(int);
+template <typename T> void h1(Maker<T> m) { m.make()(); }
+template <typename T> void h2(T t) { g(t); }
+
+// CHECK: 42:45: CallExpr=:40:49 Extent=[42:45 - 42:55]
+// CHECK: 42:45: CallExpr=:40:49 Extent=[42:45 - 42:53]
+// CHECK: 42:45: MemberRefExpr=:40:49 Extent=[42:45 - 42:51]
+// CHECK: 43:38: CallExpr= Extent=[43:38 - 43:42]
