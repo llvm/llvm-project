@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -82,13 +84,13 @@ StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
 }
 
 GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
-  // A numeric name ends in a revision, e.g. "xe_12.60.7". Every revision of a
-  // device is the same device, so look the name up without it.
+  // A numeric name ends in a revision, e.g. "xe_12.60.7". Only the major and
+  // minor versions name a device, so the revision may be any number and is not
+  // looked up.
   if (Name.starts_with("xe_")) {
-    auto [Device, RevisionStr] = Name.rsplit('.');
-    unsigned Revision;
-    if (Device.count('.') != 1 || RevisionStr.getAsInteger(10, Revision) ||
-        Revision > GPUIPRevisionMask)
+    auto [Device, Revision] = Name.rsplit('.');
+    if (Device.count('.') != 1 || Revision.empty() ||
+        !all_of(Revision, isDigit))
       return GK_NONE;
     Name = Device;
   }
