@@ -17,8 +17,8 @@ int bar(const void *a, const void *b, size_t c) {
 // CHECK:    [[CALL:%.*]] = call i32 @memcmp.inline(ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], i64 noundef [[TMP2:%.*]])
 //
 //
-// CHECK: Function Attrs: alwaysinline nounwind
+// CHECK: Function Attrs: alwaysinline nobuiltin nounwind
 // CHECK-LABEL: define internal i32 @memcmp.inline(
-// CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], i64 noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK:    [[CALL:%.*]] = call i32 @memcmp(ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], i64 noundef [[TMP2:%.*]]) #[[ATTR3:[0-9]+]]
 //

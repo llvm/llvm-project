@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=SPIRV
 
 struct Inner {
   float inherited;
@@ -43,3 +44,35 @@ struct Position {
 float4 position(sample Position p) : SV_Target { return p.p; }
 // CHECK-DAG: !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 7, i32 1, i8 4,
 //                                                                    ^ Interpolation mode.
+
+[shader("vertex")]
+noperspective centroid Inner vertex() : RESULT {
+  Inner result = {0, 0};
+  return result;
+}
+
+// Inherit from entry parameters and return declarations, replacing the entire
+// mask when an inner field supplies its own modifiers. Each use is independent.
+// SPIRV-DAG: @A0 = {{.*}} !spirv.Decorations ![[A0:[0-9]+]]
+// SPIRV-DAG: @A1 = {{.*}} !spirv.Decorations ![[A1:[0-9]+]]
+// SPIRV-DAG: @A2 = {{.*}} !spirv.Decorations ![[A2:[0-9]+]]
+// SPIRV-DAG: @A4 = {{.*}} !spirv.Decorations ![[A4:[0-9]+]]
+// SPIRV-DAG: @B0 = {{.*}} !spirv.Decorations ![[B0:[0-9]+]]
+// SPIRV-DAG: @C0 = {{.*}} !spirv.Decorations ![[C0:[0-9]+]]
+// SPIRV-DAG: @SV_Position = {{.*}} !spirv.Decorations ![[POS:[0-9]+]]
+// SPIRV-DAG: @RESULT0 = {{.*}} !spirv.Decorations ![[RESULT0:[0-9]+]]
+// SPIRV-DAG: @RESULT1 = {{.*}} !spirv.Decorations ![[RESULT1:[0-9]+]]
+// SPIRV-DAG: ![[A0]] = !{!{{[0-9]+}}, ![[FLAT:[0-9]+]]}
+// SPIRV-DAG: ![[A1]] = !{!{{[0-9]+}}}
+// SPIRV-DAG: ![[A2]] = !{!{{[0-9]+}}, ![[NP:[0-9]+]], ![[SAMPLE:[0-9]+]]}
+// SPIRV-DAG: ![[A4]] = !{!{{[0-9]+}}, ![[FLAT]]}
+// SPIRV-DAG: ![[B0]] = !{!{{[0-9]+}}, ![[CENTROID:[0-9]+]]}
+// SPIRV-DAG: ![[C0]] = !{!{{[0-9]+}}}
+// SPIRV-DAG: ![[POS]] = !{![[BUILTIN:[0-9]+]], ![[SAMPLE]]}
+// SPIRV-DAG: ![[RESULT0]] = !{!{{[0-9]+}}, ![[NP]], ![[CENTROID]]}
+// SPIRV-DAG: ![[RESULT1]] = !{!{{[0-9]+}}}
+// SPIRV-DAG: ![[FLAT]] = !{i32 14}
+// SPIRV-DAG: ![[NP]] = !{i32 13}
+// SPIRV-DAG: ![[SAMPLE]] = !{i32 17}
+// SPIRV-DAG: ![[CENTROID]] = !{i32 16}
+// SPIRV-DAG: ![[BUILTIN]] = !{i32 11, i32 15}

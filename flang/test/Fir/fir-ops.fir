@@ -37,10 +37,12 @@ func.func @instructions() {
 // CHECK: [[VAL_0:%.*]] = fir.alloca !fir.array<10xi32>
 // CHECK: [[VAL_1:%.*]] = fir.load [[VAL_0]] : !fir.ref<!fir.array<10xi32>>
 // CHECK: [[VAL_2:%.*]] = fir.alloca i32
+// CHECK: [[VAL_ALIGNED:%.*]] = fir.alloca !fir.array<10xf32> <{alignment = 64 : i64}>
 // CHECK: [[VAL_3:%.*]] = arith.constant 22 : i32
   %0 = fir.alloca !fir.array<10xi32>
   %1 = fir.load %0 : !fir.ref<!fir.array<10xi32>>
   %2 = fir.alloca i32
+  %aligned = fir.alloca !fir.array<10xf32> {alignment = 64 : i64}
   %3 = arith.constant 22 : i32
 
 // CHECK: fir.store [[VAL_3]] to [[VAL_2]] : !fir.ref<i32>

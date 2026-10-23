@@ -987,9 +987,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     // Call canBeFreed() only if there are dereferenceable bytes and it's not
     // one of the cases that can never be freed.
     if (!CanNotBeFreed && DerefBytes != 0)
-      *CanBeFreed =
-          canBeFreed() &&
-          getIROptions(getContext()).use_dereferenceable_at_point_semantics;
+      *CanBeFreed = canBeFreed();
     else
       *CanBeFreed = false;
   }

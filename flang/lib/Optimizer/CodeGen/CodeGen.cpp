@@ -48,6 +48,7 @@
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -480,13 +481,21 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 
+    // A requested alignment is a minimum: never go below the ABI alignment of
+    // the allocated type, which is what an alloca without an explicit
+    // alignment gets.
+    unsigned alignment = 0;
+    if (std::optional<std::int64_t> requested = alloc.getAlignment())
+      alignment = static_cast<unsigned>(std::max<std::uint64_t>(
+          *requested, getDataLayout().getTypeABIAlignment(llvmObjectType)));
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
     // attribute like before is certainly bad).
     auto llvmAlloc = mlir::LLVM::AllocaOp::create(
         rewriter, loc, ::getLlvmPtrType(alloc.getContext(), allocaAs),
-        llvmObjectType, size);
+        llvmObjectType, size, alignment);
     if (alloc.getPinned())
       llvmAlloc->setDiscardableAttr(alloc.getPinnedAttrName(),
                                     alloc.getPinnedAttr());
@@ -3848,8 +3857,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         0, getGlobalAddressSpace(rewriter), false,
         mlir::LLVM::ThreadLocalMode::NotThreadLocal, comdat, attrs, dbgExprs);
 
+    // A requested alignment is a minimum: never go below the ABI alignment of
+    // the global's type.
     if (global.getAlignment() && *global.getAlignment() > 0)
-      g.setAlignment(*global.getAlignment());
+      g.setAlignment(std::max<std::uint64_t>(
+          *global.getAlignment(), getDataLayout().getTypeABIAlignment(tyAttr)));
     if (auto section = global.getSection())
       g.setSection(*section);
 
@@ -5193,6 +5205,9 @@ public:
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ub::populateUBToLLVMConversionPatterns(typeConverter, pattern);
+    if (lowerMemRef)
+      mlir::populateFinalizeMemRefToLLVMConversionPatterns(
+          typeConverter, pattern, &symbolTables);
 
     // Flang specific overloads for OpenMP operations, to allow for special
     // handling of things like Box types.
