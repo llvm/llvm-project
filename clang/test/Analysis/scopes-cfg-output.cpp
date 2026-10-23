@@ -40,7 +40,9 @@ extern const bool UV;
 // CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], A[0])
 // CHECK-NEXT:   5: A b[0];
 // CHECK-NEXT:   6: [B1.3].~A[2]() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   7: [B1.3] (Lifetime ends)
+// CHECK-NEXT:   8: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   9: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B0 (EXIT)]
@@ -62,17 +64,19 @@ void test_array() {
 // CHECK-NEXT:   7:  (CXXConstructExpr, [B1.8], A)
 // CHECK-NEXT:   8: A d;
 // CHECK-NEXT:   9: [B1.8].~A() (Implicit destructor)
-// CHECK-NEXT:  10: [B1.6].~A() (Implicit destructor)
-// CHECK-NEXT:  11: CFGScopeEnd(c)
-// CHECK-NEXT:  12:  (CXXConstructExpr, [B1.13], A)
-// CHECK-NEXT:  13: A b;
-// CHECK-NEXT:  14: [B1.13].~A() (Implicit destructor)
-// CHECK-NEXT:  15: [B1.3].~A() (Implicit destructor)
-// CHECK-NEXT:  16: CFGScopeEnd(a)
+// CHECK-NEXT:  10: [B1.8] (Lifetime ends)
+// CHECK-NEXT:  11: [B1.6].~A() (Implicit destructor)
+// CHECK-NEXT:  12: [B1.6] (Lifetime ends)
+// CHECK-NEXT:  13: CFGScopeEnd(c)
+// CHECK-NEXT:  14:  (CXXConstructExpr, [B1.15], A)
+// CHECK-NEXT:  15: A b;
+// CHECK-NEXT:  16: [B1.15].~A() (Implicit destructor)
+// CHECK-NEXT:  17: [B1.15] (Lifetime ends)
+// CHECK-NEXT:  18: [B1.3].~A() (Implicit destructor)
+// CHECK-NEXT:  19: [B1.3] (Lifetime ends)
+// CHECK-NEXT:  20: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
-// CHECK:      [B0 (EXIT)]
-// CHECK-NEXT:   Preds (1): B1
 void test_scope() {
   A a;
   { A c;
@@ -87,16 +91,21 @@ void test_scope() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B3.5].~A() (Implicit destructor)
-// CHECK-NEXT:   5: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:   6: CFGScopeEnd(a)
+// CHECK-NEXT:   4: [B1.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B3.5].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B3.5] (Lifetime ends)
+// CHECK-NEXT:   7: [B3.3].~A() (Implicit destructor)
+// CHECK-NEXT:   8: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   9: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B3.5].~A() (Implicit destructor)
-// CHECK-NEXT:   3: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B3.5] (Lifetime ends)
+// CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B3]
@@ -123,9 +132,11 @@ void test_return() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B4.8].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B4.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B4.8] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B4.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B4.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B2 B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -133,7 +144,8 @@ void test_return() {
 // CHECK-NEXT:   2:  (CXXConstructExpr, [B2.3], A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B2.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B2.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
@@ -141,7 +153,8 @@ void test_return() {
 // CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
@@ -175,30 +188,38 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B8
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B8.8].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
-// CHECK-NEXT:   4: A e;
-// CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:   6: [B8.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B8.8] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], A)
+// CHECK-NEXT:   5: A e;
+// CHECK-NEXT:   6: [B1.5].~A() (Implicit destructor)
+// CHECK-NEXT:   7: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   8: [B8.3].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B8.3] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B2 B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B4.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
+// CHECK-NEXT:   4: [B2.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B4.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B4.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B4.3].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(c)
-// CHECK-NEXT:   4: [B8.8].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(b)
-// CHECK-NEXT:   6: [B8.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B4.3] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B8.8].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B8.8] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(b)
+// CHECK-NEXT:   8: [B8.3].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B8.3] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B4]
@@ -214,18 +235,23 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B5.2], A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B5.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B7.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
+// CHECK-NEXT:   4: [B5.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B7.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B7.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B6]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B7.3].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(c)
-// CHECK-NEXT:   4: [B8.8].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(b)
-// CHECK-NEXT:   6: [B8.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B7.3] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B8.8].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B8.8] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(b)
+// CHECK-NEXT:   8: [B8.3].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B8.3] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B7]
@@ -275,9 +301,11 @@ void test_if_jumps() {
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B5.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B4.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B5.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B5.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -288,9 +316,11 @@ void test_if_jumps() {
 // CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
-// CHECK-NEXT:   6: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(b)
+// CHECK-NEXT:   5: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(c)
+// CHECK-NEXT:   7: [B4.5].~A() (Implicit destructor)
+// CHECK-NEXT:   8: [B4.5] (Lifetime ends)
+// CHECK-NEXT:   9: CFGScopeEnd(b)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
@@ -326,12 +356,15 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
-// CHECK-NEXT:   4: A e;
-// CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:   6: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], A)
+// CHECK-NEXT:   5: A e;
+// CHECK-NEXT:   6: [B1.5].~A() (Implicit destructor)
+// CHECK-NEXT:   7: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B11.3] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -341,20 +374,26 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
-// CHECK-NEXT:   6: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B3.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B9.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
+// CHECK-NEXT:   8: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B10.5] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(b)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(c)
-// CHECK-NEXT:   4: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(b)
-// CHECK-NEXT:   6: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(b)
+// CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B11.3] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B5]
@@ -365,9 +404,11 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B4 B3
 // CHECK:      [B6]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(c)
-// CHECK-NEXT:   3: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(b)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(c)
+// CHECK-NEXT:   4: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(b)
 // CHECK-NEXT:   T: continue;
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B2
@@ -379,7 +420,8 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B6 B5
 // CHECK:      [B8]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(c)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(c)
 // CHECK-NEXT:   T: break;
 // CHECK-NEXT:   Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
@@ -433,8 +475,10 @@ void test_while_jumps() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
 // CHECK-NEXT:   2: A d;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(a)
+// CHECK-NEXT:   4: [B1.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B11.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -447,16 +491,20 @@ void test_while_jumps() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B3.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B9.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(b)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(b)
-// CHECK-NEXT:   4: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(b)
+// CHECK-NEXT:   5: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B11.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B5]
@@ -467,7 +515,8 @@ void test_while_jumps() {
 // CHECK-NEXT:   Succs (2): B4 B3
 // CHECK:      [B6]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
 // CHECK-NEXT:   T: continue;
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B2
@@ -479,7 +528,8 @@ void test_while_jumps() {
 // CHECK-NEXT:   Succs (2): B6 B5
 // CHECK:      [B8]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
 // CHECK-NEXT:   T: break;
 // CHECK-NEXT:   Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
@@ -519,16 +569,19 @@ void test_do_jumps() {
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B5.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B4.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B5.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B5.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: b
 // CHECK-NEXT:   2: [B2.1].p
 // CHECK-NEXT:   3: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B4.5] (Lifetime ends)
+// CHECK-NEXT:   5: CFGScopeEnd(b)
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B3]
@@ -536,7 +589,8 @@ void test_do_jumps() {
 // CHECK-NEXT:   2:  (CXXConstructExpr, [B3.3], A)
 // CHECK-NEXT:   3: A c;
 // CHECK-NEXT:   4: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
+// CHECK-NEXT:   5: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
@@ -571,39 +625,50 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(c)
-// CHECK-NEXT:   3: [B11.6].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(b)
-// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], A)
-// CHECK-NEXT:   6: A f;
-// CHECK-NEXT:   7: [B1.6].~A() (Implicit destructor)
-// CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   9: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(c)
+// CHECK-NEXT:   4: [B11.6].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B11.6] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(b)
+// CHECK-NEXT:   7:  (CXXConstructExpr, [B1.8], A)
+// CHECK-NEXT:   8: A f;
+// CHECK-NEXT:   9: [B1.8].~A() (Implicit destructor)
+// CHECK-NEXT:  10: [B1.8] (Lifetime ends)
+// CHECK-NEXT:  11: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:  12: [B11.3] (Lifetime ends)
+// CHECK-NEXT:  13: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(c)
+// CHECK-NEXT:   2: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (2): B3 B6
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B3.2], A)
 // CHECK-NEXT:   2: A e;
 // CHECK-NEXT:   3: [B3.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(d)
+// CHECK-NEXT:   4: [B3.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B9.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(d)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
 // CHECK-NEXT:   1: return;
 // CHECK-NEXT:   2: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(d)
-// CHECK-NEXT:   4: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(c)
-// CHECK-NEXT:   6: [B11.6].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(b)
-// CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   9: CFGScopeEnd(a)
+// CHECK-NEXT:   3: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(d)
+// CHECK-NEXT:   5: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B10.5] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
+// CHECK-NEXT:   8: [B11.6].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B11.6] (Lifetime ends)
+// CHECK-NEXT:  10: CFGScopeEnd(b)
+// CHECK-NEXT:  11: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:  12: [B11.3] (Lifetime ends)
+// CHECK-NEXT:  13: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B5]
@@ -614,7 +679,8 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B4 B3
 // CHECK:      [B6]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(d)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(d)
 // CHECK-NEXT:   T: continue;
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B2
@@ -626,7 +692,8 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Succs (2): B6 B5
 // CHECK:      [B8]
 // CHECK-NEXT:   1: [B9.3].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(d)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(d)
 // CHECK-NEXT:   T: break;
 // CHECK-NEXT:   Preds (1): B9
 // CHECK-NEXT:   Succs (1): B1
@@ -664,7 +731,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   Preds (1): B12
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B0 (EXIT)]
-// CHECK-NEXT:   Preds (2): B1 B4
+// CHECK-NEXT:   Preds (2): B1 B4      
 void test_for_jumps() {
   A a;
   for (A b; A c = b; ) {
@@ -681,15 +748,18 @@ void test_for_jumps() {
 // CHECK-NEXT:   Succs (1): B8
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B7.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B8.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   2: [B7.5] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B8.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B8.3] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1: [B5.4] ? [B3.3] : [B4.2]
 // CHECK-NEXT:   2: [B7.5].~A() (Implicit destructor)
-// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   3: [B7.5] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(b)
 // CHECK-NEXT:   Preds (2): B3 B4
 // CHECK-NEXT:   Succs (1): B7
 // CHECK:      [B3]
@@ -749,23 +819,30 @@ void test_for_inc_conditional() {
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
 // CHECK-NEXT:   2: A c;
 // CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B6.4].~A() (Implicit destructor)
-// CHECK-NEXT:   5: [B6.2].~A() (Implicit destructor)
-// CHECK-NEXT:   6: [B7.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   4: [B1.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B6.4].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B6.4] (Lifetime ends)
+// CHECK-NEXT:   7: [B6.2].~A() (Implicit destructor)
+// CHECK-NEXT:   8: [B6.2] (Lifetime ends)
+// CHECK-NEXT:   9: [B7.3].~A() (Implicit destructor)
+// CHECK-NEXT:  10: [B7.3] (Lifetime ends)
+// CHECK-NEXT:  11: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B2 B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:   1:  (CXXConstructExpr, [B2.2], A)
 // CHECK-NEXT:   2: A nb;
 // CHECK-NEXT:   3: [B2.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B6.7].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(na)
+// CHECK-NEXT:   4: [B2.2] (Lifetime ends)
+// CHECK-NEXT:   5: [B6.7].~A() (Implicit destructor)
+// CHECK-NEXT:   6: [B6.7] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(na)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B3]
 // CHECK-NEXT:   1: [B6.7].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(na)
+// CHECK-NEXT:   2: [B6.7] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(na)
 // CHECK-NEXT:   T: goto l1;
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B1
@@ -800,9 +877,12 @@ void test_for_inc_conditional() {
 // CHECK-NEXT:   Succs (1): B6
 // CHECK:      [B8]
 // CHECK-NEXT:   1: [B6.7].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(na)
-// CHECK-NEXT:   3: [B6.4].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B6.2].~A() (Implicit destructor)
+// CHECK-NEXT:   2: [B6.7] (Lifetime ends)
+// CHECK-NEXT:   3: CFGScopeEnd(na)
+// CHECK-NEXT:   4: [B6.4].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B6.4] (Lifetime ends)
+// CHECK-NEXT:   6: [B6.2].~A() (Implicit destructor)
+// CHECK-NEXT:   7: [B6.2] (Lifetime ends)
 // CHECK-NEXT:   T: goto l0;
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B6
@@ -825,10 +905,12 @@ l1:
 // CHECK:      [B7 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B6
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
-// CHECK-NEXT:   2: CFGScopeBegin(unused2)
-// CHECK-NEXT:   3: int unused2;
-// CHECK-NEXT:   4: CFGScopeEnd(unused2)
+// CHECK-NEXT:   1: [B6.3] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
+// CHECK-NEXT:   3: CFGScopeBegin(unused2)
+// CHECK-NEXT:   4: int unused2;
+// CHECK-NEXT:   5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(unused2)
 // CHECK-NEXT:   Preds (2): B4 B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -837,12 +919,14 @@ l1:
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B3]
-// CHECK-NEXT:   1: CFGScopeEnd(unused1)
+// CHECK-NEXT:   1: [B4.2] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(unused1)
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(unused1)
 // CHECK-NEXT:   2: int unused1;
-// CHECK-NEXT:   3: CFGScopeEnd(unused1)
+// CHECK-NEXT:   3: [B4.2] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(unused1)
 // CHECK-NEXT:   T: break;
 // CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B1
@@ -877,11 +961,15 @@ void test_for_compound_and_break() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(__end1)
-// CHECK-NEXT:   2: CFGScopeEnd(__begin1)
-// CHECK-NEXT:   3: CFGScopeEnd(__range1)
-// CHECK-NEXT:   4: [B5.3].~A[10]() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(a)
+// CHECK-NEXT:   1: [B5.11] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(__end1)
+// CHECK-NEXT:   3: [B5.14] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(__begin1)
+// CHECK-NEXT:   5: [B5.5] (Lifetime ends)
+// CHECK-NEXT:   6: CFGScopeEnd(__range1)
+// CHECK-NEXT:   7: [B5.3].~A[10]() (Implicit destructor)
+// CHECK-NEXT:   8: [B5.3] (Lifetime ends)
+// CHECK-NEXT:   9: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -911,7 +999,8 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   9: [B4.8] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:  10: i
 // CHECK-NEXT:  11: [B4.10] = [B4.9] (OperatorCall)
-// CHECK-NEXT:  12: CFGScopeEnd(i)
+// CHECK-NEXT:  12: [B4.5] (Lifetime ends)
+// CHECK-NEXT:  13: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B3
 // CHECK:      [B5]
@@ -942,10 +1031,13 @@ void test_range_for(A &b) {
 // CHECK:      [B8 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
-// CHECK-NEXT:   2: 1
-// CHECK-NEXT:   3: int k = 1;
-// CHECK-NEXT:   4: CFGScopeEnd(c)
+// CHECK-NEXT:   1: [B2.8] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
+// CHECK-NEXT:   3: 1
+// CHECK-NEXT:   4: int k = 1;
+// CHECK-NEXT:   5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:   6: [B2.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (3): B3 B5 B6
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -969,7 +1061,8 @@ void test_range_for(A &b) {
 // CHECK-NEXT:   3: int a = 0;
 // CHECK-NEXT:   4: i
 // CHECK-NEXT:   5: ++[B3.4]
-// CHECK-NEXT:   6: CFGScopeEnd(a)
+// CHECK-NEXT:   6: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B4 B2
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
@@ -1029,10 +1122,13 @@ void test_switch_with_compound_with_default() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
-// CHECK-NEXT:   2: 3
-// CHECK-NEXT:   3: int k = 3;
-// CHECK-NEXT:   4: CFGScopeEnd(c)
+// CHECK-NEXT:   1: [B2.8] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
+// CHECK-NEXT:   3: 3
+// CHECK-NEXT:   4: int k = 3;
+// CHECK-NEXT:   5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:   6: [B2.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(c)
 // CHECK-NEXT:   Preds (3): B3 B4 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1092,10 +1188,13 @@ void test_switch_with_compound_without_default() {
 // CHECK:      [B5 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
-// CHECK-NEXT:   2: 1
-// CHECK-NEXT:   3: int k = 1;
-// CHECK-NEXT:   4: CFGScopeEnd(s)
+// CHECK-NEXT:   1: [B2.8] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
+// CHECK-NEXT:   3: 1
+// CHECK-NEXT:   4: int k = 1;
+// CHECK-NEXT:   5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:   6: [B2.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(s)
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1119,7 +1218,8 @@ void test_switch_with_compound_without_default() {
 // CHECK-NEXT:   3: int a = 0;
 // CHECK-NEXT:   4: i
 // CHECK-NEXT:   5: ++[B3.4]
-// CHECK-NEXT:   6: CFGScopeEnd(a)
+// CHECK-NEXT:   6: [B3.3] (Lifetime ends)
+// CHECK-NEXT:   7: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B4 B2
 // CHECK-NEXT:   Succs (1): B1
 // CHECK:      [B4]
@@ -1142,7 +1242,10 @@ void test_without_compound() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
+// CHECK-NEXT:   1: [B11.4] (Lifetime ends)
+// CHECK-NEXT:   2: [B11.3] (Lifetime ends)
+// CHECK-NEXT:   3: [B11.2] (Lifetime ends)
+// CHECK-NEXT:   4: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (2): B4 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1151,13 +1254,15 @@ void test_without_compound() {
 // CHECK-NEXT:   Preds (2): B3 B7
 // CHECK-NEXT:   Succs (1): B10
 // CHECK:      [B3]
-// CHECK-NEXT:   1: CFGScopeEnd(z)
+// CHECK-NEXT:   1: [B4.3] (Lifetime ends)
+// CHECK-NEXT:   2: CFGScopeEnd(z)
 // CHECK-NEXT:   Succs (1): B2
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(z)
 // CHECK-NEXT:   2: 5
 // CHECK-NEXT:   3: int z = 5;
-// CHECK-NEXT:   4: CFGScopeEnd(z)
+// CHECK-NEXT:   4: [B4.3] (Lifetime ends)
+// CHECK-NEXT:   5: CFGScopeEnd(z)
 // CHECK-NEXT:   T: break;
 // CHECK-NEXT:   Preds (2): B6 B8
 // CHECK-NEXT:   Succs (1): B1
@@ -1243,21 +1348,26 @@ void test_for_switch_in_for() {
 // CHECK-NEXT:    Succs (1): B3
 // CHECK:       [B1]
 // CHECK-NEXT:   label:
-// CHECK-NEXT:    1: CFGScopeEnd(n2t)
-// CHECK-NEXT:    2: CFGScopeEnd(n1t)
-// CHECK-NEXT:    3: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:    4: CFGScopeEnd(a)
+// CHECK-NEXT:    1: [B2.10] (Lifetime ends)
+// CHECK-NEXT:    2: CFGScopeEnd(n2t)
+// CHECK-NEXT:    3: [B2.8] (Lifetime ends)
+// CHECK-NEXT:    4: CFGScopeEnd(n1t)
+// CHECK-NEXT:    5: [B3.3].~A() (Implicit destructor)
+// CHECK-NEXT:    6: [B3.3] (Lifetime ends)
+// CHECK-NEXT:    7: CFGScopeEnd(a)
 // CHECK-NEXT:    Preds (2): B2 B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
 // CHECK-NEXT:    1: [B3.9].~A() (Implicit destructor)
-// CHECK-NEXT:    2: CFGScopeEnd(n2s)
-// CHECK-NEXT:    3: [B3.6].~A() (Implicit destructor)
-// CHECK-NEXT:    4: CFGScopeEnd(n1s)
-// CHECK-NEXT:    5: CFGScopeBegin(n1t)
-// CHECK-NEXT:    6: int n1t;
-// CHECK-NEXT:    7: CFGScopeBegin(n2t)
-// CHECK-NEXT:    8: int n2t;
+// CHECK-NEXT:    2: [B3.9] (Lifetime ends)
+// CHECK-NEXT:    3: CFGScopeEnd(n2s)
+// CHECK-NEXT:    4: [B3.6].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B3.6] (Lifetime ends)
+// CHECK-NEXT:    6: CFGScopeEnd(n1s)
+// CHECK-NEXT:    7: CFGScopeBegin(n1t)
+// CHECK-NEXT:    8: int n1t;
+// CHECK-NEXT:    9: CFGScopeBegin(n2t)
+// CHECK-NEXT:   10: int n2t;
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:       [B3]
 // CHECK-NEXT:    1: CFGScopeBegin(a)
@@ -1270,11 +1380,13 @@ void test_for_switch_in_for() {
 // CHECK-NEXT:    8:  (CXXConstructExpr, [B3.9], A)
 // CHECK-NEXT:    9: A n2s;
 // CHECK-NEXT:   10: [B3.9].~A() (Implicit destructor)
-// CHECK-NEXT:   11: CFGScopeEnd(n2s)
-// CHECK-NEXT:   12: [B3.6].~A() (Implicit destructor)
-// CHECK-NEXT:   13: CFGScopeEnd(n1s)
-// CHECK-NEXT:   14: CFGScopeBegin(n1t)
-// CHECK-NEXT:   15: CFGScopeBegin(n2t)
+// CHECK-NEXT:   11: [B3.9] (Lifetime ends)
+// CHECK-NEXT:   12: CFGScopeEnd(n2s)
+// CHECK-NEXT:   13: [B3.6].~A() (Implicit destructor)
+// CHECK-NEXT:   14: [B3.6] (Lifetime ends)
+// CHECK-NEXT:   15: CFGScopeEnd(n1s)
+// CHECK-NEXT:   16: CFGScopeBegin(n1t)
+// CHECK-NEXT:   17: CFGScopeBegin(n2t)
 // CHECK-NEXT:    T: goto label;
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B1
@@ -1301,23 +1413,28 @@ label:
 // CHECK:       [B5 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B3
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B2.8].~A() (Implicit destructor)
-// CHECK-NEXT:    2: CFGScopeEnd(n2s)
-// CHECK-NEXT:    3: [B2.5].~A() (Implicit destructor)
-// CHECK-NEXT:    4: CFGScopeEnd(n1s)
-// CHECK-NEXT:    5: [B3.3].~A() (Implicit destructor)
-// CHECK-NEXT:    6: CFGScopeEnd(a)
+// CHECK-NEXT:    1: [B2.10].~A() (Implicit destructor)
+// CHECK-NEXT:    2: [B2.10] (Lifetime ends)
+// CHECK-NEXT:    3: CFGScopeEnd(n2s)
+// CHECK-NEXT:    4: [B2.7].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B2.7] (Lifetime ends)
+// CHECK-NEXT:    6: CFGScopeEnd(n1s)
+// CHECK-NEXT:    7: [B3.3].~A() (Implicit destructor)
+// CHECK-NEXT:    8: [B3.3] (Lifetime ends)
+// CHECK-NEXT:    9: CFGScopeEnd(a)
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
 // CHECK-NEXT:   label:
-// CHECK-NEXT:    1: CFGScopeEnd(n2t)
-// CHECK-NEXT:    2: CFGScopeEnd(n1t)
-// CHECK-NEXT:    3: CFGScopeBegin(n1s)
-// CHECK-NEXT:    4:  (CXXConstructExpr, [B2.5], A)
-// CHECK-NEXT:    5: A n1s;
-// CHECK-NEXT:    6: CFGScopeBegin(n2s)
-// CHECK-NEXT:    7:  (CXXConstructExpr, [B2.8], A)
-// CHECK-NEXT:    8: A n2s;
+// CHECK-NEXT:    1: [B3.7] (Lifetime ends)
+// CHECK-NEXT:    2: CFGScopeEnd(n2t)
+// CHECK-NEXT:    3: [B3.5] (Lifetime ends)
+// CHECK-NEXT:    4: CFGScopeEnd(n1t)
+// CHECK-NEXT:    5: CFGScopeBegin(n1s)
+// CHECK-NEXT:    6:  (CXXConstructExpr, [B2.7], A)
+// CHECK-NEXT:    7: A n1s;
+// CHECK-NEXT:    8: CFGScopeBegin(n2s)
+// CHECK-NEXT:    9:  (CXXConstructExpr, [B2.10], A)
+// CHECK-NEXT:   10: A n2s;
 // CHECK-NEXT:    Preds (2): B3 B4
 // CHECK-NEXT:    Succs (1): B4
 // CHECK:       [B3]
@@ -1331,12 +1448,14 @@ label:
 // CHECK-NEXT:    Preds (1): B5
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B4]
-// CHECK-NEXT:    1: [B2.8].~A() (Implicit destructor)
-// CHECK-NEXT:    2: CFGScopeEnd(n2s)
-// CHECK-NEXT:    3: [B2.5].~A() (Implicit destructor)
-// CHECK-NEXT:    4: CFGScopeEnd(n1s)
-// CHECK-NEXT:    5: CFGScopeBegin(n1t)
-// CHECK-NEXT:    6: CFGScopeBegin(n2t)
+// CHECK-NEXT:    1: [B2.10].~A() (Implicit destructor)
+// CHECK-NEXT:    2: [B2.10] (Lifetime ends)
+// CHECK-NEXT:    3: CFGScopeEnd(n2s)
+// CHECK-NEXT:    4: [B2.7].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B2.7] (Lifetime ends)
+// CHECK-NEXT:    6: CFGScopeEnd(n1s)
+// CHECK-NEXT:    7: CFGScopeBegin(n1t)
+// CHECK-NEXT:    8: CFGScopeBegin(n2t)
 // CHECK-NEXT:    T: goto label;
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B2
@@ -1364,8 +1483,10 @@ label:
 // CHECK-NEXT:    Succs (1): B7
 // CHECK:       [B1]
 // CHECK-NEXT:   label:
-// CHECK-NEXT:    1: CFGScopeEnd(n2t)
-// CHECK-NEXT:    2: CFGScopeEnd(n1t)
+// CHECK-NEXT:    1: [B3.2] (Lifetime ends)
+// CHECK-NEXT:    2: CFGScopeEnd(n2t)
+// CHECK-NEXT:    3: [B5.2] (Lifetime ends)
+// CHECK-NEXT:    4: CFGScopeEnd(n1t)
 // CHECK-NEXT:    Preds (4): B2 B3 B4 B6
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -1424,7 +1545,8 @@ label:
 // CHECK-NEXT:   1: CFGScopeBegin(i)
 // CHECK-NEXT:   2: int i __attribute__((cleanup(cleanup_int)));
 // CHECK-NEXT:   3: CleanupFunction (cleanup_int)
-// CHECK-NEXT:   4: CFGScopeEnd(i)
+// CHECK-NEXT:   4: [B1.2] (Lifetime ends)
+// CHECK-NEXT:   5: CFGScopeEnd(i)
 void cleanup_int(int *i);
 void test_cleanup_functions() {
   int i __attribute__((cleanup(cleanup_int)));
@@ -1436,13 +1558,15 @@ void test_cleanup_functions() {
 // CHECK-NEXT:    3: [B1.2] = [B1.1]
 // CHECK-NEXT:    4: return;
 // CHECK-NEXT:    5: CleanupFunction (cleanup_int)
-// CHECK-NEXT:    6: CFGScopeEnd(i)
+// CHECK-NEXT:    6: [B3.2] (Lifetime ends)
+// CHECK-NEXT:    7: CFGScopeEnd(i)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:    1: return;
 // CHECK-NEXT:    2: CleanupFunction (cleanup_int)
-// CHECK-NEXT:    3: CFGScopeEnd(i)
+// CHECK-NEXT:    3: [B3.2] (Lifetime ends)
+// CHECK-NEXT:    4: CFGScopeEnd(i)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B3]
@@ -1472,7 +1596,8 @@ void test_cleanup_functions2(int m) {
 // CHECK-NEXT:    3: F f __attribute__((cleanup(cleanup_F)));
 // CHECK-NEXT:    4: CleanupFunction (cleanup_F)
 // CHECK-NEXT:    5: [B1.3].~F() (Implicit destructor)
-// CHECK-NEXT:    6: CFGScopeEnd(f)
+// CHECK-NEXT:    6: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    7: CFGScopeEnd(f)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 class F {

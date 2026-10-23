@@ -24,7 +24,7 @@
 // CHECK-NEXT: cfg-conditional-static-initializers = true
 // CHECK-NEXT: cfg-expand-default-aggr-inits = false
 // CHECK-NEXT: cfg-implicit-dtors = true
-// CHECK-NEXT: cfg-lifetime = false
+// CHECK-NEXT: cfg-lifetime = true
 // CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
@@ -61,6 +61,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:EndAnalysis = false
 // CHECK-NEXT: debug.AnalysisOrder:EndFunction = false
 // CHECK-NEXT: debug.AnalysisOrder:EvalCall = false
+// CHECK-NEXT: debug.AnalysisOrder:LifetimeEnd = false
 // CHECK-NEXT: debug.AnalysisOrder:LiveSymbols = false
 // CHECK-NEXT: debug.AnalysisOrder:NewAllocator = false
 // CHECK-NEXT: debug.AnalysisOrder:PointerEscape = false

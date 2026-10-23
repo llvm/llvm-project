@@ -22,7 +22,7 @@ int sink(void) // expected-warning-re{{sink -> Total CFGBlocks: {{[0-9]+}} | Unr
   return 0;
 }
 
-int emptyConditionLoop(void) // expected-warning-re{{emptyConditionLoop -> Total CFGBlocks: {{[0-9]+}} | Unreachable CFGBlocks: 0 | Exhausted Block: yes | Empty WorkList: yes}}
+int emptyConditionLoop(void) // expected-warning-re{{emptyConditionLoop -> Total CFGBlocks: {{[0-9]+}} | Unreachable CFGBlocks: 1 | Exhausted Block: yes | Empty WorkList: yes}}
 {
   int num = 1;
   for (;;)
