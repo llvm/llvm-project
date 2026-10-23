@@ -11,19 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_GPUROCDLATTACHTARGET
-#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+#include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;

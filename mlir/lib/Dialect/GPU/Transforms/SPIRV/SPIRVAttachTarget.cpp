@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/SPIRV/Passes.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
@@ -19,12 +19,11 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Target/SPIRV/Target.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_GPUSPIRVATTACHTARGET
-#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+#include "mlir/Dialect/GPU/Transforms/SPIRV/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
