@@ -513,6 +513,30 @@ func.func @vector_print_on_scalar(%arg0: i64) {
   return
 }
 
+// CHECK-LABEL: @vector_print_clauses
+func.func @vector_print_clauses() {
+  // CHECK: vector.print punctuation <newline>
+  // CHECK-NEXT: %[[VALUE:.*]] = arith.constant 1 : i64
+  vector.print punctuation <newline>
+  %value = arith.constant 1 : i64
+  // CHECK-NEXT: vector.print %[[VALUE]] : i64
+  vector.print %value : i64
+  // CHECK-NEXT: vector.print %[[VALUE]] : i64 punctuation <comma>
+  vector.print %value : i64 punctuation <comma>
+  // CHECK-NEXT: vector.print str "value"
+  vector.print str "value"
+  // CHECK-NEXT: vector.print punctuation <comma>
+  vector.print punctuation <comma>
+  return
+}
+
+// CHECK-LABEL: @vector_print_bare
+func.func @vector_print_bare() {
+  // CHECK: vector.print punctuation <newline>
+  vector.print
+  return
+}
+
 // CHECK-LABEL: @shape_cast
 func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : vector<8x1xf32>,
