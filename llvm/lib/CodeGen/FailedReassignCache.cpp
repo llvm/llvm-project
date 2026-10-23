@@ -128,11 +128,12 @@ void Cache::remember(const LiveInterval &LI, bool HintOnly) {
     return;
   dropIfRenumbered();
   unsigned Id = LI.reg().id();
-  auto It = Entries.find(Id);
-  if (It != Entries.end())
-    removeFromBuckets(Id, It->second);
-  Entry &E = Entries[Id];
-  E = Entry();
+  auto [It, Inserted] = Entries.try_emplace(Id);
+  Entry &E = It->second;
+  if (!Inserted) {
+    removeFromBuckets(Id, E);
+    E = Entry();
+  }
   E.SegCount = LI.segments.size();
   E.Begin = LI.beginIndex();
   E.End = LI.endIndex();

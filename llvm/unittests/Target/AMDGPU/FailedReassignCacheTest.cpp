@@ -83,7 +83,7 @@ public:
 
     void unassign(unsigned VirtIdx) { Matrix.unassign(LI(VirtIdx)); }
 
-    /// Insert enough instructions that packIndexes() moves \p LI into a
+    /// Insert enough instructions that packIndexes() moves \p Range into a
     /// different slot-index bucket, and pack.
     void shiftAcrossBucket(const LiveInterval &Range) {
       SlotIndexes &Indexes = *LIS.getSlotIndexes();
