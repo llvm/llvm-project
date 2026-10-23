@@ -959,7 +959,7 @@ define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<%n.vec>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ ir<%7>, ir-bb<vec.epilog.iter.check> ], [ ir<3>, ir-bb<vector.main.loop.iter.check> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ ir<%8>, ir-bb<vec.epilog.iter.check> ], [ ir<3>, ir-bb<vector.main.loop.iter.check> ]
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%bc.merge.rdx>, ir<3>
