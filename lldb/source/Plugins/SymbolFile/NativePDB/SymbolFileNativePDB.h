@@ -13,6 +13,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -364,6 +365,8 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
   /// typedef basename -> Global ID(s) of its S_UDT
   lldb_private::UniqueCStringMap<uint32_t> m_typedef_base_names;
+  /// Qualified name of a scope of a typedef -> Global ID of a typedef in it.
+  llvm::StringMap<uint32_t> m_typedef_scopes;
 
   /// mangled name/full function name -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
