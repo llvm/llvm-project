@@ -1147,6 +1147,23 @@ func.func @alloca_underaligned() -> !fir.ref<i32> {
 
 // -----
 
+// Test fir.global with a requested alignment
+
+fir.global @g_aligned {alignment = 64 : i64} : !fir.array<16xi32>
+
+// CHECK: llvm.mlir.global external @g_aligned() {{.*}}alignment = 64 : i64{{.*}} : !llvm.array<16 x i32>
+
+// -----
+
+// A requested global alignment below the ABI alignment of the type is raised
+// to it.
+
+fir.global @g_underaligned {alignment = 2 : i64} : i32
+
+// CHECK: llvm.mlir.global external @g_underaligned() {{.*}}alignment = 4 : i64{{.*}} : i32
+
+// -----
+
 // Test fir.alloca of pointer to array
 
 func.func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
