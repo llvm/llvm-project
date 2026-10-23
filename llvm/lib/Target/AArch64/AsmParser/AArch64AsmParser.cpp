@@ -203,6 +203,7 @@ private:
   bool parseDirectiveCFILLVMSetRAState();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
+  bool parseDirectiveCFINonHintPAuthFrame();
 
   bool parseDirectiveVariantPCS(SMLoc L);
 
@@ -7129,6 +7130,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
     parseDirectiveCFIMTETaggedFrame();
+  else if (IDVal == ".cfi_non_hint_pauth_frame")
+    parseDirectiveCFINonHintPAuthFrame();
   else if (IDVal == ".arch_extension")
     parseDirectiveArchExtension(Loc);
   else if (IDVal == ".variant_pcs")
@@ -7648,6 +7651,15 @@ bool AArch64AsmParser::parseDirectiveCFIMTETaggedFrame() {
   if (parseEOL())
     return true;
   getStreamer().emitCFIMTETaggedFrame();
+  return false;
+}
+
+/// parseDirectiveCFINonHintPAuthFrame
+/// ::= .cfi_non_hint_pauth_frame
+bool AArch64AsmParser::parseDirectiveCFINonHintPAuthFrame() {
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFINonHintPAuthFrame();
   return false;
 }
 
