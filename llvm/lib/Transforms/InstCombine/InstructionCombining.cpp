@@ -6277,8 +6277,7 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const auto &CLOpts =
-      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
+  const auto &CLOpts = getInstCombineCLOptions(F);
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

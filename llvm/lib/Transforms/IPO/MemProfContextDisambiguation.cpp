@@ -5291,16 +5291,20 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // implicit callers (see assignImplicitCallers).
     ImplicitSourceMap ImplicitSources;
     // Map from each original callsite node in this function to its original
-    // call (clone 0). The Call recorded on an original node is updated to the
-    // call in a function clone if that node is assigned to a function clone,
-    // after which it can no longer be used to index the function clone CallMaps
-    // (which are keyed by the original calls). No node in this function has
-    // been assigned yet at this point.
-    DenseMap<const ContextNode *, CallInfo> OrigNodeToOrigCall;
+    // call and matching calls (clone 0). The calls recorded on an original node
+    // are updated to the calls in a function clone if that node is assigned to
+    // a function clone, after which they can no longer be used to index the
+    // function clone CallMaps (which are keyed by the original calls). No node
+    // in this function has been assigned yet at this point.
+    struct OrigCallsInfo {
+      CallInfo Call;
+      SmallVector<CallInfo, 0> MatchingCalls;
+    };
+    DenseMap<const ContextNode *, OrigCallsInfo> OrigNodeToOrigCalls;
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       if (Node && Node->Call == Call)
-        OrigNodeToOrigCall[Node] = Call;
+        OrigNodeToOrigCalls[Node] = {Call, Node->MatchingCalls};
     }
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
@@ -5332,13 +5336,18 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         if (auto It = CallMap.find(Call); It != CallMap.end())
           CallClone = It->second;
         CallsiteClone->setCall(CallClone);
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          CallInfo CallClone(MatchingCall);
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+        // Need to do the same for all matching calls. Rebuild the list of
+        // CallsiteClone from the original matching calls (it may have been
+        // copied from a node whose calls were already remapped), using the
+        // same mapping as for Call.
+        assert(OrigNodeToOrigCalls.count(Node));
+        CallsiteClone->MatchingCalls.clear();
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          CallInfo CallClone(OrigMatchingCall);
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end())
             CallClone = It->second;
-          // Updates the call in the list.
-          MatchingCall = CallClone;
+          CallsiteClone->MatchingCalls.push_back(CallClone);
         }
       };
 
@@ -5534,27 +5543,26 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // that each caller can only call callsites within the same
               // function, so we are guaranteed that Callee Call is in the
               // current OrigFunc.
-              // CallMap is set up as indexed by original Call at clone 0. Note
-              // that we cannot simply use the Call of Callee's original node,
-              // as that is updated to the call in a function clone if the
-              // original node was itself assigned to a function clone.
-              assert(OrigNodeToOrigCall.count(Callee->getOrigNode()));
-              CallInfo OrigCall = OrigNodeToOrigCall[Callee->getOrigNode()];
+              // CallMap is set up as indexed by original calls at clone 0. Note
+              // that we cannot simply use the calls recorded on Callee's
+              // original node, as those are updated to the calls in a function
+              // clone if the original node was itself assigned to a function
+              // clone.
+              assert(OrigNodeToOrigCalls.count(Callee->getOrigNode()));
+              auto &OrigCalls = OrigNodeToOrigCalls[Callee->getOrigNode()];
               DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
-              assert(CallMap.count(OrigCall));
-              CallInfo NewCall(CallMap[OrigCall]);
+              assert(CallMap.count(OrigCalls.Call));
+              CallInfo NewCall(CallMap[OrigCalls.Call]);
               assert(NewCall);
               NewClone->setCall(NewCall);
               // Need to do the same for all matching calls.
-              for (auto &MatchingCall : NewClone->MatchingCalls) {
-                CallInfo OrigMatchingCall(MatchingCall);
-                OrigMatchingCall.setCloneNo(0);
+              NewClone->MatchingCalls.clear();
+              for (auto &OrigMatchingCall : OrigCalls.MatchingCalls) {
                 assert(CallMap.count(OrigMatchingCall));
                 CallInfo NewCall(CallMap[OrigMatchingCall]);
                 assert(NewCall);
-                // Updates the call in the list.
-                MatchingCall = NewCall;
+                NewClone->MatchingCalls.push_back(NewCall);
               }
             }
           }
@@ -5817,9 +5825,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           // for all calls.
           assert(false && "Expected to find call in CallMap");
         }
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end()) {
+        // Need to do the same for all matching calls. Use the original
+        // matching calls, as those on Node may have been remapped to the calls
+        // of a function clone if Node was assigned to one.
+        assert(OrigNodeToOrigCalls.count(Node));
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end()) {
             CallInfo CallClone = It->second;
             CallVector.push_back(CallClone);
           } else {

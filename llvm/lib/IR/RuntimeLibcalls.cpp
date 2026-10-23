@@ -167,7 +167,7 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
 
 static std::pair<Type *, Attribute>
 convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
-                       unsigned IntBits, Type *LongDoubleTy) {
+                       unsigned IntBits, LongDoubleFormat LdblFormat) {
 
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
@@ -204,7 +204,7 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case Dbl:
     return {Type::getDoubleTy(Ctx), Attribute()};
   case LDbl:
-    return {LongDoubleTy, Attribute()};
+    return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
   case Ptr:
     return {PointerType::get(Ctx, 0), Attribute()};
   case V2F32:
@@ -257,11 +257,10 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     return {};
 
   unsigned IntBits = getIntSize(TT);
-  Type *LongDoubleTy = getLongDoubleType(Ctx, LongDoubleFmt);
   AttributeList Attrs;
 
   auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleTy);
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleFmt);
   if (RetAttr.isValid())
     Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
 
@@ -285,7 +284,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       ArgAttr = LastAttr;
     } else {
       std::tie(ArgTy, ArgAttr) = convertToIRTypeAndAttr(
-          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleTy);
+          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleFmt);
       LastTy = ArgTy;
       LastAttr = ArgAttr;
     }
