@@ -62,7 +62,7 @@ using namespace llvm::opt;
 
 class SymbolizerOptTable : public opt::OptTable {
 public:
-  SymbolizerOptTable() : OptTable(OptionTables) {
+  SymbolizerOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };

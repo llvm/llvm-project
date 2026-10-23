@@ -27,7 +27,7 @@ acc.reduction.recipe @reduction_add_ref_f64 : !fir.ref<f64> reduction_operator <
 ^bb0(%arg0: !fir.ref<f64>):
   %cst = arith.constant 0.000000e+00 : f64
   %0 = fir.alloca f64
-  %1 = fir.declare %0 {uniq_name = "acc.reduction.init"} : (!fir.ref<f64>) -> !fir.ref<f64>
+  %1 = fir.declare %0 uniq_name("acc.reduction.init") : (!fir.ref<f64>) -> !fir.ref<f64>
   fir.store %cst to %1 : !fir.ref<f64>
   acc.yield %1 : !fir.ref<f64>
 } combiner {
@@ -41,7 +41,7 @@ acc.reduction.recipe @reduction_add_ref_f64 : !fir.ref<f64> reduction_operator <
 func.func @par_reduction_clause_(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) attributes {fir.internal_name = "_QPpar_reduction_clause"} {
   %cst = arith.constant 1.000000e+00 : f64
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFpar_reduction_clauseEtmp"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFpar_reduction_clauseEtmp") : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
   %2 = acc.reduction varPtr(%1 : !fir.ref<f64>) recipe(@reduction_add_ref_f64) name("tmp") -> !fir.ref<f64>
   acc.parallel reduction(%2 : !fir.ref<f64>) {
     %3 = fir.load %2 : !fir.ref<f64>

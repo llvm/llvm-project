@@ -54,6 +54,7 @@ public:
   static char ID;
 
   LazyMachineBlockFrequencyInfoPass();
+  ~LazyMachineBlockFrequencyInfoPass() override;
 
   /// Compute and return the block frequencies.
   MachineBlockFrequencyInfo &getBFI() { return calculateIfNotAvailable(); }

@@ -142,8 +142,7 @@ define amdgpu_kernel void @add_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX9-NEXT:    s_andn2_b64 s[2:3], s[4:5], exec
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_or_b64 s[4:5], s[2:3], s[4:5]
+; GFX9-NEXT:    s_or_b64 s[4:5], s[2:3], vcc
 ; GFX9-NEXT:  .LBB2_4: ; %endif
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -182,8 +181,7 @@ define amdgpu_kernel void @add_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX10-NEXT:    s_andn2_b32 s2, s4, exec_lo
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX10-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
-; GFX10-NEXT:    s_or_b32 s4, s2, s3
+; GFX10-NEXT:    s_or_b32 s4, s2, vcc_lo
 ; GFX10-NEXT:  .LBB2_4: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -223,10 +221,9 @@ define amdgpu_kernel void @add_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a,
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_and_not1_b32 s2, s6, exec_lo
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
-; GFX11-NEXT:    s_or_b32 s6, s2, s3
+; GFX11-NEXT:    s_or_b32 s6, s2, vcc_lo
 ; GFX11-NEXT:  .LBB2_4: ; %endif
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX11-NEXT:    s_xor_b32 s2, s6, -1

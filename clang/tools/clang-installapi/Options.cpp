@@ -38,7 +38,7 @@ namespace {
 /// \brief Create OptTable class for parsing actual command line arguments.
 class DriverOptTable : public opt::OptTable {
 public:
-  DriverOptTable() : OptTable(OptionTables) {}
+  DriverOptTable() : OptTable(optionTables()) {}
 };
 
 } // end anonymous namespace.

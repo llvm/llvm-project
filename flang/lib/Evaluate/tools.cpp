@@ -713,6 +713,29 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
   return std::nullopt;
 }
 
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
+  using IntType = Type<TypeCategory::Integer, 4>;
+  const semantics::DerivedTypeSpec *derived{
+      GetDerivedTypeSpec(operand.GetType())};
+  CHECK(derived);
+  DynamicType enumType{*derived};
+  DynamicType intResultType{TypeCategory::Integer, 4};
+  characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
+  ddo.intent = common::Intent::In;
+  characteristics::Procedure::Attrs attrs{
+      characteristics::Procedure::Attr::Pure,
+      characteristics::Procedure::Attr::Elemental};
+  characteristics::DummyArguments dummies;
+  dummies.emplace_back("a"s, std::move(ddo));
+  SpecificIntrinsic intSpec{"int"s,
+      characteristics::Procedure{characteristics::FunctionResult{intResultType},
+          std::move(dummies), attrs}};
+  ActualArguments intArgs;
+  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
+  return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
+      ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+}
+
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
@@ -797,35 +820,10 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                   return Relate(
                       messages, opr, std::move(*xOrd), std::move(*yOrd));
                 }
-                // Non-constant operands: wrap in INT() to convert to
-                // integer comparison. Build FunctionRef<Int4> for each
-                // operand representing INT(enumExpr).
-                auto makeIntCall =
-                    [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
-                  using IntType = Type<TypeCategory::Integer, 4>;
-                  DynamicType enumType{*xDerived};
-                  DynamicType intResultType{TypeCategory::Integer, 4};
-                  characteristics::DummyDataObject ddo{
-                      characteristics::TypeAndShape{enumType}};
-                  ddo.intent = common::Intent::In;
-                  characteristics::Procedure::Attrs attrs{
-                      characteristics::Procedure::Attr::Pure,
-                      characteristics::Procedure::Attr::Elemental};
-                  characteristics::DummyArguments dummies;
-                  dummies.emplace_back("a"s, std::move(ddo));
-                  SpecificIntrinsic intSpec{"int"s,
-                      characteristics::Procedure{
-                          characteristics::FunctionResult{intResultType},
-                          std::move(dummies), attrs}};
-                  ActualArguments intArgs;
-                  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-                  return AsGenericExpr(
-                      Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-                          ProcedureDesignator{std::move(intSpec)},
-                          std::move(intArgs)})));
-                };
-                return Relate(messages, opr, makeIntCall(std::move(dx)),
-                    makeIntCall(std::move(dy)));
+                // Non-constant operands: compare INT(x) and INT(y).
+                return Relate(messages, opr,
+                    MakeEnumerationIntCall(std::move(dx)),
+                    MakeEnumerationIntCall(std::move(dy)));
               }
             }
             DIE("invalid types for relational operator");
@@ -1138,12 +1136,20 @@ bool IsNullPointerOrAllocatable(const Expr<SomeType> *x) {
 }
 
 // GetSymbolVector()
-auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
-  if (const auto *details{x.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (IsVariable(details->expr()) && !UnwrapProcedureRef(*details->expr())) {
-      // associate(x => variable that is not a pointer returned by a function)
-      return (*this)(details->expr());
+const Expr<SomeType> *GetVariableSelector(const Symbol &sym) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()}) {
+    if (const auto &expr{details->expr()};
+        expr && IsVariable(*expr) && !UnwrapProcedureRef(*expr)) {
+      return &*expr;
     }
+  }
+  return nullptr;
+}
+
+auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
+  if (const auto *selector{GetVariableSelector(x)}) {
+    return (*this)(*selector);
   }
   return {x.GetUltimate()};
 }
@@ -1222,6 +1228,22 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols) {
+  semantics::UnorderedSymbolSet result;
+  for (SymbolRef sym : symbols) {
+    if (const auto *selector{GetVariableSelector(*sym)}) {
+      for (SymbolRef selectorSym :
+          ExpandCudaAssociations(CollectCudaSymbols(*selector))) {
+        result.insert(selectorSym);
+      }
+    } else {
+      result.insert(sym);
+    }
+  }
+  return result;
+}
+
 std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   SymbolVector symbols{GetSymbolVector(expr)};
   std::reverse(symbols.begin(), symbols.end());
@@ -1239,7 +1261,8 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+static semantics::UnorderedSymbolSet CollectUniqueCUDADeviceSymbols(
+    const Expr<SomeType> &expr) {
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
   semantics::UnorderedSymbolSet symbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
@@ -1253,7 +1276,21 @@ int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
       }
     }
   }
-  return symbols.size();
+  return symbols;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  return CollectUniqueCUDADeviceSymbols(expr).size();
+}
+
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
+  int count{0};
+  for (const Symbol &sym : CollectUniqueCUDADeviceSymbols(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 std::pair<semantics::UnorderedSymbolSet, semantics::UnorderedSymbolSet>
@@ -1288,8 +1325,12 @@ GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+  if (deviceSymbols.empty()) {
+    return false;
+  }
+  // Device data used in an operation, even one with no other operand such as
+  // a negation or a conversion, is copied to the host to evaluate it there.
+  return HasConstant(expr) || !hostSymbols.empty() || !IsVariable(expr);
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
@@ -1316,6 +1357,33 @@ bool IsCUDADeviceSymbol(const Symbol &sym) {
     return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
   }
   return false;
+}
+
+static std::optional<common::CUDADataAttr> GetDesignatedCUDADataAttr(
+    const Symbol &sym) {
+  const Symbol &ultimate{sym.GetUltimate()};
+  if (const auto *details{
+          ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+    return details->cudaDataAttr();
+  }
+  if (const auto *selector{GetVariableSelector(ultimate)}) {
+    // The attribute of a component prevails over the one of its base.
+    SymbolVector symbols{GetSymbolVector(*selector)};
+    for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+      if (auto attr{GetDesignatedCUDADataAttr(*it)}) {
+        return attr;
+      }
+      if (!it->get().owner().IsDerivedType()) {
+        break;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
+  auto symAttr{GetDesignatedCUDADataAttr(sym)};
+  return symAttr && *symAttr == attr;
 }
 
 bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
@@ -1482,11 +1550,6 @@ static SignedNumericExpr<CAT, KIND> buildSignedAdd(
       true};
 }
 
-template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
-  return std::nullopt;
-}
-
 template <common::TypeCategory CAT, int KIND>
 static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT, KIND> &expr) {
@@ -1530,24 +1593,6 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
-}
-
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
-  // Keep the supported categories explicit: integer reassociation requires a
-  // separate intermediate-range policy.
-  if constexpr (CAT == common::TypeCategory::Real ||
-      CAT == common::TypeCategory::Complex) {
-    return common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeType>{std::move(*result)};
-          return std::nullopt;
-        },
-        expr.u);
-  }
-  return std::nullopt;
 }
 
 template <typename> struct IsExpr : std::false_type {};
@@ -2937,7 +2982,9 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
-      !(derived && derived->IsVectorType());
+      !(derived && derived->IsVectorType()) &&
+      !(derived &&
+          derived->typeSymbol().get<DerivedTypeDetails>().isEnumerationType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

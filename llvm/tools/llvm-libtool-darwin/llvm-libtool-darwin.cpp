@@ -53,7 +53,7 @@ enum ID {
 
 class LibtoolDarwinOptTable : public opt::OptTable {
 public:
-  LibtoolDarwinOptTable() : OptTable(OptionTables) {}
+  LibtoolDarwinOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 

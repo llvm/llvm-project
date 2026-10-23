@@ -57,12 +57,7 @@ static cl::alias BasicAggregationAlias("ba",
 
 static cl::opt<bool> DeprecatedBasicAggregationNl(
     "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
-    cl::cat(AggregatorCategory), cl::ReallyHidden,
-    cl::callback([](const bool &Enabled) {
-      errs()
-          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
-      BasicAggregation = Enabled;
-    }));
+    cl::cat(AggregatorCategory), cl::ReallyHidden);
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
@@ -88,18 +83,18 @@ static cl::list<unsigned long long>
     FilterPID("pid",
               cl::desc("only use samples from process with specified PID(s) "
                        "(comma-separated)"),
-              cl::CommaSeparated, cl::ZeroOrMore, cl::cat(AggregatorCategory));
+              cl::CommaSeparated, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
     cl::desc("impute missing fall-throughs for branch-only traces"),
-    cl::Optional, cl::cat(AggregatorCategory));
+    cl::cat(AggregatorCategory));
 
-static cl::opt<bool>
-IgnoreBuildID("ignore-build-id",
-  cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
-  cl::init(false),
-  cl::cat(AggregatorCategory));
+cl::opt<bool> IgnoreBuildID(
+    "ignore-build-id",
+    cl::desc(
+        "continue even if build-ids in input binary and perf.data mismatch"),
+    cl::init(false), cl::cat(AggregatorCategory));
 
 static cl::opt<bool> IgnoreInterruptLBR(
     "ignore-interrupt-lbr",
@@ -110,7 +105,6 @@ static cl::opt<unsigned long long>
 MaxSamples("max-samples",
   cl::init(-1ULL),
   cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
@@ -139,7 +133,6 @@ static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(AggregatorCategory));
 
 } // namespace opts
@@ -386,13 +379,20 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     return;
   }
 
+  if (opts::IgnoreBuildID) {
+    errs() << "PERF2BOLT-WARNING: failed to match build-id from perf output, "
+              "continuing because -ignore-build-id was requested. The profile "
+              "will be meaningless if the perf data was not recorded for this "
+              "binary.\n";
+    return;
+  }
+
   errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
             "This indicates the input binary supplied for data aggregation "
             "is not the same recorded by perf when collecting profiling "
             "data, or there were no samples recorded for the binary. "
             "Use -ignore-build-id option to override.\n";
-  if (!opts::IgnoreBuildID)
-    abort();
+  abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
@@ -918,6 +918,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
     opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
 
+  if (opts::DeprecatedBasicAggregationNl.getNumOccurrences()) {
+    errs() << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+    opts::BasicAggregation = opts::DeprecatedBasicAggregationNl;
+  }
+
   this->BC = &BC;
 
   if (!opts::ReadPreAggregated)
@@ -1324,13 +1329,22 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   /// perf script -F brstack entry format:
-  /// FROM/TO/EVENT/INTX/ABORT/CYCLES/TYPE/SPEC
+  /// FROM/TO/EVENT/INTX/ABORT/CYCLES[/TYPE/SPEC]
+  ErrorOr<StringRef> EntryStr = parseString(FieldSeparator, true);
+  if (std::error_code EC = EntryStr.getError())
+    return EC;
+  SmallVector<StringRef, 8> Fields;
+  EntryStr->split(Fields, '/');
+  if (Fields.size() < 6 ||
+      (Fields.size() > 6 && (Fields.size() < 8 || Fields[7].empty()))) {
+    reportError("expected rest of brstack entry");
+    Diag << "Found: " << *EntryStr << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
   LBREntry Res;
   // From
-  ErrorOr<StringRef> FromStrRes = parseString('/');
-  if (std::error_code EC = FromStrRes.getError())
-    return EC;
-  StringRef OffsetStr = FromStrRes.get();
+  StringRef OffsetStr = Fields[0];
   if (OffsetStr.getAsInteger(0, Res.From)) {
     reportError("expected hexadecimal number with From address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1338,10 +1352,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // To
-  ErrorOr<StringRef> ToStrRes = parseString('/');
-  if (std::error_code EC = ToStrRes.getError())
-    return EC;
-  OffsetStr = ToStrRes.get();
+  OffsetStr = Fields[1];
   if (OffsetStr.getAsInteger(0, Res.To)) {
     reportError("expected hexadecimal number with To address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1349,10 +1360,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // Event: M: mispredicted, P: predicted, N: not taken
-  ErrorOr<StringRef> EventStrRes = parseString('/');
-  if (std::error_code EC = EventStrRes.getError())
-    return EC;
-  StringRef MispredStr = EventStrRes.get();
+  StringRef MispredStr = Fields[2];
   // SPE brstack mispredicted flags might be up to two characters long:
   // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
@@ -1380,28 +1388,12 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
-  // Transaction, abort, cycles
-  for (unsigned I = 0; I < 3; ++I) {
-    ErrorOr<StringRef> IgnoredStr = parseString('/');
-    if (std::error_code EC = IgnoredStr.getError())
-      return EC;
-  }
+  // Transaction, abort, cycles are ignored.
 
   // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
-  ErrorOr<StringRef> TypeStr = parseString('/');
-  if (std::error_code EC = TypeStr.getError())
-    return EC;
-  Res.IsReturn = TypeStr.get() == "RET";
+  Res.IsReturn = Fields.size() > 6 && Fields[6] == "RET";
 
-  // Branch speculation
-  ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
-  if (std::error_code EC = Rest.getError())
-    return EC;
-  if (Rest.get().size() < 1) {
-    reportError("expected rest of brstack entry");
-    Diag << "Found: " << Rest.get() << "\n";
-    return make_error_code(llvm::errc::io_error);
-  }
+  // Branch speculation is ignored.
   return Res;
 }
 
@@ -2217,7 +2209,7 @@ std::optional<DataAggregator::ForkInfo> DataAggregator::parseForkEvent() {
   return FI;
 }
 
-ErrorOr<std::pair<StringRef, DataAggregator::MMapInfo>>
+ErrorOr<std::tuple<StringRef, StringRef, DataAggregator::MMapInfo>>
 DataAggregator::parseMMapEvent() {
   while (checkAndConsumeFS()) {
   }
@@ -2235,7 +2227,7 @@ DataAggregator::parseMMapEvent() {
   size_t Pos = Line.find("PERF_RECORD_MMAP2");
   if (Pos == StringRef::npos) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
 
   // Line:
@@ -2249,12 +2241,13 @@ DataAggregator::parseMMapEvent() {
   Line = Line.drop_front(Pos);
 
   // Line:
-  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
+  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) @ <hexoffset>
+  //   \<<buildid>\>]: .* <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
   if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
   FileName = sys::path::filename(FileName);
 
@@ -2287,9 +2280,11 @@ DataAggregator::parseMMapEvent() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  const StringRef BuildId = Line.split('<').second.split('>').first;
+
   consumeRestOfLine();
 
-  return std::make_pair(FileName, ParsedInfo);
+  return std::make_tuple(FileName, BuildId, ParsedInfo);
 }
 
 std::error_code DataAggregator::parseMMapEvents() {
@@ -2298,26 +2293,30 @@ std::error_code DataAggregator::parseMMapEvents() {
                      TimerGroupDesc, opts::TimeAggregator);
 
   std::multimap<StringRef, MMapInfo> GlobalMMapInfo;
+  std::multimap<StringRef, MMapInfo *> BuildIdMMapInfo;
   while (hasData()) {
-    ErrorOr<std::pair<StringRef, MMapInfo>> FileMMapInfoRes = parseMMapEvent();
+    ErrorOr<std::tuple<StringRef, StringRef, MMapInfo>> FileMMapInfoRes =
+        parseMMapEvent();
     if (std::error_code EC = FileMMapInfoRes.getError())
       return EC;
 
-    std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
-    if (FileMMapInfo.second.PID == -1)
+    auto [File, BuildId, MMapInfo] = FileMMapInfoRes.get();
+    if (MMapInfo.PID == -1)
       continue;
-    if (FileMMapInfo.first == "(deleted)")
+    if (File == "(deleted)")
       continue;
 
-    GlobalMMapInfo.insert(FileMMapInfo);
+    auto It = GlobalMMapInfo.emplace(File, MMapInfo);
+    if (!BuildId.empty())
+      BuildIdMMapInfo.emplace(BuildId, &It->second);
   }
 
   LLVM_DEBUG({
     dbgs() << "FileName -> mmap info:\n"
-           << "  Filename : PID [MMapAddr, Size, Offset]\n";
-    for (const auto &[Name, MMap] : GlobalMMapInfo)
-      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", Name, MMap.PID,
-                        MMap.MMapAddress, MMap.Size, MMap.Offset);
+           << "  FileName : PID [MMapAddr, Size, Offset]\n";
+    for (const auto &[FileName, MMap] : GlobalMMapInfo)
+      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", FileName,
+                        MMap.PID, MMap.MMapAddress, MMap.Size, MMap.Offset);
   });
 
   StringRef NameToUse = llvm::sys::path::filename(BC->getFilename());
@@ -2327,8 +2326,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     NameToUse = BuildIDBinaryName;
   }
 
-  auto Range = GlobalMMapInfo.equal_range(NameToUse);
-  for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
+  auto matchMMapInfo = [&](MMapInfo &MMapInfo) {
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
       bool MatchFound = llvm::any_of(
@@ -2345,7 +2343,7 @@ std::error_code DataAggregator::parseMMapEvents() {
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
                << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
-        continue;
+        return;
       }
     }
 
@@ -2359,7 +2357,7 @@ std::error_code DataAggregator::parseMMapEvents() {
                << Twine::utohexstr(MMapInfo.MMapAddress)
                << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
                << ". Ignoring profile data for this mapping\n";
-        continue;
+        return;
       }
       MMapInfo.BaseAddress = *BaseAddress;
     }
@@ -2376,6 +2374,17 @@ std::error_code DataAggregator::parseMMapEvents() {
     const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
     if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
+  };
+
+  std::optional<StringRef> BuildId = BC->getFileBuildID();
+  if (!opts::IgnoreBuildID && BuildId && BuildIdMMapInfo.count(*BuildId) > 0) {
+    auto Range = BuildIdMMapInfo.equal_range(*BuildId);
+    for (MMapInfo *MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(*MMapInfo);
+  } else {
+    auto Range = GlobalMMapInfo.equal_range(NameToUse);
+    for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(MMapInfo);
   }
 
   if (BinaryMMapInfo.empty()) {

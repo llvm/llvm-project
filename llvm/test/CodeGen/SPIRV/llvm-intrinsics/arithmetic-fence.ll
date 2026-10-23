@@ -4,16 +4,16 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - --spirv-ext=+SPV_EXT_arithmetic_fence | FileCheck %s --check-prefixes=CHECK-EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-NOEXT-NO: OpCapability ArithmeticFenceEXT
-; CHECK-NOEXT-NO: OpExtension "SPV_EXT_arithmetic_fence"
+; CHECK-NOEXT-NOT: OpCapability ArithmeticFenceEXT
+; CHECK-NOEXT-NOT: OpExtension "SPV_EXT_arithmetic_fence"
 ; CHECK-NOEXT: OpFunction
 ; CHECK-NOEXT: OpFMul
 ; CHECK-NOEXT: OpFAdd
-; CHECK-NOEXT-NO: OpArithmeticFenceEXT
+; CHECK-NOEXT-NOT: OpArithmeticFenceEXT
 ; CHECK-NOEXT: OpFunction
-; CHECK-NOEXT-NO: OpArithmeticFenceEXT
+; CHECK-NOEXT-NOT: OpArithmeticFenceEXT
 ; CHECK-NOEXT: OpFunction
-; CHECK-NOEXT-NO: OpArithmeticFenceEXT
+; CHECK-NOEXT-NOT: OpArithmeticFenceEXT
 
 ; CHECK-EXT: OpCapability ArithmeticFenceEXT
 ; CHECK-EXT: OpExtension "SPV_EXT_arithmetic_fence"

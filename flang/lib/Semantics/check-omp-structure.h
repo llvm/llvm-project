@@ -58,6 +58,7 @@ struct LoopSequence;
 template <typename ElemTy, typename SetsSetTy> struct AppliedElement {
   parser::omp::WithSource<ElemTy> id;
   SetsSetTy sets;
+  llvm::omp::Version version{};
 };
 
 template <typename ElemTy, typename SetsSetTy> struct AppliedElementInfo {
@@ -268,7 +269,8 @@ private:
 
   // check-omp-atomic.cpp
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
-      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
+      llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock,
+      bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
       std::string_view name, bool checkTypeOnPointer = true);
@@ -318,6 +320,8 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
+  void CheckDoacross(
+      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
@@ -365,9 +369,9 @@ private:
       const AppliedModifierInfo &info);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  void VerifyModifiers(const parser::OmpClause &x);
+  void VerifyModifierSyntax(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =
@@ -375,6 +379,8 @@ private:
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clauseId,
       parser::CharBlock clauseSource, llvm::omp::Directive dirId);
+  void SetAllowedClauseOverride(llvm::omp::Clause clauseId,
+      llvm::omp::Directive dirId, llvm::omp::Version since);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
@@ -390,6 +396,7 @@ private:
       llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
+  void AnalyzeSubstring(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
   FindMutuallyExclusiveClauses(llvm::omp::Clauses exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
@@ -430,8 +437,6 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
-  void CheckDoacross(
-      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(const parser::CharBlock &source,
@@ -439,9 +444,11 @@ private:
   void CheckTypeParamInquiry(const parser::CharBlock &source,
       const parser::OmpObject &object, llvm::omp::Clause clauseId);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObject &object, llvm::StringRef clause = "");
+      const parser::OmpObject &object, llvm::StringRef clause = "",
+      bool checkSubstrings = true);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "",
+      bool checkSubstrings = true);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
@@ -485,6 +492,8 @@ private:
       const parser::CharBlock &source, llvm::omp::Directive type);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  void CheckSubstring(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
       parser::CharBlock source, llvm::omp::Clause clauseId);
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
@@ -502,6 +511,7 @@ private:
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
+  void CheckArraySectionStrides(const parser::DataRef &, llvm::omp::Clause);
   void CheckLastPartRefForArraySection(
       const parser::Designator &designator, llvm::omp::Clause clauseId);
   void CheckSharedBindingInOuterContext(

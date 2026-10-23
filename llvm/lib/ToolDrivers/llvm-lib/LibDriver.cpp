@@ -50,7 +50,7 @@ using namespace llvm::opt;
 
 class LibOptTable : public opt::OptTable {
 public:
-  LibOptTable() : opt::OptTable(OptionTables, true) {}
+  LibOptTable() : opt::OptTable(optionTables(), true) {}
 };
 } // namespace
 

@@ -7,7 +7,7 @@
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
 !CHECK-DAG: %[[FIVE:.*]] = arith.constant 5 : index
 !CHECK-DAG: %[[ARG1_REF:.*]] = fir.convert %[[ARG1_UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,5>>
-!CHECK-DAG: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1_REF]] typeparams %[[FIVE]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!CHECK-DAG: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1_REF]] typeparams %[[FIVE]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFlastprivate_characterEarg1") : (!fir.ref<!fir.char<1,5>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 
 !CHECK: omp.parallel {
 
@@ -15,7 +15,7 @@
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ARG1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<!fir.char<1,5>>, !{{.*}}) {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 !CHECK: %[[FIVE:.*]] = arith.constant 5 : index
-!CHECK: %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] typeparams %[[FIVE]] {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+!CHECK: %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] typeparams %[[FIVE]] uniq_name("_QFlastprivate_characterEarg1") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !CHECK: %[[UNIT:.*]] = arith.constant 6 : i32
 !CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]]
@@ -56,11 +56,11 @@ end do
 end subroutine
 
 !CHECK: func @_QPlastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFlastprivate_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFlastprivate_intEarg1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-DAG: omp.parallel  {
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE:.*]], @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<i32>, !{{.*}}) {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK:      %[[CLONE_DECL:.*]]:2 = hlfir.declare %[[CLONE]] {uniq_name = "_QFlastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      %[[CLONE_DECL:.*]]:2 = hlfir.declare %[[CLONE]] uniq_name("_QFlastprivate_intEarg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -94,13 +94,13 @@ print *, arg1
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmult_lastprivate_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmult_lastprivate_intEarg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmult_lastprivate_intEarg1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmult_lastprivate_intEarg2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[CLONE2:.*]], @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !{{.*}}) {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFmult_lastprivate_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFmult_lastprivate_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] uniq_name("_QFmult_lastprivate_intEarg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] uniq_name("_QFmult_lastprivate_intEarg2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -136,13 +136,13 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmult_lastprivate_int2Earg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmult_lastprivate_int2Earg1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmult_lastprivate_int2Earg2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[CLONE2:.*]], @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !{{.*}}) {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFmult_lastprivate_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFmult_lastprivate_int2Earg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] uniq_name("_QFmult_lastprivate_int2Earg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-DAG: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] uniq_name("_QFmult_lastprivate_int2Earg2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -178,15 +178,15 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFfirstpriv_lastpriv_intEarg1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFfirstpriv_lastpriv_intEarg2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
 ! Firstprivate update
 !CHECK-NOT: omp.barrier
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[CLONE2:.*]], @{{.*}} %{{.*}}#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !{{.*}}) {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] {uniq_name = "_QFfirstpriv_lastpriv_intEarg2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] uniq_name("_QFfirstpriv_lastpriv_intEarg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[CLONE2_DECL:.*]]:2 = hlfir.declare %[[CLONE2]] uniq_name("_QFfirstpriv_lastpriv_intEarg2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -220,7 +220,7 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
-!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFfirstpriv_lastpriv_int2Earg1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel  {
 
 ! Firstprivate update
@@ -228,7 +228,7 @@ end subroutine
 
 !CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[IV:.*]] : !fir.ref<i32>, !fir.ref<i32>) private_barrier {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] uniq_name("_QFfirstpriv_lastpriv_int2Earg1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK-NEXT: hlfir.declare %[[IV]]
 ! Testing last iteration check
@@ -264,10 +264,10 @@ end subroutine
 ! Check that LASTPRIVATE updates the private copy of `i` when used inside
 ! nested PARALLEL constructs in which `i` is private.
 !CHECK-LABEL: func @_QPlastprivate_nested_parallel()
-!CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_nested_parallelEi") :
 !CHECK-SAME:                  (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         omp.parallel private(@_QFlastprivate_nested_parallelEi_private_i32 %[[I]]#0 {{.*}})
-!CHECK:           %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK:           %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_nested_parallelEi") :
 !CHECK-SAME:                         (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           omp.parallel {
 !CHECK:             omp.wsloop private(@_QFlastprivate_nested_parallelEi_private_i32 %[[PRIV_I]]#0 {{.*}})
@@ -288,7 +288,7 @@ end subroutine
 !CHECK-LABEL: func @_QPlastprivate_nested_parallel2()
 !CHECK:         omp.parallel {
 !CHECK:           omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 {{.*}})
-!CHECK:             %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallel2Ei"}
+!CHECK:             %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_nested_parallel2Ei")
 !CHECK:             omp.parallel {
 !CHECK:               omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 %[[PRIV_I]]#0 {{.*}})
 !CHECK:                 hlfir.assign %{{.*}} to %[[PRIV_I]]#0

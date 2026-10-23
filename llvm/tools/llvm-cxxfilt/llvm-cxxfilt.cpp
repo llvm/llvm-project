@@ -37,7 +37,7 @@ using namespace llvm::opt;
 
 class CxxfiltOptTable : public opt::OptTable {
 public:
-  CxxfiltOptTable() : opt::OptTable(OptionTables) {
+  CxxfiltOptTable() : opt::OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };

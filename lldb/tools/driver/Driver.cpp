@@ -84,7 +84,7 @@ enum ID {
 
 class LLDBOptTable : public opt::OptTable {
 public:
-  LLDBOptTable() : opt::OptTable(OptionTables) {}
+  LLDBOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 

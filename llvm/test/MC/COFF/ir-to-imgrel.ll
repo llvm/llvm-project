@@ -8,7 +8,7 @@
 ; RELOC: IMAGE_REL_AMD64_ADDR32NB ?x@@3HA
 @"\01?x@@3HA" = global i32 trunc (i64 sub nsw (i64 ptrtoint (ptr @"\01?x@@3HA" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), align 4
 
-declare void @f()
+declare dllimport void @f()
 
 ; X64: .long   f@IMGREL
 ; RELOC: IMAGE_REL_AMD64_ADDR32NB f

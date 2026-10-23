@@ -1172,8 +1172,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -2096,10 +2097,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
@@ -2415,6 +2416,46 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
+// Sound wherever the caller has already dropped the type tests: the check
+// folds to true, the trap branch becomes dead, and later passes fold it
+// away. Required because the backend cannot select these intrinsics
+// ("must be lowered by the LowerTypeTests pass before code generation").
+bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
+                                            bool IsRelative) {
+  bool Changed = false;
+  for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
+    Instruction *I = dyn_cast<Instruction>(User);
+    if (!I)
+      continue;
+    IRBuilder<> IRB(I);
+    Value *Ptr = I->getOperand(0);
+    Value *Offset = I->getOperand(1);
+    Type *PtrTy = I->getType()->getStructElementType(0);
+    ConstantInt *True = ConstantInt::getTrue(M.getContext());
+    Instruction *Load;
+    if (IsRelative) {
+      Load = IRB.CreateIntrinsicWithoutFolding(
+          Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
+          /*FMFSource=*/nullptr, "rel_load");
+    } else {
+      Value *PtrAdd = IRB.CreatePtrAdd(Ptr, Offset);
+      Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
+    }
+
+    Value *Replacement = PoisonValue::get(I->getType());
+    Replacement = IRB.CreateInsertValue(Replacement, True, {1});
+    Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
+    I->replaceAllUsesWith(Replacement);
+
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
+    I->eraseFromParent();
+    Changed = true;
+  }
+  if (Changed)
+    CheckedLoadFn.eraseFromParent();
+  return Changed;
+}
+
 static void dropTypeTests(Module &M, Function &TypeTestFunc,
                           bool ShouldDropAll) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
@@ -2444,6 +2485,20 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (TypeTestFunc)
     dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+  // Only drop checked loads when dropping everything: in Assume mode a
+  // checked load may feed a CFI trap check, which must keep diagnosing
+  // loudly instead of being turned to true.
+  bool DroppedCheckedLoads = false;
+  if (ShouldDropAll) {
+    if (Function *F =
+            Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, false);
+    if (Function *F = Intrinsic::getDeclarationIfExists(
+            &M, Intrinsic::type_checked_load_relative))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, true);
+  }
   // Normally we'd have already removed all @llvm.public.type.test calls,
   // except for in the case where we originally were performing ThinLTO but
   // decided not to in the backend.
@@ -2451,7 +2506,7 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
     dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-  if (TypeTestFunc || PublicTypeTestFunc) {
+  if (TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads) {
     // We have deleted the type intrinsics, so we no longer have enough
     // information to reason about the liveness of virtual function pointers
     // in GlobalDCE.
@@ -2490,6 +2545,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2510,6 +2597,9 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }

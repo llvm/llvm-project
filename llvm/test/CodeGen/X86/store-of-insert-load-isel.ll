@@ -29,8 +29,8 @@ define void @variable_offset_insert(ptr %g, i32 %eltval, i32 %offset) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY]], 3, implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
-  ; CHECK-NEXT:   MOV32mr [[COPY2]], 4, killed [[SUBREG_TO_REG]], 0, $noreg, [[COPY1]] :: (store (s32))
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri]], %subreg.sub_32bit
+  ; CHECK-NEXT:   MOV32mr [[COPY2]], 4, [[SUBREG_TO_REG]], 0, $noreg, [[COPY1]] :: (store (s32))
   ; CHECK-NEXT:   RET 0
   %vec = load <4 x i32>, ptr %g, align 16
   %insert = insertelement <4 x i32> %vec, i32 %eltval, i32 %offset
@@ -47,8 +47,8 @@ define void @variable_offset_insert_unaligned(ptr %g, i32 %eltval, i32 %offset) 
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY]], 3, implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[AND32ri]], %subreg.sub_32bit
-  ; CHECK-NEXT:   MOV32mr [[COPY2]], 4, killed [[SUBREG_TO_REG]], 0, $noreg, [[COPY1]] :: (store (s32), align 1)
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[AND32ri]], %subreg.sub_32bit
+  ; CHECK-NEXT:   MOV32mr [[COPY2]], 4, [[SUBREG_TO_REG]], 0, $noreg, [[COPY1]] :: (store (s32), align 1)
   ; CHECK-NEXT:   RET 0
   %vec = load <4 x i32>, ptr %g, align 1
   %insert = insertelement <4 x i32> %vec, i32 %eltval, i32 %offset

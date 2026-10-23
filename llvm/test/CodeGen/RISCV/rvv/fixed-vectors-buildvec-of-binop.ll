@@ -624,3 +624,37 @@ entry:
   %3 = insertelement <2 x i32> %2, i32 %1, i64 1
   ret <2 x i32> %3
 }
+
+; The scalar lshrs are performed on i32 and then implicitly truncated by the
+; insert_vector_elt, so they must not be combined into a vector lshr on the i8
+; elements, which would truncate before the shift instead of after it.
+define <8 x i8> @insert_elt_of_trunc_op(i32 %a) {
+; CHECK-LABEL: insert_elt_of_trunc_op:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vadd.vi v8, v8, 2
+; CHECK-NEXT:    srli a1, a0, 8
+; CHECK-NEXT:    vsrl.vv v8, v9, v8
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    srli a0, a0, 9
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 6
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 7
+; CHECK-NEXT:    ret
+entry:
+  %b = trunc i32 %a to i8
+  %s8 = lshr i32 %a, 8
+  %s9 = lshr i32 %a, 9
+  %t8 = trunc i32 %s8 to i8
+  %t9 = trunc i32 %s9 to i8
+  %v0 = insertelement <8 x i8> poison, i8 %b, i64 0
+  %v1 = shufflevector <8 x i8> %v0, <8 x i8> poison, <8 x i32> zeroinitializer
+  %v2 = lshr <8 x i8> %v1, <i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 poison, i8 poison>
+  %v3 = insertelement <8 x i8> %v2, i8 %t8, i64 6
+  %v4 = insertelement <8 x i8> %v3, i8 %t9, i64 7
+  ret <8 x i8> %v4
+}

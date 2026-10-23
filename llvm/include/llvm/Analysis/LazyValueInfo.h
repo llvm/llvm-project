@@ -65,14 +65,14 @@ namespace llvm {
     LLVM_ABI Constant *getPredicateOnEdge(CmpInst::Predicate Pred, Value *V,
                                           Constant *C, BasicBlock *FromBB,
                                           BasicBlock *ToBB,
-                                          Instruction *CxtI = nullptr);
+                                          Instruction *CtxI = nullptr);
 
     /// Determine whether the specified value comparison with a constant is
     /// known to be true or false at the specified instruction. \p Pred is a
     /// CmpInst predicate. If \p UseBlockValue is true, the block value is also
     /// taken into account.
     LLVM_ABI Constant *getPredicateAt(CmpInst::Predicate Pred, Value *V,
-                                      Constant *C, Instruction *CxtI,
+                                      Constant *C, Instruction *CtxI,
                                       bool UseBlockValue);
 
     /// Determine whether the specified value comparison is known to be true
@@ -81,17 +81,17 @@ namespace llvm {
     /// \p Pred is a CmpInst predicate.
     /// If \p UseBlockValue is true, the block value is also taken into account.
     LLVM_ABI Constant *getPredicateAt(CmpInst::Predicate Pred, Value *LHS,
-                                      Value *RHS, Instruction *CxtI,
+                                      Value *RHS, Instruction *CtxI,
                                       bool UseBlockValue);
 
     /// Determine whether the specified value is known to be a constant at the
     /// specified instruction. Return null if not.
-    LLVM_ABI Constant *getConstant(Value *V, Instruction *CxtI);
+    LLVM_ABI Constant *getConstant(Value *V, Instruction *CtxI);
 
     /// Return the ConstantRange constraint that is known to hold for the
     /// specified value at the specified instruction. This may only be called
     /// on integer-typed Values.
-    LLVM_ABI ConstantRange getConstantRange(Value *V, Instruction *CxtI,
+    LLVM_ABI ConstantRange getConstantRange(Value *V, Instruction *CtxI,
                                             bool UndefAllowed);
 
     /// Return the ConstantRange constraint that is known to hold for the value
@@ -103,14 +103,14 @@ namespace llvm {
     /// constant on the specified edge.  Return null if not.
     LLVM_ABI Constant *getConstantOnEdge(Value *V, BasicBlock *FromBB,
                                          BasicBlock *ToBB,
-                                         Instruction *CxtI = nullptr);
+                                         Instruction *CtxI = nullptr);
 
     /// Return the ConstantRage constraint that is known to hold for the
     /// specified value on the specified edge. This may be only be called
     /// on integer-typed Values.
     LLVM_ABI ConstantRange getConstantRangeOnEdge(Value *V, BasicBlock *FromBB,
                                                   BasicBlock *ToBB,
-                                                  Instruction *CxtI = nullptr);
+                                                  Instruction *CtxI = nullptr);
 
     /// Inform the analysis cache that we have threaded an edge from
     /// PredBB to OldSucc to be from PredBB to NewSucc instead.

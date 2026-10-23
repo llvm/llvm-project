@@ -48,7 +48,7 @@ using namespace llvm::opt;
 
 class CvtResOptTable : public opt::OptTable {
 public:
-  CvtResOptTable() : opt::OptTable(OptionTables, true) {}
+  CvtResOptTable() : opt::OptTable(optionTables(), true) {}
 };
 }
 

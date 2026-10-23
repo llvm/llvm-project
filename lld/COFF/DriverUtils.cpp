@@ -751,7 +751,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 #define OPTTABLE_CODE
 #include "Options.inc"
 
-COFFOptTable::COFFOptTable() : OptTable(OptionTables, true) {}
+COFFOptTable::COFFOptTable() : OptTable(optionTables(), true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

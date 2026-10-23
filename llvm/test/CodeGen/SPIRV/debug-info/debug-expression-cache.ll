@@ -1,15 +1,11 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=COUNT --implicit-check-not=DebugOperation --implicit-check-not=DebugExpression
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL %}
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; A #dbg_declare and a DIGlobalVariableExpression share DW_OP_constu 42,
 ; DW_OP_stack_value. There is no llvm::GlobalVariable: a backing @g would
 ; make DebugGlobalVariable use that OpVariable and skip the expression.
 ; We check that both reuse one DebugExpression.
-;
-; spirv-val rejects a DebugExpression as the DebugGlobalVariable Variable
-; operand (KhronosGroup/SPIRV-Tools#6469). The VAL line expects that failure;
-; when the fix lands, restore a plain spirv-val invocation.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
@@ -33,10 +29,6 @@
 ; COUNT: OpExtInst {{.*}} DebugOperation
 ; COUNT: OpExtInst {{.*}} DebugOperation
 ; COUNT: OpExtInst {{.*}} DebugExpression
-
-; The operand list the validator will accept has varied across releases, so
-; match only up to it.
-; VAL: DebugGlobalVariable: expected operand Variable must be a result id of
 
 target triple = "spirv64-unknown-unknown"
 

@@ -32,12 +32,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-suppress-apx-for-relocation"
 
-cl::opt<bool> X86EnableAPXForRelocation(
-    "x86-enable-apx-for-relocation",
-    cl::desc("Enable APX features (EGPR, NDD and NF) for instructions with "
-             "relocations on x86-64 ELF"),
-    cl::init(false));
-
 namespace {
 class X86SuppressAPXForRelocationLegacy : public MachineFunctionPass {
 public:
@@ -250,9 +244,9 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
 }
 
 static bool suppressAPXForRelocation(MachineFunction &MF) {
-  if (X86EnableAPXForRelocation)
-    return false;
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().enable_apx_for_relocation)
+    return false;
   bool Changed = handleInstructionWithEGPR(MF, ST);
   Changed |= handleNDDOrNFInstructions(MF, ST);
 

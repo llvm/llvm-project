@@ -43,7 +43,7 @@ using namespace llvm::opt;
 
 class DebuginfodFindOptTable : public opt::OptTable {
 public:
-  DebuginfodFindOptTable() : OptTable(OptionTables) {}
+  DebuginfodFindOptTable() : OptTable(optionTables()) {}
 };
 
 } // end anonymous namespace
