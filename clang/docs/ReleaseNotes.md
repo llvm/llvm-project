@@ -458,6 +458,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
@@ -801,6 +805,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -832,6 +837,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when constant-evaluating `__builtin_object_size`
   or `__builtin_dynamic_object_size` with a type argument that is not an
   integer constant expression. (#GH231108)
+- Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
+  applied to a field of a record marked `preserve_static_offset`.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
@@ -872,6 +879,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `extern` variable with an initializer. Static data members declared with
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
+
+- Fixed an assertion failure when generating code for an x86 function with the
+  `interrupt` attribute whose first parameter uses a typedef for a pointer
+  type. (#GH204756)
 
 #### Bug Fixes to C++ Support
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
@@ -1112,6 +1123,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
+
+- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain. Macro definitions using `#` as the value separator and
+  `/permissive` options are also translated consistently for host and device
+  compilation.
 
 #### Miscellaneous Clang Crashes Fixed
 

@@ -2817,8 +2817,9 @@ int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   return RISCVLoadFPImm::getLoadFPImm(Imm);
 }
 
-bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   bool IsLegalVT = false;
   if (VT == MVT::f16)
     IsLegalVT = Subtarget.hasStdExtZfhminOrZhinxmin();
@@ -2830,25 +2831,25 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     IsLegalVT = Subtarget.hasStdExtZfbfmin();
 
   if (!IsLegalVT)
-    return false;
+    return FPImmAction::ConstantPool;
 
   if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Some constants can be produced by fli+fneg.
   if (Imm.isNegative() && getLegalZfaFPImm(-Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
     // td can handle +0.0 or -0.0 already.
     // -0.0 can be created by fmv + fneg.
-    return Imm.isZero();
+    return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
 
   // Special case: fmv + fneg
   if (Imm.isNegZero())
-    return true;
+    return FPImmAction::Legal;
 
   // Building an integer and then converting requires a fmv at the end of
   // the integer sequence. The fmv is not required for Zfinx.
@@ -2856,7 +2857,9 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   const int Cost =
       FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
                                            Subtarget.getXLen(), Subtarget);
-  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost;
+  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
 }
 
 // TODO: This is very conservative.
@@ -19500,6 +19503,39 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Expose the two scalar accumulates instead of a dot-product pair and PADD.DW.
+static SDValue combineAddPackedByteDot(SDNode *N, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP() || Subtarget.is64Bit() ||
+      N->getValueType(0) != MVT::v2i32)
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Lo, Hi;
+    if (!sd_match(N->getOperand(I), m_OneUse(m_Node(ISD::BUILD_VECTOR,
+                                                    m_Value(Lo), m_Value(Hi)))))
+      continue;
+    unsigned Opc = Lo.getOpcode();
+    if (Opc != Hi.getOpcode() ||
+        (Opc != RISCVISD::PM4ADD && Opc != RISCVISD::PM4ADDU &&
+         Opc != RISCVISD::PM4ADDSU))
+      continue;
+    // Splitting is profitable if at least one dot can fold into its add.
+    if (!Lo.hasOneUse() && !Hi.hasOneUse())
+      continue;
+
+    SDLoc DL(N);
+    SDValue Acc = N->getOperand(1 - I);
+    SDValue AccLo = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 0);
+    SDValue AccHi = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 1);
+    SDValue SumLo = DAG.getNode(ISD::ADD, DL, MVT::i32, AccLo, Lo);
+    SDValue SumHi = DAG.getNode(ISD::ADD, DL, MVT::i32, AccHi, Hi);
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, SumLo, SumHi);
+  }
+  return SDValue();
+}
+
 static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
   // Recognize the RV64 decompositions listed for the 32-bit packed widening
@@ -19721,6 +19757,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineAddPackedByteDot(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
@@ -25460,6 +25498,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op2);
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
+    break;
+  }
+  case RISCVISD::USATI: {
+    // USATI with null immediate folds to 0.
+    if (isNullConstant(N->getOperand(1)))
+      return DAG.getConstant(0, DL, N->getValueType(0));
     break;
   }
   case RISCVISD::FMV_W_X_RV64: {

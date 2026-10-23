@@ -648,7 +648,9 @@ class DAPConnection:
         self._is_ready.set()
         error = None
         try:
-            while self.is_alive():
+            # Read until EOF, so messages the adapter sent right before closing
+            # the connection are not lost.
+            while True:
                 message = DAPConnection.read_message(self._transport)
                 if not message:
                     break

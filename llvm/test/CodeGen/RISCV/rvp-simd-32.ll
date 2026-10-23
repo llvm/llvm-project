@@ -4075,9 +4075,9 @@ define <2 x i16> @test_psati_i16x2_max_width(<2 x i16> %a) {
 define <2 x i16> @test_pusati_u16x2(<2 x i16> %a) {
 ; CHECK-LABEL: test_pusati_u16x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pusati.h a0, a0, 0
+; CHECK-NEXT:    pusati.h a0, a0, 1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 0)
+  %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 1)
   ret <2 x i16> %res
 }
 
