@@ -134,11 +134,16 @@ Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
   while (const auto *Agg = dyn_cast_if_present<MutableAggregate *>(V->Val)) {
     Type *AggTy = Agg->Ty;
     std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
-    if (!Index || Index->uge(Agg->Elements.size()) ||
-        !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
+    if (!Index || Index->uge(Agg->Elements.size()) || Offset.isNegative())
       return nullptr;
 
     V = &Agg->Elements[Index->getZExtValue()];
+    TypeSize MemberSize = DL.getTypeStoreSize(V->getType());
+    if (MemberSize.isScalable() || Offset.uge(MemberSize.getFixedValue()) ||
+        !TypeSize::isKnownLE(TySize,
+                             TypeSize::getFixed(MemberSize.getFixedValue() -
+                                                Offset.getZExtValue())))
+      return nullptr;
   }
 
   return ConstantFoldLoadFromConst(cast<Constant *>(V->Val), Ty, Offset, DL);
