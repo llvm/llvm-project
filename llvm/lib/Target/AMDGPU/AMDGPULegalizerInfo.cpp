@@ -2338,7 +2338,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
     .unsupported();
 
-  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
+  getActionDefinitionsBuilder(G_PREFETCH)
+      .customFor({Constant32Ptr})
+      .alwaysLegal();
 
   getActionDefinitionsBuilder(
       {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
@@ -2403,6 +2405,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_PREFETCH:
     return legalizeLoad(Helper, MI);
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI);
@@ -3516,7 +3519,8 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   MachineRegisterInfo &MRI = *B.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
 
-  Register PtrReg = MI.getOperand(1).getReg();
+  unsigned PtrIdx = MI.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
+  Register PtrReg = MI.getOperand(PtrIdx).getReg();
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AddrSpace = PtrTy.getAddressSpace();
 
@@ -3524,7 +3528,7 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
     auto Cast = B.buildAddrSpaceCast(ConstPtr, PtrReg);
     Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(Cast.getReg(0));
+    MI.getOperand(PtrIdx).setReg(Cast.getReg(0));
     Observer.changedInstr(MI);
     return true;
   }

@@ -2923,9 +2923,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::Builder &builder = parser.getBuilder();
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
-  mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
-  mlir::StringAttr flattenedCoroutineNameAttr =
-      getFlattenedCoroutineAttrName(state.name);
+  mlir::StringAttr coroutineKindNameAttr = getCoroutineKindAttrName(state.name);
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
@@ -2939,14 +2937,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
-  if (::mlir::succeeded(
-          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
-    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (::mlir::succeeded(
-          parser.parseOptionalKeyword(flattenedCoroutineNameAttr.strref())))
-    state.addAttribute(flattenedCoroutineNameAttr,
-                       parser.getBuilder().getUnitAttr());
+  // Parse optional coroutine kind attribute
+  {
+    static constexpr llvm::StringRef keywords[] = {"coroutine",
+                                                   "flattened_coroutine"};
+    llvm::StringRef keyword;
+    if (parser.parseOptionalKeyword(&keyword, keywords).succeeded())
+      state.addAttribute(
+          coroutineKindNameAttr,
+          cir::CoroutineKindAttr::get(builder.getContext(),
+                                      *cir::symbolizeCoroutineKind(keyword)));
+  }
+
   // Parse optional inline kind attribute
   cir::InlineKindAttr inlineKindAttr;
   if (failed(parseInlineKindAttr(parser, inlineKindAttr)))
@@ -3289,11 +3292,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getBuiltin())
     p << " builtin";
 
-  if (getCoroutine())
-    p << " coroutine";
-
-  if (getFlattenedCoroutine())
-    p << " flattened_coroutine";
+  if (std::optional<cir::CoroutineKind> coroKind = getCoroutineKind())
+    p << ' ' << cir::stringifyCoroutineKind(*coroKind);
 
   printInlineKindAttr(p, getInlineKindAttr());
 
@@ -3392,7 +3392,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 mlir::LogicalResult cir::FuncOp::verify() {
 
-  if (!isDeclaration() && getCoroutine()) {
+  if (!isDeclaration() && getCoroutineKind() == cir::CoroutineKind::Coroutine) {
     int coroutineOpCount = 0;
     this->walk([&](Operation *op) {
       if (isa<CoroutineOp>(op)) {

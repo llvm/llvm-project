@@ -8303,8 +8303,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
         LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, LHS);
       Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, LHS, TV, FV);
-      if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-        Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
       return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                          DAG.getNode(ISD::FNEG, dl, MVT::f64, LHS), Sel1, FV);
     case ISD::SETULT:
@@ -8339,8 +8337,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
       Cmp = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Cmp);
     Sel1 = DAG.getNode(PPCISD::FSEL, dl, ResVT, Cmp, TV, FV);
-    if (Sel1.getValueType() == MVT::f32)   // Comparison is always 64-bits
-      Sel1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Sel1);
     return DAG.getNode(PPCISD::FSEL, dl, ResVT,
                        DAG.getNode(ISD::FNEG, dl, MVT::f64, Cmp), Sel1, FV);
   case ISD::SETULT:
