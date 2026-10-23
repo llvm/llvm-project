@@ -126,15 +126,16 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI) {
 /// Fold `icmp pred (readfirstlane X), X` when X is uniform at that use.
 static bool optimizeUniformCmpReadFirstLane(ICmpInst &Cmp, UniformityInfo &UI) {
   Value *X;
-  Instruction *RFL;
+  IntrinsicInst *RFL;
   if (!match(&Cmp,
-             m_c_ICmp(m_Instruction(
-                          RFL, m_Intrinsic<Intrinsic::amdgcn_readfirstlane>(
-                                   m_Value(X))),
+             m_c_ICmp(m_CombineAnd(
+                          m_Intrinsic<Intrinsic::amdgcn_readfirstlane>(
+                              m_Value(X)),
+                          m_AnyIntrinsic(RFL)),
                       m_Deferred(X))))
     return false;
 
-  if (UI.isDivergentAtUse(RFL->getOperandUse(0)))
+  if (UI.isDivergentAtUse(RFL->getArgOperandUse(0)))
     return false;
 
   // If readfirstlane's operand is uniform then we know we are comparing two
