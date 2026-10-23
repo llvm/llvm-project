@@ -109,10 +109,10 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
     Lo = &Hi;
   } else {
     Register HiDestReg = Hi.getOperand(0).getReg();
-    if (!MRI->hasOneUse(HiDestReg))
+    if (!MRI->hasOneNonDBGUse(HiDestReg))
       return false;
 
-    Lo = &*MRI->use_instr_begin(HiDestReg);
+    Lo = &*MRI->use_instr_nodbg_begin(HiDestReg);
     if (Lo->getOpcode() != RISCV::ADDI)
       return false;
   }
@@ -176,6 +176,11 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
         DIExpression::appendOpsToArg(DbgMI.getDebugExpression(), UndoOffset,
                                      DbgMI.getDebugOperandIndex(&MO)));
   }
+
+  // The value produced by Hi also changes. Unlike Lo, its partial address
+  // cannot be recovered by subtracting the folded offset.
+  if (&Hi != &Lo)
+    MRI->markUsesInDebugValueAsUndef(Hi.getOperand(0).getReg());
 
   // Put the offset back in Hi and the Lo
   Hi.getOperand(1).setOffset(Offset);
@@ -589,6 +594,10 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // Folding changes the value represented by DestReg, so its debug users can
   // no longer describe the same address.
   MRI->markUsesInDebugValueAsUndef(DestReg);
+
+  // Hi's partial address changes too and cannot be recovered.
+  if (&Hi != &Lo)
+    MRI->markUsesInDebugValueAsUndef(Hi.getOperand(0).getReg());
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp =
