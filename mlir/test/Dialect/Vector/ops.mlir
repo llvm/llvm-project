@@ -341,9 +341,9 @@ func.func @extract_strided_slice_scalable(%arg0: vector<4x[8]x16xf32>) -> vector
   iterator_types = ["reduction"]
 }
 // CHECK-LABEL: @contraction_to_0d_vector
-func.func @contraction_to_0d_vector(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %arg2: vector<f32>) -> vector<f32> {
+func.func @contraction_to_0d_vector(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: vector<f32>) -> vector<f32> {
   // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<add>} %{{.*}}, %{{.*}}, %{{.*}} : vector<10xf32>, vector<10xf32> into vector<f32>
-  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %arg2
+  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %acc
     : vector<10xf32>, vector<10xf32> into vector<f32>
   // CHECK:      return %[[X]] : vector<f32>
   return %0 : vector<f32>

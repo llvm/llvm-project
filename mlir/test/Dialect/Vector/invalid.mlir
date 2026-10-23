@@ -961,9 +961,9 @@ func.func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>
 
 // -----
 
-func.func @contraction_scalar_acc_0d_result(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %arg2: f32) {
-  // expected-error@+1 {{expected accumulator and result to have the same type}}
-  %0 = "vector.contract"(%arg0, %arg1, %arg2) <{
+func.func @contraction_scalar_acc_0d_result(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: f32) {
+  // expected-error@+1 {{expected same accumulator and result type}}
+  %0 = "vector.contract"(%arg0, %arg1, %acc) <{
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
     iterator_types = [#vector.iterator_type<reduction>],
     kind = #vector.kind<add>}> : (vector<10xf32>, vector<10xf32>, f32) -> vector<f32>
