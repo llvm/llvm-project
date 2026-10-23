@@ -167,18 +167,18 @@ void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
 
 // Print the fields of a class or record, including their source locations.
 void DetailedRecordsEmitter::printFields(const Record &Rec, raw_ostream &OS) {
-  const auto &ValueList = Rec.getValues();
+  SmallVector<const RecordVal *, 0> ValueList = Rec.getAllValues();
   if (ValueList.empty()) {
     OS << "  Fields: (none)\n";
     return;
   }
 
   OS << "  Fields:\n";
-  for (const RecordVal &Value : ValueList) {
+  for (const RecordVal *Value : ValueList) {
     OS << "    ";
-    Value.print(OS, false);
+    Value->print(OS, false);
     OS << formatv("  |{0}|\n",
-                  SrcMgr.getFormattedLocationNoOffset(Value.getLoc()));
+                  SrcMgr.getFormattedLocationNoOffset(Value->getLoc()));
   }
 }
 
