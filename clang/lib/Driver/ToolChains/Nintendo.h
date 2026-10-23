@@ -21,7 +21,8 @@ namespace nintendo {
 
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Assembler(const ToolChain &TC) : Tool("nintendo::Assembler", "assembler", TC) {}
+  Assembler(const ToolChain &TC)
+      : Tool("nintendo::Assembler", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 

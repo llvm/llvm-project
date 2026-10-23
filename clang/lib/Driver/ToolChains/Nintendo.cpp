@@ -119,12 +119,11 @@ void tools::nintendo::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
-static bool validateToolChainRoot(const Driver& D, StringRef ToolChainRoot) {
+static bool validateToolChainRoot(const Driver &D, StringRef ToolChainRoot) {
   SmallString<128> ToolChainRootInclude = ToolChainRoot;
   llvm::sys::path::append(ToolChainRootInclude, "include");
 
@@ -158,8 +157,7 @@ static std::string getToolChainRoot(const Driver &D,
 
 toolchains::NintendoOS::NintendoOS(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args)
-    : Generic_ELF(D, Triple, Args),
-      ToolChainRoot(getToolChainRoot(D, Triple)) {
+    : Generic_ELF(D, Triple, Args), ToolChainRoot(getToolChainRoot(D, Triple)) {
 
   path_list &ProgramPaths = getProgramPaths();
 
@@ -226,8 +224,7 @@ toolchains::NintendoOS::GetCXXStdlibType(const ArgList &Args) const {
     if (Value == "platform")
       return ToolChain::CST_Libcxx;
 
-    getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-        << A->getAsString(Args);
+    getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
   }
 
   return ToolChain::CST_Libcxx;
@@ -265,8 +262,8 @@ void toolchains::NintendoOS::AddClangCXXStdlibIncludeArgs(
     SmallString<128> IncPath(ToolChainRoot);
     SmallString<128> TargetIncPath(ToolChainRoot);
     llvm::sys::path::append(IncPath, "include", "c++", "v1");
-    llvm::sys::path::append(TargetIncPath, "include", getTriple().str(),
-                            "c++", "v1");
+    llvm::sys::path::append(TargetIncPath, "include", getTriple().str(), "c++",
+                            "v1");
     addSystemInclude(DriverArgs, CC1Args, TargetIncPath);
     addSystemInclude(DriverArgs, CC1Args, IncPath);
   }
