@@ -2982,6 +2982,34 @@ collectIRMemberToRecipe(VPlan &Plan) {
   return IRMemberToRecipe;
 }
 
+/// Return true if interleaved group \p IG needs a mask to handle the gaps.
+static bool needsMaskForGaps(const InterleaveGroup<Instruction> *IG,
+                             bool IsStore, bool EpilogueAllowed) {
+  return (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
+         (IsStore && !IG->isFull());
+}
+
+/// Return the recipe for the member of interleaved group \p IG at its insertion
+/// point. If the recipe of InsertPos is dead, return the alive member recipe
+/// that is earliest in program order (i.e. dominates all other alive members).
+static VPWidenMemoryRecipe *getInsertPosRecipe(
+    const InterleaveGroup<Instruction> *IG,
+    const DenseMap<Instruction *, VPWidenMemoryRecipe *> &IRMemberToRecipe,
+    VPWidenMemoryRecipe *StartMemR, const VPDominatorTree &VPDT) {
+  VPWidenMemoryRecipe *InsertPosMemR =
+      IRMemberToRecipe.lookup(IG->getInsertPos());
+  if (InsertPosMemR)
+    return InsertPosMemR;
+
+  InsertPosMemR = StartMemR;
+  for (Instruction *Member : IG->members())
+    if (VPWidenMemoryRecipe *MemberR = IRMemberToRecipe.lookup(Member))
+      if (VPDT.properlyDominates(MemberR->getAsRecipe(),
+                                 InsertPosMemR->getAsRecipe()))
+        InsertPosMemR = MemberR;
+  return InsertPosMemR;
+}
+
 void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
@@ -3024,23 +3052,14 @@ void VPlanTransforms::createInterleaveGroups(
     }
 
     bool NeedsMaskForGaps =
-        (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
-        (!StoredValues.empty() && !IG->isFull());
+        needsMaskForGaps(IG, !StoredValues.empty(), EpilogueAllowed);
 
-    Instruction *IRInsertPos = IG->getInsertPos();
-    auto *InsertPos = IRMemberToRecipe.lookup(IRInsertPos);
-    if (!InsertPos) {
-      // InsertPos member is dead: find a new member that is alive.
-      assert(isa<VPWidenLoadRecipe>(Start->getAsRecipe()) &&
-             "Dead member in non-load group?");
-      InsertPos = Start;
-      for (Instruction *Member : IG->members())
-        if (VPWidenMemoryRecipe *MemberR = IRMemberToRecipe.lookup(Member))
-          if (VPDT.properlyDominates(MemberR->getAsRecipe(),
-                                     InsertPos->getAsRecipe()))
-            InsertPos = MemberR;
-      IRInsertPos = &InsertPos->getIngredient();
-    }
+    assert((IRMemberToRecipe.contains(IG->getInsertPos()) ||
+           isa<VPWidenLoadRecipe>(Start->getAsRecipe())) &&
+          "Dead member in non-load group?");
+    VPWidenMemoryRecipe *InsertPos =
+        getInsertPosRecipe(IG, IRMemberToRecipe, Start, VPDT);
+    Instruction *IRInsertPos = &InsertPos->getIngredient();
     VPRecipeBase *InsertPosR = InsertPos->getAsRecipe();
 
     GEPNoWrapFlags NW = GEPNoWrapFlags::none();
@@ -6353,7 +6372,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 void VPlanTransforms::convertToStridedAccesses(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
     VFRange &Range,
-    SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups) {
+    SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups,
+    bool EpilogueAllowed) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -6408,6 +6428,7 @@ void VPlanTransforms::convertToStridedAccesses(
           cast<VPWidenLoadRecipe>(R)->replaceAllUsesWith(StridedR);
         R->eraseFromParent();
       };
+  VPDominatorTree VPDT(Plan);
   // Transform interleave access into multiple strided accesses.
   InterleaveGroups.remove_if([&](const auto *IG) {
     auto It =
@@ -6419,24 +6440,33 @@ void VPlanTransforms::convertToStridedAccesses(
       return false;
 
     VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
-    VPRecipeBase *StartR = StartMemR->getAsRecipe();
-    Type *DataTy;
-    Intrinsic::ID IntrinID;
-    std::tie(DataTy, IntrinID) = GetDataTyAndIntrinID(StartR);
     unsigned NumOfMembers =
         llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
           return IRMemberToRecipe.contains(Member);
         });
-    Align Alignment = StartMemR->getAlign();
+    VPWidenMemoryRecipe *InsertPosMemR =
+        getInsertPosRecipe(IG, IRMemberToRecipe, StartMemR, VPDT);
+    Type *DataTy;
+    Intrinsic::ID IntrinID;
+    std::tie(DataTy, IntrinID) =
+        GetDataTyAndIntrinID(InsertPosMemR->getAsRecipe());
+    auto *AddrType =
+        cast<PointerType>(InsertPosMemR->getAddr()->getScalarType());
+    bool NeedsMaskForGaps = needsMaskForGaps(
+        IG, IntrinID == Intrinsic::experimental_vp_strided_store,
+        EpilogueAllowed);
+    Align Alignment = InsertPosMemR->getAlign();
     auto IsProfitable = [&](ElementCount VF) {
       Type *VectorTy = toVectorTy(DataTy, VF);
       if (!Ctx.TTI.isLegalStridedLoadStore(VectorTy, Alignment))
         return false;
       const InstructionCost InterleavedCost =
-          Ctx.getLegacyCost(IG->getInsertPos(), VF);
+          VPInterleaveBase::computeInterleaveGroupCost(
+              IG, DataTy, VF, AddrType->getAddressSpace(),
+              InsertPosMemR->getMask(), NeedsMaskForGaps, Ctx);
       const InstructionCost StridedLoadStoreCost =
           VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
-              IntrinID, VectorTy, StartMemR->isMasked(), Alignment, Ctx);
+              IntrinID, VectorTy, InsertPosMemR->isMasked(), Alignment, Ctx);
       return StridedLoadStoreCost * NumOfMembers < InterleavedCost;
     };
 
@@ -6446,8 +6476,7 @@ void VPlanTransforms::convertToStridedAccesses(
 
     // ???: Do we still need to invalidate the legacy widening decision?
     // Get stride from the factor of group.
-    VPValue *Addr = StartMemR->getAddr();
-    Type *IndexTy = DL.getIndexType(Addr->getScalarType());
+    Type *IndexTy = DL.getIndexType(AddrType);
     APInt StrideSize(IndexTy->getIntegerBitWidth(),
                      IG->getFactor() *
                          DL.getTypeAllocSize(DataTy).getFixedValue(),
