@@ -12,7 +12,7 @@
 
 // void swap(deque& c)
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
-//              __is_nothrow_swappable<allocator_type>::value);
+//              __is_nothrow_swappable<allocator_type>::value);        // constexpr since C++26
 //
 //  In C++17, the standard says that swap shall have:
 //     noexcept(allocator_traits<Allocator>::is_always_equal::value);

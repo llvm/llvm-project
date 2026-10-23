@@ -9,7 +9,7 @@
 // UNSUPPORTED: no-exceptions
 // <deque>
 
-// void push_back(const value_type& x);
+// void push_back(const value_type& x); // constexpr since C++26
 
 #include <deque>
 #include "test_macros.h"
