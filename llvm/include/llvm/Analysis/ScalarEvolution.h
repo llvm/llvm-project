@@ -2327,6 +2327,14 @@ private:
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
 
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
+
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.
   bool isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,

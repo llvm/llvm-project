@@ -1376,6 +1376,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigdelset
     libc.src.signal.sigemptyset
     libc.src.signal.sigfillset
+    libc.src.signal.sigismember
     libc.src.signal.signal
     libc.src.signal.sigprocmask
 
@@ -1448,6 +1449,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timespec_get
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_getoverrun
     libc.src.time.timer_gettime
     libc.src.time.timer_settime
 
@@ -1551,6 +1553,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
+      libc.src.unistd.setresgid
+      libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
 

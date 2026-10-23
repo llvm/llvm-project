@@ -873,6 +873,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
 
+- Fixed rejecting valid reference initialization with conversion function templates whose returned type is depending on 
+  template parameters. (#GH226984)
+
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
@@ -1112,6 +1115,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Fixed missing destructor cleanups and incorrect initialization for lambda
+  init-captures in default member initializers used during aggregate
+  initialization. (#GH196469)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1125,6 +1132,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
+
+- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain. Macro definitions using `#` as the value separator and
+  `/permissive` options are also translated consistently for host and device
+  compilation.
 
 #### Miscellaneous Clang Crashes Fixed
 
@@ -1191,6 +1204,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### BPF Support
+
+- Added `-mcpu=v5` and the `__BPF_FEATURE_HMUL` predefined macro for unsigned
+  and signed high-half multiply instructions.
 
 #### DirectX Support
 
