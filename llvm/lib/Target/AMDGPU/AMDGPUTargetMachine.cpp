@@ -1283,7 +1283,7 @@ bool AMDGPUTargetMachine::splitModule(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB(this);
+  PassBuilder PB(M.getContext(), this);
   PB.registerModuleAnalyses(MAM);
   PB.registerFunctionAnalyses(FAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
@@ -1374,7 +1374,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   }
   if (SramEcc != TargetIDSetting::Any) {
     SubtargetKey.append(",sramecc=");
-    SubtargetKey.push_back(Xnack == TargetIDSetting::On ? '1' : '0');
+    SubtargetKey.push_back(SramEcc == TargetIDSetting::On ? '1' : '0');
   }
 
   auto &I = SubtargetMap[SubtargetKey];

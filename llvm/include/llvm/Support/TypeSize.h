@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -321,6 +322,10 @@ public:
     return (isScalable() && getKnownMinValue() != 0) || getKnownMinValue() > 1;
   }
 };
+
+inline hash_code hash_value(const ElementCount &EC) {
+  return hash_combine(EC.getKnownMinValue(), EC.isScalable());
+}
 
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known

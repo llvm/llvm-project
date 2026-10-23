@@ -11,7 +11,6 @@ class GlobalVariablesCppTestCase(TestBase):
         TestBase.setUp(self)
         self.source = lldb.SBFileSpec("main.cpp")
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

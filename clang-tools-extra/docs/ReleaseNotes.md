@@ -139,6 +139,10 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
@@ -179,6 +183,11 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Improved {doc}`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments inside GNU statement expressions unless they form the value of
+  the statement expression.
 
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
@@ -325,6 +334,10 @@ infrastructure are described first, followed by tool-specific sections.
   warning when returning a variable captured by a lambda or a block, which is
   never implicitly moved from.
 
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
@@ -393,6 +406,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives and incorrect fixes caused by synthetic parentheses
     in reference non-type template parameter uses, `__builtin_dump_struct` calls,
     and OpenMP `linear` clauses.
+
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid

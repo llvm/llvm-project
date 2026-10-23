@@ -23,8 +23,8 @@
 #include "lldb/Utility/Status.h"
 
 #include "NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
 #include <optional>
 
 using namespace lldb_private;
