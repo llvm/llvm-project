@@ -1,0 +1,64 @@
+// RUN: not cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_return = {
+  return = { kind = "indirect_aliased", indirect_align = 8 },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @ret_big() -> !rec_Big
+      attributes { test_classify = #byref_return }
+
+  // CHECK: error: 'cir.func' op IndirectAliased return is not allowed
+  // CHECK-SAME: (classic codegen rejects it in EmitFunctionEpilog)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_as4 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8,
+               indirect_addr_space = 4 } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  cir.func private @takes_big_as4(%arg0: !rec_Big)
+      attributes { test_classify = #byref_as4 }
+
+  // A slot for the copy would be an alloca, which cannot live in address
+  // space 4.
+  cir.func @caller_as4_no_storage(%novalue: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    cir.call @takes_big_as4(%novalue) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument outside the alloca address
+  // CHECK-SAME: space that does not name forwardable storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_as4(%novalue)
+
+}
