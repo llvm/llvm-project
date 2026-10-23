@@ -5843,8 +5843,7 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
 bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
-  llvm_unreachable("Not implemented");
-  return true;
+  return tokError("!MDFunctionLocalContext parsing not yet implemented");
 }
 
 /// parseDILocationFields:
