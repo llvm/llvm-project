@@ -457,7 +457,7 @@ def AArch64PostLegalizerCombiner
                         select_combines, select_zero_true, select_zero_false, select_not,
                         fold_merge_to_zext, merge_combines,
                         constant_fold_binops, constant_fold_cast_op, identity_combines,
-                        ptr_add_immed_chain, overlapping_and,
+                        ptr_add_immed_chain, shift_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, trunc_or_to_addhn,
                         combine_concat_vector,
