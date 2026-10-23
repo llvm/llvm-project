@@ -17,6 +17,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -36,6 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -591,6 +593,20 @@ private:
   bool appendAsBoundedCallToArg(const PointerFlowPair &Pair,
                                 tooling::AtomicChange &AC) const;
 
+  /// If \c E has the form `new T[n]` and it needs to have a bounded type, edit
+  /// it to `bounded_ptr<T>::_new(n)`
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool replaceNewExprWithBounded(const Expr *E,
+                                 tooling::AtomicChange &AC) const;
+
+  /// If \c E is a call expression of the form `malloc(n)` and it needs to have
+  /// a bounded type, edit it to `_malloc(n)`
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool replaceMallocCallWithBounded(const Expr *E,
+                                    tooling::AtomicChange &AC) const;
+
   /// Provided \c E is transformed, if it has the form '&e[i]' or '&*e',
   /// edit it to '(e + i)' or 'e', resp.
   /// \return true iff E needs edit and \c addEditToAtomicChange is called on
@@ -781,6 +797,11 @@ ExpressionRewriter::adaptPointerFlow(const PointerFlowPair &Pair) const {
 
   if (IsRHSTransformed)
     rewriteExpression(Pair.RHS, AC);
+  else if (IsLHSTransformed) {
+    // Handle RHSes that are non-entity based and need to have bounded types:
+    IsRHSTransformed = replaceNewExprWithBounded(Pair.RHS, AC) ||
+                       replaceMallocCallWithBounded(Pair.RHS, AC);
+  }
   if (!IsLHSTransformed && IsRHSTransformed)
     appendDataCallToArg(Pair, AC);
   if (IsLHSTransformed && IsRHSTransformed)
@@ -955,6 +976,78 @@ bool ExpressionRewriter::rewritePointerCast(const Expr *E,
   return true;
 }
 
+bool ExpressionRewriter::replaceNewExprWithBounded(
+    const Expr *E, tooling::AtomicChange &AC) const {
+  const auto *NE = dyn_cast<CXXNewExpr>(E->IgnoreParenImpCasts());
+
+  if (!NE || !NE->isArray() || NE->hasInitializer() ||
+      NE->getNumPlacementArgs() != 0)
+    return false;
+
+  std::optional<const Expr *> ArraySize = NE->getArraySize();
+
+  if (!ArraySize)
+    return false;
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LO = Ctx.getLangOpts();
+  CharSourceRange SizeCR =
+      Lexer::getAsCharRange((*ArraySize)->getSourceRange(), SM, LO);
+  CharSourceRange FullNewExprCR =
+      Lexer::getAsCharRange(NE->getSourceRange(), SM, LO);
+  CharSourceRange PreSizeCR = CharSourceRange::getCharRange(
+      FullNewExprCR.getBegin(), SizeCR.getBegin());
+  CharSourceRange PostSizeCR =
+      CharSourceRange::getCharRange(SizeCR.getEnd(), FullNewExprCR.getEnd());
+  std::string T = spell(NE->getAllocatedType(), Ctx);
+
+  // For `new T[n]`,
+  // 1. replace contents in PreSizeCR with "bounded_ptr<T>::_new(", and
+  // 2. replace contents in PostSizeCR with ")",
+  // results in 'bounded_ptr<T>::_new(n)'.
+  addEditToAtomicChange(PreSizeCR, "bounded_ptr<" + T + ">::_new(",
+                        EditKind::Replace, AC);
+  addEditToAtomicChange(PostSizeCR, ")", EditKind::Replace, AC);
+  return true;
+}
+
+bool ExpressionRewriter::replaceMallocCallWithBounded(
+    const Expr *E, tooling::AtomicChange &AC) const {
+  // strip cast:
+  if (const auto *CastE = dyn_cast<CastExpr>(E->IgnoreParenImpCasts()))
+    E = CastE->getSubExpr();
+
+  const auto *CallE = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+
+  if (!CallE)
+    return false;
+
+  const auto *CalleeDRE =
+      dyn_cast<DeclRefExpr>(CallE->getCallee()->IgnoreParenImpCasts());
+
+  if (!CalleeDRE)
+    return false;
+
+  const FunctionDecl *Callee = dyn_cast<FunctionDecl>(CalleeDRE->getDecl());
+
+  if (!Callee || !Callee->getIdentifier() ||
+      Callee->getBuiltinID() != Builtin::BImalloc)
+    return false;
+
+  bool HasQualifier = CalleeDRE->hasQualifier();
+  // If there are name qualifiers, the insertion is at the end loc of callee
+  // DRE's qualifier range. E.g., for `std::malloc`, we need to insert at the
+  // end of the `std::` qualifier.
+  SourceRange SR = HasQualifier
+                       ? CalleeDRE->getQualifierLoc().getLocalSourceRange()
+                       : CalleeDRE->getSourceRange();
+  EditKind EK = HasQualifier ? EditKind::InsertAtEnd : EditKind::InsertAtBegin;
+  CharSourceRange CR =
+      Lexer::getAsCharRange(SR, Ctx.getSourceManager(), Ctx.getLangOpts());
+
+  return addEditToAtomicChange(CR, "_", EK, AC);
+}
+
 void ExpressionRewriter::rewriteExprInTU(const TranslationUnitDecl *TU) {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       ContributorGroups;
@@ -1027,19 +1120,26 @@ bool ExpressionRewriter::addEditToAtomicChange(
     tooling::AtomicChange &AC) const {
   assert(Range.isCharRange());
 
-  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+  const SourceManager &SM = Ctx.getSourceManager();
+  CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, Ctx.getLangOpts());
+
+  // An invalid FileRange means part of Range resides inside a macro
+  // expansion (or spans two different files) that couldn't be safely
+  // resolved to a real file location.
+  if (!FileRange.isValid())
     // FIXME: report...
     return false;
 
-  const SourceManager &SM = Ctx.getSourceManager();
   llvm::Error Err = [&]() -> llvm::Error {
     switch (EditKind) {
     case Replace:
-      return AC.replace(SM, Range, NewText);
+      return AC.replace(SM, FileRange, NewText);
     case InsertAtBegin:
-      return AC.insert(SM, Range.getBegin(), NewText, /*InsertAfter=*/false);
+      return AC.insert(SM, FileRange.getBegin(), NewText,
+                        /*InsertAfter=*/false);
     case InsertAtEnd:
-      return AC.insert(SM, Range.getEnd(), NewText, /*InsertAfter=*/true);
+      return AC.insert(SM, FileRange.getEnd(), NewText, /*InsertAfter=*/true);
     }
     llvm_unreachable("unhandled EditKind");
   }();
