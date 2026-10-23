@@ -426,7 +426,9 @@ eligible leaf functions with up to 28 legalized 32-bit argument slots,
 returning through the same register window. Calls are direct and non-nested;
 the kernel and one leaf have separate bounded 4 KiB scratch regions. This
 path is only verified by offline simulator fixtures and is not a general
-device calling convention or a benchmark option. A module without
+device calling convention or a benchmark option. The option removes dead
+device functions after inlining, before per-function machine-code generation.
+A module without
 ``agx_kernel`` functions
 compiles each external function as an entry point with the kernel ABI.
 
@@ -699,12 +701,12 @@ precision`_; diagnosed as unsupported), textures and graphics shaders, calls
 to functions that are not defined in the module, recursion through variadic
 functions or ``musttail`` calls, and dynamic ``alloca`` in recursive functions.
 
-The backend does not use the hardware call and return instructions: all
-functions are inlined into the kernels. (G14C does have direct and
-register-indirect calls with buffer-relative return targets, but only
-calls by a whole, fully active SIMD-group have been measured so far; the
-divergent cases that code generation would need are still open, see the
-AGX Performance Simulator's ``tasks/unsafe-01-call-ret.md``.) An
+The default backend does not use hardware call and return instructions: all
+functions are inlined into the kernels. The opt-in direct leaf-call path is
+described in `Kernel ABI`_; its emitted code has offline simulator coverage
+but has not been validated as a compiler-generated ABI on the GPU. G14C
+direct, register-indirect, and divergent call/return behavior has been
+measured separately (see the Apple M2 Playground call/return handoff). An
 indirect call becomes a test of the callee against each address-taken
 function of the module with the same type, with a direct call (inlined) for
 each, and a trap if none matches. The address of such a function, as a

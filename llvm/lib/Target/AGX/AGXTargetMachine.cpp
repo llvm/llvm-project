@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The AGX code generation pipeline. Like AMDGPU, all calls are inlined and
-// the control flow graph is structurized before instruction selection.
+// The AGX code generation pipeline. Calls are inlined by default; the opt-in
+// leaf-call path keeps eligible callees. The control flow graph is
+// structurized before instruction selection.
 // Unlike AMDGPU, AGX has no scalar unit and no scalar branches: every
 // conditional branch, uniform or not, is lowered to execution mask
 // operations on the per-thread nesting counter r0l.
@@ -31,6 +32,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
@@ -193,6 +195,11 @@ void AGXPassConfig::addIRPasses() {
   // functions outlined.
   addPass(createAGXAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());
+  // Inlining non-callable wrappers can leave outlined leaves with no users.
+  // Removing them before per-function codegen is material for large PTX
+  // modules, where even dead device functions may be thousands of blocks.
+  if (agxExperimentalLeafCallsEnabled())
+    addPass(createGlobalDCEPass());
 
   // 64- and 128-bit atomics take locks; the others are hardware atomics.
   addPass(createAGXExpandWideAtomicsPass(&getAGXTargetMachine()));
