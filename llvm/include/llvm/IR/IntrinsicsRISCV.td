@@ -2211,6 +2211,14 @@ class RVPBinaryIntrinsic
   def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_mulqr_i32 : RVPScalarBinaryIntrinsic;
 
+  // Scalar "Q-format" Multiply with Widening Accumulate.
+  class RVPScalarQFormatWideningAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                              [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mqwacc_i64  : RVPScalarQFormatWideningAccIntrinsic;
+  def int_riscv_mqrwacc_i64 : RVPScalarQFormatWideningAccIntrinsic;
+
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;
   def int_riscv_pmhracc   : RVPTernaryIntrinsic;

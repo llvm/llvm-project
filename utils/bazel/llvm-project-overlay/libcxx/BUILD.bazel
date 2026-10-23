@@ -1,0 +1,139 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+licenses(["notice"])
+
+exports_files([
+    "include/__config_site.in",
+    "include/module.modulemap.in",
+    "vendor/llvm/default_assertion_handler.in",
+])
+
+filegroup(
+    name = "libcxx_hdrs",
+    srcs = glob(
+        [
+            # Top level includes and those in `experimental` and `ext` sometimes
+            # have no extension.
+            "include/*",
+            "include/experimental/*",
+            "include/ext/*",
+
+            # Implementation detail headers all use `.h` extensions
+            "include/**/*.h",
+        ],
+        exclude = [
+            # Omit CMake and CMake-configured files that get caught by the
+            # extension-less patterns.
+            "**/*.in",
+            "**/CMakeLists.txt",
+
+            # Omit C++03 compatibility headers as current users don't need them.
+            "include/__cxx03/**",
+        ],
+    ),
+)
+
+LIBCXX_SRCS_PSTL_LIBDISPATCH = [
+    "src/pstl/libdispatch.cpp",
+]
+
+filegroup(
+    name = "libcxx_srcs_pstl_libdispatch",
+    srcs = LIBCXX_SRCS_PSTL_LIBDISPATCH,
+)
+
+LIBCXX_SRCS_SUPPORT_IBM_PATTERNS = [
+    "src/support/ibm/**/*.cpp",
+]
+
+filegroup(
+    name = "libcxx_srcs_support_ibm",
+    srcs = glob(LIBCXX_SRCS_SUPPORT_IBM_PATTERNS),
+)
+
+LIBCXX_SRCS_SUPPORT_WIN32_PATTERNS = [
+    "src/support/win32/**/*.cpp",
+]
+
+filegroup(
+    name = "libcxx_srcs_support_win32",
+    srcs = glob(LIBCXX_SRCS_SUPPORT_WIN32_PATTERNS),
+)
+
+LIBCXX_SRCS_TZDB = [
+    "src/experimental/chrono_exception.cpp",
+    "src/experimental/time_zone.cpp",
+    "src/experimental/tzdb.cpp",
+    "src/experimental/tzdb_list.cpp",
+]
+
+filegroup(
+    name = "libcxx_srcs_tzdb",
+    srcs = LIBCXX_SRCS_TZDB,
+)
+
+# Exclude platform-dependent patterns that are provided by per-target filegroups
+# above.
+LIBCXX_SRCS_TARGET_EXCLUDES = (
+    LIBCXX_SRCS_PSTL_LIBDISPATCH +
+    LIBCXX_SRCS_SUPPORT_IBM_PATTERNS +
+    LIBCXX_SRCS_SUPPORT_WIN32_PATTERNS +
+    LIBCXX_SRCS_TZDB
+)
+
+filegroup(
+    name = "libcxx_srcs_generic",
+    srcs = glob(
+        [
+            "src/**/*.cpp",
+            "src/**/*.h",
+            "src/**/*.ipp",
+        ],
+        exclude = [
+            # Build is for use with libc++abi and so don't need 'new.cpp'.
+            "src/new.cpp",
+
+            # Build is for compiler-rt platforms so we have its int128 support.
+            "src/filesystem/int128_builtins.cpp",
+        ] + LIBCXX_SRCS_TARGET_EXCLUDES,
+    ),
+)
+
+filegroup(
+    name = "libcxx_linux_srcs",
+    srcs = [
+        ":libcxx_srcs_generic",
+        ":libcxx_srcs_tzdb",
+    ],
+)
+
+filegroup(
+    name = "libcxx_macos_srcs",
+    srcs = [
+        ":libcxx_srcs_generic",
+        # TODO: Include libdispatch sources here to enable that pstl backend.
+    ],
+)
+
+filegroup(
+    name = "libcxx_win32_srcs",
+    srcs = [
+        ":libcxx_srcs_generic",
+        ":libcxx_srcs_support_win32",
+    ],
+)
+
+filegroup(
+    name = "libcxx_all_srcs",
+    srcs = [
+        ":libcxx_linux_srcs",
+        ":libcxx_macos_srcs",
+        ":libcxx_win32_srcs",
+    ],
+)

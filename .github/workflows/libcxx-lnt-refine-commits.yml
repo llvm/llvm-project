@@ -1,0 +1,129 @@
+# This file defines a reusable workflow that selects the commits to benchmark on a LNT machine in order
+# to bisect the most significant changes found in the data gathered so far on that machine.
+#
+# The selected commits are uploaded as an artifact containing a single `refinement.txt` file, with one
+# commit per line, best first. That file is empty when there is nothing to refine.
+#
+# See libcxx/utils/ci/lnt/README.md for a description of the tools used here.
+
+name: "[libc++] Select refinement commits"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      lnt-machine:
+        description: 'The LNT machine whose data to refine'
+        required: true
+        type: string
+      metric:
+        description: 'The metric to look for changes in'
+        required: true
+        type: string
+      direction:
+        description: 'The direction of the changes to refine (increase, decrease or both)'
+        required: true
+        type: string
+      max-commits:
+        description: 'The maximum number of commits to select'
+        required: true
+        type: number
+      artifact-name:
+        description: 'The name of the artifact to upload the result as'
+        required: true
+        type: string
+
+jobs:
+  select:
+    name: Select refinement commits for ${{ inputs.lnt-machine }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash # for pipefail, which the default shell doesn't set
+    env:
+      MACHINE: ${{ inputs.lnt-machine }}
+      METRIC: ${{ inputs.metric }}
+      DIRECTION: ${{ inputs.direction }}
+      MAX_COMMITS: ${{ inputs.max-commits }}
+      # Keep in sync with libcxx-lnt-submit.yml and libcxx-benchmark-cron.yml
+      LNT_URL: https://lnt.llvm.org
+    steps:
+      # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
+      # It is cached and recomputed every hour instead of every time this workflow is called.
+      - name: Compute the cache key
+        id: key
+        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
+
+      - name: Try restoring the selection from cache
+        id: restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/refinement.txt # restore to temp since the checkout below would overwrite it
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Checkout the full LLVM monorepo
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Selecting commits requires full Git history, but not the blob content.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Install Python
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
+
+      - name: Install dependencies
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: pip install -r libcxx/utils/ci/lnt/requirements.txt
+
+      - name: Download the data from LNT
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: |
+          # Download the data and the runs as of a fixed time point. That way, the commits that we consider
+          # "attempted" are exactly those used to find changepoints.
+          as_of=$(date -u -d '5 minutes ago' +%FT%TZ)
+          curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/series"                           \
+               --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                  \
+               --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" -o series.jsonl
+
+          curl -sS --fail -G "${LNT_URL}/api/suites/libcxx/runs"                                          \
+               --data-urlencode machine="${MACHINE}" --data-urlencode submitted_before="${as_of}"         \
+               --data-urlencode limit=10000                                                               \
+            | jq -r 'if .cursor.next then error("more runs than fit in a page") else .items[].commit end' \
+            | sort -u > attempted.txt
+
+      - name: Detect changepoints
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: |
+          libcxx/utils/ci/lnt/detect-changepoints --input series.jsonl --series-by test --aggregate median \
+                                                  --jobs "$(nproc)" -v --output changes.jsonl
+
+      - name: Select refinement commits
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        run: |
+          libcxx/utils/ci/lnt/select-refinement-commits --changes changes.jsonl --attempted-commits attempted.txt \
+                                                        --direction "${DIRECTION}" --max-commits "${MAX_COMMITS}"   \
+                                                        -v --output "${RUNNER_TEMP}/refinement.txt"
+
+      - name: Cache the selection
+        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/refinement.txt
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Upload the selection
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ runner.temp }}/refinement.txt
+          if-no-files-found: error

@@ -98,7 +98,9 @@ entries:
 
 The `coverage` key establishes how far back and at which frequency performance should be measured
 for that configuration. A machine without a `coverage` entry can be defined, but it won't result
-in historical data.
+in historical data. Within it, the optional `refinement` key enables bisecting the changes found in
+that data: it gives the `metric` to use for finding changepoints, the `direction` of the changes to
+bisect (`increase`, `decrease` or `both`) and the number of commits (`max-commits`) to select at a time.
 
 The `pr-benchmarks` key determines whether the machine is used when benchmarking pull requests
 with `/libcxx-bot benchmark`.

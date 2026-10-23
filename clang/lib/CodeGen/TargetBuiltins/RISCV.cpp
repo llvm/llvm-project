@@ -1760,6 +1760,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_mulqr_i32;
     break;
 
+  // Scalar "Q-format" Multiply with Widening Accumulate
+  case RISCV::BI__builtin_riscv_mqwacc_i64:
+    ID = Intrinsic::riscv_mqwacc_i64;
+    break;
+  case RISCV::BI__builtin_riscv_mqrwacc_i64:
+    ID = Intrinsic::riscv_mqrwacc_i64;
+    break;
+
   // Packed "Q-format" Multiply with Widening Accumulate
   case RISCV::BI__builtin_riscv_pmqwacc_i32x2:
   case RISCV::BI__builtin_riscv_pmqrwacc_i32x2: {

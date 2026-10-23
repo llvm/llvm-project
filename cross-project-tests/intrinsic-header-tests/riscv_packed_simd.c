@@ -3200,6 +3200,21 @@ int32_t test_mulqr_i32(int32_t rs1, int32_t rs2) {
   return __riscv_mulqr_i32(rs1, rs2);
 }
 
+// Scalar "Q-format" multiply with widening accumulate
+// CHECK-LABEL: test_mqwacc_i64:
+// RV32:        mqwacc{{[[:space:]]}}
+// RV64:        mqacc.w00
+int64_t test_mqwacc_i64(int64_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mqwacc_i64(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mqrwacc_i64:
+// RV32:        mqrwacc{{[[:space:]]}}
+// RV64:        mqracc.w00
+int64_t test_mqrwacc_i64(int64_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mqrwacc_i64(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: test_pmulh_i16x2:
 // CHECK:       pmulh.h
 int16x2_t test_pmulh_i16x2(int16x2_t rs1, int16x2_t rs2) {
@@ -4553,6 +4568,31 @@ uint32x2_t test_pwmaccu_u32x2(uint32x2_t rd, uint16x2_t rs1, uint16x2_t rs2) {
 // RV64:        pmaccsu.w.h00
 int32x2_t test_pwmaccsu_i32x2(int32x2_t rd, int16x2_t rs1, uint16x2_t rs2) {
   return __riscv_pwmaccsu_i32x2(rd, rs1, rs2);
+}
+
+// Packed Byte Multiplication with Horizontal Addition and Accumulate.
+// CHECK-LABEL: test_pm4adda_i8x8:
+// RV32:        pm4adda.b{{[[:space:]]}}
+// RV32:        pm4adda.b{{[[:space:]]}}
+// RV64:        pm4adda.b{{[[:space:]]}}
+int32x2_t test_pm4adda_i8x8(int32x2_t rd, int8x8_t a, int8x8_t b) {
+  return __riscv_pm4adda_i8x8(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm4addau_u8x8:
+// RV32:        pm4addau.b{{[[:space:]]}}
+// RV32:        pm4addau.b{{[[:space:]]}}
+// RV64:        pm4addau.b{{[[:space:]]}}
+uint32x2_t test_pm4addau_u8x8(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addau_u8x8(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm4addasu_i8x8:
+// RV32:        pm4addasu.b{{[[:space:]]}}
+// RV32:        pm4addasu.b{{[[:space:]]}}
+// RV64:        pm4addasu.b{{[[:space:]]}}
+int32x2_t test_pm4addasu_i8x8(int32x2_t rd, int8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addasu_i8x8(rd, a, b);
 }
 
 // Packed Multiplication with Widening Horizontal Addition.
