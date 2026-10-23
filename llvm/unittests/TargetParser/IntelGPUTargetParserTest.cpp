@@ -81,9 +81,9 @@ TEST(IntelGPUTargetParserTest, NumericArchName) {
 TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   using IntelGPU::IGCAFeatureSet;
   using IntelGPU::IGCATarget;
-  IGCATarget C{60, IGCAFeatureSet::ComputeExact};
+  IGCATarget C{20, IGCAFeatureSet::ComputeExact};
   EXPECT_TRUE(C.isValid());
-  EXPECT_EQ(C.getTarget(), 60);
+  EXPECT_EQ(C.getTarget(), 20);
   EXPECT_EQ(C.getFeatureSet(), IGCAFeatureSet::ComputeExact);
   EXPECT_TRUE(C.isExact());
   // An exact feature set is still of its class:
@@ -95,7 +95,7 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   EXPECT_FALSE(C.hasRender());
   EXPECT_FALSE(C.isRenderExact());
   EXPECT_EQ(IGCATarget::unpack(C.pack()), C);
-  EXPECT_NE(C, IGCATarget(60, IGCAFeatureSet::Compute));
+  EXPECT_NE(C, IGCATarget(20, IGCAFeatureSet::Compute));
   // A feature set that is not exact:
   IGCATarget R{60, IGCAFeatureSet::Render};
   EXPECT_TRUE(R.isRender());
@@ -116,6 +116,15 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   EXPECT_EQ(IGCATarget::unpack(2), IGCATarget::invalid());
   EXPECT_FALSE(IGCATarget::unpack(2).isValid());
   EXPECT_EQ(IGCATarget(0, IGCAFeatureSet::RenderExact), IGCATarget::invalid());
+  // Targets not listed in INTEL_IGCA_TARGET are invalid:
+  EXPECT_FALSE(IGCATarget(42, IGCAFeatureSet::Core).isValid());
+  EXPECT_EQ(IGCATarget(42, IGCAFeatureSet::Core), IGCATarget::invalid());
+  EXPECT_EQ(IGCATarget(60, IGCAFeatureSet::ComputeExact),
+            IGCATarget::invalid());
+  // If the reserved bits are set, something probably went wrong:
+  EXPECT_EQ(
+      IGCATarget::unpack(IGCATarget(20, IGCAFeatureSet::Compute).pack() | 0x8),
+      IGCATarget::invalid());
 }
 
 TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
@@ -222,20 +231,18 @@ TEST(IntelGPUTargetParserTest, IGCASpellingsMatchFields) {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 }
 
-TEST(IntelGPUTargetParserTest, EveryDeviceHasValidIGCATarget) {
-  // Every device's IGCA target and feature sets should have a corresponding
-  // entry in INTEL_IGCA_TARGET:
+// Every device's IGCA target and feature sets should have a corresponding
+// entry in INTEL_IGCA_TARGET:
 #define INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)          \
-  EXPECT_NE(IntelGPU::getIGCATargetName(IntelGPU::IGCATarget(                  \
-                IGCA_TARGET, IntelGPU::IGCAFeatureSet::IGCA_FEATURE_SETS)),    \
-            "")                                                                \
-      << NAME;
+  static_assert(IntelGPU::IGCATarget(                                          \
+                    IGCA_TARGET, IntelGPU::IGCAFeatureSet::IGCA_FEATURE_SETS)  \
+                    .isValid(),                                                \
+                NAME " uses an IGCA target not listed in INTEL_IGCA_TARGET");
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
   INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
   INTEL_IGCA_TARGET_CHECK(NAME, IGCA_TARGET, IGCA_FEATURE_SETS)
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 #undef INTEL_IGCA_TARGET_CHECK
-}
 
 } // namespace

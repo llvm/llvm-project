@@ -57,14 +57,30 @@ enum class IGCAFeatureSet : uint8_t {
 ///   +------------------+------------------------+---------------+
 ///          16 bits              13 bits              3 bits
 ///
-/// Note that bit 0 is a flag that represents if the feature set is "exact",
-/// and Target == 0 denotes an invalid IGCA Target.
+/// Note that bit 0 is a flag that represents if the feature set is "exact".
+/// Only targets listed in INTEL_IGCA_TARGET are valid; any other value is
+/// stored as invalid(), whose packed representation is 0.
 class IGCATarget {
   uint32_t V = 0;
+
+  /// \return true if \p Packed contains a target listed in INTEL_IGCA_TARGET.
+  static constexpr bool isKnownIGCATargetLevel(uint32_t Packed) {
+    switch (Packed) {
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
+  case uint32_t(TARGET) << TargetShift |                                       \
+      llvm::to_underlying(IGCAFeatureSet::FEATURE_SET):
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+      return true;
+    default:
+      return false;
+    }
+  }
+
   constexpr explicit IGCATarget(uint32_t Packed) {
-    // Target == 0 is invalid, so V remains 0, and any feature set bits are
-    // ignored. This keeps V == 0 as the only canonical invalid representation.
-    if (uint16_t Target = Packed >> TargetShift; Target != 0)
+    // Targets not listed in INTEL_IGCA_TARGET (including Target == 0) are
+    // invalid, so V remains 0. This keeps V == 0 as the only canonical invalid
+    // representation.
+    if (isKnownIGCATargetLevel(Packed))
       V = Packed;
   }
 
@@ -85,7 +101,7 @@ public:
   /// Wrap a packed uint32_t IGCA target with an IGCATarget class.
   static constexpr IGCATarget unpack(uint32_t V) { return IGCATarget(V); }
 
-  uint16_t getTarget() const { return uint16_t(V >> TargetShift); }
+  constexpr uint16_t getTarget() const { return uint16_t(V >> TargetShift); }
   /// \return the feature set, including whether it is exact.
   ///
   /// To check if a target has a feature set regardless of exactness, use
@@ -95,8 +111,8 @@ public:
     return IGCAFeatureSet(V & FeatureSetMask);
   }
   bool isExact() const { return V & IsExactMask; }
-  bool isValid() const { return getTarget() != 0; }
-  explicit operator bool() const { return isValid(); }
+  constexpr bool isValid() const { return getTarget() != 0; }
+  constexpr explicit operator bool() const { return isValid(); }
 
   bool isCore() const { return getFeatureSet() == IGCAFeatureSet::Core; }
   /// \return true if the target has a non-exact Compute feature set.
