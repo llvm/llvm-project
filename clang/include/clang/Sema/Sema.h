@@ -7277,6 +7277,12 @@ public:
   /// variable will have in the given scope.
   QualType getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc);
 
+  /// Handle a use of the variably modified type \p T in the current context.
+  /// Array bounds evaluated in an enclosing context are captured by the
+  /// lambdas in between; if a local class or a block is in between instead,
+  /// the use is diagnosed. Returns false if the use is invalid.
+  bool CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc);
+
   /// Mark all of the declarations referenced within a particular AST node as
   /// referenced. Used when template instantiation instantiates a non-dependent
   /// type -- entities referenced by the type are now referenced.
@@ -8489,6 +8495,10 @@ public:
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
+
+  /// Maps the size expression of each VLA type created inside a function,
+  /// block or lambda to the context in which that size is evaluated.
+  llvm::DenseMap<const Expr *, const DeclContext *> VLASizeExprOwners;
 
   /// Methods for marking which expressions involve dereferencing a pointer
   /// marked with the 'noderef' attribute. Expressions are checked bottom up as

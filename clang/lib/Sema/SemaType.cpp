@@ -2375,6 +2375,15 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
     }
   }
 
+  // Remember where the bound of a VLA is evaluated. Bounds in a function
+  // prototype are evaluated in that function, which doesn't exist yet, so they
+  // are not recorded and their uses are not diagnosed.
+  if (const VariableArrayType *VAT = Context.getAsVariableArrayType(T))
+    if (CurContext->isFunctionOrMethod() &&
+        !(getCurScope() && getCurScope()->isFunctionPrototypeScope()))
+      if (const Expr *Size = VAT->getSizeExpr())
+        VLASizeExprOwners.try_emplace(Size, CurContext);
+
   return T;
 }
 

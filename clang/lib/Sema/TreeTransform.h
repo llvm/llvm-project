@@ -13977,6 +13977,11 @@ ExprResult
 TreeTransform<Derived>::TransformUnaryExprOrTypeTraitExpr(
                                                 UnaryExprOrTypeTraitExpr *E) {
   if (E->isArgumentType()) {
+    // Transform the type operand in an unevaluated context, as the parser does.
+    EnterExpressionEvaluationContext Unevaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
+        Sema::ReuseLambdaContextDecl);
+
     TypeSourceInfo *OldT = E->getArgumentTypeInfo();
 
     TypeSourceInfo *NewT = getDerived().TransformType(OldT);
