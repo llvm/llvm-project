@@ -228,9 +228,9 @@ def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwi
     Source bitwidths 1, 32 and 64 are not supported because some attributes
     require these fixed widths.
 
-    Mappings apply once to the original width, preserving signedness and
-    leaving unmapped widths unchanged. Widening expects signless constants and
-    treats them as signed. Narrowing truncates without checking for data loss.
+    Mappings apply once to the original width, leaving unmapped widths unchanged.
+    Signless values are expected. Widening sign-extends constants.
+    Narrowing truncates without checking for data loss.
     The caller is responsible for ensuring the conversion is appropriate.
 
     Conversion covers types, function signatures and attribute payloads
