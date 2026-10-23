@@ -203,3 +203,11 @@ entry:
   %and = and i64 %sel2, %shl
   ret i64 %and
 }
+
+define i128 @freeze_i128() {
+; X86ASM-LABEL: freeze_i128:
+; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    retq
+  %y1 = freeze i128 poison
+  ret i128 %y1
+}
