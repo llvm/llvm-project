@@ -668,6 +668,16 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      VPValue *Mask;
+      if (Plan.hasScalarVFOnly() &&
+          match(&R,
+                m_Intrinsic<Intrinsic::mask_beforefirst>(m_VPValue(Mask)))) {
+        R.getVPSingleValue()->replaceAllUsesWith(
+            Builder.createNot(Mask, R.getDebugLoc()));
+        R.eraseFromParent();
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
