@@ -62,7 +62,7 @@ MachineCycleAnalysis::run(MachineFunction &MF,
   return MCI;
 }
 
-bool MachineCycleAnalysis::invalidate(
+bool MachineCycleInfo::invalidate(
     MachineFunction &, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's

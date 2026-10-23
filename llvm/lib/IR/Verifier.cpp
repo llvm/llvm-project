@@ -2832,6 +2832,18 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
         "Attributes 'hot' and 'cold' are incompatible");
+
+  if (Attrs.hasFnAttr("mnop-mcount")) {
+    auto A = Attrs.getFnAttr("fentry-call");
+    Check(A.isValid() && A.getValueAsString() == "true",
+          "mnop-mcount only supported with fentry-call");
+  }
+
+  if (Attrs.hasFnAttr("mrecord-mcount")) {
+    auto A = Attrs.getFnAttr("fentry-call");
+    Check(A.isValid() && A.getValueAsString() == "true",
+          "mrecord-mcount only supported with fentry-call");
+  }
 }
 
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {

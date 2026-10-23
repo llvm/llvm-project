@@ -821,7 +821,6 @@ define i32 @srxi_i32(i32 %a, i32 %b) {
 define i8 @shlsat_i8(i8 %a, i8 %b) {
 ; RV32-LABEL: shlsat_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.b a1, a1
 ; RV32-NEXT:    slli a0, a0, 24
 ; RV32-NEXT:    ssha a0, a0, a1
 ; RV32-NEXT:    srai a0, a0, 24
@@ -848,7 +847,6 @@ define i8 @shlsat_i8(i8 %a, i8 %b) {
 define i16 @shlsat_i16(i16 %a, i16 %b) {
 ; RV32-LABEL: shlsat_i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    ssha a0, a0, a1
 ; RV32-NEXT:    srai a0, a0, 16
@@ -975,7 +973,6 @@ define i32 @shlsati_i32(i32 %a) {
 define i8 @ushlsat_i8(i8 %a, i8 %b) {
 ; RV32-LABEL: ushlsat_i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.b a1, a1
 ; RV32-NEXT:    slli a0, a0, 24
 ; RV32-NEXT:    sshl a0, a0, a1
 ; RV32-NEXT:    srli a0, a0, 24
@@ -999,7 +996,6 @@ define i8 @ushlsat_i8(i8 %a, i8 %b) {
 define i16 @ushlsat_i16(i16 %a, i16 %b) {
 ; RV32-LABEL: ushlsat_i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    sshl a0, a0, a1
 ; RV32-NEXT:    srli a0, a0, 16
@@ -3350,15 +3346,10 @@ define i32 @test_sati_i32_w32(i32 %a) {
 }
 
 define i32 @test_usati_u32_w0(i32 %a) {
-; RV32-LABEL: test_usati_u32_w0:
-; RV32:       # %bb.0:
-; RV32-NEXT:    usati a0, a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_usati_u32_w0:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_usati_u32_w0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.riscv.usati.i32(i32 %a, i32 0)
   ret i32 %res
 }

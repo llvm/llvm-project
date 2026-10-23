@@ -3489,15 +3489,14 @@ void X86TargetLowering::getTgtMemIntrinsic(
   }
 }
 
-/// Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                     bool ForCodeSize) const {
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+X86TargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                  bool ForCodeSize) const {
   for (const APFloat &FPImm : LegalFPImmediates)
     if (Imm.bitwiseIsEqual(FPImm))
-      return true;
-  return false;
+      return FPImmAction::Legal;
+  return FPImmAction::ConstantPool;
 }
 
 bool X86TargetLowering::shouldReduceLoadWidth(
@@ -58255,14 +58254,15 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  EVT ExtraVT = cast<VTSDNode>(N1)->getVT();
+  EVT ExtVT = cast<VTSDNode>(N1)->getVT();
+  unsigned ExtVTBits = ExtVT.getScalarSizeInBits();
   SDLoc dl(N);
 
   // The SIGN_EXTEND_INREG to v4i64 is expensive operation on the
   // both SSE and AVX2 since there is no sign-extended shift right
   // operation on a vector with 64-bit elements.
-  //(sext_in_reg (v4i64 anyext (v4i32 x )), ExtraVT) ->
-  // (v4i64 sext (v4i32 sext_in_reg (v4i32 x , ExtraVT)))
+  //(sext_in_reg (v4i64 anyext (v4i32 x )), ExtVT) ->
+  // (v4i64 sext (v4i32 sext_in_reg (v4i32 x , ExtVT)))
   if (VT == MVT::v4i64 && (N0.getOpcode() == ISD::ANY_EXTEND ||
                            N0.getOpcode() == ISD::SIGN_EXTEND)) {
     SDValue N00 = N0.getOperand(0);
@@ -58278,12 +58278,27 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
     if (SDValue Promote = PromoteMaskArithmetic(N0, dl, DAG, Subtarget))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Promote, N1);
 
-    if (N00.getValueType() == MVT::v4i32 && ExtraVT.getSizeInBits() < 128) {
+    if (N00.getValueType() == MVT::v4i32 && ExtVT.getSizeInBits() < 128) {
       SDValue Tmp =
           DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::v4i32, N00, N1);
       return DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i64, Tmp);
     }
   }
+
+  // fold (sext_in_reg (logic x, y)) -> (logic x, (sext_in_reg y))
+  // iff x (or y) is already sign extended.
+  if (VT.isVector() && isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0.getOperand(0)))
+      return DAG.getNode(
+          N0.getOpcode(), dl, VT, N0.getOperand(0),
+          DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, N0.getOperand(1), N1));
+    if (ExtVTBits >= DAG.ComputeMaxSignificantBits(N0.getOperand(1)))
+      return DAG.getNode(
+          N0.getOpcode(), dl, VT,
+          DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, N0.getOperand(0), N1),
+          N0.getOperand(1));
+  }
+
   return SDValue();
 }
 
