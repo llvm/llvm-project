@@ -8,8 +8,8 @@ define <2 x i64> @bitcast_fp128_to_v2i64(fp128 %arg) {
 ; BASE-NEXT:    ld %f0, 0(%r2)
 ; BASE-NEXT:    ld %f2, 8(%r2)
 ; BASE-NEXT:    axbr %f0, %f0
-; BASE-NEXT:    lgdr %r2, %f0
 ; BASE-NEXT:    lgdr %r3, %f2
+; BASE-NEXT:    lgdr %r2, %f0
 ; BASE-NEXT:    br %r14
 ;
 ; Z13-LABEL: bitcast_fp128_to_v2i64:
