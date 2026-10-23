@@ -19,6 +19,7 @@
 #include "TGParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -33,10 +34,16 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <cerrno>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
+#ifdef __MVS__
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -126,6 +133,22 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
+#ifdef __MVS__
+  // On z/OS, text files default to IBM-1047, but tablegen generated files
+  // should be UTF-8. If the file does not yet exist, create and tag it as UTF-8
+  // so that ToolOutputFile opens it with the correct tag already set.
+  if (Filename != "-" && !sys::fs::exists(Filename)) {
+    int FD = ::open(Filename.str().c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (FD == -1)
+      return reportError(argv0, "error creating " + Filename + ": " +
+                                    std::strerror(errno) + "\n");
+    EC = setFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
+    ::close(FD);
+    if (EC)
+      return reportError(argv0, "error tagging " + Filename + ": " +
+                                    EC.message() + "\n");
+  }
+#endif
   ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
   if (EC)
     return reportError(argv0, "error opening " + Filename + ": " +
