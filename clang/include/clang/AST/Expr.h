@@ -650,8 +650,7 @@ public:
     /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
-    /// Location where we spot ptr to int cast or null subobject while
-    /// evaluating constant expression in MS compatibility mode.
+    /// Diagnostics for extensions accepted during constant evaluation.
     SmallVectorImpl<PartialDiagnosticAt> *ExtendedDiag = nullptr;
 
     EvalStatus() = default;

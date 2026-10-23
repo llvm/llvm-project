@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only -frecovery-ast -frecovery-ast-type %s
 // RUN: %clang_cc1 -std=c23 -triple x86_64-scei-ps4 -verify=expected,ps4 -fsyntax-only %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Werror=gnu-folding-constant -verify=expected,gnu %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Werror=gnu-folding-constant -verify=expected,gnu -fexperimental-new-constant-interpreter %s
 
 #define M static
 struct S { int a; char b; };
@@ -82,8 +84,8 @@ void test9(void) {
 
   (void)(constexpr int){(constexpr int){1}};
   (void)(constexpr struct S1){.a = (constexpr int){1}};
-  (void)(constexpr int){(int){1}};
-  (void)(constexpr int){(static int){1}};
+  (void)(constexpr int){(int){1}}; // gnu-error {{reading a non-constexpr compound literal}}
+  (void)(constexpr int){(static int){1}}; // gnu-error {{reading a non-constexpr compound literal}}
 }
 
 void test10(void) {
@@ -178,6 +180,7 @@ void test16(void) {
   static int a;
   (void)(constexpr int *){&a};     // expected-error {{constexpr pointer initializer is not null}}
   (void)(constexpr struct S7){-1}; // expected-error {{constexpr initializer evaluates to -1 which is not exactly representable in type 'unsigned char'}}
+  (void)(constexpr float){0.1}; // expected-error {{constexpr initializer evaluates to}}
 }
 
 int a19[3];
@@ -353,4 +356,54 @@ int *test55(void) {
 
 int test56(int x) {                 // expected-note {{'test56' declared here}}
   return (constexpr int){test56()}; // expected-error {{too few arguments to function call, single argument 'x' was not specified}}
+}
+
+constexpr int a27 = (constexpr int){1};
+constexpr int a28 = (int){1};                  // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a29 = (const int){1};            // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a30 = (static int){1};           // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a31 = (constexpr struct S5){1}.a;
+constexpr int a32 = (struct S5){1}.a;          // gnu-error {{reading a non-constexpr compound literal}}
+constexpr struct S5 a33 = (constexpr struct S5){1};
+constexpr struct S5 a34 = (struct S5){1};      // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a35 = (constexpr int){(int){1}}; // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a36 = (int){a2};                 // gnu-error {{reading a non-constexpr compound literal}}
+constexpr int a37 = sizeof((int){1});
+constexpr int a38 = 1 || (int){1};
+int *a39 = &(int){1};
+int a40 = (int){1};
+static_assert(a27 == 1 && a31 == 1 && a33.a == 1);
+
+enum E { E7 = 1 };
+constexpr enum E a41 = (enum E){E7};         // gnu-error {{reading a non-constexpr compound literal}}
+constexpr double a42 = (double){1.0};        // gnu-error {{reading a non-constexpr compound literal}}
+constexpr union U1 a43 = (union U1){.a = 1}; // gnu-error {{reading a non-constexpr compound literal}}
+static_assert(a41 == E7 && (int)a42 == 1 && a43.a == 1);
+
+void test57(void) {
+  constexpr int a = (constexpr int){1};
+  constexpr int b = (int){1};             // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr int c = (const int){1};       // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr int d = (static int){1};      // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr int e = (constexpr struct S5){1}.a;
+  constexpr int f = (struct S5){1}.a;     // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr struct S5 g = (constexpr struct S5){1};
+  constexpr struct S5 h = (struct S5){1}; // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr int i = (int){a2};            // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr int j = sizeof((int){1});
+  constexpr int k = 1 || (int){1};
+  int *l = &(int){1};
+  int m = (int){1};
+  constexpr enum E n = (enum E){E7};         // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr double o = (double){1.0};        // gnu-error {{reading a non-constexpr compound literal}}
+  constexpr union U1 p = (union U1){.a = 1}; // gnu-error {{reading a non-constexpr compound literal}}
+  static_assert(a == 1 && e == 1 && g.a == 1);
+  static_assert(n == E7 && (int)o == 1 && p.a == 1);
+  static_assert(((int[]){1})[0] == 1);       // gnu-error {{folding it to a constant is a GNU extension}}
+}
+
+void test58(int a) {
+  (void)(constexpr int){(int){a}};   // expected-error {{initializer of compound literal must be a constant expression}}
+  int b = 0;
+  (void)(constexpr int){(int){b++}}; // expected-error {{initializer of compound literal must be a constant expression}}
 }

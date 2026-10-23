@@ -7739,8 +7739,10 @@ ExprResult Sema::BuildCompoundLiteralExpr(
   if (HasConstexpr && !LiteralExpr->isTypeDependent() &&
       !LiteralExpr->isValueDependent() && !literalType->isDependentType()) {
     SmallVector<PartialDiagnosticAt, 4> Notes;
+    SmallVector<PartialDiagnosticAt, 4> Warnings;
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
+    Eval.ExtendedDiag = &Warnings;
     if (!LiteralExpr->EvaluateAsConstantExpr(Eval, Context) || !Notes.empty()) {
       SourceLocation DiagLoc = ConstexprLoc;
       if (Notes.size() == 1 && Notes.front().second.getDiagID() ==
@@ -7754,6 +7756,8 @@ ExprResult Sema::BuildCompoundLiteralExpr(
         Diag(Note.first, Note.second);
       return ExprError();
     }
+    for (const PartialDiagnosticAt &Warning : Warnings)
+      Diag(Warning.first, Warning.second);
   }
 
   // In C, compound literals are l-values for some reason.

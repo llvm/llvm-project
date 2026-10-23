@@ -3696,6 +3696,19 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
   return true;
 }
 
+static bool canFoldCompoundLiteralInitializer(const CompoundLiteralExpr *E,
+                                              const ASTContext &Ctx,
+                                              bool IsConstantFolding,
+                                              Expr::EvalResult &Result) {
+  if (!Ctx.getLangOpts().C23 || E->isConstexpr() || IsConstantFolding)
+    return false;
+  if (!E->getInitializer()->EvaluateAsRValue(Result, Ctx))
+    return false;
+  if (Result.HasSideEffects || Result.HasUndefinedBehavior)
+    return false;
+  return true;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
@@ -3745,14 +3758,23 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   unsigned LocalIndex;
   if (T)
-    LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
-  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(Init))
+    LocalIndex = this->allocateLocalPrimitive(E, *T, /*IsConst=*/false);
+  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(E))
     LocalIndex = *MaybeIndex;
   else
     return false;
 
   if (!this->emitGetPtrLocal(LocalIndex, E))
     return false;
+
+  Expr::EvalResult Folded;
+  if (canFoldCompoundLiteralInitializer(E, Ctx.getASTContext(),
+                                        this->constantFolding(), Folded)) {
+    if (T)
+      return this->visitAPValue(Folded.Val, *T, E) && this->emitInit(*T, E);
+    return this->visitAPValueInitializer(Folded.Val, E, E->getType()) &&
+           this->emitFinishInit(E);
+  }
 
   if (T)
     return this->visit(Init) && this->emitInit(*T, E);

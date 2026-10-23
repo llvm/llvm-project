@@ -4926,6 +4926,15 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   else if (AK != clang::AK_Dereference) {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
 
+    if (Info.getLangOpts().C23 &&
+        Info.EvalMode == EvaluationMode::ConstantExpression &&
+        (AK == AK_Read || AK == AK_ReadObjectRepresentation)) {
+      if (const auto *CLE = dyn_cast_or_null<CompoundLiteralExpr>(Base);
+          CLE && !CLE->isConstexpr()) {
+        Info.CCEDiag(E, diag::note_constexpr_non_constexpr_compound_literal);
+      }
+    }
+
     if (!Frame) {
       if (const MaterializeTemporaryExpr *MTE =
               dyn_cast_or_null<MaterializeTemporaryExpr>(Base)) {
@@ -9909,6 +9918,10 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   // FIXME: Evaluating in place isn't always right. We should figure out how to
   // use appropriate evaluation context here, see
   // clang/test/AST/static-compound-literals-reeval.cpp for a failure.
+  llvm::SaveAndRestore SavedMode(Info.EvalMode);
+  if (Info.getLangOpts().C23 && !E->isConstexpr() &&
+      Info.EvalMode == EvaluationMode::ConstantExpression)
+    Info.EvalMode = EvaluationMode::ConstantFold;
   if (!EvaluateInPlace(*Lit, Info, Result, E->getInitializer())) {
     *Lit = APValue();
     return false;
