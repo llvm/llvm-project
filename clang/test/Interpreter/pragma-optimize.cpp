@@ -1,4 +1,5 @@
 // REQUIRES: host-supports-jit
+// REQUIRES: stability
 //
 // '#pragma clang repl optimize(<opt>)' sets the optimization level and size for
 // input parsed after it; <opt> is an -O flag spelled without the leading dash.
