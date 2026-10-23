@@ -1452,8 +1452,9 @@ public:
   /// vector register. For wider element types, this could result in
   /// creating vectors that span multiple vector registers.
   /// If false, the vectorization factor will be chosen based on the
-  /// size of the widest element type.
-  /// \p K Register Kind for vectorization.
+  /// size of the widest element type. The optional \p ElementTy parameter
+  /// allows targets to avoid maximizing bandwidth for specific element types
+  /// (e.g. `i1s`). \p K Register Kind for vectorization.
   LLVM_ABI bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K,
                                 Type *ElementTy = nullptr) const;
