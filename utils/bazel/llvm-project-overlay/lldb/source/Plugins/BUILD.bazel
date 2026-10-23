@@ -572,6 +572,21 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginPlatformEmscripten",
+    srcs = glob(["Platform/Emscripten/*.cpp"]),
+    hdrs = glob(["Platform/Emscripten/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
     name = "PluginPlatformLinux",
     srcs = glob(["Platform/Linux/*.cpp"]),
     hdrs = glob(["Platform/Linux/*.h"]),

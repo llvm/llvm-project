@@ -1767,6 +1767,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -1835,6 +1836,7 @@ libc_support_library(
         ":__support_cpp_utility",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
         ":hdr_stdint_proxy",
     ],
 )
