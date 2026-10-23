@@ -85,7 +85,6 @@ struct MissingFeatures {
   static bool opCallPaddingArgs() { return false; }
   static bool opCallBitcastArg() { return false; }
   static bool opCallReturn() { return false; }
-  static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
@@ -122,6 +121,8 @@ struct MissingFeatures {
   // Coroutines
   static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
+  static bool coroGetRetObjManager() { return false; };
+  static bool coroUnwindRegion() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -215,7 +216,6 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cudaTextureType() { return false; }
-  static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deadOnReturnAttr() { return false; }

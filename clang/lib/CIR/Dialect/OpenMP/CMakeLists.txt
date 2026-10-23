@@ -3,6 +3,7 @@ add_clang_library(CIROpenMPSupport
 
   DEPENDS
   MLIRCIROpsIncGen
+  MLIRMemorySlotInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

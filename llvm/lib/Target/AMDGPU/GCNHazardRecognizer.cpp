@@ -1127,6 +1127,9 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
     if (I->isBundle())
       continue;
 
+    if (I->isMetaInstruction())
+      continue;
+
     if (IsHazard(*I))
       return WaitStates;
 

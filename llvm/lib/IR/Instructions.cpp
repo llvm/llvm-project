@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -52,10 +53,6 @@
 #include <vector>
 
 using namespace llvm;
-
-static cl::opt<bool> DisableI2pP2iOpt(
-    "disable-i2p-p2i-opt", cl::init(false),
-    cl::desc("Disables inttoptr/ptrtoint roundtrip optimization"));
 
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
@@ -3039,8 +3036,8 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return secondOp;
       return 0;
     case 7: {
-      // Disable inttoptr/ptrtoint optimization if enabled.
-      if (DisableI2pP2iOpt)
+      // Skip the inttoptr/ptrtoint optimization if disabled.
+      if (!getIROptions(SrcTy->getContext()).i2p_p2i_opt)
         return 0;
 
       // Cannot simplify if address spaces are different!

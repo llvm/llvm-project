@@ -1,0 +1,21 @@
+add_libc_testsuite(libc-sys-eventfd-tests)
+
+add_libc_test(
+  eventfd_test
+  SUITE
+    libc-sys-eventfd-tests
+  SRCS
+    eventfd_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_eventfd_macros
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.sys.eventfd.eventfd
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

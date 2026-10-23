@@ -11,6 +11,7 @@ add_mlir_library(MLIRQueryMatcher
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Query/Matcher
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRIR
   MLIRParser
   )
