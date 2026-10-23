@@ -906,7 +906,8 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
     llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
     auto numArguments = bb.getNumArguments();
-    assert(numArguments == std::distance(phis.begin(), phis.end()));
+    assert(numArguments ==
+           static_cast<size_t>(std::distance(phis.begin(), phis.end())));
     for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
