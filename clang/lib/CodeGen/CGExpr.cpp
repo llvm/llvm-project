@@ -1739,12 +1739,18 @@ bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
   return true;
 }
 
+LValue CodeGenFunction::EmitAccessedLValue(const Expr *E) {
+  // Look through parentheses, as EmitLValue does, so that '(a[i])++' is checked
+  // the same way as 'a[i]++'.
+  if (SanOpts.has(SanitizerKind::ArrayBounds))
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E->IgnoreParens()))
+      return EmitArraySubscriptExpr(ASE, /*Accessed=*/true);
+
+  return EmitLValue(E);
+}
+
 LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
-  LValue LV;
-  if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
-    LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
-  else
-    LV = EmitLValue(E);
+  LValue LV = EmitAccessedLValue(E);
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
@@ -3965,7 +3971,9 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
   }
   case UO_Real:
   case UO_Imag: {
-    LValue LV = EmitLValue(E->getSubExpr());
+    // A component of an array element only exists if the element does, as
+    // for a member of one.
+    LValue LV = EmitAccessedLValue(E->getSubExpr());
     assert(LV.isSimple() && "real/imag on non-ordinary l-value");
 
     // __real is valid on scalars.  This is a faster way of testing that.
