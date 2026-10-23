@@ -3474,7 +3474,7 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
 struct DelayedIRBuilder {
   std::optional<IRBuilder<>> Builder;
 
-  DelayedIRBuilder() {}
+  DelayedIRBuilder() = default;
   DelayedIRBuilder(Module &M) { Builder.emplace(M); }
 
   void initUsingInsertionBlock(BasicBlock *BB) {
