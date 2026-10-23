@@ -10677,6 +10677,20 @@ class InstructionsCompatibilityAnalysis {
         MainOp = nullptr;
         return;
       }
+      // fma lanes match the fmuladd main op; use an fma as the main op so the
+      // fused form is not weakened to fmuladd.
+      if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+        auto *It = find_if(VL, [&](Value *V) {
+          return match(V, m_Intrinsic<Intrinsic::fma>()) &&
+                 cast<Instruction>(V)->getParent() == MainOp->getParent();
+        });
+        if (It != VL.end())
+          MainOp = cast<Instruction>(*It);
+        if (doesNotNeedToBeScheduled(MainOp) && R.isVectorized(MainOp)) {
+          MainOp = nullptr;
+          return;
+        }
+      }
       MainOpcode = MainOp->getOpcode();
     }
   }
@@ -10730,7 +10744,7 @@ class InstructionsCompatibilityAnalysis {
     }
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+    if (isFMAOrFMulAdd(MainOp)) {
       Type *Ty = MainOp->getType();
       if (S.hasAbsorbedCopyableFMulOrFAdd() &&
           isAbsorbableCopyableFMulOrFAdd(S, V)) {
@@ -11471,12 +11485,11 @@ public:
         return OrigS;
       return S;
     }
-    // Casts are the only 1-operand and fmuladd is the only 3-operand
-    // copyable.
+    // Casts are the only 1-operand and fma/fmuladd are the only 3-operand
+    // copyables.
     assert((Operands.size() == 2 ||
             (Operands.size() == 1 && isa<CastInst>(MainOp)) ||
-            (Operands.size() == 3 &&
-             RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
+            (Operands.size() == 3 && isFMAOrFMulAdd(MainOp))) &&
            "Unexpected number of operands!");
     if (CopyableNum < VL.size() / 2)
       return S;

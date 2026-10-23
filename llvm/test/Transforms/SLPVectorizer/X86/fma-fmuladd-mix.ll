@@ -119,19 +119,23 @@ define void @fmuladd_2f64() {
 ; the fma lane must not be weakened to fmuladd.
 define void @fmuladd_fma_copyable_4f64() {
 ; NO-FMA-LABEL: @fmuladd_fma_copyable_4f64(
+; NO-FMA-NEXT:    [[A0:%.*]] = load double, ptr @srcA64, align 8
+; NO-FMA-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 1), align 8
 ; NO-FMA-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 3), align 8
+; NO-FMA-NEXT:    [[B0:%.*]] = load double, ptr @srcB64, align 8
+; NO-FMA-NEXT:    [[B1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 1), align 8
 ; NO-FMA-NEXT:    [[B3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 3), align 8
-; NO-FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8
-; NO-FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @srcB64, align 8
-; NO-FMA-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr @srcC64, align 8
-; NO-FMA-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double poison, double poison, double 0.000000e+00, double poison>, double [[A3]], i64 3
-; NO-FMA-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; NO-FMA-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; NO-FMA-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> <double poison, double poison, double -0.000000e+00, double poison>, double [[B3]], i64 3
-; NO-FMA-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; NO-FMA-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; NO-FMA-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP6]], <4 x double> [[TMP9]], <4 x double> [[TMP3]])
-; NO-FMA-NEXT:    store <4 x double> [[TMP10]], ptr @dst64, align 8
+; NO-FMA-NEXT:    [[C0:%.*]] = load double, ptr @srcC64, align 8
+; NO-FMA-NEXT:    [[C1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 1), align 8
+; NO-FMA-NEXT:    [[C2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 2), align 8
+; NO-FMA-NEXT:    [[C3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 3), align 8
+; NO-FMA-NEXT:    [[FMA0:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B0]], double [[C0]])
+; NO-FMA-NEXT:    [[FMA1:%.*]] = call double @llvm.fma.f64(double [[A1]], double [[B1]], double [[C1]])
+; NO-FMA-NEXT:    [[FMA3:%.*]] = call double @llvm.fmuladd.f64(double [[A3]], double [[B3]], double [[C3]])
+; NO-FMA-NEXT:    store double [[FMA0]], ptr @dst64, align 8
+; NO-FMA-NEXT:    store double [[FMA1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+; NO-FMA-NEXT:    store double [[C2]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 2), align 8
+; NO-FMA-NEXT:    store double [[FMA3]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 3), align 8
 ; NO-FMA-NEXT:    ret void
 ;
 ; FMA-LABEL: @fmuladd_fma_copyable_4f64(
@@ -146,7 +150,7 @@ define void @fmuladd_fma_copyable_4f64() {
 ; FMA-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> <double poison, double poison, double -0.000000e+00, double poison>, double [[B3]], i64 3
 ; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; FMA-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; FMA-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP6]], <4 x double> [[TMP9]], <4 x double> [[TMP3]])
+; FMA-NEXT:    [[TMP10:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP6]], <4 x double> [[TMP9]], <4 x double> [[TMP3]])
 ; FMA-NEXT:    store <4 x double> [[TMP10]], ptr @dst64, align 8
 ; FMA-NEXT:    ret void
 ;
