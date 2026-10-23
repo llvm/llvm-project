@@ -730,11 +730,11 @@ body:             |
     ; GCN-NOT:  s_set_vgpr_msb
     ; GCN:      v_mov_b32_e32 v0 /*v256*/, v1
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-    INLINEASM &"; def v0", 1, 327690, def $vgpr0
-    INLINEASM &"; use v0", 1, 327690, $vgpr0
-    INLINEASM &"; use v1", 1, 327690, undef $vgpr1
+    INLINEASM &"; def v0", 1, 10, def $vgpr0
+    INLINEASM &"; use v0", 1, 10, $vgpr0
+    INLINEASM &"; use v1", 1, 10, undef $vgpr1
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-    INLINEASM &"; no vgprs, mode preserved", 1, 327690, undef $sgpr0
+    INLINEASM &"; no vgprs, mode preserved", 1, 10, undef $sgpr0
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
     ; ASM: NumVgprs: 257
