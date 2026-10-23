@@ -36588,7 +36588,7 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
   // If the vector is scalable, SVE is enabled, implying support for complex
   // numbers. Otherwise, we need to ensure complex number support is available
   if (!VTy->isScalableTy() &&
-      !(Subtarget->hasComplxNum() && Subtarget->isNeonAvailable()))
+      (!Subtarget->hasComplxNum() || !Subtarget->isNeonAvailable()))
     return false;
 
   auto *ScalarTy = VTy->getScalarType();
