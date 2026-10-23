@@ -11696,16 +11696,20 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
   }
 
-  // If the subtract doesn't overflow then just use abs(sub())
+  // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
+  // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
   bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+  bool UseSigned = IsSigned || IsNonNegative;
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+  if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
-  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
-    return DAG.getNode(ISD::ABS, dl, VT,
-                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  if (DAG.willNotOverflowSub(UseSigned, RHS, LHS)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
+    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+  }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
