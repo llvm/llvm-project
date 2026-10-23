@@ -1156,3 +1156,91 @@ define amdgpu_ps <4 x bfloat> @fmax_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) 
   %result = call <4 x bfloat> @llvm.maxnum.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   ret <4 x bfloat> %result
 }
+
+define amdgpu_ps bfloat @clamp_bf16(bfloat %a) {
+; GFX9-LABEL: clamp_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_max_f32_e32 v0, 0, v0
+; GFX9-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
+; GFX9-NEXT:    v_add3_u32 v0, v1, v0, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX9-NEXT:    v_add3_u32 v0, v1, v0, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: clamp_bf16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, 0, v0
+; GFX12-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX12-NEXT:    v_add3_u32 v0, v1, v0, 0x7fff
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_min_num_f32_e32 v0, 1.0, v0
+; GFX12-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX12-NEXT:    v_add3_u32 v0, v1, v0, 0x7fff
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: clamp_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, 0 op_sel:[0,1]
+; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, 1.0
+; GFX1250-NEXT:    ; return to shader part epilog
+  %max = call nnan bfloat @llvm.maxnum.bf16(bfloat %a, bfloat 0.0)
+  %min = call nnan bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
+  ret bfloat %min
+}
+
+; 0xR3C00 is 1.0 as a half but 2^-7 as a bfloat, so this is not a clamp.
+define amdgpu_ps bfloat @clamp_bf16_half_one_bits(bfloat %a) {
+; GFX9-LABEL: clamp_bf16_half_one_bits:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_max_f32_e32 v0, 0, v0
+; GFX9-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
+; GFX9-NEXT:    v_add3_u32 v0, v1, v0, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_min_f32_e32 v0, 0x3c000000, v0
+; GFX9-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX9-NEXT:    v_add3_u32 v0, v1, v0, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: clamp_bf16_half_one_bits:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, 0, v0
+; GFX12-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX12-NEXT:    v_add3_u32 v0, v1, v0, 0x7fff
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_min_num_f32_e32 v0, 0x3c000000, v0
+; GFX12-NEXT:    v_bfe_u32 v1, v0, 16, 1
+; GFX12-NEXT:    v_add3_u32 v0, v1, v0, 0x7fff
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: clamp_bf16_half_one_bits:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GFX1250-NEXT:    ; return to shader part epilog
+  %max = call nnan bfloat @llvm.maxnum.bf16(bfloat %a, bfloat 0.0)
+  %min = call nnan bfloat @llvm.minnum.bf16(bfloat %max, bfloat 0xR3C00)
+  ret bfloat %min
+}
