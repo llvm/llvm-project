@@ -10667,7 +10667,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
   // Keep a shared comparison instead of materializing both condition codes.
-  // Scalar SETCCs with custom lowering may fold into flag-based instructions.
+  // Scalar SETCCs with custom lowering or native i1 results may fold into
+  // flag-based instructions.
   bool KeepNotOfSetCC = false;
   if (N0Opcode == ISD::SETCC && !N0.hasOneUse()) {
     EVT OpVT = N0.getOperand(0).getValueType();
@@ -10678,8 +10679,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                     ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
                     : VT;
     KeepNotOfSetCC =
-        (OpVT.isVector() ||
-         (!VT.isVector() && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        (OpVT.isVector() || (!VT.isVector() && XorVT != MVT::i1 &&
+                             TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
         TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
   }
   if (TLI.isConstTrueVal(N1) &&

@@ -382,19 +382,16 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; CHECK-NEXT:    sra.w $a0, $a0, $a1
-; CHECK-NEXT:    ori $fp, $zero, 254
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB8_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    move $a1, $a0
 ; CHECK-NEXT:    slti $a0, $a0, 255
-; CHECK-NEXT:    blt $fp, $a1, .LBB8_1
+; CHECK-NEXT:    xori $a1, $a0, 1
+; CHECK-NEXT:    bnez $a1, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -403,19 +400,17 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV:       # %bb.0: # %bb
 ; NORMV-NEXT:    addi.d $sp, $sp, -16
 ; NORMV-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NORMV-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
-; NORMV-NEXT:    sra.w $a1, $a0, $a1
-; NORMV-NEXT:    ori $fp, $zero, 254
+; NORMV-NEXT:    sra.w $a0, $a0, $a1
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB8_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a0, $a1, 0
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    pcaddu18i $ra, %call36(bar)
 ; NORMV-NEXT:    jirl $ra, $ra, 0
-; NORMV-NEXT:    slti $a1, $a0, 255
-; NORMV-NEXT:    blt $fp, $a0, .LBB8_1
+; NORMV-NEXT:    slti $a0, $a0, 255
+; NORMV-NEXT:    xori $a1, $a0, 1
+; NORMV-NEXT:    bnez $a1, .LBB8_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
-; NORMV-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; NORMV-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; NORMV-NEXT:    addi.d $sp, $sp, 16
 ; NORMV-NEXT:    ret
