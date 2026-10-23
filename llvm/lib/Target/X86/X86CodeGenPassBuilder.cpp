@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/MachineCombiner.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -276,8 +278,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
-    // ported.
+    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addMachineFunctionPass(EHContGuardTargetsPass(), PMW);
   }
@@ -285,8 +286,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
-  // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
-  // ported.
+  addMachineFunctionPass(PseudoProbeInserterPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.

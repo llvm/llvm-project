@@ -609,14 +609,14 @@ void X86PassConfig::addPreEmitPass2() {
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
   addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.

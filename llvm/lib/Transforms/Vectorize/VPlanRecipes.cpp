@@ -1992,13 +1992,29 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::StepVector:
     O << "step-vector " << *getScalarType();
     break;
-  case VPInstruction::Intrinsic: {
-    O << "call " << *getScalarType() << " @"
-      << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
-    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
-      Op->printAsOperand(O, SlotTracker);
-    });
+  case VPInstruction::Intrinsic:
+  case Instruction::Call: {
+    O << "call";
+    printFlags(O);
+    O << *getScalarType() << " ";
+    unsigned NumArgs;
+    if (getOpcode() == VPInstruction::Intrinsic) {
+      O << "@" << Intrinsic::getBaseName(vputils::getIntrinsicID(this));
+      NumArgs = getNumOperands() - 1;
+    } else {
+      getCalledFunction(operands())->printAsOperand(O, /*PrintType=*/false);
+      NumArgs = getCalledFnOperandIndex(operands());
+    }
+    O << "(";
+    interleaveComma(drop_end(operands(), getNumOperands() - NumArgs), O,
+                    [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
     O << ")";
+    if (VPValue *Mask = getMask()) {
+      O << ", ";
+      Mask->printAsOperand(O, SlotTracker);
+    }
     return;
   }
   case Instruction::Load:

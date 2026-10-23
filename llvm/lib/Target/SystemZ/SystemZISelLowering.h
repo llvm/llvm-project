@@ -86,8 +86,8 @@ public:
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override {
     // Do not shrink 64-bit FP constpool entries since LDEB is slower than
     // LD, and having the full constant in memory enables reg/mem opcodes.
