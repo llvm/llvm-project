@@ -632,8 +632,7 @@ bool TGParser::resolveArguments(const Record *Rec,
          "Too many template arguments allowed");
 
   // Loop over the template arguments and handle the (name, value) pair.
-  SmallVector<const Init *, 2> UnsolvedArgNames(
-      map_range(Args, [](const RecordVal &Arg) { return Arg.getNameInit(); }));
+  SmallVector<const RecordVal *, 2> UnsolvedArgs(make_pointer_range(Args));
   for (auto *Arg : ArgValues) {
     const Init *ArgName = nullptr;
     const Init *ArgValue = Arg->getValue();
@@ -643,25 +642,28 @@ bool TGParser::resolveArguments(const Record *Rec,
       ArgName = Arg->getName();
 
     // We can only specify the template argument once.
-    if (!is_contained(UnsolvedArgNames, ArgName))
+    auto It = find_if(UnsolvedArgs, [ArgName](const RecordVal *UnsolvedArg) {
+      return UnsolvedArg->getNameInit() == ArgName;
+    });
+    if (It == UnsolvedArgs.end())
       return Error(Loc, "We can only specify the template argument '" +
                             ArgName->getAsUnquotedString() + "' once");
 
     ArgValueHandler(ArgName, ArgValue);
-    llvm::erase(UnsolvedArgNames, ArgName);
+    UnsolvedArgs.erase(It);
   }
 
   // For unsolved arguments, if there is no default value, complain.
-  for (auto *UnsolvedArgName : UnsolvedArgNames) {
-    const Init *Default = Rec->getValue(UnsolvedArgName)->getValue();
+  for (const RecordVal *UnsolvedArg : UnsolvedArgs) {
+    const Init *Default = UnsolvedArg->getValue();
     if (!Default->isComplete()) {
-      std::string Name = UnsolvedArgName->getAsUnquotedString();
-      Error(Loc, "value not specified for template argument '" + Name + "'");
-      PrintNote(Rec->getFieldLoc(Name),
+      Error(Loc, "value not specified for template argument '" +
+                     UnsolvedArg->getName() + "'");
+      PrintNote(UnsolvedArg->getLoc(),
                 "declared in '" + Rec->getNameInitAsString() + "'");
       return true;
     }
-    ArgValueHandler(UnsolvedArgName, Default);
+    ArgValueHandler(UnsolvedArg->getNameInit(), Default);
   }
 
   return false;
@@ -3544,7 +3546,7 @@ bool TGParser::ParseTemplateArgValueList(
 
       auto *Name = cast<StringInit>(Value);
       const Init *QualifiedName = QualifyName(*ArgsRec, Name);
-      auto *NamedArg = ArgsRec->getValue(QualifiedName);
+      const RecordVal *NamedArg = ArgsRec->getTemplateArg(QualifiedName);
       if (!NamedArg)
         return Error(ValueLoc,
                      "Argument " + Name->getAsString() + " doesn't exist");
@@ -4765,13 +4767,9 @@ bool TGParser::CheckTemplateArgValues(
 
   bool HasError = false;
   for (auto [Value, Loc] : llvm::zip_equal(Values, ValuesLocs)) {
-    const Init *ArgName = nullptr;
-    if (Value->isPositional())
-      ArgName = TArgs[Value->getIndex()].getNameInit();
-    if (Value->isNamed())
-      ArgName = Value->getName();
-
-    const RecordVal *Arg = ArgsRec->getValue(ArgName);
+    const RecordVal *Arg = Value->isPositional()
+                               ? &TArgs[Value->getIndex()]
+                               : ArgsRec->getTemplateArg(Value->getName());
     const RecTy *ArgType = Arg->getType();
 
     if (const auto *ArgValue = dyn_cast<TypedInit>(Value->getValue())) {
