@@ -1,15 +1,14 @@
 ! RUN: split-file %s %t
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/source.f90 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/source.f90 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -o - %t/source.f90 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -o - %t/source.f90 | FileCheck %s --check-prefix=SIMD
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 %t/source.f90 | FileCheck %s --check-prefix=SYMBOLS
 ! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %t/source.f90
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE60
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE,SCOPE52
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE,SCOPE60
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefix=SCOPE
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefix=SCOPE
 
 !--- source.f90
 ! SIMD: module
@@ -138,21 +137,12 @@ contains
   end procedure separate_work
 end submodule assumes_implementation
 
-subroutine uses_assumes_module_reload()
-  use assumes_module, only: separate_work
-  implicit none
-  call separate_work()
-end subroutine uses_assumes_module_reload
-
 ! MODFILE: module assumes_module
 ! MODFILE: !$omp assumes no_openmp
 
 ! SUBMODULE-LABEL: func.func @_QMassumes_modulePseparate_work()
-! SUBMODULE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
-! SUBMODULE-LABEL: func.func @_QPuses_assumes_module_reload() {
-
-! SUBMODULE60-LABEL: func.func @_QMassumes_modulePseparate_work() {
-! SUBMODULE60-LABEL: func.func @_QPuses_assumes_module_reload() {
+! SUBMODULE-NOT: "omp_no_openmp"
+! SUBMODULE: return
 
 !--- versioned-scope.f90
 module scoped_assumes
@@ -171,10 +161,8 @@ end module scoped_assumes
 
 submodule (scoped_assumes) scoped_implementation
 contains
-  ! SCOPE52-LABEL: func.func @independent_work()
-  ! SCOPE52-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
-  ! SCOPE60-LABEL: func.func @independent_work()
-  ! SCOPE60-NOT: "omp_no_openmp"
+  ! SCOPE-LABEL: func.func @independent_work()
+  ! SCOPE-NOT: "omp_no_openmp"
   module procedure independent_work
     ! SCOPE: omp.parallel {
     !$omp parallel

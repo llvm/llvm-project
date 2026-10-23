@@ -6511,9 +6511,7 @@ private:
     builder->setInsertionPointToStart(&func.front());
     const auto &langOptions = bridge.getSemanticsContext().langOptions();
     const auto *assumptionScopeEnd =
-        langOptions.getOpenMPVersion() >= 60
-            ? &Fortran::semantics::omp::GetProgramUnit(scope).parent()
-            : nullptr;
+        &Fortran::semantics::omp::GetProgramUnit(scope).parent();
     for (const auto *assumptionScope = &scope;
          !langOptions.OpenMPSimd && !assumptionScope->IsGlobal() &&
          assumptionScope != assumptionScopeEnd;
