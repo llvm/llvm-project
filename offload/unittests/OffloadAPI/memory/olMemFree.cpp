@@ -29,6 +29,19 @@ TEST_P(olMemFreeAllocTypesTest, Success) {
   ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }
 
+TEST_P(olMemFreeAllocTypesTest, InvalidDoubleFree) {
+  // Small enough to be pooled, so this covers freeing pooled memory twice.
+  void *Alloc = nullptr;
+  ol_alloc_type_t AllocType = getTestParam();
+  if (AllocType == OL_ALLOC_TYPE_HOST) {
+    ASSERT_SUCCESS(olMemAllocHost(Context, Device, 1024, &Alloc));
+  } else {
+    ASSERT_SUCCESS(olMemAlloc(Context, Device, AllocType, 1024, &Alloc));
+  }
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
+  ASSERT_ANY_ERROR(olMemFree(Context, Alloc));
+}
+
 TEST_P(olMemFreeTest, InvalidNullPtr) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(
