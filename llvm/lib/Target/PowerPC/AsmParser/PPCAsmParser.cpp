@@ -364,6 +364,9 @@ public:
   bool isU6ImmX2() const { return isUImm<6>() && (getImm() & 1) == 0; }
   bool isU7ImmX4() const { return isUImm<7>() && (getImm() & 3) == 0; }
   bool isU8ImmX8() const { return isUImm<8>() && (getImm() & 7) == 0; }
+  bool isASXBI() const {
+    return Kind == Immediate && getImm() >= 32 && getImm() <= 47;
+  }
 
   bool isU16Imm() const { return isExtImm<16>(/*Signed*/ false, 1); }
   bool isS16Imm() const { return isExtImm<16>(/*Signed*/ true, 1); }

@@ -158,6 +158,17 @@ defm u4imm : UnsignedImmediate<i32,
 defm u5imm : UnsignedImmediate<i32,
   [{ return isUInt<5>(Imm); }], NOOP_SDNodeXForm,
   "U5Imm", 5>;
+
+// PowerPC AS names the tag exception bits by their architectural XER bit
+// numbers, 32 through 47.  The instruction fields contain XBI - 32.
+def ASXBIAsmOperand : ImmediateAsmOperand<"isASXBI">;
+def asxbi : Operand<i32> {
+  let PrintMethod = "printUImmOperand<6>";
+  let DecoderMethod = "decodeASXBIOperand";
+  let ParserMatchClass = ASXBIAsmOperand;
+  let EncoderMethod = "getASXBIEncoding";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 defm u6imm : UnsignedImmediate<i32,
   [{ return isUInt<6>(Imm); }], NOOP_SDNodeXForm,
   "U6Imm", 6>;

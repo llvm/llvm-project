@@ -1966,9 +1966,82 @@ let PPC970_Unit = 7 in {
 // We mark SCV as having no scheduling model since it is only meant to be used
 // as inline assembly. If we implement a builtin pattern for it we will need to
 // add it to the P9 and P10 scheduling models.
-let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
+let Predicates = [IsISA3_0OrPPCAS], hasNoSchedulingInfo = 1 in {
   def SCV : SCForm<17, 0, 1, (outs), (ins i32imm:$LEV),
                    "scv $LEV", IIC_BrB, []>;
+}
+
+// PowerPC AS tag-setting instruction.  The architected encoding has no
+// explicit operands; bits 11...15 carry its fixed selector value.
+let Predicates = [HasPPCAS], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in {
+  def SETTAG : I<31, (outs), (ins), "settag", NoItinerary> {
+    let Inst{6...10} = 0;
+    let Inst{11...15} = 1;
+    let Inst{16...20} = 0;
+    let Inst{21...30} = 499;
+    let Inst{31} = 0;
+  }
+
+  let isAsmParserOnly = 1 in
+  def TXER : TXForm<31, 4, (outs),
+                    (ins u5imm:$TO, u10imm:$UI, asxbi:$XBI),
+                    "txer $TO, $UI, $XBI", NoItinerary>;
+
+  def LSDX_PPCAS : XForm_1<31, 565, (outs g8rc:$RST),
+                           (ins g8rc:$RA, g8rc:$RB),
+                           "lsdx $RST, $RA, $RB", NoItinerary, []>;
+  def LSDI_PPCAS : XForm_1<31, 629, (outs g8rc:$RST),
+                           (ins g8rc:$RA, u5imm:$RB),
+                           "lsdi $RST, $RA, $RB", NoItinerary, []>;
+  def STSDX_PPCAS : XForm_1<31, 693, (outs),
+                            (ins g8rc:$RST, g8rc:$RA, g8rc:$RB),
+                            "stsdx $RST, $RA, $RB", NoItinerary, []>;
+  def STSDI_PPCAS : XForm_1<31, 757, (outs),
+                            (ins g8rc:$RST, g8rc:$RA, u5imm:$RB),
+                            "stsdi $RST, $RA, $RB", NoItinerary, []>;
+
+  def CMPLA_PPCAS : XForm_16<31, 64, (outs crrc:$BF),
+                             (ins g8rc:$RA, g8rc:$RB),
+                             "cmpla $BF, $RA, $RB", NoItinerary> {
+    let L = 1;
+  }
+  def MCRXRT_PPCAS : X_BF3<31, 544, (outs crrc:$BF), (ins),
+                            "mcrxrt $BF", NoItinerary>;
+
+  def SELII_PPCAS : ASSelectForm<12, (outs g8rc:$RA),
+                                 (ins s5imm:$S1, s5imm:$S2, asxbi:$XBI),
+                                 "selii $RA, $S1, $S2, $XBI">;
+  def SELIR_PPCAS : ASSelectForm<13, (outs g8rc:$RA),
+                                 (ins s5imm:$S1, g8rc:$S2, asxbi:$XBI),
+                                 "selir $RA, $S1, $S2, $XBI">;
+  def SELRI_PPCAS : ASSelectForm<14, (outs g8rc:$RA),
+                                 (ins g8rc:$S1, s5imm:$S2, asxbi:$XBI),
+                                 "selri $RA, $S1, $S2, $XBI">;
+  def SELRR_PPCAS : ASSelectForm<15, (outs g8rc:$RA),
+                                 (ins g8rc:$S1, g8rc:$S2, asxbi:$XBI),
+                                 "selrr $RA, $S1, $S2, $XBI">;
+
+  def SELIIo_PPCAS : ASSelectForm<12, (outs g8rc:$RA),
+                                  (ins s5imm:$S1, s5imm:$S2, asxbi:$XBI),
+                                  "selii. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELIRo_PPCAS : ASSelectForm<13, (outs g8rc:$RA),
+                                  (ins s5imm:$S1, g8rc:$S2, asxbi:$XBI),
+                                  "selir. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELRIo_PPCAS : ASSelectForm<14, (outs g8rc:$RA),
+                                  (ins g8rc:$S1, s5imm:$S2, asxbi:$XBI),
+                                  "selri. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
+  def SELRRo_PPCAS : ASSelectForm<15, (outs g8rc:$RA),
+                                  (ins g8rc:$S1, g8rc:$S2, asxbi:$XBI),
+                                  "selrr. $RA, $S1, $S2, $XBI"> {
+    let RC = 1;
+  }
 }
 
 // Branch history rolling buffer.

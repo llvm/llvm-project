@@ -33,6 +33,12 @@ using namespace llvm;
 
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
+unsigned PPCMCCodeEmitter::getASXBIEncoding(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  return MI.getOperand(OpNo).getImm() - 32;
+}
+
 MCCodeEmitter *llvm::createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                             MCContext &Ctx) {
   return new PPCMCCodeEmitter(MCII, Ctx);

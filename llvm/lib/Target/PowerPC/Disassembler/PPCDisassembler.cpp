@@ -255,6 +255,15 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeASXBIOperand(MCInst &Inst, uint64_t Imm,
+                                       int64_t Address,
+                                       const MCDisassembler *Decoder) {
+  if (!isUInt<4>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm + 32));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
@@ -395,6 +404,18 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   // Read the instruction in the proper endianness.
   uint64_t Inst = ReadFunc(Bytes.data());
+
+  // TXER uses the PowerPC AS TX-form. Its XBI field occupies bits that the
+  // base Power ISA decoder treats as part of an X-form extended opcode, so it
+  // must be recognized before the generated base instruction table.
+  if (STI.hasFeature(PPC::FeaturePPCAS) && (Inst >> 26) == 31 &&
+      (Inst & 0x3f) == 0x08 && ((Inst >> 21) & 0x1f) <= 1) {
+    MI.setOpcode(PPC::TXER);
+    MI.addOperand(MCOperand::createImm((Inst >> 21) & 0x1f));
+    MI.addOperand(MCOperand::createImm((Inst >> 11) & 0x3ff));
+    MI.addOperand(MCOperand::createImm(((Inst >> 7) & 0xf) + 32));
+    return MCDisassembler::Success;
+  }
 
   if (STI.hasFeature(PPC::FeatureSPE)) {
     DecodeStatus result =
