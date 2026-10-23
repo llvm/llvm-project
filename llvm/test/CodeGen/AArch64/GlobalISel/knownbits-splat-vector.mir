@@ -13,7 +13,7 @@ body:             |
   ; CHECK-NEXT: %one:_ KnownBits:00000000000000000000000000000001 SignBits:31 IsKnownNeverZero:1
   ; CHECK-NEXT: %two:_ KnownBits:00000000000000000000000000000010 SignBits:30 IsKnownNeverZero:1
   ; CHECK-NEXT: %x:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
-  ; CHECK-NEXT: %splat:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:0
+  ; CHECK-NEXT: %splat:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
     %w:_(i32) = COPY $w0
     %c:_(i1) = G_TRUNC %w(i32)
     %one:_(i32) = G_CONSTANT i32 1
@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT: %one:_ KnownBits:00000000000000000000000000000001 SignBits:31 IsKnownNeverZero:1
   ; CHECK-NEXT: %two:_ KnownBits:00000000000000000000000000000010 SignBits:30 IsKnownNeverZero:1
   ; CHECK-NEXT: %x:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
-  ; CHECK-NEXT: %splat:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:0
+  ; CHECK-NEXT: %splat:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
     %w:_(i32) = COPY $w0
     %c:_(i1) = G_TRUNC %w(i32)
     %one:_(i32) = G_CONSTANT i32 1

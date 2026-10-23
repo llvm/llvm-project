@@ -7,7 +7,7 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @splat_fconstant
   ; CHECK-NEXT: %c:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %splat:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %splat:_ FPClasses:(pnorm) SignBitKnown:0
     %c:_(f32) = G_FCONSTANT float 1.0
     %splat:_(<4 x f32>) = G_SPLAT_VECTOR %c(f32)
 ...
@@ -17,7 +17,7 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @splat_fconstant_scalable
   ; CHECK-NEXT: %c:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %splat:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %splat:_ FPClasses:(pnorm) SignBitKnown:0
     %c:_(f32) = G_FCONSTANT float 1.0
     %splat:_(<vscale x 4 x f32>) = G_SPLAT_VECTOR %c(f32)
 ...
@@ -30,7 +30,7 @@ body:             |
   ; CHECK-LABEL: name: @splat_fabs
   ; CHECK-NEXT: %x:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %abs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %splat:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %splat:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
     %x:_(f32) = COPY $s0
     %abs:_(f32) = G_FABS %x
     %splat:_(<4 x f32>) = G_SPLAT_VECTOR %abs(f32)
