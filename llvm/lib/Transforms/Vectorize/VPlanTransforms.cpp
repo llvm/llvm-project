@@ -6420,7 +6420,9 @@ void VPlanTransforms::convertToStridedAccesses(
 
     VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
     VPRecipeBase *StartR = StartMemR->getAsRecipe();
-    auto [DataTy, IntrinID] = GetDataTyAndIntrinID(StartR);
+    Type *DataTy;
+    Intrinsic::ID IntrinID;
+    std::tie(DataTy, IntrinID) = GetDataTyAndIntrinID(StartR);
     unsigned NumOfMembers =
         llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
           return IRMemberToRecipe.contains(Member);
@@ -6503,7 +6505,9 @@ void VPlanTransforms::convertToStridedAccesses(
                                      m_SpecificLoop(&L))))
         continue;
 
-      auto [DataTy, IntrinID] = GetDataTyAndIntrinID(&R);
+      Type *DataTy;
+      Intrinsic::ID IntrinID;
+      std::tie(DataTy, IntrinID) = GetDataTyAndIntrinID(&R);
 
       Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
