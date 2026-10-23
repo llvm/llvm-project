@@ -89,9 +89,9 @@ define void @implied2_neg(i32 %n) {
 ; Prove that (n u>= -1) =\=> (n - 1 s>= 0).
 ; CHECK-LABEL: 'implied2_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:

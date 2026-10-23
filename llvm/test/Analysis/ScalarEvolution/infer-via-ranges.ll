@@ -8,7 +8,7 @@ define void @infer_via_ranges(ptr %arr, i32 %n) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is ((-1 + %n) umin %n)
 ; CHECK-NEXT:    exit count for loop: %n
 ; CHECK-NEXT:    exit count for in.bounds: (-1 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2147483648
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) umin %n)
 ; CHECK-NEXT:    symbolic max exit count for loop: %n
 ; CHECK-NEXT:    symbolic max exit count for in.bounds: (-1 + %n)
