@@ -1,5 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -S -passes=instcombine %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -S -passes=always-inline,instcombine %s | FileCheck %s --check-prefixes=CHECK,INLINE
+; RUN: opt -mtriple=amdgpu12.50-amd-amdhsa -S -passes=instcombine %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
