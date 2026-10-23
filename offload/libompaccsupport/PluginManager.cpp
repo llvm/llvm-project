@@ -486,7 +486,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
           } else {
             GenericKernelTy *Kernel =
                 llvm::offload::tmp::__ol_tgt_GetKernelFromSymbol(*AddrOrErr);
-            DeviceEntry.Address = Kernel;
+            DeviceEntry.Address = *AddrOrErr;
 
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on the device
@@ -517,6 +517,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
 
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
+            LaunchInfo.Name = Kernel->getName();
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
