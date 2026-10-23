@@ -73,7 +73,7 @@ namespace math {
 //      g(x)'s primary range of accuracy (i.e., if 0.5 < 1/|x| <= 1), the rule
 //      from Case 2 must be applied recursively to 1/|x|.
 
-LIBC_INLINE float16 atanpif16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 atanpif16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
 
   FPBits xbits(x);

@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float16 f16mull(long double x, long double y) {
+LIBC_INLINE constexpr float16 f16mull(long double x, long double y) {
   return fputil::generic::mul<float16>(x, y);
 }
 

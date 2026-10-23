@@ -72,7 +72,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_LOG2F16_EXCEPTS>
 
 } // namespace log2f16_internal
 
-LIBC_INLINE float16 log2f16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 log2f16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);

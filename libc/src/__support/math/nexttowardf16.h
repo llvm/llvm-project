@@ -17,10 +17,9 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
-LIBC_INLINE float16 nexttowardf16(float16 x, long double y) {
+LIBC_INLINE LIBC_CONSTEXPR float16 nexttowardf16(float16 x, long double y) {
   // We can reuse the nextafter implementation because the internal nextafter is
   // templated on the types of the arguments.
   return fputil::nextafter(x, y);

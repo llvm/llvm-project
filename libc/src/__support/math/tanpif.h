@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float tanpif(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float tanpif(float x) {
   using namespace sincosf_utils_internal;
 
   using FPBits = typename fputil::FPBits<float>;
@@ -91,7 +91,7 @@ LIBC_INLINE float tanpif(float x) {
   // Once k and y are computed, we then deduce the answer by the formula:
   // tan(x) = sin(x) / cos(x)
   //        = (sin_y * cos_k + cos_y * sin_k) / (cos_y * cos_k - sin_y * sin_k)
-  double sin_k, cos_k, sin_y, cosm1_y;
+  double sin_k{}, cos_k{}, sin_y{}, cosm1_y{};
   sincospif_eval(xd, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && cos_k == 0)) {
