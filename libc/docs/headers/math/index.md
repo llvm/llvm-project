@@ -471,6 +471,7 @@ Notes:
 ## Algorithms + Implementation Details
 
 - {doc}`log`
+- [Trigonometric range reduction](https://arxiv.org/pdf/2609.35015)
 
 ## Fixed-point Arithmetics
 

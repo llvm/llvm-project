@@ -2012,6 +2012,9 @@ def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
 def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
 
+// ComplexPattern for instruction that use 8-bit signed shift amounts like SSHL.
+def shiftMask256 : ComplexPattern<XLenVT, 1, "selectShiftMask<256>", [], [], 0>;
+
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPairNoX0, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
@@ -2230,6 +2233,13 @@ class PatHorizontalMulAcc<SDPatternOperator OpNode, RVInst Inst,
                           ValueType ResultVT, ValueType SrcVT>
     : Pat<(ResultVT (OpNode (ResultVT GPR:$rd), (SrcVT GPR:$rs1),
                             (SrcVT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+class PatHorizontalMulAdd<SDPatternOperator OpNode, RVInst Inst,
+                          ValueType ResultVT, ValueType SrcVT>
+    : Pat<(ResultVT (add (ResultVT GPR:$rd),
+                        (binop_oneuse<OpNode> (SrcVT GPR:$rs1),
+                                              (SrcVT GPR:$rs2)))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
 // (rs1 << 1) + rs2
@@ -2571,9 +2581,9 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<ssubsat, SSUB>;
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
-  def : PatGprGpr<sshlsat, SSHA>;
-  def : PatGprGpr<ushlsat, SSHL>;
-  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
+  def : PatGprShiftMask<sshlsat, SSHA, shiftMask256>;
+  def : PatGprShiftMask<ushlsat, SSHL, shiftMask256>;
+  def : PatGprImm<sshlsat, SSLAI, uimm5>;
   // No SSLLI
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
@@ -2605,6 +2615,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, i32, v4i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, i32, v2i16>;
@@ -3444,6 +3458,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulqr, PMULQR_W, v2i32>;
 
   // Packed multiplication with horizontal addition patterns.
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, v2i32, v8i8>;
+
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
   def : PatHorizontalMul<riscv_pm2add_x, PM2ADD_HX, v2i32, v4i16>;
