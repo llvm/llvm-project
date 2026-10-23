@@ -2445,6 +2445,66 @@ getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
   return {associate.getBase(), associate};
 }
 
+// A boxchar cannot carry volatility, so a dynamic-length character variable
+// only shows it on its FIR base or on the variable it designates.
+static bool isVolatileCharacter(hlfir::Entity var) {
+  if (fir::isa_volatile_type(var.getType()) ||
+      fir::isa_volatile_type(var.getFirBase().getType()))
+    return true;
+  if (auto designate = var.getDefiningOp<hlfir::DesignateOp>())
+    return isVolatileCharacter(hlfir::Entity{designate.getMemref()});
+  return false;
+}
+
+// TRIM(x) of a character variable is x(1:LEN_TRIM(x)). Replace the operation
+// with a substring designator of x instead of the runtime call, which
+// allocates the result on the heap. Bufferization then copies the substring
+// into a stack temporary where a value is needed. Expressions are left to the
+// runtime: they have no storage to designate into.
+class CharTrimOpConversion : public mlir::OpRewritePattern<hlfir::CharTrimOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CharTrimOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CharTrimOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    hlfir::Entity str{op.getChr()};
+    if (!str.isVariable())
+      return rewriter.notifyMatchFailure(op, "operand is not a variable");
+    if (isVolatileCharacter(str))
+      return rewriter.notifyMatchFailure(op, "operand is volatile");
+
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, str);
+    assert(!cleanup && "variable to Exv should not produce cleanup");
+    const fir::CharBoxValue *charBox = exv.getCharBox();
+    if (!charBox)
+      return rewriter.notifyMatchFailure(op, "operand is not a plain string");
+
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value lenTrim =
+        fir::factory::CharacterExprHelper{builder, loc}.createLenTrim(*charBox);
+
+    auto charTy = mlir::cast<fir::CharacterType>(str.getFortranElementType());
+    // A dynamic-length character designator must be a boxchar.
+    mlir::Type substrTy =
+        fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
+    auto substr = hlfir::DesignateOp::create(
+        builder, loc, substrTy, str, /*component=*/{},
+        /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+        /*substring=*/mlir::ValueRange{one, lenTrim},
+        /*complexPart=*/std::nullopt, /*shape=*/mlir::Value{},
+        /*typeParams=*/mlir::ValueRange{lenTrim},
+        fir::FortranVariableFlagsAttr{});
+    mlir::Value result = hlfir::AsExprOp::create(builder, loc, substr);
+    assert(result.getType() == op.getType() && "unexpected hlfir.expr type");
+    rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
 class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
 public:
   using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
@@ -3338,6 +3398,7 @@ public:
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
     patterns.insert<CmpCharOpConversion>(context);
     patterns.insert<IndexOpConversion>(context);
+    patterns.insert<CharTrimOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
