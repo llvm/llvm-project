@@ -663,10 +663,9 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
           Block = ED->getRawStmt();
 
         unsigned NewParentScope = Scopes.size();
-        Scopes.emplace_back(ParentScope,
-                            diag::note_omp_protected_structured_block,
-                            diag::note_omp_exits_structured_block,
-                            Block->getBeginLoc());
+        Scopes.emplace_back(
+            ParentScope, diag::note_omp_protected_structured_block,
+            diag::note_omp_exits_structured_block, Block->getBeginLoc());
         BuildScopeInformation(Block, NewParentScope);
         return;
       }
