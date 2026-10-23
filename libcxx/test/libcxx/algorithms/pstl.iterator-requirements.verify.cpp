@@ -153,6 +153,12 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::includes(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: includes}}
+    (void)std::includes(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: includes}}
+  }
+
+  {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
   }
@@ -267,6 +273,69 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::search_n(pol, non_fwd, non_fwd, 1, 1);       // expected-error@*:* {{static assertion failed: search_n}}
     (void)std::search_n(pol, non_fwd, non_fwd, 1, 1, pred); // expected-error@*:* {{static assertion failed: search_n}}
+  }
+
+  {
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_difference}}
+
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+  }
+
+  {
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, non_fwd, non_fwd, it, it, it);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, non_fwd, non_fwd, it);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, it, it, non_output);
+
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, non_fwd, non_fwd, it, it, it, pred);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, non_fwd, non_fwd, it, pred);
+    // expected-error@*:* {{static assertion failed: set_symmetric_difference}}
+    (void)std::set_symmetric_difference(pol, it, it, it, it, non_output, pred);
+  }
+
+  {
+    (void)std::set_intersection(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_intersection}}
+
+    (void)std::set_intersection(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+    (void)std::set_intersection(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_intersection}}
+  }
+
+  {
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_union}}
+
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_union}}
   }
 
   {
