@@ -27,12 +27,14 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -5889,6 +5891,14 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
                                       m_VPValue(FalseBase))) ||
       vputils::isSingleScalar(Cond) || !IsUniformBase(TrueBase) ||
       !IsUniformBase(FalseBase))
+    return false;
+
+  auto AreKnownNoAlias = [](VPValue *A, VPValue *B) {
+    const Value *ObjA = getUnderlyingObject(A->getUnderlyingValue());
+    const Value *ObjB = getUnderlyingObject(B->getUnderlyingValue());
+    return ObjA != ObjB && isIdentifiedObject(ObjA) && isIdentifiedObject(ObjB);
+  };
+  if (!IsLoad && !AreKnownNoAlias(TrueBase, FalseBase))
     return false;
 
   VPlan &Plan = *VPI->getParent()->getPlan();
