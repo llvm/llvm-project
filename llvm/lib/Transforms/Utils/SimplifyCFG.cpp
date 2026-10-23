@@ -2055,6 +2055,12 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         }
 
         combineMetadataForCSE(I1, I2, true);
+        // If we are combining select instructions, we mark the profile
+        // explicitly unknown given we are hoisting the instruction across
+        // control flow and we have no guarantee that the control flow condition
+        // we are hoisting across is independent of the select condition.
+        if (auto *SI = dyn_cast<SelectInst>(I1))
+          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
         // I1 and I2 are being combined into a single instruction.  Its debug
         // location is the merged locations of the original instructions.
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
