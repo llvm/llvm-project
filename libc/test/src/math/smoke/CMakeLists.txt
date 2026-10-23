@@ -1,4 +1,4 @@
-add_libc_testsuite(libc-math-smoke-tests)
+add_libc_testsuite(libc-math-smoke-tests PARENT libc-math-tests)
 
 add_fp_unittest(
   cosf_test
@@ -286,7 +286,7 @@ add_fp_unittest(
 add_fp_unittest(
   faddl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     faddl_test.cpp
   HDRS
@@ -301,7 +301,7 @@ add_fp_unittest(
 add_fp_unittest(
   faddf128_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     faddf128_test.cpp
   HDRS
@@ -1423,8 +1423,11 @@ add_fp_unittest(
     exp_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.exp
+    libc.src.__support.math.exp_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
 )
 
 add_fp_unittest(
@@ -4833,7 +4836,7 @@ add_fp_unittest(
 add_fp_unittest(
   atanpif16_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     atanpif16_test.cpp
   DEPENDS
@@ -4890,7 +4893,7 @@ add_fp_unittest(
 add_fp_unittest(
   asinpif16_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     asinpif16_test.cpp
   DEPENDS

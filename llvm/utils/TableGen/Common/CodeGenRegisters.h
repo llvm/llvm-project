@@ -110,12 +110,18 @@ public:
                                    const CodeGenHwModes &CGH) {
     assert(A && B);
     std::pair<CompMap::iterator, bool> Ins = Composed.try_emplace(A, B);
+    unsigned NumModes = CGH.getNumModeIds();
+
+    // An earlier identical call already added the ranges for every mode, so
+    // there is nothing left to do once B has an offset in all of them.
+    if (!Ins.second && Ins.first->second == B &&
+        B->hasOffsetInAllModes(NumModes))
+      return nullptr;
 
     // Synthetic subreg indices that aren't contiguous (for instance ARM
     // register tuples) don't have a bit range, so it's OK to let
     // B->Offset == -1. For the other cases, accumulate the offset and set
     // the size here. Only do so if there is no offset yet though.
-    unsigned NumModes = CGH.getNumModeIds();
     // Skip default mode.
     for (unsigned M = 0; M < NumModes; ++M) {
       // Handle DefaultMode last.
@@ -165,6 +171,20 @@ public:
   }
 
 private:
+  // Return true if Range has an offset in all NumModes modes. Offsets are
+  // never cleared once set, so cache a true result.
+  bool hasOffsetInAllModes(unsigned NumModes) {
+    if (OffsetInAllModes)
+      return true;
+
+    OffsetInAllModes =
+        Range.size() == NumModes && all_of(Range, [](const auto &P) {
+          return P.second.Offset != (uint32_t)-1;
+        });
+    return OffsetInAllModes;
+  }
+
+  bool OffsetInAllModes = false;
   CompMap Composed;
 };
 
@@ -181,9 +201,13 @@ public:
   bool Artificial = true;
   bool Constant = false;
 
-  // Map SubRegIndex -> Register.
+  // Map SubRegIndex -> Register, used while computing the sub-registers.
   using SubRegMap =
       std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>;
+
+  // A reference to the final sub-registers, sorted by sub-register index.
+  using SubRegArrayRef =
+      ArrayRef<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>>;
 
   CodeGenRegister(const Record *R, unsigned Enum);
 
@@ -212,9 +236,9 @@ public:
   // silently corrupts sub-register liveness and spilling). See the definition.
   void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
-  const SubRegMap &getSubRegs() const {
-    assert(SubRegsComplete && "Must precompute sub-registers");
-    return SubRegs;
+  SubRegArrayRef getSubRegs() const {
+    assert(SuperRegsComplete && "Must precompute super-registers");
+    return FinalSubRegs;
   }
 
   // Add sub-registers to OSet following a pre-order defined by the .td file.
@@ -226,6 +250,10 @@ public:
   CodeGenSubRegIndex *getSubRegIndex(const CodeGenRegister *Reg) const {
     return SubReg2Idx.lookup(Reg);
   }
+
+  // Return the sub-register at Idx, or NULL if there is none. Only valid after
+  // computeSuperRegs().
+  CodeGenRegister *getSubReg(const CodeGenSubRegIndex *Idx) const;
 
   using SuperRegList = std::vector<const CodeGenRegister *>;
 
@@ -309,9 +337,13 @@ private:
   // Super-registers where this is the first explicit sub-register.
   SuperRegList LeadingSuperRegs;
 
+  // Built by computeSubRegs(); copied to FinalSubRegs and freed by
+  // computeSuperRegs().
   SubRegMap SubRegs;
   SuperRegList SuperRegs;
   DenseMap<const CodeGenRegister *, CodeGenSubRegIndex *> SubReg2Idx;
+  SmallVector<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>, 0>
+      FinalSubRegs;
   RegUnitList RegUnits;
   RegUnitLaneMaskList RegUnitLaneMasks;
 };
