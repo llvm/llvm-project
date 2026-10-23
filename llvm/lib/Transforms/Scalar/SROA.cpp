@@ -4965,9 +4965,10 @@ public:
   /// slice into.
   struct Iterator
       : public iterator_facade_base<Iterator, std::forward_iterator_tag,
-                                    Iterator> {
+                                    const Iterator> {
     SliceSplitter &SS;
     unsigned Idx;
+    Iterator() = default;
     Iterator(SliceSplitter &SS, bool IsEnd) : SS(SS) {
       Idx = IsEnd ? SS.Splits.size() + 1 : 0;
     }
