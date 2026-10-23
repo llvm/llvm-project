@@ -399,11 +399,13 @@ define i32 @freeze_shl_nsw(i32 %a0) nounwind {
 define i32 @freeze_shl_outofrange(i32 %a0) nounwind {
 ; X86-LABEL: freeze_shl_outofrange:
 ; X86:       # %bb.0:
+; X86-NEXT:    # freeze: $eax
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_shl_outofrange:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    shll $2, %eax
 ; X64-NEXT:    retq
   %x = shl i32 %a0, 32
@@ -513,11 +515,13 @@ define i32 @freeze_ashr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 define i32 @freeze_ashr_outofrange(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ashr_outofrange:
 ; X86:       # %bb.0:
+; X86-NEXT:    # freeze: $eax
 ; X86-NEXT:    sarl $3, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_outofrange:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    sarl $3, %eax
 ; X64-NEXT:    retq
   %x = ashr i32 %a0, 32
@@ -628,11 +632,13 @@ define i32 @freeze_lshr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 define i32 @freeze_lshr_outofrange(i32 %a0) nounwind {
 ; X86-LABEL: freeze_lshr_outofrange:
 ; X86:       # %bb.0:
+; X86-NEXT:    # freeze: $eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_outofrange:
 ; X64:       # %bb.0:
+; X64-NEXT:    # freeze: $eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    retq
   %x = lshr i32 %a0, 32

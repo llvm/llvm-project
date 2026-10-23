@@ -1801,7 +1801,8 @@ define i64 @v_test_udiv24_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-LABEL: v_test_udiv24_pow2_k_den_i64:
 ; GCN-IR:       ; %bb.0: ; %_udiv-special-cases
 ; GCN-IR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-IR-NEXT:    v_lshrrev_b32_e32 v4, 8, v1
+; GCN-IR-NEXT:    v_lshrrev_b32_e32 v0, 8, v1
+; GCN-IR-NEXT:    v_mov_b32_e32 v4, v0
 ; GCN-IR-NEXT:    v_ffbh_u32_e32 v0, v4
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
 ; GCN-IR-NEXT:    s_flbit_i32_b32 s4, 0
