@@ -1297,12 +1297,28 @@ public:
                                   const CallBase &I, MachineFunction &MF,
                                   unsigned Intrinsic) const {}
 
-  /// Returns true if the target can instruction select the specified FP
-  /// immediate natively. If false, the legalizer will materialize the FP
-  /// immediate as a load from a constant pool.
-  virtual bool isFPImmLegal(const APFloat & /*Imm*/, EVT /*VT*/,
-                            bool ForCodeSize = false) const {
-    return false;
+  /// How the legalizer should materialize a floating-point immediate.
+  enum class FPImmAction {
+    /// The target can instruction select the immediate natively.
+    Legal,
+    /// Build the immediate as a bitcast of an integer constant with the same
+    /// bits.
+    Bitcast,
+    /// Load the immediate from the constant pool.
+    ConstantPool,
+  };
+
+  /// Returns how the legalizer should materialize the specified FP immediate.
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, EVT /*VT*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
+  /// Returns true if the specified FP immediate can be materialized without a
+  /// load from the constant pool.
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize = false) const {
+    return getFPImmAction(Imm, VT, ForCodeSize) != FPImmAction::ConstantPool;
   }
 
   /// Targets can use this to indicate that they only support *some*
@@ -3360,6 +3376,10 @@ public:
   virtual bool
   optimizeExtendOrTruncateConversion(Instruction *I, Loop *L,
                                      const TargetTransformInfo &TTI) const {
+    return false;
+  }
+
+  virtual bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const {
     return false;
   }
 
