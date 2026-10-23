@@ -46,7 +46,7 @@ public:
   };
 
   IncludeFixerContext() = default;
-  IncludeFixerContext(StringRef FilePath,
+  IncludeFixerContext(llvm::StringRef FilePath,
                       std::vector<QuerySymbolInfo> QuerySymbols,
                       std::vector<find_all_symbols::SymbolInfo> Symbols);
 
@@ -61,7 +61,7 @@ public:
   }
 
   /// Get the file path to the file being processed.
-  StringRef getFilePath() const { return FilePath; }
+  llvm::StringRef getFilePath() const { return FilePath; }
 
   /// Get header information.
   const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }

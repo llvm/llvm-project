@@ -18,8 +18,11 @@
 #ifndef LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 #define LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceLocation.h"
+// Please do not #include Clang headers in this file. This file can be used
+// from clang-tblgen, and consuming Clang headers here will create a circular
+// dependency. It _is_ acceptable to forward-declare types from the "clang"
+// namespace, as long as the consuming code in clang-tblgen does not need to use
+// any of the functions that use the forward-declared types.
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -34,9 +37,13 @@
 
 namespace clang {
 
+class CharSourceRange;
 class FileManager;
 class Rewriter;
+class SourceLocation;
 class SourceManager;
+class SourceRange;
+class LangOptions;
 
 namespace tooling {
 
@@ -91,24 +98,24 @@ public:
   /// \param FilePath A source file accessible via a SourceManager.
   /// \param Offset The byte offset of the start of the range in the file.
   /// \param Length The length of the range in bytes.
-  Replacement(StringRef FilePath, unsigned Offset, unsigned Length,
-              StringRef ReplacementText);
+  Replacement(llvm::StringRef FilePath, unsigned Offset, unsigned Length,
+              llvm::StringRef ReplacementText);
 
   /// Creates a Replacement of the range [Start, Start+Length) with
   /// ReplacementText.
   Replacement(const SourceManager &Sources, SourceLocation Start,
-              unsigned Length, StringRef ReplacementText);
+              unsigned Length, llvm::StringRef ReplacementText);
 
   /// Creates a Replacement of the given range with ReplacementText.
   Replacement(const SourceManager &Sources, const CharSourceRange &Range,
-              StringRef ReplacementText,
-              const LangOptions &LangOpts = LangOptions());
+              llvm::StringRef ReplacementText,
+              const LangOptions &LangOpts = DefaultLangOptions);
 
   /// Creates a Replacement of the node with ReplacementText.
   template <typename Node>
   Replacement(const SourceManager &Sources, const Node &NodeToReplace,
-              StringRef ReplacementText,
-              const LangOptions &LangOpts = LangOptions());
+              llvm::StringRef ReplacementText,
+              const LangOptions &LangOpts = DefaultLangOptions);
 
   /// Returns whether this replacement can be applied to a file.
   ///
@@ -117,10 +124,10 @@ public:
 
   /// Accessors.
   /// @{
-  StringRef getFilePath() const { return FilePath; }
+  llvm::StringRef getFilePath() const { return FilePath; }
   unsigned getOffset() const { return ReplacementRange.getOffset(); }
   unsigned getLength() const { return ReplacementRange.getLength(); }
-  StringRef getReplacementText() const { return ReplacementText; }
+  llvm::StringRef getReplacementText() const { return ReplacementText; }
   /// @}
 
   /// Applies the replacement on the Rewriter.
@@ -131,11 +138,20 @@ public:
 
 private:
   void setFromSourceLocation(const SourceManager &Sources, SourceLocation Start,
-                             unsigned Length, StringRef ReplacementText);
+                             unsigned Length, llvm::StringRef ReplacementText);
   void setFromSourceRange(const SourceManager &Sources,
                           const CharSourceRange &Range,
-                          StringRef ReplacementText,
+                          llvm::StringRef ReplacementText,
                           const LangOptions &LangOpts);
+  void setFromSourceRange(const SourceManager &Sources,
+                          const SourceRange &Range,
+                          llvm::StringRef ReplacementText,
+                          const LangOptions &LangOpts);
+
+  // Used as a default argument to avoid requiring LangOptions to be complete in
+  // this header.
+  static const LangOptions DefaultLangOptions;
+  static const char *const InvalidLocation;
 
   std::string FilePath;
   Range ReplacementRange;
@@ -167,7 +183,7 @@ public:
 
   std::string message() const override;
 
-  void log(raw_ostream &OS) const override { OS << message(); }
+  void log(llvm::raw_ostream &OS) const override { OS << message(); }
 
   replacement_error get() const { return Err; }
 
@@ -328,7 +344,7 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 /// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
 /// is returned (the Error message can be converted to string using
 /// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
-llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+llvm::Expected<std::string> applyAllReplacements(llvm::StringRef Code,
                                                  const Replacements &Replaces);
 
 /// Collection of Replacements generated from a single translation unit.
@@ -360,11 +376,11 @@ std::map<std::string, Replacements> groupReplacementsByFile(
 
 template <typename Node>
 Replacement::Replacement(const SourceManager &Sources,
-                         const Node &NodeToReplace, StringRef ReplacementText,
+                         const Node &NodeToReplace,
+                         llvm::StringRef ReplacementText,
                          const LangOptions &LangOpts) {
-  const CharSourceRange Range =
-      CharSourceRange::getTokenRange(NodeToReplace->getSourceRange());
-  setFromSourceRange(Sources, Range, ReplacementText, LangOpts);
+  setFromSourceRange(Sources, NodeToReplace->getSourceRange(), ReplacementText,
+                     LangOpts);
 }
 
 } // namespace tooling

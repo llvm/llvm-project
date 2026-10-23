@@ -15,7 +15,12 @@
 #ifndef LLVM_CLANG_TOOLING_REPLACEMENTSYAML_H
 #define LLVM_CLANG_TOOLING_REPLACEMENTSYAML_H
 
-#include "clang/Tooling/Refactoring.h"
+// Please do not #include Clang headers in this file. This file can be used
+// from clang-tblgen, and consuming Clang headers here will create a circular
+// dependency. It _is_ acceptable to forward-declare types from the "clang"
+// namespace, as long as the consuming code in clang-tblgen does not need to use
+// any of the functions that use the forward-declared types.
+#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <string>
 
