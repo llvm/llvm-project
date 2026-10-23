@@ -5879,17 +5879,16 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     return false;
 
   ScalarEvolution &SE = *CostCtx.PSE.getSE();
-  auto IsLoopInvariant = [&](VPValue *V) {
-    Value *UnderlyingV = V->getUnderlyingValue();
-    return UnderlyingV &&
+  auto IsUniformBase = [&](VPValue *Base) {
+    Value *UnderlyingV = Base->getUnderlyingValue();
+    return vputils::isSingleScalar(Base) && UnderlyingV &&
            SE.isLoopInvariant(CostCtx.PSE.getSCEV(UnderlyingV), CostCtx.L);
   };
   VPValue *Cond = nullptr, *TrueBase = nullptr, *FalseBase = nullptr;
   if (!match(GEPOperands[0], m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
                                       m_VPValue(FalseBase))) ||
-      vputils::isSingleScalar(Cond) || !vputils::isSingleScalar(TrueBase) ||
-      !vputils::isSingleScalar(FalseBase) || !IsLoopInvariant(TrueBase) ||
-      !IsLoopInvariant(FalseBase))
+      vputils::isSingleScalar(Cond) || !IsUniformBase(TrueBase) ||
+      !IsUniformBase(FalseBase))
     return false;
 
   VPlan &Plan = *VPI->getParent()->getPlan();
@@ -5902,18 +5901,16 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     return false;
 
   Value *Index = *GEP->idx_begin();
-  auto *AR = dyn_cast<SCEVAddRecExpr>(CostCtx.PSE.getSCEV(Index));
-  if (!AR || AR->getLoop() != CostCtx.L)
+  const SCEV *IndexSCEV = CostCtx.PSE.getSCEV(Index);
+  if (!match(IndexSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(),
+                                            m_SpecificLoop(CostCtx.L))))
     return false;
   // GEP indices are sign-extended or truncated to the pointer index type.
   // Make sure the converted recurrence still has unit stride.
   Type *GEPIndexTy = Plan.getDataLayout().getIndexType(GEP->getType());
-  auto *ExtendedAR =
-      dyn_cast<SCEVAddRecExpr>(SE.getTruncateOrSignExtend(AR, GEPIndexTy));
-  auto *Step = ExtendedAR
-                   ? dyn_cast<SCEVConstant>(ExtendedAR->getStepRecurrence(SE))
-                   : nullptr;
-  if (!Step || !Step->getAPInt().isOne())
+  IndexSCEV = SE.getTruncateOrSignExtend(IndexSCEV, GEPIndexTy);
+  if (!match(IndexSCEV, m_scev_AffineAddRec(m_SCEV(), m_scev_One(),
+                                            m_SpecificLoop(CostCtx.L))))
     return false;
 
   Align Alignment = getLoadStoreAlignment(I);
@@ -5958,6 +5955,7 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable, Range))
     return false;
 
+  DebugLoc DL = VPI->getDebugLoc();
   VPBuilder Builder(VPI);
   auto CreatePointer = [&](VPValue *Base) {
     SmallVector<VPValue *> Operands(GEPOperands);
@@ -5965,38 +5963,34 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     auto *ArmGEP = GEPRecipe->cloneWithOperands(Operands, Ptr->getScalarType());
     ArmGEP->dropPoisonGeneratingFlags();
     Builder.insert(ArmGEP);
-    return Builder.createConsecutiveVectorPointer(
-        ArmGEP, ScalarTy, /*Reverse=*/false, VPI->getDebugLoc());
+    return Builder.createConsecutiveVectorPointer(ArmGEP, ScalarTy,
+                                                  /*Reverse=*/false, DL);
   };
   VPValue *TruePtr = CreatePointer(TrueBase);
   VPValue *FalsePtr = CreatePointer(FalseBase);
 
-  VPValue *FalseCond = Builder.createNot(Cond, VPI->getDebugLoc());
+  VPValue *FalseCond = Builder.createNot(Cond, DL);
   VPValue *TrueMask = Cond;
   VPValue *FalseMask = FalseCond;
   if (VPValue *Mask = VPI->getMask()) {
-    TrueMask = Builder.createLogicalAnd(Mask, Cond, VPI->getDebugLoc());
-    FalseMask = Builder.createLogicalAnd(Mask, FalseCond, VPI->getDebugLoc());
+    TrueMask = Builder.createLogicalAnd(Mask, Cond, DL);
+    FalseMask = Builder.createLogicalAnd(Mask, FalseCond, DL);
   }
 
-  if (IsLoad) {
-    VPSingleDefRecipe *TrueLoad =
-        Builder.createWidenLoad(*cast<LoadInst>(I), TruePtr, TrueMask,
-                                /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-    VPSingleDefRecipe *FalseLoad =
-        Builder.createWidenLoad(*cast<LoadInst>(I), FalsePtr, FalseMask,
-                                /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-    VPInstruction *Select =
-        Builder.createSelect(Cond, TrueLoad, FalseLoad, VPI->getDebugLoc());
-    VPI->replaceAllUsesWith(Select);
-  } else {
-    VPValue *StoredVal = VPI->getOperand(0);
-    Builder.createWidenStore(*cast<StoreInst>(I), TruePtr, StoredVal, TrueMask,
-                             /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-    Builder.createWidenStore(*cast<StoreInst>(I), FalsePtr, StoredVal,
-                             FalseMask, /*Consecutive=*/true, *VPI,
-                             VPI->getDebugLoc());
-  }
+  auto CreateMemOp = [&](VPValue *Ptr, VPValue *Mask) -> VPRecipeBase * {
+    if (IsLoad)
+      return Builder.createWidenLoad(*cast<LoadInst>(I), Ptr, Mask,
+                                     /*Consecutive=*/true, *VPI, DL);
+    return Builder.createWidenStore(*cast<StoreInst>(I), Ptr,
+                                    VPI->getOperand(0), Mask,
+                                    /*Consecutive=*/true, *VPI, DL);
+  };
+  VPRecipeBase *TrueMemOp = CreateMemOp(TruePtr, TrueMask);
+  VPRecipeBase *FalseMemOp = CreateMemOp(FalsePtr, FalseMask);
+  if (IsLoad)
+    VPI->replaceAllUsesWith(
+        Builder.createSelect(Cond, TrueMemOp->getVPSingleValue(),
+                             FalseMemOp->getVPSingleValue(), DL));
   VPI->eraseFromParent();
   return true;
 }
