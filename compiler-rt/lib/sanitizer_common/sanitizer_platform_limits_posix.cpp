@@ -197,6 +197,10 @@ typedef struct user_fpregs elf_fpregset_t;
 #    endif
 #  endif
 
+#  if __has_include(<threads.h>)
+#    include <threads.h>
+#  endif
+
 // Include these after system headers to avoid name clashes and ambiguities.
 #  include "sanitizer_common.h"
 #  include "sanitizer_internal_defs.h"
@@ -1021,6 +1025,12 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
   const int si_SEGV_MAPERR = SEGV_MAPERR;
   const int si_SEGV_ACCERR = SEGV_ACCERR;
+
+#  if SANITIZER_INTERCEPT_C11_THREADS
+  const int threads_mtx_plain = mtx_plain;
+  const int threads_mtx_recursive = mtx_recursive;
+  const int threads_mtx_timed = mtx_timed;
+#  endif
 } // namespace __sanitizer
 
 using namespace __sanitizer;
@@ -1405,5 +1415,11 @@ CHECK_TYPE_SIZE(sem_t);
 #if SANITIZER_LINUX && defined(__arm__)
 COMPILER_CHECK(ARM_VFPREGS_SIZE == ARM_VFPREGS_SIZE_ASAN);
 #endif
+
+#  if SANITIZER_INTERCEPT_C11_THREADS
+COMPILER_CHECK(thrd_success == 0);
+COMPILER_CHECK(sizeof(thrd_t) == sizeof(pthread_t));
+COMPILER_CHECK(sizeof(tss_t) == sizeof(unsigned));
+#  endif
 
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_APPLE
