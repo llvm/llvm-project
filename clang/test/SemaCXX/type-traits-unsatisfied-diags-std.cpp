@@ -67,6 +67,13 @@ template <typename T>
 constexpr bool is_final_v = __is_final(T);
 
 template <typename T>
+struct is_trivially_destructible {
+    static constexpr bool value = __is_trivially_destructible(T);
+};
+template <typename T>
+constexpr bool is_trivially_destructible_v = __is_trivially_destructible(T);
+
+template <typename T>
 struct is_abstract {
     static constexpr bool value = __is_abstract(T);
 };
@@ -159,6 +166,15 @@ template <typename T>
 constexpr bool is_final_v = __is_final(T);
 
 template <typename T>
+struct __details_is_trivially_destructible {
+    static constexpr bool value = __is_trivially_destructible(T);
+};
+template <typename T>
+using is_trivially_destructible = __details_is_trivially_destructible<T>;
+template <typename T>
+constexpr bool is_trivially_destructible_v = __is_trivially_destructible(T);
+
+template <typename T>
 struct __details_is_abstract {
     static constexpr bool value = __is_abstract(T);
 };
@@ -246,6 +262,13 @@ template <typename T>
 constexpr bool is_final_v = is_final<T>::value;
 
 template <typename T>
+struct __details_is_trivially_destructible : bool_constant<__is_trivially_destructible(T)> {};
+template <typename T>
+using is_trivially_destructible = __details_is_trivially_destructible<T>;
+template <typename T>
+constexpr bool is_trivially_destructible_v = is_trivially_destructible<T>::value;
+
+template <typename T>
 struct __details_is_abstract : bool_constant<__is_abstract(T)> {};
 template <typename T>
 using is_abstract = __details_is_abstract<T>;
@@ -277,6 +300,18 @@ static_assert(std::is_trivially_copyable_v<int&>);
 // expected-note@-1 {{'int &' is not trivially copyable}} \
 // expected-note@-1 {{because it is a reference type}}
 
+
+static_assert(std::is_trivially_destructible<int>::value);
+
+static_assert(std::is_trivially_destructible<void>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_trivially_destructible<void>::value'}} \
+// expected-note@-1 {{'void' is not trivially destructible}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+static_assert(std::is_trivially_destructible_v<void>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_trivially_destructible_v<void>'}} \
+// expected-note@-1 {{'void' is not trivially destructible}} \
+// expected-note@-1 {{because it is a cv void type}}
 
  // Direct tests
  static_assert(std::is_standard_layout<int>::value);
