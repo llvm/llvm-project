@@ -177,7 +177,7 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-LE-NEXT:    sth r6, 2(r5)
 ; CHECK-LE-NEXT:    addi r5, r5, 2
 ; CHECK-LE-NEXT:    bdnz .LBB2_1
-; CHECK-LE-NEXT:  .LBB2_2: # %for.cond.cleanup
+; CHECK-LE-NEXT:  .LBB2_2: # %for.end
 ; CHECK-LE-NEXT:    addi r3, r1, 48
 ; CHECK-LE-NEXT:    bl test_arr
 ; CHECK-LE-NEXT:    nop
@@ -208,7 +208,7 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-BE-NEXT:    sth r6, 2(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 2
 ; CHECK-BE-NEXT:    bdnz .LBB2_1
-; CHECK-BE-NEXT:  .LBB2_2: # %for.cond.cleanup
+; CHECK-BE-NEXT:  .LBB2_2: # %for.end
 ; CHECK-BE-NEXT:    addi r3, r1, 128
 ; CHECK-BE-NEXT:    bl test_arr
 ; CHECK-BE-NEXT:    nop

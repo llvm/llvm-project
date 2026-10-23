@@ -91,7 +91,7 @@ for.body:                                         ; preds = %for.body, %entry
 return:                                           ; preds = %for.body
   ret i32 %val
 ; CHECK-LABEL: @test4
+; CHECK: __tls_get_addr
 ; CHECK: mtctr
 ; CHECK: bdnz
-; CHECK: __tls_get_addr
 }
