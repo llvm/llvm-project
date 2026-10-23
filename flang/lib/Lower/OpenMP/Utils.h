@@ -234,8 +234,7 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
 /// The default mapper path first looks for a user-defined mapper. If none
-/// exists, it may synthesize a compiler-generated mapper, except for target
-/// enter data, target exit data, and target update directives.
+/// exists, it may synthesize a compiler-generated mapper.
 ///
 /// \param converter The converter used to query and generate mapper symbols.
 /// \param loc The location to use when generating an implicit mapper.
@@ -244,13 +243,17 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
 ///        empty name.
 /// \param mapTypeBits The map flags used when deciding whether an implicit
 ///        mapper should be generated.
-/// \param directive The enclosing OpenMP directive.
 /// \return A symbol reference to the resolved mapper, or a null attribute when
 ///         no mapper applies.
-mlir::FlatSymbolRefAttr resolveMapperId(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const omp::Object &object, llvm::StringRef mapperIdName,
-    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdName,
+                mlir::omp::ClauseMapFlags mapTypeBits);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
