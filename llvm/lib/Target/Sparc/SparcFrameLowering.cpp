@@ -312,19 +312,6 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
 #endif
 }
 
-void SparcFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget.getCLOpts().disable_sparc_leaf_proc && isLeafProc(MF)) {
-    SparcMachineFunctionInfo *MFI = MF.getInfo<SparcMachineFunctionInfo>();
-    MFI->setLeafProc(true);
-
-    remapRegsForLeafProc(MF);
-  }
-}
-
 static uint64_t estimateFunctionSizeInBytes(const SparcInstrInfo *TII,
                                             const MachineFunction &MF) {
   uint64_t FuncSize = 0;
@@ -337,21 +324,35 @@ static uint64_t estimateFunctionSizeInBytes(const SparcInstrInfo *TII,
   return FuncSize;
 }
 
+void SparcFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                              BitVector &SavedRegs,
+                                              RegScavenger *RS) const {
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  SparcMachineFunctionInfo *MFI = MF.getInfo<SparcMachineFunctionInfo>();
+  const SparcInstrInfo *TII = STI.getInstrInfo();
+  const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
+
+  bool IsLargeFunction = !isInt<23>(estimateFunctionSizeInBytes(TII, MF));
+  MFI->setLargeProc(IsLargeFunction);
+
+  if (!Subtarget.getCLOpts().disable_sparc_leaf_proc && isLeafProc(MF)) {
+    MFI->setLeafProc(true);
+
+    remapRegsForLeafProc(MF);
+  }
+}
+
 void SparcFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const SparcRegisterInfo *RI = STI.getRegisterInfo();
   const TargetRegisterClass &RC =
       STI.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SparcInstrInfo *TII = STI.getInstrInfo();
   SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
 
   // Far branches beyond 23-bit offset require a spill slot for scratch
   // register.
-  bool IsLargeFunction = !isInt<23>(estimateFunctionSizeInBytes(TII, MF));
-  SMFI->setLargeProc(IsLargeFunction);
-
-  if (IsLargeFunction) {
+  if (SMFI->isLargeProc()) {
     int FI =
         MFI.CreateSpillStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC));
     RS->addScavengingFrameIndex(FI);
