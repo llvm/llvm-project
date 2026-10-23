@@ -111,6 +111,13 @@ llvm::Error DeviceTy::initGeometryProps() {
   if (auto Err = Query(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE,
                        GeometryProps.MaxBlockSharedMemSize))
     return Err;
+  // Not every device reports its number of compute units; zero turns off the
+  // heuristics that need it.
+  GeometryProps.NumComputeUnits =
+      getInfo<uint32_t>(DeviceInfo::NUM_COMPUTE_UNITS);
+  // Some defaults depend on the backend. If it is unknown, the generic ones
+  // apply.
+  GeometryProps.Backend = Backend;
 
   return llvm::Error::success();
 }
@@ -130,6 +137,12 @@ llvm::Error DeviceTy::init() {
                        Res->Details);
   IsHostDevice =
       getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
+
+  // Needs to be initialized before the GeometryProps.
+  if (auto *Platform = getInfo<ol_platform_handle_t>(DeviceInfo::PLATFORM);
+      olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                        sizeof(GeometryProps.Backend), &GeometryProps.Backend))
+    Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   getInfoString(DeviceInfo::UID, Uid);
   if (Uid.empty())
