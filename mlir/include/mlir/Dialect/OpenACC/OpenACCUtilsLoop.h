@@ -94,6 +94,11 @@ void setCollapseCountAttr(Operation *op, uint64_t count);
 /// collapse_count attribute.
 uint64_t getCollapseCount(Operation *op);
 
+/// Record that the loop \p op was lowered from an acc.loop operation.
+void setLoopConstructAttr(Operation *op);
+
+/// Returns true if the loop \p op was lowered from an acc.loop operation.
+bool hasLoopConstructAttr(Operation *op);
 } // namespace acc
 } // namespace mlir
 

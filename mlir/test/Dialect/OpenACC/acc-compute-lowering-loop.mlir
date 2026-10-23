@@ -15,6 +15,7 @@ func.func @parallel_independent_loop(%buf: memref<16xi32>) {
   // CHECK-NOT: acc.par_width
   // CHECK: acc.compute_region
   // CHECK: scf.parallel
+  // CHECK: acc.loop_construct
   acc.parallel dataOperands(%dev : memref<16xi32>) {
     acc.loop control(%i : index) = (%c0 : index) to (%c16 : index) step (%c1 : index) {
       %vi = arith.index_cast %i : index to i32
@@ -71,7 +72,9 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
   // CHECK: scf.for
   // CHECK-NOT: scf.for
   // CHECK-NOT: scf.parallel
+  // CHECK-NOT: acc.loop_construct
   // CHECK: acc.collapse_count = 2 : i64
+  // CHECK-NOT: acc.loop_construct
   acc.parallel dataOperands(%dev : memref<1xi32>) {
     acc.loop control(%i : index, %j : index) = (%lb0, %lb1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
       %vi = arith.index_cast %i : index to i32
@@ -99,7 +102,7 @@ func.func @parallel_loop_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 : inde
   // CHECK: scf.parallel (%{{.*}}, %{{.*}})
   // CHECK-NOT: scf.for
   // CHECK-NOT: scf.parallel
-  // CHECK: acc.collapse_count = 2 : i64
+  // CHECK: acc.collapse_count = 2 : i64, acc.loop_construct
   acc.parallel dataOperands(%dev : memref<1xi32>) {
     acc.loop control(%i : index, %j : index) = (%lb0, %lb1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
       %vi = arith.index_cast %i : index to i32
