@@ -5965,27 +5965,16 @@ add_header_library(
 )
 
 add_header_library(
-  tanpi_utils
-  HDRS
-    tanpi_utils.h
-  DEPENDS
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
-)
-
-add_header_library(
   tanpif
   HDRS
     tanpif.h
   DEPENDS
     .sincosf_utils
-    .tanpi_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.is_integer
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.common
     libc.src.__support.macros.config
@@ -5998,7 +5987,6 @@ add_header_library(
     tanpif16.h
   DEPENDS
     .sincosf16_utils
-    .tanpi_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.include.llvm-libc-macros.float16_macros
@@ -6006,6 +5994,7 @@ add_header_library(
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.is_integer
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
 )

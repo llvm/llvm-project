@@ -20,16 +20,15 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/math/tanpi_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float16 tanpif16(float16 x) {
   using namespace sincosf16_internal;
-  using namespace tanpi_internal;
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 
@@ -54,9 +53,10 @@ LIBC_INLINE float16 tanpif16(float16 x) {
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
 
-  if (LIBC_UNLIKELY(is_integer(x))) {
+  if (LIBC_UNLIKELY(fputil::is_integer(x))) {
     // Preserve the input sign for even integers and flip it for odd integers.
-    Sign sign = is_odd_integer(x) ? xbits.sign().negate() : xbits.sign();
+    Sign sign =
+        fputil::is_odd_integer(x) ? xbits.sign().negate() : xbits.sign();
     return FPBits::zero(sign).get_val();
   }
 
