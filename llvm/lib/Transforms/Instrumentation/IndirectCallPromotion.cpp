@@ -586,6 +586,44 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
   return NewInst;
 }
 
+CallBase &llvm::pgo::promoteIndirectCallWithVTableCmp(
+    CallBase &CB, Instruction *VPtr, Function *DirectCallee,
+    ArrayRef<Constant *> AddressPoints, uint64_t Count, uint64_t TotalCount,
+    bool AttachProfToDirectCall, ArrayRef<GlobalVariable *> VTables,
+    OptimizationRemarkEmitter *ORE) {
+  BasicBlock *OriginalBB = CB.getParent();
+  CallBase &NewInst = promoteCallWithVTableCmp(
+      CB, VPtr, DirectCallee, AddressPoints,
+      createBranchWeights(CB.getContext(), Count, TotalCount - Count));
+
+  if (AttachProfToDirectCall)
+    setFittedBranchWeights(NewInst, {Count},
+                           /*IsExpected=*/false);
+
+  int SinkCount = tryToSinkInstructions(OriginalBB, CB.getParent());
+
+  if (ORE) {
+    ORE->emit([&]() {
+      OptimizationRemark Remark(DEBUG_TYPE, "Promoted", &CB);
+      Remark << "Promote indirect call to "
+             << ore::NV("DirectCallee", DirectCallee) << " with count "
+             << ore::NV("Count", Count) << " out of "
+             << ore::NV("TotalCount", TotalCount) << ", sink "
+             << ore::NV("SinkCount", SinkCount)
+             << " instruction(s) and compare "
+             << ore::NV("VTable", VTables.size()) << " vtable(s): {";
+      for (size_t I = 0; I < VTables.size(); ++I) {
+        if (I != 0)
+          Remark << ", ";
+        Remark << ore::NV("VTable", VTables[I]);
+      }
+      Remark << "}";
+      return Remark;
+    });
+  }
+  return NewInst;
+}
+
 // Promote indirect-call to conditional direct-call for one callsite.
 bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
     CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
@@ -693,44 +731,18 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
       VTableGUIDCounts[GUID] -= Count;
 
-    // 'OriginalBB' is the basic block of indirect call. After each candidate
-    // is promoted, a new basic block is created for the indirect fallback basic
-    // block and indirect call `CB` is moved into this new BB.
-    BasicBlock *OriginalBB = CB.getParent();
-    promoteCallWithVTableCmp(
+    // Sort GUIDs so remark message is deterministic.
+    std::set<uint64_t> GUIDSet;
+    SmallVector<GlobalVariable *, 2> VTables;
+    for (auto [GUID, Count] : Candidate.VTableGUIDAndCounts)
+      GUIDSet.insert(GUID);
+    for (uint64_t GUID : GUIDSet)
+      VTables.push_back(Symtab->getGlobalVariable(GUID));
+
+    pgo::promoteIndirectCallWithVTableCmp(
         CB, VPtr, Candidate.TargetFunction, Candidate.AddressPoints,
-        createBranchWeights(CB.getContext(), Candidate.Count,
-                            TotalFuncCount - Candidate.Count));
-
-    int SinkCount = tryToSinkInstructions(OriginalBB, CB.getParent());
-
-    ORE.emit([&]() {
-      OptimizationRemark Remark(DEBUG_TYPE, "Promoted", &CB);
-
-      const auto &VTableGUIDAndCounts = Candidate.VTableGUIDAndCounts;
-      Remark << "Promote indirect call to "
-             << ore::NV("DirectCallee", Candidate.TargetFunction)
-             << " with count " << ore::NV("Count", Candidate.Count)
-             << " out of " << ore::NV("TotalCount", TotalFuncCount) << ", sink "
-             << ore::NV("SinkCount", SinkCount)
-             << " instruction(s) and compare "
-             << ore::NV("VTable", VTableGUIDAndCounts.size())
-             << " vtable(s): {";
-
-      // Sort GUIDs so remark message is deterministic.
-      std::set<uint64_t> GUIDSet;
-      for (auto [GUID, Count] : VTableGUIDAndCounts)
-        GUIDSet.insert(GUID);
-      for (auto Iter = GUIDSet.begin(); Iter != GUIDSet.end(); Iter++) {
-        if (Iter != GUIDSet.begin())
-          Remark << ", ";
-        Remark << ore::NV("VTable", Symtab->getGlobalVariable(*Iter));
-      }
-
-      Remark << "}";
-
-      return Remark;
-    });
+        Candidate.Count, TotalFuncCount, /*AttachProfToDirectCall=*/false,
+        VTables, &ORE);
 
     PromotedFuncCount.push_back({Candidate.Index, Candidate.Count});
 

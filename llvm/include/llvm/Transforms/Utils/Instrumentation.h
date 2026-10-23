@@ -109,6 +109,16 @@ LLVM_ABI CallBase &promoteIndirectCall(CallBase &CB, Function *F,
                                        uint64_t Count, uint64_t TotalCount,
                                        bool AttachProfToDirectCall,
                                        OptimizationRemarkEmitter *ORE);
+
+// Helper function that transforms CB (either an indirect-call instruction, or
+// an invoke instruction) to a conditional call to F by comparing VPtr against
+// AddressPoints, and sinks dead instructions from the original basic block to
+// the indirect-call fallback block.
+LLVM_ABI CallBase &promoteIndirectCallWithVTableCmp(
+    CallBase &CB, Instruction *VPtr, Function *F,
+    ArrayRef<Constant *> AddressPoints, uint64_t Count, uint64_t TotalCount,
+    bool AttachProfToDirectCall, ArrayRef<GlobalVariable *> VTables,
+    OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.

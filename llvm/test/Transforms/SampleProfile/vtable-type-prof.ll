@@ -21,8 +21,10 @@ target triple = "x86_64-unknown-linux-gnu"
 @Derived2 = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @Base_foo, ptr @Derived2_bar] }, !type !0, !type !2
 
 ; ICP: remark: {{.*}} Promote indirect call to Derived1_bar with count 600 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived1}
+; ICP: remark: {{.*}} Promote indirect call to Derived1_bar with count 600 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived1}
 ; ICP: remark: {{.*}} Promote indirect call to Derived2_bar with count 400 out of 400, sink 2 instruction(s) and compare 1 vtable(s): {Derived2}
 ; ICP: remark: {{.*}} Promote indirect call to Derived1_foo with count 1000 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived1}
+; ICP: remark: {{.*}} Promote indirect call to Derived2_bar with count 400 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived2}
 
 ; COMMON-LABEL: define void @test(
 ; NOVTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}{{$}}
@@ -71,13 +73,19 @@ entry:
 }
 
 ; Existing (stale) vtable metadata on a cold virtual call is cleared when
-; -overwrite-existing-weights is on, and otherwise left untouched.
+; -overwrite-existing-weights is on, and otherwise left untouched. A vtable
+; load in a hot block that also feeds a cold virtual call keeps its metadata.
 ; COMMON-LABEL: define void @test_cold(
+; VTABLE: %vtable_hot = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof ![[VT3:[0-9]+]]
 ; OVERWRITE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}{{$}}
 ; NOVTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof !{{[0-9]+}}
 ; VTABLE1: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof !{{[0-9]+}}
 define void @test_cold(ptr %d, i1 %c) #0 !dbg !30 {
 entry:
+  %vtable_hot = load ptr, ptr %d, align 8, !dbg !32
+  %vfn_hot = getelementptr inbounds ptr, ptr %vtable_hot, i64 0, !dbg !32
+  %0 = load ptr, ptr %vfn_hot, align 8, !dbg !32
+  call void %0(ptr %d), !dbg !32
   br i1 %c, label %hot, label %cold, !dbg !33
 
 hot:
@@ -86,9 +94,39 @@ hot:
 cold:
   %vtable = load ptr, ptr %d, align 8, !dbg !31, !prof !40
   %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1, !dbg !31
-  %0 = load ptr, ptr %vfn, align 8, !dbg !31
-  call void %0(ptr %d), !dbg !31
+  %1 = load ptr, ptr %vfn, align 8, !dbg !31
+  call void %1(ptr %d), !dbg !31
+  %vfn_cold_shared = getelementptr inbounds ptr, ptr %vtable_hot, i64 1, !dbg !31
+  %2 = load ptr, ptr %vfn_cold_shared, align 8, !dbg !31
+  call void %2(ptr %d), !dbg !31
   ret void, !dbg !32
+}
+
+; When an indirect virtual call target has inlinee samples in the profile, the
+; sample profile loader promotes and inlines it using vtable comparison, sinks
+; the function-pointer load to the fallback block, and marks the promoted
+; vtable as NOMORE_ICP_MAGICNUM (-1) so downstream ICP can promote the
+; remaining vtable candidate.
+; COMMON-LABEL: define void @test_icp_inline(
+; NOVTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}{{$}}
+; VTABLE: %vtable = load ptr, ptr %d, align 8, !dbg !{{[0-9]+}}, !prof ![[VT_ICP:[0-9]+]]
+; NOVTABLE: icmp eq ptr %1, @Derived1_bar
+; VTABLE: icmp eq ptr %vtable, getelementptr inbounds (i8, ptr @Derived1, i32 16)
+; COMMON: if.true.direct_targ:
+; COMMON-NOT: call void @Derived1_bar
+; COMMON: if.false.orig_indirect:
+; VTABLE-NEXT: %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1
+; VTABLE-NEXT: %[[VFN:.*]] = load ptr, ptr %vfn, align 8
+; COMMON: call void %{{.*}}(ptr %d), !dbg !{{[0-9]+}}, !prof ![[FN_ICP:[0-9]+]]
+define void @test_icp_inline(ptr %d) #0 !dbg !50 {
+entry:
+  %vtable = load ptr, ptr %d, align 8, !dbg !51
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"Base"), !dbg !51
+  tail call void @llvm.assume(i1 %0), !dbg !51
+  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1, !dbg !51
+  %1 = load ptr, ptr %vfn, align 8, !dbg !51
+  call void %1(ptr %d), !dbg !51
+  ret void, !dbg !52
 }
 
 define void @Base_foo(ptr %this) #0 {
@@ -103,8 +141,8 @@ define void @Derived1_foo(ptr %this) #0 {
   ret void
 }
 
-define void @Derived1_bar(ptr %this) #0 {
-  ret void
+define void @Derived1_bar(ptr %this) #0 !dbg !60 {
+  ret void, !dbg !61
 }
 
 define void @Derived2_bar(ptr %this) #0 {
@@ -120,10 +158,13 @@ attributes #0 = { "use-sample-profile" }
 ; expects for IPVK_VTableTarget (kind 2).
 ; VTABLE-DAG: ![[VT1]] = !{!"VP", i32 2, i64 1000, i64 -4123858694673519054, i64 600, i64 -7211198353767973908, i64 400}
 ; VTABLE-DAG: ![[VT2]] = !{!"VP", i32 2, i64 1000, i64 -4123858694673519054, i64 1000}
+; VTABLE-DAG: ![[VT3]] = !{!"VP", i32 2, i64 100, i64 -4123858694673519054, i64 100}
+; VTABLE-DAG: ![[VT_ICP]] = !{!"VP", i32 2, i64 400, i64 -4123858694673519054, i64 -1, i64 -7211198353767973908, i64 400}
 ; VTABLE1-DAG: ![[VT1]] = !{!"VP", i32 2, i64 1000, i64 -4123858694673519054, i64 600}
 ; VTABLE1-DAG: ![[VT2]] = !{!"VP", i32 2, i64 1000, i64 -4123858694673519054, i64 1000}
 ; COMMON-DAG: ![[FN1]] = !{!"VP", i32 0, i64 1000, i64 {{-?[0-9]+}}, i64 600, i64 {{-?[0-9]+}}, i64 400}
 ; COMMON-DAG: ![[FN2]] = !{!"VP", i32 0, i64 1000, i64 {{-?[0-9]+}}, i64 1000}
+; COMMON-DAG: ![[FN_ICP]] = !{!"VP", i32 0, i64 1000, i64 3827408714133779784, i64 -1, i64 5837445539218476403, i64 400}
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!4, !5}
@@ -150,3 +191,8 @@ attributes #0 = { "use-sample-profile" }
 !32 = !DILocation(line: 32, column: 1, scope: !30)
 !33 = !DILocation(line: 33, column: 1, scope: !30)
 !40 = !{!"VP", i32 2, i64 100, i64 -4123858694673519054, i64 100}
+!50 = distinct !DISubprogram(name: "test_icp_inline", scope: !6, file: !6, line: 50, type: !7, scopeLine: 50, unit: !3)
+!51 = !DILocation(line: 51, column: 3, scope: !50)
+!52 = !DILocation(line: 52, column: 1, scope: !50)
+!60 = distinct !DISubprogram(name: "Derived1_bar", scope: !6, file: !6, line: 60, type: !7, scopeLine: 60, unit: !3)
+!61 = !DILocation(line: 61, column: 1, scope: !60)
