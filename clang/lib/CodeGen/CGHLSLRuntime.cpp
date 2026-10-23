@@ -1532,8 +1532,9 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       }
       // SPIR-V barycentric built-ins are float3, even for half3 inputs.
       llvm::Type *BuiltinType = llvm::FixedVectorType::get(CGM.FloatTy, 3);
-      llvm::Value *Barycentrics = createSPIRVBuiltinLoad(
+      llvm::Value *Barycentrics = createSPIRVInputLoad(
           B, CGM.getModule(), BuiltinType, Semantic->getSemanticName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
           NoPerspective ? /* BuiltIn::BaryCoordNoPerspKHR */ 5287
                         : /* BuiltIn::BaryCoordKHR */ 5286,
           InterpMode);
