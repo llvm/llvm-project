@@ -60,6 +60,7 @@ add_subdirectory(spawn)
 add_subdirectory(pwd)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(ftw)
   add_subdirectory(pthread)
   add_subdirectory(semaphore)
 endif()
