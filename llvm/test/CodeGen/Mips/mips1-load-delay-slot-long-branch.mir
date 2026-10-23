@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=mipsel-sony-psx -mcpu=mips1 -filetype=obj -o /dev/null %s
+# RUN: llc -mtriple=mipsel-sony-psx -mcpu=mips1 -stop-after mips-branch-expansion -o - %s | FileCheck %s --check-prefixes=MIPS1
+
+--- |
+  define void @load_delay_slot_long_branch() {
+    ret void
+  }
+...
+---
+name:            load_delay_slot_long_branch
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  ; MIPS1-LABEL: name: load_delay_slot_long_branch
+  ; MIPS1: bb.0:
+  ; MIPS1: BNE $a0, $a1, %bb.{{[0-9]+}}
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $a0, $a1
+    BEQ undef $a0, undef $a1, %bb.3, implicit-def $at
+
+  bb.1:
+    successors: %bb.2, %bb.4
+    liveins: $a0, $a1
+    INLINEASM &".space 131040", sideeffect attdialect
+    BEQ undef $a0, undef $a1, %bb.4, implicit-def $at
+
+  ; MIPS1: bb.2:
+  ; MIPS1: $v1 = LW renamable $a0, 0
+  ; MIPS1-NEXT: $zero = SLL $zero, 0
+  bb.2:
+    successors: %bb.3, %bb.4
+    liveins: $a0, $v1
+    $v1 = LW renamable $a0, 0
+    $v1 = LW renamable $v1, 0
+    BEQ undef $a0, undef $v1, %bb.4, implicit-def $at
+
+  bb.3:
+    JR undef $ra
+
+  bb.4:
+    PseudoReturn undef $ra
+...
