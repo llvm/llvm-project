@@ -971,6 +971,12 @@ TEST(ConstantsTest, ToConstantFPRangeVector) {
   EXPECT_EQ(Constant::getNullValue(VecTy)->toConstantFPRange(),
             ConstantFPRange(APFloat(0.0f)));
 
+  Constant *SplatWithPoison = ConstantVector::get(
+      {GetFP(2.0f), PoisonValue::get(FloatTy), GetFP(2.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(SplatWithPoison));
+  EXPECT_EQ(SplatWithPoison->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+
   Constant *CDV = ConstantVector::get({GetFP(1.0f), GetFP(-2.0f), GetFP(0.5f)});
   ASSERT_TRUE(isa<ConstantDataVector>(CDV));
   EXPECT_EQ(CDV->toConstantFPRange(),
