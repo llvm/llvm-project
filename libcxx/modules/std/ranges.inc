@@ -25,6 +25,10 @@ export namespace std {
       using std::ranges::__cpo::empty;
       using std::ranges::__cpo::size;
       using std::ranges::__cpo::ssize;
+
+#if _LIBCPP_STD_VER >= 26
+      using std::ranges::__cpo::reserve_hint;
+#endif
     } // namespace __cpo
 
     // [range.range], ranges
@@ -49,6 +53,11 @@ export namespace std {
     // [range.sized], sized ranges
     using std::ranges::disable_sized_range;
     using std::ranges::sized_range;
+
+#if _LIBCPP_STD_VER >= 26
+    // [range.approximately.sized], approximately sized ranges
+    using std::ranges::approximately_sized_range;
+#endif
 
     // [range.view], views
     using std::ranges::enable_view;
