@@ -39,16 +39,16 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowPosNeverSNaN) {
 TEST_F(AArch64GISelMITest, TestFPClassFMADemandNaN) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %y:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %z:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    %x_canon:_(s32) = G_FCANONICALIZE %x
-    %y_canon:_(s32) = G_FCANONICALIZE %y
-    %z_canon:_(s32) = G_FCANONICALIZE %z
-    %fma:_(s32) = G_FMA %x_canon, %y_canon, %z_canon
-    %fmad:_(s32) = G_FMAD %x_canon, %y_canon, %z_canon
-    %copy_fma:_(s32) = COPY %fma
-    %copy_fmad:_(s32) = COPY %fmad
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
+    %y:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
+    %z:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
+    %x_canon:_(f32) = G_FCANONICALIZE %x
+    %y_canon:_(f32) = G_FCANONICALIZE %y
+    %z_canon:_(f32) = G_FCANONICALIZE %z
+    %fma:_(f32) = G_FMA %x_canon, %y_canon, %z_canon
+    %fmad:_(f32) = G_FMAD %x_canon, %y_canon, %z_canon
+    %copy_fma:_(f32) = COPY %fma
+    %copy_fmad:_(f32) = COPY %fmad
 )";
 
   setUp(MIRString);
