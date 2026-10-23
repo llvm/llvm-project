@@ -123,6 +123,16 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
     case 'J':
       delegate.HandleAsyncStructuredDataPacket(response.GetStringRef());
       break;
+    case 'N': {
+      std::string symbol_name;
+      response.GetHexByteString(symbol_name);
+      std::string reply_payload = delegate.HandleAsyncSymbolLookup(symbol_name);
+      if (!reply_payload.empty()) {
+        StringExtractorGDBRemote sym_response;
+        SendPacketAndWaitForResponseNoLock(reply_payload, sym_response);
+      }
+      break;
+    }
     case 'T':
     case 'S':
       // Do this with the continue lock held.

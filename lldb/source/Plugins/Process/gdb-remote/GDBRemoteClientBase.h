@@ -38,6 +38,14 @@ public:
     /// \param[in] data
     ///   The complete data packet, expected to start with JSON-async.
     virtual void HandleAsyncStructuredDataPacket(llvm::StringRef data) = 0;
+
+    /// Handle a server's need symbol lookup request.
+    ///
+    /// \param[in] symbol_name
+    ///     Symbol name requested.
+    /// \returns
+    ///     The qSymbolLookupReply payload to send, or "" to skip.
+    virtual std::string HandleAsyncSymbolLookup(llvm::StringRef symbol_name) = 0;
   };
 
   GDBRemoteClientBase(const char *comm_name);

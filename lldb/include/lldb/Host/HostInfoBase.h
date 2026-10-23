@@ -196,6 +196,9 @@ public:
     return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
+  static bool ComputeSharedLibraryDirectory(FileSpec &file_spec,
+                                             SharedLibraryDirectoryHelper *helper);
+
   /// Return information about module \p filepath if it is loaded in
   /// the current process's address space.
   ///
@@ -268,9 +271,6 @@ public:
   static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
 
 protected:
-  static bool
-  ComputeSharedLibraryDirectory(FileSpec &file_spec,
-                                SharedLibraryDirectoryHelper *helper);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);

@@ -226,6 +226,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qLaunchGDBServer;
       if (PACKET_MATCHES("qLaunchSuccess"))
         return eServerPacketType_qLaunchSuccess;
+      if (PACKET_MATCHES("qLDXINFO"))
+        return eServerPacketType_qLDXINFO;
       break;
 
     case 'M':
@@ -281,6 +283,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qSyncThreadStateSupported;
       if (PACKET_MATCHES("qStructuredDataPlugins"))
         return eServerPacketType_qStructuredDataPlugins;
+      if (PACKET_STARTS_WITH("qSymbolLookupReply:"))
+        return eServerPacketType_qSymbolLookupReply;
       break;
 
     case 'T':

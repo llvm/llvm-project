@@ -54,6 +54,9 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -206,6 +209,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                                 &GDBRemoteCommunicationServerLLGS::Handle_Z);
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_z,
                                 &GDBRemoteCommunicationServerLLGS::Handle_z);
+  RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_qLDXINFO,
+                                &GDBRemoteCommunicationServerLLGS::Handle_qLDXINFO);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QPassSignals,
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
@@ -274,6 +279,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QNonStop,
       &GDBRemoteCommunicationServerLLGS::Handle_QNonStop);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qSymbolLookupReply,
+      &GDBRemoteCommunicationServerLLGS::Handle_qSymbolLookupReply);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vStdio,
       &GDBRemoteCommunicationServerLLGS::Handle_vStdio);
@@ -1336,6 +1344,101 @@ GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
     return SendNotificationPacketNoLock("Stdio", m_stdio_notification_queue,
                                         response.GetString());
   return SendPacketNoLock(response.GetString());
+}
+
+lldb::addr_t
+GDBRemoteCommunicationServerLLGS::SymbolLookup(llvm::StringRef symbol_name) {
+  Log *log = GetLog(LLDBLog::Process);
+  Status error;
+  bool interrupt = false;
+  bool done = false;
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s: requesting address of "
+            "symbol '%s' from client",
+            __FUNCTION__, std::string(symbol_name).c_str());
+
+  m_symbol_lookup_pending = true;
+  m_symbol_lookup_result = LLDB_INVALID_ADDRESS;
+
+  if (SendSymbolLookupRequest(symbol_name) != PacketResult::Success) {
+    m_symbol_lookup_pending = false;
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s: failed to send "
+              "symbol lookup request for '%s'",
+              __FUNCTION__, std::string(symbol_name).c_str());
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  while (m_symbol_lookup_pending) {
+    const PacketResult result =
+        GetPacketAndSendResponse(GetPacketTimeout(), error, interrupt, done);
+    if (result != PacketResult::Success) {
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationServerLLGS::%s: symbol lookup for '%s' "
+                "failed while waiting for client reply: %s",
+                __FUNCTION__, std::string(symbol_name).c_str(),
+                error.AsCString());
+      m_symbol_lookup_pending = false;
+      return LLDB_INVALID_ADDRESS;
+    }
+  }
+
+  lldb::addr_t addr = m_symbol_lookup_result;
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s: symbol '%s' resolved to "
+            "0x%" PRIx64,
+            __FUNCTION__, std::string(symbol_name).c_str(), addr);
+  return addr;
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendSymbolLookupRequest(
+    llvm::StringRef symbol_name) {
+  // Build the packet: N<hex_encoded_name>
+  // 'N' is a new async packet type (Need-symbol)
+  StreamString response;
+  response.PutChar('N');
+  response.PutBytesAsRawHex8(symbol_name.data(), symbol_name.size());
+
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qSymbolLookupReply(
+    StringExtractorGDBRemote &packet) {
+  // Packet format: qSymbolLookupReply:<hex_addr>:<hex_encoded_name>
+  // If the client could not resolve the symbol, <hex_addr> is empty.
+  packet.SetFilePos(strlen("qSymbolLookupReply:"));
+
+  llvm::StringRef remainder(packet.GetStringRef().substr(packet.GetFilePos()));
+  auto colon_pos = remainder.find(':');
+  if (colon_pos == llvm::StringRef::npos)
+    return SendErrorResponse(Status::FromErrorString(
+        "qSymbolLookupReply: missing colon separator"));
+
+  llvm::StringRef addr_str = remainder.slice(0, colon_pos);
+  llvm::StringRef name_hex = remainder.substr(colon_pos + 1);
+
+  lldb::addr_t addr = LLDB_INVALID_ADDRESS;
+  if (!addr_str.empty()) {
+    if (addr_str.getAsInteger(16, addr))
+      return SendErrorResponse(
+          Status::FromErrorString("qSymbolLookupReply: bad address field"));
+  }
+
+  std::string symbol_name;
+  StringExtractorGDBRemote name_extractor(name_hex);
+  name_extractor.GetHexByteString(symbol_name);
+
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s: symbol '%s' -> 0x%" PRIx64,
+            __FUNCTION__, symbol_name.c_str(), addr);
+
+  m_symbol_lookup_result = addr;
+  m_symbol_lookup_pending = false;
+
+  return SendOKResponse();
 }
 
 Status GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
@@ -3281,6 +3384,29 @@ GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint(
   StreamGDBRemote response;
   response.PutEscapedBytes(response_str.data(), response_str.size());
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qLDXINFO(StringExtractorGDBRemote &packet) {
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    Log *log = GetLog(LLDBLog::Process);
+    LLDB_LOG(log, "qLDXINFO failed, no process available");
+    return SendErrorResponse(0xff);
+  }
+
+#if defined(_AIX)
+  // FIXME: buffer size
+  struct ld_xinfo info[64];
+  if (ptrace64(PT_LDXINFO, m_current_process->GetID(), (long long)&(info[0]), sizeof(info), nullptr) != 0) {
+    return SendErrorResponse(0xff);
+  }
+  StreamGDBRemote response;
+  response.PutBytesAsRawHex8(&(info[0]), sizeof(info));
+  return SendPacketNoLock(response.GetString());
+#else
+  return SendErrorResponse(0xff);
+#endif
 }
 
 GDBRemoteCommunication::PacketResult

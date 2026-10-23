@@ -283,6 +283,23 @@ public:
     /// through a redirected pseudoconsole that the platform owns.
     virtual void NewProcessOutput(NativeProcessProtocol *process,
                                   llvm::StringRef data) {}
+
+    /// Request the load address of a symbol from lldb client
+    ///
+    /// This request sends request from server for 'need symbol'
+    /// to the lldb client, waits for the qSymbolLookupReply response, 
+    /// and returns the resolved load address.
+    /// Returns LLDB_INVALID_ADDRESS if the client could not resolve the
+    /// symbol or if the query is not supported.
+    ///
+    /// \param[in] symbol_name
+    ///    Symbol name to resolve.
+    /// 
+    /// \return
+    ///    Load address of the symbol, or LLDB_INVALID_ADDRESS.
+    virtual lldb::addr_t SymbolLookup(llvm::StringRef symbol_name) {
+      return LLDB_INVALID_ADDRESS;
+    }
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,

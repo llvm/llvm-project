@@ -6,6 +6,11 @@ set(LLVM_TARGET_DEFINITIONS PlatformOptions.td)
 tablegen(LLVM PlatformOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(PlatformOptionsTableGen)
 
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 set(LLDB_PLUGINS)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -80,6 +85,7 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
+      lldbPluginInstructionPPC64
       ${LLDB_SYSTEM_LIBS}
 )
 

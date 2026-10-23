@@ -28,8 +28,10 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorExtras.h"
 #include <optional>
+#include <string>
 #include <tuple>
 
 using namespace lldb;
@@ -81,6 +83,7 @@ lldb_private::formatters::GetFirstValueOfLibCXXCompressedPair(
     // pre-c88580c member name
     value = pair.GetChildMemberWithName("__first_");
   }
+
   return value;
 }
 
@@ -558,8 +561,8 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   StringLayout layout =
       *index_or_err == 0 ? StringLayout::DSC : StringLayout::CSD;
 
-  bool short_mode = false; // this means the string is in short-mode and the
-                           // data is stored inline
+  bool short_mode = false;    // this means the string is in short-mode and the
+                              // data is stored inline
   bool using_bitmasks = true; // Whether the class uses bitmasks for the mode
                               // flag (pre-D123580).
   uint64_t size;
@@ -578,6 +581,23 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     using_bitmasks = false;
     short_mode = !is_long->GetValueAsUnsigned(/*fail_value=*/0);
     size = size_sp->GetValueAsUnsigned(/*fail_value=*/0);
+#if _AIX
+    std::string is_long_val_str;
+    std::string size_val_str;
+    if (is_long->GetValueAsCString(lldb::eFormatUnsigned, is_long_val_str) &&
+        size_sp->GetValueAsCString(lldb::eFormatUnsigned, size_val_str)) {
+      unsigned long long is_long_val = 0;
+      unsigned long long size_val = 0;
+      if (!llvm::to_integer(is_long_val_str, is_long_val, 10) ||
+          !llvm::to_integer(size_val_str, size_val, 10))
+        return {};
+      short_mode = !is_long_val;
+      size = size_val;
+      if (size > 23)
+        size = 0; // as it is garbage if not valid
+    }
+#endif
+
   } else {
     // The string mode is encoded in the size field.
     size_mode_value = size_sp->GetValueAsUnsigned(0);
@@ -702,23 +722,23 @@ bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
 }
 
 static std::tuple<bool, ValueObjectSP, size_t>
-LibcxxExtractStringViewData(ValueObject& valobj) {
+LibcxxExtractStringViewData(ValueObject &valobj) {
   auto dataobj = GetChildMemberWithName(
       valobj, {ConstString("__data_"), ConstString("__data")});
   auto sizeobj = GetChildMemberWithName(
       valobj, {ConstString("__size_"), ConstString("__size")});
   if (!dataobj || !sizeobj)
-    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
 
   if (!dataobj->GetError().Success() || !sizeobj->GetError().Success())
-    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
 
   bool success{false};
   uint64_t size = sizeobj->GetValueAsUnsigned(0, &success);
   if (!success)
-    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
 
-  return std::make_tuple(true,dataobj,size);
+  return std::make_tuple(true, dataobj, size);
 }
 
 template <StringPrinter::StringElementType element_type>

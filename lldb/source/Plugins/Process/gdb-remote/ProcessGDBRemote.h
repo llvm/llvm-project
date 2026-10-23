@@ -41,6 +41,10 @@
 #include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteRegisterContext.h"
 
+#if defined(_AIX)
+struct ld_xinfo;
+#endif
+
 #include "llvm/ADT/DenseMap.h"
 
 namespace lldb_private {
@@ -469,6 +473,10 @@ protected:
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &region_info) override;
 
+#if defined(_AIX)
+  Status DoGetLDXINFO(struct ld_xinfo *info_ptr) override;
+#endif
+
 private:
   // For ProcessGDBRemote only
   std::string m_partial_profile_data;
@@ -532,6 +540,7 @@ private:
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
+  std::string HandleAsyncSymbolLookup(llvm::StringRef symbol_name) override;
 
   lldb::ThreadSP
   HandleThreadAsyncInterrupt(uint8_t signo,

@@ -61,6 +61,7 @@ public:
     eServerPacketType_qQueryGDBServer,
     eServerPacketType_qKillSpawnedProcess,
     eServerPacketType_qLaunchSuccess,
+    eServerPacketType_qLDXINFO,
     eServerPacketType_qModuleInfo,
     eServerPacketType_qProcessInfoPID,
     eServerPacketType_qSpeedTest,
@@ -189,6 +190,13 @@ public:
     eServerPacketType_vStopped,
     eServerPacketType_vCtrlC,
     eServerPacketType_vStdio,
+
+    /// Sent by the client to deliver a symbol address back to the server after
+    /// the server issued a qSymbolLookup request.
+    /// Format: qSymbolLookupReply:<hex_addr>:<hex_encoded_name>
+    /// If the symbol was not found the address field is empty:
+    ///   qSymbolLookupReply::<hex_encoded_name>
+    eServerPacketType_qSymbolLookupReply,
   };
 
   ServerPacketType GetServerPacketType() const;

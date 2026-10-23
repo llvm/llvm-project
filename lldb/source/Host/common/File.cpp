@@ -237,7 +237,7 @@ Expected<File::OpenOptions> NativeFileBase::GetOptions() const {
   return m_options;
 }
 
-int NativeFileBase::Fileno(FILE *fh) const { return ::fileno(fh); }
+int NativeFileBase::Fileno(FILE *fh) const { return (::fileno)(fh); }
 
 int NativeFileBase::Dup(int fd) const { return ::dup(fd); }
 

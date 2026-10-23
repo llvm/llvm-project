@@ -464,7 +464,11 @@ lldb::ChildCacheState LibCxxListFrontEnd::Update() {
   ValueObjectSP backend_addr(m_backend.AddressOf(err));
   if (err.Fail() || !backend_addr)
     return lldb::ChildCacheState::eRefetch;
+#ifdef _AIX
+  m_node_address = m_backend.GetAddressOf(false).address;
+#else
   m_node_address = backend_addr->GetValueAsUnsigned(0);
+#endif
   if (!m_node_address || m_node_address == LLDB_INVALID_ADDRESS)
     return lldb::ChildCacheState::eRefetch;
   ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__end_"));
