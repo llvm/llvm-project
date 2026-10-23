@@ -2488,17 +2488,24 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI())) {
+  // Keep v8bf16 legal with AVX even without native bf16 instructions so that
+  // f32-to-bf16 conversions can be expanded in the vector domain.
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
                                                         : &X86::VR128RegClass);
-    addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
-                                                         : &X86::VR256RegClass);
+    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()) {
+      addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512()
+                                         ? &X86::VR256XRegClass
+                                         : &X86::VR256RegClass);
+      addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+    }
     // We set the type action of bf16 to TypeSoftPromoteHalf, but we don't
     // provide the method to promote BUILD_VECTOR. Set the operation action
     // Custom to do the customization later.
     setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
-    for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
+    for (MVT VT : {MVT::v8bf16, MVT::v16bf16}) {
+      if (!isTypeLegal(VT))
+        continue;
       setF16Action(VT, Expand);
       if (!Subtarget.hasBF16())
         setOperationAction(ISD::VSELECT, VT, Custom);
@@ -2507,26 +2514,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FFLOOR, ISD::FCEIL,
+            ISD::FTRUNC, ISD::FRINT, ISD::FNEARBYINT, ISD::FROUNDEVEN,
+            ISD::FROUND, ISD::FCANONICALIZE})
+        setOperationPromotedToType(Opc, VT,
+                                   VT.changeVectorElementType(MVT::f32));
+      setOperationAction(ISD::SETCC, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
-    addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
-
-    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()) {
-      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
-                           ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                           ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
-        setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
-        setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
-      }
-      setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
-      setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
-    } else {
-      // No native conversions to promote with, expand like vXf16 without F16C.
-      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
-        setOperationAction(Opc, MVT::v8bf16, Expand);
-        setOperationAction(Opc, MVT::v16bf16, Expand);
-      }
-    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
@@ -9493,8 +9489,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
-  if (VT.getVectorElementType() == MVT::bf16 &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()))
+  if (VT.getVectorElementType() == MVT::bf16 && Subtarget.hasAVX())
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
@@ -22921,8 +22916,7 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
       return Op;
     // Without native conversions, round in vector registers instead of
     // unrolling to libcalls.
-    if (VT.isVector() && SVT.getScalarType() == MVT::f32 && !IsStrict &&
-        !Subtarget.hasBF16() && !Subtarget.hasAVXNECONVERT())
+    if (!IsStrict && SVT.getScalarType() == MVT::f32)
       return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
@@ -23071,6 +23065,13 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
     Res = DAG.getBitcast(MVT::v8i16, Res);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
                        DAG.getVectorIdxConstant(0, DL));
+  }
+
+  if (SVT == MVT::f32 && !Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
+    // FP_TO_BF16 has an integer result after bf16 is softened. Form the
+    // equivalent FP_ROUND node to reuse the generic bf16 rounding expansion.
+    SDValue Round = DAG.getFPExtendOrRound(Op.getOperand(0), DL, MVT::bf16);
+    return DAG.getBitcast(MVT::i16, expandFP_ROUND(Round.getNode(), DAG));
   }
 
   MakeLibCallOptions CallOptions;
@@ -61452,7 +61453,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         EVT ConcatVT = EVT::getVectorVT(
             *DAG.getContext(), SubVT.getSimpleVT().getScalarType(),
             SubVT.getVectorElementCount() * Subs.size());
-        if (ConcatVT.isSimple()) {
+        // Don't form an illegal concatenation from legal subvectors, e.g.
+        // v16bf16 from v8bf16 without BWI; this also runs after legalization.
+        if (ConcatVT.isSimple() &&
+            (TLI.isTypeLegal(ConcatVT) || !TLI.isTypeLegal(SubVT))) {
           for (SDValue &Sub : Subs)
             Sub = DAG.getBitcast(SubVT, Sub);
           if (SDValue ConcatSrc = combineConcatVectorOps(
