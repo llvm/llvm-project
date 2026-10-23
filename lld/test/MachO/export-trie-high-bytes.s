@@ -5,10 +5,10 @@
 ## right before the 0xff in _a\xffb, and _c\xff ends with it. 0x80 is the most
 ## negative signed char and shares its _d prefix with an ASCII name.
 
-## llvm-mc does not interpret escapes in quoted symbol names, so printf
-## produces the raw bytes.
-# RUN: printf '.globl "_a", "_a\377b", "_c\377", "_d\200x", "_dy"\n_a:\n"_a\377b":\n"_c\377":\n"_d\200x":\n_dy:\nret\n' | \
-# RUN:   llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t.o
+## The assembly below writes the bytes as <FF> and <80>, and sed swaps in the
+## raw bytes. printf generates the sed script because BSD sed has no \xff.
+# RUN: printf 's/<FF>/\377/g\ns/<80>/\200/g\n' > %t.sed
+# RUN: sed -f %t.sed %s | llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t.o
 # RUN: %lld -dylib %t.o -o %t.dylib
 # RUN: llvm-objdump --macho --exports-trie %t.dylib > %t.txt
 
@@ -23,3 +23,11 @@
 # CHECK-DAG: _cM-^?{{$}}
 # CHECK-DAG: _dM-^@x{{$}}
 # CHECK-DAG: _dy{{$}}
+
+.globl _a, "_a<FF>b", "_c<FF>", "_d<80>x", _dy
+_a:
+"_a<FF>b":
+"_c<FF>":
+"_d<80>x":
+_dy:
+  ret

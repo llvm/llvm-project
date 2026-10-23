@@ -200,8 +200,8 @@ TrieNode *TrieBuilder::makeNode() {
   return node;
 }
 
-// Like operator[], but returns -1 past the end of the name. -1 sorts below
-// every byte, so a name sorts ahead of the longer names it is a prefix of.
+// Like operator[], but returns -1 when pos is past the end of the name. -1
+// sorts below every byte, so "_foo" sorts before "_foobar".
 static int charAt(const Symbol *sym, size_t pos) {
   StringRef str = sym->getName();
   if (pos >= str.size())
