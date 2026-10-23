@@ -6809,8 +6809,8 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
 
   // m(m(X, Y), Z) --> m(X, Y) if m(X, Z) == X or m(Y, Z) == Y.
   if (MaxRecurse--) {
-    if (foldMinimumMaximumSharedOp(IID, X0, Op1, MaxRecurse) ||
-        foldMinimumMaximumSharedOp(IID, Y0, Op1, MaxRecurse))
+    if (foldMinimumMaximumSharedOp(IID, X0, Op1, MaxRecurse) == X0 ||
+        foldMinimumMaximumSharedOp(IID, Y0, Op1, MaxRecurse) == Y0)
       return M0;
   }
 
