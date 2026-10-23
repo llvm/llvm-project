@@ -13,7 +13,7 @@
 # --- load / store ---
 ---
 # CHECK-LABEL: lb:
-# CHECK: lb $4, 0($5) # encoding: [0x85,0x84,0x00,0x00]
+# CHECK: lb $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x00]
 name: lb
 tracksRegLiveness: false
 body: |
@@ -22,7 +22,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbgp:
-# CHECK: lb $4, 0($gp) # encoding: [0x80,0x44,0x00,0x00]
+# CHECK: lb $a0, 0($gp) # encoding: [0x80,0x44,0x00,0x00]
 name: lbgp
 tracksRegLiveness: false
 body: |
@@ -31,7 +31,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbs9:
-# CHECK: lb $4, 0($5) # encoding: [0x85,0xa4,0x00,0x00]
+# CHECK: lb $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x00]
 name: lbs9
 tracksRegLiveness: false
 body: |
@@ -40,7 +40,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbu:
-# CHECK: lbu $4, 0($5) # encoding: [0x85,0x84,0x00,0x20]
+# CHECK: lbu $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x20]
 name: lbu
 tracksRegLiveness: false
 body: |
@@ -49,7 +49,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbugp:
-# CHECK: lbu $4, 0($gp) # encoding: [0x88,0x44,0x00,0x00]
+# CHECK: lbu $a0, 0($gp) # encoding: [0x88,0x44,0x00,0x00]
 name: lbugp
 tracksRegLiveness: false
 body: |
@@ -58,7 +58,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbus9:
-# CHECK: lbu $4, 0($5) # encoding: [0x85,0xa4,0x00,0x10]
+# CHECK: lbu $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x10]
 name: lbus9
 tracksRegLiveness: false
 body: |
@@ -67,7 +67,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbux:
-# CHECK: lbux $4, $6($5) # encoding: [0xa6,0x20,0x07,0x21]
+# CHECK: lbux $a0, $a2($a1) # encoding: [0xa6,0x20,0x07,0x21]
 name: lbux
 tracksRegLiveness: false
 body: |
@@ -76,7 +76,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbx:
-# CHECK: lbx $4, $6($5) # encoding: [0xa6,0x20,0x07,0x20]
+# CHECK: lbx $a0, $a2($a1) # encoding: [0xa6,0x20,0x07,0x20]
 name: lbx
 tracksRegLiveness: false
 body: |
@@ -85,7 +85,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lh:
-# CHECK: lh $4, 0($5) # encoding: [0x85,0x84,0x00,0x40]
+# CHECK: lh $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x40]
 name: lh
 tracksRegLiveness: false
 body: |
@@ -94,7 +94,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhgp:
-# CHECK: lh $4, 0($gp) # encoding: [0x90,0x44,0x00,0x00]
+# CHECK: lh $a0, 0($gp) # encoding: [0x90,0x44,0x00,0x00]
 name: lhgp
 tracksRegLiveness: false
 body: |
@@ -103,7 +103,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhs9:
-# CHECK: lh $4, 0($5) # encoding: [0x85,0xa4,0x00,0x20]
+# CHECK: lh $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x20]
 name: lhs9
 tracksRegLiveness: false
 body: |
@@ -112,7 +112,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhu:
-# CHECK: lhu $4, 0($5) # encoding: [0x85,0x84,0x00,0x60]
+# CHECK: lhu $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x60]
 name: lhu
 tracksRegLiveness: false
 body: |
@@ -121,7 +121,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhugp:
-# CHECK: lhu $4, 0($gp) # encoding: [0x90,0x44,0x01,0x00]
+# CHECK: lhu $a0, 0($gp) # encoding: [0x90,0x44,0x01,0x00]
 name: lhugp
 tracksRegLiveness: false
 body: |
@@ -130,7 +130,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhus9:
-# CHECK: lhu $4, 0($5) # encoding: [0x85,0xa4,0x00,0x30]
+# CHECK: lhu $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x30]
 name: lhus9
 tracksRegLiveness: false
 body: |
@@ -139,7 +139,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhux:
-# CHECK: lhux $4, $6($5) # encoding: [0xa6,0x20,0x07,0x23]
+# CHECK: lhux $a0, $a2($a1) # encoding: [0xa6,0x20,0x07,0x23]
 name: lhux
 tracksRegLiveness: false
 body: |
@@ -148,7 +148,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhuxs:
-# CHECK: lhuxs $4, $6($5) # encoding: [0xa6,0x20,0x47,0x23]
+# CHECK: lhuxs $a0, $a2($a1) # encoding: [0xa6,0x20,0x47,0x23]
 name: lhuxs
 tracksRegLiveness: false
 body: |
@@ -157,7 +157,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhx:
-# CHECK: lhx $4, $6($5) # encoding: [0xa6,0x20,0x07,0x22]
+# CHECK: lhx $a0, $a2($a1) # encoding: [0xa6,0x20,0x07,0x22]
 name: lhx
 tracksRegLiveness: false
 body: |
@@ -166,7 +166,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhxs:
-# CHECK: lhxs $4, $6($5) # encoding: [0xa6,0x20,0x47,0x22]
+# CHECK: lhxs $a0, $a2($a1) # encoding: [0xa6,0x20,0x47,0x22]
 name: lhxs
 tracksRegLiveness: false
 body: |
@@ -175,7 +175,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ll:
-# CHECK: ll $4, 0($5) # encoding: [0x85,0xa4,0x00,0x51]
+# CHECK: ll $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x51]
 name: ll
 tracksRegLiveness: false
 body: |
@@ -184,7 +184,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lw:
-# CHECK: lw $4, 0($5) # encoding: [0x85,0x84,0x00,0x80]
+# CHECK: lw $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x80]
 name: lw
 tracksRegLiveness: false
 body: |
@@ -193,7 +193,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwgp:
-# CHECK: lw $4, 0($gp) # encoding: [0x80,0x40,0x02,0x00]
+# CHECK: lw $a0, 0($gp) # encoding: [0x80,0x40,0x02,0x00]
 name: lwgp
 tracksRegLiveness: false
 body: |
@@ -202,7 +202,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwm:
-# CHECK: lwm $4, 0($5), 1 # encoding: [0x85,0xa4,0x00,0x14]
+# CHECK: lwm $a0, 0($a1), 1 # encoding: [0x85,0xa4,0x00,0x14]
 name: lwm
 tracksRegLiveness: false
 body: |
@@ -211,7 +211,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lws9:
-# CHECK: lw $4, 0($5) # encoding: [0x85,0xa4,0x00,0x40]
+# CHECK: lw $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x40]
 name: lws9
 tracksRegLiveness: false
 body: |
@@ -220,7 +220,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwx:
-# CHECK: lwx $4, $6($5) # encoding: [0xa6,0x20,0x07,0x24]
+# CHECK: lwx $a0, $a2($a1) # encoding: [0xa6,0x20,0x07,0x24]
 name: lwx
 tracksRegLiveness: false
 body: |
@@ -229,7 +229,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwxs:
-# CHECK: lwxs $4, $6($5) # encoding: [0xa6,0x20,0x47,0x24]
+# CHECK: lwxs $a0, $a2($a1) # encoding: [0xa6,0x20,0x47,0x24]
 name: lwxs
 tracksRegLiveness: false
 body: |
@@ -238,7 +238,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sb:
-# CHECK: sb $4, 0($5) # encoding: [0x85,0x84,0x00,0x10]
+# CHECK: sb $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x10]
 name: sb
 tracksRegLiveness: false
 body: |
@@ -247,7 +247,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sbgp:
-# CHECK: sb $4, 0($gp) # encoding: [0x84,0x44,0x00,0x00]
+# CHECK: sb $a0, 0($gp) # encoding: [0x84,0x44,0x00,0x00]
 name: sbgp
 tracksRegLiveness: false
 body: |
@@ -256,7 +256,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sbs9:
-# CHECK: sb $4, 0($5) # encoding: [0x85,0xa4,0x00,0x08]
+# CHECK: sb $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x08]
 name: sbs9
 tracksRegLiveness: false
 body: |
@@ -265,7 +265,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sbx:
-# CHECK: sbx $4, $6($5) # encoding: [0xa6,0x20,0x87,0x20]
+# CHECK: sbx $a0, $a2($a1) # encoding: [0xa6,0x20,0x87,0x20]
 name: sbx
 tracksRegLiveness: false
 body: |
@@ -274,7 +274,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sc:
-# CHECK: sc $4, 0($5) # encoding: [0x85,0xa4,0x00,0x59]
+# CHECK: sc $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x59]
 name: sc
 tracksRegLiveness: false
 body: |
@@ -283,7 +283,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: scwp:
-# CHECK: scwp $4, $5, ($6) # encoding: [0x86,0xa4,0x29,0x59]
+# CHECK: scwp $a0, $a1, ($a2) # encoding: [0x86,0xa4,0x29,0x59]
 name: scwp
 tracksRegLiveness: false
 body: |
@@ -292,7 +292,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sh:
-# CHECK: sh $4, 0($5) # encoding: [0x85,0x84,0x00,0x50]
+# CHECK: sh $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x50]
 name: sh
 tracksRegLiveness: false
 body: |
@@ -301,7 +301,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: shgp:
-# CHECK: sh $4, 0($gp) # encoding: [0x94,0x44,0x00,0x00]
+# CHECK: sh $a0, 0($gp) # encoding: [0x94,0x44,0x00,0x00]
 name: shgp
 tracksRegLiveness: false
 body: |
@@ -310,7 +310,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: shs9:
-# CHECK: sh $4, 0($5) # encoding: [0x85,0xa4,0x00,0x28]
+# CHECK: sh $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x28]
 name: shs9
 tracksRegLiveness: false
 body: |
@@ -319,7 +319,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: shx:
-# CHECK: shx $4, $6($5) # encoding: [0xa6,0x20,0x87,0x22]
+# CHECK: shx $a0, $a2($a1) # encoding: [0xa6,0x20,0x87,0x22]
 name: shx
 tracksRegLiveness: false
 body: |
@@ -328,7 +328,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: shxs:
-# CHECK: shxs $4, $6($5) # encoding: [0xa6,0x20,0xc7,0x22]
+# CHECK: shxs $a0, $a2($a1) # encoding: [0xa6,0x20,0xc7,0x22]
 name: shxs
 tracksRegLiveness: false
 body: |
@@ -337,7 +337,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sw:
-# CHECK: sw $4, 0($5) # encoding: [0x85,0x84,0x00,0x90]
+# CHECK: sw $a0, 0($a1) # encoding: [0x85,0x84,0x00,0x90]
 name: sw
 tracksRegLiveness: false
 body: |
@@ -346,7 +346,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swgp:
-# CHECK: sw $4, 0($gp) # encoding: [0x80,0x40,0x03,0x00]
+# CHECK: sw $a0, 0($gp) # encoding: [0x80,0x40,0x03,0x00]
 name: swgp
 tracksRegLiveness: false
 body: |
@@ -355,7 +355,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swm:
-# CHECK: swm $4, 0($5), 1 # encoding: [0x85,0xa4,0x00,0x1c]
+# CHECK: swm $a0, 0($a1), 1 # encoding: [0x85,0xa4,0x00,0x1c]
 name: swm
 tracksRegLiveness: false
 body: |
@@ -364,7 +364,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sws9:
-# CHECK: sw $4, 0($5) # encoding: [0x85,0xa4,0x00,0x48]
+# CHECK: sw $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x48]
 name: sws9
 tracksRegLiveness: false
 body: |
@@ -373,7 +373,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swx:
-# CHECK: swx $4, $6($5) # encoding: [0xa6,0x20,0x87,0x24]
+# CHECK: swx $a0, $a2($a1) # encoding: [0xa6,0x20,0x87,0x24]
 name: swx
 tracksRegLiveness: false
 body: |
@@ -382,7 +382,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swxs:
-# CHECK: swxs $4, $6($5) # encoding: [0xa6,0x20,0xc7,0x24]
+# CHECK: swxs $a0, $a2($a1) # encoding: [0xa6,0x20,0xc7,0x24]
 name: swxs
 tracksRegLiveness: false
 body: |
@@ -391,7 +391,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ualh:
-# CHECK: ualh $4, 0($5) # encoding: [0x85,0xa4,0x00,0x21]
+# CHECK: ualh $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x21]
 name: ualh
 tracksRegLiveness: false
 body: |
@@ -400,7 +400,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ualw:
-# CHECK: ualw $4, 0($5) # encoding: [0x85,0xa4,0x00,0x15]
+# CHECK: ualw $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x15]
 name: ualw
 tracksRegLiveness: false
 body: |
@@ -409,7 +409,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ualwm:
-# CHECK: ualwm $4, 0($5), 1 # encoding: [0x85,0xa4,0x00,0x15]
+# CHECK: ualwm $a0, 0($a1), 1 # encoding: [0x85,0xa4,0x00,0x15]
 name: ualwm
 tracksRegLiveness: false
 body: |
@@ -418,7 +418,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: uash:
-# CHECK: uash $4, 0($5) # encoding: [0x85,0xa4,0x00,0x29]
+# CHECK: uash $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x29]
 name: uash
 tracksRegLiveness: false
 body: |
@@ -427,7 +427,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: uasw:
-# CHECK: uasw $4, 0($5) # encoding: [0x85,0xa4,0x00,0x1d]
+# CHECK: uasw $a0, 0($a1) # encoding: [0x85,0xa4,0x00,0x1d]
 name: uasw
 tracksRegLiveness: false
 body: |
@@ -436,7 +436,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: uaswm:
-# CHECK: uaswm $4, 0($5), 1 # encoding: [0x85,0xa4,0x00,0x1d]
+# CHECK: uaswm $a0, 0($a1), 1 # encoding: [0x85,0xa4,0x00,0x1d]
 name: uaswm
 tracksRegLiveness: false
 body: |
@@ -447,7 +447,7 @@ body: |
 # --- cache / prefetch / sync ---
 ---
 # CHECK-LABEL: cache:
-# CHECK: cache 0, 0($5) # encoding: [0x05,0xa4,0x00,0x39]
+# CHECK: cache 0, 0($a1) # encoding: [0x05,0xa4,0x00,0x39]
 name: cache
 tracksRegLiveness: false
 body: |
@@ -456,7 +456,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: llwp:
-# CHECK: llwp $4, $5, ($6) # encoding: [0x86,0xa4,0x29,0x51]
+# CHECK: llwp $a0, $a1, ($a2) # encoding: [0x86,0xa4,0x29,0x51]
 name: llwp
 tracksRegLiveness: false
 body: |
@@ -465,7 +465,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: pref:
-# CHECK: pref 0, 0($5) # encoding: [0x05,0x84,0x00,0x30]
+# CHECK: pref 0, 0($a1) # encoding: [0x05,0x84,0x00,0x30]
 name: pref
 tracksRegLiveness: false
 body: |
@@ -474,7 +474,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: prefs9:
-# CHECK: pref 0, 0($5) # encoding: [0x05,0xa4,0x00,0x18]
+# CHECK: pref 0, 0($a1) # encoding: [0x05,0xa4,0x00,0x18]
 name: prefs9
 tracksRegLiveness: false
 body: |
@@ -483,7 +483,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: synci:
-# CHECK: synci 0($5) # encoding: [0xe5,0x87,0x00,0x30]
+# CHECK: synci 0($a1) # encoding: [0xe5,0x87,0x00,0x30]
 name: synci
 tracksRegLiveness: false
 body: |
@@ -492,7 +492,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: syncis9:
-# CHECK: synci 0($5) # encoding: [0xe5,0xa7,0x00,0x18]
+# CHECK: synci 0($a1) # encoding: [0xe5,0xa7,0x00,0x18]
 name: syncis9
 tracksRegLiveness: false
 body: |

@@ -13,7 +13,7 @@
 # --- three-register (ArithLogicR32) ---
 ---
 # CHECK-LABEL: add:
-# CHECK: add $4, $5, $6 # encoding: [0xc5,0x20,0x10,0x21]
+# CHECK: add $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x21]
 name: add
 tracksRegLiveness: false
 body: |
@@ -22,7 +22,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addu:
-# CHECK: addu $4, $5, $6 # encoding: [0xc5,0x20,0x50,0x21]
+# CHECK: addu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x21]
 name: addu
 tracksRegLiveness: false
 body: |
@@ -31,7 +31,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: and:
-# CHECK: and $4, $5, $6 # encoding: [0xc5,0x20,0x50,0x22]
+# CHECK: and $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x22]
 name: and
 tracksRegLiveness: false
 body: |
@@ -40,7 +40,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: div:
-# CHECK: div $4, $5, $6 # encoding: [0xc5,0x20,0x18,0x21]
+# CHECK: div $a0, $a1, $a2 # encoding: [0xc5,0x20,0x18,0x21]
 name: div
 tracksRegLiveness: false
 body: |
@@ -49,7 +49,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: divu:
-# CHECK: divu $4, $5, $6 # encoding: [0xc5,0x20,0x98,0x21]
+# CHECK: divu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x98,0x21]
 name: divu
 tracksRegLiveness: false
 body: |
@@ -58,7 +58,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mod:
-# CHECK: mod $4, $5, $6 # encoding: [0xc5,0x20,0x58,0x21]
+# CHECK: mod $a0, $a1, $a2 # encoding: [0xc5,0x20,0x58,0x21]
 name: mod
 tracksRegLiveness: false
 body: |
@@ -67,7 +67,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: modu:
-# CHECK: modu $4, $5, $6 # encoding: [0xc5,0x20,0xd8,0x21]
+# CHECK: modu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd8,0x21]
 name: modu
 tracksRegLiveness: false
 body: |
@@ -76,7 +76,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: muh:
-# CHECK: muh $4, $5, $6 # encoding: [0xc5,0x20,0x58,0x20]
+# CHECK: muh $a0, $a1, $a2 # encoding: [0xc5,0x20,0x58,0x20]
 name: muh
 tracksRegLiveness: false
 body: |
@@ -85,7 +85,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: muhu:
-# CHECK: muhu $4, $5, $6 # encoding: [0xc5,0x20,0xd8,0x20]
+# CHECK: muhu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd8,0x20]
 name: muhu
 tracksRegLiveness: false
 body: |
@@ -94,7 +94,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mul:
-# CHECK: mul $4, $5, $6 # encoding: [0xc5,0x20,0x18,0x20]
+# CHECK: mul $a0, $a1, $a2 # encoding: [0xc5,0x20,0x18,0x20]
 name: mul
 tracksRegLiveness: false
 body: |
@@ -103,7 +103,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mulu:
-# CHECK: mulu $4, $5, $6 # encoding: [0xc5,0x20,0x98,0x20]
+# CHECK: mulu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x98,0x20]
 name: mulu
 tracksRegLiveness: false
 body: |
@@ -112,7 +112,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: nor:
-# CHECK: nor $4, $5, $6 # encoding: [0xc5,0x20,0xd0,0x22]
+# CHECK: nor $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x22]
 name: nor
 tracksRegLiveness: false
 body: |
@@ -121,7 +121,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: or:
-# CHECK: or $4, $5, $6 # encoding: [0xc5,0x20,0x90,0x22]
+# CHECK: or $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x22]
 name: or
 tracksRegLiveness: false
 body: |
@@ -130,7 +130,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: rotrv:
-# CHECK: rotrv $4, $5, $6 # encoding: [0xc5,0x20,0xd0,0x20]
+# CHECK: rotrv $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x20]
 name: rotrv
 tracksRegLiveness: false
 body: |
@@ -139,7 +139,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sllv:
-# CHECK: sllv $4, $5, $6 # encoding: [0xc5,0x20,0x10,0x20]
+# CHECK: sllv $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x20]
 name: sllv
 tracksRegLiveness: false
 body: |
@@ -148,7 +148,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: slt:
-# CHECK: slt $4, $5, $6 # encoding: [0xc5,0x20,0x50,0x23]
+# CHECK: slt $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x23]
 name: slt
 tracksRegLiveness: false
 body: |
@@ -157,7 +157,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sltu:
-# CHECK: sltu $4, $5, $6 # encoding: [0xc5,0x20,0x90,0x23]
+# CHECK: sltu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x23]
 name: sltu
 tracksRegLiveness: false
 body: |
@@ -166,7 +166,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sov:
-# CHECK: sov $4, $5, $6 # encoding: [0xc5,0x20,0xd0,0x23]
+# CHECK: sov $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x23]
 name: sov
 tracksRegLiveness: false
 body: |
@@ -175,7 +175,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: srav:
-# CHECK: srav $4, $5, $6 # encoding: [0xc5,0x20,0x90,0x20]
+# CHECK: srav $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x20]
 name: srav
 tracksRegLiveness: false
 body: |
@@ -184,7 +184,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: srlv:
-# CHECK: srlv $4, $5, $6 # encoding: [0xc5,0x20,0x50,0x20]
+# CHECK: srlv $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x20]
 name: srlv
 tracksRegLiveness: false
 body: |
@@ -193,7 +193,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sub:
-# CHECK: sub $4, $5, $6 # encoding: [0xc5,0x20,0x90,0x21]
+# CHECK: sub $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x21]
 name: sub
 tracksRegLiveness: false
 body: |
@@ -202,7 +202,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: subu:
-# CHECK: subu $4, $5, $6 # encoding: [0xc5,0x20,0xd0,0x21]
+# CHECK: subu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x21]
 name: subu
 tracksRegLiveness: false
 body: |
@@ -211,7 +211,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: xor:
-# CHECK: xor $4, $5, $6 # encoding: [0xc5,0x20,0x10,0x23]
+# CHECK: xor $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x23]
 name: xor
 tracksRegLiveness: false
 body: |
@@ -222,7 +222,7 @@ body: |
 # --- register-only ---
 ---
 # CHECK-LABEL: clo:
-# CHECK: clo $4, $5 # encoding: [0x85,0x20,0x3f,0x4b]
+# CHECK: clo $a0, $a1 # encoding: [0x85,0x20,0x3f,0x4b]
 name: clo
 tracksRegLiveness: false
 body: |
@@ -231,7 +231,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: clz:
-# CHECK: clz $4, $5 # encoding: [0x85,0x20,0x3f,0x5b]
+# CHECK: clz $a0, $a1 # encoding: [0x85,0x20,0x3f,0x5b]
 name: clz
 tracksRegLiveness: false
 body: |
@@ -240,7 +240,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: movn:
-# CHECK: movn $4, $5, $6 # encoding: [0xc5,0x20,0x10,0x26]
+# CHECK: movn $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x26]
 name: movn
 tracksRegLiveness: false
 body: |
@@ -249,7 +249,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: movz:
-# CHECK: movz $4, $5, $6 # encoding: [0xc5,0x20,0x10,0x22]
+# CHECK: movz $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x22]
 name: movz
 tracksRegLiveness: false
 body: |
@@ -258,7 +258,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: rdpgpr:
-# CHECK: rdpgpr $4, $5 # encoding: [0x85,0x20,0x7f,0xe1]
+# CHECK: rdpgpr $a0, $a1 # encoding: [0x85,0x20,0x7f,0xe1]
 name: rdpgpr
 tracksRegLiveness: false
 body: |
@@ -267,7 +267,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: seb:
-# CHECK: seb $4, $5 # encoding: [0x85,0x20,0x08,0x00]
+# CHECK: seb $a0, $a1 # encoding: [0x85,0x20,0x08,0x00]
 name: seb
 tracksRegLiveness: false
 body: |
@@ -276,7 +276,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: seh:
-# CHECK: seh $4, $5 # encoding: [0x85,0x20,0x48,0x00]
+# CHECK: seh $a0, $a1 # encoding: [0x85,0x20,0x48,0x00]
 name: seh
 tracksRegLiveness: false
 body: |
@@ -285,7 +285,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: wrpgpr:
-# CHECK: wrpgpr $4, $5 # encoding: [0x85,0x20,0x7f,0xf1]
+# CHECK: wrpgpr $a0, $a1 # encoding: [0x85,0x20,0x7f,0xf1]
 name: wrpgpr
 tracksRegLiveness: false
 body: |
@@ -296,7 +296,7 @@ body: |
 # --- register + immediate ---
 ---
 # CHECK-LABEL: addiu:
-# CHECK: addiu $4, $5, 100 # encoding: [0x85,0x00,0x64,0x00]
+# CHECK: addiu $a0, $a1, 100 # encoding: [0x85,0x00,0x64,0x00]
 name: addiu
 tracksRegLiveness: false
 body: |
@@ -309,7 +309,7 @@ body: |
 # to 0 here to confirm the mnemonic and the opcode and register fields.
 
 # CHECK-LABEL: addiuneg:
-# CHECK: addiu $4, $5, 0 # encoding: [0x85,0x80,0x00,0x80]
+# CHECK: addiu $a0, $a1, 0 # encoding: [0x85,0x80,0x00,0x80]
 name: addiuneg
 tracksRegLiveness: false
 body: |
@@ -318,7 +318,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiurs5:
-# CHECK: addiu $4, $4, 4 # encoding: [0x8c,0x90]
+# CHECK: addiu $a0, $a0, 4 # encoding: [0x8c,0x90]
 name: addiurs5
 tracksRegLiveness: false
 body: |
@@ -327,7 +327,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: andi:
-# CHECK: andi $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x20]
+# CHECK: andi $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x20]
 name: andi
 tracksRegLiveness: false
 body: |
@@ -336,7 +336,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lui:
-# CHECK: lui $4, 15 # encoding: [0x80,0xe0,0x00,0xf0]
+# CHECK: lui $a0, 15 # encoding: [0x80,0xe0,0x00,0xf0]
 name: lui
 tracksRegLiveness: false
 body: |
@@ -345,7 +345,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ori:
-# CHECK: ori $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x00]
+# CHECK: ori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x00]
 name: ori
 tracksRegLiveness: false
 body: |
@@ -354,7 +354,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: rotr:
-# CHECK: rotr $4, $5, 3 # encoding: [0x85,0x80,0xc3,0xc0]
+# CHECK: rotr $a0, $a1, 3 # encoding: [0x85,0x80,0xc3,0xc0]
 name: rotr
 tracksRegLiveness: false
 body: |
@@ -363,7 +363,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: seqi:
-# CHECK: seqi $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x60]
+# CHECK: seqi $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x60]
 name: seqi
 tracksRegLiveness: false
 body: |
@@ -372,7 +372,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sll:
-# CHECK: sll $4, $5, 3 # encoding: [0x85,0x80,0x03,0xc0]
+# CHECK: sll $a0, $a1, 3 # encoding: [0x85,0x80,0x03,0xc0]
 name: sll
 tracksRegLiveness: false
 body: |
@@ -381,7 +381,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: slti:
-# CHECK: slti $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x40]
+# CHECK: slti $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x40]
 name: slti
 tracksRegLiveness: false
 body: |
@@ -390,7 +390,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sltiu:
-# CHECK: sltiu $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x50]
+# CHECK: sltiu $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x50]
 name: sltiu
 tracksRegLiveness: false
 body: |
@@ -399,7 +399,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sra:
-# CHECK: sra $4, $5, 3 # encoding: [0x85,0x80,0x83,0xc0]
+# CHECK: sra $a0, $a1, 3 # encoding: [0x85,0x80,0x83,0xc0]
 name: sra
 tracksRegLiveness: false
 body: |
@@ -408,7 +408,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: srl:
-# CHECK: srl $4, $5, 3 # encoding: [0x85,0x80,0x43,0xc0]
+# CHECK: srl $a0, $a1, 3 # encoding: [0x85,0x80,0x43,0xc0]
 name: srl
 tracksRegLiveness: false
 body: |
@@ -417,7 +417,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: xori:
-# CHECK: xori $4, $5, 15 # encoding: [0x85,0x80,0x0f,0x10]
+# CHECK: xori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x10]
 name: xori
 tracksRegLiveness: false
 body: |
@@ -428,7 +428,7 @@ body: |
 # --- bitfield ---
 ---
 # CHECK-LABEL: bitrevw:
-# CHECK: bitrevw $4, $5 # encoding: [0x85,0x80,0x1f,0xd0]
+# CHECK: bitrevw $a0, $a1 # encoding: [0x85,0x80,0x1f,0xd0]
 name: bitrevw
 tracksRegLiveness: false
 body: |
@@ -437,7 +437,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: byterevw:
-# CHECK: byterevw $4, $5 # encoding: [0x85,0x80,0x18,0xd2]
+# CHECK: byterevw $a0, $a1 # encoding: [0x85,0x80,0x18,0xd2]
 name: byterevw
 tracksRegLiveness: false
 body: |
@@ -446,7 +446,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ext:
-# CHECK: ext $4, $5, 3, 5 # encoding: [0x85,0x80,0x03,0xf1]
+# CHECK: ext $a0, $a1, 3, 5 # encoding: [0x85,0x80,0x03,0xf1]
 name: ext
 tracksRegLiveness: false
 body: |
@@ -455,7 +455,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: extw:
-# CHECK: extw $4, $5, $6, 3 # encoding: [0xc5,0x20,0xdf,0x20]
+# CHECK: extw $a0, $a1, $a2, 3 # encoding: [0xc5,0x20,0xdf,0x20]
 name: extw
 tracksRegLiveness: false
 body: |
@@ -464,7 +464,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ins:
-# CHECK: ins $4, $5, 3, 5 # encoding: [0x85,0x80,0xc3,0xe1]
+# CHECK: ins $a0, $a1, 3, 5 # encoding: [0x85,0x80,0xc3,0xe1]
 name: ins
 tracksRegLiveness: false
 body: |
@@ -473,7 +473,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: rotx:
-# CHECK: rotx $4, $5, 3, 5, 0 # encoding: [0x85,0x80,0x03,0xd1]
+# CHECK: rotx $a0, $a1, 3, 5, 0 # encoding: [0x85,0x80,0x03,0xd1]
 name: rotx
 tracksRegLiveness: false
 body: |
@@ -484,7 +484,7 @@ body: |
 # --- PC/GP-relative address (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: addiugpb:
-# CHECK: addiu $4, $gp, 0 # encoding: [0x8c,0x44,0x00,0x00]
+# CHECK: addiu $a0, $gp, 0 # encoding: [0x8c,0x44,0x00,0x00]
 name: addiugpb
 tracksRegLiveness: false
 body: |
@@ -493,7 +493,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiugpw:
-# CHECK: addiu $4, $gp, 0 # encoding: [0x80,0x40,0x00,0x00]
+# CHECK: addiu $a0, $gp, 0 # encoding: [0x80,0x40,0x00,0x00]
 name: addiugpw
 tracksRegLiveness: false
 body: |
@@ -502,7 +502,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiupc:
-# CHECK: addiupc $4, 0 # encoding: [0x80,0x04,0x00,0x00]
+# CHECK: addiupc $a0, 0 # encoding: [0x80,0x04,0x00,0x00]
 name: addiupc
 tracksRegLiveness: false
 body: |
@@ -511,7 +511,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: aluipc:
-# CHECK: aluipc $4, 0 # encoding: [0x80,0xe0,0x02,0x00]
+# CHECK: aluipc $a0, 0 # encoding: [0x80,0xe0,0x02,0x00]
 name: aluipc
 tracksRegLiveness: false
 body: |
@@ -520,7 +520,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lapc32:
-# CHECK: lapc.h $4, 0 # encoding: [0x80,0x04,0x00,0x00]
+# CHECK: lapc.h $a0, 0 # encoding: [0x80,0x04,0x00,0x00]
 name: lapc32
 tracksRegLiveness: false
 body: |

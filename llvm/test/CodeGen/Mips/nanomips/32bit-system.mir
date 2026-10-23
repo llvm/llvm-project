@@ -19,7 +19,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32b:
-# CHECK: crc32b $4, $5 # encoding: [0x85,0x20,0xe8,0x03]
+# CHECK: crc32b $a0, $a1 # encoding: [0x85,0x20,0xe8,0x03]
 name: crc32b
 tracksRegLiveness: false
 body: |
@@ -28,7 +28,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32cb:
-# CHECK: crc32cb $4, $5 # encoding: [0x85,0x20,0xe8,0x13]
+# CHECK: crc32cb $a0, $a1 # encoding: [0x85,0x20,0xe8,0x13]
 name: crc32cb
 tracksRegLiveness: false
 body: |
@@ -37,7 +37,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32ch:
-# CHECK: crc32ch $4, $5 # encoding: [0x85,0x20,0xe8,0x17]
+# CHECK: crc32ch $a0, $a1 # encoding: [0x85,0x20,0xe8,0x17]
 name: crc32ch
 tracksRegLiveness: false
 body: |
@@ -46,7 +46,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32cw:
-# CHECK: crc32cw $4, $5 # encoding: [0x85,0x20,0xe8,0x1b]
+# CHECK: crc32cw $a0, $a1 # encoding: [0x85,0x20,0xe8,0x1b]
 name: crc32cw
 tracksRegLiveness: false
 body: |
@@ -55,7 +55,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32h:
-# CHECK: crc32h $4, $5 # encoding: [0x85,0x20,0xe8,0x07]
+# CHECK: crc32h $a0, $a1 # encoding: [0x85,0x20,0xe8,0x07]
 name: crc32h
 tracksRegLiveness: false
 body: |
@@ -64,7 +64,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: crc32w:
-# CHECK: crc32w $4, $5 # encoding: [0x85,0x20,0xe8,0x0b]
+# CHECK: crc32w $a0, $a1 # encoding: [0x85,0x20,0xe8,0x0b]
 name: crc32w
 tracksRegLiveness: false
 body: |
@@ -163,7 +163,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: teq:
-# CHECK: teq $4, $5, 0 # encoding: [0xa4,0x20,0x00,0x00]
+# CHECK: teq $a0, $a1, 0 # encoding: [0xa4,0x20,0x00,0x00]
 name: teq
 tracksRegLiveness: false
 body: |
@@ -172,7 +172,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: tne:
-# CHECK: tne $4, $5, 0 # encoding: [0xa4,0x20,0x00,0x04]
+# CHECK: tne $a0, $a1, 0 # encoding: [0xa4,0x20,0x00,0x04]
 name: tne
 tracksRegLiveness: false
 body: |
@@ -183,7 +183,7 @@ body: |
 # --- coprocessor-0 access ---
 ---
 # CHECK-LABEL: mfc0:
-# CHECK: mfc0 $4, $0, 0 # encoding: [0x80,0x20,0x30,0x00]
+# CHECK: mfc0 $a0, $0, 0 # encoding: [0x80,0x20,0x30,0x00]
 name: mfc0
 tracksRegLiveness: false
 body: |
@@ -192,7 +192,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mfhc0:
-# CHECK: mfhc0 $4, $0, 0 # encoding: [0x80,0x20,0x38,0x00]
+# CHECK: mfhc0 $a0, $0, 0 # encoding: [0x80,0x20,0x38,0x00]
 name: mfhc0
 tracksRegLiveness: false
 body: |
@@ -201,7 +201,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mtc0:
-# CHECK: mtc0 $4, $0, 0 # encoding: [0x80,0x20,0x70,0x00]
+# CHECK: mtc0 $a0, $0, 0 # encoding: [0x80,0x20,0x70,0x00]
 name: mtc0
 tracksRegLiveness: false
 body: |
@@ -210,7 +210,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mthc0:
-# CHECK: mthc0 $4, $0, 0 # encoding: [0x80,0x20,0x78,0x00]
+# CHECK: mthc0 $a0, $0, 0 # encoding: [0x80,0x20,0x78,0x00]
 name: mthc0
 tracksRegLiveness: false
 body: |
@@ -219,7 +219,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: rdhwr:
-# CHECK: rdhwr $4, $hwr_cpunum, 0 # encoding: [0x80,0x20,0xc0,0x01]
+# CHECK: rdhwr $a0, $hwr_cpunum, 0 # encoding: [0x80,0x20,0xc0,0x01]
 name: rdhwr
 tracksRegLiveness: false
 body: |
@@ -230,7 +230,7 @@ body: |
 # --- misc / ASE ---
 ---
 # CHECK-LABEL: di:
-# CHECK: di $4 # encoding: [0x80,0x20,0x7f,0x47]
+# CHECK: di $a0 # encoding: [0x80,0x20,0x7f,0x47]
 name: di
 tracksRegLiveness: false
 body: |
@@ -239,7 +239,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: dvp:
-# CHECK: dvp $4 # encoding: [0x80,0x20,0x90,0x03]
+# CHECK: dvp $a0 # encoding: [0x80,0x20,0x90,0x03]
 name: dvp
 tracksRegLiveness: false
 body: |
@@ -248,7 +248,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ei:
-# CHECK: ei $4 # encoding: [0x80,0x20,0x7f,0x57]
+# CHECK: ei $a0 # encoding: [0x80,0x20,0x7f,0x57]
 name: ei
 tracksRegLiveness: false
 body: |
@@ -257,7 +257,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: evp:
-# CHECK: evp $4 # encoding: [0x80,0x20,0x90,0x07]
+# CHECK: evp $a0 # encoding: [0x80,0x20,0x90,0x07]
 name: evp
 tracksRegLiveness: false
 body: |
@@ -266,7 +266,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ginvi:
-# CHECK: ginvi $4 # encoding: [0x04,0x20,0x7f,0x1f]
+# CHECK: ginvi $a0 # encoding: [0x04,0x20,0x7f,0x1f]
 name: ginvi
 tracksRegLiveness: false
 body: |
@@ -275,7 +275,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ginvt:
-# CHECK: ginvt $4, 0 # encoding: [0x04,0x20,0x7f,0x0f]
+# CHECK: ginvt $a0, 0 # encoding: [0x04,0x20,0x7f,0x0f]
 name: ginvt
 tracksRegLiveness: false
 body: |
@@ -284,7 +284,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lsa:
-# CHECK: lsa $4, $5, $6, 1 # encoding: [0xc5,0x20,0x0f,0x22]
+# CHECK: lsa $a0, $a1, $a2, 1 # encoding: [0xc5,0x20,0x0f,0x22]
 name: lsa
 tracksRegLiveness: false
 body: |

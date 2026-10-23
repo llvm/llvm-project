@@ -277,7 +277,9 @@ static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
                                               const MCAsmInfo &MAI,
                                               const MCInstrInfo &MII,
                                               const MCRegisterInfo &MRI) {
-  return new MipsInstPrinter(MAI, MII, MRI);
+  return new MipsInstPrinter(
+      MAI, MII, MRI,
+      MipsABIInfo::computeTargetABI(T, MAI.getTargetOptions().getABIName()));
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,

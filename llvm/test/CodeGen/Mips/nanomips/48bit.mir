@@ -13,7 +13,7 @@
 # --- arithmetic / immediate ---
 ---
 # CHECK-LABEL: addiu48:
-# CHECK: addiu $4, $4, 305419896 # encoding: [0x81,0x60,0x78,0x56,0x34,0x12]
+# CHECK: addiu $a0, $a0, 305419896 # encoding: [0x81,0x60,0x78,0x56,0x34,0x12]
 name: addiu48
 tracksRegLiveness: false
 body: |
@@ -22,7 +22,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: li48:
-# CHECK: li $4, 305419896 # encoding: [0x80,0x60,0x78,0x56,0x34,0x12]
+# CHECK: li $a0, 305419896 # encoding: [0x80,0x60,0x78,0x56,0x34,0x12]
 name: li48
 tracksRegLiveness: false
 body: |
@@ -33,7 +33,7 @@ body: |
 # --- PC/GP-relative address (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: addiugp48:
-# CHECK: addiu.b32 $4, $gp, 0 # encoding: [0x82,0x60,0x00,0x00,0x00,0x00]
+# CHECK: addiu.b32 $a0, $gp, 0 # encoding: [0x82,0x60,0x00,0x00,0x00,0x00]
 name: addiugp48
 tracksRegLiveness: false
 body: |
@@ -42,7 +42,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiupc48:
-# CHECK: addiupc $4, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+# CHECK: addiupc $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
 name: addiupc48
 tracksRegLiveness: false
 body: |
@@ -51,7 +51,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lapc48:
-# CHECK: lapc.b $4, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+# CHECK: lapc.b $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
 name: lapc48
 tracksRegLiveness: false
 body: |
@@ -62,7 +62,7 @@ body: |
 # --- PC-relative load / store (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: lwpc:
-# CHECK: lwpc $4, 0 # encoding: [0x8b,0x60,0x00,0x00,0x00,0x00]
+# CHECK: lwpc $a0, 0 # encoding: [0x8b,0x60,0x00,0x00,0x00,0x00]
 name: lwpc
 tracksRegLiveness: false
 body: |
@@ -71,7 +71,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swpc:
-# CHECK: swpc $4, 0 # encoding: [0x8f,0x60,0x00,0x00,0x00,0x00]
+# CHECK: swpc $a0, 0 # encoding: [0x8f,0x60,0x00,0x00,0x00,0x00]
 name: swpc
 tracksRegLiveness: false
 body: |

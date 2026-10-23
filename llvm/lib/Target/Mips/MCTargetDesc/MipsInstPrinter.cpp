@@ -82,8 +82,12 @@ void MipsInstPrinter::printCOP0Operand(const MCInst *MI, unsigned OpNo,
 }
 
 void MipsInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
+  unsigned AltIdx = Mips::NoRegAltName;
+  if (ABI.IsP32())
+    AltIdx = ABI.getRegAltNameIndex();
+
   markup(OS, Markup::Register)
-      << '$' << StringRef(getRegisterName(Reg)).lower();
+      << '$' << StringRef(getRegisterName(Reg, AltIdx)).lower();
 }
 
 void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,

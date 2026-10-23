@@ -13,7 +13,7 @@
 # --- alu / logic / move ---
 ---
 # CHECK-LABEL: addiur1sp:
-# CHECK: addiu $4, $sp, 4 # encoding: [0x41,0x72]
+# CHECK: addiu $a0, $sp, 4 # encoding: [0x41,0x72]
 name: addiur1sp
 tracksRegLiveness: false
 body: |
@@ -22,7 +22,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiur2:
-# CHECK: addiu $4, $5, 4 # encoding: [0x51,0x92]
+# CHECK: addiu $a0, $a1, 4 # encoding: [0x51,0x92]
 name: addiur2
 tracksRegLiveness: false
 body: |
@@ -31,7 +31,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: and16:
-# CHECK: and $4, $5, $4 # encoding: [0x58,0x52]
+# CHECK: and $a0, $a1, $a0 # encoding: [0x58,0x52]
 name: and16
 tracksRegLiveness: false
 body: |
@@ -40,7 +40,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: andi16:
-# CHECK: andi $4, $5, 3 # encoding: [0x53,0xf2]
+# CHECK: andi $a0, $a1, 3 # encoding: [0x53,0xf2]
 name: andi16
 tracksRegLiveness: false
 body: |
@@ -58,7 +58,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: li16:
-# CHECK: li $4, 5 # encoding: [0x05,0xd2]
+# CHECK: li $a0, 5 # encoding: [0x05,0xd2]
 name: li16
 tracksRegLiveness: false
 body: |
@@ -67,7 +67,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: move:
-# CHECK: move $4, $5 # encoding: [0x85,0x10]
+# CHECK: move $a0, $a1 # encoding: [0x85,0x10]
 name: move
 tracksRegLiveness: false
 body: |
@@ -76,7 +76,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: not16:
-# CHECK: not $4, $5 # encoding: [0x50,0x52]
+# CHECK: not $a0, $a1 # encoding: [0x50,0x52]
 name: not16
 tracksRegLiveness: false
 body: |
@@ -85,7 +85,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: or16:
-# CHECK: or $4, $5, $4 # encoding: [0x5c,0x52]
+# CHECK: or $a0, $a1, $a0 # encoding: [0x5c,0x52]
 name: or16
 tracksRegLiveness: false
 body: |
@@ -103,7 +103,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sll16:
-# CHECK: sll $4, $5, 3 # encoding: [0x53,0x32]
+# CHECK: sll $a0, $a1, 3 # encoding: [0x53,0x32]
 name: sll16
 tracksRegLiveness: false
 body: |
@@ -112,7 +112,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: srl16:
-# CHECK: srl $4, $5, 3 # encoding: [0x5b,0x32]
+# CHECK: srl $a0, $a1, 3 # encoding: [0x5b,0x32]
 name: srl16
 tracksRegLiveness: false
 body: |
@@ -130,7 +130,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: xor16:
-# CHECK: xor $4, $5, $4 # encoding: [0x54,0x52]
+# CHECK: xor $a0, $a1, $a0 # encoding: [0x54,0x52]
 name: xor16
 tracksRegLiveness: false
 body: |
@@ -141,7 +141,7 @@ body: |
 # --- arithmetic ---
 ---
 # CHECK-LABEL: addu16:
-# CHECK: addu $4, $5, $6 # encoding: [0x58,0xb3]
+# CHECK: addu $a0, $a1, $a2 # encoding: [0x58,0xb3]
 name: addu16
 tracksRegLiveness: false
 body: |
@@ -150,7 +150,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addu4x4:
-# CHECK: addu $4, $4, $5 # encoding: [0x85,0x3c]
+# CHECK: addu $a0, $a0, $a1 # encoding: [0x85,0x3c]
 name: addu4x4
 tracksRegLiveness: false
 body: |
@@ -159,7 +159,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: movep:
-# CHECK: movep $4, $5, $6, $7 # encoding: [0xe6,0xbc]
+# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xe6,0xbc]
 name: movep
 tracksRegLiveness: false
 body: |
@@ -168,7 +168,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: moveprev:
-# CHECK: movep $4, $5, $6, $7 # encoding: [0xac,0xfc]
+# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xac,0xfc]
 name: moveprev
 tracksRegLiveness: false
 body: |
@@ -177,7 +177,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: mul4x4:
-# CHECK: mul $4, $4, $5 # encoding: [0x8d,0x3c]
+# CHECK: mul $a0, $a0, $a1 # encoding: [0x8d,0x3c]
 name: mul4x4
 tracksRegLiveness: false
 body: |
@@ -186,7 +186,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: subu16:
-# CHECK: subu $4, $5, $6 # encoding: [0x59,0xb3]
+# CHECK: subu $a0, $a1, $a2 # encoding: [0x59,0xb3]
 name: subu16
 tracksRegLiveness: false
 body: |
@@ -197,7 +197,7 @@ body: |
 # --- load / store ---
 ---
 # CHECK-LABEL: lb16:
-# CHECK: lb $4, 0($5) # encoding: [0x50,0x5e]
+# CHECK: lb $a0, 0($a1) # encoding: [0x50,0x5e]
 name: lb16
 tracksRegLiveness: false
 body: |
@@ -206,7 +206,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lbu16:
-# CHECK: lbu $4, 0($5) # encoding: [0x58,0x5e]
+# CHECK: lbu $a0, 0($a1) # encoding: [0x58,0x5e]
 name: lbu16
 tracksRegLiveness: false
 body: |
@@ -215,7 +215,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lh16:
-# CHECK: lh $4, 0($5) # encoding: [0x50,0x7e]
+# CHECK: lh $a0, 0($a1) # encoding: [0x50,0x7e]
 name: lh16
 tracksRegLiveness: false
 body: |
@@ -224,7 +224,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lhu16:
-# CHECK: lhu $4, 0($5) # encoding: [0x58,0x7e]
+# CHECK: lhu $a0, 0($a1) # encoding: [0x58,0x7e]
 name: lhu16
 tracksRegLiveness: false
 body: |
@@ -233,7 +233,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lw16:
-# CHECK: lw $4, 0($5) # encoding: [0x50,0x16]
+# CHECK: lw $a0, 0($a1) # encoding: [0x50,0x16]
 name: lw16
 tracksRegLiveness: false
 body: |
@@ -242,7 +242,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lw4x4:
-# CHECK: lw $4, 0($5) # encoding: [0x85,0x74]
+# CHECK: lw $a0, 0($a1) # encoding: [0x85,0x74]
 name: lw4x4
 tracksRegLiveness: false
 body: |
@@ -251,7 +251,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwgp16:
-# CHECK: lw $4, 0($gp) # encoding: [0x00,0x56]
+# CHECK: lw $a0, 0($gp) # encoding: [0x00,0x56]
 name: lwgp16
 tracksRegLiveness: false
 body: |
@@ -260,7 +260,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwsp16:
-# CHECK: lw $4, 0($sp) # encoding: [0x80,0x34]
+# CHECK: lw $a0, 0($sp) # encoding: [0x80,0x34]
 name: lwsp16
 tracksRegLiveness: false
 body: |
@@ -269,7 +269,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lwxs16:
-# CHECK: lwxs $4, $6($5) # encoding: [0xe9,0x52]
+# CHECK: lwxs $a0, $a2($a1) # encoding: [0xe9,0x52]
 name: lwxs16
 tracksRegLiveness: false
 body: |
@@ -278,7 +278,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sb16:
-# CHECK: sb $4, 0($5) # encoding: [0x54,0x5e]
+# CHECK: sb $a0, 0($a1) # encoding: [0x54,0x5e]
 name: sb16
 tracksRegLiveness: false
 body: |
@@ -287,7 +287,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sh16:
-# CHECK: sh $4, 0($5) # encoding: [0x51,0x7e]
+# CHECK: sh $a0, 0($a1) # encoding: [0x51,0x7e]
 name: sh16
 tracksRegLiveness: false
 body: |
@@ -296,7 +296,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sw16:
-# CHECK: sw $4, 0($5) # encoding: [0x50,0x96]
+# CHECK: sw $a0, 0($a1) # encoding: [0x50,0x96]
 name: sw16
 tracksRegLiveness: false
 body: |
@@ -305,7 +305,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sw4x4:
-# CHECK: sw $4, 0($5) # encoding: [0x85,0xf4]
+# CHECK: sw $a0, 0($a1) # encoding: [0x85,0xf4]
 name: sw4x4
 tracksRegLiveness: false
 body: |
@@ -314,7 +314,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swgp16:
-# CHECK: sw $4, 0($gp) # encoding: [0x00,0xd6]
+# CHECK: sw $a0, 0($gp) # encoding: [0x00,0xd6]
 name: swgp16
 tracksRegLiveness: false
 body: |
@@ -323,7 +323,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: swsp16:
-# CHECK: sw $4, 0($sp) # encoding: [0x80,0xb4]
+# CHECK: sw $a0, 0($sp) # encoding: [0x80,0xb4]
 name: swsp16
 tracksRegLiveness: false
 body: |
@@ -334,7 +334,7 @@ body: |
 # --- jump ---
 ---
 # CHECK-LABEL: jalrc16:
-# CHECK: jalrc $ra, $5 # encoding: [0xb0,0xd8]
+# CHECK: jalrc $ra, $a1 # encoding: [0xb0,0xd8]
 name: jalrc16
 tracksRegLiveness: false
 body: |
@@ -372,7 +372,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: beqzc16:
-# CHECK: beqzc $4, 0 # encoding: [0x00,0x9a]
+# CHECK: beqzc $a0, 0 # encoding: [0x00,0x9a]
 name: beqzc16
 tracksRegLiveness: false
 body: |
@@ -381,7 +381,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bnezc16:
-# CHECK: bnezc $4, 0 # encoding: [0x00,0xba]
+# CHECK: bnezc $a0, 0 # encoding: [0x00,0xba]
 name: bnezc16
 tracksRegLiveness: false
 body: |
