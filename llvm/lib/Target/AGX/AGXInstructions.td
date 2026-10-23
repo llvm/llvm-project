@@ -971,6 +971,33 @@ defm : DeviceLoadPat<atomic_load_nonext_32, i32, DEVICE_LOAD_32, AGXDeviceAddr32
 defm : DeviceStorePat<atomic_store_32, i32, DEVICE_STORE_32, AGXDeviceAddr32, FMT_I32, 1>;
 
 //===----------------------------------------------------------------------===//
+// Textures
+//===----------------------------------------------------------------------===//
+
+// llvm.agx.texture.sample (AGXISD::TEXTURE_SAMPLE, selected in
+// AGXISelDAGToDAG): the four 32-bit channels, asynchronously like a load.
+class TextureSamplePseudo<RegisterClass coords>
+    : AGXPseudo<(outs GPR128:$R),
+                (ins i32imm:$g, GPR32:$T, GPR16:$S, coords:$C, i32imm:$dim,
+                     i32imm:$mask)> {
+  let G13Real = TEXTURE_SAMPLE_g13;
+  // the channels arrive after the sources are read, as Mesa allocates them
+  let Constraints = "@earlyclobber $R";
+  let mayLoad = 1;
+  let IsAsync = 1;
+  let IsMemory = 1;
+  let SchedRW = [WriteDeviceLoad];
+}
+
+def TEXTURE_SAMPLE_1D : TextureSamplePseudo<GPR32>;
+def TEXTURE_SAMPLE_2D : TextureSamplePseudo<GPR32x2>;
+
+def : Pat<(v4i32 (int_agx_texture_sample i32:$t, i16:$s, f32:$x, f32:$y, 2)),
+          (TEXTURE_SAMPLE_2D 0, $t, $s,
+                             (REG_SEQUENCE GPR32x2, $x, sub0, $y, sub1), 2,
+                             15)>;
+
+//===----------------------------------------------------------------------===//
 // Threadgroup memory
 //===----------------------------------------------------------------------===//
 
@@ -1447,13 +1474,27 @@ foreach Op = AGXSIMDOps in {
             (!cast<Instruction>(Kind.Name#"_"#Op.Name#"_32") 0, $v)>;
 }
 
-let isConvergent = 1 in
+let isConvergent = 1 in {
 def SIMD_MATRIX_FMADD32 : AGXALUPseudo<SIMD_MATRIX_FMADD32_g13,
                                        (outs GPR64:$dst),
                                        (ins SrcMods:$src0_mods, Src64Op:$src0,
                                             SrcMods:$src1_mods, Src64Op:$src1,
                                             SrcMods:$src2_mods, Src64Op:$src2),
                                        [], [WriteSIMDReduce]>;
+def SIMD_MATRIX_FMADD16 : AGXALUPseudo<SIMD_MATRIX_FMADD16_g13,
+                                       (outs GPR32:$dst),
+                                       (ins SrcMods:$src0_mods, GPR32SrcOp:$src0,
+                                            SrcMods:$src1_mods, GPR32SrcOp:$src1,
+                                            SrcMods:$src2_mods, GPR32SrcOp:$src2),
+                                       [], [WriteSIMDReduce]>;
+}
+
+let Predicates = [HasSIMDMatrix] in {
+def : Pat<(i64 (int_agx_simd_matrix_fmadd32 i64:$a, i64:$b, i64:$c)),
+          (SIMD_MATRIX_FMADD32 0, $a, 0, $b, 0, $c)>;
+def : Pat<(i32 (int_agx_simd_matrix_fmadd16 i32:$a, i32:$b, i32:$c)),
+          (SIMD_MATRIX_FMADD16 0, $a, 0, $b, 0, $c)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Control flow

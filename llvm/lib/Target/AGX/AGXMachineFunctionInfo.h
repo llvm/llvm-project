@@ -43,6 +43,9 @@ GlobalDataLayout computeGlobalDataLayout(const Module &M);
 /// Whether F's instructions use a global that lives in the global data buffer,
 /// and so F needs the buffer's address.
 bool usesGlobalData(const Function &F);
+/// Whether a function of \p M samples textures (llvm.agx.texture.sample): its
+/// kernels then receive the texture heap address in uniforms u0_u1.
+bool usesTextureHeap(const Module &M);
 
 } // namespace AGX
 
@@ -60,6 +63,8 @@ class AGXMachineFunctionInfo : public MachineFunctionInfo {
   /// uniform half register.
   Register GlobalDataVReg;
   unsigned GlobalDataHalfIndex = 0;
+  /// The kernel's first four uniform halves hold the texture heap address.
+  bool TextureHeap = false;
 
   /// Threadgroup memory: offset of each __shared__ style variable.
   DenseMap<const GlobalVariable *, unsigned> ThreadgroupOffsets;
@@ -93,6 +98,8 @@ public:
     GlobalDataHalfIndex = HalfIndex;
   }
   Register getGlobalDataVReg() const { return GlobalDataVReg; }
+  void setTextureHeap() { TextureHeap = true; }
+  bool hasTextureHeap() const { return TextureHeap; }
   unsigned getGlobalDataHalfIndex() const { return GlobalDataHalfIndex; }
 
   /// Offset of \p GV in threadgroup memory. The first call lays out every

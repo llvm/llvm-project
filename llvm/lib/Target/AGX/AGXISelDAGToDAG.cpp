@@ -81,6 +81,7 @@ private:
 
   void selectVectorLoad(SDNode *N, unsigned NumElts);
   void selectVectorStore(SDNode *N, unsigned NumElts);
+  void selectTextureSample(SDNode *N);
 };
 
 class AGXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -114,6 +115,8 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
   case AGXISD::STORE_V3:
   case AGXISD::STORE_V4:
     return selectVectorStore(N, N->getNumOperands() - 2);
+  case AGXISD::TEXTURE_SAMPLE:
+    return selectTextureSample(N);
   case ISD::BUILD_PAIR: {
     SDLoc DL(N);
     SDValue Ops[] = {
@@ -231,6 +234,36 @@ void AGXDAGToDAGISel::selectVectorStore(SDNode *N, unsigned NumElts) {
   }
   CurDAG->setNodeMemRefs(Store, {M->getMemOperand()});
   ReplaceNode(N, Store);
+}
+
+/// TEXTURE_SAMPLE: one texture_sample of the four channels into a register
+/// tuple, and the channels as its subregisters; 2D coordinates as a pair.
+void AGXDAGToDAGISel::selectTextureSample(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0), T = N->getOperand(1), S = N->getOperand(2);
+  unsigned Dim = N->getConstantOperandVal(5);
+  SDValue C = N->getOperand(3);
+  unsigned Opc = AGX::TEXTURE_SAMPLE_1D;
+  if (Dim == 2) {
+    SDValue Seq[] = {
+        CurDAG->getTargetConstant(AGX::GPR32x2RegClassID, DL, MVT::i32), C,
+        CurDAG->getTargetConstant(AGX::sub0, DL, MVT::i32), N->getOperand(4),
+        CurDAG->getTargetConstant(AGX::sub1, DL, MVT::i32)};
+    C = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                       MVT::Untyped, Seq),
+                0);
+    Opc = AGX::TEXTURE_SAMPLE_2D;
+  }
+  MachineSDNode *Sample = CurDAG->getMachineNode(
+      Opc, DL, MVT::Untyped, MVT::Other,
+      {CurDAG->getTargetConstant(0, DL, MVT::i32), T, S, C,
+       CurDAG->getTargetConstant(Dim, DL, MVT::i32),
+       CurDAG->getTargetConstant(vectorMask(4), DL, MVT::i32), Chain});
+  for (unsigned I = 0; I < 4; ++I)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   SubRegs[I], DL, MVT::i32, SDValue(Sample, 0)));
+  ReplaceUses(SDValue(N, 4), SDValue(Sample, 1));
+  CurDAG->RemoveDeadNode(N);
 }
 
 /// Integer immediates 0-255 are encoded in the instruction.

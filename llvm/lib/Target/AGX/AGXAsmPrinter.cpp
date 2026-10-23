@@ -111,6 +111,8 @@ void AGXAsmPrinter::emitFunctionBodyStart() {
     OutStreamer->emitRawComment(
         " global data buffer at u" + Twine(MFI->getGlobalDataHalfIndex() / 2) +
         "_u" + Twine(MFI->getGlobalDataHalfIndex() / 2 + 1));
+  if (MFI->hasTextureHeap())
+    OutStreamer->emitRawComment(" texture heap at u0_u1");
   OutStreamer->emitRawComment(" threadgroup memory: " +
                               Twine(MFI->getThreadgroupSize()) + " bytes");
   OutStreamer->emitRawComment(" stack size: " +
@@ -145,6 +147,11 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///     the grid by (x, y, z) and multiplies the threadgroup's z by x * y * z.
 ///     2, 1, N, ...: checked mode (AGXUsage.rst, "Checked mode").
 ///     3, table half, count half: checked mode's allocation table.
+///     4, half: the kernel argument with the parameter attribute
+///     "agx-hidden"="threadgroup-bytes", which the launch sets to the
+///     threadgroup memory of the dispatch (static and dynamic bytes).
+///     5, half: the 64-bit texture heap address goes in the uniforms from
+///     half (0), for llvm.agx.texture.sample.
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -180,7 +187,8 @@ void AGXAsmPrinter::recordKernel() {
     }
   } else {
     for (const Argument &A : F.args()) {
-      if (F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked").isValid())
+      if (F.getAttributes().getParamAttr(A.getArgNo(), "agx-checked").isValid() ||
+          F.getAttributes().getParamAttr(A.getArgNo(), "agx-hidden").isValid())
         continue;
       Type *T = A.getType()->isPointerTy() ? A.getParamByRefType() : nullptr;
       Args.append({T ? 1u : 0u,
@@ -191,7 +199,8 @@ void AGXAsmPrinter::recordKernel() {
   }
   R.push_back(Args.size() / 3);
   R.append(Args);
-  // Extension 3 goes last: readers stop at an extension they do not know.
+  // Extensions 3 and 4 go last: readers stop at an extension they do not
+  // know.
   SmallVector<uint32_t, 3> TableExt;
   Attribute Slots = F.getFnAttribute("agx-checked-slots");
   if (Slots.isValid()) {
@@ -234,6 +243,13 @@ void AGXAsmPrinter::recordKernel() {
     }
   }
   R.append(TableExt);
+  for (const Argument &A : F.args()) {
+    Attribute Role = F.getAttributes().getParamAttr(A.getArgNo(), "agx-hidden");
+    if (Role.isValid() && Role.getValueAsString() == "threadgroup-bytes")
+      R.append({4, Half(A.getArgNo())});
+  }
+  if (MFI->hasTextureHeap())
+    R.append({5, 0});
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }
 

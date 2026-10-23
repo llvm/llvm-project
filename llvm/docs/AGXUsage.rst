@@ -419,8 +419,9 @@ Kernel ABI
 ==========
 
 Kernels use the ``agx_kernel`` calling convention and return ``void``. There
-are no calls: every other function is inlined, and the backend reports an
-error for calls that remain. A module without ``agx_kernel`` functions
+are no calls: every other function is inlined (recursive ones after the
+lowering in `Recursion`_), and the backend reports an error for calls that
+remain. A module without ``agx_kernel`` functions
 compiles each external function as an entry point with the kernel ABI.
 
 Kernel arguments are passed in uniform registers. They are packed in order in
@@ -466,14 +467,30 @@ then                        the number of arguments of the source kernel,
                             and for each: kind (0 = its bytes are in the
                             uniforms, 1 = a pointer to them is), size in
                             bytes, first half (0xffffffff if unused)
+then                        optional tagged extensions, up to the size of
+                            the record; a reader stops at a tag it does not
+                            know
 ==========================  ==============================================
+
+The extensions are:
+
+* ``1, x, y, z``: the kernel runs clusters of x * y * z CTAs as one
+  threadgroup (function attribute ``agx-cluster-dims``).
+* ``2, ...`` and ``3, ...``: checked mode (see "Checked mode").
+* ``4, half``: the first half of the kernel argument with the parameter
+  attribute ``"agx-hidden"="threadgroup-bytes"``, which is not a source
+  argument: the driver sets it to the threadgroup memory of the dispatch, the
+  kernel's threadgroup memory bytes plus the dynamic ones of the launch.
+* ``5, half``: the driver sets the 64-bit uniform from ``half`` (always 0)
+  to the address of the texture heap (see "Textures").
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
 
 Threadgroup variables are globals in address space 3 without an initializer.
-They are allocated per kernel in threadgroup memory, at offsets in order of
-first use.
+They are allocated per kernel in threadgroup memory, those the kernel uses in
+module order, each aligned to its alignment, then those of size zero (whose
+memory is the dynamic threadgroup memory of the launch), in module order.
 
 Device and constant variables (globals in address spaces 0, 1 and 4) live in
 the *global data buffer*. When a module defines any, each kernel receives
@@ -495,6 +512,30 @@ Type               Value  Field
 
 There are no relocations in ``.text``, and references to globals of other
 objects are not supported.
+
+Textures
+--------
+
+``llvm.agx.texture.sample(i32 %offset, i16 %sampler, float %x, float %y,
+i32 immarg %dim)`` samples a texture with the texture unit and returns its
+four channels as ``<4 x i32>``: the bits of floats for float, unorm and snorm
+formats, integers for integer formats. ``%dim`` is 0 (1D, ``%y`` unused) or 2
+(2D). It is ``texture_sample`` in its bindless form: the 24-byte texture
+descriptor is at ``%offset`` bytes from the *texture heap* address, and
+``%sampler`` is an index into the sampler heap of the compute command
+(``drm_asahi_cmd_compute.sampler_heap`` and ``sampler_count``: 8-byte sampler
+descriptors). The level is chosen automatically (level 0 without
+derivatives), so mipmapped textures are not supported. Both descriptors use
+the layouts of Mesa's ``cmdbuf.xml`` (``Texture``, ``Sampler``). The result
+is asynchronous like a load, followed by a wait before its first use, and
+does not share registers with the sources.
+
+The descriptor base of a bindless ``texture_sample`` must be a 64-bit uniform
+register below the 64th at a multiple of four halves. If any function of a
+module samples, every kernel of the module therefore receives the texture
+heap address in ``u0_u1``, before its arguments (record extension 5, and
+``texture heap at u0_u1`` in the resource comments): non-kernel functions
+read the same uniforms.
 
 Execution model
 ===============
@@ -624,7 +665,8 @@ sequence costs 0.4 to 0.65 us.
 
 Not supported: ``frem`` and vector arithmetic on ``double`` (see `Double
 precision`_; diagnosed as unsupported), textures and graphics shaders, calls
-to functions that are not defined in the module, and recursion.
+to functions that are not defined in the module, recursion through variadic
+functions or ``musttail`` calls, and dynamic ``alloca`` in recursive functions.
 
 The backend does not use the hardware call and return instructions: all
 functions are inlined into the kernels. (G14C does have direct and
@@ -636,6 +678,33 @@ indirect call becomes a test of the callee against each address-taken
 function of the module with the same type, with a direct call (inlined) for
 each, and a trap if none matches. The address of such a function, as a
 value (stored, compared or passed), is its number in the module (1, 2, ...).
+
+Recursion
+---------
+
+Each cycle of the call graph (after indirect calls became direct ones)
+becomes, for each of its functions called from outside the cycle, one
+function that runs the whole cycle over an explicit stack of frames in
+private memory, and is then inlined like any other:
+
+* A function's arguments, its ``alloca``\ s and the values it uses outside
+  their basic block (its blocks are split after each call into the cycle)
+  are fields of its frame, after a header of two 32-bit words: the number of
+  the call site to return to, and the caller's stack pointer. Frames are
+  16-byte aligned.
+* A call stores the arguments in the callee's frame, which follows the
+  caller's, and branches to the callee's entry; a return stores the return
+  value in a slot of the function, pops its frame and branches on the call
+  site number to the code after the call (or out, for 0).
+
+The control flow passes make the result structured, so the threads of a
+SIMD-group may recurse to different depths. The stack is
+``-agx-recursion-stack-size`` bytes per thread (by default four times the
+module flag ``!{i32 2, !"agx-stack-size", i32 N}``, else 4096), part of the
+kernel's private memory. A thread whose call would pass its end stores 1 to
+``__agx_stack_overflow``, a 32-bit global of device memory that is 0 at load,
+and ends; the runtime reports the launch as failed (ZLUDA's ``zluda_agx``
+gives ``CUDA_ERROR_LAUNCH_FAILED``) and clears the word.
 
 .. _agx-apple9:
 
@@ -719,6 +788,13 @@ PTX behavior in software (``AGXStrictFP.cpp``):
   correctly rounded. ``llvm.fma`` on ``bfloat`` is computed exactly with
   integer arithmetic (see `Double precision`_), since a ``float`` fma would
   round twice.
+
+``!agx.keep-denormals``
+  Independently of the features, a ``float`` operation carrying this metadata
+  (an empty node) gets the ``ieee-fp32`` lowering above in any function, also
+  one that flushes denormals: a front end's IEEE operation in flushing code,
+  such as the addition of an atomic add that keeps denormals in a
+  compare-and-swap loop.
 
 ``canonical-nan``
   NaN results of floating point arithmetic and conversions are ``0x7fffffff``
@@ -812,8 +888,17 @@ in a ``<2 x T>``, with r = 4 * (t / 16) + (t / 2) % 4 and
 c = 4 * ((t / 8) % 2) + 2 * (t % 2). It is computed with shuffles (each
 thread gathers its row of A and its two columns of B, 24 shuffles; four times
 as many on subtargets with ``quad-shuffle-index-merge``) and 16 fused
-multiply-adds per thread, in order of k starting from C; the matrix unit of
-Apple9 GPUs is not used yet.
+multiply-adds per thread, in order of k starting from C. On G14 the matrix
+unit (``simd_matrix_fmadd32`` and ``simd_matrix_fmadd16``, the
+``llvm.agx.simd.matrix.fmadd32`` and ``fmadd16`` intrinsics on the ``i64`` or
+``i32`` of each ``<2 x T>``) computes the same chain of fused multiply-adds
+for the same layout, ``float`` flushing denormals like the ALU and ``half``
+keeping them; it is used for ``float`` unless the function has IEEE float
+denormals with ``ieee-fp32``, and for ``half`` when the function has IEEE
+half denormals, without ``canonical-nan``. Its operands are register pairs
+(``r0_r1``, or the halves ``r0l_r0h`` of one register), encoded as their
+first register. ``bfloat``, other GPUs and the matrix unit of Apple9 GPUs use
+the shuffles.
 
 SIMD-group shuffles
 -------------------

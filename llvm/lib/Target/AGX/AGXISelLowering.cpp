@@ -33,8 +33,10 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/Support/MathExtras.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -71,6 +73,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, {MVT::i16, MVT::i32, MVT::i64, MVT::f16,
                                   MVT::f32}, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
+  // llvm.agx.texture.sample's <4 x i32> (ReplaceNodeResults)
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4i32, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction({ISD::STACKSAVE, ISD::STACKRESTORE,
@@ -310,8 +314,14 @@ SDValue AGXTargetLowering::LowerFormalArguments(
     diagnose(DAG, DL, "variadic AGX kernels are not supported");
 
   // Arguments are packed into consecutive uniform registers in 16-bit units,
-  // each aligned to its size (64-bit values to 32 bits).
+  // each aligned to its size (64-bit values to 32 bits), after the texture
+  // heap address in a module that samples textures: texture_sample's bindless
+  // base is a uniform below u64 at a multiple of four halves.
   unsigned Half = 0;
+  if (AGX::usesTextureHeap(*MF.getFunction().getParent())) {
+    MFI->setTextureHeap();
+    Half = 4;
+  }
   bool Overflow = false;
   auto Allocate = [&](MVT VT) -> MCRegister {
     unsigned Bits = VT.getSizeInBits();
@@ -552,6 +562,23 @@ static unsigned vectorNode(bool Load, unsigned N) {
 void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
                                            SmallVectorImpl<SDValue> &Results,
                                            SelectionDAG &DAG) const {
+  // llvm.agx.texture.sample: one i32 result per channel.
+  if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN &&
+      N->getConstantOperandVal(1) == Intrinsic::agx_texture_sample) {
+    SDLoc DL(N);
+    SDValue Sample = DAG.getNode(
+        AGXISD::TEXTURE_SAMPLE, DL,
+        DAG.getVTList({MVT::i32, MVT::i32, MVT::i32, MVT::i32, MVT::Other}),
+        {N->getOperand(0), N->getOperand(2), N->getOperand(3), N->getOperand(4),
+         N->getOperand(5),
+         DAG.getTargetConstant(N->getConstantOperandVal(6), DL, MVT::i32)});
+    Results.push_back(DAG.getBuildVector(
+        MVT::v4i32, DL,
+        {Sample.getValue(0), Sample.getValue(1), Sample.getValue(2),
+         Sample.getValue(3)}));
+    Results.push_back(Sample.getValue(4));
+    return;
+  }
   // Vector loads: one access with a 32-bit result per element.
   auto *L = dyn_cast<LoadSDNode>(N);
   if (!L || L->getExtensionType() != ISD::NON_EXTLOAD || L->isIndexed() ||

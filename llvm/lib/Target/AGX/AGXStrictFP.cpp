@@ -49,6 +49,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -1096,6 +1097,10 @@ static constexpr const char *ExactTag = "agx.exact";
 /// Instructions whose denormals follow IEEE although their function flushes
 /// them (their operands and results were flushed explicitly if needed).
 static constexpr const char *IEEETag = "agx.ieee";
+/// Binary32 operations that keep denormals in any function and with or
+/// without ieee-fp32 (AGXUsage.rst, "Floating point"): an IEEE operation the
+/// front end needs in otherwise flushing code.
+static constexpr const char *KeepDenormalsTag = "agx.keep-denormals";
 
 /// Division and square root, which the hardware only approximates.
 static bool isCorrectlyRounded(const Instruction &I) {
@@ -1207,7 +1212,10 @@ bool AGXStrictFP::runOnFunction(Function &F) {
   bool FunctionIEEE = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
                       DenormalMode::IEEE;
   bool CanonicalNaN = ST.hasCanonicalNaN();
-  if (!ST.hasIEEEFP32() && !CanonicalNaN)
+  bool KeepDenormals = any_of(instructions(F), [](const Instruction &I) {
+    return I.hasMetadata(KeepDenormalsTag);
+  });
+  if (!ST.hasIEEEFP32() && !CanonicalNaN && !KeepDenormals)
     return false;
 
   bool Changed = false;
@@ -1232,13 +1240,13 @@ bool AGXStrictFP::runOnFunction(Function &F) {
         canonicalizeNaN(*I);
         Changed = true;
       }
-  if (ST.hasIEEEFP32())
-    for (Instruction *I : Worklist) {
-      if (FunctionIEEE || I->hasMetadata(IEEETag))
-        Changed |= lowerIEEE(*I);
-      else if (isCorrectlyRounded(*I))
-        Changed |= lowerFlushing(*I);
-    }
+  for (Instruction *I : Worklist) {
+    if (I->hasMetadata(KeepDenormalsTag) ||
+        (ST.hasIEEEFP32() && (FunctionIEEE || I->hasMetadata(IEEETag))))
+      Changed |= lowerIEEE(*I);
+    else if (ST.hasIEEEFP32() && isCorrectlyRounded(*I))
+      Changed |= lowerFlushing(*I);
+  }
   return Changed;
 }
 
@@ -1595,6 +1603,19 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
                     (FlushTy->isFloatTy() || FlushTy->isHalfTy()) &&
                     !CI->getType()->isVectorTy();
     SoftFloat SF(B);
+    bool Nearest = isa<ConstantInt>(Rounding) &&
+                   cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
+    bool Double = ResTy->isDoubleTy() || OpTy->isDoubleTy();
+    // Directed rounding is computed in software, and the half precision ALU
+    // keeps denormals (AGXCodeGenPrepare flushes plain half operations, which
+    // these become only here): in a function that flushes them, flush the
+    // operands and the result explicitly.
+    if (!Mismatch && KnownDefault && Default && !Double &&
+        (FlushTy->isHalfTy() || (FlushTy->isFloatTy() && !Nearest)) &&
+        !CI->getType()->isVectorTy()) {
+      Mismatch = true;
+      Flush = B.getTrue();
+    }
     // A denormal mode that differs from the function's: flush the operands
     // explicitly (and the result below).
     if (Mismatch)
@@ -1604,9 +1625,6 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
                                               SF.flushDenormal(CI->getArgOperand(I)),
                                               CI->getArgOperand(I)));
 
-    bool Nearest = isa<ConstantInt>(Rounding) &&
-                   cast<ConstantInt>(Rounding)->getZExtValue() == RoundNearestEven;
-    bool Double = ResTy->isDoubleTy() || OpTy->isDoubleTy();
     Value *R = Nearest || Double
                    ? nullptr
                    : lowerRounded(CI, Rounding, ST.hasCanonicalNaN());

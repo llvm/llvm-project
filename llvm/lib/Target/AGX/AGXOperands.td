@@ -288,6 +288,28 @@ def AGXMemIndex : Operand<i32> {
   let ParserMatchClass = AGXMemIndexAsm;
 }
 
+// Texture operands: the 32-bit byte offset of the texture descriptor, the
+// 16-bit sampler index and the coordinates (32-bit registers, or 16-bit ones:
+// operand bit 8).
+def AGXTexOffset : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexOffsetEncoding";
+  let DecoderMethod = "decodeTexOffset";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+def AGXTexSampler : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexSamplerEncoding";
+  let DecoderMethod = "decodeTexSampler";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+def AGXTexCoords : Operand<i32> {
+  let PrintMethod = "printMemBase";
+  let EncoderMethod = "getTexCoordsEncoding";
+  let DecoderMethod = "decodeTexCoords";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+
 // Threadgroup memory base: 16-bit register, 16-bit uniform or zero.
 def AGXLocalBase : Operand<i32> {
   let PrintMethod = "printLocalBase";
@@ -348,4 +370,6 @@ def Src16Op : AGXRegOperand<SRC16, "OPERAND_SRC">;
 def Src32Op : AGXRegOperand<SRC32, "OPERAND_SRC">;
 // 64-bit sources cannot be uniform registers.
 def Src64Op : AGXRegOperand<GPR64, "OPERAND_SRC">;
+// A 32-bit general purpose register (the 16-bit pair of a matrix operand).
+def GPR32SrcOp : AGXRegOperand<GPR32, "OPERAND_SRC">;
 def Base64Op : AGXRegOperand<BASE64, "OPERAND_REGISTER", "MCOI">;

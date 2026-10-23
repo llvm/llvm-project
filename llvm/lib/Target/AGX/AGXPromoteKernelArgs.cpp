@@ -227,9 +227,11 @@ static bool promote(Function &F) {
   for (Argument &A : F.args()) {
     unsigned I = A.getArgNo();
     const Plan &P = Plans[I];
-    // The hidden arguments of checked mode are not source arguments: the
-    // record describes them separately (AGXCheckedAccesses).
-    if (!Attrs.getParamAttr(I, "agx-checked").isValid()) {
+    // The hidden arguments of checked mode and "agx-hidden" are not source
+    // arguments: the record describes them separately (AGXCheckedAccesses,
+    // AGXAsmPrinter).
+    if (!Attrs.getParamAttr(I, "agx-checked").isValid() &&
+        !Attrs.getParamAttr(I, "agx-hidden").isValid()) {
       OS << (FirstItem ? "" : ",") << (P.ByRef && !P.Promote ? 'p' : 'v')
          << P.Bytes << ':' << FirstNew[I];
       FirstItem = false;

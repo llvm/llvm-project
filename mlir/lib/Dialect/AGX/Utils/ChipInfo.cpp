@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AGX/Utils/ChipInfo.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::agx;

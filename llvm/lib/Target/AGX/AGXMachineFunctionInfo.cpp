@@ -13,6 +13,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/Support/MathExtras.h"
@@ -90,6 +91,11 @@ bool AGX::usesGlobalData(const Function &F) {
     }
   }
   return false;
+}
+
+bool AGX::usesTextureHeap(const Module &M) {
+  const Function *F = Intrinsic::getDeclarationIfExists(&M, Intrinsic::agx_texture_sample);
+  return F && !F->use_empty();
 }
 
 AGX::GlobalDataLayout AGX::computeGlobalDataLayout(const Module &M) {

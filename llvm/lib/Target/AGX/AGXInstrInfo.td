@@ -55,6 +55,16 @@ def AGXload_v3 : SDNode<"AGXISD::LOAD_V3", SDT_AGXLoadV3,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AGXload_v4 : SDNode<"AGXISD::LOAD_V4", SDT_AGXLoadV4,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+// llvm.agx.texture.sample with its four channels as i32 results: texture
+// offset, sampler index, x, y and the dimension (a target constant).
+def SDT_AGXTextureSample
+    : SDTypeProfile<4, 5, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                           SDTCisVT<2, i32>, SDTCisVT<3, i32>,
+                           SDTCisVT<4, i32>, SDTCisVT<5, i16>,
+                           SDTCisVT<6, f32>, SDTCisVT<7, f32>,
+                           SDTCisVT<8, i32>]>;
+def AGXtexture_sample : SDNode<"AGXISD::TEXTURE_SAMPLE", SDT_AGXTextureSample,
+                               [SDNPHasChain, SDNPMayLoad]>;
 def AGXstore_v2 : SDNode<"AGXISD::STORE_V2", SDT_AGXStoreV2,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AGXstore_v3 : SDNode<"AGXISD::STORE_V3", SDT_AGXStoreV3,

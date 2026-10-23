@@ -138,6 +138,7 @@ static bool lowerIndirectCalls(Module &M) {
 
 bool AGXAlwaysInline::runOnModule(Module &M) {
   bool Changed = lowerIndirectCalls(M);
+  Changed |= lowerAGXRecursion(M);
   // Modules without any agx_kernel function (for example tests of single
   // functions) compile every external function as an entry point.
   bool HasKernels = any_of(M, [](const Function &F) {
@@ -185,7 +186,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool unifyExits(Function &F);
   bool lowerConstrainedFP(Function &F);
   bool lowerDivergentShuffles(Function &F, const UniformityInfo &UI);
-  bool lowerMatrixFMA(Function &F);
+  bool lowerMatrixFMA(Function &F, const AGXSubtarget &ST);
   bool flushHalfDenormals(Function &F);
   bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
@@ -628,17 +629,43 @@ static bool isHalf(const Type *Ty) { return Ty->getScalarType()->isHalfTy(); }
 /// matrix, with r = 4 * (t / 16) + (t / 2) % 4 and c = 4 * ((t / 8) % 2) +
 /// 2 * (t % 2). Each thread gathers its row of A and its two columns of B
 /// with shuffles and accumulates in order of k with fused multiply-adds.
-bool AGXCodeGenPrepare::lowerMatrixFMA(Function &F) {
+///
+/// On G14 the matrix unit (simd_matrix_fmadd32 / 16) computes the same chain
+/// of fused multiply-adds for the same layout (measured: Apple-M2-Playground
+/// results/2026-10-21-b15-simd-matrix): float flushing denormals like the
+/// ALU, half keeping them. It is used where the shuffled form gives the same
+/// results: float without IEEE denormals in software (ieee-fp32), half with
+/// IEEE denormals, and no canonical NaNs.
+bool AGXCodeGenPrepare::lowerMatrixFMA(Function &F, const AGXSubtarget &ST) {
   SmallVector<IntrinsicInst *, 2> Calls;
   for (Instruction &I : instructions(F))
     if (auto *II = dyn_cast<IntrinsicInst>(&I);
         II && II->getIntrinsicID() == Intrinsic::agx_simdgroup_matrix_fma)
       Calls.push_back(II);
+  bool Unit = ST.hasSIMDMatrix() && !ST.hasMesaISA() && !ST.hasCanonicalNaN() &&
+              ST.getGeneration() == AGXSubtarget::G14;
+  bool FloatUnit =
+      Unit && !(ST.hasIEEEFP32() &&
+                F.getDenormalMode(APFloat::IEEEsingle()) == DenormalMode::getIEEE());
+  bool HalfUnit =
+      Unit && F.getDenormalMode(APFloat::IEEEhalf()) == DenormalMode::getIEEE();
   for (IntrinsicInst *II : Calls) {
     IRBuilder<> B(II);
     Type *VT = II->getType();
     Value *A = II->getArgOperand(0), *Bm = II->getArgOperand(1),
           *C = II->getArgOperand(2);
+    Type *ET = VT->getScalarType();
+    if ((ET->isFloatTy() && FloatUnit) || (ET->isHalfTy() && HalfUnit)) {
+      Type *IT = ET->isFloatTy() ? B.getInt64Ty() : B.getInt32Ty();
+      Intrinsic::ID ID = ET->isFloatTy() ? Intrinsic::agx_simd_matrix_fmadd32
+                                         : Intrinsic::agx_simd_matrix_fmadd16;
+      Value *D = B.CreateIntrinsic(ID, {},
+                                   {B.CreateBitCast(A, IT), B.CreateBitCast(Bm, IT),
+                                    B.CreateBitCast(C, IT)});
+      II->replaceAllUsesWith(B.CreateBitCast(D, VT));
+      II->eraseFromParent();
+      continue;
+    }
     Value *T = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup, {});
     auto Bits = [&](Value *V, unsigned Shift, unsigned Mask) {
       return B.CreateAnd(B.CreateLShr(V, Shift), Mask);
@@ -840,7 +867,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   const auto &ST = TM.getSubtarget<AGXSubtarget>(F);
   bool Changed = diagnoseDoubles(F);
-  Changed |= lowerMatrixFMA(F);
+  Changed |= lowerMatrixFMA(F, ST);
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(
         F, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());

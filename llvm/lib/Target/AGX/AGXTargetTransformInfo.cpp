@@ -45,6 +45,8 @@ static bool isThreadVaryingIntrinsic(Intrinsic::ID ID) {
   case Intrinsic::agx_dfdx:
   case Intrinsic::agx_dfdy:
   case Intrinsic::agx_simdgroup_matrix_fma:
+  case Intrinsic::agx_simd_matrix_fmadd32:
+  case Intrinsic::agx_simd_matrix_fmadd16:
     return true;
   default:
     return false;

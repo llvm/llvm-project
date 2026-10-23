@@ -160,6 +160,36 @@ def int_agx_simdgroup_matrix_fma
                              LLVMMatchType<0>],
                             [IntrNoMem, IntrConvergent]>;
 
+// The matrix unit's simd_matrix_fmadd32 / simd_matrix_fmadd16, which
+// AGXCodeGenPrepare uses for llvm.agx.simdgroup.matrix.fma where it gives the
+// same results: the <2 x float> (i64) or <2 x half> (i32) of each matrix.
+def int_agx_simd_matrix_fmadd32
+    : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                            [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+                            [IntrNoMem, IntrConvergent]>;
+def int_agx_simd_matrix_fmadd16
+    : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrConvergent]>;
+
+//===----------------------------------------------------------------------===//
+// Textures.
+//===----------------------------------------------------------------------===//
+
+// texture_sample in its bindless form: the 24-byte texture descriptor at byte
+// offset T (operand 0) from the texture heap address, which every kernel of a
+// module that samples receives in its first uniform registers (AGXUsage.rst,
+// "Textures"), sampled with sampler S (operand 1), an index into the command's
+// sampler heap, at coordinates (x, y) (y unused for 1D), at level 0. The
+// result is the four channels as 32-bit values (floats for float, unorm and
+// snorm formats, integers otherwise). Operand 4 is the dimension: 0 for 1D,
+// 2 for 2D.
+def int_agx_texture_sample
+    : DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+                            [llvm_i32_ty, llvm_i16_ty, llvm_float_ty,
+                             llvm_float_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+
 //===----------------------------------------------------------------------===//
 // Arithmetic.
 //===----------------------------------------------------------------------===//
