@@ -111,12 +111,19 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case AGXISD::CALL: {
     SDLoc DL(N);
+    // Mesa's push_exec r0l, 2 is if_fcmp r0l, eq, 0.0, 0.0, 2.
+    // Reserve the caller's masked lanes before RET changes its counters.
+    SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    SDValue Two = CurDAG->getTargetConstant(2, DL, MVT::i32);
+    SDValue PushOps[] = {Zero, Zero, Zero, Zero, Zero, Zero, Two,
+                         N->getOperand(0)};
+    SDNode *Push = CurDAG->getMachineNode(AGX::IF_FCMP, DL, MVT::Other,
+                                          PushOps);
     SDNode *Call = CurDAG->getMachineNode(AGX::AGX_CALL, DL, MVT::Other,
-                                          N->getOperand(1), N->getOperand(0));
-    SDValue Nest = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    SDValue Count = CurDAG->getTargetConstant(2, DL, MVT::i32);
+                                          N->getOperand(1), N->getOperand(2),
+                                          SDValue(Push, 0));
     ReplaceNode(N, CurDAG->getMachineNode(AGX::POP_EXEC, DL, MVT::Other,
-                                          Nest, Count, SDValue(Call, 0)));
+                                          Zero, Two, SDValue(Call, 0)));
     return;
   }
   case AGXISD::RET: {

@@ -322,6 +322,26 @@ SDValue AGXTargetLowering::LowerFormalArguments(
   auto *MFI = MF.getInfo<AGXMachineFunctionInfo>();
   const MCRegisterInfo &MRI = *ST.getRegisterInfo();
 
+  if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls) {
+    if (IsVarArg || Ins.size() > 1 ||
+        (!Ins.empty() && Ins[0].VT != MVT::i32)) {
+      diagnose(DAG, DL,
+               "experimental AGX leaf ABI supports at most one i32 argument");
+      for (const ISD::InputArg &In : Ins)
+        InVals.push_back(DAG.getUNDEF(In.VT));
+      return Chain;
+    }
+    for (const ISD::InputArg &In : Ins) {
+      if (In.VT != MVT::i32) {
+        InVals.push_back(DAG.getUNDEF(In.VT));
+        continue;
+      }
+      Register VReg = MF.addLiveIn(AGX::R2, &AGX::GPR32RegClass);
+      InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+    }
+    return Chain;
+  }
+
   if (IsVarArg)
     diagnose(DAG, DL, "variadic AGX kernels are not supported");
 
@@ -403,9 +423,14 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
                                const SDLoc &DL, SelectionDAG &DAG) const {
-  if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls &&
-      Outs.empty())
+  if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls) {
+    if (Outs.size() > 1 || (!Outs.empty() && Outs[0].VT != MVT::i32))
+      diagnose(DAG, DL,
+               "experimental AGX leaf ABI supports at most one i32 return");
+    if (Outs.size() == 1 && Outs[0].VT == MVT::i32)
+      Chain = DAG.getCopyToReg(Chain, DL, AGX::R2, OutVals[0]);
     return DAG.getNode(AGXISD::RET, DL, MVT::Other, Chain);
+  }
   if (!Outs.empty())
     diagnose(DAG, DL, "AGX kernels cannot return values");
   return DAG.getNode(AGXISD::STOP, DL, MVT::Other, Chain);
@@ -414,7 +439,10 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
-  if (ExperimentalLeafCalls && CLI.Outs.empty() && CLI.Ins.empty() &&
+  bool ABIShape = CLI.Outs.size() <= 1 && CLI.Ins.size() <= 1 &&
+                  (CLI.Outs.empty() || CLI.Outs[0].VT == MVT::i32) &&
+                  (CLI.Ins.empty() || CLI.Ins[0].VT == MVT::i32);
+  if (ExperimentalLeafCalls && ABIShape &&
       DAG.getMachineFunction().getFunction().getCallingConv() ==
           CallingConv::AGX_KERNEL) {
     if (auto *G = dyn_cast<GlobalAddressSDNode>(CLI.Callee)) {
@@ -437,12 +465,33 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
             else if (const auto *CB = dyn_cast<CallBase>(&I))
               Leaf &= CB->getCalledFunction() &&
                       CB->getCalledFunction()->isIntrinsic();
-        if (!F->isDeclaration() && HasCall && EntryOnly && Leaf &&
-            F->getReturnType()->isVoidTy() &&
-            F->arg_empty() && F->hasFnAttribute(Attribute::NoInline)) {
+        bool Signature = !F->isVarArg() && !CLI.IsVarArg &&
+                         !CLI.IsTailCall &&
+                         CLI.Outs.size() == F->arg_size() &&
+                         CLI.Ins.empty() == F->getReturnType()->isVoidTy() &&
+                         (F->arg_empty() ||
+                          (F->arg_size() == 1 &&
+                           F->getArg(0)->getType()->isIntegerTy(32))) &&
+                         (F->getReturnType()->isVoidTy() ||
+                          F->getReturnType()->isIntegerTy(32));
+        if (!F->isDeclaration() && F->size() == 1 && HasCall && EntryOnly &&
+            Leaf &&
+            Signature && F->hasFnAttribute(Attribute::NoInline)) {
+          SDValue Chain = CLI.Chain;
+          if (!CLI.OutVals.empty())
+            Chain = DAG.getCopyToReg(Chain, CLI.DL, AGX::R2, CLI.OutVals[0]);
           SDValue Target = DAG.getTargetGlobalAddress(F, CLI.DL, MVT::i64);
-          return DAG.getNode(AGXISD::CALL, CLI.DL, MVT::Other, CLI.Chain,
-                             Target);
+          const uint32_t *Mask = ST.getRegisterInfo()->getCallPreservedMask(
+              DAG.getMachineFunction(), CallingConv::C);
+          Chain = DAG.getNode(AGXISD::CALL, CLI.DL, MVT::Other, Chain, Target,
+                              DAG.getRegisterMask(Mask));
+          if (!CLI.Ins.empty()) {
+            SDValue Result = DAG.getCopyFromReg(Chain, CLI.DL, AGX::R2,
+                                                MVT::i32);
+            InVals.push_back(Result.getValue(0));
+            return Result.getValue(1);
+          }
+          return Chain;
         }
       }
     }

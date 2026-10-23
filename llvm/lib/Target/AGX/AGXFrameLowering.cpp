@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGXFrameLowering.h"
+#include "AGX.h"
 #include "AGXSubtarget.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -28,6 +29,9 @@ unsigned AGXFrameLowering::getStackAdjustUnits(const MachineFunction &MF) {
 void AGXFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   unsigned Units = getStackAdjustUnits(MF);
+  if (Units && agxExperimentalLeafCallsEnabled() &&
+      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL)
+    report_fatal_error("experimental AGX calls need separate callee stack frames");
   if (!Units)
     return;
   if (Units > 0x7fff)

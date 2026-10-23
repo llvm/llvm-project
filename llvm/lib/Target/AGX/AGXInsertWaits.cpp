@@ -82,7 +82,7 @@ firstUses(MachineBasicBlock &MBB, const TargetRegisterInfo &TRI) {
     unsigned Use = Instrs.size();
     for (unsigned J = I + 1; J < Instrs.size() && Use == Instrs.size(); ++J) {
       const MachineInstr &UI = *Instrs[J];
-      if (isBarrier(UI) || UI.isTerminator()) {
+      if (isBarrier(UI) || UI.isCall() || UI.isTerminator()) {
         Use = J;
         break;
       }
@@ -140,7 +140,7 @@ bool AGXInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         Clear(MI.getOperand(0).getImm() & 1);
         continue;
       }
-      bool All = isBarrier(MI) || MI.isTerminator();
+      bool All = isBarrier(MI) || MI.isCall() || MI.isTerminator();
       for (unsigned G = 0; G < 2; ++G)
         if (Groups[G].Count && (All || Touches(MI, G)))
           Wait(MI.getIterator(), G);

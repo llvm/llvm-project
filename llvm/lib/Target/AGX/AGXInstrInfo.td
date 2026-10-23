@@ -19,8 +19,8 @@ def SDT_AGXCFTarget : SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>;
 // Kernel return.
 def AGXstop : SDNode<"AGXISD::STOP", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
-// Experimental direct call to a leaf with no arguments or return value.
-def SDT_AGXCall : SDTypeProfile<0, 1, [SDTCisVT<0, i64>]>;
+// Experimental direct call to a single-block leaf with a small scalar ABI.
+def SDT_AGXCall : SDTypeProfile<0, 2, [SDTCisVT<0, i64>]>;
 def AGXcall : SDNode<"AGXISD::CALL", SDT_AGXCall,
                     [SDNPHasChain, SDNPSideEffect]>;
 def AGXret : SDNode<"AGXISD::RET", SDTNone,

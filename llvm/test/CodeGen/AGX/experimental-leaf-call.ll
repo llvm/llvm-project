@@ -4,7 +4,8 @@
 ; entry block. The return needs pop_exec 2 before subsequent kernel work.
 ;
 ; CHECK-LABEL: kernel:
-; CHECK: call leaf
+; CHECK: if_fcmp r0l, eq, 0.0, 0.0, 2
+; CHECK-NEXT: call leaf
 ; CHECK-NEXT: pop_exec r0l, 2
 ; CHECK-NEXT: stop
 ; CHECK-LABEL: leaf:
