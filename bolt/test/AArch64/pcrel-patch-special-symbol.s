@@ -3,7 +3,7 @@
 ## such as __hot_data_start. Such a target cannot be kept in place, so the
 ## instruction must be patched as usual: correctly when the new value is in
 ## range, and with an error otherwise, never silently left pointing at the old
-## address.
+## address. Both LDR (literal) and ADR are covered.
 ##
 ## https://github.com/llvm/llvm-project/pull/221344
 
@@ -16,7 +16,7 @@
 # RUN:   -Wl,--no-relax -Wl,-z,max-page-size=4096 -Wl,-T,%t/layout.ld
 
 ## Place the new code close to the input so that the relocated
-## __hot_data_start stays within the +/-1MB reach of LDR (literal).
+## __hot_data_start stays within the +/-1MB reach of LDR (literal) and ADR.
 # RUN: llvm-bolt %t.exe -o %t.bolt --skip-funcs=victim --lite=0 --hot-data \
 # RUN:   --reorder-data=.data --data=%t/profile.fdata --no-huge-pages \
 # RUN:   --custom-allocation-vma=0x80000 2>&1 \
@@ -25,14 +25,17 @@
 # RUN:   | FileCheck %s
 
 # CHECK-BOLT-NOT: unable to update PC-relative reference to __hot_data_start
+# CHECK-BOLT-NOT: unable to convert ADR
 # CHECK-BOLT-NOT: BOLT-ERROR
 
-## Both references to __hot_data_start follow the new hot data start.
+## All references to __hot_data_start follow the new hot data start.
 # CHECK: [[#%x,HOT:]] g {{.*}} __hot_data_start
 # CHECK-LABEL: <victim>:
 # CHECK-NEXT: ldr x0, 0x[[#HOT]]
 # CHECK-NEXT: adrp x1, 0x[[#HOT]]
 # CHECK-NEXT: add x1, x1, #0x0
+# CHECK-NEXT: ldr x1, [x1]
+# CHECK-NEXT: adr x2, 0x[[#HOT]]
 
 ## With huge page alignment the new value is out of range: BOLT must fail
 ## instead of leaving the old address in place.
@@ -40,7 +43,7 @@
 # RUN:   --hot-data --reorder-data=.data --data=%t/profile.fdata 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-FAR
 
-# CHECK-FAR: BOLT-ERROR: JITLink failed: {{.*}} out of range of LDRLiteral19 fixup
+# CHECK-FAR: BOLT-ERROR: JITLink failed: {{.*}} out of range of {{ADRLiteral21|LDRLiteral19}} fixup
 
 #--- main.s
   .text
@@ -54,8 +57,8 @@ _start:
   svc #0
   .size _start, .-_start
 
-## Both loads refer to the same marker. The ADRP+ADD pair is patched through
-## the regular path; the LDR (literal) is the one under test.
+## All loads refer to the same marker. The ADRP+ADD pair is patched through
+## the regular path; the LDR (literal) and the ADR are the ones under test.
   .globl victim
   .type victim, %function
 victim:
@@ -63,7 +66,10 @@ victim:
   adrp x1, __hot_data_start
   add x1, x1, :lo12:__hot_data_start
   ldr x1, [x1]
+  adr x2, __hot_data_start
+  ldr x2, [x2]
   cmp x0, x1
+  ccmp x1, x2, #0, eq
   cset x0, ne
   ret
   .size victim, .-victim
