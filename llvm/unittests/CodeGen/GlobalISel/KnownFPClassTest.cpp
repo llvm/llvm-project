@@ -39,9 +39,9 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowPosNeverSNaN) {
 TEST_F(AArch64GISelMITest, TestFPClassFMADemandNaN) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %x:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
-    %y:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
-    %z:_(f32) = G_LOAD %ptr(p0) :: (load (s32))
+    %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %y:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %z:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %x_canon:_(f32) = G_FCANONICALIZE %x
     %y_canon:_(f32) = G_FCANONICALIZE %y
     %z_canon:_(f32) = G_FCANONICALIZE %z
