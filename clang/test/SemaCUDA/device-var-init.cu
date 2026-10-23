@@ -533,6 +533,9 @@ __device__ void *ptr1 = nullptr;
 __device__ void *ptr2 = ptr1;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 
+__device__ T d_t_copy = d_t_i;
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
 __device__ [[gnu::constructor(101)]] void ctor() {}
 // dev-error@-1 {{CUDA does not support global constructors for __device__ functions}}
 __device__ [[gnu::destructor(101)]] void dtor() {}
@@ -590,6 +593,15 @@ struct ED_I {
 __device__ void df_empty_dtor() {
   static ED_I l_ed_i;
   static ED_I l_ed_i_init = {1};
+}
+
+__device__ void df_copy_init(T t) {
+  static T l_t_copy = t;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static __shared__ T s_t_copy = t;
+  // expected-error@-1 {{initialization is not supported for __shared__ variables}}
+  constexpr T ce = {1};
+  static T l_t_constexpr_copy = ce;
 }
 
 

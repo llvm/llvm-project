@@ -718,7 +718,9 @@ bool HasAllowedCUDADeviceStaticInitializer(SemaCUDA &S, VarDecl *VD,
     if (!Init)
       return true;
     if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
-      return S.isEmptyConstructor(VD->getLocation(), CE->getConstructor());
+      CXXConstructorDecl *CD = CE->getConstructor();
+      return CD->isDefaultConstructor() &&
+             S.isEmptyConstructor(VD->getLocation(), CD);
     }
     return false;
   };
