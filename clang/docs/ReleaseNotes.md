@@ -1109,6 +1109,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   instantiation, explicit specialization, or call against a function template
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
+- Clang now diagnoses uses of function parameters inside the body of a lambda
+  appearing in a default argument. (#GH233811)
 
 #### Bug Fixes to AST Handling
 
