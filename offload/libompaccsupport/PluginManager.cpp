@@ -52,8 +52,11 @@ void PluginManager::init() {
   TIMESCOPE();
 
   ODBG(ODT_Init) << "Loading RTLs";
-  if (ol_result_t Res = olInit(nullptr))
+  if (ol_result_t Res = olInit(nullptr)) {
     REPORT() << "Failed to initialize liboffload: " << Res->Details;
+    return;
+  }
+  LibOffloadInitialized = true;
 
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
@@ -100,8 +103,10 @@ void PluginManager::deinit() {
 #endif
 
   Plugins.clear();
-  if (auto Err = olShutDown())
-    REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  if (LibOffloadInitialized) {
+    if (auto Err = olShutDown())
+      REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  }
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
@@ -150,6 +155,8 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 }
 
 void PluginManager::initializeAllDevices() {
+  if (!LibOffloadInitialized)
+    return;
   if (auto Err = iterateDevices(
           [this](ol_device_handle_t Device) { initializeDevice(Device); })) {
     REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
@@ -292,6 +299,10 @@ bool PluginManager::registerImageOnDevice(
 }
 
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
+  // There are no devices to register with if liboffload was not initialized.
+  if (!LibOffloadInitialized)
+    return;
+
   RTLsMtx.lock();
 
   // Upgrade the entries from the legacy implementation if necessary.
@@ -797,6 +808,8 @@ getProfilerToAttach() {
 #endif
 
 int PluginManager::getNumActivePlugins() const {
+  if (!LibOffloadInitialized)
+    return 0;
   int count = 0;
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {

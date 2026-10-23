@@ -2805,7 +2805,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
 
     if (mlir::Attribute attr =
-            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic());
+        attr && !fnOp.isDeclaration()) {
       auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
       llvm::StringRef kernelName = kernelNameAttr.getKernelName();
       cudaKernelMap[kernelName] = fnOp;
