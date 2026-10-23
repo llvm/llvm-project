@@ -132,3 +132,15 @@ void f() {
 }
 }
 #endif
+
+#if __cplusplus >= 202002L
+namespace GH175713 {
+template <typename T> concept C = true;
+inline void f() {
+  auto a = []<decltype(1()) N>() {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  auto b = []<template <decltype(1()) N> class TT>() {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  auto c = []<typename T> requires (sizeof(T) == 1()) (T) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+  auto d = []<C<decltype(1())> T>(T) {}; // expected-error {{called object type 'int' is not a function or function pointer}}
+}
+}
+#endif

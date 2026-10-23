@@ -1011,6 +1011,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
+- Fixed a crash when a parameter or template parameter of a lambda had a
+  `decltype` of an erroneous expression as its type. (#GH175713, #GH150733)
+
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)

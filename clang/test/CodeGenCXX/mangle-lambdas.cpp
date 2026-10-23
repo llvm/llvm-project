@@ -436,3 +436,17 @@ struct TestNestedInstantiation {
 void test_NestedInstantiation() {
   TestNestedInstantiation()();
 }
+
+template <typename T> void decltype_sig(T t) {
+  [](decltype(t) x) { side_effect(); }(t);
+  [](decltype(t) x) { side_effect(); }(t);
+  [](decltype(t) x, T y) { side_effect(); }(t, t);
+  [](auto x, decltype(t) y) { side_effect(); }(t, t);
+}
+
+void use_decltype_sig() { decltype_sig(1); }
+
+// CHECK-LABEL: define linkonce_odr void @_ZZ12decltype_sigIiEvT_ENKUliE_clEi(
+// CHECK-LABEL: define linkonce_odr void @_ZZ12decltype_sigIiEvT_ENKUliE0_clEi(
+// CHECK-LABEL: define linkonce_odr void @_ZZ12decltype_sigIiEvT_ENKUliiE_clEii(
+// CHECK-LABEL: define linkonce_odr void @_ZZ12decltype_sigIiEvT_ENKUlS0_iE_clIiEEDaS0_i(

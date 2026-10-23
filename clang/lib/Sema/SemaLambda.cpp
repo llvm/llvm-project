@@ -486,6 +486,29 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   return false;
 }
 
+static bool templateParameterContainsErrors(const NamedDecl *Param) {
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+    return NTTP->getType()->containsErrors();
+  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param))
+    return llvm::any_of(*TTP->getTemplateParameters(),
+                        templateParameterContainsErrors);
+  return false;
+}
+
+/// Whether any part of the lambda's <lambda-sig> contains errors.
+static bool lambdaSignatureContainsErrors(const CXXRecordDecl *Class,
+                                          const CXXMethodDecl *Method) {
+  if (Method->isInvalidDecl() || Method->getType()->containsErrors())
+    return true;
+  const TemplateParameterList *TPL =
+      Class->getGenericLambdaTemplateParameterList();
+  if (!TPL)
+    return false;
+  const Expr *RequiresClause = TPL->getRequiresClause();
+  return (RequiresClause && RequiresClause->containsErrors()) ||
+         llvm::any_of(*TPL, templateParameterContainsErrors);
+}
+
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
@@ -516,6 +539,10 @@ void Sema::handleLambdaNumbering(
   // numbering state before final numbering is assigned below.
   if (ContextDecl)
     Class->setLambdaContextDecl(ContextDecl);
+
+  // Erroneous signatures cannot be mangled, and invalid code is never emitted.
+  if (lambdaSignatureContainsErrors(Class, Method))
+    return;
 
   CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
