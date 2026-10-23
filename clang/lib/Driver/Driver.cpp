@@ -3932,7 +3932,7 @@ static StringRef getCanonicalArchString(Compilation &C,
              !StringToOffloadArch(ArchStr).isIntelIGCA()) {
     // FIXME(IGCA): AMD targets should reject IGCA targets altogether.
     // FIXME(IGCA): This only checks ArchStr's starting with "igca". Typos such
-    // as IGCA_20ca still fall through this check. 
+    // as IGCA_20ca still fall through this check.
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "IGCA" << ArchStr;
     return StringRef();
