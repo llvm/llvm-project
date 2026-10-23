@@ -82,12 +82,13 @@ StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
 }
 
 GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
-  // A numeric name may end in a revision, e.g. "xe_12.60.7". Every revision of
-  // a device is the same device, so look the name up without it.
-  if (Name.starts_with("xe_") && Name.count('.') == 2) {
+  // A numeric name ends in a revision, e.g. "xe_12.60.7". Every revision of a
+  // device is the same device, so look the name up without it.
+  if (Name.starts_with("xe_")) {
     auto [Device, RevisionStr] = Name.rsplit('.');
     unsigned Revision;
-    if (RevisionStr.getAsInteger(10, Revision) || Revision > GPUIPRevisionMask)
+    if (Device.count('.') != 1 || RevisionStr.getAsInteger(10, Revision) ||
+        Revision > GPUIPRevisionMask)
       return GK_NONE;
     Name = Device;
   }
