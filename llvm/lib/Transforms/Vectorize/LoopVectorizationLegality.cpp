@@ -727,6 +727,28 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
+bool LoopVectorizationLegality::addConditionalInduction(
+    PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
+  DenseMap<Value *, const SCEVAddRecExpr *> CompressedPtrsForCondID;
+  if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
+                             *PSE.getSE())) {
+    reportVectorizationFailure(
+        "Unsupported user of conditional induction found",
+        "UnsupportedConditionalInductionUse", ORE, TheLoop);
+    return false;
+  }
+
+  ConditionalInductions[Phi] = CondID;
+
+  for (auto [Ptr, PtrAddRec] : CompressedPtrsForCondID) {
+    LLVM_DEBUG(dbgs() << "LV: Found compressed pointer: " << *Ptr << '\n');
+    assert(PtrAddRec->isAffine() && "Expected affine SCEVAddRecExpr");
+    CompressedPtrs[Ptr] = CompressedPtrInfo{Phi, PtrAddRec};
+  }
+
+  return true;
+}
+
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -884,6 +906,13 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
+    }
+
+    ConditionalInductionDescriptor CondID;
+    if (Opts.lv_compressing_patterns &&
+        ConditionalInductionDescriptor::isConditionalInductionPHI(
+            Phi, TheLoop, CondID, *PSE.getSE())) {
+      return addConditionalInduction(Phi, CondID);
     }
 
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
@@ -2029,6 +2058,17 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
+  }
+
+  if (hasConditionalInductions()) {
+    reportVectorizationFailure(
+        "We can vectorize this loop with a compressstore or expandload, but "
+        "vectorization support is not implemented yet.",
+        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
   }
 
   if (Result) {

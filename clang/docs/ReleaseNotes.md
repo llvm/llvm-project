@@ -54,6 +54,26 @@ in a future version of Clang.
   mode, as it was removed from the standard by
   [P3475R2](https://wg21.link/P3475R2).
 
+- Because specializations of templated functions can now be instantiated during
+  constant evaluation, certain expressions that could not previously be
+  evaluated as constant expressions can now be evaluated as such. This can
+  affect overload resolution, which can in some cases change the semantics of a
+  program. For example:
+
+  ```cpp
+  // Construct a function `g` for which `g()` is only a constant expression if
+  // `f<int>` can be instantiated during constant evaluation.
+  template <typename T> constexpr T f();
+  constexpr int g() { return f<int>(); }
+  template <typename T> constexpr T f() { return T{1}; }
+
+  // Construct a family of overloads named `h` such that the result of `h()` is
+  // 1 if `g()` is a constant expression; otherwise 2.
+  template <auto = g()>     consteval int h()      { return 1; }
+  template <typename... Ts> consteval int h(Ts...) { return 2; }
+
+  int main() { return h(); }  // Previously returned 2; now returns 1.
+  ```
 
 ### Objective-C Specific Potentially Breaking Changes
 
@@ -438,6 +458,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
+  tentative definitions of structure types which contain a field marked with
+  the `require_explicit_initialization` attribute. (#GH232483)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
@@ -781,6 +805,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -812,6 +837,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when constant-evaluating `__builtin_object_size`
   or `__builtin_dynamic_object_size` with a type argument that is not an
   integer constant expression. (#GH231108)
+- Fixed a crash on BPF targets when `__builtin_preserve_field_info` is
+  applied to a field of a record marked `preserve_static_offset`.
 
 - `__has_unique_object_representations` now returns `true` for `_Atomic` types
   whose object representation is identical to that of their value type, such
@@ -853,7 +880,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
+- Fixed an assertion failure when generating code for an x86 function with the
+  `interrupt` attribute whose first parameter uses a typedef for a pointer
+  type. (#GH204756)
+
 #### Bug Fixes to C++ Support
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
@@ -1078,6 +1110,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Fixed missing destructor cleanups and incorrect initialization for lambda
+  init-captures in default member initializers used during aggregate
+  initialization. (#GH196469)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1163,6 +1199,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### BPF Support
+
+- Added `-mcpu=v5` and the `__BPF_FEATURE_HMUL` predefined macro for unsigned
+  and signed high-half multiply instructions.
 
 #### DirectX Support
 

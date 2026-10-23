@@ -259,6 +259,17 @@ add_header_library(
 )
 
 add_header_library(
+  is_integer
+  HDRS
+    is_integer.h
+  DEPENDS
+    .fp_bits
+    libc.src.__support.CPP.bit
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   manipulation_functions
   HDRS
     ManipulationFunctions.h

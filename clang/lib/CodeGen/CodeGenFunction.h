@@ -627,6 +627,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// True if CodeGen currently emits the argument of
+  /// __builtin_preserve_field_info.
+  bool IsInPreserveFieldInfo = false;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
