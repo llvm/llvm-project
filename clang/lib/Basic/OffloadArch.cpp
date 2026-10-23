@@ -13,6 +13,7 @@
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 
 namespace clang {
 
@@ -25,10 +26,12 @@ OffloadArch OffloadArch::HIPDefault() {
 }
 
 OffloadArch OffloadArch::getIntelIGCA(llvm::IntelGPU::IGCATarget T) {
+  assert(T.isValid() && "T is not a valid IGCA target");
   return {TargetArch::IntelIGCA, T.pack()};
 }
 
 llvm::IntelGPU::IGCATarget OffloadArch::igcaTarget() const {
+  assert(isIntelIGCA() && "cannot get IGCA target from a non-IGCA OffloadArch");
   return llvm::IntelGPU::IGCATarget::unpack(Kind);
 }
 

@@ -109,6 +109,8 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   EXPECT_TRUE(Core.isCore());
   // Invalid behavior:
   EXPECT_FALSE(IGCATarget::invalid());
+  // invalid() has no feature set, even though its bits match Core:
+  EXPECT_FALSE(IGCATarget::invalid().isCore());
   EXPECT_EQ(IGCATarget::invalid().pack(), 0u);
   EXPECT_EQ(IGCATarget(0, IGCAFeatureSet::Compute), IGCATarget::invalid());
   // unpack(2) is invalid since it results in Target = 0. It should thus equate

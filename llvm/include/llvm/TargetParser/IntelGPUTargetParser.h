@@ -64,7 +64,7 @@ class IGCATarget {
   uint32_t V = 0;
 
   /// \return true if \p Packed contains a target listed in INTEL_IGCA_TARGET.
-  static constexpr bool isKnownIGCATargetLevel(uint32_t Packed) {
+  static constexpr bool isKnownIGCATarget(uint32_t Packed) {
     switch (Packed) {
 #define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
   case uint32_t(TARGET) << TargetShift |                                       \
@@ -80,7 +80,7 @@ class IGCATarget {
     // Targets not listed in INTEL_IGCA_TARGET (including Target == 0) are
     // invalid, so V remains 0. This keeps V == 0 as the only canonical invalid
     // representation.
-    if (isKnownIGCATargetLevel(Packed))
+    if (isKnownIGCATarget(Packed))
       V = Packed;
   }
 
@@ -107,37 +107,49 @@ public:
   /// To check if a target has a feature set regardless of exactness, use
   /// hasCompute() or hasRender() instead of raw comparison between
   /// IGCAFeatureSet enums.
-  IGCAFeatureSet getFeatureSet() const {
+  constexpr IGCAFeatureSet getFeatureSet() const {
     return IGCAFeatureSet(V & FeatureSetMask);
   }
-  bool isExact() const { return V & IsExactMask; }
+  constexpr bool isExact() const { return V & IsExactMask; }
   constexpr bool isValid() const { return getTarget() != 0; }
   constexpr explicit operator bool() const { return isValid(); }
 
-  bool isCore() const { return getFeatureSet() == IGCAFeatureSet::Core; }
+  /// \return true if the target has the Core feature set.
+  constexpr bool isCore() const {
+    // invalid() has the same feature set bits as Core, so we check explicitly.
+    return isValid() && getFeatureSet() == IGCAFeatureSet::Core;
+  }
   /// \return true if the target has a non-exact Compute feature set.
-  bool isCompute() const { return getFeatureSet() == IGCAFeatureSet::Compute; }
+  constexpr bool isCompute() const {
+    return getFeatureSet() == IGCAFeatureSet::Compute;
+  }
   /// \return true if the target has a non-exact Render feature set.
-  bool isRender() const { return getFeatureSet() == IGCAFeatureSet::Render; }
-  bool isComputeExact() const {
+  constexpr bool isRender() const {
+    return getFeatureSet() == IGCAFeatureSet::Render;
+  }
+  constexpr bool isComputeExact() const {
     return getFeatureSet() == IGCAFeatureSet::ComputeExact;
   }
-  bool isRenderExact() const {
+  constexpr bool isRenderExact() const {
     return getFeatureSet() == IGCAFeatureSet::RenderExact;
   }
   /// \return true if target has either Compute or ComputeExact feature set.
-  bool hasCompute() const {
+  constexpr bool hasCompute() const {
     return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
            llvm::to_underlying(IGCAFeatureSet::Compute);
   }
   /// \return true if target has either Render or RenderExact feature set.
-  bool hasRender() const {
+  constexpr bool hasRender() const {
     return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
            llvm::to_underlying(IGCAFeatureSet::Render);
   }
 
-  friend bool operator==(IGCATarget A, IGCATarget B) { return A.V == B.V; }
-  friend bool operator!=(IGCATarget A, IGCATarget B) { return !(A == B); }
+  friend constexpr bool operator==(IGCATarget A, IGCATarget B) {
+    return A.V == B.V;
+  }
+  friend constexpr bool operator!=(IGCATarget A, IGCATarget B) {
+    return !(A == B);
+  }
 };
 
 /// \return the device name that \p GPUIPVersion identifies, as reported by the
