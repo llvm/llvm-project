@@ -539,6 +539,33 @@ void MCStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
+void MCStreamer::emitCFILLVMDefCfaAddressConstant(unsigned AddressSpace,
+                                                  int64_t Offset, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createLLVMDefCfaAddressConstant(Label, AddressSpace,
+                                                        Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMDefCfaAddressScaled(unsigned AddressSpace,
+                                                int64_t Offset,
+                                                unsigned Register,
+                                                unsigned DerefSize,
+                                                unsigned Scale, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createLLVMDefCfaAddressScaled(
+          Label, AddressSpace, Offset, Register, DerefSize, Scale, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
 void MCStreamer::emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
