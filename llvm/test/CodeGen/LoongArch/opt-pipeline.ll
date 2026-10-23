@@ -73,6 +73,7 @@
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
+; LAXX-NEXT:       SJLJ Exception Handling preparation
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
 ; LAXX-NEXT:       Prepare inline asm insts

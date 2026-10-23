@@ -694,6 +694,7 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
     // The default value for ComplexRangeKind is Full if no option is selected
     return cir::ComplexRangeKind::Full;
   }
+  llvm_unreachable("fully covered switch");
 }
 
 mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {

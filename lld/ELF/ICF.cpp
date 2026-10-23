@@ -544,10 +544,8 @@ template <class ELFT> void ICF<ELFT>::run() {
   // as the target's index. Each chunk appends its sections' edges to its own
   // buffer; edgeEnd[i] is where section i's edges end within that buffer.
   size_t numChunks = divideCeil(numSections, chunkSize);
-  SmallVector<uint64_t, 0> hashes;
-  SmallVector<uint32_t, 0> edgeEnd;
-  hashes.resize_for_overwrite(numSections);
-  edgeEnd.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> hashes(numSections, llvm::for_overwrite);
+  SmallVector<uint32_t, 0> edgeEnd(numSections,llvm::for_overwrite);
   SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numChunks);
   parallelFor(0, numChunks, [&](size_t c) {
     SmallVectorImpl<uint32_t> &edges = chunkEdges[c];
@@ -564,8 +562,7 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Propagate hashes over edges for 7 rounds. Each round saves up to one
   // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
-  SmallVector<uint64_t, 0> nextHashes;
-  nextHashes.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> nextHashes(numSections, llvm::for_overwrite);
   for (int round = 7; round--;) {
     parallelFor(0, numChunks, [&](size_t c) {
       ArrayRef<uint32_t> edges = chunkEdges[c];
@@ -583,8 +580,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   }
 
   // Order sections so that those in the same equivalence class are consecutive.
-  SmallVector<uint64_t, 0> keys;
-  keys.resize_for_overwrite(numSections);
+  SmallVector<uint64_t, 0> keys(numSections, llvm::for_overwrite);
   parallelFor(0, numSections, [&](size_t i) {
     // mix()'s low bits depend only on the inputs' low bits. Fold the high half.
     uint32_t h = hashes[i] ^ hashes[i] >> 32;
@@ -592,8 +588,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     keys[i] = uint64_t(h) << 32 | i;
   });
   parallelSort(keys.begin(), keys.end());
-  SmallVector<InputSection *, 0> sorted;
-  sorted.resize_for_overwrite(numSections);
+  SmallVector<InputSection *, 0> sorted(numSections, llvm::for_overwrite);
   parallelFor(0, numSections,
               [&](size_t i) { sorted[i] = sections[uint32_t(keys[i])]; });
   sections = std::move(sorted);

@@ -11522,8 +11522,10 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   assert(StepVector && "Step vector needs splitting");
 
   // Rebase and saturate the termination value.
-  SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
-                                DL, OpVT);
+  SDValue Max =
+      DAG.getConstant(maxUIntN(std::min(StepVector.getScalarValueSizeInBits(),
+                                        OpVT.getScalarSizeInBits())),
+                      DL, OpVT);
   End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
   End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
   End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());

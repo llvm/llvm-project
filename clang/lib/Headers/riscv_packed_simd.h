@@ -498,6 +498,10 @@ __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __built
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
 __packed_binary_builtin(mulqr_i32, int32_t, __builtin_riscv_mulqr_i32)
 
+/* Scalar "Q-format" Multiply with Widening Accumulate */
+__packed_ternary_builtin_mixed(mqwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqwacc_i64)
+__packed_ternary_builtin_mixed(mqrwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqrwacc_i64)
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)
@@ -1193,7 +1197,12 @@ __packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __bui
 __packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
 __packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
 
-/* Packed Multiplication with Horizontal Addition and Accumulate (64-bit) */
+/* Packed Widening Multiply Accumulate */
+__packed_ternary_builtin_mixed(pwmacc_i32x2, int32x2_t, int16x2_t, int16x2_t, __builtin_riscv_pwmacc_i32x2)
+__packed_ternary_builtin_mixed(pwmaccu_u32x2, uint32x2_t, uint16x2_t, uint16x2_t, __builtin_riscv_pwmaccu_u32x2)
+__packed_ternary_builtin_mixed(pwmaccsu_i32x2, int32x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pwmaccsu_i32x2)
+
+  /* Packed Multiplication with Horizontal Addition and Accumulate (64-bit) */
 static __inline__ int32x2_t __DEFAULT_FN_ATTRS
 __riscv_pm4adda_i8x8(int32x2_t __rd, int8x8_t __rs1, int8x8_t __rs2) {
   return (int32x2_t)((uint32x2_t)__rd +
