@@ -1073,6 +1073,9 @@ static bool doNotCSE(SDNode *N) {
   case ISD::HANDLENODE:
   case ISD::EH_LABEL:
     return true;   // Never CSE these nodes.
+  case ISD::FREEZE:
+    // Each freeze of undef is a distinct value.
+    return N->getOperand(0).isUndef();
   }
 
   // Check that remaining values produced are not flags.
@@ -7596,7 +7599,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
-  if (VT != MVT::Glue) { // Don't CSE glue producing nodes
+  // Don't CSE glue producing nodes or freezes of undef.
+  if (VT != MVT::Glue && !(Opcode == ISD::FREEZE && N1.isUndef())) {
     SDNodeKey ID(Opcode, VTs, Ops);
     FoldingSetInsertToken InsertToken;
     if (SDNode *E = lookupNode(ID, DL, InsertToken)) {
@@ -12484,7 +12488,7 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
 
   updateDivergence(N);
   // If this gets put into a CSE map, add it.
-  if (InsertToken)
+  if (InsertToken && !doNotCSE(N))
     CSEMap.insert(N, InsertToken);
   return N;
 }
