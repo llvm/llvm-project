@@ -642,6 +642,10 @@ bool AGXTargetLowering::allowsMisalignedMemoryAccesses(
   return OK;
 }
 
+static cl::opt<bool> AGXByteVectorStores(
+    "agx-byte-vector-stores", cl::init(true), cl::Hidden,
+    cl::desc("Store 2 or 4 bytes with one device_store of the byte format"));
+
 SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
                                             SelectionDAG &DAG) const {
   auto *S = cast<StoreSDNode>(Op);
@@ -650,7 +654,8 @@ SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
   SDLoc DL(Op);
   // 2 or 4 bytes, naturally aligned (PTX st.v2.u8 / st.v4.u8): one access of
   // the byte format from 16-bit values
-  if ((VT == MVT::v2i8 || VT == MVT::v4i8) && !S->isTruncatingStore() &&
+  if (AGXByteVectorStores && (VT == MVT::v2i8 || VT == MVT::v4i8) &&
+      !S->isTruncatingStore() &&
       !S->isIndexed() && S->isSimple() &&
       S->getAddressSpace() == AGX::DEVICE_ADDRESS &&
       S->getAlign() >= Align(VT.getStoreSize())) {
