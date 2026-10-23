@@ -253,17 +253,16 @@ int fallthrough_covered_enums(Enum e) {
   return n;
 }
 
-// Fallthrough annotations in local classes used to generate "fallthrough
-// annotation does not directly precede switch label" warning.
-
+// Attributes on consecutive switch labels should not introduce false fallthrough.
 int fallthrough_attributed_labels(int n) {
   switch (n) {
-    [[unlikely]] case 0:
-    [[unlikely]] case 1:
-    [[likely]] case 2:
-    case 3:
-    [[unlikely]] default:
-      return 1;
+  [[unlikely]] case 0:
+  [[unlikely]] case 1:
+  [[likely]] case 2:
+  case 3:
+    return 0;
+  [[unlikely]] default:
+    return 1;
   }
   switch (n) {
     case 4:
@@ -279,6 +278,59 @@ int fallthrough_attributed_labels(int n) {
   return n;
 }
 
+// Consecutive ordinary labels do not introduce fallthrough.
+int fallthrough_ordinary_labels(int n) {
+  switch (n) {
+  case 0:
+  case 1:
+    return 0;
+  case 2:
+    return 1;
+  default:
+    return 2;
+  }
+}
+
+// An explicit fallthrough annotation should suppress the warning.
+int fallthrough_explicit_annotation(int n) {
+  switch (n) {
+  case 0:
+    ++n;
+    [[clang::fallthrough]];
+  case 1:
+    return 0;
+  default:
+    return 1;
+  }
+}
+
+// Genuine fallthrough without an annotation should warn.
+int fallthrough_without_annotation(int n) {
+  switch (n) {
+  case 0:
+    ++n;
+    // expected-warning@+1 {{unannotated fall-through between switch labels}}
+  case 1: // expected-note 2 {{insert}}
+    return 0;
+  default:
+    return 1;
+  }
+}
+
+// An attributed case label immediately follows an ordinary label.
+int fallthrough_label_attributed_case(int n) {
+  switch (n) {
+  case 0:
+  ordinary_label:
+    [[likely]] case 1:
+    return 0;
+  default:
+    return 1;
+  }
+}
+
+// Fallthrough annotations in local classes used to generate "fallthrough
+// annotation does not directly precede switch label" warning.
 void fallthrough_in_local_class() {
   class C {
     void f(int x) {

@@ -1381,7 +1381,7 @@ public:
       //   case X: {} case Y:
       //   case X: ; case Y:
       if (const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(B.getLabel()))
-        if (!isa<SwitchCase>(stripAttributedStmts(SW->getSubStmt())))
+        if (!isa<SwitchCase>(SW->getSubStmt()))
           return SW->getSubStmt();
 
       return nullptr;
