@@ -8824,20 +8824,10 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MUL->getOperand(1).getReg();
-  bool Src0IsKill = MUL->getOperand(1).isKill();
   Register SrcReg1 = MUL->getOperand(2).getReg();
-  bool Src1IsKill = MUL->getOperand(2).isKill();
 
-  Register SrcReg2;
-  bool Src2IsKill;
-  if (ReplacedAddend) {
-    // If we just generated a new addend, we must be it's only use.
-    SrcReg2 = *ReplacedAddend;
-    Src2IsKill = true;
-  } else {
-    SrcReg2 = Root.getOperand(IdxOtherOpd).getReg();
-    Src2IsKill = Root.getOperand(IdxOtherOpd).isKill();
-  }
+  Register SrcReg2 =
+      ReplacedAddend ? *ReplacedAddend : Root.getOperand(IdxOtherOpd).getReg();
 
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
@@ -8851,20 +8841,20 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstrBuilder MIB;
   if (kind == FMAInstKind::Default)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill))
-              .addReg(SrcReg2, getKillRegState(Src2IsKill));
+              .addReg(SrcReg0)
+              .addReg(SrcReg1)
+              .addReg(SrcReg2);
   else if (kind == FMAInstKind::Indexed)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg2, getKillRegState(Src2IsKill))
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill))
+              .addReg(SrcReg2)
+              .addReg(SrcReg0)
+              .addReg(SrcReg1)
               .addImm(MUL->getOperand(3).getImm());
   else if (kind == FMAInstKind::Accumulator)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg2, getKillRegState(Src2IsKill))
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill));
+              .addReg(SrcReg2)
+              .addReg(SrcReg0)
+              .addReg(SrcReg1);
   else
     assert(false && "Invalid FMA instruction kind \n");
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
@@ -8968,9 +8958,6 @@ genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
   Register SrcReg0 = MAD->getOperand(1).getReg();
   Register SrcReg1 = MAD->getOperand(2).getReg();
   Register SrcReg2 = MAD->getOperand(3).getReg();
-  bool Src0IsKill = MAD->getOperand(1).isKill();
-  bool Src1IsKill = MAD->getOperand(2).isKill();
-  bool Src2IsKill = MAD->getOperand(3).isKill();
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
   if (SrcReg0.isVirtual())
@@ -8982,9 +8969,9 @@ genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB =
       BuildMI(MF, MIMetadata(Root), TII->get(Opc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
-          .addReg(SrcReg2, getKillRegState(Src2IsKill));
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
+          .addReg(SrcReg2);
   InsInstrs.push_back(MIB);
 
   return MAD;
@@ -9132,9 +9119,7 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MUL->getOperand(1).getReg();
-  bool Src0IsKill = MUL->getOperand(1).isKill();
   Register SrcReg1 = MUL->getOperand(2).getReg();
-  bool Src1IsKill = MUL->getOperand(2).isKill();
 
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
@@ -9147,8 +9132,8 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB =
       BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
           .addReg(VR);
   // Insert the MADD
   InsInstrs.push_back(MIB);
@@ -9170,11 +9155,8 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   Register ResultReg = Root.getOperand(0).getReg();
   Register RegA = Root.getOperand(1).getReg();
-  bool RegAIsKill = Root.getOperand(1).isKill();
   Register RegB = AddMI->getOperand(IdxOpd1).getReg();
-  bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
-  bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
   Register NewVR =
       MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
@@ -9193,13 +9175,13 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB1 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), NewVR)
-          .addReg(RegA, getKillRegState(RegAIsKill))
-          .addReg(RegB, getKillRegState(RegBIsKill))
+          .addReg(RegA)
+          .addReg(RegB)
           .setMIFlags(Flags);
   MachineInstrBuilder MIB2 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), ResultReg)
-          .addReg(NewVR, getKillRegState(true))
-          .addReg(RegC, getKillRegState(RegCIsKill))
+          .addReg(NewVR)
+          .addReg(RegC)
           .setMIFlags(Flags);
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
