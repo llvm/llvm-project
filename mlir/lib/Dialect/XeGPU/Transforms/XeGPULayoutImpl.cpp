@@ -824,6 +824,76 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return resLayout;
 }
 
+/// Folds a group of adjacent result dims into the one
+/// source dim they came from in a row-major vector.shape_cast.
+static std::optional<std::pair<int64_t, int64_t>>
+foldSplitGroup(ArrayRef<int64_t> layout, ArrayRef<int64_t> data,
+               ArrayRef<int64_t> shape,
+               function_ref<bool(size_t)> innerIsFaster) {
+  int64_t L = layout.back(), D = data.back(), S = shape.back();
+  for (int64_t i = static_cast<int64_t>(layout.size()) - 2; i >= 0; --i) {
+    int64_t Lo = layout[i], Do = data[i], So = shape[i];
+    if (L == 1) {
+      // (a) One subgroup owns every inner offset, so each owned outer index is
+      // a contiguous run of S elements.
+      L = Lo;
+      D = Do * S;
+    } else if (Lo == 1) {
+      // (b) Outer dim not distributed, every row repeats the inner pattern.
+      if (S % (L * D) != 0)
+        return std::nullopt;
+    } else if (Do == 1 && L * D == S && innerIsFaster(i)) {
+      // (c) One outer index per pass, inner tiled exactly once.
+      L = Lo * L;
+    } else {
+      return std::nullopt;
+    }
+    S *= So;
+  }
+  return std::make_pair(L, D);
+}
+
+/// Folds the sg_layout/sg_data of every split group in layout onto its source
+/// dim with foldSplitGroup.
+static std::optional<SmallVector<int64_t>>
+foldSgSplitGroups(xegpu::DistributeLayoutAttr layout,
+                  ArrayRef<int64_t> resShape,
+                  ArrayRef<SmallVector<int64_t>> splitDimGroups) {
+  SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = layout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> srcSgData;
+  if (sgLayout.empty())
+    return srcSgData;
+
+  // order[0] is the fastest-changing dim; speed[dim] is its position in order.
+  SmallVector<int64_t> order = layout.getEffectiveOrderAsInt();
+  SmallVector<int64_t> speed(order.size());
+  for (auto [pos, dim] : llvm::enumerate(order))
+    speed[dim] = pos;
+
+  for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
+    SmallVector<int64_t> l, d, s;
+    for (int64_t dim : dimGroup) {
+      l.push_back(sgLayout[dim]);
+      d.push_back(sgData[dim]);
+      s.push_back(resShape[dim]);
+    }
+    // Subgroup ids must count along the inner dims before the outer one.
+    auto innerIsFaster = [&](size_t i) {
+      for (size_t j = i + 1; j < dimGroup.size(); ++j)
+        if (speed[dimGroup[j]] > speed[dimGroup[i]])
+          return false;
+      return true;
+    };
+    std::optional<std::pair<int64_t, int64_t>> folded =
+        foldSplitGroup(l, d, s, innerIsFaster);
+    if (!folded)
+      return std::nullopt;
+    srcSgData.push_back(folded->second);
+  }
+  return srcSgData;
+}
+
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
 xegpu::DistributeLayoutAttr
@@ -857,10 +927,31 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Use case 2: Dim split from source to result, for multi-stage reduction
   SmallVector<SmallVector<int64_t>> splitDimGroups;
   if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
+    // collapseDims multiplies sg_data across a group, which is only right when
+    // each subgroup's tile is one contiguous run of the flattened dim.
+    std::optional<SmallVector<int64_t>> srcSgData =
+        foldSgSplitGroups(resLayout, resShape, splitDimGroups);
+    if (!srcSgData)
+      return nullptr;
+
+    // Collapse later groups first so earlier groups' dim indices stay valid.
     auto srcLayout = resLayout;
-    for (const auto &dimGroup : splitDimGroups)
+    for (const auto &dimGroup : llvm::reverse(splitDimGroups))
       srcLayout = srcLayout.collapseDims(dimGroup);
 
+    // Overwrite the multiplied sg_data with the folded values.
+    if (!srcSgData->empty() &&
+        *srcSgData != srcLayout.getEffectiveSgDataAsInt()) {
+      auto plain = dyn_cast<xegpu::LayoutAttr>(srcLayout);
+      if (!plain)
+        return nullptr;
+      MLIRContext *ctx = resLayout.getContext();
+      SmallVector<int32_t> sgData32(srcSgData->begin(), srcSgData->end());
+      srcLayout = xegpu::LayoutAttr::get(
+          ctx, plain.getSgLayout(), DenseI32ArrayAttr::get(ctx, sgData32),
+          plain.getInstData(), plain.getLaneLayout(), plain.getLaneData(),
+          plain.getOrder());
+    }
     return srcLayout;
   }
 
@@ -2833,12 +2924,27 @@ static bool isContiguousTiling(ArrayRef<int64_t> dimGroup,
   return true;
 }
 
+/// Checks that layout x data tiles a split group so that collapseDims
+/// gives the right layout for the merged dim
+static bool isCollapsibleLevel(ArrayRef<int64_t> dimGroup,
+                               ArrayRef<int64_t> shape,
+                               ArrayRef<int64_t> layout,
+                               ArrayRef<int64_t> data) {
+  if (!isContiguousTiling(dimGroup, shape, data, /*tileShape=*/{},
+                          /*expectedStride=*/1))
+    return false;
+  int64_t collapsedData = 1;
+  for (int64_t dim : dimGroup)
+    collapsedData *= data[dim];
+  return isContiguousTiling(dimGroup, shape, layout, data,
+                            /*expectedStride=*/collapsedData);
+}
+
 xegpu::DistributeLayoutAttr
 xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
                                   VectorType srcVecTy, VectorType resVecTy,
                                   DistributeLayoutAttr consumerLayout) {
-  // TODO: work out the subgroup level rule; leave such layouts alone for now.
-  if (!consumerLayout || layoutKind == xegpu::LayoutKind::Subgroup)
+  if (!consumerLayout)
     return consumerLayout;
 
   ArrayRef<int64_t> resShape = resVecTy.getShape();
@@ -2846,6 +2952,14 @@ xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
   if (!xegpu::matchSplitDimExpansion(srcVecTy.getShape(), resShape,
                                      splitDimGroups))
     return consumerLayout;
+
+  // Accept the consumer layout only if each split group folds onto its source
+  // dim as-is.
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    if (!foldSgSplitGroups(consumerLayout, resShape, splitDimGroups))
+      return nullptr;
+    return consumerLayout;
+  }
 
   SmallVector<int64_t> laneLayout =
       consumerLayout.getEffectiveLaneLayoutAsInt();
@@ -2878,17 +2992,9 @@ xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
   SmallVector<int64_t> resLaneData = resLayout.getEffectiveLaneDataAsInt();
 
   for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
-    // One lane's elements must be a single contiguous run of the collapsed dim.
-    if (!isContiguousTiling(dimGroup, resShape, resLaneData, /*tileShape=*/{},
-                            /*expectedStride=*/1))
-      return nullptr;
-
-    // Consecutive lanes must be exactly one such run apart.
-    int64_t collapsedLaneData = 1;
-    for (int64_t dim : dimGroup)
-      collapsedLaneData *= resLaneData[dim];
-    if (!isContiguousTiling(dimGroup, resShape, resLaneLayout, resLaneData,
-                            /*expectedStride=*/collapsedLaneData))
+    // One lane's elements must be a single contiguous run of the collapsed dim,
+    // and consecutive lanes must be exactly one such run apart.
+    if (!isCollapsibleLevel(dimGroup, resShape, resLaneLayout, resLaneData))
       return nullptr;
 
     // The inst tile must walk the result shape the same way.
