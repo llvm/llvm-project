@@ -28,7 +28,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <map>
 #include <set>
@@ -37,9 +37,6 @@
 
 namespace llvm {
 class Triple;
-namespace vfs {
-class FileSystem;
-}
 namespace cl {
 class ExpansionContext;
 }
@@ -363,7 +360,8 @@ private:
   /// TranslateInputArgs - Create a new derived argument list from the input
   /// arguments, after applying the standard argument translations.
   llvm::opt::DerivedArgList *
-  TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
+  TranslateInputArgs(const llvm::opt::InputArgList &Args,
+                     const llvm::Triple &Triple) const;
 
   // handleArguments - All code related to claiming and printing diagnostics
   // related to arguments to the driver are done here.

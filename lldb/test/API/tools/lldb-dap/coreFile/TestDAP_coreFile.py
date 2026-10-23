@@ -28,6 +28,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x40011C",
+        compileUnitId=0,
     ),
     StackFrame(
         column=0,
@@ -41,6 +42,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x400142",
+        compileUnitId=0,
     ),
     StackFrame(
         column=0,
@@ -54,6 +56,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x40015F",
+        compileUnitId=0,
     ),
 ]
 

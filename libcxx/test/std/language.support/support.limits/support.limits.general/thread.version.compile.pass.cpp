@@ -30,6 +30,10 @@
 #    error "__cpp_lib_jthread should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_formatters
@@ -40,6 +44,10 @@
 #    error "__cpp_lib_jthread should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 17
 
 #  ifdef __cpp_lib_formatters
@@ -48,6 +56,10 @@
 
 #  ifdef __cpp_lib_jthread
 #    error "__cpp_lib_jthread should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 20
@@ -67,6 +79,10 @@
 #    ifdef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 23
@@ -97,6 +113,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION)
@@ -125,6 +145,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER > 26
 
 #  if !defined(_LIBCPP_VERSION)
@@ -150,6 +174,19 @@
 #  else
 #    ifdef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should be defined in c++29"
+#    endif
+#    if __cpp_lib_thread_attributes != 202606L
+#      error "__cpp_lib_thread_attributes should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

@@ -42,6 +42,28 @@ public:
   Error initAsyncInfoImpl(GenericDeviceTy &Device,
                           AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
+  llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                  void *HostPtr, TargetAllocTy Kind,
+                                  size_t Alignment,
+                                  GenericProfilerTy *ProfilerPtr) override;
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                         GenericProfilerTy *ProfilerPtr) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+  /// Get kernel indirect access flags from all allocators in this context.
+  ze_kernel_indirect_access_flags_t getIndirectFlags() {
+    ze_kernel_indirect_access_flags_t Flags = 0;
+    for (auto &[Device, Allocator] : DeviceAllocators)
+      Flags |= Allocator->getIndirectFlags();
+    if (HostAllocator)
+      Flags |= HostAllocator->getIndirectFlags();
+    return Flags;
+  }
+
+  /// Initialize per-plugin-context memory allocators. Runs the pool
+  /// probe L0 calls up-front so the first user allocation is not delayed.
+  Error initAllocators();
+
   /// Pop an idle queue for \p Device from the cache, or create a new one.
   Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
     return QueueCache.getQueue(*Device);
@@ -56,6 +78,11 @@ private:
   bool OwnsZeContext;
 
   L0QueueCacheTy QueueCache;
+
+  /// Per-plugin-context allocators; scoped to this context's ze_context.
+  llvm::DenseMap<L0DeviceTy *, std::unique_ptr<MemAllocatorTy>>
+      DeviceAllocators;
+  std::unique_ptr<MemAllocatorTy> HostAllocator;
 };
 
 /// Class implementing the LevelZero specific functionalities of the plugin.
@@ -71,9 +98,6 @@ private:
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information for each Context using TLS.
-  L0ContextTLSTableTy ContextTLSTable;
-
   /// L0 plugin options.
   L0OptionsTy Options;
 
@@ -84,10 +108,6 @@ private:
 public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
-
-  L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
-    return ContextTLSTable.get(Context);
-  }
 
   const L0OptionsTy &getOptions() { return Options; }
 
@@ -113,7 +133,10 @@ public:
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   Expected<bool> isELFCompatible(uint32_t DeviceId,
-                                 StringRef Image) const override;
+                                 StringRef Image) const override {
+    // ELF images are not supported. Images must be SPIR-V or OffloadBinary.
+    return false;
+  }
 
   Error flushQueueImpl(omp_interop_val_t *Interop) override;
   Error syncBarrierImpl(omp_interop_val_t *Interop) override;

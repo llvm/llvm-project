@@ -200,6 +200,16 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
+static std::optional<int64_t> getElementSize(const ElementRegion *ER,
+                                             SValBuilder &SVB) {
+  QualType ElemType = ER->getElementType();
+
+  if (ElemType->isIncompleteType())
+    return std::nullopt;
+
+  return SVB.getContext().getTypeSizeInChars(ElemType).getQuantity();
+}
+
 /// For a given \p CurRegion that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
@@ -222,18 +232,14 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB,
     if (!Index)
       return std::nullopt;
 
-    QualType ElemType = CurRegion->getElementType();
-
-    // FIXME: The following early return was presumably added to safeguard the
-    // getTypeSizeInChars() call (which doesn't accept an incomplete type), but
-    // it seems that `ElemType` cannot be incomplete at this point.
-    if (ElemType->isIncompleteType())
+    // The size of an incomplete type (e.g forward declaration) is unknown, so
+    // the offset cannot be calculated.
+    std::optional<int64_t> ElemSize = getElementSize(CurRegion, SVB);
+    if (!ElemSize)
       return std::nullopt;
 
     // Calculate Delta = Index * sizeof(ElemType).
-    NonLoc Size = SVB.makeArrayIndex(
-        SVB.getContext().getTypeSizeInChars(ElemType).getQuantity());
-    auto Delta = EvalBinOp(BO_Mul, *Index, Size);
+    auto Delta = EvalBinOp(BO_Mul, *Index, SVB.makeArrayIndex(*ElemSize));
     if (!Delta)
       return std::nullopt;
 
@@ -324,7 +330,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
 
     Out << ' ' << SU.asElementName();
 
-    if (*ExtentN > 1)
+    if (*ExtentN != 1)
       Out << "s";
   }
 
@@ -452,7 +458,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
-      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C)};
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
+      /*AlsoAcceptEquality=*/(getElementSize(AccessedER, SVB) == 0)};
 
   bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
@@ -472,7 +479,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         // forms the past-the-end pointer without actually dereferencing it.
         auto [EqualsToThreshold, NotEqualToThreshold] =
             bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
-                                            /*CheckEquality=*/true);
+                                            bounds::Comparison::EQ);
         if (EqualsToThreshold && !NotEqualToThreshold) {
           C.addTransition(EqualsToThreshold);
           return;

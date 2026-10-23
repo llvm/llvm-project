@@ -1,5 +1,4 @@
-//===-- Language.h ---------------------------------------------------*- C++
-//-*-===//
+//===-- Language.h --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,11 +11,13 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <vector>
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -166,6 +167,10 @@ public:
 
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
+
+  /// Returns the Language that handles names mangled with \p scheme, or a
+  /// nullptr if there is none.
+  static Language *FindPluginForManglingScheme(Mangled::ManglingScheme scheme);
 
   static llvm::Expected<lldb::LanguageType>
   GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
@@ -324,6 +329,30 @@ public:
     return false;
   }
 
+  /// Returns true if this language handles the names mangled with \p scheme.
+  virtual bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const {
+    return false;
+  }
+
+  /// Parses mangled function names.
+  class MangledNameParser {
+  public:
+    virtual ~MangledNameParser() = default;
+
+    /// Parse a function name. Returns std::nullopt if \p mangled isn't a
+    /// function name that this parser understands.
+    virtual std::optional<Mangled::FunctionNameParts>
+    Parse(const Mangled &mangled) = 0;
+  };
+
+  /// Returns a parser for the names mangled with \p scheme, a scheme that this
+  /// language handles, or a nullptr if the symbol table should index them by
+  /// their demangled names.
+  virtual std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const {
+    return nullptr;
+  }
+
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
   /// values of said types by appending proper prefix/suffix information in
@@ -442,6 +471,8 @@ public:
 
   /// Equivalent to \c LanguageIsC||LanguageIsObjC||LanguageIsCPlusPlus.
   static bool LanguageIsCFamily(lldb::LanguageType language);
+
+  static bool LanguageIsFortran(lldb::LanguageType language);
 
   static bool LanguageIsPascal(lldb::LanguageType language);
 

@@ -451,6 +451,101 @@ DWARF:
   ASSERT_EQ(compiler_type.GetPtrAuthDiscriminator(), 42U);
 }
 
+TEST_F(DWARFASTParserClangTests, TestPtrAuthAddressDiscriminatedTemplateParam) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Foo
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x02
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x03
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x04
+          Tag:             DW_TAG_LLVM_ptrauth_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_LLVM_ptrauth_key
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_LLVM_ptrauth_address_discriminated
+              Form:            DW_FORM_flag_present
+        - Code:            0x05
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x04 # DW_LANG_C_plus_plus
+
+# 0x0f:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp] (\"Foo\")
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+
+# 0x14:     DW_TAG_template_type_parameter
+#             DW_AT_type [DW_FORM_ref4] (0x0000001a)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x1a
+
+        - AbbrCode:        0x00 # end of children of structure_type
+
+# 0x1a: DW_TAG_LLVM_ptrauth_type
+#         DW_AT_type [DW_FORM_ref4] (0x00000020)
+#         DW_AT_LLVM_ptrauth_key [DW_FORM_data1] (0x04)
+#         DW_AT_LLVM_ptrauth_address_discriminated [DW_FORM_flag_present] (true)
+        - AbbrCode:        0x04
+          Values:
+            - Value:           0x20
+            - Value:           0x04
+
+# 0x20: DW_TAG_pointer_type
+        - AbbrCode:        0x05
+
+        - AbbrCode:        0x00 # end of children of compile_unit
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+
+  DWARFDIE cu_die = tester.GetCUDIE();
+  DWARFDIE struct_die = cu_die.GetFirstChild();
+  ASSERT_EQ(struct_die.Tag(), DW_TAG_structure_type);
+
+  EXPECT_EQ(tester.GetParser().GetDIEClassTemplateParams(struct_die),
+            "<void *__ptrauth(4, 1, 0x00)>");
+}
+
 struct ExtractIntFromFormValueTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
   clang_utils::TypeSystemClangHolder holder;
@@ -2149,4 +2244,149 @@ TEST_F(DWARFASTParserClangTests, TestRustVariantMember) {
   // 0x16151413121110090807060504030201 ==
   // 29352461300415899028694309177919734273
   ASSERT_EQ(f_name, "$variant$29352461300415899028694309177919734273");
+}
+
+TEST_F(DWARFASTParserClangTests, TestObjCRuntimeNameAnnotation) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_APPLE_runtime_class
+              Form:      DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_member
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_LLVM_annotation
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_const_value
+              Form:      DW_FORM_string
+        - Code:            0x5
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_APPLE_runtime_class
+              Form:      DW_FORM_data1
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language (DW_LANG_ObjC)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x10
+
+#   DW_TAG_structure_type
+#     DW_AT_name ('Renamed')
+#     DW_AT_APPLE_runtime_class (DW_LANG_ObjC)
+#     DW_TAG_member
+#       DW_AT_name ('objc_runtime_name')
+#     DW_TAG_LLVM_annotation
+#       DW_AT_name ('other')
+#       DW_AT_const_value ('value')
+#     DW_TAG_LLVM_annotation
+#       DW_AT_name ('objc_runtime_name')
+#       DW_AT_const_value ('_$s4main7RenamedC')
+
+        - AbbrCode: 0x2
+          Values:
+            - CStr: Renamed
+            - Value: 0x10
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: objc_runtime_name
+
+        - AbbrCode: 0x4
+          Values:
+            - CStr: other
+            - CStr: value
+
+        - AbbrCode: 0x4
+          Values:
+            - CStr: objc_runtime_name
+            - CStr: _$s4main7RenamedC
+
+        - AbbrCode: 0x0
+
+#   DW_TAG_structure_type
+#     DW_AT_name ('Plain')
+#     DW_AT_APPLE_runtime_class (DW_LANG_ObjC)
+
+        - AbbrCode: 0x5
+          Values:
+            - CStr: Plain
+            - Value: 0x10
+
+        - AbbrCode: 0x0
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  DWARFDIE renamed_die = cu_die.GetFirstChild();
+  ASSERT_EQ(renamed_die.GetName(), llvm::StringRef("Renamed"));
+  DWARFDIE plain_die = renamed_die.GetSibling();
+  ASSERT_EQ(plain_die.GetName(), llvm::StringRef("Plain"));
+
+  // Only DW_TAG_LLVM_annotation children are considered.
+  DWARFDIE annotation =
+      DWARFASTParser::GetAnnotation(renamed_die, "objc_runtime_name");
+  ASSERT_TRUE(annotation.IsValid());
+  EXPECT_EQ(annotation.Tag(), DW_TAG_LLVM_annotation);
+  EXPECT_STREQ(annotation.GetAttributeValueAsString(DW_AT_const_value, ""),
+               "_$s4main7RenamedC");
+  EXPECT_FALSE(DWARFASTParser::GetAnnotation(renamed_die, "missing").IsValid());
+  EXPECT_FALSE(
+      DWARFASTParser::GetAnnotation(plain_die, "objc_runtime_name").IsValid());
+
+  SymbolContext sc;
+  auto parse_objc_class = [&](DWARFDIE die) -> clang::ObjCInterfaceDecl * {
+    TypeSP type_sp = tester.GetParser().ParseTypeFromDWARF(
+        sc, die, /*type_is_new_ptr=*/nullptr);
+    if (!type_sp)
+      return nullptr;
+    return TypeSystemClang::GetAsObjCInterfaceDecl(
+        type_sp->GetForwardCompilerType());
+  };
+
+  clang::ObjCInterfaceDecl *renamed = parse_objc_class(renamed_die);
+  ASSERT_NE(renamed, nullptr);
+  EXPECT_EQ(renamed->getObjCRuntimeNameAsString(), "_$s4main7RenamedC");
+
+  clang::ObjCInterfaceDecl *plain = parse_objc_class(plain_die);
+  ASSERT_NE(plain, nullptr);
+  EXPECT_EQ(plain->getObjCRuntimeNameAsString(), "Plain");
 }

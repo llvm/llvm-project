@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/lroundbf16.h"
 
-LIST_ROUND_TO_INTEGER_TESTS(bfloat16, long, LIBC_NAMESPACE::lroundbf16)
+LIST_ROUND_TO_INTEGER_TESTS(Lroundbf16, bfloat16, long,
+                            LIBC_NAMESPACE::lroundbf16)

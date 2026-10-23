@@ -124,6 +124,22 @@ Language *Language::FindPlugin(LanguageType language,
   return result;
 }
 
+Language *
+Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
+  if (scheme == Mangled::eManglingSchemeNone)
+    return nullptr;
+
+  Language *result = nullptr;
+  ForEach([&result, scheme](Language *language) {
+    if (language->HandlesManglingScheme(scheme)) {
+      result = language;
+      return IterationAction::Stop;
+    }
+    return IterationAction::Continue;
+  });
+  return result;
+}
+
 void Language::ForEach(
     llvm::function_ref<IterationAction(Language *)> callback) {
   // If we want to iterate over all languages, we first have to complete the
@@ -390,6 +406,20 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool Language::LanguageIsFortran(LanguageType language) {
+  switch (language) {
+  case eLanguageTypeFortran77:
+  case eLanguageTypeFortran90:
+  case eLanguageTypeFortran95:
+  case eLanguageTypeFortran03:
+  case eLanguageTypeFortran08:
+  case eLanguageTypeFortran18:
     return true;
   default:
     return false;

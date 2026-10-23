@@ -25,7 +25,7 @@ def CustomPropertiesPrinterOp : Op<TestDialect, "custom_properties_printer"> {
 // Absent default-valued attributes are not printed from property storage.
 // CHECK: void DefaultValuedAttrOp::_odsPrintPropertiesAsKeyValueList
 // CHECK: if (shouldPrint("attr") && prop.attr) {
-// CHECK-NEXT: printKey("attr");
+// CHECK-NEXT: printKey("attr", /*printValue=*/true);
 def DefaultValuedAttrOp : Op<TestDialect, "default_valued_attr"> {
   let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$attr);
   let assemblyFormat = "prop-dict attr-dict";

@@ -10,7 +10,7 @@ define <8 x i8> @insert_zero_v4i8(<4 x i8> %v) {
 ;
 ; RV64-LABEL: insert_zero_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> zeroinitializer, <4 x i8> %v, i64 0)
   ret <8 x i8> %r
@@ -24,7 +24,7 @@ define <4 x i16> @insert_zero_v2i16(<2 x i16> %v) {
 ;
 ; RV64-LABEL: insert_zero_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> zeroinitializer, <2 x i16> %v, i64 0)
   ret <4 x i16> %r

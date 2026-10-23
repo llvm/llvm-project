@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -99,6 +98,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
       O << ".satfinite";
     return;
+  } else if (Modifier == "pzo") {
+    // PZO flag
+    if (Imm & NVPTX::PTXCvtMode::PZO_FLAG)
+      O << ".pzo";
+    return;
   } else if (Modifier == "relu") {
     // RELU flag
     if (Imm & NVPTX::PTXCvtMode::RELU_FLAG)
@@ -144,6 +148,16 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     }
   }
   llvm_unreachable("Invalid conversion modifier");
+}
+
+void NVPTXInstPrinter::printFPRoundingMode(const MCInst *MI, int OpNum,
+                                           const MCSubtargetInfo &,
+                                           raw_ostream &O) {
+  const auto RM =
+      static_cast<APFloat::roundingMode>(MI->getOperand(OpNum).getImm());
+  const StringRef Name = nvvm::GetRoundingModeName(RM);
+  assert(!Name.empty() && "Invalid FP rounding mode");
+  O << Name;
 }
 
 void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
@@ -498,10 +512,13 @@ void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
     printOperand(MI, OpNum, STI, O);
 }
 
-void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
-                                      const MCSubtargetInfo &, raw_ostream &O) {
-  int64_t Imm = MI->getOperand(OpNum).getImm();
-  O << formatHex(Imm) << "U";
+void NVPTXInstPrinter::printRegOrHexImm(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm())
+    printHexUImm<32>(MI, OpNum, STI, O);
+  else
+    printOperand(MI, OpNum, STI, O);
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
@@ -561,6 +578,25 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
     return;
   }
   llvm_unreachable("Invalid cta_group in printCTAGroup");
+}
+
+void NVPTXInstPrinter::printTMAValidateDataFlags(const MCInst *MI, int OpNum,
+                                                 const MCSubtargetInfo &,
+                                                 raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using VDTy = nvvm::TMAValidateDataPattern;
+  const VDTy Pattern = static_cast<VDTy>(MO.getImm());
+  // Qualifier omitted for disabled pattern
+  if (Pattern == VDTy::DISABLED)
+    return;
+  O << ".mbarrier::report::validity::"
+    << nvvm::getTMAValidateDataPatternName(Pattern);
+}
+
+void NVPTXInstPrinter::printMemScope(const MCInst *MI, int OpNum,
+                                     const MCSubtargetInfo &, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  O << "." << nvvm::getMemScopeName(static_cast<nvvm::MemScope>(MO.getImm()));
 }
 
 void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,

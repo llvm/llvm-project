@@ -14,7 +14,7 @@
 //           class ForwardIterator,
 //           class Size,
 //           class T>
-//   void uninitialized_fill_n(ExecutionPolicy&& exec, ForwardIterator first, Size n, const T& value);
+//   ForwardIterator uninitialized_fill_n(ExecutionPolicy&& exec, ForwardIterator first, Size n, const T& value);
 
 #include <atomic>
 #include <algorithm>
@@ -69,9 +69,9 @@ struct TestCounted {
 
       runway_sample(std::size(counters) + 1, [&](size_t size) {
         // Construct the Counted object in range [0, size).
-        std::uninitialized_fill_n(policy, Iter(pool), size, CountedInit{pool, counters});
-        ASSERT_SAME_TYPE(
-            decltype(std::uninitialized_fill_n(policy, Iter(pool), size, CountedInit{pool, counters})), void);
+        auto res = std::uninitialized_fill_n(policy, Iter(pool), size, CountedInit{pool, counters});
+        static_assert(std::is_same_v<decltype(res), Iter>);
+        assert(res == Iter(pool + size));
 
         // Verify that inside this range the counters are all 1 and outside the range they are all 0.
         assert(std::all_of(std::begin(counters), std::begin(counters) + size, [](auto& x) { return x == 1; }));

@@ -27,6 +27,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <cstdint>
 #include <utility>
 
@@ -34,7 +35,8 @@ namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
-bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
+bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
+                                                unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
@@ -152,6 +154,15 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
              << ScopeExpr->getType();
 
+    // Reject any string that is not a valid synchronization scope name.
+    std::optional<std::string> ScopeName =
+        ScopeExpr->tryEvaluateString(getASTContext());
+    const llvm::Triple &TT = TI.getTriple();
+    if (ScopeName && !llvm::parseAtomicScopeIRString(TT, *ScopeName)) {
+      return Diag(ScopeExpr->getExprLoc(), diag::err_invalid_sync_scope)
+             << *ScopeName << ScopeExpr->getSourceRange();
+    }
+
     return false;
   }
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
@@ -202,6 +213,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);

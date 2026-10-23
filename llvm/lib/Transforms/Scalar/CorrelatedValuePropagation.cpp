@@ -36,7 +36,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -207,8 +206,8 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
 
 static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
                              BasicBlock *From, BasicBlock *To,
-                             Instruction *CxtI) {
-  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CxtI))
+                             Instruction *CtxI) {
+  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CtxI))
     return C;
 
   // Look if the incoming value is a select with a scalar condition for which
@@ -223,7 +222,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // for vector type constants that are not all zeroes or all ones.
   Value *Condition = SI->getCondition();
   if (!Condition->getType()->isVectorTy()) {
-    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
+    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CtxI)) {
       if (C->isOneValue())
         return SI->getTrueValue();
       if (C->isNullValue())
@@ -239,7 +238,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getTrueValue();
 
@@ -247,7 +246,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // similar to the select "false" case, but try the select "true" value
   if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getFalseValue();
 

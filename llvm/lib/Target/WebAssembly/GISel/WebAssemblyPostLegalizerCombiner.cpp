@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -192,7 +191,11 @@ bool WebAssemblyPostLegalizerCombinerLegacy::runOnMachineFunction(
 PreservedAnalyses WebAssemblyPostLegalizerCombinerPass::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
   bool Changed = runCombinerOnMachineFunction(
-      MF, [&]() { return MF.getFunction().hasOptNone(); },
+      MF,
+      [&]() {
+        return MF.getFunction().hasOptNone() ||
+               shouldSkipOptimizationForOptBisect(MF.getFunction());
+      },
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); },
       [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); });

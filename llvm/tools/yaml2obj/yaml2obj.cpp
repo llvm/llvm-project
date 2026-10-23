@@ -16,10 +16,14 @@
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -30,37 +34,25 @@
 using namespace llvm;
 
 namespace {
-cl::OptionCategory Cat("yaml2obj Options");
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-cl::opt<std::string> Input(cl::Positional, cl::desc("<input file>"),
-                           cl::init("-"), cl::cat(Cat));
+using namespace llvm::opt;
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static cl::list<std::string>
-    D("D", cl::Prefix,
-      cl::desc("Defined the specified macros to their specified "
-               "definition. The syntax is <macro>=<definition>"),
-      cl::cat(Cat));
-
-cl::opt<bool> PreprocessOnly("E", cl::desc("Just print the preprocessed file"),
-                             cl::cat(Cat));
-
-cl::opt<unsigned>
-    DocNum("docnum", cl::init(1),
-           cl::desc("Read specified document from input (default = 1)"),
-           cl::cat(Cat));
-
-static cl::opt<uint64_t>
-    MaxSize("max-size", cl::init(10 * 1024 * 1024),
-            cl::desc("Sets the maximum allowed output size (0 means no limit) "
-                     "[ELF and COFF only]"),
-            cl::cat(Cat));
-
-cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
-                                    cl::value_desc("filename"), cl::init("-"),
-                                    cl::Prefix, cl::cat(Cat));
+class Yaml2ObjOptTable : public opt::OptTable {
+public:
+  Yaml2ObjOptTable() : OptTable(optionTables()) { setDashDashParsing(true); }
+};
 } // namespace
 
 static std::optional<std::string> preprocess(StringRef Buf,
+                                             ArrayRef<std::string> D,
                                              yaml::ErrorHandler ErrHandler) {
   DenseMap<StringRef, StringRef> Defines;
   for (StringRef Define : D) {
@@ -110,17 +102,54 @@ static std::optional<std::string> preprocess(StringRef Buf,
   return Preprocessed;
 }
 
+template <class T>
+static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value,
+                        yaml::ErrorHandler ErrHandler) {
+  if (const opt::Arg *A = Args.getLastArg(ID)) {
+    StringRef V(A->getValue());
+    if (!to_integer(V, Value, 0)) {
+      ErrHandler("expected an integer, but got '" + V + "'");
+      exit(1);
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(Cat);
-  cl::ParseCommandLineOptions(
-      argc, argv, "Create an object file from a YAML description", nullptr,
-      nullptr, nullptr, /*LongOptionsUseDoubleDash=*/true);
-
   constexpr StringRef ProgName = "yaml2obj";
   auto ErrHandler = [&](const Twine &Msg) {
     WithColor::error(errs(), ProgName) << Msg << "\n";
   };
+
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  Yaml2ObjOptTable Tbl;
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        ErrHandler(Msg);
+        exit(1);
+      });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(outs(), "yaml2obj [options] <input file>",
+                  "Create an object file from a YAML description");
+    return 0;
+  }
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
+    return 0;
+  }
+
+  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
+  if (Inputs.size() > 1) {
+    ErrHandler("too many input files");
+    return 1;
+  }
+  StringRef Input = Inputs.empty() ? StringRef("-") : StringRef(Inputs[0]);
+  StringRef OutputFilename = Args.getLastArgValue(OPT_o, "-");
+  unsigned DocNum = 1;
+  parseIntArg(Args, OPT_docnum_EQ, DocNum, ErrHandler);
+  uint64_t MaxSize = 10 * 1024 * 1024;
+  parseIntArg(Args, OPT_max_size_EQ, MaxSize, ErrHandler);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(
@@ -137,12 +166,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::optional<std::string> Buffer =
-      preprocess(Buf.get()->getBuffer(), ErrHandler);
+  std::optional<std::string> Buffer = preprocess(
+      Buf.get()->getBuffer(), Args.getAllArgValues(OPT_D), ErrHandler);
   if (!Buffer)
     return 1;
 
-  if (PreprocessOnly) {
+  if (Args.hasArg(OPT_E)) {
     Out->os() << Buffer;
   } else {
     yaml::Input YIn(*Buffer);

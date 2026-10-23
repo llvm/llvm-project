@@ -76,3 +76,22 @@ void take_wide_unnamed(union WideUnnamedBitfield u);
 void call_wide_unnamed(union WideUnnamedBitfield u) { take_wide_unnamed(u); }
 
 // CHECK-DAG: declare void @take_wide_unnamed(i64)
+
+// A non-zero-width unnamed bitfield is INTEGER, which beats the double's SSE
+// in the merge, so the union travels in a GPR.
+union DoubleUnnamedBitfield {
+  double d;
+  long : 64;
+};
+
+void take_double_unnamed(union DoubleUnnamedBitfield u);
+void call_double_unnamed(union DoubleUnnamedBitfield u) {
+  take_double_unnamed(u);
+}
+
+// CHECK-DAG: declare void @take_double_unnamed(i64)
+
+union DoubleUnnamedBitfield ret_double_unnamed(void);
+void call_ret_double_unnamed(void) { ret_double_unnamed(); }
+
+// CHECK-DAG: declare i64 @ret_double_unnamed()

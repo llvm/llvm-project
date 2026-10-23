@@ -209,8 +209,8 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // If the offset is too big we have to adjust and restore the frame pointer
   // to materialize a valid load/store with displacement.
-  //: TODO: consider using only one adiw/sbiw chain for more than one frame
-  //: index
+  // TODO: Consider using only one adiw/sbiw chain for more than one frame
+  //       indexes.
   if (Offset > MaxOffset) {
     unsigned AddOpc = AVR::ADIWRdK, SubOpc = AVR::SBIWRdK;
     int AddOffset = Offset - MaxOffset;
@@ -251,7 +251,14 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   assert(isUInt<6>(Offset) && "Offset is out of range");
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
+  // STDSPQRr and STDWSPQRr expect an SP-based address and are expanded by
+  // rewriting the base to the frame pointer, so materialize the frame index
+  // as SP for them.
+  if (MI.getOpcode() == AVR::STDSPQRr || MI.getOpcode() == AVR::STDWSPQRr)
+    MI.getOperand(FIOperandNum).ChangeToRegister(AVR::SP, false);
+  else
+    MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
+
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 
   // Since we didn't remove an instruction, we return false.
@@ -260,20 +267,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register AVRRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  if (TFI->hasFP(MF)) {
-    // The Y pointer register
-    return AVR::R28;
-  }
-
-  return AVR::SP;
-}
-
-const TargetRegisterClass *
-AVRRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // FIXME: Currently we're using avr-gcc as reference, so we restrict
-  // ptrs to Y and Z regs. Though avr-gcc has buggy implementation
-  // of memory constraint, so we can fix it and bit avr-gcc here ;-)
-  return &AVR::PTRDISPREGSRegClass;
+  return TFI->hasFP(MF) ? AVR::R29R28 : AVR::SP;
 }
 
 void AVRRegisterInfo::splitReg(Register Reg, Register &LoReg,

@@ -483,7 +483,7 @@ The following builders are generated:
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   TypeRange resultTypes,
                   ValueRange operands,
-                  Properties properties,
+                  const Properties &properties,
                   ArrayRef<NamedAttribute> discardableAttributes = {});
 
 // All result-types/operands/attributes have one aggregate parameter.
@@ -523,7 +523,7 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 // Generated if return type can be inferred.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ValueRange operands,
-                  Properties properties,
+                  const Properties &properties,
                   ArrayRef<NamedAttribute> discardableAttributes);
 
 // All operands/attributes have aggregate parameters.
@@ -538,6 +538,22 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 The first two forms provide basic uniformity so that we can create ops using
 the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
+
+For operations with non-empty properties, the aggregate builder that takes a
+mixed `attributes` array is deprecated. Use the overload that takes a typed
+`Properties` structure and a separate `discardableAttributes` array instead.
+The deprecated overload remains available for compatibility: it partitions the
+mixed array using the operation's statically known inherent-attribute and
+property names, converts that subset into `Properties`, and places only the
+remaining discardable attributes in `OperationState::attributes`. Defaults and
+result-type inference therefore observe the populated properties before the
+operation is created. Operations with empty properties retain the ordinary
+aggregate attribute builder without a deprecation.
+
+This applies to all aggregate builder variants, including builders with
+explicit or inferred result types and builders that derive result types from
+operands or the first attribute. The overload taking `Properties` and
+`discardableAttributes` is not deprecated.
 
 The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
@@ -743,15 +759,12 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
-    -   Any inherent attributes that are not used elsewhere in the format are
-        printed as part of the attribute dictionary unless a `prop-dict` is
-        present.
-    -   Discardable attributes are always part of the `attr-dict`.
-    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
-        `attr-dict` only carries discardable attributes for property-backed
-        operations. Inherent attributes must be bound directly in the format or
-        covered by `prop-dict`.
+    -   Represents the attribute dictionary of the operation. Under the
+        default strict format rules, it contains only discardable attributes.
+        Inherent attributes must be bound directly in the format or covered by
+        `prop-dict`. The deprecated `useStrictPropertiesInAssemblyFormat = 0`
+        setting temporarily allows inherent attributes to mix with discardable
+        attributes in `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -767,6 +780,9 @@ The available directives are as follows:
         on the default parser use attribute conversion instead when no
         `FieldParser` specialization is available or when the selected
         specialization declares `isKeyValueCompositional = false`.
+        `UnitAttr` and `UnitProp` entries use a presence-only `<key>` spelling
+        and are omitted when absent. The parser also accepts `<key = unit>` for
+        compatibility.
     -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
         accepted when parsing. The generated printer uses the key-value
         spelling and the same custom-printer or attribute-conversion choice.
@@ -842,6 +858,18 @@ The available directives are as follows:
         `vector.multi_reduction <minf>, ...` but using `qualified($kind)` in the
         declarative assembly format will print it instead as:
         `vector.multi_reduction #vector.kind<minf>, ...`.
+
+*   `enum ( attribute )`
+
+    -   Represents the symbolic value of an enum-backed attribute without the
+        attribute's dialect prefix, mnemonic, or custom assembly format.
+    -   The argument must be an enum attribute. For example, if `$kind` has the
+        complete form `#vector.kind<minf>`, `enum($kind)` prints `minf`, `$kind`
+        prints the attribute's assembly-format body `<minf>`, and
+        `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
+    -   Bit enums must define a zero-valued case so every valid bitmask has a
+        symbolic spelling. An unquoted comma-separated bit enum cannot be
+        followed by a comma literal because the two uses would be ambiguous.
 
 #### Literals
 
@@ -1111,9 +1139,8 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
-1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
-    attribute and property must either appear in the format or be covered by the
-    `prop-dict` directive.
+1.  Every inherent attribute and property must either appear in the format or
+    be covered by the `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.
@@ -1772,12 +1799,15 @@ There are several mechanisms for creating an `Attribute` whose values are
 taken from a `*Enum`.
 
 The most common of these is to use the `EnumAttr` class, which takes
-an `EnumInfo` (either a `IntEnum` or `BitEnum`) as a parameter and constructs
-an attribute that holds one argument - value of the enum. This attribute
-is defined within a dialect and can have its assembly format customized to,
-for example, print angle brackets around the enum value or assign a mnemonic.
+an `EnumInfo` (either an `IntEnum` or `BitEnum`) as a parameter and constructs
+an attribute with one parameter: the value of the enum. This attribute
+is defined within a dialect and, by default, prints its value in angle brackets,
+for example `#my_dialect.kind<case>`. In a declarative operation assembly
+format, use `enum($kind)` to print only the symbolic value `case`. The
+attribute's assembly format can still be overridden when different standalone
+syntax is required.
 
-An older form involves using the `*IntEnumAttr` and `*BitEnumATtr` classes
+An older form involves using the `*IntEnumAttr` and `*BitEnumAttr` classes
 and their corresponding `*EnumAttrCase` classes (which can be used
 anywhere a `*EnumCase` is needed). These classes store their values
 as a `SignlessIntegerAttr` of their bitwidth, imposing the constraint on it

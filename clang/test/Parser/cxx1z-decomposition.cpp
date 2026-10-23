@@ -213,7 +213,6 @@ void invalid_attributes() {
   // pre2c-warning@+1 {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
   auto [a alignas(42) // expected-error {{'alignas' attribute only applies to variables, data members and tag types}}
       [[assume(true), // expected-error {{'assume' attribute cannot be applied to a declaration}}
-        carries_dependency, // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
         fallthrough,  // expected-error {{'fallthrough' attribute cannot be applied to a declaration}}
         likely, // expected-error {{'likely' attribute cannot be applied to a declaration}}
         unlikely, // expected-error {{'unlikely' attribute cannot be applied to a declaration}}
