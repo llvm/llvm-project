@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -34,16 +35,10 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cerrno>
-#include <cstring>
 #include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
-#ifdef __MVS__
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -133,26 +128,28 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
+  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  if (EC)
+    return reportError(argv0, "error opening " + Filename + ": " +
+                                  EC.message() + "\n");
 #ifdef __MVS__
-  // On z/OS, text files default to IBM-1047, but tablegen generated files
-  // should be UTF-8. If the file does not yet exist, create and tag it as UTF-8
-  // so that ToolOutputFile opens it with the correct tag already set.
-  if (Filename != "-" && !sys::fs::exists(Filename)) {
-    int FD = ::open(Filename.str().c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
-    if (FD == -1)
-      return reportError(argv0, "error creating " + Filename + ": " +
-                                    std::strerror(errno) + "\n");
-    EC = setFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
-    ::close(FD);
+  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
+  // Tag the file as UTF-8 before any content is written. ToolOutputFile does
+  // not expose its file descriptor, so reopen the (still empty) file.
+  if (Filename != "-") {
+    int FD;
+    EC = sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting,
+                                   sys::fs::OF_None);
+    if (EC)
+      return reportError(argv0, "error reopening " + Filename + ": " +
+                                    EC.message() + "\n");
+    EC = setzOSFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
+    sys::Process::SafelyCloseFileDescriptor(FD);
     if (EC)
       return reportError(argv0, "error tagging " + Filename + ": " +
                                     EC.message() + "\n");
   }
 #endif
-  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
-  if (EC)
-    return reportError(argv0, "error opening " + Filename + ": " +
-                                  EC.message() + "\n");
   OutFile.os() << Content;
   if (ErrorsPrinted == 0)
     OutFile.keep();
