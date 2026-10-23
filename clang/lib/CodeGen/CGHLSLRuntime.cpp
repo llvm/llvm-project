@@ -1510,7 +1510,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_Barycentrics is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      using llvm::dxbc::PSV::InterpolationMode;
+      using llvm::hlsl::InterpolationMode;
       // Perspective is encoded by the built-in; only sampling decorations
       // belong on the interface variable.
       bool NoPerspective = false;
