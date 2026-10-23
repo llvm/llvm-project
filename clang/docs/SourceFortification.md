@@ -2,25 +2,20 @@
 
 ## Introduction
 
-Source fortification (commonly enabled via the
-[`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
-macro in C standard libraries such as glibc and Android's Bionic) hardens calls
-to standard C and POSIX library functions against buffer overflows and invalid
-arguments using a combination of compile-time diagnostics and runtime bounds
-checks.
+Clang provides built-in compile-time source fortification diagnostics under
+{ref}`-Wfortify-source` (enabled by default) to catch buffer overflows, format
+string truncations, and invalid arguments in calls to supported C and POSIX
+library functions.
 
-Clang provides built-in compile-time fortification diagnostics under
-{ref}`-Wfortify-source` (and related warning flags), as well as the underlying
-builtins and attributes used by fortified C library headers.
+`-Wfortify-source` runs in the frontend (`Sema`) and diagnoses calls when
+buffer sizes and access lengths (or argument values) can be constant-evaluated
+without optimizations. It does not flag cases where proving an overflow
+requires optimizations (such as inlining, constant propagation of non-`const`
+local variables, or value-range analysis).
 
-## Compile-Time Diagnostics (`-Wfortify-source`)
+## Supported Checks
 
-`-Wfortify-source` is enabled by default in Clang and warns at compile time in
-the frontend when buffer sizes and access lengths (or argument values) can be
-constant-evaluated without optimizations. It does not flag cases where proving
-an overflow requires optimizations (such as inlining, constant propagation of
-non-`const` local variables, or value-range analysis). Specifically, it can
-diagnose:
+`-Wfortify-source` can diagnose:
 
 1. **Destination buffer overflows and format truncation**: When a
    constant-evaluated size argument, source string literal length, or minimum
@@ -60,44 +55,36 @@ diagnostic groups:
   `memchr`, `memcmp`, and `bcmp`) exceeds the frontend-known size of the source
   buffer.
 
-## Differences from GCC and glibc `_FORTIFY_SOURCE`
+## Differences from `_FORTIFY_SOURCE`
 
-Clang's fortification implementation differs from GCC and glibc in several
-important ways:
+The [`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
+macro in C standard libraries (such as glibc and Android's Bionic) hardens
+calls to C and POSIX functions by rewriting them in system headers into
+fortified wrappers and `__builtin___*_chk` intrinsics (typically when
+optimization is enabled), combining compile-time diagnostics with runtime
+bounds checks. Clang's `-Wfortify-source` flag differs from
+`-D_FORTIFY_SOURCE` in a few ways:
 
-1. **Frontend semantic checks vs. middle-end analysis**:
-   In GCC with glibc, compile-time fortification warnings rely on C library
-   headers rewriting calls into `__builtin___*_chk` intrinsics when
-   `_FORTIFY_SOURCE` is defined and optimization (`-O1` or higher) is enabled,
-   with diagnostics emitted by middle-end optimization passes. In Clang,
-   `-Wfortify-source` is a frontend (`Sema`) check enabled by default even at
-   `-O0` and without `-D_FORTIFY_SOURCE`, checking direct calls to recognized
-   library functions as well as `__builtin___*_chk` builtins.
-   - **Benefits**: Warnings are fast, consistent across optimization levels
-     (including `-O0` debug builds), independent of C library header
-     fortification, and avoid false positives from middle-end control-flow
-     transformations (such as jump threading or loop unrolling).
-   - **Limitations**: Because checks run in the frontend before inlining and
-     value-range propagation, Clang only diagnoses calls where the buffer size
-     and access size can be constant-evaluated directly in the frontend (for
-     example, it will not flag calls whose size is stored in a non-`const` local
-     variable, or format overflows that depend on variadic argument values rather
-     than the format string literal itself), whereas GCC's middle-end can detect
-     overflows exposed after inlining or value-range analysis.
+1. **Compile-time warnings only vs. runtime bounds checks**:
+   `-Wfortify-source` is purely a compile-time diagnostic flag; it checks
+   direct calls to recognized library functions (as well as
+   `__builtin___*_chk` builtins) without altering generated code. By contrast,
+   `-D_FORTIFY_SOURCE` also inserts runtime bounds-checking calls (`__*_chk`)
+   that abort on overflow when sizes cannot be proven safe at compile time.
 
-2. **Function coverage**:
-   C libraries such as glibc and Bionic fortify a broader set of libc and POSIX
-   functions under `_FORTIFY_SOURCE` than Clang's `-Wfortify-source` currently
-   diagnoses on unfortified calls (for example, additional functions in
-   `<unistd.h>`, `<stdio.h>`, `<sys/socket.h>`, and `<wchar.h>`;
-   see [tracking issue #142230](https://github.com/llvm/llvm-project/issues/142230)).
+2. **Frontend constant evaluation vs. optimization-dependent checks**:
+   `-Wfortify-source` runs in the Clang frontend (`Sema`) and is enabled by
+   default even at `-O0` and without `-D_FORTIFY_SOURCE` or C library header
+   fortification, making diagnostics fast, consistent across optimization
+   levels, and free of false positives from middle-end control-flow
+   transformations (such as jump threading or loop unrolling). Conversely,
+   because it runs before inlining and optimization, it only diagnoses calls
+   whose buffer and access sizes can be constant-evaluated directly in the
+   frontend, whereas `-D_FORTIFY_SOURCE` (when enabled with optimization) can
+   catch additional overflows at runtime or after inlining (for example, via
+   `warning`/`error` function attributes, or middle-end passes in GCC).
 
-3. **Fortified wrapper functions and attributes**:
-   Clang lowers `__builtin_object_size` before middle-end inlining and does not
-   support GCC's `__builtin_va_arg_pack` or `__builtin_va_arg_pack_len` in
-   inline wrapper functions. To support fortified inline wrappers in C library
-   headers (such as Bionic), Clang provides the `pass_object_size` /
-   `pass_dynamic_object_size` and `diagnose_as_builtin` attributes (see
-   {doc}`AttributeReference` and {doc}`LanguageExtensions`). When a parameter is
-   annotated with `pass_object_size(type)`, `-Wfortify-source` evaluates the
-   argument's buffer size using the specified `type` (`0`–`3`).
+3. **Function coverage**:
+   `-Wfortify-source` does not yet cover the full set of functions that
+   `-D_FORTIFY_SOURCE` does, though expanding coverage is a
+   [work in progress](https://github.com/llvm/llvm-project/issues/142230).
