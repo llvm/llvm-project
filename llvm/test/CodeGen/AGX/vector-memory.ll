@@ -102,3 +102,23 @@ define agx_kernel void @bytes_unaligned(ptr addrspace(1) %p, ptr addrspace(1) %o
   store i32 %s, ptr addrspace(1) %o
   ret void
 }
+
+; and the stores of 4 and 2 bytes, from consecutive 16-bit halves
+; CHECK-LABEL: byte_stores:
+; CHECK: device_store 0, i8, xyzw, [[A:r[0-9]+]]l_[[A]]h_[[B:r[0-9]+]]l_[[B]]h,
+; CHECK: device_store 0, i8, xy, [[C:r[0-9]+]]l_[[C]]h,
+; CHECK-NOT: device_store
+; CHECK: stop
+define agx_kernel void @byte_stores(ptr addrspace(1) %p, ptr addrspace(1) %q, i32 %x) {
+  %t = trunc i32 %x to i8
+  %u = add i8 %t, 1
+  %v0 = insertelement <4 x i8> poison, i8 %t, i32 0
+  %v1 = insertelement <4 x i8> %v0, i8 %u, i32 1
+  %v2 = insertelement <4 x i8> %v1, i8 7, i32 2
+  %v3 = insertelement <4 x i8> %v2, i8 200, i32 3
+  store <4 x i8> %v3, ptr addrspace(1) %p, align 4
+  %w0 = insertelement <2 x i8> poison, i8 %u, i32 0
+  %w1 = insertelement <2 x i8> %w0, i8 %t, i32 1
+  store <2 x i8> %w1, ptr addrspace(1) %q, align 2
+  ret void
+}

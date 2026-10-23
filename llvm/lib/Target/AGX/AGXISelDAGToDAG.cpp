@@ -81,6 +81,7 @@ private:
 
   void selectVectorLoad(SDNode *N, unsigned NumElts);
   void selectByteVectorLoad(SDNode *N, unsigned NumElts);
+  void selectByteVectorStore(SDNode *N, unsigned NumElts);
   void selectVectorStore(SDNode *N, unsigned NumElts);
   void selectTextureSample(SDNode *N);
 };
@@ -115,6 +116,9 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
   case AGXISD::LOAD_V2_I8:
   case AGXISD::LOAD_V4_I8:
     return selectByteVectorLoad(N, N->getNumValues() - 1);
+  case AGXISD::STORE_V2_I8:
+  case AGXISD::STORE_V4_I8:
+    return selectByteVectorStore(N, N->getNumOperands() - 2);
   case AGXISD::STORE_V2:
   case AGXISD::STORE_V3:
   case AGXISD::STORE_V4:
@@ -226,6 +230,44 @@ void AGXDAGToDAGISel::selectByteVectorLoad(SDNode *N, unsigned NumElts) {
   }
   ReplaceUses(SDValue(N, NumElts), SDValue(Load, 1));
   CurDAG->RemoveDeadNode(N);
+}
+
+/// STORE_V2_I8 / STORE_V4_I8: the 16-bit values as the halves of a 32-bit
+/// register or pair, then one device_store of the byte format (the low byte of
+/// half k at byte k).
+void AGXDAGToDAGISel::selectByteVectorStore(SDNode *N, unsigned NumElts) {
+  SDLoc DL(N);
+  auto *M = cast<MemSDNode>(N);
+  SDValue Chain = N->getOperand(0), Addr = N->getOperand(NumElts + 1);
+  auto Word = [&](unsigned I) {
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(AGX::GPR32RegClassID, DL, MVT::i32),
+        N->getOperand(1 + I), CurDAG->getTargetConstant(AGX::lo16, DL, MVT::i32),
+        N->getOperand(2 + I), CurDAG->getTargetConstant(AGX::hi16, DL, MVT::i32)};
+    return SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                          MVT::i32, Ops),
+                   0);
+  };
+  SDValue Val = Word(0);
+  if (NumElts == 4) {
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(AGX::GPR32x2RegClassID, DL, MVT::i32), Val,
+        CurDAG->getTargetConstant(AGX::sub0, DL, MVT::i32), Word(2),
+        CurDAG->getTargetConstant(AGX::sub1, DL, MVT::i32)};
+    Val = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                         MVT::Untyped, Ops),
+                  0);
+  }
+  SDValue Base, Index, Signed, Shift;
+  SelectDeviceAddr8(Addr, Base, Index, Signed, Shift);
+  SDValue G = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  SDValue Fmt = CurDAG->getTargetConstant(0, DL, MVT::i32); // i8
+  SDValue Mask = CurDAG->getTargetConstant(vectorMask(NumElts), DL, MVT::i32);
+  MachineSDNode *Store = CurDAG->getMachineNode(
+      NumElts == 2 ? AGX::DEVICE_STORE_32_H16 : AGX::DEVICE_STORE_64_H16, DL,
+      MVT::Other, {G, Fmt, Mask, Val, Base, Index, Signed, Shift, Chain});
+  CurDAG->setNodeMemRefs(Store, {M->getMemOperand()});
+  ReplaceNode(N, Store);
 }
 
 /// STORE_V2/3/4: the elements as one register tuple, then one device_store /

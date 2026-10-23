@@ -924,6 +924,8 @@ def DEVICE_LOAD_128 : DeviceLoadPseudo<GPR128>;
 // as the 16-bit destination (AGXMCInstLower).
 def DEVICE_LOAD_32_H16 : DeviceLoadPseudo<GPR32>;
 def DEVICE_LOAD_64_H16 : DeviceLoadPseudo<GPR32x2>;
+def DEVICE_STORE_32_H16 : DeviceStorePseudo<GPR32>;
+def DEVICE_STORE_64_H16 : DeviceStorePseudo<GPR32x2>;
 def DEVICE_STORE_16 : DeviceStorePseudo<GPR16>;
 def DEVICE_STORE_32 : DeviceStorePseudo<GPR32>;
 def DEVICE_STORE_64 : DeviceStorePseudo<GPR32x2>;

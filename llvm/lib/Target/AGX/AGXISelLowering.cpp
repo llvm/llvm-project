@@ -98,7 +98,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
   // and naturally aligned device loads of 2 or 4 bytes become one access of
   // the byte format (ReplaceNodeResults)
-  setOperationAction(ISD::LOAD, {MVT::v2i8, MVT::v4i8}, Custom);
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::v2i8, MVT::v4i8}, Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -647,9 +647,27 @@ SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
   auto *S = cast<StoreSDNode>(Op);
   SDValue Val = S->getValue();
   EVT VT = Val.getValueType();
+  SDLoc DL(Op);
+  // 2 or 4 bytes, naturally aligned (PTX st.v2.u8 / st.v4.u8): one access of
+  // the byte format from 16-bit values
+  if ((VT == MVT::v2i8 || VT == MVT::v4i8) && !S->isTruncatingStore() &&
+      !S->isIndexed() && S->isSimple() &&
+      S->getAddressSpace() == AGX::DEVICE_ADDRESS &&
+      S->getAlign() >= Align(VT.getStoreSize())) {
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<SDValue, 6> Ops{S->getChain()};
+    for (unsigned I = 0; I < NumElts; ++I)
+      Ops.push_back(DAG.getNode(
+          ISD::ANY_EXTEND, DL, MVT::i16,
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Val,
+                      DAG.getVectorIdxConstant(I, DL))));
+    Ops.push_back(S->getBasePtr());
+    return DAG.getMemIntrinsicNode(
+        NumElts == 2 ? AGXISD::STORE_V2_I8 : AGXISD::STORE_V4_I8, DL,
+        DAG.getVTList(MVT::Other), Ops, S->getMemoryVT(), S->getMemOperand());
+  }
   if (S->isTruncatingStore() || S->isIndexed() || !isVectorAccess(VT, S))
     return SDValue();
-  SDLoc DL(Op);
   SmallVector<SDValue, 6> Ops{S->getChain()};
   for (unsigned I = 0; I < VT.getVectorNumElements(); ++I)
     Ops.push_back(DAG.getBitcast(
