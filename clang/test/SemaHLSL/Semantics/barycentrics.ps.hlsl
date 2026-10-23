@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -DSPIRV -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 
+// Type, index and interpolation checks for SV_Barycentrics. These are
+// independent of the shader stage and IO direction, which are covered by
+// barycentrics.stages.hlsl.
+
 [shader("pixel")]
 float4 valid(float3 p : SV_Barycentrics0) : SV_Target {
   return float4(p, 1);
@@ -65,14 +69,6 @@ struct AffineInput {
 void inherited_affine(noperspective Input i) {}
 [shader("pixel")]
 void field_override(linear AffineInput i) {}
-
-[shader("vertex")]
-float4 wrong_stage(float3 b : SV_Barycentrics) : SV_Position { return 0; }
-// expected-error@-1 {{semantic 'SV_Barycentrics' is not supported in vertex shader inputs}}
-
-[shader("pixel")]
-float3 wrong_output() : SV_Barycentrics { return 0; }
-// expected-error@-1 {{semantic 'SV_Barycentrics' is not supported in pixel shader outputs}}
 
 #ifdef SPIRV
 [shader("pixel")]
