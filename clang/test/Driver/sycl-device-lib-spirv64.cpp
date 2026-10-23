@@ -38,20 +38,20 @@
 // CHECK-FLAT-LAYOUT-BC: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}linux{{[/\\]+}}libclang_rt.builtins-spirv64.bc"
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
+// RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MISSING
 // CHECK-MISSING: error: no compiler-rt builtins bitcode library '{{.*}}libclang_rt.builtins{{.*}}.bc' found in the clang resource directory
 
 // Compilations that stop at or before the compile phase never link bitcode, so
 // a missing builtins library is not an error for them.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -E \
-// RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
+// RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsyntax-only \
-// RUN:   -resource-dir=%T/nonexistent %s 2>&1 \
+// RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --precompile \
-// RUN:   -resource-dir=%T/nonexistent -x c++-header %s 2>&1 \
+// RUN:   -resource-dir=%t/nonexistent -x c++-header %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
 // CHECK-NO-CODEGEN-NOT: error:
 // CHECK-NO-CODEGEN-NOT: "-mlink-builtin-bitcode"

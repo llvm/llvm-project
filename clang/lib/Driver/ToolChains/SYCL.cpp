@@ -129,11 +129,8 @@ void SYCLToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
-  // Only link device libraries when the compilation actually reaches IR
-  // generation. Compilations that stop at or before the compile phase (e.g.
-  // -E, --precompile, -fsyntax-only) never emit IR, so -mlink-builtin-bitcode
-  // would be unused and requiring the builtins bitcode to be present would be
-  // a spurious error on those code paths.
+  // Compilations that stop at or before the compile phase (-E, --precompile,
+  // -fsyntax-only) emit no IR, so they need no device libraries.
   if (getDriver().getFinalPhase(DriverArgs) <= phases::Compile)
     return;
 
@@ -231,25 +228,20 @@ SYCLToolChain::getDeviceLibs(
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return {};
-  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: lib/<triple>/libclang_rt.builtins.bc
-  // compiler-rt installs under the three-part triple, so normalize short
-  // spellings like --offload-targets=spirv64 before building the path.
-  SmallString<128> BCPath(getDriver().ResourceDir);
-  llvm::sys::path::append(
-      BCPath, "lib",
-      getTriple().normalize(llvm::Triple::CanonicalForm::THREE_IDENT),
-      "libclang_rt.builtins.bc");
-  if (!getDriver().getVFS().exists(BCPath)) {
-    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF:
-    // lib/<os>/libclang_rt.builtins-spirv64.bc
-    BCPath = getDriver().ResourceDir;
-    llvm::sys::path::append(BCPath, "lib", HostTC.getOSLibName(),
-                            "libclang_rt.builtins-spirv64.bc");
+  // Per-target layout: lib/<triple>/libclang_rt.builtins.bc.
+  if (std::optional<std::string> RuntimeDir = getRuntimePath()) {
+    SmallString<128> BCPath(*RuntimeDir);
+    llvm::sys::path::append(BCPath, "libclang_rt.builtins.bc");
+    if (getVFS().exists(BCPath))
+      return {{std::string(BCPath), /*ShouldInternalize=*/true}};
   }
-  if (!getDriver().getVFS().exists(BCPath)) {
-    getDriver().Diag(clang::diag::err_drv_device_lib_not_found)
-        << /*compiler-rt builtins*/ 1 << BCPath;
-    return {};
-  }
-  return {{std::string(BCPath), /*ShouldInternalize=*/true}};
+  // Flat layout (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF):
+  // lib/<os>/libclang_rt.builtins-spirv64.bc.
+  SmallString<128> BCPath(HostTC.getCompilerRTPath());
+  llvm::sys::path::append(BCPath, "libclang_rt.builtins-spirv64.bc");
+  if (getVFS().exists(BCPath))
+    return {{std::string(BCPath), /*ShouldInternalize=*/true}};
+  getDriver().Diag(diag::err_drv_device_lib_not_found)
+      << /*compiler-rt builtins*/ 1 << BCPath;
+  return {};
 }
