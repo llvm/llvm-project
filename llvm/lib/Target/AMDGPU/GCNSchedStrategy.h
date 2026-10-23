@@ -454,10 +454,6 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *SRI;
 
-  /// Per-candidate cache of the src2 "needs VGPR" decision, computed once
-  /// and reused on-demand.
-  DenseMap<const MachineInstr *, bool> Src2NeedsVGPRCache;
-
   /// Do a speculative rewrite and collect copy locations. The speculative
   /// rewrite allows us to calculate the RP of the code after the rewrite, and
   /// the copy locations allow us to calculate the total cost of copies required
@@ -481,7 +477,7 @@ private:
   bool rewrite(ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
 
   /// \returns true if this MI is a rewrite candidate.
-  bool isRewriteCandidate(MachineInstr *MI) const;
+  bool isRewriteCandidate(MachineInstr *MI);
 
   /// Resets all candidates in \p RewriteCands back to VGPR form.
   void resetRewriteCandsToVGPR(
@@ -492,16 +488,20 @@ private:
   void findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
                         SmallVectorImpl<SlotIndex> &DefIdxs);
 
-  /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
-  /// ReachingUses
-  void findReachingUses(const MachineInstr *DefMI, LiveIntervals *LIS,
+  /// Finds all the reaching uses of \p DefReg defined by \p DefMI and stores
+  /// the use operands in \p ReachingUses. \p DefReg must be passed explicitly
+  /// because \p DefMI may define a register other than its operand 0 (e.g.
+  /// ds_write2*).
+  void findReachingUses(const MachineInstr *DefMI, Register DefReg,
+                        LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
-  /// Returns true if the src2 register with reaching defs \p Src2ReachingDefs
-  /// has a use other than a group MFMA (in \p RewriteSet) or a copy, which
-  /// would keep it in VGPR form rather than let it be reclassified to AGPR.
-  bool hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
-                           const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
+  /// Returns true if \p Reg (a rewrite candidate's dst or src2) can be wholly
+  /// reclassified to AGPR without creating an illegal VALU AGPR access. \p
+  /// DstReachingUses lists the uses exempted from the user check (the dst's own
+  /// reaching uses, bridged back to VGPR by case2); pass {} for a src2.
+  bool isRecolorSafe(Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
+                     const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet);
 
 public:
   bool initGCNSchedStage() override;

@@ -4,12 +4,18 @@
 ; chains can be rewritten to the AGPR form when ArchVGPR pressure is excessive.
 ;
 ; This IR is reduced from a Triton-generated GEMM kernel with multiple (30 to be
-; exact) MFMAs in a phi-carried loop with high VGPR pressure, every MFMA in the
-; loop is rewritten to the AGPR-destination form (v_mfma_f32_16x16x32_f16 a*).
+; exact) MFMAs in a phi-carried loop with high VGPR pressure.
+;
+; FIXME: These MFMAs are built lane-by-lane (subreg-piecewise accumulators), so
+; the temporary broad subreg workaround in isRewriteCandidate rejects all of
+; them and the coexec AGPR rewrite is fully disabled on this kernel (0/30 MFMAs
+; migrated -- all stay v_mfma_f32_16x16x32_f16 v*). Restore the AGPR-form
+; assertions (30x a-dest, none v-dest) once the subreg-aware (narrow /
+; forward-exclusion) fix replaces the broad WA.
 
 ; CHECK-LABEL: v5_local_prefetch:
-; CHECK-COUNT-30: v_mfma_f32_16x16x32_f16 a
-; CHECK-NOT: v_mfma_f32_16x16x32_f16 v
+; CHECK-COUNT-30: v_mfma_f32_16x16x32_f16 v
+; CHECK-NOT: v_mfma_f32_16x16x32_f16 a
 
 define amdgpu_kernel void @v5_local_prefetch() #0 {
 .lr.ph:

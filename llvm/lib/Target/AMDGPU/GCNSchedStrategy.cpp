@@ -1353,11 +1353,10 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    const MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, Register DefReg, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
-  for (MachineOperand &UseMO :
-       DAG.MRI.use_nodbg_operands(DefMI->getOperand(0).getReg())) {
+  for (MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(DefReg)) {
     SmallVector<SlotIndex, 8> ReachingDefIndexes;
     findReachingDefs(UseMO, LIS, ReachingDefIndexes);
 
@@ -2428,40 +2427,63 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-/// Returns true if reaching def \p RD will be in AGPR form after the rewrite
-/// and so needs no bridge copy: a candidate MFMA in \p RewriteSet, an
-/// AV_MOV_*_IMM_PSEUDO, or a copy from a candidate src2 reg in \p CandSrc2Regs.
-/// A non-candidate MFMA stays in VGPR form and still needs a bridge.
-static bool isReachingDefAGPRForm(
-    MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
-    const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
-  if (TII.isMAI(*RD))
-    return RewriteSet.contains(RD);
-  if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
-      RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
-    return true;
-  if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
-    return true;
-  return false;
+static bool
+isRewriteCandidateMAI(const MachineInstr *MI, const SIInstrInfo *TII,
+                      const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet) {
+  return TII->isMAI(*MI) && RewriteCandsSet.contains(MI);
 }
 
-bool RewriteMFMAFormStage::hasUseRequiringVGPR(
-    ArrayRef<SlotIndex> Src2ReachingDefs,
-    const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
-  for (SlotIndex RDIdx : Src2ReachingDefs) {
-    const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-    SmallVector<MachineOperand *, 8> ReachingUses;
-    findReachingUses(RD, DAG.LIS, ReachingUses);
-    for (const MachineOperand *UseMO : ReachingUses) {
-      const MachineInstr *UseMI = UseMO->getParent();
-      if (UseMI->isCopy())
-        continue;
-      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
-        continue;
-      return true;
-    }
+static bool canWriteAGPR(const MachineInstr *MI, Register Reg,
+                         const TargetRegisterClass *RegAGPRClass,
+                         const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
+  if (MI->getDesc().getNumDefs() == 0)
+    return false;
+  return MI->getRegClassConstraintEffectForVReg(Reg, RegAGPRClass, TII, SRI) !=
+         nullptr;
+}
+
+static bool userAcceptsAGPR(const MachineInstr *UserMI, Register Reg,
+                            const TargetRegisterClass *RegAGPRClass,
+                            const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
+  return UserMI->getRegClassConstraintEffectForVReg(Reg, RegAGPRClass, TII,
+                                                    SRI) != nullptr;
+}
+
+bool RewriteMFMAFormStage::isRecolorSafe(
+    Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
+    const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet) {
+  const TargetRegisterClass *RegAGPRClass =
+      SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(Reg));
+  for (MachineInstr &DefMI : DAG.MRI.def_instructions(Reg)) {
+    // A candidate MFMA def is rewritten to AGPR form (it produces the AGPR
+    // result directly), so it does not constrain the recolor.
+    if (isRewriteCandidateMAI(&DefMI, TII, RewriteCandsSet))
+      continue;
+    if (!canWriteAGPR(&DefMI, Reg, RegAGPRClass, TII, SRI))
+      return false;
   }
-  return false;
+
+  for (MachineInstr &UserMI : DAG.MRI.use_nodbg_instructions(Reg)) {
+
+    if (isRewriteCandidateMAI(&UserMI, TII, RewriteCandsSet))
+      continue;
+
+    MachineOperand *UseMO = UserMI.findRegisterUseOperand(Reg, /*TRI=*/nullptr);
+
+    if (is_contained(DstReachingUses, UseMO))
+      continue;
+
+    SmallVector<SlotIndex, 8> ReachingDefs;
+    findReachingDefs(*UseMO, DAG.LIS, ReachingDefs);
+    if (none_of(ReachingDefs, [&](SlotIndex RDIdx) {
+          const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+          return RD && !isRewriteCandidateMAI(RD, TII, RewriteCandsSet);
+        }))
+      continue;
+    if (!userAcceptsAGPR(&UserMI, Reg, RegAGPRClass, TII, SRI))
+      return false;
+  }
+  return true;
 }
 
 void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
@@ -2487,18 +2509,32 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
   }
 }
 
-bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
+bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
   if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
-  // Reject candidates whose users force an unavoidable bridge copy.
-  Register DstReg = MI->getOperand(0).getReg();
-  for (const MachineInstr &UseMI : DAG.MRI.use_nodbg_instructions(DstReg)) {
-    if (!TII->isMAI(UseMI) && !UseMI.isCopy())
+
+  // v1 (broad WA, reconstructed -- romanovvlad's WrittenPiecewise): reject this
+  // MFMA if its dst or src2 is written piecewise (has any non-undef subreg def
+  // anywhere). Over-broad (reverts many benign lane-by-lane accumulators) but
+  // the only form that covers the src2<-earlier-dst chain; temporary until the
+  // real subreg-aware reaching-def / forward-exclusion fix lands.
+  const TargetRegisterInfo *TRI = DAG.MRI.getTargetRegisterInfo();
+  auto WrittenPiecewise = [&](Register Reg) {
+    if (!Reg.isVirtual())
       return false;
-  }
-  return true;
+    for (MachineInstr &DefMI : DAG.MRI.def_instructions(Reg)) {
+      const MachineOperand *DMO = DefMI.findRegisterDefOperand(Reg, TRI);
+      if (DMO && DMO->getSubReg() != 0 && !DMO->isUndef())
+        return true;
+    }
+    return false;
+  };
+  if (WrittenPiecewise(MI->getOperand(0).getReg()))
+    return false;
+  MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+  return !Src2 || !Src2->isReg() || !WrittenPiecewise(Src2->getReg());
 }
 
 bool RewriteMFMAFormStage::initHeuristics(
@@ -2510,15 +2546,10 @@ bool RewriteMFMAFormStage::initHeuristics(
   // Collect the candidate group, its members share AGPR-form operands
   // post-rewrite, so reaching defs feeding any member don't need bridge copy.
   SmallPtrSet<MachineInstr *, 16> RewriteSet;
-  DenseSet<Register> CandSrc2Regs;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isRewriteCandidate(&MI))
-        continue;
-      RewriteSet.insert(&MI);
-      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-      if (Src2 && Src2->isReg())
-        CandSrc2Regs.insert(Src2->getReg());
+      if (isRewriteCandidate(&MI))
+        RewriteSet.insert(&MI);
     }
   }
 
@@ -2539,51 +2570,51 @@ bool RewriteMFMAFormStage::initHeuristics(
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
-        // If src2 has a use that must remain VGPR, it cannot be reclassified to
-        // AGPR.
-        bool Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
-        Src2NeedsVGPRCache[&MI] = Src2NeedsVGPR;
-
-        for (SlotIndex RDIdx : Src2ReachingDefs) {
-          MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (!Src2NeedsVGPR &&
-              isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
-            continue;
-          CopyForDef.insert(RD);
+        bool Src2RecolorSafe = isRecolorSafe(Src2->getReg(), {}, RewriteSet);
+        if (!Src2RecolorSafe) {
+          for (SlotIndex RDIdx : Src2ReachingDefs) {
+            MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+            CopyForDef.insert(RD);
+          }
         }
       }
 
       MachineOperand &Dst = MI.getOperand(0);
       SmallVector<MachineOperand *, 8> DstReachingUses;
 
-      findReachingUses(&MI, DAG.LIS, DstReachingUses);
+      findReachingUses(&MI, Dst.getReg(), DAG.LIS, DstReachingUses);
+      bool DstRecolorSafe =
+          isRecolorSafe(Dst.getReg(), DstReachingUses, RewriteSet);
 
       for (MachineOperand *RUOp : DstReachingUses) {
         MachineInstr *UserMI = RUOp->getParent();
+        bool NeedsAGPRToVGPRCopy = true;
         // Group members read the AGPR result directly.
-        if (TII->isMAI(*UserMI) && RewriteSet.contains(UserMI))
-          continue;
+        if (isRewriteCandidateMAI(UserMI, TII, RewriteSet))
+          NeedsAGPRToVGPRCopy = false;
 
         // For any user of the result of the MFMA which is not an MFMA, we
-        // insert a copy. For a given register, we will only insert one copy
-        // per user block.
-        CopyForUse[UserMI->getParent()].insert(RUOp->getReg());
+        // record a copy location. For a given register, we only record one
+        // copy per user block.
+        if (NeedsAGPRToVGPRCopy)
+          CopyForUse[UserMI->getParent()].insert(RUOp->getReg());
 
-        if (TII->isMAI(*UserMI))
+        // If the dst can be wholly recolored to AGPR, its reaching defs are
+        // reclassified along with it, so no per-def bridge copy is needed.
+        if (DstRecolorSafe)
           continue;
-
         SmallVector<SlotIndex, 8> DstUsesReachingDefs;
         findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
 
         for (SlotIndex RDIndex : DstUsesReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-          if (TII->isMAI(*RD))
+          if (isRewriteCandidateMAI(RD, TII, RewriteSet))
             continue;
 
-          // For any definition of the user of the MFMA which is not an MFMA,
-          // we insert a copy. We do this to transform all the reaching defs
-          // of this use to AGPR. By doing this, we can insert a copy from
-          // AGPR to VGPR at the user rather than after the MFMA.
+          // Dst cannot be recolored: for any non-MFMA reaching def of this
+          // use, record a copy location. This transforms all the reaching
+          // defs of this use to AGPR so the AGPR-to-VGPR copy lands at the
+          // user rather than after the MFMA.
           CopyForDef.insert(RD);
         }
       }
@@ -2771,6 +2802,20 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<Register, DenseSet<MachineOperand *>> ReplaceMap;
   // The map of reaching defs for a given register -- to avoid duplicate copies.
   DenseMap<Register, SmallPtrSet<MachineInstr *, 8>> ReachingDefCopyMap;
+
+  // Return (creating it on first use) the VGPR-class "mapped" register that
+  // carries \p Reg's AGPR-form value; records the original->mapped RedefMap
+  // entry.
+  auto getOrCreateMappedReg = [&](Register Reg) -> Register {
+    auto [It, Inserted] = RedefMap.try_emplace(Reg);
+    if (Inserted) {
+      assert(!ReachingDefCopyMap.contains(Reg));
+      const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
+      It->second =
+          DAG.MRI.createVirtualRegister(SRI->getEquivalentVGPRClass(RC));
+    }
+    return It->second;
+  };
   // The map of reaching uses for a given register by basic block -- to avoid
   // duplicate copies and to calculate per MBB insert pts.
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
@@ -2805,33 +2850,24 @@ bool RewriteMFMAFormStage::rewrite(
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
       SmallSetVector<MachineInstr *, 8> Src2DefsReplace;
 
-      // If src2 has a use that must remain VGPR, it cannot be reclassified to
-      // AGPR.
-      bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
-
-      for (SlotIndex RDIndex : Src2ReachingDefs) {
-        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (!Src2NeedsVGPR &&
-            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
-          continue;
-
-        Src2DefsReplace.insert(RD);
+      // An already-redefined src2 reuses its mapped reg below, so treat it as
+      // unsafe to recolor and collect the reaching defs that need a bridge.
+      bool Src2AlreadyRedef = RedefMap.contains(Src2Reg);
+      bool Src2RecolorSafe =
+          !Src2AlreadyRedef && isRecolorSafe(Src2Reg, {}, RewriteCandsSet);
+      // src2 cannot be recolored to AGPR: collect its non-candidate reaching
+      // defs to bridge below (candidate MFMAs already produce AGPR directly).
+      if (!Src2RecolorSafe) {
+        for (SlotIndex RDIndex : Src2ReachingDefs) {
+          MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
+          if (isRewriteCandidateMAI(RD, TII, RewriteCandsSet))
+            continue;
+          Src2DefsReplace.insert(RD);
+        }
       }
 
       if (!Src2DefsReplace.empty()) {
-        auto RI = RedefMap.find(Src2Reg);
-        if (RI != RedefMap.end()) {
-          MappedReg = RI->second;
-        } else {
-          assert(!ReachingDefCopyMap.contains(Src2Reg));
-          const TargetRegisterClass *Src2RC = DAG.MRI.getRegClass(Src2Reg);
-          const TargetRegisterClass *VGPRRC =
-              SRI->getEquivalentVGPRClass(Src2RC);
-
-          // Track the mapping of the original register to the new register.
-          MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-          RedefMap[Src2Reg] = MappedReg;
-        }
+        MappedReg = getOrCreateMappedReg(Src2Reg);
 
         // If none exists, create a copy from this reaching def.
         // We may have inserted a copy already in an earlier iteration.
@@ -2878,50 +2914,88 @@ bool RewriteMFMAFormStage::rewrite(
     SmallVector<MachineOperand *, 8> DstReachingUseCopies;
     SmallVector<MachineInstr *, 8> DstUseDefsReplace;
 
-    findReachingUses(MI, DAG.LIS, DstReachingUses);
+    findReachingUses(MI, DstReg, DAG.LIS, DstReachingUses);
 
+    // An already-redefined dst reuses its mapped reg, so treat it as unsafe to
+    // recolor and bridge its reaching defs instead.
+    bool DstAlreadyRedef = RedefMap.contains(DstReg);
+    bool DstRecolorSafe =
+        !DstAlreadyRedef &&
+        isRecolorSafe(DstReg, DstReachingUses, RewriteCandsSet);
+    const TargetRegisterClass *DstAGPRClass =
+        SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(DstReg));
     for (MachineOperand *RUOp : DstReachingUses) {
       MachineInstr *UserMI = RUOp->getParent();
-      // Group members read the AGPR result directly.
-      if (TII->isMAI(*UserMI) && RewriteCandsSet.contains(UserMI))
-        continue;
-
-      // If there is a non mai reaching use, then we need a copy.
-      if (find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
+      // Decide whether this reaching use can read the dst's AGPR form directly
+      // or needs an AGPR->VGPR bridge copy.
+      //   - A group-member MFMA always reads the AGPR result directly.
+      //   - Any other user can skip the bridge only when the dst is recolored
+      //     to AGPR (DstRecolorSafe) and its operand accepts an AGPR. When the
+      //     dst is unsafe, its original reg stays VGPR, so every non-MFMA user
+      //     must go through a bridge copy.
+      bool CanReadAGPR =
+          TII->isMAI(*UserMI)
+              ? RewriteCandsSet.contains(UserMI)
+              : DstRecolorSafe &&
+                    userAcceptsAGPR(UserMI, DstReg, DstAGPRClass, TII, SRI);
+      if (!CanReadAGPR &&
+          find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
         DstReachingUseCopies.push_back(RUOp);
-
-      // Non-rewritten MAI: its defs aren't being reclassified.
-      if (TII->isMAI(*UserMI))
+      // If the dst is wholly recolored to AGPR, its reaching defs are
+      // reclassified along with it, so none of them need a bridge copy.
+      if (DstRecolorSafe)
         continue;
-
       SmallVector<SlotIndex, 8> DstUsesReachingDefs;
       findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
 
       for (SlotIndex RDIndex : DstUsesReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
+        if (isRewriteCandidateMAI(RD, TII, RewriteCandsSet))
           continue;
-
-        // If there is a non mai reaching def of this reaching use, then we will
-        // need a copy.
+        // A non-candidate reaching def must be bridged to VGPR; record it once
+        // (dedup against DstUseDefsReplace).
         if (find(DstUseDefsReplace, RD) == DstUseDefsReplace.end())
           DstUseDefsReplace.push_back(RD);
       }
     }
+    // The dst has no reaching uses and cannot be recolored: create a fresh
+    // reg to carry the AGPR-form value and record the mapping, leaving the
+    // original dst reg in VGPR form.
+    if (DstReachingUses.empty() && !DstRecolorSafe) {
+      // Exclusion must already have dropped any dst that was bridged as an
+      // earlier MFMA's src2, so it cannot be pre-mapped when we reach here.
+      // Enforce this in release builds too: a silent overwrite of an existing
+      // mapping would miscompile.
+      auto [It, Inserted] = RedefMap.try_emplace(DstReg);
+      if (!Inserted)
+        llvm_unreachable(
+            "empty-use dst unexpectedly already mapped -- exclusion missed it");
+      const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
+      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+      MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      It->second = MappedReg;
 
+      // The candidate MFMA's def operand is redirected to MappedReg (which is
+      // reclassified to AGPR form), so the original dst reg loses its full-lane
+      // def. Bridge the AGPR-form result back into the original VGPR reg right
+      // after the MFMA so any later partial redef and downstream use still see
+      // a dominating full-lane def.
+      MachineInstrBuilder Bridge =
+          BuildMI(*MI->getParent(), std::next(MI->getIterator()),
+                  MI->getDebugLoc(), TII->get(TargetOpcode::COPY))
+              .addDef(DstReg, {}, 0)
+              .addUse(MappedReg, {}, 0);
+      DAG.LIS->InsertMachineInstrInMaps(*Bridge);
+    }
+
+    // Unsafe dst with no def to bridge: no copy needed, but it must still be
+    // mapped so reclassification recolors the mapped reg instead of illegally
+    // recoloring the original VGPR dst to AGPR.
+    if (DstUseDefsReplace.empty() && !DstRecolorSafe) {
+      MappedReg = getOrCreateMappedReg(DstReg);
+    }
     if (!DstUseDefsReplace.empty()) {
-      auto RI = RedefMap.find(DstReg);
-      if (RI != RedefMap.end()) {
-        MappedReg = RI->second;
-      } else {
-        assert(!ReachingDefCopyMap.contains(DstReg));
-        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-
-        // Track the mapping of the original register to the new register.
-        MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-        RedefMap[DstReg] = MappedReg;
-      }
+      MappedReg = getOrCreateMappedReg(DstReg);
 
       // If none exists, create a copy from this reaching def.
       // We may have inserted a copy already in an earlier iteration.
