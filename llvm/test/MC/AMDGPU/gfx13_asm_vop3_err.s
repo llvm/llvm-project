@@ -255,3 +255,97 @@ v_wave_match_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_wave_match_b32_e64_dpp v5, v3, v1 row_share:1
 // W32: :[[@LINE-1]]:1: error: e64_dpp variant of this instruction is not supported
 // W64: :[[@LINE-2]]:1: error: e64_dpp variant of this instruction is not supported
+
+// v_cvt_sr_fp8_f16 and v_cvt_sr_bf8_f16 use op_sel bits 2 and 3 to select a
+// byte in vdst, which is exposed as byte_sel. Bits 0 and 1 must be left clear,
+// so there is no op_sel operand at all.
+
+v_cvt_sr_bf8_f16 v1, v2, v3 op_sel:[1]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_bf8_f16 v1, v2, v3 op_sel:[1] byte_sel:3
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_bf8_f16 v1, v2, v3 op_sel:[0,1]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_bf8_f16 v1, v2, v3 op_sel:[1] quad_perm:[0,1,2,3]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_bf8_f16 v1, v2, v3 op_sel:[1] dpp8:[1,2,3,4,5,6,7,0]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_fp8_f16 v1, v2, v3 op_sel:[1]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_fp8_f16 v1, v2, v3 op_sel:[1] byte_sel:3
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_fp8_f16 v1, v2, v3 op_sel:[0,1]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_fp8_f16 v1, v2, v3 op_sel:[1] quad_perm:[0,1,2,3]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+v_cvt_sr_fp8_f16 v1, v2, v3 op_sel:[1] dpp8:[1,2,3,4,5,6,7,0]
+// W32: :[[@LINE-1]]:29: error: not a valid operand.
+// W64: :[[@LINE-2]]:29: error: not a valid operand.
+
+// Bit 0 is not a half select for src0, so the src0.h form is not encodable.
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_bf8_f16 v1, |v2.h|, v3
+// W32: :[[@LINE-1]]:23: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:23: error: invalid operand for instruction
+
+v_cvt_sr_bf8_f16 v1, -v2.h, v3
+// W32: :[[@LINE-1]]:23: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:23: error: invalid operand for instruction
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3]
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0]
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, |v2.h|, v3
+// W32: :[[@LINE-1]]:23: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:23: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, -v2.h, v3
+// W32: :[[@LINE-1]]:23: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:23: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3]
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0]
+// W32: :[[@LINE-1]]:22: error: invalid operand for instruction
+// W64: :[[@LINE-2]]:22: error: invalid operand for instruction

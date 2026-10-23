@@ -87,7 +87,7 @@ LLVM_ABI Constant *ConstantFoldInstOperands(
 /// Denormal inputs may be flushed based on the denormal handling mode.
 LLVM_ABI Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
-    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, const Function *CtxF = nullptr);
 
 /// Attempt to constant fold a unary operation with the specified operand.
 /// Returns null on failure.
@@ -116,7 +116,7 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 ///
 /// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
-LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Function *CtxF,
                                    bool IsOutput);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
@@ -128,6 +128,20 @@ LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
 /// DestTy is wider or narrower than C. Returns nullptr on failure.
 LLVM_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy,
                                            bool IsSigned, const DataLayout &DL);
+
+/// Attempt to constant fold a bitinsert instruction with the specified
+/// operands. The constant result is returned if successful. Otherwise, null is
+/// returned.
+LLVM_ABI Constant *ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
+                                                 Constant *Offset,
+                                                 const DataLayout &DL);
+
+/// Attempt to constant fold a bitextract instruction with the specified result
+/// type and operands. The constant result is returned if successful.
+/// Otherwise, null is returned.
+LLVM_ABI Constant *ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
+                                                  Constant *Offset,
+                                                  const DataLayout &DL);
 
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
 /// the end of C are accessed, they are assumed to be poison.
@@ -173,7 +187,7 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
 LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
                                          ArrayRef<Constant *> Ops, Type *Ty,
                                          const DataLayout &DL,
-                                         Function *CxtF = nullptr);
+                                         const Function *CtxF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

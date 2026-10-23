@@ -16,11 +16,11 @@ int if0(bool a) {
 
 // CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool {{.*}} loc({{.*}})) -> (!s32i{{.*}})
 // CIR: cir.scope {
-// CIR:   %4 = cir.load{{.*}} %0 : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:   %4 = cir.load{{.*}} %1 : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.if %4 {
 // CIR-NEXT:   %5 = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:   cir.store{{.*}} %5, %1 : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %6 = cir.load{{.*}} %1 : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %5, %0 : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %6 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %6 : !s32i
 // CIR-NEXT:   }
 // CIR-NEXT:  }
@@ -29,18 +29,18 @@ int if0(bool a) {
 // LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %0)
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
-// LLVM:   %6 = load i8, ptr %2, align 1
+// LLVM:   %6 = load i8, ptr %3, align 1
 // LLVM:   %7 = trunc i8 %6 to i1
 // LLVM:   br i1 %7, label %[[THEN:.*]], label %[[END:.*]]
 // LLVM: [[THEN]]:
-// LLVM:   store i32 2, ptr %3, align 4
-// LLVM:   %9 = load i32, ptr %3, align 4
+// LLVM:   store i32 2, ptr %2, align 4
+// LLVM:   %9 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %9
 // LLVM: [[END]]:
 // LLVM:   br label %[[LABEL4:.*]]
 // LLVM: [[LABEL4]]:
-// LLVM:   store i32 3, ptr %3, align 4
-// LLVM:   %12 = load i32, ptr %3, align 4
+// LLVM:   store i32 3, ptr %2, align 4
+// LLVM:   %12 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %12
 
 // OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %a)
@@ -286,8 +286,8 @@ int if_init() {
 // CIR: }
 
 // LLVM: define{{.*}} i32 @_Z7if_initv()
-// LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: store i32 42, ptr %[[X]], align 4
 // LLVM: %[[X_VAL:.*]] = load i32, ptr %[[X]], align 4
 // LLVM: %[[COND:.*]] = icmp ne i32 %[[X_VAL]], 0
@@ -326,3 +326,50 @@ int if_init() {
 // OGCG: [[RETURN]]:
 // OGCG:   %[[RETVAL_FINAL:.*]] = load i32, ptr %[[RETVAL]], align 4
 // OGCG:   ret i32 %[[RETVAL_FINAL]]
+
+void if3() {
+  if (0) {
+foo:
+    if_init();
+  } goto foo;
+}
+// CIR: cir.func{{.*}} @_Z3if3v()
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR: cir.if %[[ZERO_BOOL]]
+// CIR: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
+
+// Just making sure we don't lose either of the above 'if' branches because of
+// the label, so just making sure they have the 'call' should be sufficient.
+// LLVM: define{{.*}} void @_Z3if3v()
+// LLVM: call{{.*}}i32 @_Z7if_initv
+
+// OGCG: define{{.*}} void @_Z3if3v()
+// OGCG: call{{.*}}i32 @_Z7if_initv
+void if4(int a) {
+  switch (a) {
+    case 0:
+      if (0) {
+        case 1:
+          if0(false);
+      }
+  }
+}
+// CIR: cir.func{{.*}} @_Z3if4i(%[[ARG:.*]]: !s32i {{.*}})
+// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
+// CIR:  %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR:  cir.switch(%[[LOAD_ARG]] : !s32i) {
+// CIR:  cir.case(equal, [#cir.int<0> : !s32i]) {
+// CIR:    cir.scope {
+// CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:      %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR:      cir.if %[[ZERO_BOOL]]
+// CIR:        cir.call @_Z3if0b(
+
+// LLVM: define{{.*}} void @_Z3if4i(i32 noundef %[[ARG:.*]])
+// LLVM: switch i32
+// LLVM: call{{.*}}i32 @_Z3if0b(
+
+// OGCG: define{{.*}} void @_Z3if4i(i32 noundef %[[ARG:.*]])
+// OGCG: switch i32
+// OGCG: call{{.*}}i32 @_Z3if0b(

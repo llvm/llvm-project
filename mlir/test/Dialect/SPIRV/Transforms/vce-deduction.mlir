@@ -174,6 +174,32 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// CHECK: requires #spirv.vce<v1.0, [Int64, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Int64], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc_i64 = 1 : i64
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Vector16, Shader, Kernel, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.SpecConstantComposite @scc (@sc, @sc, @sc, @sc, @sc, @sc, @sc, @sc) : vector<8xi32>
+}
+
+// CHECK: requires #spirv.vce<v1.0, [ReplicatedCompositesEXT, Vector16, Shader, Kernel, Matrix], [SPV_EXT_replicated_composites]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.EXT.SpecConstantCompositeReplicate @scc (@sc) : vector<8xi32>
+}
+
 //===----------------------------------------------------------------------===//
 // Extension
 //===----------------------------------------------------------------------===//

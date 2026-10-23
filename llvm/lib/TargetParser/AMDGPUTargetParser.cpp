@@ -556,6 +556,26 @@ unsigned AMDGPU::getLDSAllocGranule(Triple::SubArchType SubArch) {
   return getLDSAllocGranule(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLDSEncodingGranule(GPUKind AK) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_256))
+    return 256;
+  if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_512))
+    return 512;
+  if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_1024))
+    return 1024;
+  if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_1280))
+    return 1280;
+  if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_2048))
+    return 2048;
+
+  return 0;
+}
+
+unsigned AMDGPU::getLDSEncodingGranule(Triple::SubArchType SubArch) {
+  return getLDSEncodingGranule(getGPUKindFromSubArch(SubArch));
+}
+
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;
@@ -587,6 +607,7 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_XNACK_SUPPORT,
     FEAT_SRAMECC_SUPPORT,
     FEAT_XNACK_ON_OFF_MODES,
+    FEAT_SRAMECC_ON_OFF_MODES,
     FEAT_APERTURE_REGS,
     FEAT_GET_DOORBELL_ID,
     FEAT_AGPR_ALLOC,
@@ -597,7 +618,12 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_LDS_ALLOC_GRANULARITY_512,
     FEAT_LDS_ALLOC_GRANULARITY_1024,
     FEAT_LDS_ALLOC_GRANULARITY_1280,
-    FEAT_LDS_ALLOC_GRANULARITY_2048};
+    FEAT_LDS_ALLOC_GRANULARITY_2048,
+    FEAT_LDS_ENCODING_GRANULARITY_256,
+    FEAT_LDS_ENCODING_GRANULARITY_512,
+    FEAT_LDS_ENCODING_GRANULARITY_1024,
+    FEAT_LDS_ENCODING_GRANULARITY_1280,
+    FEAT_LDS_ENCODING_GRANULARITY_2048};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.
@@ -762,17 +788,20 @@ static void getDefaultTargetIDFeatures(GPUKind Arch,
                                        TargetIDSetting &XnackSetting,
                                        TargetIDSetting &SramEccSetting) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
-  // xnack with on/off modes defaults to Any; supported without on/off modes is
-  // hardwired On (e.g. gfx1250); unsupported is Unsupported.
+  // Features with on/off modes default to Any; supported without on/off modes
+  // is hardwired On; unsupported is Unsupported.
   if (!Features.test(FEAT_XNACK_SUPPORT))
     XnackSetting = TargetIDSetting::Unsupported;
   else if (Features.test(FEAT_XNACK_ON_OFF_MODES))
     XnackSetting = TargetIDSetting::Any;
   else
     XnackSetting = TargetIDSetting::On;
-  SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
-                       ? TargetIDSetting::Any
-                       : TargetIDSetting::Unsupported;
+  if (!Features.test(FEAT_SRAMECC_SUPPORT))
+    SramEccSetting = TargetIDSetting::Unsupported;
+  else if (Features.test(FEAT_SRAMECC_ON_OFF_MODES))
+    SramEccSetting = TargetIDSetting::Any;
+  else
+    SramEccSetting = TargetIDSetting::On;
 }
 
 // Compute the xnack/sramecc settings for processor \p Arch from the
@@ -807,7 +836,7 @@ static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
       SeenXnack = true;
     } else if (FeatureString.consume_front("sramecc")) {
       TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
-      if (SeenSramEcc || SramEccSetting == TargetIDSetting::Unsupported ||
+      if (SeenSramEcc || !Features.test(FEAT_SRAMECC_ON_OFF_MODES) ||
           Sign == TargetIDSetting::Unsupported)
         Valid = false;
       else
@@ -905,16 +934,24 @@ static bool isXnackHardwiredOn(GPUKind Arch) {
          !Features.test(FEAT_XNACK_ON_OFF_MODES);
 }
 
+static bool isSramEccHardwiredOn(GPUKind Arch) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  return Features.test(FEAT_SRAMECC_SUPPORT) &&
+         !Features.test(FEAT_SRAMECC_ON_OFF_MODES);
+}
+
 // Append the explicit (On/Off) sramecc/xnack feature modifiers in canonical
-// order, e.g. ":sramecc-:xnack+". Xnack is never emitted for hardwired-on
-// targets.
+// order, e.g. ":sramecc-:xnack+". Hardwired-on features are never emitted.
 static void printFeatureModifiers(raw_ostream &OS, TargetIDSetting SramEcc,
                                   TargetIDSetting Xnack,
+                                  bool SramEccHardwiredOn,
                                   bool XnackHardwiredOn) {
-  if (SramEcc == TargetIDSetting::Off)
-    OS << ":sramecc-";
-  else if (SramEcc == TargetIDSetting::On)
-    OS << ":sramecc+";
+  if (!SramEccHardwiredOn) {
+    if (SramEcc == TargetIDSetting::Off)
+      OS << ":sramecc-";
+    else if (SramEcc == TargetIDSetting::On)
+      OS << ":sramecc+";
+  }
 
   if (XnackHardwiredOn)
     return;
@@ -930,7 +967,7 @@ void TargetID::print(raw_ostream &StreamRep) const {
 
   if (IsAMDHSA) {
     printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting(),
-                          isXnackHardwiredOn(Arch));
+                          isSramEccHardwiredOn(Arch), isXnackHardwiredOn(Arch));
   }
 }
 
@@ -944,7 +981,7 @@ std::string TargetID::toString() const {
 void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
   OS << getArchNameAMDGCN(Arch);
   printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting(),
-                        isXnackHardwiredOn(Arch));
+                        isSramEccHardwiredOn(Arch), isXnackHardwiredOn(Arch));
 }
 
 std::string TargetID::getCanonicalFeatureString() const {

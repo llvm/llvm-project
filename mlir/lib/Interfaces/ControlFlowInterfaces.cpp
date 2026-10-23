@@ -722,9 +722,6 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute the mapping of successor inputs to successor operands.
     auto regionBranchOp = cast<RegionBranchOpInterface>(op);
     RegionBranchInverseSuccessorMapping inputToOperands;
@@ -732,6 +729,7 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
+    const bool isIsolated = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     for (Value value : inputToOperands.keys()) {
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
@@ -744,8 +742,28 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
               /*maxReachableValues=*/1)) ||
           reachableValues.empty())
         continue;
-      assert(*reachableValues.begin() != value &&
+      Value replacement = *reachableValues.begin();
+      assert(replacement != value &&
              "successor inputs are supposed to be excluded");
+      // A value inside an isolated region cannot be replaced with a value from
+      // another region, even if the replacement dominates its uses. Op results
+      // are in the parent region and do not cross this isolation boundary.
+      // Successor inputs are direct region arguments or results of this op.
+      // Valid input IR already prevents captures across nested isolation
+      // boundaries, so only this op's boundary needs an additional check.
+      // Example (isolated_op has IsolatedFromAbove):
+      // %r = isolated_op %x {
+      // ^bb0(%arg: ...):
+      //   use(%arg)
+      //   yield %arg
+      // }
+      // use(%r)
+      // Replacing %arg with %x would introduce a capture inside isolated_op.
+      // Replacing %r with %x changes only the outer use and is allowed.
+      Region *valueRegion = value.getParentRegion();
+      if (isIsolated && valueRegion->getParentOp() == op &&
+          replacement.getParentRegion() != valueRegion)
+        continue;
       // Do not replace `value` with the found reachable value if doing so
       // would violate dominance. Example:
       // %r = scf.execute_region ... {
@@ -755,9 +773,9 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
       // use(%r)
       // In the above example, reachableValues(%r) = {%a}, but %a cannot be
       // used as a replacement for %r due to dominance / scope.
-      if (!isDefinedBefore(regionBranchOp, *reachableValues.begin(), value))
+      if (!isDefinedBefore(regionBranchOp, replacement, value))
         continue;
-      rewriter.replaceAllUsesWith(value, *reachableValues.begin());
+      rewriter.replaceAllUsesWith(value, replacement);
       changed = true;
     }
     return success(changed);
@@ -845,9 +863,6 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute tied values: values that must come as a set. If you remove one,
     // you must remove all. If a successor op operand is forwarded to two
     // successor inputs %a and %b, both %a and %b are in the same set.
@@ -995,9 +1010,6 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Collect all successor inputs and sort them. When dropping the uses of a
     // successor input, we'd like to also drop the uses of the same tied
     // successor inputs. Otherwise, a set of tied successor inputs may not

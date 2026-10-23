@@ -52,10 +52,8 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
            /*default=*/"", "Suffix of the allocator entry points used for "
            "allocations marked with the managed heap allocation mode.">,
-    Option<"unsafeFPConversion", "unsafe-fp-conversion", "bool",
-           /*default=*/"false",
-           "Use plain fptosi/fptoui instead of saturating intrinsics "
-           "for FP-to-integer conversions.">
+    Option<"lowerMemRef", "lower-memref", "bool", /*default=*/"false",
+           "Also convert memref dialect operations.">
   ];
 }
 

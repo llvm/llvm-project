@@ -431,6 +431,20 @@ func.func @from_elements_with_poison() -> tensor<1xindex> {
 
 // -----
 
+// Ensure tensor.extract_slice with a poison offset doesn't crash. The poison
+// value is not a constant integer, so it must not be folded into a static
+// offset.
+// CHECK-LABEL: func @extract_slice_with_poison_offset
+func.func @extract_slice_with_poison_offset(%t: tensor<8xf32>) -> tensor<4xf32> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[SLICE:.*]] = tensor.extract_slice %arg0[%[[POISON]]] [4] [1]
+  %p = ub.poison : index
+  %s = tensor.extract_slice %t[%p] [4] [1] : tensor<8xf32> to tensor<4xf32>
+  return %s : tensor<4xf32>
+}
+
+// -----
+
 // Ensure tensor.from_elements with a vector element type doesn't crash
 // when the elements fold to constants (DenseElementsAttr does not support
 // non-scalar element types via the Attribute overload).
@@ -1914,6 +1928,26 @@ func.func @pad_fold_static(%arg0: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
     tensor.yield %cst: f32
   } : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
   return %padded : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// A negative constant is not folded into the attribute, since the verifier
+// requires the attribute to be non-negative.
+
+// CHECK-LABEL: func @pad_nofold_negative_constant(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<4xf32>
+//       CHECK:   %[[C:.*]] = arith.constant -2 : index
+//       CHECK:   tensor.pad %[[ARG0]] low[%[[C]]] high[0]
+//       CHECK:   } : tensor<4xf32> to tensor<?xf32>
+func.func @pad_nofold_negative_constant(%arg0: tensor<4xf32>, %pad_value: f32)
+    -> tensor<?xf32> {
+  %c = arith.constant -2 : index
+  %0 = tensor.pad %arg0 low[%c] high[0] {
+  ^bb0(%arg1: index):
+    tensor.yield %pad_value : f32
+  } : tensor<4xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
 }
 
 // -----

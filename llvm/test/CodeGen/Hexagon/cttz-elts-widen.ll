@@ -29,7 +29,7 @@ define i32 @cttz_elts_high_lane_v3i32() {
 ; padding, would change these.
 define i32 @cttz_elts_v3i32(<3 x i32> %v) {
 ; CHECK-LABEL: cttz_elts_v3i32:
-; CHECK:     p2 = vcmpw.eq(r1:0,r5:4)
+; CHECK:     p1 = vcmpw.eq(r1:0,r5:4)
 ; CHECK:     p0 = vcmpw.eq(r7:6,r5:4)
 ; CHECK:     r0 = sub(#4,r0)
   %res = call i32 @llvm.experimental.cttz.elts.i32.v3i32(<3 x i32> %v, i1 false)

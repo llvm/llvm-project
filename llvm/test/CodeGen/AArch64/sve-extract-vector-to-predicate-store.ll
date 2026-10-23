@@ -51,12 +51,11 @@ define void @pred_store_neg1(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 ; CHECK-NEXT:    mov w8, v0.s[2]
 ; CHECK-NEXT:    mov z2.s, z0.s[4]
 ; CHECK-NEXT:    mov z1.s, z0.s[6]
-; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov v0.b[1], w8
 ; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    mov v0.b[2], w8
 ; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    mov v0.b[3], w8
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload

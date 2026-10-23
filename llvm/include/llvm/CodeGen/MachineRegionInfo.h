@@ -45,7 +45,18 @@ template <> struct RegionTraits<MachineFunction> {
   static unsigned getNumSuccessors(MachineBasicBlock *BB) {
     return BB->succ_size();
   }
+
+  /// Update statistics about created regions.
+  LLVM_ABI static void updateStatistics(MachineRegion *R);
 };
+
+// The explicit instantiation declarations of the region base classes must come
+// before the classes deriving from them. Defining a derived class implicitly
+// instantiates its base. Declaring the explicit instantiation after the derived
+// class will cause clang-cl to silently drop the dllimport attribute, resulting
+// in incorrect linkage.
+extern template class LLVM_TEMPLATE_ABI
+    RegionNodeBase<RegionTraits<MachineFunction>>;
 
 class MachineRegionNode : public RegionNodeBase<RegionTraits<MachineFunction>> {
 public:
@@ -59,6 +70,9 @@ public:
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI
+    RegionBase<RegionTraits<MachineFunction>>;
+
 class MachineRegion : public RegionBase<RegionTraits<MachineFunction>> {
 public:
   LLVM_ABI MachineRegion(MachineBasicBlock *Entry, MachineBasicBlock *Exit,
@@ -71,13 +85,15 @@ public:
   }
 };
 
-class LLVM_ABI MachineRegionInfo
-    : public RegionInfoBase<RegionTraits<MachineFunction>> {
+extern template class LLVM_TEMPLATE_ABI
+    RegionInfoBase<RegionTraits<MachineFunction>>;
+
+class MachineRegionInfo : public RegionInfoBase<RegionTraits<MachineFunction>> {
 public:
   using Base = RegionInfoBase<RegionTraits<MachineFunction>>;
 
-  explicit MachineRegionInfo();
-  ~MachineRegionInfo() override;
+  LLVM_ABI explicit MachineRegionInfo();
+  LLVM_ABI ~MachineRegionInfo();
 
   MachineRegionInfo(MachineRegionInfo &&Arg)
       : Base(std::move(static_cast<Base &>(Arg))) {
@@ -91,14 +107,12 @@ public:
   }
 
   /// Handle invalidation explicitly.
-  bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 
-  // updateStatistics - Update statistic about created regions.
-  void updateStatistics(MachineRegion *R) final;
-
-  void recalculate(MachineFunction &F, MachineDominatorTree *DT,
-                   MachinePostDominatorTree *PDT, MachineDominanceFrontier *DF);
+  LLVM_ABI void recalculate(MachineFunction &F, MachineDominatorTree *DT,
+                            MachinePostDominatorTree *PDT,
+                            MachineDominanceFrontier *DF);
 };
 
 class LLVM_ABI MachineRegionInfoAnalysis
@@ -212,10 +226,6 @@ struct GraphTraits<MachineRegionInfoPass *>
     return GraphTraits<MachineRegionInfo *>::nodes_end(&RI->getRegionInfo());
   }
 };
-
-extern template class RegionBase<RegionTraits<MachineFunction>>;
-extern template class RegionNodeBase<RegionTraits<MachineFunction>>;
-extern template class RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
 
