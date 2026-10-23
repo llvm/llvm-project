@@ -205,6 +205,7 @@ enum ResourceKind {
   RkStringTableBundle = 6,
   RkAccelerators = 9,
   RkRcData = 10,
+  RkMessageTable = 11,
   RkCursorGroup = 12,
   RkIconGroup = 14,
   RkVersionInfo = 16,
