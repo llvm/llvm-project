@@ -223,9 +223,6 @@ MISched::Direction llvm::getPreRADirection() { return PreRADirection; }
 TargetSubtargetInfo::AntiDepBreakMode llvm::getPostRABreakAntiDeps() {
   return PostRABreakAntiDeps;
 }
-bool llvm::hasPostRABreakAntiDepsOverride() {
-  return PostRABreakAntiDeps.getNumOccurrences() > 0;
-}
 bool llvm::shouldVerifyScheduling() { return VerifyScheduling; }
 
 #ifndef NDEBUG
@@ -1141,6 +1138,18 @@ AntiDepState::AntiDepState(MachineSchedContext *C,
   }
 }
 
+void AntiDepState::scanRangeBackwards(MachineBasicBlock::iterator From,
+                                      MachineBasicBlock::iterator To) {
+  for (auto I = From; I != To;) {
+    MachineInstr &MI = *--I;
+    --BoundaryScanIndex;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, BoundaryScanIndex, RegionEndIndex);
+    if (MI.isBundle())
+      BoundaryScanIndex -= MI.getBundleSize();
+  }
+}
+
 void AntiDepState::startBlock(MachineBasicBlock *MBB) {
   if (!Breaker)
     return;
@@ -1162,22 +1171,9 @@ void AntiDepState::enterRegion(MachineBasicBlock::iterator End) {
 
   // Scheduling regions exclude boundary instructions and may have gaps between
   // them. Scan those gaps so the breaker's liveness remains synchronized.
-  scanRangeBackwards(BoundaryScanPos, End, BoundaryScanIndex);
+  scanRangeBackwards(BoundaryScanPos, End);
   RegionEndIndex = BoundaryScanIndex;
   RegionProcessed = false;
-}
-
-void AntiDepState::scanRangeBackwards(MachineBasicBlock::iterator From,
-                                      MachineBasicBlock::iterator To,
-                                      unsigned &Count) {
-  for (auto I = From; I != To;) {
-    MachineInstr &MI = *--I;
-    --Count;
-    if (!MI.isDebugOrPseudoInstr())
-      Breaker->Observe(MI, Count, RegionEndIndex);
-    if (MI.isBundle())
-      Count -= MI.getBundleSize();
-  }
 }
 
 void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
@@ -1191,7 +1187,7 @@ void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
   else
     // schedule() skips empty and single-instruction regions. Scan a skipped
     // region here so its instructions still contribute to liveness.
-    scanRangeBackwards(End, Begin, BoundaryScanIndex);
+    scanRangeBackwards(End, Begin);
 }
 
 bool AntiDepState::breakAntiDependencies(

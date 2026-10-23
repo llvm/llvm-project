@@ -124,8 +124,6 @@ enum Direction {
 LLVM_ABI MISched::Direction getPreRADirection();
 /// Returns -misched-postra-break-antideps.
 LLVM_ABI TargetSubtargetInfo::AntiDepBreakMode getPostRABreakAntiDeps();
-/// Returns whether -misched-postra-break-antideps was specified.
-LLVM_ABI bool hasPostRABreakAntiDepsOverride();
 /// Returns whether -verify-misched is set.
 LLVM_ABI bool shouldVerifyScheduling();
 
@@ -352,7 +350,7 @@ public:
 
 private:
   void scanRangeBackwards(MachineBasicBlock::iterator From,
-                          MachineBasicBlock::iterator To, unsigned &Count);
+                          MachineBasicBlock::iterator To);
 };
 
 /// ScheduleDAGMI is an implementation of ScheduleDAGInstrs that simply
@@ -1507,16 +1505,6 @@ template <typename Strategy = PostGenericScheduler>
 ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
   return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
                            /*RemoveKillFlags=*/true, getPostRABreakAntiDeps());
-}
-
-template <typename Strategy = PostGenericScheduler>
-ScheduleDAGMI *
-createSchedPostRA(MachineSchedContext *C,
-                  TargetSubtargetInfo::AntiDepBreakMode DefaultMode) {
-  TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
-      hasPostRABreakAntiDepsOverride() ? getPostRABreakAntiDeps() : DefaultMode;
-  return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
-                           /*RemoveKillFlags=*/true, AntiDepMode);
 }
 
 class MachineSchedulerPass
