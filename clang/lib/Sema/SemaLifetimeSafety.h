@@ -137,7 +137,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
   return LSOpts;
 }
 
-class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
+class LifetimeSafetySemaHelperImpl final : public LifetimeSafetySemaHelper {
 
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
