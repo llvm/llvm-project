@@ -260,9 +260,9 @@ int fallthrough_attributed_labels(int n) {
   [[unlikely]] case 1:
   [[likely]] case 2:
   case 3:
-    return 0;
+  [[unlikely]] case 4:
   [[unlikely]] default:
-    return 1;
+    return -1;
   }
   switch (n) {
     case 4:
