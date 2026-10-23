@@ -76,8 +76,8 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(ST.hasDeviceAtomicU64MinMax() ? 64 : 32);
   setMinCmpXchgSizeInBits(32);
 
-  // There are no calls and no scalar branches: all control flow is
-  // structured by AGXAnnotateControlFlow.
+  // Scalar branches become structured mask operations in
+  // AGXAnnotateControlFlow.
   setOperationAction(ISD::BR_CC, {MVT::i16, MVT::i32, MVT::i64, MVT::f16,
                                   MVT::f32}, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
@@ -314,6 +314,40 @@ bool AGXTargetLowering::isSystemScopeDeviceAccess(const Instruction *I) {
 // Calling convention
 //===----------------------------------------------------------------------===//
 
+// Experimental device calls pass legalized values in r2..r29. Sixteen-bit
+// values occupy one low half; i64 values start at an even register and occupy
+// two. The same window carries return values. This is intentionally separate
+// from the kernel uniform-register convention.
+static MCRegister callValueReg(MVT VT, unsigned &Slot,
+                               const MCRegisterInfo &MRI) {
+  unsigned Words = VT == MVT::i64 ? 2 : 1;
+  if (VT == MVT::i64)
+    Slot = alignTo(Slot, 2);
+  if (Slot + Words > 28)
+    return MCRegister();
+  AGX::RegKind Kind = VT == MVT::i16 || VT == MVT::f16
+                          ? AGX::RegKind::GPR16
+                      : VT == MVT::i32 || VT == MVT::f32
+                          ? AGX::RegKind::GPR32
+                      : VT == MVT::i64 ? AGX::RegKind::GPR64
+                                       : AGX::RegKind::Invalid;
+  if (Kind == AGX::RegKind::Invalid)
+    return MCRegister();
+  MCRegister Reg = AGX::getRegister(Kind, (2 + Slot) * 2, MRI);
+  Slot += Words;
+  return Reg;
+}
+
+template <typename Args>
+static bool canUseCallRegisters(const Args &Values,
+                                const MCRegisterInfo &MRI) {
+  unsigned Slot = 0;
+  for (const auto &Value : Values)
+    if (!callValueReg(Value.VT, Slot, MRI))
+      return false;
+  return true;
+}
+
 SDValue AGXTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -323,21 +357,17 @@ SDValue AGXTargetLowering::LowerFormalArguments(
   const MCRegisterInfo &MRI = *ST.getRegisterInfo();
 
   if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls) {
-    if (IsVarArg || Ins.size() > 1 ||
-        (!Ins.empty() && Ins[0].VT != MVT::i32)) {
-      diagnose(DAG, DL,
-               "experimental AGX leaf ABI supports at most one i32 argument");
+    if (IsVarArg || !canUseCallRegisters(Ins, MRI)) {
+      diagnose(DAG, DL, "experimental AGX call arguments exceed r2..r29");
       for (const ISD::InputArg &In : Ins)
         InVals.push_back(DAG.getUNDEF(In.VT));
       return Chain;
     }
+    unsigned Slot = 0;
     for (const ISD::InputArg &In : Ins) {
-      if (In.VT != MVT::i32) {
-        InVals.push_back(DAG.getUNDEF(In.VT));
-        continue;
-      }
-      Register VReg = MF.addLiveIn(AGX::R2, &AGX::GPR32RegClass);
-      InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+      MCRegister PReg = callValueReg(In.VT, Slot, MRI);
+      Register VReg = MF.addLiveIn(PReg, getRegClassFor(In.VT));
+      InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, In.VT));
     }
     return Chain;
   }
@@ -424,11 +454,15 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                const SmallVectorImpl<SDValue> &OutVals,
                                const SDLoc &DL, SelectionDAG &DAG) const {
   if (CallConv != CallingConv::AGX_KERNEL && ExperimentalLeafCalls) {
-    if (Outs.size() > 1 || (!Outs.empty() && Outs[0].VT != MVT::i32))
-      diagnose(DAG, DL,
-               "experimental AGX leaf ABI supports at most one i32 return");
-    if (Outs.size() == 1 && Outs[0].VT == MVT::i32)
-      Chain = DAG.getCopyToReg(Chain, DL, AGX::R2, OutVals[0]);
+    const MCRegisterInfo &MRI = *ST.getRegisterInfo();
+    if (!canUseCallRegisters(Outs, MRI))
+      diagnose(DAG, DL, "experimental AGX call results exceed r2..r29");
+    unsigned Slot = 0;
+    for (unsigned I = 0; I < Outs.size(); ++I) {
+      MCRegister PReg = callValueReg(Outs[I].VT, Slot, MRI);
+      if (PReg)
+        Chain = DAG.getCopyToReg(Chain, DL, PReg, OutVals[I]);
+    }
     return DAG.getNode(AGXISD::RET, DL, MVT::Other, Chain);
   }
   if (!Outs.empty())
@@ -439,9 +473,9 @@ AGXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
-  bool ABIShape = CLI.Outs.size() <= 1 && CLI.Ins.size() <= 1 &&
-                  (CLI.Outs.empty() || CLI.Outs[0].VT == MVT::i32) &&
-                  (CLI.Ins.empty() || CLI.Ins[0].VT == MVT::i32);
+  const MCRegisterInfo &MRI = *ST.getRegisterInfo();
+  bool ABIShape = canUseCallRegisters(CLI.Outs, MRI) &&
+                  canUseCallRegisters(CLI.Ins, MRI);
   if (ExperimentalLeafCalls && ABIShape &&
       DAG.getMachineFunction().getFunction().getCallingConv() ==
           CallingConv::AGX_KERNEL) {
@@ -449,47 +483,46 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
       if (const auto *F = dyn_cast<Function>(G->getGlobal())) {
         const Function &Caller = DAG.getMachineFunction().getFunction();
         bool HasCall = false;
-        bool EntryOnly = true;
         for (const BasicBlock &BB : Caller)
           for (const Instruction &I : BB)
             if (const auto *CB = dyn_cast<CallBase>(&I))
-              if (CB->getCalledFunction() == F) {
+              if (CB->getCalledFunction() == F)
                 HasCall = true;
-                EntryOnly &= &BB == &Caller.getEntryBlock();
-              }
         bool Leaf = true;
+        unsigned Returns = 0;
         for (const BasicBlock &BB : *F)
           for (const Instruction &I : BB)
-            if (isa<AllocaInst>(I))
-              Leaf = false;
+            if (isa<ReturnInst>(I))
+              ++Returns;
+            else if (const auto *AI = dyn_cast<AllocaInst>(&I))
+              Leaf &= AI->isStaticAlloca();
             else if (const auto *CB = dyn_cast<CallBase>(&I))
               Leaf &= CB->getCalledFunction() &&
                       CB->getCalledFunction()->isIntrinsic();
         bool Signature = !F->isVarArg() && !CLI.IsVarArg &&
                          !CLI.IsTailCall &&
-                         CLI.Outs.size() == F->arg_size() &&
+                         CLI.Outs.empty() == F->arg_empty() &&
                          CLI.Ins.empty() == F->getReturnType()->isVoidTy() &&
-                         (F->arg_empty() ||
-                          (F->arg_size() == 1 &&
-                           F->getArg(0)->getType()->isIntegerTy(32))) &&
-                         (F->getReturnType()->isVoidTy() ||
-                          F->getReturnType()->isIntegerTy(32));
-        if (!F->isDeclaration() && F->size() == 1 && HasCall && EntryOnly &&
-            Leaf &&
+                         !F->hasStructRetAttr();
+        if (!F->isDeclaration() && Returns == 1 && HasCall && Leaf &&
             Signature && F->hasFnAttribute(Attribute::NoInline)) {
           SDValue Chain = CLI.Chain;
-          if (!CLI.OutVals.empty())
-            Chain = DAG.getCopyToReg(Chain, CLI.DL, AGX::R2, CLI.OutVals[0]);
+          unsigned Slot = 0;
+          for (unsigned I = 0; I < CLI.OutVals.size(); ++I) {
+            MCRegister PReg = callValueReg(CLI.Outs[I].VT, Slot, MRI);
+            Chain = DAG.getCopyToReg(Chain, CLI.DL, PReg, CLI.OutVals[I]);
+          }
           SDValue Target = DAG.getTargetGlobalAddress(F, CLI.DL, MVT::i64);
           const uint32_t *Mask = ST.getRegisterInfo()->getCallPreservedMask(
               DAG.getMachineFunction(), CallingConv::C);
           Chain = DAG.getNode(AGXISD::CALL, CLI.DL, MVT::Other, Chain, Target,
                               DAG.getRegisterMask(Mask));
-          if (!CLI.Ins.empty()) {
-            SDValue Result = DAG.getCopyFromReg(Chain, CLI.DL, AGX::R2,
-                                                MVT::i32);
+          Slot = 0;
+          for (const ISD::InputArg &In : CLI.Ins) {
+            MCRegister PReg = callValueReg(In.VT, Slot, MRI);
+            SDValue Result = DAG.getCopyFromReg(Chain, CLI.DL, PReg, In.VT);
             InVals.push_back(Result.getValue(0));
-            return Result.getValue(1);
+            Chain = Result.getValue(1);
           }
           return Chain;
         }
@@ -501,7 +534,7 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Name = G->getGlobal()->getName();
   else if (auto *E = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
     Name = E->getSymbol();
-  diagnose(DAG, CLI.DL, "unsupported call to '" + Name + "' (AGX has no calls)");
+  diagnose(DAG, CLI.DL, "unsupported AGX call to '" + Name + "'");
   for (const ISD::InputArg &In : CLI.Ins)
     InVals.push_back(DAG.getUNDEF(In.VT));
   return CLI.Chain;

@@ -104,6 +104,25 @@ bool AGXInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+    // Register allocation can insert a reload between CALL and its return
+    // pop. RET has masked the returning lanes, so that reload would not run.
+    // Keep the pop immediately after the call before assigning wait slots.
+    for (auto I = MBB.begin(); I != MBB.end(); ++I) {
+      if (I->getOpcode() != AGX::AGX_CALL)
+        continue;
+      auto Next = std::next(I);
+      auto Pop = Next;
+      while (Pop != MBB.end() && Pop->getOpcode() != AGX::POP_CALL_EXEC &&
+             !Pop->isCall() && !Pop->isTerminator())
+        ++Pop;
+      if (Pop == MBB.end() || Pop->getOpcode() != AGX::POP_CALL_EXEC)
+        report_fatal_error("AGX call has no return-mask pop in its block");
+      if (Pop != Next) {
+        MBB.splice(Next, &MBB, Pop);
+        Changed = true;
+      }
+    }
+
     DenseMap<const MachineInstr *, unsigned> FirstUse = firstUses(MBB, TRI);
     struct Group {
       BitVector Pending;

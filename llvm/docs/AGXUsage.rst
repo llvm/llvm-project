@@ -418,10 +418,16 @@ overlap.
 Kernel ABI
 ==========
 
-Kernels use the ``agx_kernel`` calling convention and return ``void``. There
-are no calls: every other function is inlined (recursive ones after the
-lowering in `Recursion`_), and the backend reports an error for calls that
-remain. A module without ``agx_kernel`` functions
+Kernels use the ``agx_kernel`` calling convention and return ``void``. By
+default, every other function is inlined (recursive ones after the lowering
+in `Recursion`_), and the backend reports an error for calls that remain.
+The experimental ``-agx-experimental-leaf-calls`` codegen option outlines
+eligible leaf functions with up to 28 legalized 32-bit argument slots,
+returning through the same register window. Calls are direct and non-nested;
+the kernel and one leaf have separate bounded 4 KiB scratch regions. This
+path is only verified by offline simulator fixtures and is not a general
+device calling convention or a benchmark option. A module without
+``agx_kernel`` functions
 compiles each external function as an entry point with the kernel ABI.
 
 Kernel arguments are passed in uniform registers. They are packed in order in

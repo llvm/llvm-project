@@ -43,6 +43,15 @@ static constexpr unsigned BitopMov = 0b1010;
 AGXInstrInfo::AGXInstrInfo(const AGXSubtarget &ST)
     : AGXGenInstrInfo(ST, RI), RI(ST), ST(ST) {}
 
+bool AGXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                        const MachineBasicBlock *MBB,
+                                        const MachineFunction &MF) const {
+  // RET masks the returning lanes until this exact pop. Instructions after a
+  // call must not be scheduled into that masked interval.
+  return MI.getOpcode() == AGX::POP_CALL_EXEC ||
+         AGXGenInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 void AGXInstrInfo::copy32(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
                           MCRegister Dst, MCRegister Src, bool KillSrc) const {

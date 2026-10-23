@@ -9,8 +9,9 @@
 // AGX kernels receive their arguments in uniform registers. The layout is
 // computed by AGXTargetLowering::LowerFormalArguments (natural alignment in
 // 16-bit units, see AGXUsage.rst), not by a CCState, so only the callee saved
-// register list is described here. There are no callable functions: all calls
-// are inlined before code generation.
+// register list is described here. The default path inlines calls; the
+// experimental leaf-call path uses a small register window and no callee-saved
+// registers.
 //
 //===----------------------------------------------------------------------===//
 

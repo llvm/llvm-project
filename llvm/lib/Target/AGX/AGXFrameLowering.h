@@ -20,6 +20,10 @@ class AGXSubtarget;
 /// stack_adjust at kernel entry.
 class AGXFrameLowering : public TargetFrameLowering {
 public:
+  // Experimental, non-nested call ABI: caller and callee occupy disjoint
+  // regions of one per-thread scratch allocation.
+  static constexpr unsigned CallFrameRegionBytes = 4096;
+
   explicit AGXFrameLowering(const AGXSubtarget &ST)
       : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(4), 0,
                             Align(4)) {}

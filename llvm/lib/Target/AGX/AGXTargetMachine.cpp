@@ -139,7 +139,7 @@ class AGXPassConfig : public TargetPassConfig {
 public:
   AGXPassConfig(AGXTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {
-    // There are no calls, no stack unwinding and no shrink wrapping.
+    // There is no stack unwinding or shrink wrapping.
     disablePass(&StackMapLivenessID);
     disablePass(&FuncletLayoutID);
     disablePass(&PatchableFunctionID);
@@ -189,7 +189,8 @@ void AGXPassConfig::addIRPasses() {
   // asks alias analysis, the scheduler's memory dependences among them).
   addPass(createAGXAAWrapperPass());
   addPass(createAGXExternalAAWrapperPass());
-  // There are no function calls: inline everything into the kernels.
+  // Inline by default; the experimental leaf-call option leaves eligible
+  // functions outlined.
   addPass(createAGXAlwaysInlinePass());
   addPass(createAlwaysInlinerLegacyPass());
 

@@ -1623,6 +1623,14 @@ def AGX_RET : AGXPseudo<(outs), (ins AGXCallReg:$target), []> {
   let G13Real = RET_g13;
 }
 
+// A return leaves its issuing lanes at mask depth two. No caller instruction
+// may execute before the pop, even when it has no register dependence on it.
+let isBarrier = 1, hasSideEffects = 1, Uses = [R0L], Defs = [R0L],
+    IsExecMaskOp = 1 in
+def POP_CALL_EXEC : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$n), []> {
+  let G13Real = POP_EXEC_g13;
+}
+
 let isTrap = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 1 in
 def AGX_TRAP : AGXPseudo<(outs), (ins), [(trap)]> {
   let G13Real = TRAP_g13;

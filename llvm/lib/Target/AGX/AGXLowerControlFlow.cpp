@@ -406,7 +406,10 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     BuildMI(Entry, Entry.begin(), DebugLoc(), TII.get(AGX::MOV_IMM16),
             AGX::R0H)
         .addImm(0);
-  if (HasControlFlow) {
+  // Callable functions inherit the caller's execution mask depth. Resetting
+  // it here would resurrect lanes excluded by the enclosing call.
+  if (HasControlFlow &&
+      MF.getFunction().getCallingConv() == CallingConv::AGX_KERNEL) {
     BuildMI(Entry, Entry.begin(), DebugLoc(), TII.get(AGX::SET_NEST))
         .addImm(0);
   }

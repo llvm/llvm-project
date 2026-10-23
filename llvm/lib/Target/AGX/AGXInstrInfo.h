@@ -88,6 +88,10 @@ public:
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
 
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
+
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   /// The real instruction of the subtarget's encoding family for the pseudo

@@ -8,11 +8,13 @@
 
 #include "AGXRegisterInfo.h"
 #include "AGX.h"
+#include "AGXFrameLowering.h"
 #include "AGXSubtarget.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -43,9 +45,18 @@ BitVector AGXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // r0l is the execution mask nesting counter. r0h is left alone so that
   // r0 is never clobbered as a whole.
   ReserveWithAliases(AGX::R0);
-  if (agxExperimentalLeafCallsEnabled()) {
+  bool UsesCallABI = MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL;
+  if (!UsesCallABI)
+    for (const BasicBlock &BB : MF.getFunction())
+      for (const Instruction &I : BB)
+        if (const auto *CB = dyn_cast<CallBase>(&I)) {
+          const Function *Callee = CB->getCalledFunction();
+          UsesCallABI |= !Callee || !Callee->isIntrinsic();
+        }
+  if (agxExperimentalLeafCallsEnabled() && UsesCallABI) {
     ReserveWithAliases(AGX::R1);
-    ReserveWithAliases(AGX::R2);
+    for (unsigned I = 2; I < 30; ++I)
+      ReserveWithAliases(AGX::GPR32RegClass.getRegister(I));
   }
 
   // Registers beyond the subtarget's register file.
@@ -96,6 +107,9 @@ bool AGXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineOperand &FIOp = MI.getOperand(FIOperandNum);
   int FI = FIOp.getIndex();
   int64_t Offset = MF.getFrameInfo().getObjectOffset(FI);
+  if (agxExperimentalLeafCallsEnabled() &&
+      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL)
+    Offset += AGXFrameLowering::CallFrameRegionBytes;
   if (Offset < 0 || Offset > 0x7fff)
     report_fatal_error("AGX stack frame too large");
   FIOp.ChangeToImmediate(Offset);

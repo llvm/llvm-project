@@ -8,9 +8,9 @@
 //
 // IR transformations that AGX code generation relies on:
 //
-//  * AGXAlwaysInline marks every non-kernel function always_inline (and
-//    internal, so it disappears once inlined), since there are no calls,
-//    and removes the unused ones.
+//  * AGXAlwaysInline normally marks every non-kernel function always_inline
+//    (and internal, so it disappears once inlined). The opt-in call path keeps
+//    eligible leaves out of this expansion and removes unused functions.
 //  * AGXCodeGenPrepare expands what the hardware has no instruction or
 //    library for: integer division, and memory intrinsics that are not
 //    small enough to be expanded by instruction selection. There is no
@@ -30,6 +30,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXMachineFunctionInfo.h"
 #include "AGXSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -53,6 +54,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -88,9 +90,63 @@ INITIALIZE_PASS(AGXAlwaysInline, "agx-always-inline", "AGX Always Inline",
 
 ModulePass *llvm::createAGXAlwaysInlinePass() { return new AGXAlwaysInline(); }
 
-/// There are no calls in the hardware, direct or indirect: an indirect call
-/// becomes a test of the callee against each address-taken function of its
-/// type, with a direct call (inlined later) for each, and a trap if none
+static bool allocateExperimentalCallType(Type *Ty, unsigned &Slots) {
+  if (Ty->isVoidTy())
+    return true;
+  if (auto *Array = dyn_cast<ArrayType>(Ty)) {
+    for (uint64_t I = 0; I < Array->getNumElements(); ++I)
+      if (!allocateExperimentalCallType(Array->getElementType(), Slots))
+        return false;
+    return true;
+  }
+  if (Ty->isPointerTy() || Ty->isIntegerTy(64)) {
+    Slots = alignTo(Slots, 2) + 2;
+  } else if (Ty->isIntegerTy(16) || Ty->isIntegerTy(32) ||
+             Ty->isHalfTy() || Ty->isFloatTy()) {
+    ++Slots;
+  } else {
+    return false;
+  }
+  return Slots <= 28;
+}
+
+static bool canKeepExperimentalLeaf(const Function &F) {
+  if (F.isDeclaration() || F.hasFnAttribute(Attribute::AlwaysInline) ||
+      F.isVarArg() || F.hasStructRetAttr() || AGX::usesGlobalData(F))
+    return false;
+  unsigned ArgSlots = 0;
+  for (const Argument &Arg : F.args())
+    if (!allocateExperimentalCallType(Arg.getType(), ArgSlots))
+      return false;
+  unsigned ResultSlots = 0;
+  if (!allocateExperimentalCallType(F.getReturnType(), ResultSlots))
+    return false;
+  unsigned Returns = 0;
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
+      if (isa<CallBrInst>(I))
+        return false;
+      if (const auto *AI = dyn_cast<AllocaInst>(&I))
+        if (!AI->isStaticAlloca())
+          return false;
+      if (isa<ReturnInst>(I))
+        ++Returns;
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        const Function *Callee = CB->getCalledFunction();
+        if (!Callee || !Callee->isIntrinsic() ||
+            Callee->getIntrinsicID() == Intrinsic::agx_texture_sample ||
+            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_x ||
+            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_y ||
+            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_z)
+          return false;
+      }
+    }
+  return Returns == 1;
+}
+
+/// The default backend inlines all calls. An indirect call becomes a test of
+/// the callee against each address-taken function of its type, with a direct
+/// call (inlined later) for each, and a trap if none
 /// matches. The addresses of these functions, as values, become their
 /// numbers (1, 2, ...), so that they can be stored, compared and passed.
 static bool lowerIndirectCalls(Module &M) {
@@ -165,6 +221,11 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
     }
     if (F.hasFnAttribute(Attribute::NoInline))
       continue;
+    if (agxExperimentalLeafCallsEnabled() && canKeepExperimentalLeaf(F)) {
+      F.addFnAttr(Attribute::NoInline);
+      Changed = true;
+      continue;
+    }
     F.addFnAttr(Attribute::AlwaysInline);
     Changed = true;
   }

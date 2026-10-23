@@ -19,6 +19,18 @@ using namespace llvm;
 
 unsigned AGXFrameLowering::getStackAdjustUnits(const MachineFunction &MF) {
   uint64_t Bytes = MF.getFrameInfo().getStackSize();
+  if (agxExperimentalLeafCallsEnabled() &&
+      MF.getFunction().getCallingConv() == CallingConv::AGX_KERNEL) {
+    bool HasCall = false;
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        HasCall |= MI.getOpcode() == AGX::AGX_CALL;
+    if (HasCall) {
+      if (Bytes > CallFrameRegionBytes)
+        report_fatal_error("experimental AGX caller frame exceeds 4096 bytes");
+      Bytes = 2 * CallFrameRegionBytes;
+    }
+  }
   if (!Bytes)
     return 0;
   // Like the vendor compiler, allocate 40 more bytes and round up to 16
@@ -30,8 +42,11 @@ void AGXFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   unsigned Units = getStackAdjustUnits(MF);
   if (Units && agxExperimentalLeafCallsEnabled() &&
-      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL)
-    report_fatal_error("experimental AGX calls need separate callee stack frames");
+      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL) {
+    if (MF.getFrameInfo().getStackSize() > CallFrameRegionBytes)
+      report_fatal_error("experimental AGX callee frame exceeds 4096 bytes");
+    return; // The kernel owns the stack_adjust for both regions.
+  }
   if (!Units)
     return;
   if (Units > 0x7fff)

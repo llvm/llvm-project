@@ -122,7 +122,7 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
     SDNode *Call = CurDAG->getMachineNode(AGX::AGX_CALL, DL, MVT::Other,
                                           N->getOperand(1), N->getOperand(2),
                                           SDValue(Push, 0));
-    ReplaceNode(N, CurDAG->getMachineNode(AGX::POP_EXEC, DL, MVT::Other,
+    ReplaceNode(N, CurDAG->getMachineNode(AGX::POP_CALL_EXEC, DL, MVT::Other,
                                           Zero, Two, SDValue(Call, 0)));
     return;
   }
