@@ -6524,6 +6524,8 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   // Requiring LoopSimplify a second time here prevents IVUsers from running
   // twice, since LoopSimplify was invalidated by running ScalarEvolution.
   AU.addRequiredID(LoopSimplifyID);
+  AU.addRequiredID(LCSSAID);
+  AU.addPreservedID(LCSSAID);
   AU.addRequired<IVUsersWrapperPass>();
   AU.addPreserved<IVUsersWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -7246,8 +7248,10 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   if (L->isRecursivelyLCSSAForm(DT, LI) && L->getExitBlock()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     SCEVExpander Rewriter(SE, "lsr", true);
-    int Rewrites = rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
-                                         UnusedIndVarInLoop, DeadInsts);
+    int Rewrites =
+        rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
+                              UnusedIndVarInLoop, DeadInsts,
+                              /*CanDeleteLoop=*/false);
     Rewriter.clear();
     if (Rewrites) {
       Changed = true;
@@ -7322,6 +7326,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(IVUsersWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
+INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
 INITIALIZE_PASS_END(LoopStrengthReduce, "loop-reduce",
                     "Loop Strength Reduction", false, false)
 

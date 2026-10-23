@@ -27,7 +27,8 @@ define void @bar() personality ptr @zot {
 ; CHECK-NEXT:    br i1 [[C_0]], label [[BB2]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP7_LCSSA:%.*]] = phi i64 [ [[TMP7]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP]], [[TMP6]]
+; CHECK-NEXT:    [[TMP6_LCSSA:%.*]] = phi i32 [ [[TMP6]], [[BB5]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP]], [[TMP6_LCSSA]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP]], -1

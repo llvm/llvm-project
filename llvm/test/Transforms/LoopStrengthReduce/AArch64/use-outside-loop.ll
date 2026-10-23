@@ -43,7 +43,8 @@ define i32 @postinc_inloop_no_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -129,11 +130,12 @@ define i32 @postinc_inloop_postinc_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[P2_NEXT_LCSSA:%.*]] = phi ptr [ [[P2_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P0_NEXT_LCSSA:%.*]] = phi ptr [ [[P0_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P3_NEXT_LCSSA:%.*]] = phi ptr [ [[P3_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[P0_NEXT_LCSSA]], ptr [[P]], align 8
 ; CHECK-NEXT:    store ptr [[P1_NEXT_LCSSA]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    store ptr [[P2_NEXT_LCSSA]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    store ptr [[P3_NEXT_LCSSA]], ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -219,7 +221,8 @@ define i32 @offset_inloop_no_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -299,11 +302,12 @@ define i32 @offset_inloop_offset_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[SCEVGEP8_LCSSA:%.*]] = phi ptr [ [[SCEVGEP8]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SCEVGEP5_LCSSA:%.*]] = phi ptr [ [[SCEVGEP5]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SCEVGEP2_LCSSA:%.*]] = phi ptr [ [[SCEVGEP2]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[SCEVGEP2_LCSSA]], ptr [[P]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP5_LCSSA]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP8_LCSSA]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP11_LCSSA]], ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -391,11 +395,12 @@ define i32 @postinc_inloop_offset_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[P1_NEXT_LCSSA:%.*]] = phi ptr [ [[P1_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P2_NEXT_LCSSA:%.*]] = phi ptr [ [[P2_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P3_NEXT_LCSSA:%.*]] = phi ptr [ [[P3_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[P0_NEXT_LCSSA]], ptr [[P]], align 8
 ; CHECK-NEXT:    store ptr [[P1_NEXT_LCSSA]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    store ptr [[P2_NEXT_LCSSA]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    store ptr [[P3_NEXT_LCSSA]], ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -491,11 +496,12 @@ define i32 @offset_inloop_postinc_outsideloop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[P2_NEXT_LCSSA:%.*]] = phi ptr [ [[P2_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P1_NEXT_LCSSA:%.*]] = phi ptr [ [[P1_NEXT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P0_NEXT_LCSSA:%.*]] = phi ptr [ [[P0_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[P0_NEXT_LCSSA]], ptr [[P]], align 8
 ; CHECK-NEXT:    store ptr [[P1_NEXT_LCSSA]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    store ptr [[P2_NEXT_LCSSA]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    store ptr [[P3_NEXT_LCSSA]], ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8
@@ -594,13 +600,14 @@ define i32 @icmpzero_merging(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[SCEVGEP4_LCSSA:%.*]] = phi ptr [ [[SCEVGEP4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SCEVGEP1_LCSSA:%.*]] = phi ptr [ [[SCEVGEP1]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IV_SUB_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_SUB_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_4_LCSSA:%.*]] = phi i32 [ [[RET_4]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store ptr [[SCEVGEP1_LCSSA]], ptr [[P]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP4_LCSSA]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP7_LCSSA]], ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    store ptr [[SCEVGEP10_LCSSA]], ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i64, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i64 [[IV_SUB_NEXT_LCSSA]], ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    ret i32 [[RET_4]]
+; CHECK-NEXT:    ret i32 [[RET_4_LCSSA]]
 ;
 entry:
   %p0.load = load ptr, ptr %p, align 8

@@ -11,19 +11,20 @@ define void @foo() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T:%.*]] = shl i64 [[T14:%.*]], 32
+; CHECK-NEXT:    [[T14:%.*]] = phi i64 [ [[T15:%.*]], [[BB13:%.*]] ]
+; CHECK-NEXT:    [[T:%.*]] = shl i64 [[T14]], 32
 ; CHECK-NEXT:    [[T2:%.*]] = add i64 [[T]], 1
 ; CHECK-NEXT:    [[T3:%.*]] = ashr i64 [[T2]], 32
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i16 [ [[LSR_IV_NEXT:%.*]], [[BB13:%.*]] ], [ 6, [[BB:%.*]] ]
-; CHECK-NEXT:    [[T5:%.*]] = phi i64 [ 2, [[BB]] ], [ [[T14]], [[BB13]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i16 [ [[LSR_IV_NEXT:%.*]], [[BB13]] ], [ 6, [[BB:%.*]] ]
+; CHECK-NEXT:    [[T5:%.*]] = phi i64 [ 2, [[BB]] ], [ [[T15]], [[BB13]] ]
 ; CHECK-NEXT:    [[T6:%.*]] = add i64 [[T5]], 4
 ; CHECK-NEXT:    [[T7:%.*]] = trunc i64 [[T6]] to i16
 ; CHECK-NEXT:    [[T8:%.*]] = urem i16 [[T7]], 3
 ; CHECK-NEXT:    [[T9:%.*]] = mul i16 [[T8]], 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i16 [[LSR_IV]], 6
-; CHECK-NEXT:    [[T14]] = add nuw nsw i64 [[T5]], 6
+; CHECK-NEXT:    [[T15]] = add nuw nsw i64 [[T5]], 6
 ; CHECK-NEXT:    [[T10:%.*]] = icmp eq i16 [[T9]], 1
 ; CHECK-NEXT:    br i1 [[T10]], label [[BB11:%.*]], label [[BB13]]
 ; CHECK:       bb11:

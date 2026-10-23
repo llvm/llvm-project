@@ -17,7 +17,8 @@ define i32 @postindex_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
@@ -55,7 +56,8 @@ define i32 @preindex_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
@@ -95,7 +97,8 @@ define i64 @offset_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX_NEXT]], [[VAL1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_END:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret i64 [[ADD]]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i64 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
@@ -127,7 +130,7 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[RET_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[RET_NEXT1:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[PVAL]], 0
 ; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
@@ -139,12 +142,13 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RET]], [[QVAL]]
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[RET_NEXT]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[RET]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[RET_NEXT1]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[RET]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
 ; CHECK-NEXT:    [[NVAL:%.*]] = load volatile i64, ptr [[N]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IDX_NEXT]], [[NVAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RET_NEXT:%.*]] = phi i32 [ [[RET_NEXT1]], %[[FOR_INC]] ]
 ; CHECK-NEXT:    ret i32 [[RET_NEXT]]
 ;
 entry:

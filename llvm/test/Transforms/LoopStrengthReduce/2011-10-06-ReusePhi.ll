@@ -37,9 +37,10 @@ define float @test(ptr nocapture %A, ptr nocapture %B, i32 %N, i32 %IA, i32 %IB)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHECK:       while.end.loopexit:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[SUM0_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM0_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret float [[SUM0_0_LCSSA]]
 ;
 entry:

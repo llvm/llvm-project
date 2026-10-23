@@ -14,8 +14,9 @@ define i32 @sink_freqinfo(i32 %a, i32 %b) nounwind uwtable ssp !prof !14 {
 ; MSINK_BFI-NEXT: imull
 
 ; MSINK_NOBFI-LABEL: sink_freqinfo
-; MSINK_NOBFI: imull
 ; MSINK_NOBFI: jl
+; MSINK_NOBFI-NEXT: ## %bb.
+; MSINK_NOBFI-NEXT: imull
 entry:
   br label %B
 
