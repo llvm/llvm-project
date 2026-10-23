@@ -13473,6 +13473,18 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
     return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::riscv_mqwacc_i64:
+  case Intrinsic::riscv_mqrwacc_i64: {
+    // RV32 goes via ReplaceNodeResults. RV64 uses mqacc.w00 on the low words.
+    unsigned Opc = IntNo == Intrinsic::riscv_mqwacc_i64
+                       ? RISCVISD::MQACC_HALVES_00
+                       : RISCVISD::MQRACC_HALVES_00;
+    SDValue Rs1 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Op.getOperand(2));
+    SDValue Rs2 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Op.getOperand(3));
+    return DAG.getNode(Opc, DL, MVT::i64, Op.getOperand(1), Rs1, Rs2);
+  }
   case Intrinsic::riscv_pmhacc:
   case Intrinsic::riscv_pmhracc:
   case Intrinsic::riscv_pmhaccu:
@@ -18342,6 +18354,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
       SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mqwacc_i64:
+    case Intrinsic::riscv_mqrwacc_i64: {
+      if (Subtarget.is64Bit())
+        return;
+      unsigned Opc = IntNo == Intrinsic::riscv_mqwacc_i64 ? RISCVISD::MQWACC
+                                                          : RISCVISD::MQRWACC;
+      auto [RdLo, RdHi] =
+          DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+      SDValue Acc =
+          DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      {RdLo, RdHi, N->getOperand(2), N->getOperand(3)});
+      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                                    Acc.getValue(0), Acc.getValue(1)));
       return;
     }
     case Intrinsic::riscv_pnclipp:

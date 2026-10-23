@@ -126,6 +126,8 @@ def CIR_Dialect : Dialect {
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
+    // Hash of the -cuid compilation unit ID. Absent when no CUID was given.
+    static llvm::StringRef getCUIDHashAttrName() { return "cir.cuid_hash"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

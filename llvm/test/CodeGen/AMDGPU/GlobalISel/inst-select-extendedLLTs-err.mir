@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu12.51 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
 # XFAIL: *
 

@@ -29013,6 +29013,15 @@ bool BoUpSLP::collectValuesToDemote(
         ToDemote.push_back(E.Idx);
         return IsProfitableToDemote;
       };
+  // The operand count is not always two: a flattened node has one entry per
+  // reassociated column. Collect the entries by the actual number of operand
+  // columns.
+  auto GetOperandEntries = [&]() {
+    return map_to_vector(seq<unsigned>(E.getNumOperands()),
+                         [&](unsigned Idx) -> const TreeEntry * {
+                           return getOperandEntry(&E, Idx);
+                         });
+  };
 
   if (E.State == TreeEntry::SplitVectorize)
     return TryProcessInstruction(
@@ -29065,11 +29074,7 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return TryProcessInstruction(
-        BitWidth, map_to_vector(seq<unsigned>(E.getNumOperands()),
-                                [&](unsigned Idx) -> const TreeEntry * {
-                                  return getOperandEntry(&E, Idx);
-                                }));
+    return TryProcessInstruction(BitWidth, GetOperandEntries());
   }
   case Instruction::Freeze:
     return TryProcessInstruction(BitWidth, getOperandEntry(&E, 0));
@@ -29087,8 +29092,7 @@ bool BoUpSLP::collectValuesToDemote(
         return AmtKnownBits.getMaxValue().ult(BitWidth);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), ShlChecker);
   }
   case Instruction::LShr: {
     // If this is a truncate of a logical shr, we can truncate it to a smaller
@@ -29108,9 +29112,7 @@ bool BoUpSLP::collectValuesToDemote(
                                  SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        LShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), LShrChecker);
   }
   case Instruction::AShr: {
     // If this is a truncate of an arithmetic shr, we can truncate it to a
@@ -29130,9 +29132,7 @@ bool BoUpSLP::collectValuesToDemote(
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        AShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), AShrChecker);
   }
   case Instruction::UDiv:
   case Instruction::URem: {
@@ -29148,8 +29148,7 @@ bool BoUpSLP::collectValuesToDemote(
                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, Checker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), Checker);
   }
 
   // We can demote selects if we can demote their true and false values.
