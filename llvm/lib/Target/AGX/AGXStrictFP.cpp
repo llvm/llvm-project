@@ -1497,6 +1497,50 @@ scalarizeConstrained(ConstrainedFPIntrinsic *CI) {
   return Lanes;
 }
 
+/// V with phi P taken to be C: a constant, or null if V depends on other
+/// values (only the integer arithmetic of mode computations is followed).
+static Constant *evaluateAssuming(Value *V, PHINode *P, Constant *C,
+                                  const DataLayout &DL, unsigned Depth = 0) {
+  if (V == P)
+    return C;
+  if (auto *K = dyn_cast<Constant>(V))
+    return K;
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || Depth > 32)
+    return nullptr;
+  if (auto *Fr = dyn_cast<FreezeInst>(I))
+    return evaluateAssuming(Fr->getOperand(0), P, C, DL, Depth + 1);
+  auto *BO = dyn_cast<BinaryOperator>(I);
+  if (!BO)
+    return nullptr;
+  Constant *L = evaluateAssuming(BO->getOperand(0), P, C, DL, Depth + 1);
+  Constant *R = L ? evaluateAssuming(BO->getOperand(1), P, C, DL, Depth + 1)
+                  : nullptr;
+  return R ? ConstantFoldBinaryOpOperands(BO->getOpcode(), L, R, DL) : nullptr;
+}
+
+/// The constant that integer phi P always holds: the one constant among its
+/// incoming values that every other incoming value gives back when P holds
+/// it (by induction over the executions of P).
+static Constant *constantModePhi(PHINode &P) {
+  if (!P.getType()->isIntegerTy())
+    return nullptr;
+  Constant *C = nullptr;
+  for (Value *In : P.incoming_values())
+    if (auto *K = dyn_cast<Constant>(In)) {
+      if (C && C != K)
+        return nullptr;
+      C = K;
+    }
+  if (!C || isa<UndefValue>(C) || isa<ConstantExpr>(C))
+    return nullptr;
+  const DataLayout &DL = P.getDataLayout();
+  for (Value *In : P.incoming_values())
+    if (!isa<Constant>(In) && evaluateAssuming(In, &P, C, DL) != C)
+      return nullptr;
+  return C;
+}
+
 bool AGXLowerFPEnv::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -1560,9 +1604,20 @@ bool AGXLowerFPEnv::runOnFunction(Function &F) {
   PromoteMemToReg({Mode}, DT);
   // The mode is usually known: fold the integer arithmetic on it, so that the
   // operations below see constant rounding directions and denormal modes.
+  // A loop that sets the mode and restores it (PTX's add.rz of roundf
+  // followed by round-to-nearest code) gives its header a phi of the
+  // incoming mode and a function of the phi itself; it is the constant when
+  // the function gives that constant back.
   const DataLayout &DL = F.getDataLayout();
   for (bool Changed = true; Changed;) {
     Changed = false;
+    for (BasicBlock &BB : F)
+      for (PHINode &P : make_early_inc_range(BB.phis()))
+        if (Constant *C = constantModePhi(P)) {
+          P.replaceAllUsesWith(C);
+          P.eraseFromParent();
+          Changed = true;
+        }
     for (Instruction &I : make_early_inc_range(instructions(F))) {
       if (!I.getType()->isIntegerTy() || isa<CallBase>(I) || isa<FreezeInst>(I) ||
           I.mayHaveSideEffects())

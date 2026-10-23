@@ -9,12 +9,20 @@
 #include "AGXTargetTransformInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "agxtti"
+
+static cl::opt<unsigned> AGXThreadgroupUnroll(
+    "agx-threadgroup-unroll", cl::init(1), cl::Hidden,
+    cl::desc("Most iterations a loop that loads threadgroup memory is "
+             "unrolled by, so that its loads can be merged (0 or 1: no "
+             "unrolling)"));
 
 static bool isThreadVaryingIntrinsic(Intrinsic::ID ID) {
   switch (ID) {
@@ -106,4 +114,32 @@ AGXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   return std::nullopt;
+}
+
+// A threadgroup load costs about the same at any width (one to four 32-bit
+// values: Geekbench 7's gemm_block_size_bias on the M2 Max takes 11-12 us per
+// load of its inner loop whether it is x or xy, and the same with half the
+// bytes). Unrolling loops that load threadgroup memory could let the
+// load/store vectorizer merge the loads of neighbouring iterations into wider
+// ones. Off by default: the shared addresses of PTX are integers turned into
+// pointers, which the vectorizer does not see through, and the unrolled
+// gemm_block_size_bias needs 121 instead of 98 registers and is 28% slower.
+void AGXTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TargetTransformInfo::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
+  BaseT::getUnrollingPreferences(L, SE, UP, ORE);
+  bool ThreadgroupLoads = any_of(L->blocks(), [](const BasicBlock *BB) {
+    return any_of(*BB, [](const Instruction &I) {
+      auto *LI = dyn_cast<LoadInst>(&I);
+      return LI && LI->getPointerAddressSpace() == AGX::THREADGROUP_ADDRESS;
+    });
+  });
+  if (!ThreadgroupLoads || L->getNumBlocks() != 1 ||
+      AGXThreadgroupUnroll < 2)
+    return;
+  UP.Partial = UP.Runtime = true;
+  UP.MaxCount = AGXThreadgroupUnroll;
+  // the unrolled body of such a loop (a tile of a matrix product) is a few
+  // hundred instructions; the generic limit (150) would stop at its first copy
+  UP.PartialThreshold = std::max(UP.PartialThreshold, 600u);
 }
