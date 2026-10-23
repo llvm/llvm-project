@@ -244,7 +244,10 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
 
+  // This can also set the default value of a template argument.
   RecordVal *RV = CurRec->getValue(ValName);
+  if (!RV)
+    RV = CurRec->getTemplateArg(ValName);
   if (!RV)
     return Error(Loc,
                  "Value '" + ValName->getAsUnquotedString() + "' unknown!");
@@ -4090,11 +4093,8 @@ bool TGParser::ParseDefvar(Record *CurRec) {
     return TokError("local variable of this name already exists");
 
   // The name should not be conflicted with existed field names.
-  if (CurRec) {
-    auto *V = CurRec->getValue(DeclName->getValue());
-    if (V && !V->isTemplateArg())
-      return TokError("field of this name already exists");
-  }
+  if (CurRec && CurRec->getValue(DeclName->getValue()))
+    return TokError("field of this name already exists");
 
   // If this defvar is in the top level, the name should not be conflicted
   // with existed global names.

@@ -1861,11 +1861,12 @@ public:
         static_cast<const Record *>(this)->getTemplateArg(Name));
   }
 
-  /// Return the field or template argument with the given name.
+  /// Return the field with the given name, or null if there is none. Use
+  /// getTemplateArg() to look up template arguments.
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
       if (Val.Name == Name) return &Val;
-    return getTemplateArg(Name);
+    return nullptr;
   }
 
   const RecordVal *getValue(StringRef Name) const {
