@@ -164,7 +164,7 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
 /// Parse an IGCA target string such as "igca_20ca".
 ///
-/// \return an invalid IGCATarget if \p TargetStr is not a known target in
+/// \return an invalid IGCATarget if \p MaybeTarget is not a known target in
 /// IntelGPUTargetParser.def.
 LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 
