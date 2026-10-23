@@ -3688,7 +3688,7 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; PACKED-GISEL-NEXT:    ds_read_b32 v4, v5
 ; PACKED-GISEL-NEXT:    ds_read_b32 v5, v5 offset:8
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[4:5], 1.0, v[4:5] op_sel_hi:[0,1]
+; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[4:5], v[4:5], 1.0 op_sel_hi:[1,0]
 ; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -3909,7 +3909,7 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    ds_read_b64 v[2:3], v2 offset:8
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_mul_f32 v[2:3], -1.0, v[2:3] op_sel_hi:[0,1]
+; GFX90A-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], -1.0 op_sel_hi:[1,0]
 ; GFX90A-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX90A-GISEL-NEXT:    v_readfirstlane_b32 s2, v3
 ; GFX90A-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3]
@@ -3929,7 +3929,7 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    ds_read_b64 v[2:3], v2 offset:8
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_pk_mul_f32 v[2:3], -1.0, v[2:3] op_sel_hi:[0,1]
+; GFX942-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], -1.0 op_sel_hi:[1,0]
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX942-GISEL-NEXT:    v_readfirstlane_b32 s2, v3
@@ -4335,7 +4335,7 @@ define amdgpu_kernel void @fneg_v2f32_vec(ptr addrspace(1) %a) {
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
 ; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], -1.0, v[0:1] op_sel_hi:[0,1]
+; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], -1.0 op_sel_hi:[1,0]
 ; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; PACKED-GISEL-NEXT:    s_endpgm
 ;
@@ -4407,7 +4407,7 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
 ; PACKED-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], -1.0, s[2:3] op_sel_hi:[0,1]
+; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], s[2:3], -1.0 op_sel_hi:[1,0]
 ; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; PACKED-GISEL-NEXT:    s_endpgm
 ;
