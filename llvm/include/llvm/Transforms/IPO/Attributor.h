@@ -1910,7 +1910,9 @@ struct Attributor {
                                     ArrayRef<StringRef> Attrs);
 
   /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
-  /// even if the same attribute kind was already present.
+  /// even if the same attribute kind was already present. \p DeducedAttrs
+  /// must be sorted like an attribute set, with at most one attribute of each
+  /// kind.
   LLVM_ABI ChangeStatus manifestAttrs(const IRPosition &IRP,
                                       ArrayRef<Attribute> DeducedAttrs,
                                       bool ForceReplace = false);
