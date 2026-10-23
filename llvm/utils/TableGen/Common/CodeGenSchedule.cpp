@@ -58,6 +58,58 @@ struct InstRegexOp : public SetTheory::Operator {
 
   InstRegexOp(const CodeGenTarget &t) : Target(t) {}
 
+  /// For a pattern without a literal prefix that starts with a group of literal
+  /// alternatives or a character class, like (S|U)CVTF or [SU]ABD, return the
+  /// literal prefixes it can start with, like SCVTF and UCVTF. Return an empty
+  /// list if the pattern has any other form.
+  static SmallVector<std::string, 4> getLeadingPrefixes(StringRef Pat) {
+    auto IsLiteral = [](char C) { return isAlnum(C) || C == '_'; };
+    auto IsQuantifier = [](char C) { return StringRef("?*+{").contains(C); };
+
+    SmallVector<std::string, 4> Prefixes;
+    size_t End;
+    if (Pat.starts_with("(")) {
+      End = Pat.find(')');
+      if (End == StringRef::npos)
+        return {};
+      SmallVector<StringRef, 4> Alts;
+      Pat.slice(1, End).split(Alts, '|');
+      for (StringRef Alt : Alts) {
+        if (Alt.empty() || !all_of(Alt, IsLiteral))
+          return {};
+        Prefixes.push_back(Alt.str());
+      }
+    } else if (Pat.starts_with("[")) {
+      End = Pat.find(']');
+      if (End == StringRef::npos || End == 1)
+        return {};
+      for (char C : Pat.slice(1, End)) {
+        if (!IsLiteral(C))
+          return {};
+        Prefixes.push_back(std::string(1, C));
+      }
+    } else {
+      return {};
+    }
+
+    // The group or class must not be optional or repeated.
+    StringRef Rest = Pat.substr(End + 1);
+    if (!Rest.empty() && IsQuantifier(Rest.front()))
+      return {};
+
+    // Extend the prefixes with the literal characters that follow, except for
+    // a quantified last one.
+    size_t NumLiteral = 0;
+    while (NumLiteral < Rest.size() && IsLiteral(Rest[NumLiteral]))
+      ++NumLiteral;
+    if (NumLiteral > 0 && NumLiteral < Rest.size() &&
+        IsQuantifier(Rest[NumLiteral]))
+      --NumLiteral;
+    for (std::string &P : Prefixes)
+      P += Rest.take_front(NumLiteral);
+    return Prefixes;
+  }
+
   /// Remove any text inside of parentheses from S.
   static std::string removeParens(llvm::StringRef S) {
     std::string Result;
@@ -123,8 +175,16 @@ struct InstRegexOp : public SetTheory::Operator {
 
       // Look for top-level |. We cannot optimize them to binary search. A ?
       // only applies to the preceding atom, which is not part of the prefix.
-      if (removeParens(Original).find('|') != std::string::npos)
+      bool HasTopLevelOr =
+          removeParens(Original).find('|') != std::string::npos;
+      if (HasTopLevelOr)
         FirstMeta = 0;
+
+      // Without a literal prefix, the pattern may still start with one of a
+      // few literal prefixes.
+      SmallVector<std::string, 4> LeadingPrefixes;
+      if (FirstMeta == 0 && !HasTopLevelOr)
+        LeadingPrefixes = getLeadingPrefixes(Original);
 
       std::optional<Regex> Regexpr;
       StringRef Prefix = Original.substr(0, FirstMeta);
@@ -161,11 +221,6 @@ struct InstRegexOp : public SetTheory::Operator {
           return LHS < RHS->getName() && !RHS->getName().starts_with(LHS);
         }
       };
-      auto Range1 =
-          std::equal_range(Pseudos.begin(), Pseudos.end(), Prefix, Comp());
-      auto Range2 = std::equal_range(NonPseudos.begin(), NonPseudos.end(),
-                                     Prefix, Comp());
-
       // For these ranges we know that instruction names start with the prefix.
       // Check if there's a regex that needs to be checked.
       const auto HandleNonGeneric = [&](const CodeGenInstruction *Inst) {
@@ -173,8 +228,32 @@ struct InstRegexOp : public SetTheory::Operator {
         if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))
           Matched.push_back(Inst->TheDef);
       };
-      std::for_each(Range1.first, Range1.second, HandleNonGeneric);
-      std::for_each(Range2.first, Range2.second, HandleNonGeneric);
+
+      const auto VisitRange = [&](ArrayRef<const CodeGenInstruction *> Insts) {
+        if (LeadingPrefixes.empty()) {
+          auto Range =
+              std::equal_range(Insts.begin(), Insts.end(), Prefix, Comp());
+          std::for_each(Range.first, Range.second, HandleNonGeneric);
+          return;
+        }
+
+        // Visit the instructions starting with any of the leading prefixes in
+        // order, as if all instructions were visited.
+        SmallVector<size_t> Indices;
+        for (StringRef P : LeadingPrefixes) {
+          auto Range = std::equal_range(Insts.begin(), Insts.end(), P, Comp());
+          for (auto I = Range.first; I != Range.second; ++I)
+            Indices.push_back(I - Insts.begin());
+        }
+
+        llvm::sort(Indices);
+        Indices.erase(llvm::unique(Indices), Indices.end());
+        for (size_t I : Indices)
+          HandleNonGeneric(Insts[I]);
+      };
+
+      VisitRange(Pseudos);
+      VisitRange(NonPseudos);
 
       if (Matched.empty())
         PrintFatalError(Loc, "instregex has no matches: " + Original);
