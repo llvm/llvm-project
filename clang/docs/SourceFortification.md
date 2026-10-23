@@ -16,25 +16,28 @@ builtins and attributes used by fortified C library headers.
 ## Compile-Time Diagnostics (`-Wfortify-source`)
 
 `-Wfortify-source` is enabled by default in Clang and warns at compile time in
-the frontend when calls to supported C library or POSIX functions have provably
-out-of-bounds buffer arguments, truncated formatted output, or invalid constant
-arguments:
+the frontend when buffer sizes and access lengths (or argument values) can be
+constant-evaluated without optimizations. It does not flag cases where proving
+an overflow requires optimizations (such as inlining, constant propagation of
+non-`const` local variables, or value-range analysis). Specifically, it can
+diagnose:
 
-1. **Destination buffer overflows and format truncation**: Diagnoses when a
-   write operation will always overflow the destination buffer, when an
-   explicit size argument exceeds the known size of the destination buffer, or
-   when formatted output will always be truncated:
+1. **Destination buffer overflows and format truncation**: When a
+   constant-evaluated size argument, source string literal length, or minimum
+   output length of a string literal format string exceeds the known size of
+   the destination buffer (or, for bounded format functions, exceeds the
+   constant-evaluated size bound):
    - `<string.h>` / `<strings.h>`: `memcpy`, `memmove`, `memset`, `mempcpy`,
      `bcopy`, `bzero`, `strcpy`, `stpcpy`, `strcat`, `strncpy`, `stpncpy`,
      `strncat`, `strlcpy`, `strlcat` (and their `__builtin_` variants).
-   - `<stdio.h>`: `sprintf`, `snprintf`, `vsnprintf` (format overflow and
-     truncation are also controlled by {ref}`-Wformat-overflow` and
+   - `<stdio.h>`: `sprintf`, `vsprintf`, `snprintf`, `vsnprintf` (format
+     overflow and truncation are also controlled by {ref}`-Wformat-overflow` and
      {ref}`-Wformat-truncation`), `scanf`, `fscanf`, `sscanf`, `fgets`, `fread`.
    - `<poll.h>`: `poll`, `ppoll`, `ppoll64`.
    - `<sys/socket.h>`: `recv`, `recvfrom`.
 
-2. **Source buffer overreads**: Diagnoses when an explicit size argument exceeds
-   the known size of the source buffer:
+2. **Source buffer overreads**: When a constant-evaluated byte count exceeds
+   the frontend-known size of the source buffer:
    - `<stdio.h>`: `fwrite`.
 
 3. **Invalid constant arguments**:
@@ -48,13 +51,14 @@ diagnostic groups:
 
 - {ref}`-Wformat-overflow` and {ref}`-Wformat-truncation`: Enabled as subgroups
   of `-Wfortify-source`; control format-string destination overflow and
-  truncation warnings for `sprintf`, `snprintf`, and `vsnprintf`.
-- {ref}`-Wbuiltin-memcpy-chk-size`: Diagnoses when the explicit byte count
-  passed to most `__builtin___*_chk` functions exceeds the destination object
-  size.
-- {ref}`-Wstringop-overread`: Diagnoses when memory functions (such as
-  `memcpy`, `memmove`, `mempcpy`, `bcopy`, `memchr`, `memcmp`, and `bcmp`) read
-  past the end of the source buffer.
+  truncation warnings for `sprintf`, `vsprintf`, `snprintf`, and `vsnprintf`.
+- {ref}`-Wbuiltin-memcpy-chk-size`: Diagnoses when a constant-evaluated byte
+  count passed to most `__builtin___*_chk` functions exceeds the
+  constant-evaluated destination object size.
+- {ref}`-Wstringop-overread`: Diagnoses when a constant-evaluated byte count
+  passed to memory functions (such as `memcpy`, `memmove`, `mempcpy`, `bcopy`,
+  `memchr`, `memcmp`, and `bcmp`) exceeds the frontend-known size of the source
+  buffer.
 
 ## Differences from GCC and glibc `_FORTIFY_SOURCE`
 
@@ -75,8 +79,10 @@ important ways:
      transformations (such as jump threading or loop unrolling).
    - **Limitations**: Because checks run in the frontend before inlining and
      value-range propagation, Clang only diagnoses calls where the buffer size
-     and access size can be constant-evaluated in the current function (or
-     propagated via `pass_object_size`), whereas GCC's middle-end can detect
+     and access size can be constant-evaluated directly in the frontend (for
+     example, it will not flag calls whose size is stored in a non-`const` local
+     variable, or format overflows that depend on variadic argument values rather
+     than the format string literal itself), whereas GCC's middle-end can detect
      overflows exposed after inlining or value-range analysis.
 
 2. **Function coverage**:

@@ -99,9 +99,10 @@ generated unexpectedly.
 }];
 
 defvar FortifySourceDocs = [{
-Warns at compile time when calls to standard C library or POSIX functions have
-provably out-of-bounds buffer arguments, truncated formatted output, or
-invalid constant arguments, modeled after
+Warns in the frontend at compile time when calls to supported C library or POSIX
+functions have buffer sizes and access lengths (or string literal format
+strings) that can be constant-evaluated without optimizations and exceed the
+known buffer size, or have invalid constant arguments, modeled after
 [`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
 compile-time checks. See {doc}`SourceFortification` for the list of supported
 functions and differences from GCC/glibc fortification, as well as related
