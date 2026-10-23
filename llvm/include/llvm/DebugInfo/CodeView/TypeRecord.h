@@ -481,6 +481,19 @@ public:
       : TagRecord(Kind, MemberCount, Options, FieldList, Name, UniqueName),
         DerivationList(DerivationList), VTableShape(VTableShape), Size(Size) {}
 
+  bool isClass() const {
+    return Kind == TypeRecordKind::Class || Kind == TypeRecordKind::Class2;
+  }
+
+  bool isStruct() const {
+    return Kind == TypeRecordKind::Struct || Kind == TypeRecordKind::Struct2;
+  }
+
+  bool isInterface() const {
+    return Kind == TypeRecordKind::Interface ||
+           Kind == TypeRecordKind::Interface2;
+  }
+
   HfaKind getHfa() const {
     uint16_t Value = static_cast<uint16_t>(Options);
     Value = (Value & HfaKindMask) >> HfaKindShift;

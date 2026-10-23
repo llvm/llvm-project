@@ -298,8 +298,11 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
 static bool IsClassRecord(TypeLeafKind kind) {
   switch (kind) {
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
     return true;
   default:
     return false;
@@ -928,7 +931,7 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     return CreateTagType(type_id, er, ct);
   }
 
-  if (cvt.kind() == LF_UNION) {
+  if (cvt.kind() == LF_UNION || cvt.kind() == LF_UNION2) {
     UnionRecord ur;
     if (auto err = TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
@@ -3287,11 +3290,15 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     type = m_index->tpi().getType(ti);
     switch (type.kind()) {
     case LF_CLASS:
+    case LF_CLASS2:
     case LF_STRUCTURE:
+    case LF_STRUCTURE2:
     case LF_INTERFACE:
+    case LF_INTERFACE2:
       el.kind = CompilerContextKind::ClassOrStruct;
       continue;
     case LF_UNION:
+    case LF_UNION2:
       el.kind = CompilerContextKind::Union;
       continue;
     case LF_ENUM:
