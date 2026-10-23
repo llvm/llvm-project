@@ -520,7 +520,6 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto *Ty = I.getType();
   auto *WaveTy = B.getIntNTy(ST.getWavefrontSize());
   auto *EntryBB = I.getParent();
-  auto NeedResult = !I.use_empty();
 
   auto *Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
@@ -530,11 +529,8 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // Phi nodes for Accumulator, Scan results destination, and Active Lanes
   auto *Accumulator = B.CreatePHI(Ty, 2, "Accumulator");
   Accumulator->addIncoming(Identity, EntryBB);
-  PHINode *OldValuePhi = nullptr;
-  if (NeedResult) {
-    OldValuePhi = B.CreatePHI(Ty, 2, "OldValuePhi");
-    OldValuePhi->addIncoming(PoisonValue::get(Ty), EntryBB);
-  }
+  auto *OldValuePhi = B.CreatePHI(Ty, 2, "OldValuePhi");
+  OldValuePhi->addIncoming(PoisonValue::get(Ty), EntryBB);
   auto *ActiveBits = B.CreatePHI(WaveTy, 2, "ActiveBits");
   ActiveBits->addIncoming(Ballot, EntryBB);
 
@@ -548,14 +544,11 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   Value *LaneValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
                                        {V, LaneIdxInt});
 
-  // Perform writelane if intermediate scan results are required later in the
-  // kernel computations
-  Value *OldValue = nullptr;
-  if (NeedResult) {
-    OldValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_writelane,
-                                 {Accumulator, LaneIdxInt, OldValuePhi});
-    OldValuePhi->addIncoming(OldValue, ComputeLoop);
-  }
+  // Perform writelane because intermediate scan results are required later in
+  // the kernel computations
+  Value *OldValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_writelane,
+                                      {Accumulator, LaneIdxInt, OldValuePhi});
+  OldValuePhi->addIncoming(OldValue, ComputeLoop);
 
   // Accumulate the results
   auto *NewAccumulator = buildNonAtomicBinOp(B, Op, Accumulator, LaneValue);
@@ -812,7 +805,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // ComputeEnd block. We also need to set up predecessor to next block when
   // single lane done updating the final reduced value.
   BasicBlock *Predecessor = nullptr;
-  if (NeedResult && ValDivergent && ScanImpl == ScanOptions::Iterative) {
+  if (!UseWaveReductionIntrinsic && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
     //
     // OriginalBB is known to have a branch as terminator because
