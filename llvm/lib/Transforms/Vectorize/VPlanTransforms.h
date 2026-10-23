@@ -31,6 +31,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
+class RuntimePointerChecking;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class VPRecipeBuilder;
@@ -213,19 +214,23 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  /// Generate the memory runtime checks of \p RtPtrChecking as recipes and
+  /// attach the check block to \p Plan. \p VF and \p UF are used to compute
+  /// the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
-                                 ArrayRef<RuntimePointerCheck> Checks,
-                                 ScalarEvolution &SE, DebugLoc DL,
+                                 const RuntimePointerChecking &RtPtrChecking,
+                                 ScalarEvolution &SE, ElementCount VF,
+                                 unsigned UF, DebugLoc DL,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
-  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
-  /// Edges from blocks bypassing both vector loops are redirected to \p
-  /// EpiPlan's scalar preheader, all others are mirrored.
-  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
-                                           VPIRBasicBlock *EnteredFrom);
+  /// VPIRBasicBlock. Bypass edges are redirected to \p EpiPlan's scalar
+  /// preheader, or its vector preheader if only bypassing the main vector loop.
+  /// Returns the block wrapping \p MainPlan's scalar preheader, which becomes
+  /// the epilogue iteration check.
+  static VPIRBasicBlock *modelGeneratedMainLoopBlocks(VPlan &EpiPlan,
+                                                      VPlan &MainPlan);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -437,7 +442,7 @@ struct VPlanTransforms {
   static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
-  static void cse(VPlan &Plan);
+  static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
   /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
   /// VPExpandSCEVRecipe there expanding the same SCEV, if any.

@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-threads-integration-tests)
+add_libc_testsuite(libc-threads-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   mtx_test

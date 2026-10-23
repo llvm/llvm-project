@@ -1,9 +1,9 @@
-add_custom_target(libc_poll_unittests)
+add_libc_testsuite(libc-poll-tests)
 
 add_libc_test(
   poll_test
   SUITE
-    libc_poll_unittests
+    libc-poll-tests
   SRCS
     poll_test.cpp
   DEPENDS
@@ -16,7 +16,7 @@ add_libc_test(
 add_libc_test(
   ppoll_test
   SUITE
-    libc_poll_unittests
+    libc-poll-tests
   SRCS
     ppoll_test.cpp
   DEPENDS

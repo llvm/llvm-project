@@ -208,6 +208,7 @@ private:
 
   bool parseDirectiveSEHAllocStack(SMLoc L);
   bool parseDirectiveSEHPrologEnd(SMLoc L);
+  bool parseDirectiveSEHEndC(SMLoc L);
   bool parseDirectiveSEHSaveR19R20X(SMLoc L);
   bool parseDirectiveSEHSaveFPLR(SMLoc L);
   bool parseDirectiveSEHSaveFPLRX(SMLoc L);
@@ -3767,6 +3768,10 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"wfxt"}, {AArch64::FeatureWFxT}},
     {{"cflt"}, {AArch64::FeatureCFLT}},
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
+    {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
+    {{"sve-perm256"}, {AArch64::FeatureSVE_PERM256}},
+    {{"sme-f16f8f16"}, {AArch64::FeatureSMEF16F8F16}},
+    {{"fpv2"}, {AArch64::FeatureFPv2}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -6040,6 +6045,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
   case Match_InvalidMemoryIndexed16UImm6:
     return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
+  case Match_InvalidMemoryIndexed32UImm8:
+    return Error(Loc, "index must be a multiple of 32 in range [0, 8160].");
   case Match_InvalidMemoryIndexed4UImm6:
     return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
   case Match_InvalidMemoryIndexed2UImm6:
@@ -6326,6 +6333,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR_K0:
     return Error(Loc, "invalid restricted vector register, expected register "
                       "in z20..z23 or z28..z31");
+  case Match_InvalidZPR_K8:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20.b..z23.b or z28.b..z31.b");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6887,6 +6897,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed4UImm6:
   case Match_InvalidMemoryIndexed8UImm6:
   case Match_InvalidMemoryIndexed16UImm6:
+  case Match_InvalidMemoryIndexed32UImm8:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm8:
@@ -7047,6 +7058,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
   case Match_InvalidZPR_K0:
+  case Match_InvalidZPR_K8:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:
@@ -7138,6 +7150,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHAllocStack(Loc);
     else if (IDVal == ".seh_endprologue")
       parseDirectiveSEHPrologEnd(Loc);
+    else if (IDVal == ".seh_end_c")
+      parseDirectiveSEHEndC(Loc);
     else if (IDVal == ".seh_save_r19r20_x")
       parseDirectiveSEHSaveR19R20X(Loc);
     else if (IDVal == ".seh_save_fplr")
@@ -7671,6 +7685,11 @@ bool AArch64AsmParser::parseDirectiveSEHAllocStack(SMLoc L) {
 /// ::= .seh_endprologue
 bool AArch64AsmParser::parseDirectiveSEHPrologEnd(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIPrologEnd();
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveSEHEndC(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIEndC();
   return false;
 }
 
