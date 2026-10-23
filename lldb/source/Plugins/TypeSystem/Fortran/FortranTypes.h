@@ -73,38 +73,50 @@ private:
 };
 
 class FortranFunction : public FortranType {
+  // LLVM RTTI support
+  static char ID;
+
 public:
+  // llvm casting support
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || FortranType::isA(ClassID);
+  }
+
+  static bool classof(const FortranType *ft) { return ft->isA(&ID); }
+
   FortranFunction(ConstString func_name,
-                  const llvm::SmallVectorImpl<CompilerType> &parameters,
-                  const llvm::SmallVectorImpl<llvm::StringRef> &parameter_names,
+                  const llvm::SmallVectorImpl<CompilerType> &param_types,
+                  const llvm::SmallVectorImpl<llvm::StringRef> &param_names,
                   CompilerType return_type);
 
-  llvm::ArrayRef<CompilerType> GetParameters() const { return m_parameters; }
-  size_t GetNumberOfParameters() const { return m_parameters.size(); }
+  llvm::ArrayRef<CompilerType> GetParamTypes() const { return m_param_types; }
+  size_t GetNumParams() const { return m_param_types.size(); }
   CompilerType GetReturnType() const { return m_return_type; }
-  ConstString GetFunctionSignature() const { return m_function_signature; };
+  ConstString GetSignature() const { return m_func_signature; };
 
   void Profile(llvm::FoldingSetNodeID &id) const {
-    Profile(id, GetName(), m_parameters, m_return_type);
+    Profile(id, GetName(), m_param_types, m_return_type);
   }
 
   static void Profile(llvm::FoldingSetNodeID &id, ConstString func_name,
-                      llvm::ArrayRef<CompilerType> parameters,
+                      llvm::ArrayRef<CompilerType> param_types,
                       CompilerType return_type) {
     id.AddString(func_name.GetStringRef());
-    id.AddInteger(parameters.size());
+    id.AddInteger(param_types.size());
 
     if (return_type.IsValid())
       id.AddPointer(return_type.GetOpaqueQualType());
 
-    for (const auto &param : parameters)
+    for (const auto &param : param_types)
       id.AddPointer(param.GetOpaqueQualType());
   }
 
+  static FortranFunction *GetFunctionType(void *type);
+
 private:
-  llvm::SmallVector<CompilerType, 4> m_parameters;
+  llvm::SmallVector<CompilerType, 4> m_param_types;
   CompilerType m_return_type;
-  ConstString m_function_signature;
+  ConstString m_func_signature;
 };
 
 } // namespace fortran
