@@ -92,6 +92,18 @@
 ! NO-PIE-NOT: "-pie"
 ! UNUSED: warning: argument unused during compilation: '{{(-no)?}}-pie'
 ! ------------------------------------------------------------------------------
+!
+! On AIX, '-b <arg>' is passed to the linker.
+! RUN: %flang --target=powerpc-ibm-aix -bmaxdata:0x80000000 -### %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=B-OPT
+! RUN: %flang --target=powerpc-ibm-aix -b maxdata:0x80000000 -### %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=B-OPT
+! RUN: not %flang --target=x86_64-unknown-linux-gnu -bmaxdata:0x80000000 -### %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=B-OPT-NON-AIX
+!
+! B-OPT: "-b" "maxdata:0x80000000"
+! B-OPT-NON-AIX: error: unsupported option '-b' for target 'x86_64-unknown-linux-gnu'
+! ------------------------------------------------------------------------------
 
 program hello
   write(*,*), "Hello world!"
