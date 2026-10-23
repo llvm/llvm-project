@@ -1655,6 +1655,59 @@ TEST_F(SortIncludesTest, FilesBeforeFoldersWithPriority) {
                     "#include \"utils.h\""));
 }
 
+TEST_F(SortIncludesTest, RegroupByDirectory) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_RegroupByDirectory;
+  Style.IncludeCategories = {{"AThirdPartyLibrary/.*\\.h", 4, 0, false},
+                             {".*/.*\\.h", 3, 0, false}};
+  verifyFormat("#include \"Foo.h\"\n"
+               "\n"
+               "#include \"A/a.h\"\n"
+               "\n"
+               "#include \"B/b2.h\"\n"
+               "#include \"B/b3.h\"\n"
+               "\n"
+               "#include \"C/Bar.h\"\n"
+               "#include \"C/BarBar.h\"\n"
+               "\n"
+               "#include \"AThirdPartyLibrary/TPL.h\"",
+               sort("#include \"Foo.h\"\n"
+                    "\n"
+                    "#include \"A/a.h\"\n"
+                    "#include \"B/b3.h\"\n"
+                    "#include \"B/b2.h\"\n"
+                    "#include \"C/Bar.h\"\n"
+                    "#include \"C/BarBar.h\"\n"
+                    "\n"
+                    "#include \"AThirdPartyLibrary/TPL.h\"",
+                    "Foo.cpp"));
+}
+
+TEST_F(SortIncludesTest, RegroupByDirectoryMixedDelimitersAndCase) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_RegroupByDirectory;
+  Style.IncludeCategories = {{".*", 1, 0, false}};
+  verifyFormat("#include \"A/a.h\"\n"
+               "#include <A/b.h>\n"
+               "\n"
+               "#include <B/c.h>",
+               sort("#include <B/c.h>\n"
+                    "#include <A/b.h>\n"
+                    "#include \"A/a.h\""));
+
+  FmtStyle.SortIncludes.IgnoreCase = true;
+  verifyFormat("#include \"a//b.h\"\n"
+               "#include \"a/x.h\"\n"
+               "#include \"A/y.h\"\n"
+               "\n"
+               "#include \"B/z.h\"\n"
+               "\n"
+               "#include <z.h>",
+               sort("#include \"B/z.h\"\n"
+                    "#include \"A/y.h\"\n"
+                    "#include \"a/x.h\"\n"
+                    "#include \"a//b.h\"\n"
+                    "#include<z.h>"));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

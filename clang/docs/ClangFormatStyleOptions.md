@@ -4666,6 +4666,18 @@ the configuration (without a prefix: `Auto`).
     #include "a.h"                         #include <lib/main.h>
     ```
 
+  - `IBS_RegroupByDirectory` (in configuration: `RegroupByDirectory`)
+    Merge multiple `#include` blocks together and sort as one.
+    It's first grouped by category priority (defined in clang-format
+    config), then by top-level directory within each category.
+
+    ```c++
+    #include "b/b.h"             into      #include "a/a.h"
+    #include "a/b.h"                       #include "a/b.h"
+    #include "a/a.h"
+                                           #include "b/b.h"
+    ```
+
 
 
 (includecategories)=

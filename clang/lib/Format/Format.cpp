@@ -3791,6 +3791,19 @@ static void sortCppIncludes(const FormatStyle &Style,
                 Indices.end());
 
   int CurrentCategory = Includes.front().Category;
+  const auto TopLevelDirectory = [](StringRef Filename) {
+    Filename = Filename.drop_front(); // Strip leading '"' or '<'.
+    const size_t SlashPos = Filename.find('/');
+    return SlashPos == StringRef::npos ? StringRef()
+                                       : Filename.take_front(SlashPos);
+  };
+  StringRef CurrentDirectory = TopLevelDirectory(Includes.front().Filename);
+  const auto DirectoryChanged = [&](StringRef Filename) {
+    const StringRef Directory = TopLevelDirectory(Filename);
+    return Style.SortIncludes.IgnoreCase
+               ? !CurrentDirectory.equals_insensitive(Directory)
+               : CurrentDirectory != Directory;
+  };
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
@@ -3812,12 +3825,18 @@ static void sortCppIncludes(const FormatStyle &Style,
               tooling::IncludeStyle::IBS_Regroup &&
           CurrentCategory != Includes[Index].Category) {
         result += "\n";
+      } else if (Style.IncludeStyle.IncludeBlocks ==
+                     tooling::IncludeStyle::IBS_RegroupByDirectory &&
+                 (CurrentCategory != Includes[Index].Category ||
+                  DirectoryChanged(Includes[Index].Filename))) {
+        result += "\n";
       }
     }
     result += Includes[Index].Text;
     if (Cursor && CursorIndex == Index)
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
     CurrentCategory = Includes[Index].Category;
+    CurrentDirectory = TopLevelDirectory(Includes[Index].Filename);
   }
 
   if (Cursor && *Cursor >= IncludesEndOffset)
@@ -3913,7 +3932,9 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         Trimmed.empty() &&
         (Style.IncludeStyle.IncludeBlocks == tooling::IncludeStyle::IBS_Merge ||
          Style.IncludeStyle.IncludeBlocks ==
-             tooling::IncludeStyle::IBS_Regroup);
+             tooling::IncludeStyle::IBS_Regroup ||
+         Style.IncludeStyle.IncludeBlocks ==
+             tooling::IncludeStyle::IBS_RegroupByDirectory);
 
     bool MergeWithNextLine = Trimmed.ends_with("\\");
     if (!FormattingOff && !MergeWithNextLine) {
