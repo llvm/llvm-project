@@ -3644,6 +3644,26 @@ void Verifier::visitFunction(const Function &F) {
   if (!HasDebugInfo)
     return;
 
+  // Check that the debug info recorded in the FLContext is valid.
+  MDNode *RawFLContext = F.getMetadata(LLVMContext::MD_flmd);
+  if (RawFLContext) {
+    CheckDI(isa<MDFunctionLocalContext>(RawFLContext),
+            "Unexpected !flmd attachment to function", &F, RawFLContext);
+    auto *FLContext = cast<MDFunctionLocalContext>(RawFLContext);
+
+    // Validate that the correct subprogram is present.
+    CheckDI(!FLContext->getScopes().empty(),
+            "Function-local context should contain a subprogram pointing at "
+            "the function",
+            FLContext, &F);
+    CheckDI(!FLContext->getScopes().empty() &&
+                isa<DISubprogram>(FLContext->getScope(0).get()) &&
+                cast<DISubprogram>(FLContext->getScope(0).get())->describes(&F),
+            "First scope in function-local context should be subprogram "
+            "pointing at the function",
+            FLContext, &F, FLContext->getScope(0).get());
+  }
+
   // Check that all !dbg attachments lead to back to N.
   //
   // FIXME: Check this incrementally while visiting !dbg attachments.
@@ -3693,26 +3713,6 @@ void Verifier::visitFunction(const Function &F) {
       if (BrokenDebugInfo)
         return;
     }
-
-  // Now check that the debug info recorded in the FLContext is valid.
-  MDNode *RawFLContext = F.getMetadata(LLVMContext::MD_flmd);
-  if (RawFLContext) {
-    CheckDI(isa<MDFunctionLocalContext>(RawFLContext),
-            "Unexpected !flmd attachment to function", &F, RawFLContext);
-    auto *FLContext = cast<MDFunctionLocalContext>(RawFLContext);
-
-    // Validate that the correct subprogram is present.
-    CheckDI(!FLContext->getScopes().empty(),
-            "Function-local context should contain a subprogram pointing at "
-            "the function",
-            FLContext, &F);
-    CheckDI(!FLContext->getScopes().empty() &&
-                isa<DISubprogram>(FLContext->getScope(0).get()) &&
-                cast<DISubprogram>(FLContext->getScope(0).get())->describes(&F),
-            "First scope in function-local context should be subprogram "
-            "pointing at the function",
-            FLContext, &F, FLContext->getScope(0).get());
-  }
 }
 
 // verifyBasicBlock - Verify that a basic block is well formed...

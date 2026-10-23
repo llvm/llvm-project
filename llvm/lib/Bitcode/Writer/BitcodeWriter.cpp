@@ -1920,7 +1920,7 @@ void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
 void ModuleBitcodeWriter::writeMDFunctionLocalContext(
     const MDFunctionLocalContext *N, SmallVectorImpl<uint64_t> &Record,
     unsigned &Abbrev) {
-  llvm_unreachable("Not implemented");
+  report_fatal_error("!MDFunctionLocalContext bitcode not yet implemented");
 }
 
 unsigned ModuleBitcodeWriter::createDILocationAbbrev(bool WithIRLayers) {
