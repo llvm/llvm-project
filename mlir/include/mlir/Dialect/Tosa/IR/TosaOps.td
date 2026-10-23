@@ -170,6 +170,9 @@ def Tosa_AvgPool2dAdaptiveOp
     average, only the number of valid input tensor values, but not padding, are
     used to calculate the divisor. Compared to avg_pool2d, the kernel/stride/
     pad values are provided as inputs.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins Tosa_Tensor4D:$input,
@@ -2107,6 +2110,9 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad", [Pure]> {
     Pads a tensor along the borders of each dimension with a supplied value.
     Returns a new tensor with the padding included. The pad_const value includes
     the zero point if the tensor uses a zero point.
+
+    The padding amounts must be non-negative. The TOSA specification requires
+    a negative padding to be diagnosed (`ERROR_IF`).
 
     Example:
 

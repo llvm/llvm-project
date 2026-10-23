@@ -1,10 +1,10 @@
-add_custom_target(libc_ucontext_unittests)
+add_libc_testsuite(libc-ucontext-tests)
 
 if(TARGET libc.src.ucontext.getcontext)
   add_libc_test(
     ucontext_test
     SUITE
-      libc_ucontext_unittests
+      libc-ucontext-tests
     SRCS
       ucontext_test.cpp
     DEPENDS

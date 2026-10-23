@@ -8481,7 +8481,7 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
   if (Depth >= MaxAnalysisRecursionDepth)
     return Register();
 
-  LLT Ty = MRI.getType(R);
+  [[maybe_unused]] LLT Ty = MRI.getType(R);
   assert(Ty.isValid() && "Expected a typed register");
   assert(DemandedBits.getBitWidth() == Ty.getScalarSizeInBits() &&
          "DemandedBits width must match the register scalar type");
