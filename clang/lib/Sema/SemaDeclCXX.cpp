@@ -12077,8 +12077,20 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
       PrevNS = getStdNamespace();
       IsStd = true;
       AddToKnown = !IsInline;
+    } else if (R.isAmbiguous()) {
+      // Handle an ambiguous namespace reopening (often after inlining).
+      // Eg:
+      //    inline namespace A{ namespace N{}; };
+      //    inline namespace B{ namespace N{}; };
+      //    namespace N{};  // ambiguity: are we reopening A::N or B::N?
+      Diag(Loc, diag::err_ambiguous_reference) << II;
+      for (auto *D : R) {
+        Diag(D->getLocation(), diag::note_ambiguous_candidate) << D;
+      }
+      IsInvalid = true;
+      // Continue on to push Namespc as current DeclContext and return it.
     } else {
-      // We've seen this namespace for the first time.
+      // We're seeing this namespace for the first time.
       AddToKnown = !IsInline;
     }
   } else {
@@ -12161,7 +12173,8 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
   ActOnDocumentableDecl(Namespc);
 
   // Although we could have an invalid decl (i.e. the namespace name is a
-  // redefinition), push it as current DeclContext and try to continue parsing.
+  // redefinition, or an ambiguous namespace reopening), push it as current
+  // DeclContext and try to continue parsing.
   // FIXME: We should be able to push Namespc here, so that the each DeclContext
   // for the namespace has the declarations that showed up in that particular
   // namespace definition.
