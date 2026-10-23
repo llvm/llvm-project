@@ -138,6 +138,17 @@ static std::string formatFrameProcedureOptions(uint32_t IndentLevel,
   return typesetItemList(Opts, 4, IndentLevel, " | ");
 }
 
+static std::string formatCoroutineKind(CoroutineKind Kind) {
+  switch (Kind) {
+    RETURN_CASE(CoroutineKind, None, "none");
+    RETURN_CASE(CoroutineKind, Primary, "primary");
+    RETURN_CASE(CoroutineKind, Init, "init");
+    RETURN_CASE(CoroutineKind, Resume, "resume");
+    RETURN_CASE(CoroutineKind, Destroy, "destroy");
+  }
+  return formatUnknownEnum(Kind);
+}
+
 static std::string formatPublicSymFlags(uint32_t IndentLevel,
                                         PublicSymFlags Flags) {
   std::vector<std::string> Opts;
@@ -727,6 +738,10 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
       formatRegisterId(FP.getParamFramePtrReg(CompilationCPU), CompilationCPU));
   P.formatLine("flags = {0}",
                formatFrameProcedureOptions(P.getIndentLevel() + 9, FP.Flags));
+  if (FP.getCoroutineKind() != CoroutineKind::None) {
+    P.format(", coroutine kind = {0}",
+             formatCoroutineKind(FP.getCoroutineKind()));
+  }
   return Error::success();
 }
 
