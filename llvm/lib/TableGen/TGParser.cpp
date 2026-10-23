@@ -131,10 +131,6 @@ static const Init *QualifyName(const Record &CurRec, const Init *Name) {
   return NewName;
 }
 
-static const Init *QualifyName(MultiClass *MC, const Init *Name) {
-  return QualifyName(MC->Rec, Name);
-}
-
 /// Return the qualified version of the implicit 'NAME' template argument.
 static const Init *QualifiedNameOfImplicitName(const Record &Rec) {
   return QualifyName(Rec, StringInit::get(Rec.getRecords(), "NAME"));
@@ -158,9 +154,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
     if (!Rec)
       return nullptr;
     const Init *ArgName = QualifyName(*Rec, Name);
-    if (Rec->isTemplateArg(ArgName)) {
-      RecordVal *RV = Rec->getValue(ArgName);
-      assert(RV && "Template arg doesn't exist??");
+    if (RecordVal *RV = Rec->getTemplateArg(ArgName)) {
       RV->setUsed(true);
       if (TrackReferenceLocs)
         Rec->appendValueReferenceLoc(ArgName, NameLoc);
@@ -353,12 +347,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   const Record *SC = SubClass.Rec;
   MapResolver R(CurRec);
 
-  // Loop over all the subclass record's fields. Add regular fields to the new
-  // record.
+  // Loop over all the subclass record's fields and add them to the new record.
   for (const RecordVal &Field : SC->getValues())
-    if (!Field.isTemplateArg())
-      if (AddValue(CurRec, SubClass.RefRange.Start, Field, SC))
-        return true;
+    if (AddValue(CurRec, SubClass.RefRange.Start, Field, SC))
+      return true;
 
   if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
                               SubClass.RefRange.Start))
@@ -635,17 +627,18 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 bool TGParser::resolveArguments(const Record *Rec,
                                 ArrayRef<const ArgumentInit *> ArgValues,
                                 SMLoc Loc, ArgValueHandler ArgValueHandler) {
-  ArrayRef<const Init *> ArgNames = Rec->getTemplateArgs();
-  assert(ArgValues.size() <= ArgNames.size() &&
+  ArrayRef<RecordVal> Args = Rec->getTemplateArgs();
+  assert(ArgValues.size() <= Args.size() &&
          "Too many template arguments allowed");
 
   // Loop over the template arguments and handle the (name, value) pair.
-  SmallVector<const Init *, 2> UnsolvedArgNames(ArgNames);
+  SmallVector<const Init *, 2> UnsolvedArgNames(
+      map_range(Args, [](const RecordVal &Arg) { return Arg.getNameInit(); }));
   for (auto *Arg : ArgValues) {
     const Init *ArgName = nullptr;
     const Init *ArgValue = Arg->getValue();
     if (Arg->isPositional())
-      ArgName = ArgNames[Arg->getIndex()];
+      ArgName = Args[Arg->getIndex()].getNameInit();
     if (Arg->isNamed())
       ArgName = Arg->getName();
 
@@ -3522,7 +3515,7 @@ bool TGParser::ParseTemplateArgValueList(
     SmallVectorImpl<const ArgumentInit *> &Result,
     SmallVectorImpl<SMLoc> &ArgLocs, Record *CurRec, const Record *ArgsRec) {
   assert(Result.empty() && "Result vector is not empty");
-  ArrayRef<const Init *> TArgs = ArgsRec->getTemplateArgs();
+  ArrayRef<RecordVal> TArgs = ArgsRec->getTemplateArgs();
 
   if (consume(tgtok::greater)) // empty value list
     return false;
@@ -3538,9 +3531,8 @@ bool TGParser::ParseTemplateArgValueList(
     SMLoc ValueLoc = ArgLocs.emplace_back(Lex.getLoc());
     // If we are parsing named argument, we don't need to know the argument name
     // and argument type will be resolved after we know the name.
-    const Init *Value = ParseValue(
-        CurRec,
-        HasNamedArg ? nullptr : ArgsRec->getValue(TArgs[ArgIndex])->getType());
+    const Init *Value =
+        ParseValue(CurRec, HasNamedArg ? nullptr : TArgs[ArgIndex].getType());
     if (!Value)
       return true;
 
@@ -3586,80 +3578,72 @@ bool TGParser::ParseTemplateArgValueList(
   }
 }
 
-/// ParseDeclaration - Read a declaration, returning the name of field ID, or an
-/// empty string on error. This can happen in a number of different contexts,
-/// including within a def or in the template args for a class (in which case
-/// CurRec will be non-null) and within the template args for a multiclass (in
-/// which case CurRec will be null, but CurMultiClass will be set). This can
-/// also happen within a def that is within a multiclass, which will set both
-/// CurRec and CurMultiClass.
+/// ParseDeclaration - Read a declaration of a field or template argument and
+/// add it to the record. Return true on error. This can happen in a number of
+/// different contexts, including within a def or in the template args for a
+/// class (in which case CurRec will be non-null) and within the template args
+/// for a multiclass (in which case CurRec will be null, but CurMultiClass will
+/// be set). This can also happen within a def that is within a multiclass,
+/// which will set both CurRec and CurMultiClass.
 ///
 ///  Declaration ::= FIELD? Type ID ('=' Value)?
 ///
-const Init *TGParser::ParseDeclaration(Record *CurRec,
-                                       bool ParsingTemplateArgs) {
+bool TGParser::ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs) {
+  SMLoc DeclLoc = Lex.getLoc();
+
   // Read the field prefix if present.
   bool HasField = !ParsingTemplateArgs && consume(tgtok::Field);
 
   const RecTy *Type = ParseType();
   if (!Type)
-    return nullptr;
+    return true;
 
-  if (Lex.getCode() != tgtok::Id) {
-    TokError("Expected identifier in declaration");
-    return nullptr;
-  }
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("Expected identifier in declaration");
 
   std::string Str = Lex.getCurStrVal();
-  if (Str == "NAME") {
-    TokError("'" + Str + "' is a reserved variable name");
-    return nullptr;
-  }
+  if (Str == "NAME")
+    return TokError("'" + Str + "' is a reserved variable name");
 
-  if (!ParsingTemplateArgs && CurScope->varAlreadyDefined(Str)) {
-    TokError("local variable of this name already exists");
-    return nullptr;
-  }
+  if (!ParsingTemplateArgs && CurScope->varAlreadyDefined(Str))
+    return TokError("local variable of this name already exists");
 
   SMLoc IdLoc = Lex.getLoc();
   const Init *DeclName = StringInit::get(Records, Str);
   Lex.Lex();
 
-  bool BadField;
-  if (!ParsingTemplateArgs) { // def, possibly in a multiclass
-    BadField = AddValue(CurRec, IdLoc,
-                        RecordVal(DeclName, IdLoc, Type,
-                                  HasField ? RecordVal::FK_NonconcreteOK
-                                           : RecordVal::FK_Normal));
-  } else if (CurRec) { // class template argument
-    DeclName = QualifyName(*CurRec, DeclName);
-    BadField =
-        AddValue(CurRec, IdLoc,
-                 RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
-  } else { // multiclass template argument
-    assert(CurMultiClass && "invalid context for template argument");
-    DeclName = QualifyName(CurMultiClass, DeclName);
-    BadField =
-        AddValue(CurRec, IdLoc,
-                 RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
-  }
-  if (BadField)
-    return nullptr;
+  Record *Rec = CurRec ? CurRec : &CurMultiClass->Rec;
 
-  // If a value is present, parse it and set new field's value.
+  // A field is added before its value is parsed, but a template argument is
+  // added after its default value is parsed, so that it is not in scope in its
+  // own default value.
+  if (!ParsingTemplateArgs &&
+      AddValue(Rec, IdLoc,
+               RecordVal(DeclName, IdLoc, Type,
+                         HasField ? RecordVal::FK_NonconcreteOK
+                                  : RecordVal::FK_Normal)))
+    return true;
+
+  SMLoc ValLoc;
+  const Init *Val = nullptr;
   if (consume(tgtok::equal)) {
-    SMLoc ValLoc = Lex.getLoc();
-    const Init *Val = ParseValue(CurRec, Type);
-    if (!Val || SetValue(CurRec, ValLoc, DeclName, {}, Val,
-                         /*OverrideDefLoc=*/false)) {
-      // Return the name, even if an error is thrown. This is so that we can
-      // continue to make some progress, even without the value having been
-      // initialized.
-      return DeclName;
-    }
+    ValLoc = Lex.getLoc();
+    Val = ParseValue(CurRec, Type);
   }
 
-  return DeclName;
+  if (ParsingTemplateArgs) {
+    DeclName = QualifyName(*Rec, DeclName);
+    if (!Rec->addTemplateArg(
+            RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg)))
+      return Error(DeclLoc, "template argument with the same name has already "
+                            "been defined");
+  }
+
+  // Errors in the value do not stop parsing, so that we can continue to make
+  // some progress.
+  if (Val)
+    SetValue(Rec, ValLoc, DeclName, {}, Val, /*OverrideDefLoc=*/false);
+  return false;
 }
 
 /// ParseForeachDeclaration - Read a foreach declaration, returning
@@ -3754,28 +3738,12 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
   assert(Lex.getCode() == tgtok::less && "Not a template arg list!");
   Lex.Lex(); // eat the '<'
 
-  Record *TheRecToAddTo = CurRec ? CurRec : &CurMultiClass->Rec;
-
-  // Read the first declaration.
-  const Init *TemplArg = ParseDeclaration(CurRec, true /*templateargs*/);
-  if (!TemplArg)
-    return true;
-
-  TheRecToAddTo->addTemplateArg(TemplArg);
-
-  while (consume(tgtok::comma)) {
-    // Read the following declarations.
-    SMLoc Loc = Lex.getLoc();
-    TemplArg = ParseDeclaration(CurRec, true /*templateargs*/);
-    if (!TemplArg)
+  // Read the declarations. ParseDeclaration adds each one to the class or
+  // multiclass.
+  do {
+    if (ParseDeclaration(CurRec, /*ParsingTemplateArgs=*/true))
       return true;
-
-    if (TheRecToAddTo->isTemplateArg(TemplArg))
-      return Error(Loc, "template argument with the same name has already been "
-                        "defined");
-
-    TheRecToAddTo->addTemplateArg(TemplArg);
-  }
+  } while (consume(tgtok::comma));
 
   if (!consume(tgtok::greater))
     return TokError("expected '>' at end of template argument list");
@@ -3838,7 +3806,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return ParseDump(nullptr, CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
-    if (!ParseDeclaration(CurRec, false))
+    if (ParseDeclaration(CurRec, /*ParsingTemplateArgs=*/false))
       return true;
 
     if (!consume(tgtok::semi))
@@ -4793,13 +4761,13 @@ bool TGParser::CheckTemplateArgValues(
   assert(Values.size() == ValuesLocs.size() &&
          "expected as many values as locations");
 
-  ArrayRef<const Init *> TArgs = ArgsRec->getTemplateArgs();
+  ArrayRef<RecordVal> TArgs = ArgsRec->getTemplateArgs();
 
   bool HasError = false;
   for (auto [Value, Loc] : llvm::zip_equal(Values, ValuesLocs)) {
     const Init *ArgName = nullptr;
     if (Value->isPositional())
-      ArgName = TArgs[Value->getIndex()];
+      ArgName = TArgs[Value->getIndex()].getNameInit();
     if (Value->isNamed())
       ArgName = Value->getName();
 
