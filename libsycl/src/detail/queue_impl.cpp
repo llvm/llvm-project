@@ -137,6 +137,7 @@ void QueueImpl::setKernelLaunchParams(
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                                  size_t ArgSize) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
           KernelInfo, MContext, MDevice);
@@ -190,6 +191,7 @@ EventImplPtr QueueImpl::memcpy(void *Dest, const void *Src,
                                std::size_t NumBytes,
                                const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (NumBytes == 0)
     return submitWait(DepEvents);
@@ -213,6 +215,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
                              const std::vector<EventImplPtr> &DepEvents) {
   assert(PatternSize > 0 && "Pattern size has to be greater than zero");
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (Count == 0)
     return submitWait(DepEvents);
@@ -234,6 +237,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
 EventImplPtr QueueImpl::prefetch(const void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
 
   if (NumBytes == 0)
