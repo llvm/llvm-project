@@ -340,6 +340,21 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   EXPECT_EQ(match(pool, *trail_dash, "a-c"), MatchResult::Match);
   EXPECT_EQ(match(pool, *trail_dash, "abc"), MatchResult::Match);
 
+  ErrorOr<ExprId> dash_start_range = parse_ere("a[--0]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(dash_start_range.has_value());
+  EXPECT_EQ(match(pool, *dash_start_range, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a.c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a/c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a0c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a1c"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> dash_end_range = parse_ere("a[!--]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(dash_end_range.has_value());
+  EXPECT_EQ(match(pool, *dash_end_range, "a!c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a+c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a.c"), MatchResult::NoMatch);
+
   ErrorOr<ExprId> coll_sym = parse_ere("a[[.x.]]b", REG_EXTENDED, pool);
   ASSERT_TRUE(coll_sym.has_value());
   EXPECT_EQ(match(pool, *coll_sym, "axb"), MatchResult::Match);
@@ -352,10 +367,11 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   ASSERT_TRUE(coll_one.has_value());
   EXPECT_EQ(match(pool, *coll_one, "a1b"), MatchResult::Match);
 
-  ErrorOr<ExprId> star_range = parse_ere("[a-c]*", REG_EXTENDED, pool);
+  ErrorOr<ExprId> star_range = parse_ere("^[a-c]*$", REG_EXTENDED, pool);
   ASSERT_TRUE(star_range.has_value());
   EXPECT_EQ(match(pool, *star_range, ""), MatchResult::Match);
   EXPECT_EQ(match(pool, *star_range, "abcba"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *star_range, "abzcba"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {

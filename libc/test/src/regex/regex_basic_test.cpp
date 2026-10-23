@@ -256,6 +256,23 @@ TEST(LlvmLibcRegexTest, BracketExpressionsAndRanges) {
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abc", 0, nullptr, 0), 0);
   LIBC_NAMESPACE::regfree(&preg);
 
+  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a[--0]c", REG_EXTENDED | REG_NOSUB),
+            0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a-c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a.c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a/c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a0c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a1c", 0, nullptr, 0), REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+
+  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a[!--]c", REG_EXTENDED | REG_NOSUB),
+            0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a!c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a+c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a-c", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a.c", 0, nullptr, 0), REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+
   ASSERT_EQ(
       LIBC_NAMESPACE::regcomp(&preg, "a[[.x.]]b", REG_EXTENDED | REG_NOSUB), 0);
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "axb", 0, nullptr, 0), 0);
@@ -266,10 +283,12 @@ TEST(LlvmLibcRegexTest, BracketExpressionsAndRanges) {
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a]b", 0, nullptr, 0), 0);
   LIBC_NAMESPACE::regfree(&preg);
 
-  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "[a-c]*", REG_EXTENDED | REG_NOSUB),
-            0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::regcomp(&preg, "^[a-c]*$", REG_EXTENDED | REG_NOSUB), 0);
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "", 0, nullptr, 0), 0);
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abcba", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abzcba", 0, nullptr, 0),
+            REG_NOMATCH);
   LIBC_NAMESPACE::regfree(&preg);
 
   // Bracket error conditions.
