@@ -500,16 +500,18 @@ bool LoopVectorizationLegality::isUniformMemOp(
   return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
 }
 
-/// Returns true if the type produced by \p I can be widened. Casts from vector
-/// types and extractelement instructions cannot be widened. Struct results are
+/// Returns true if the type produced by \p I can be widened. Struct results are
 /// only supported if \p AllowStructCalls is set, for calls whose users are all
 /// extractvalue instructions and whose struct element types can be widened.
-static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
-  if (isa<ExtractElementInst>(I) ||
-      (isa<CastInst>(I) &&
-       !VectorType::isValidElementType(I.getOperand(0)->getType())))
+/// Also, we cannot re-vectorize element or shuffle operations yet.
+static bool canWidenResultType(const Instruction &I, bool AllowStructCalls,
+                               bool AllowVectors) {
+  if (isa<ExtractElementInst, InsertElementInst, ShuffleVectorInst>(I))
     return false;
+
   Type *Ty = I.getType();
+  if (isa<FixedVectorType>(Ty))
+    return AllowVectors;
   if (!isa<StructType>(Ty))
     return canVectorizeTy(Ty);
   return AllowStructCalls && isa<CallInst>(I) && canVectorizeTy(Ty) &&
@@ -519,18 +521,31 @@ static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
 /// Returns true if the types produced and stored by \p I can be widened,
 /// otherwise reports a vectorization failure for \p TheLoop and returns false.
 static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
-                          OptimizationRemarkEmitter *ORE, Loop *TheLoop) {
-  if (!canWidenResultType(I, AllowStructCalls)) {
+                          bool AllowVectors, OptimizationRemarkEmitter *ORE,
+                          Loop *TheLoop) {
+  if (!canWidenResultType(I, AllowStructCalls, AllowVectors)) {
     reportVectorizationFailure("Found unvectorizable type",
                                "instruction return type cannot be vectorized",
                                "CantVectorizeInstructionReturnType", ORE,
                                TheLoop, &I);
     return false;
   }
+
+  // Casts and stores require checking their input as well.
+  auto CanTriviallyVectorizeTy = [&](Type *Ty) {
+    return VectorType::isValidElementType(Ty) ||
+           (isa<FixedVectorType>(Ty) && AllowVectors);
+  };
   auto *SI = dyn_cast<StoreInst>(&I);
-  if (SI && !VectorType::isValidElementType(SI->getValueOperand()->getType())) {
+  if (SI && !CanTriviallyVectorizeTy(SI->getValueOperand()->getType())) {
     reportVectorizationFailure("Store instruction cannot be vectorized",
                                "CantVectorizeStore", ORE, TheLoop, SI);
+    return false;
+  }
+  if (isa<CastInst>(&I) &&
+      !CanTriviallyVectorizeTy(I.getOperand(0)->getType())) {
+    reportVectorizationFailure("Cast instruction cannot be vectorized",
+                               "CantVectorizeCast", ORE, TheLoop, &I);
     return false;
   }
   return true;
@@ -577,7 +592,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // Uses of swifterror values must remain scalar. Calls with operand bundles
     // cannot be widened.
     for (Instruction &I : *BB) {
-      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
+
+      // REVEC: Disabled for outer loops until legality checks are harmonised.
+      if (canWidenTypes(I, /*AllowStructCalls=*/false,
+                        /*AllowVectors=*/false, ORE, TheLoop) &&
           canVectorizeSwiftErrorUses(I, ORE, TheLoop) &&
           canVectorizeOperandBundles(I, ORE, TheLoop))
         continue;
@@ -1000,17 +1018,26 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
+  // REVEC: Remember that a vector instruction was found for later checks.
+  if (I.getType()->isVectorTy() ||
+      any_of(I.operand_values(),
+             [](const Value *V) { return V->getType()->isVectorTy(); }))
+    LoopContainsVectors = true;
+
   // Check that the instruction return and stored types are vectorizable.
-  if (!canWidenTypes(I, /*AllowStructCalls=*/true, ORE, TheLoop))
+  if (!canWidenTypes(I, /*AllowStructCalls=*/true, Opts.vectorize_vector_loops,
+                     ORE, TheLoop))
     return false;
 
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
     // For nontemporal stores, check that a nontemporal vector version is
     // supported on the target.
     if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
-      // Arbitrarily try a vector of 2 elements.
-      auto *VecTy =
-          FixedVectorType::get(ST->getValueOperand()->getType(), /*NumElts=*/2);
+      // Arbitrarily try a vector of 2 elements or use the existing vector type.
+      Type *StoreTy = ST->getValueOperand()->getType();
+      Type *VecTy = StoreTy->isVectorTy()
+                        ? StoreTy
+                        : FixedVectorType::get(StoreTy, /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
         reportVectorizationFailure(
@@ -1024,7 +1051,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (LD->getMetadata(LLVMContext::MD_nontemporal)) {
       // For nontemporal loads, check that a nontemporal vector version is
       // supported on the target (arbitrarily try a vector of 2 elements).
-      auto *VecTy = FixedVectorType::get(I.getType(), /*NumElts=*/2);
+      Type *VecTy = I.getType()->isVectorTy()
+                        ? I.getType()
+                        : FixedVectorType::get(I.getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of load type");
       if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
         reportVectorizationFailure(
@@ -2031,6 +2060,19 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  if (LoopContainsVectors && any_of(TheLoop->blocks(), [this](BasicBlock *BB) {
+        return blockNeedsPredication(BB);
+      })) {
+    reportVectorizationFailure("Cannot if-convert vector loop",
+                               "if-conversion is not supported for vector "
+                               "instructions in loop",
+                               "UnsupportedVectorInstruction", ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount()) &&
       !isVectorizableEarlyExitLoop()) {
     assert(UncountableExitType == UncountableExitTrait::None &&
@@ -2110,6 +2152,14 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   }
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
+
+  // TODO-REVEC: Disable tail-folding for now. New intrinsics are needed for
+  // per-segment predication because the element count of the predicate and the
+  // data type do not match.
+  if (LoopContainsVectors) {
+    LLVM_DEBUG(dbgs() << "LV: Tail-folding disabled for REVEC.\n");
+    return false;
+  }
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

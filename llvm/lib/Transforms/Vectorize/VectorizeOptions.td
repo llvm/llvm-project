@@ -39,6 +39,8 @@ defm : BoolField<"lv-compressing-patterns", "true",
 defm : EnumField<"scalable-vectorization", "LoopVectorizeHints::ScalableForceKind", "LoopVectorizeHints::SK_Unspecified", "off,preferred,on,always",
   ["LoopVectorizeHints::SK_FixedWidthOnly", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_AlwaysScalable"],
   "Control whether the compiler can use scalable vectors to vectorize a loop">;
+defm : BoolField<"vectorize-vector-loops", "false",
+  "Allow vectorization of loops with vector instructions.">;
 
 // LoopVectorizationPlanner.cpp
 defm : BoolField<"force-target-supports-gather-scatter-ops", "false",
