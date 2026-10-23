@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -97,6 +98,9 @@ private:
   DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
   DenseMap<MachineInstr *, MachineBasicBlock *, MachineInstrExpressionTrait>
       PREMap;
+  DenseMap<MachineInstr *,
+           SmallVector<std::pair<unsigned, Register>, 4>>
+      InstRegChangedMap;
   ScopedHTType VNT;
   SmallVector<MachineInstr *, 64> Exps;
   unsigned CurrVN = 0;
@@ -125,6 +129,7 @@ private:
   bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
   bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
   bool PerformSimplePRE(MachineDominatorTree *DT);
+  void RecoverRegChangedInst();
   /// Heuristics to see if it's profitable to move common computations of MBB
   /// and MBB1 to CandidateBB.
   bool isProfitableToHoistInto(MachineBasicBlock *CandidateBB,
@@ -883,6 +888,28 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
         NewMI.setDebugLoc(EmptyDL);
 
         NewMI.getOperand(0).setReg(NewReg);
+        for (MachineOperand &MO :
+             llvm::make_early_inc_range(MRI->use_nodbg_operands(VReg))) {
+          if (MO.isUse() &&
+              MO.getParent()->getParent()->getNumber() == MBB->getNumber()) {
+            InstRegChangedMap[MO.getParent()].push_back(
+                std::make_pair(MO.getOperandNo(), VReg));
+            MO.setReg(NewReg);
+          }
+        }
+        auto *SiblingBBMI = PREMap.find(&MI)->getFirst();
+        for (MachineOperand &MO :
+             llvm::make_early_inc_range(MRI->use_nodbg_operands(
+                 SiblingBBMI->getOperand(0).getReg()))) {
+          if (MO.isUse() && PREMap.count(MO.getParent())) {
+            MachineInstr *UseMI = MO.getParent();
+            InstRegChangedMap[UseMI].push_back(
+                std::make_pair(MO.getOperandNo(), MO.getReg()));
+            PREMap.erase(UseMI);
+            MO.setReg(NewReg);
+            PREMap.try_emplace(UseMI, UseMI->getParent());
+          }
+        }
 
         PREMap[&MI] = CMBB;
         ++NumPREs;
@@ -891,6 +918,19 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
     }
   }
   return Changed;
+}
+
+// For finding subexpression completely, original mir maybe be changed,
+// this may cause some risk if the redundant MI can't be eliminated later.
+// So when leave from PRE we need recover MI operands to original state,
+// just left redundant common subexpression MIs in CMBB.
+void MachineCSEImpl::RecoverRegChangedInst() {
+  for (auto Item : InstRegChangedMap) {
+    MachineInstr *Inst = Item.getFirst();
+    for (auto Opinfo : Item.getSecond()) {
+      Inst->getOperand(Opinfo.first).setReg(Opinfo.second);
+    }
+  }
 }
 
 // This simple PRE (partial redundancy elimination) pass doesn't actually
@@ -902,6 +942,8 @@ bool MachineCSEImpl::PerformSimplePRE(MachineDominatorTree *DT) {
   SmallVector<MachineDomTreeNode *, 32> BBs;
 
   PREMap.clear();
+  InstRegChangedMap.clear();
+
   bool Changed = false;
   BBs.push_back(DT->getRootNode());
   do {
@@ -912,6 +954,8 @@ bool MachineCSEImpl::PerformSimplePRE(MachineDominatorTree *DT) {
     Changed |= ProcessBlockPRE(DT, MBB);
 
   } while (!BBs.empty());
+
+  RecoverRegChangedInst();
 
   return Changed;
 }
