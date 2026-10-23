@@ -81,38 +81,34 @@ define <8 x i1> @not_vp_reverse_v8i1(<8 x i1> %v, <8 x i1> %m, i32 zeroext %evl)
 define <vscale x 4 x i32> @not_setcc_with_multiple_uses(ptr %a, ptr %b, <vscale x 4 x i32> %index, i32 %limit, i32 %evl) {
 ; RV32-LABEL: not_setcc_with_multiple_uses:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.x v12, a2
 ; RV32-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmsltu.vx v10, v8, a2
-; RV32-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; RV32-NEXT:    vmsleu.vv v11, v12, v8
+; RV32-NEXT:    vsetvli zero, a3, e8, mf2, ta, ma
+; RV32-NEXT:    vmnot.m v8, v10
 ; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vle32.v v8, (a0), v0.t
-; RV32-NEXT:    vmv1r.v v0, v11
-; RV32-NEXT:    vle32.v v12, (a1), v0.t
+; RV32-NEXT:    vle32.v v12, (a0), v0.t
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vle32.v v8, (a1), v0.t
 ; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v12, v8, v0
+; RV32-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: not_setcc_with_multiple_uses:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    slli a3, a3, 32
-; RV64-NEXT:    srli a3, a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a2
 ; RV64-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vmsltu.vx v10, v8, a2
-; RV64-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; RV64-NEXT:    vmsleu.vv v11, v12, v8
+; RV64-NEXT:    slli a3, a3, 32
+; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    vsetvli zero, a3, e8, mf2, ta, ma
+; RV64-NEXT:    vmnot.m v8, v10
 ; RV64-NEXT:    vmv1r.v v0, v10
-; RV64-NEXT:    vle32.v v8, (a0), v0.t
-; RV64-NEXT:    vmv1r.v v0, v11
-; RV64-NEXT:    vle32.v v12, (a1), v0.t
+; RV64-NEXT:    vle32.v v12, (a0), v0.t
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vle32.v v8, (a1), v0.t
 ; RV64-NEXT:    vmv1r.v v0, v10
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
+; RV64-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV64-NEXT:    ret
 entry:
   %insert = insertelement <vscale x 4 x i32> poison, i32 %limit, i64 0

@@ -21212,6 +21212,20 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT OpVT = N0.getValueType();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (DCI.isAfterLegalizeDAG() && VT.isScalableVector() && OpVT.isInteger()) {
+    // Recover a mask NOT when the inverse comparison is already shared. Use a
+    // target node so the generic combine does not duplicate the comparison.
+    ISD::CondCode InverseCC = ISD::getSetCCInverse(Cond, OpVT);
+    SDNode *Inverse = DAG.getNodeIfExists(ISD::SETCC, N->getVTList(),
+                                          {N0, N1, DAG.getCondCode(InverseCC)});
+    if (Inverse && !Inverse->use_empty() && !Inverse->hasOneUse()) {
+      auto [Mask, VL] =
+          getDefaultScalableVLOps(VT.getSimpleVT(), dl, DAG, Subtarget);
+      return DAG.getNode(RISCVISD::VMXOR_VL, dl, VT, SDValue(Inverse, 0), Mask,
+                         VL);
+    }
+  }
+
   if (SDValue V =
           canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG, DCI))
     return V;
