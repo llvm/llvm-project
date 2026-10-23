@@ -874,6 +874,10 @@ def : Pat<(f32 (sint_to_fp i32:$a)), (CONVERT_32_32 CVT_S32_TO_F, 0, $a, ROUND_R
 def : Pat<(f32 (uint_to_fp i32:$a)), (CONVERT_32_32 CVT_U32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (sint_to_fp i16:$a)), (CONVERT_32_16 CVT_S16_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f32 (uint_to_fp i16:$a)), (CONVERT_32_16 CVT_U16_TO_F, 0, $a, ROUND_RTE)>;
+// Zero-extended bytes often arrive as i16 after vector load legalization.
+// The byte mode reads the low eight bits directly, without a separate mask.
+def : Pat<(f32 (uint_to_fp (and i16:$a, 255))),
+          (CONVERT_32_16 CVT_U8_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f16 (sint_to_fp i32:$a)), (CONVERT_16_32 CVT_S32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f16 (uint_to_fp i32:$a)), (CONVERT_16_32 CVT_U32_TO_F, 0, $a, ROUND_RTE)>;
 def : Pat<(f16 (sint_to_fp i16:$a)), (CONVERT_16_16 CVT_S16_TO_F, 0, $a, ROUND_RTE)>;
