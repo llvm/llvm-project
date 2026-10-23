@@ -4256,15 +4256,20 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    KnownFPClass RHSClass = computeKnownFPClass(RHS, fcAllFlags, Q);
-    KnownFPClass LHSClass = computeKnownFPClass(LHS, fcAllFlags, Q);
-
-    if (FMF.noNaNs() ||
-        (RHSClass.isKnownNeverNaN() && LHSClass.isKnownNeverNaN()))
+    if (FMF.noNaNs())
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
 
-    if (RHSClass.isKnownAlwaysNaN() || LHSClass.isKnownAlwaysNaN())
-      return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
+    // Constants are canonicalized to the RHS, so query it first.
+    KnownFPClass RHSClass = computeKnownFPClass(RHS, fcAllFlags, Q);
+    if (RHSClass.isKnownAlwaysNaN())
+      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_UNO);
+
+    KnownFPClass LHSClass = computeKnownFPClass(LHS, fcAllFlags, Q);
+    if (LHSClass.isKnownAlwaysNaN())
+      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_UNO);
+
+    if (LHSClass.isKnownNeverNaN() && RHSClass.isKnownNeverNaN())
+      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
   }
 
   if (std::optional<bool> Res =
