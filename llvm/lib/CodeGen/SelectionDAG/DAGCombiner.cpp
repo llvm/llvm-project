@@ -31555,8 +31555,10 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
     // shift or a multiply and because foldDivRemOfSelect would undo this.
     bool IsIntDivRem = BinOpc == ISD::SDIV || BinOpc == ISD::UDIV ||
                        BinOpc == ISD::SREM || BinOpc == ISD::UREM;
-    if (IsIntDivRem && isConstantOrConstantVector(N11) &&
-        isConstantOrConstantVector(N21))
+    const Function &F = DAG.getMachineFunction().getFunction();
+    if (IsIntDivRem && !F.hasMinSize() &&
+        !TLI.isIntDivCheap(N1.getValueType(), F.getAttributes()) &&
+        isConstantOrConstantVector(N11) && isConstantOrConstantVector(N21))
       return SDValue();
     // Second op VT might be different (e.g. shift amount type)
     if (N11.getValueType() == N21.getValueType()) {

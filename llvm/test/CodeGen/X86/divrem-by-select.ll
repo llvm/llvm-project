@@ -885,3 +885,22 @@ define <4 x i32> @negative_udiv_vector_minsize(<4 x i1> %c, <4 x i32> %x) minsiz
   %r = udiv <4 x i32> %x, %d
   ret <4 x i32> %r
 }
+
+define i32 @presplit_udiv_minsize(i1 %c, i32 %x) minsize nounwind {
+; CHECK-X64-LABEL: presplit_udiv_minsize:
+; CHECK-X64:       # %bb.0:
+; CHECK-X64-NEXT:    movl %esi, %eax
+; CHECK-X64-NEXT:    testb $1, %dil
+; CHECK-X64-NEXT:    pushq $13
+; CHECK-X64-NEXT:    popq %rcx
+; CHECK-X64-NEXT:    pushq $7
+; CHECK-X64-NEXT:    popq %rsi
+; CHECK-X64-NEXT:    cmovnel %ecx, %esi
+; CHECK-X64-NEXT:    xorl %edx, %edx
+; CHECK-X64-NEXT:    divl %esi
+; CHECK-X64-NEXT:    retq
+  %a = udiv i32 %x, 13
+  %b = udiv i32 %x, 7
+  %r = select i1 %c, i32 %a, i32 %b
+  ret i32 %r
+}
