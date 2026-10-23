@@ -3032,9 +3032,6 @@ template <typename FolderTy>
 IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
-// Create wrappers for C Binding types.
-LLVM_ABI IRBuilder<> *unwrap(LLVMBuilderRef Ref);
-
 } // end namespace llvm
 
 #endif // LLVM_IR_IRBUILDER_H
