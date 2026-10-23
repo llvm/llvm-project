@@ -1420,6 +1420,11 @@ defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts"
   GenPredicate=false
 >;
 
+defm CacheFillSize : AMDGPUSubtargetFeature<"cache-fill-size",
+  "Has a cache fill size field in VMEM instructions indicating how much data is fetched on a cache miss",
+  /*GenPredicate=*/0
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1921,7 +1926,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize
   ]
 >;
 //===----------------------------------------------------------------------===//

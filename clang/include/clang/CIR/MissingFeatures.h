@@ -216,10 +216,8 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cudaTextureType() { return false; }
-  static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
-  static bool deadOnReturnAttr() { return false; }
   static bool noaliasOnByvalAttr() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }

@@ -1767,6 +1767,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -1835,6 +1836,7 @@ libc_support_library(
         ":__support_cpp_utility",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
         ":hdr_stdint_proxy",
     ],
 )
@@ -3492,6 +3494,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fputil_is_integer",
+    hdrs = ["src/__support/FPUtil/is_integer.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_manipulation_functions",
     hdrs = ["src/__support/FPUtil/ManipulationFunctions.h"],
     textual_hdrs = [
@@ -5102,6 +5115,7 @@ cc_library(
         ":__support_fputil_fp_bitwise",
         ":__support_fputil_generic_fmod",
         ":__support_fputil_hypot",
+        ":__support_fputil_is_integer",
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
@@ -10211,6 +10225,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_polyeval",
@@ -10230,6 +10245,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_polyeval",
@@ -10573,6 +10589,7 @@ libc_support_library(
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
@@ -10653,6 +10670,7 @@ libc_support_library(
         ":__support_fputil_double_double",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
@@ -11659,6 +11677,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
@@ -12002,6 +12021,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_macros_config",
         ":__support_macros_optimization",
