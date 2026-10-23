@@ -462,6 +462,15 @@ class MetadataLoader::MetadataLoaderImpl {
   Module &TheModule;
   MetadataLoaderCallbacks Callbacks;
 
+  /// Forward-reference tracking for MDFunctionLocalContext.
+  /// Each call to parseOneMetadata for a context adds an entry to these arrays
+  /// iff it contains at least one forward reference to a scope/context; flushed
+  /// when we resolve metadata references.
+  SmallVector<std::pair<MDFunctionLocalContext *, SmallVector<uint64_t, 0>>, 0>
+      FLMDScopeMetadataIDs;
+  SmallVector<std::pair<MDFunctionLocalContext *, SmallVector<uint64_t, 0>>, 0>
+      FLMDInlineeMetadataIDs;
+
   /// Cursor associated with the lazy-loading of Metadata. This is the easy way
   /// to keep around the right "context" (Abbrev list) to be able to jump in
   /// the middle of the metadata block and load any record.
@@ -1353,6 +1362,37 @@ void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
   // Finally, everything is in place, we can replace the placeholders operands
   // with the final node they refer to.
   Placeholders.flush(MetadataList);
+
+  // Now that we've flushed, we can resolve the FLMD fwd refs too.
+  for (auto &[FLMD, ScopeMDs] : FLMDScopeMetadataIDs) {
+    for (size_t ScopeIdx = 0; ScopeIdx < FLMD->Scopes.size(); ++ScopeIdx) {
+      // Forward references are the expected case, but not guaranteed, so skip
+      // anything that isn't a forward reference now.
+      if (FLMD->Scopes[ScopeIdx].Scope)
+        continue;
+      Metadata *ScopeMD = MetadataList.lookup(ScopeMDs[ScopeIdx]);
+      // If the cast here fails, the scope will be left with a nullptr Scope,
+      // which should fail in the verifier.
+      FLMD->Scopes[ScopeIdx].Scope = dyn_cast_or_null<DILocalScope>(ScopeMD);
+    }
+  }
+  for (auto &[FLMD, InlineeMDs] : FLMDInlineeMetadataIDs) {
+    for (size_t InlinedCallIdx = 0; InlinedCallIdx < FLMD->InlinedCalls.size();
+         ++InlinedCallIdx) {
+      // Forward references are the expected case, but not guaranteed, so skip
+      // anything that isn't a forward reference now.
+      if (FLMD->InlinedCalls[InlinedCallIdx].InlineeContext)
+        continue;
+      Metadata *InlineeContextMD =
+          MetadataList.lookup(InlineeMDs[InlinedCallIdx]);
+      // If the cast here fails, the InlinedCall will be left with a nullptr
+      // InlineeContext, which should fail in the verifier.
+      FLMD->InlinedCalls[InlinedCallIdx].InlineeContext =
+          dyn_cast_or_null<MDFunctionLocalContext>(InlineeContextMD);
+    }
+  }
+  FLMDScopeMetadataIDs.clear();
+  FLMDInlineeMetadataIDs.clear();
 }
 
 static Value *getValueFwdRef(BitcodeReaderValueList &ValueList, unsigned Idx,
@@ -2633,6 +2673,99 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_FLMD: {
+    // MDFunctionLocalContext is never uniqued.
+    IsDistinct = true;
+    // Since we have several variable-length arrays in this metadata, we'll be
+    // checking the number of records multiple times.
+    size_t NumRecords = Record.size();
+    // Minimal possible case, 1 Version/NonDebug record + 4 "size" records.
+    if (NumRecords < 5)
+      return error("Invalid record");
+    bool IsNonDebug = Record[0] & 1;
+    uint64_t Version = Record[0] >> 1;
+    (void)Version;
+    // FLMD comprises 3 arrays with a leading length field.
+    uint64_t CurrentRecord = 1;
+    MDFunctionLocalContext *NewFLMD = MDFunctionLocalContext::getDistinct(Context, IsNonDebug);
+    // Assign the metadata number now, so that we don't have to use forward
+    // references for ourself.
+    MetadataList.assignValue(NewFLMD, NextMetadataNo);
+    // Scopes
+    uint64_t NumScopes = Record[CurrentRecord++];
+    // Check we have enough remaining records for NumScopes and 2 more sizes.
+    if (NumRecords - CurrentRecord < NumScopes + 2)
+      return error("Invalid record");
+    // NB: Keeping the FwdRefs array as a raw pointer won't work if this
+    // function recurses from here or if the root array otherwise ends up being
+    // written to.
+    SmallVectorImpl<uint64_t> *ScopeFwdRefs = nullptr;
+    for (uint64_t ScopeIdx = 0; ScopeIdx < NumScopes; ++ScopeIdx) {
+      uint64_t Scope = Record[CurrentRecord++];
+      auto *ScopeMD = getMD(Scope);
+      // If the Scope metadata has already been loaded then use it, otherwise
+      // track the forward reference.
+      if (auto *ScopeNode = dyn_cast<DILocalScope>(ScopeMD)) {
+        NewFLMD->Scopes.push_back(FLScope(ScopeNode));
+      } else {
+        if (!ScopeFwdRefs) {
+          FLMDScopeMetadataIDs.push_back({NewFLMD, {}});
+          ScopeFwdRefs = &FLMDScopeMetadataIDs.back().second;
+          ScopeFwdRefs->resize_for_overwrite(NumScopes);
+        }
+        (*ScopeFwdRefs)[ScopeIdx] = Scope;
+        NewFLMD->Scopes.push_back(FLScope(nullptr));
+      }
+    }
+    // SrcLocs
+    uint64_t NumSrcLocs = Record[CurrentRecord++];
+    // Check we have enough remaining records for NumSrcLocs and 1 more size.
+    if (NumRecords - CurrentRecord < (NumSrcLocs * 3) + 1)
+      return error("Invalid record");
+    for (uint64_t SrcLocIdx = 0; SrcLocIdx < NumSrcLocs; ++SrcLocIdx) {
+      uint32_t Line = Record[CurrentRecord++];
+      uint16_t Column = Record[CurrentRecord++];
+      uint16_t RawScopeIdx = Record[CurrentRecord++];
+      NewFLMD->SrcLocs.push_back(FLSrcLoc(
+        Line, Column, FLIndex<FLScope>::fromRaw(RawScopeIdx)));
+    }
+    // InlinedCalls
+    uint64_t NumInlinedCalls = Record[CurrentRecord++];
+    // Check we have exactly enough remaining records for NumInlinedCalls.
+    if (NumRecords - CurrentRecord != (NumInlinedCalls * 4))
+      return error("Invalid record");
+    // NB: Keeping the FwdRefs array as a raw pointer won't work if this
+    // function recurses from here or if the root array otherwise ends up being
+    // written to.
+    SmallVectorImpl<uint64_t> *InlinedCallFwdRefs = nullptr;
+    for (uint64_t InlinedCallIdx = 0; InlinedCallIdx < NumInlinedCalls; ++InlinedCallIdx) {
+      uint32_t RawSrcLocIdx = Record[CurrentRecord++];
+      uint16_t RawInlinedAtIdx = Record[CurrentRecord++];
+      bool Uniquable = Record[CurrentRecord++];
+      uint64_t InlineeContext = Record[CurrentRecord++];
+      auto *InlineeMD = getMD(InlineeContext);
+      if (MDFunctionLocalContext *InlineeFLContext =
+              dyn_cast<MDFunctionLocalContext>(InlineeMD)) {
+        NewFLMD->InlinedCalls.push_back(
+            FLInlinedCall(FLIndex<FLSrcLoc>::fromRaw(RawSrcLocIdx),
+                          FLIndex<FLInlinedCall>::fromRaw(RawInlinedAtIdx),
+                          InlineeFLContext, Uniquable));
+      } else {
+        if (!InlinedCallFwdRefs) {
+          FLMDInlineeMetadataIDs.push_back({NewFLMD, {}});
+          InlinedCallFwdRefs = &FLMDInlineeMetadataIDs.back().second;
+          InlinedCallFwdRefs->resize_for_overwrite(NumInlinedCalls);
+        }
+        (*InlinedCallFwdRefs)[InlinedCallIdx] = InlineeContext;
+        NewFLMD->InlinedCalls.push_back(
+            FLInlinedCall(FLIndex<FLSrcLoc>::fromRaw(RawSrcLocIdx),
+                          FLIndex<FLInlinedCall>::fromRaw(RawInlinedAtIdx),
+                          nullptr, Uniquable));
+      }
+    }
     NextMetadataNo++;
     break;
   }
