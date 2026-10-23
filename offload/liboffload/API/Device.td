@@ -79,8 +79,8 @@ def ol_device_info_t : Enum {
                   "Number of work groups to use when none is requested">,
        TaggedEtor<"NATIVE_HANDLE", "void *",
                   "The backend-native handle of the device, reinterpreted as "
-                  "a void pointer. Note that for some backends the handle is "
-                  "not a pointer, in which case the value is the handle">,
+                  "a void pointer. The actual type of the handle is backend "
+                  "dependent">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);
