@@ -64,9 +64,8 @@ APInt convertValue(const APInt &value, Type type, unsigned width) {
 
 // Convert a validated byte-aligned payload, retaining storage for every
 // element. In particular, each i4 element occupies one byte, not half a byte.
-SmallVector<char> convertRawValues(ArrayRef<char> rawData,
-                                          IntegerType type,
-                                          IntegerType convertedType) {
+SmallVector<char> convertRawValues(ArrayRef<char> rawData, IntegerType type,
+                                   IntegerType convertedType) {
   const unsigned inputBytes = llvm::divideCeil(type.getWidth(), 8);
   const unsigned outputBytes = llvm::divideCeil(convertedType.getWidth(), 8);
   const size_t numElements = rawData.size() / inputBytes;
@@ -205,7 +204,8 @@ private:
 };
 
 struct TosaConvertIntegerTypesBitwidth
-    : tosa::impl::TosaConvertIntegerTypesBitwidthPassBase<TosaConvertIntegerTypesBitwidth> {
+    : tosa::impl::TosaConvertIntegerTypesBitwidthPassBase<
+          TosaConvertIntegerTypesBitwidth> {
   using Base::Base;
 
   void runOnOperation() override {
