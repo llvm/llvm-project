@@ -3200,6 +3200,21 @@ int32_t test_mulqr_i32(int32_t rs1, int32_t rs2) {
   return __riscv_mulqr_i32(rs1, rs2);
 }
 
+// Scalar "Q-format" multiply with widening accumulate
+// CHECK-LABEL: test_mqwacc_i64:
+// RV32:        mqwacc{{[[:space:]]}}
+// RV64:        mqacc.w00
+int64_t test_mqwacc_i64(int64_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mqwacc_i64(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mqrwacc_i64:
+// RV32:        mqrwacc{{[[:space:]]}}
+// RV64:        mqracc.w00
+int64_t test_mqrwacc_i64(int64_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mqrwacc_i64(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: test_pmulh_i16x2:
 // CHECK:       pmulh.h
 int16x2_t test_pmulh_i16x2(int16x2_t rs1, int16x2_t rs2) {
