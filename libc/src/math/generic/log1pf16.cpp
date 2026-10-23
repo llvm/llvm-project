@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Entrypoint definition for the log1pf16 function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/math/log1pf16.h"
 #include "src/__support/math/log1pf16.h"
