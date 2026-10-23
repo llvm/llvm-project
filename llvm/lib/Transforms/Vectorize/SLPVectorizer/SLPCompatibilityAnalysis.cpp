@@ -437,7 +437,13 @@ getLaneConstantCmp(const Instruction *I) {
 }
 
 CmpSamePredicateHelper::MaskType
-CmpSamePredicateHelper::getLaneMask(const Instruction *I) {
+CmpSamePredicateHelper::getLaneMask(const Value *V) {
+  if (V->getType()->isIntegerTy(1) && isa<ConstantInt, UndefValue>(V) &&
+      !isa<PoisonValue>(V))
+    return AllPreds;
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return 0;
   if (std::optional<std::pair<CmpInst::Predicate, APInt>> Cmp =
           getLaneConstantCmp(I)) {
     MaskType M = getFormsMask(Cmp->first, Cmp->second);
@@ -462,10 +468,10 @@ bool CmpSamePredicateHelper::isBitTest(const Instruction *I) {
   return Family && Family->second.isZero();
 }
 
-bool CmpSamePredicateHelper::add(const Instruction *I) {
-  if (auto *CI = dyn_cast<ICmpInst>(I))
+bool CmpSamePredicateHelper::add(const Value *V) {
+  if (auto *CI = dyn_cast<ICmpInst>(V))
     SeenBefore |= getBit(CI->getPredicate());
-  Mask &= getLaneMask(I);
+  Mask &= getLaneMask(V);
   return Mask != 0;
 }
 
@@ -484,17 +490,15 @@ CmpInst::Predicate
 CmpSamePredicateHelper::getSharedPredicate(ArrayRef<Value *> VL,
                                            const ICmpInst *Preferred) {
   CmpSamePredicateHelper Helper;
-  if (!all_of(VL, [&](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        return isa<PoisonValue>(V) || (I && Helper.add(I));
-      }))
+  if (!all_of(VL,
+              [&](Value *V) { return isa<PoisonValue>(V) || Helper.add(V); }))
     return CmpInst::BAD_ICMP_PREDICATE;
   return Helper.getPredicate(Preferred);
 }
 
-bool CmpSamePredicateHelper::canConvertTo(const Instruction *I,
+bool CmpSamePredicateHelper::canConvertTo(const Value *V,
                                           CmpInst::Predicate Pred) {
-  return CmpInst::isIntPredicate(Pred) && (getLaneMask(I) & getBit(Pred)) != 0;
+  return CmpInst::isIntPredicate(Pred) && (getLaneMask(V) & getBit(Pred)) != 0;
 }
 
 Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
@@ -512,6 +516,24 @@ Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
   const auto &[IsComplement, K] = *Family;
   return ConstantInt::get(I->getOperand(0)->getType(),
                           getFamilyConstant(IsComplement, K, Pred));
+}
+
+SmallVector<Value *>
+CmpSamePredicateHelper::getConstantLaneOperands(const Value *V,
+                                                const ICmpInst *Cmp) {
+  const CmpInst::Predicate Pred = Cmp->getPredicate();
+  assert(isa<Constant>(V) && canConvertTo(V, Pred) &&
+         "Expected an i1 constant lane.");
+  Type *Ty = Cmp->getOperand(0)->getType();
+  const unsigned BW = Ty->getIntegerBitWidth();
+  // Any comparison of constants refines the undef lane.
+  auto *CI = dyn_cast<ConstantInt>(V);
+  for (auto [LHS, RHS] :
+       {std::make_pair(0, 0), std::make_pair(0, 1), std::make_pair(1, 0)})
+    if (!CI ||
+        ICmpInst::compare(APInt(BW, LHS), APInt(BW, RHS), Pred) == CI->isOne())
+      return {ConstantInt::get(Ty, LHS), ConstantInt::get(Ty, RHS)};
+  llvm_unreachable("Expected the comparison of constants for the lane.");
 }
 
 bool InstructionsState::isSameOperation(const Instruction *I,
@@ -597,6 +619,10 @@ bool InstructionsState::isCopyableElement(Value *V) const {
     return C && C->getValue().getActiveBits() <=
                     cast<CastInst>(MainOp)->getSrcTy()->getIntegerBitWidth();
   }
+  // Copyable lanes of an integer compare node are limited to the i1
+  // constants.
+  if (auto *Cmp = dyn_cast<ICmpInst>(MainOp))
+    return !I && CmpSamePredicateHelper::canConvertTo(V, Cmp->getPredicate());
   if (!I)
     return !isa<PoisonValue>(V);
   // For a GEP main op only single-index GEPs with the same source element

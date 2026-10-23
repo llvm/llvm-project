@@ -139,7 +139,8 @@ public:
 /// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
 /// rest of the list by adjusting the compared constant. InstCombine also
 /// canonicalizes icmp ne (and X, 1), 0 to trunc X to i1, such lanes are
-/// treated as the original comparison or as icmp eq (and X, 1), 1.
+/// treated as the original comparison or as icmp eq (and X, 1), 1. An i1
+/// constant lane is the comparison of constants with any predicate.
 class CmpSamePredicateHelper {
   using MaskType = std::uint16_t;
   /// Bit i represents predicate ICMP_EQ + i.
@@ -163,14 +164,14 @@ class CmpSamePredicateHelper {
   static APInt getFamilyConstant(bool IsComplement, const APInt &K,
                                  CmpInst::Predicate Pred);
   /// Returns the mask of the predicates that can express the comparison
-  /// lane \p I, or 0 if \p I is not a comparison lane.
-  static MaskType getLaneMask(const Instruction *I);
+  /// lane \p V, or 0 if \p V is not a comparison lane.
+  static MaskType getLaneMask(const Value *V);
 
 public:
-  /// Intersects the convertible predicate set of the comparison lane \p I
-  /// (an icmp or a trunc to i1) with the running set. Returns false when the
-  /// intersection becomes empty.
-  bool add(const Instruction *I);
+  /// Intersects the convertible predicate set of the comparison lane \p V
+  /// (an icmp, a trunc to i1 or an i1 constant) with the running set.
+  /// Returns false when the intersection becomes empty.
+  bool add(const Value *V);
   /// Returns the shared predicate, preferring the predicate of
   /// \p Preferred when the whole list can use it, or BAD_ICMP_PREDICATE
   /// when the list cannot share a natively present predicate.
@@ -183,14 +184,18 @@ public:
   /// and A, B != 0 or and A, B == 0, or trunc X to i1, which is
   /// and X, 1 != 0.
   static bool isBitTest(const Instruction *I);
-  /// Checks if the comparison lane \p I can be expressed with the predicate
+  /// Checks if the comparison lane \p V can be expressed with the predicate
   /// \p Pred by adjusting its constant operand.
-  static bool canConvertTo(const Instruction *I, CmpInst::Predicate Pred);
+  static bool canConvertTo(const Value *V, CmpInst::Predicate Pred);
   /// Returns the adjusted constant operand expressing the comparison lane
   /// \p I with the predicate \p Pred, or nullptr if not convertible or if
   /// \p I is a compare already using \p Pred.
   static Constant *getAdjustedConstant(const Instruction *I,
                                        CmpInst::Predicate Pred);
+  /// Returns the constant operands expressing the i1 constant lane \p V as
+  /// the comparison \p Cmp.
+  static SmallVector<Value *> getConstantLaneOperands(const Value *V,
+                                                      const ICmpInst *Cmp);
 };
 
 /// Main data required for vectorization of instructions.
