@@ -52,12 +52,6 @@ static cl::list<CodeLayoutOpt> EnableCodeAlignment(
         clEnumValN(CmpCsel, "cmp-csel", "CMP/CMN-CSEL pair alignment (32-bit)"),
         clEnumValN(FcmpFcsel, "fcmp-fcsel", "FCMP-FCSEL pair alignment")));
 
-static cl::opt<unsigned> FunctionAlignBytes(
-    "aarch64-code-layout-opt-align-functions", cl::Hidden,
-    cl::desc("Function alignment in bytes for code layout optimization "
-             "(must be a power of 2)"),
-    cl::init(64));
-
 STATISTIC(NumFunctionsAligned,
           "Number of functions with aligned (to 64-bytes by default)");
 STATISTIC(NumCmpCselPairsDetected,
@@ -263,6 +257,9 @@ bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF,
   if (!Changed)
     return false;
 
+  unsigned FunctionAlignBytes = MF.getSubtarget<AArch64Subtarget>()
+                                    .getCLOpts()
+                                    .code_layout_opt_align_functions;
   if (!isPowerOf2_32(FunctionAlignBytes))
     reportFatalUsageError(
         "aarch64-code-layout-opt-align-functions must be a power of 2");

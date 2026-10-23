@@ -246,10 +246,6 @@ public:
   /// existing cache will be returned.
   AssumptionCache &getAssumptionCache(Function &F);
 
-  /// Return the cached assumptions for a function if it has already been
-  /// scanned. Otherwise return nullptr.
-  AssumptionCache *lookupAssumptionCache(Function &F);
-
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;
 

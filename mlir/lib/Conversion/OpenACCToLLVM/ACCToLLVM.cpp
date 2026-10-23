@@ -55,6 +55,9 @@ void ConvertACCToLLVMPass::runOnOperation() {
                                    runtimeConfig);
   populateACCHostDataPatterns(converter, patterns, module.getBodyRegion(),
                               symbolTable, runtimeConfig);
+  populateACCKernelLaunchPatterns(converter, patterns, accSupport,
+                                  module.getBodyRegion(), symbolTable,
+                                  runtimeConfig);
   populateACCAtomicPatterns(converter, patterns, accSupport);
   populateACCDataClauseOpPatterns(converter, patterns, accSupport,
                                   module.getBodyRegion(), symbolTable,
@@ -64,6 +67,7 @@ void ConvertACCToLLVMPass::runOnOperation() {
   configureACCExecutableDirectiveConversionLegality(target);
   configureACCDataDirectiveConversionLegality(target);
   configureACCHostDataConversionLegality(target);
+  configureACCKernelLaunchConversionLegality(target);
   configureACCAtomicConversionLegality(target);
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

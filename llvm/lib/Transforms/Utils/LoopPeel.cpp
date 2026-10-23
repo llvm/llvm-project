@@ -523,7 +523,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
-  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  auto Guards = ScalarEvolution::LoopGuards::collectOnDemand(&L, SE);
   BTC = SE.applyLoopGuards(BTC, Guards);
   RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
@@ -1003,7 +1003,7 @@ static void cloneLoopBlocks(
     // InsertTop, using the incoming value from the preheader for the original
     // preheader (when skipping the main loop) and the incoming value from the
     // latch for the latch (when continuing from the main loop).
-    IRBuilder<> B(InsertTop, InsertTop->getFirstNonPHIIt());
+    IRBuilder<> B(InsertTop->getFirstNonPHIIt());
     for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
       PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
       PHINode *PN = B.CreatePHI(NewPHI->getType(), 2);

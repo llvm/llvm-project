@@ -1068,29 +1068,29 @@ MipsMCCodeEmitter::getMovePRegPairOpValue(const MCInst &MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI) const {
   unsigned res = 0;
 
-  if (MI.getOperand(0).getReg() == Mips::A1 &&
-      MI.getOperand(1).getReg() == Mips::A2)
+  if (MI.getOperand(0).getReg() == Mips::R5 &&
+      MI.getOperand(1).getReg() == Mips::R6)
     res = 0;
-  else if (MI.getOperand(0).getReg() == Mips::A1 &&
-           MI.getOperand(1).getReg() == Mips::A3)
+  else if (MI.getOperand(0).getReg() == Mips::R5 &&
+           MI.getOperand(1).getReg() == Mips::R7)
     res = 1;
-  else if (MI.getOperand(0).getReg() == Mips::A2 &&
-           MI.getOperand(1).getReg() == Mips::A3)
+  else if (MI.getOperand(0).getReg() == Mips::R6 &&
+           MI.getOperand(1).getReg() == Mips::R7)
     res = 2;
-  else if (MI.getOperand(0).getReg() == Mips::A0 &&
-           MI.getOperand(1).getReg() == Mips::S5)
+  else if (MI.getOperand(0).getReg() == Mips::R4 &&
+           MI.getOperand(1).getReg() == Mips::R21)
     res = 3;
-  else if (MI.getOperand(0).getReg() == Mips::A0 &&
-           MI.getOperand(1).getReg() == Mips::S6)
+  else if (MI.getOperand(0).getReg() == Mips::R4 &&
+           MI.getOperand(1).getReg() == Mips::R22)
     res = 4;
-  else if (MI.getOperand(0).getReg() == Mips::A0 &&
-           MI.getOperand(1).getReg() == Mips::A1)
+  else if (MI.getOperand(0).getReg() == Mips::R4 &&
+           MI.getOperand(1).getReg() == Mips::R5)
     res = 5;
-  else if (MI.getOperand(0).getReg() == Mips::A0 &&
-           MI.getOperand(1).getReg() == Mips::A2)
+  else if (MI.getOperand(0).getReg() == Mips::R4 &&
+           MI.getOperand(1).getReg() == Mips::R6)
     res = 6;
-  else if (MI.getOperand(0).getReg() == Mips::A0 &&
-           MI.getOperand(1).getReg() == Mips::A3)
+  else if (MI.getOperand(0).getReg() == Mips::R4 &&
+           MI.getOperand(1).getReg() == Mips::R7)
     res = 7;
 
   return res;
@@ -1108,14 +1108,22 @@ MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
   switch (Op.getReg().id()) {
   default:
     llvm_unreachable("Unknown register for movep!");
-  case Mips::ZERO:  return 0;
-  case Mips::S1:    return 1;
-  case Mips::V0:    return 2;
-  case Mips::V1:    return 3;
-  case Mips::S0:    return 4;
-  case Mips::S2:    return 5;
-  case Mips::S3:    return 6;
-  case Mips::S4:    return 7;
+  case Mips::R0:
+    return 0;
+  case Mips::R17:
+    return 1;
+  case Mips::R2:
+    return 2;
+  case Mips::R3:
+    return 3;
+  case Mips::R16:
+    return 4;
+  case Mips::R18:
+    return 5;
+  case Mips::R19:
+    return 6;
+  case Mips::R20:
+    return 7;
   }
 }
 

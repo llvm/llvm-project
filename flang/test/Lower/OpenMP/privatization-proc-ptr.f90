@@ -30,11 +30,11 @@ contains
 !CHECK: omp.private {type = private} @_QFFtest_privateEpf_private_boxproc_i32_args_ref_i32 : !fir.boxproc<(!fir.ref<i32>) -> i32>
 
 !CHECK-LABEL: func private @_QFPtest_private
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_privateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_privateEps")
 !CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0
 !CHECK:         %[[PF_BOX:.*]] = fir.box_addr %[[PF_VAL]]
 !CHECK:         fir.call %[[PF_BOX]]({{.*}})
@@ -55,11 +55,11 @@ subroutine test_private
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_firstprivate
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_firstprivateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_firstprivateEps")
 subroutine test_firstprivate
   procedure(f), pointer :: pf
   procedure(sub), pointer :: ps
@@ -69,11 +69,11 @@ subroutine test_firstprivate
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_lastprivate
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEps"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEps")
 !CHECK:       omp.parallel
-!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEpf"}
-!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_lastprivateEps"}
+!CHECK:         %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEpf")
+!CHECK:         %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_lastprivateEps")
 !CHECK:         %[[PF_VAL:.*]] = fir.load %[[PRIV_PF]]#0
 !CHECK:         fir.store %[[PF_VAL]] to %[[PF]]#0
 !CHECK:         %[[PS_VAL:.*]] = fir.load %[[PRIV_PS]]#0
@@ -90,12 +90,12 @@ subroutine test_lastprivate
 end subroutine
 
 !CHECK-LABEL: func private @_QFPtest_sections
-!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEpf"}
-!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEps"}
-!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEpf"}
+!CHECK:       %[[PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEpf")
+!CHECK:       %[[PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEps")
+!CHECK:       %[[PRIV_PF:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEpf")
 !CHECK:       %[[PF_VAL:.*]] = fir.load %[[PF]]#0
 !CHECK:       fir.store %[[PF_VAL]] to %[[PRIV_PF]]#0
-!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = "_QFFtest_sectionsEps"}
+!CHECK:       %[[PRIV_PS:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFFtest_sectionsEps")
 !CHECK:       %[[PS_VAL:.*]] = fir.load %[[PS]]#0
 !CHECK:       fir.store %[[PS_VAL]] to %[[PRIV_PS]]#0
 !CHECK:       omp.sections

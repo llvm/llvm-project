@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../private.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "device.h"
 #include "omptarget.h"
 #include "rtl.h"
@@ -96,8 +96,7 @@ EXTERN int omp_get_device_from_uid(const char *DeviceUid) {
 
   auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
   for (const DeviceTy &Device : PM->devices(ExclusiveDevicesAccessor)) {
-    const char *Uid = Device.RTL->getDevice(Device.RTLDeviceID).getDeviceUid();
-    if (Uid && strcmp(DeviceUid, Uid) == 0) {
+    if (Device.getUid() == DeviceUid) {
       DeviceNum = Device.DeviceID;
       break;
     }
@@ -125,8 +124,7 @@ EXTERN const char *omp_get_uid_from_device(int DeviceNum) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  const char *Uid =
-      DeviceOrErr->RTL->getDevice(DeviceOrErr->RTLDeviceID).getDeviceUid();
+  const char *Uid = DeviceOrErr->getUid().data();
   ODBG(ODT_Interface) << "Call to " << __func__ << " returning " << Uid;
   return Uid;
 }
@@ -265,6 +263,12 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
   if (!Ptr) {
     ODBG(ODT_Interface) << "Call to " << __func__
                         << " with NULL ptr returning false";
+    return false;
+  }
+
+  if (Size == 0) {
+    ODBG(ODT_Interface) << "Call to " << __func__
+                        << " with zero size returning false";
     return false;
   }
 

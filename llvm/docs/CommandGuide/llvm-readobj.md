@@ -176,7 +176,8 @@ Display the call graph section entries i.e. for each function
 its identifying information, each of its direct callees' information
 and for each indirect callee a 64-bit number representing the callee's
 function signature. This information can be used to reconstruct
-the program call graph.
+the program call graph. The output format is described in
+{doc}`/CallGraphSection`.
 :::
 
 :::{option} --cg-profile

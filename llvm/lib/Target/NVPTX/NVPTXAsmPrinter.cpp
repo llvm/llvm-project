@@ -251,8 +251,7 @@ private:
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
-  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
-                         raw_ostream &O) const;
+  void emitCallPrototype(const CallBase &CB, MCSymbol *PrototypeSymbol) const;
   void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
 
   /// Should a .noreturn directive be emitted for \p V, which is either a
@@ -717,12 +716,16 @@ static void printReturnValClause(const OwnerT *Owner, StringRef Name,
 }
 
 void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
-                                        unsigned UniqueCallSite,
-                                        raw_ostream &O) const {
+                                        MCSymbol *PrototypeSymbol) const {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
 
-  O << "prototype_" << UniqueCallSite << " : .callprototype ";
+  OutStreamer->emitLabel(PrototypeSymbol);
+
+  SmallString<128> Str;
+  raw_svector_ostream O(Str);
+
+  O << ".callprototype ";
   printReturnValClause(&CB, "_", DL, O);
   O << "_ (";
 
@@ -754,6 +757,8 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   if (shouldEmitPTXNoReturn(CB))
     O << " .noreturn";
   O << ";\n";
+
+  OutStreamer->emitRawText(O.str());
 }
 
 void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
@@ -868,12 +873,11 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
+  OutStreamer->emitRawText(O.str());
 
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &[Id, CB] : MFI->getCallPrototypes())
-    emitCallPrototype(*CB, Id, O);
-
-  OutStreamer->emitRawText(O.str());
+  for (const auto &[CB, Symbol] : MFI->getCallPrototypes())
+    emitCallPrototype(*CB, Symbol);
 
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
     for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
@@ -1177,6 +1181,11 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   bool Result = AsmPrinter::doInitialization(M);
 
   GlobalsEmitted = false;
+
+  // Ensure globals are in the symbol table before ISel so any temp symbols are
+  // guaranteed not to collide with user symbols
+  for (const GlobalValue &GV : M.global_values())
+    getSymbol(&GV);
 
   return Result;
 }

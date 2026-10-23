@@ -3433,7 +3433,7 @@ LogicalResult acc::HostDataOp::verify() {
   llvm::SmallPtrSet<mlir::Value, 4> seenVars;
   for (mlir::Value operand : getDataClauseOperands()) {
     auto useDeviceOp =
-        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+        mlir::dyn_cast_if_present<acc::UseDeviceOp>(operand.getDefiningOp());
     if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
 
@@ -4474,20 +4474,29 @@ void ExitDataOp::addAsyncOperand(
 void ExitDataOp::addWaitOnly(MLIRContext *context,
                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void ExitDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
@@ -4570,20 +4579,29 @@ void EnterDataOp::addAsyncOperand(
 void EnterDataOp::addWaitOnly(MLIRContext *context,
                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void EnterDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
@@ -5479,6 +5497,16 @@ mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
       .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
+SmallVector<DeviceType, 3>
+acc::getDeviceTypesByPrecedence(DeviceType deviceType) {
+  SmallVector<DeviceType, 3> deviceTypes;
+  if (deviceType != DeviceType::None && deviceType != DeviceType::Star)
+    deviceTypes.push_back(deviceType);
+  deviceTypes.push_back(DeviceType::Star);
+  deviceTypes.push_back(DeviceType::None);
+  return deviceTypes;
+}
+
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
   auto name{
       llvm::TypeSwitch<mlir::Operation *, std::optional<llvm::StringRef>>(accOp)
@@ -5499,6 +5527,10 @@ mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
               [&](auto entry) { return entry.getDataClause(); })
           .Default([&](mlir::Operation *) { return std::nullopt; })};
   return dataClause;
+}
+
+bool mlir::acc::isDataEntryOp(mlir::Operation *op) {
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(op);
 }
 
 bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
