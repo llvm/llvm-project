@@ -103,9 +103,8 @@ FunctionPass *llvm::createWebAssemblyMemIntrinsicResultsLegacyPass() {
 }
 
 // Replace uses of FromReg with ToReg if they are dominated by MI.
-static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
-                                 unsigned FromReg, unsigned ToReg,
-                                 const MachineRegisterInfo &MRI,
+static bool replaceDominatedUses(MachineInstr &MI, unsigned FromReg,
+                                 unsigned ToReg, const MachineRegisterInfo &MRI,
                                  MachineDominatorTree &MDT,
                                  LiveIntervals &LIS) {
   bool Changed = false;
@@ -185,7 +184,7 @@ bool WebAssemblyMemIntrinsicResultsImpl::optimizeCall(
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
     report_fatal_error("Memory Intrinsic results: call to builtin function "
                        "with wrong signature, from/to mismatch");
-  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, *MDT, *LIS);
+  return replaceDominatedUses(MI, FromReg, ToReg, MRI, *MDT, *LIS);
 }
 
 bool WebAssemblyMemIntrinsicResultsImpl::runOnMachineFunction(
