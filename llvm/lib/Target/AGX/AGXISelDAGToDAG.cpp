@@ -240,10 +240,11 @@ void AGXDAGToDAGISel::selectByteVectorStore(SDNode *N, unsigned NumElts) {
   auto *M = cast<MemSDNode>(N);
   SDValue Chain = N->getOperand(0), Addr = N->getOperand(NumElts + 1);
   auto Word = [&](unsigned I) {
+    SDValue Lo = CurDAG->getTargetConstant(AGX::lo16, DL, MVT::i32);
+    SDValue Hi = CurDAG->getTargetConstant(AGX::hi16, DL, MVT::i32);
     SDValue Ops[] = {
         CurDAG->getTargetConstant(AGX::GPR32RegClassID, DL, MVT::i32),
-        N->getOperand(1 + I), CurDAG->getTargetConstant(AGX::lo16, DL, MVT::i32),
-        N->getOperand(2 + I), CurDAG->getTargetConstant(AGX::hi16, DL, MVT::i32)};
+        N->getOperand(1 + I), Lo, N->getOperand(2 + I), Hi};
     return SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
                                           MVT::i32, Ops),
                    0);
