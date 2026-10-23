@@ -5926,8 +5926,7 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     // Avoid VFs that split the index vector, which require rebuilding the
     // condition mask across parts and can outweigh the benefit of splitting
     // the gather or scatter.
-    if (CostCtx.TTI.getNumberOfParts(VectorType::get(Index->getType(), VF)) !=
-        1)
+    if (CostCtx.TTI.getNumberOfParts(VectorType::get(GEPIndexTy, VF)) != 1)
       return false;
     unsigned GatherScatterID =
         IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
