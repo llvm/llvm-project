@@ -3,6 +3,8 @@
 // and that OMP_TEAMS_THREAD_LIMIT is honored. Such kernels use a block size of
 // 512 by default (see '-fopenmp-target-xteam-reduction-blocksize='), so the
 // envar has to request fewer threads than that to have an observable effect.
+// The loop has to be long enough for one block per compute unit: a shorter one
+// gets the grid of a non-reduction kernel, with possibly fewer threads.
 //
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=16 OMP_TEAMS_THREAD_LIMIT=256 %libomptarget-run-generic 2>&1 | %fcheck-generic
@@ -17,11 +19,11 @@
 // clang-format on
 #include <stdio.h>
 
+#define N (1 << 20)
+
+double a[N];
+
 int main() {
-  int N = 100;
-
-  double a[N];
-
   for (int i = 0; i < N; i++)
     a[i] = i;
 
@@ -32,7 +34,7 @@ int main() {
   for (int j = 0; j < N; j = j + 1)
     sum1 += a[j];
 
-  int rc = sum1 != 4950;
+  int rc = sum1 != (double)N * (N - 1) / 2;
 
   if (!rc)
     printf("Success\n");
@@ -40,6 +42,6 @@ int main() {
   return rc;
 }
 // clang-format off
-/// CHECK: Launching kernel {{.*}} with [1,1,1] blocks and [256,1,1] threads in SPMD mode
+/// CHECK: Launching kernel {{.*}} with [{{[0-9]+}},1,1] blocks and [256,1,1] threads in SPMD mode
 /// CHECK: Success
 
