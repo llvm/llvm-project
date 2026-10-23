@@ -327,13 +327,18 @@ bool IsVariableListItem(
   return false;
 }
 
-std::optional<bool> IsSubstring(
+std::optional<bool> IsSubstringAndValidate(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
   // Whole objects and other designators cannot be substrings. Analyzing them
   // as expressions can reject otherwise valid OpenMP list items.
   if (auto *desg{GetDesignatorFromObj(object)}; desg &&
       (std::holds_alternative<parser::Substring>(desg->u) ||
           GetArrayElementFromObj(object))) {
+    // This query also validates potential substrings, including in clauses
+    // where they are permitted. Expression analysis can mark symbols erroneous
+    // and rewrite the parse tree, so it is not free of side effects. Retain its
+    // diagnostics: discarding them leaves erroneous symbols without a reported
+    // error and can cause assertion failures when those symbols are used again.
     evaluate::ExpressionAnalyzer ea(*semaCtx);
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
       return ExtractSubstring(*expr).has_value();

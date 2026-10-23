@@ -4596,7 +4596,7 @@ void OmpStructureChecker::CheckSubstring(
     const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const parser::OmpObject &object : objects.v) {
-    if (IsSubstring(object, &context_).value_or(false)) {
+    if (IsSubstringAndValidate(object, &context_).value_or(false)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
           "A substring cannot appear in a %s clause"_err_en_US,
@@ -4706,7 +4706,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObject &object,
     llvm::StringRef clause, bool checkSubstrings) {
-  auto isSubstring{IsSubstring(object, &context_)};
+  auto isSubstring{IsSubstringAndValidate(object, &context_)};
   if (!isSubstring) {
     return; // Expression analysis has already diagnosed the invalid item.
   }
