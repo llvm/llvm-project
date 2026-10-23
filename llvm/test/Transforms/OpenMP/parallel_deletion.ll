@@ -648,7 +648,7 @@ define internal void @.omp.reduction.reduction_func(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARG1]], align 8, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARG]], align 8, !invariant.load [[META1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4, !invariant.load [[META1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
