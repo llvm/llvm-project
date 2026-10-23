@@ -53,6 +53,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXExpandWideAtomicsPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
   initializeAGXSinkAddressesPass(PR);
+  initializeAGXThreadgroupAddressesPass(PR);
+  initializeAGXHoistGuardedLoadsPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
@@ -206,9 +208,14 @@ void AGXPassConfig::addIRPasses() {
   // By-reference kernel arguments become uniform register values.
   addPass(createAGXPromoteKernelArgsPass());
   // Neighbouring 32-bit accesses become one vector access (after checked
-  // mode, which checks the accesses as the source wrote them).
-  if (getOptLevel() != CodeGenOptLevel::None)
+  // mode, which checks the accesses as the source wrote them); threadgroup
+  // and private addresses computed in integers become base + constant first.
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // Loads that all-pairs loops skip for one element issue together.
+    addPass(createAGXHoistGuardedLoadsPass());
+    addPass(createAGXThreadgroupAddressesPass());
     addPass(createLoadStoreVectorizerPass());
+  }
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.
   addPass(createScalarizerPass());

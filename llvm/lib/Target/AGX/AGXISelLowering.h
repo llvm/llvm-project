@@ -38,6 +38,7 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerExpLog(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG) const;

@@ -87,7 +87,44 @@ define void @upward_fast(ptr addrspace(1) %out, float %a, float %b) #0 {
   ret void
 }
 
+; A loop that switches to round toward zero and back (CUDA's roundf: add.rz
+; then round-to-nearest code) leaves the mode known at its header: the
+; round-to-nearest operations stay ordinary ones and only the add.rz is
+; computed in software.
+; CHECK-LABEL: @loop_restores_mode(
+; CHECK: loop:
+; CHECK-NOT: call {{.*}}constrained
+; CHECK: %d = fsub float %x, %a
+; CHECK: bitcast float %d to i32
+; CHECK: %x.next = fadd float %x, 1.000000e+00
+define void @loop_restores_mode(ptr addrspace(1) %out, float %a, float %h, i32 %n) #0 {
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %x = phi float [ %a, %entry ], [ %x.next, %loop ]
+  %d = call float @llvm.experimental.constrained.fsub.f32(float %x, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %m0 = call i32 @llvm.agx.get.fpmode()
+  %m1 = and i32 %m0, -16
+  %m2 = or i32 %m1, 4
+  call void @llvm.agx.set.fpmode(i32 %m2)
+  %r = call float @llvm.experimental.constrained.fadd.f32(float %d, float %h, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %o = getelementptr float, ptr addrspace(1) %out, i32 %i
+  store float %r, ptr addrspace(1) %o
+  %m3 = call i32 @llvm.agx.get.fpmode()
+  %m4 = and i32 %m3, -16
+  %m5 = or i32 %m4, 5
+  call void @llvm.agx.set.fpmode(i32 %m5)
+  %x.next = call float @llvm.experimental.constrained.fadd.f32(float %x, float 1.0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %i.next = add i32 %i, 1
+  %c = icmp slt i32 %i.next, %n
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 declare void @llvm.agx.set.fpmode(i32)

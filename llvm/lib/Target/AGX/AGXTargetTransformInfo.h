@@ -53,6 +53,10 @@ public:
 
   unsigned getInliningThresholdMultiplier() const override { return 11; }
 
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TargetTransformInfo::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE) const override;
+
   // Device and threadgroup accesses of up to four 32-bit values are one
   // instruction (xy / xyz / xyzw) at any 4-byte alignment (ptx-re-blockers
   // B33); the load/store vectorizer merges neighbouring ones.

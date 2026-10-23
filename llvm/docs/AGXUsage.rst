@@ -576,6 +576,26 @@ lines and pages (ptx-re-blockers B33). The vectorizer runs after checked mode,
 so the checks see the accesses the source wrote. Vector arithmetic is still
 scalar.
 
+Threadgroup and private addresses that PTX computes in integers (``inttoptr``
+of an integer expression) are first written as a constant offset from the
+address without its constant terms, rebuilt from the instructions already
+there (``AGXThreadgroupAddresses``, ``-agx-threadgroup-address-offsets``), so
+that the vectorizer sees ``a[k]`` and ``a[k + 1]`` as one base at offsets 0
+and 4. Loops with a known trip count whose threadgroup loads read the 4 or 8
+bytes by which their address advances each iteration are unrolled until those
+reads cover 16 bytes (``-agx-threadgroup-unroll``: 0, the default, for that;
+1 for no unrolling; N for up to N copies of every single-block loop that
+loads threadgroup memory): the inner loop of a matrix product over a tile
+then loads ``xyzw``.
+
+In a loop that writes no memory and exits only at its latch, a device load in
+a block that runs exactly when ``j != i`` (``i`` loop-invariant, the test run
+every iteration) moves to the loop header when the same address with ``i``
+for ``j`` was loaded before the loop (``AGXHoistGuardedLoads``,
+``-agx-hoist-skipped-loads``): an all-pairs loop that skips its own element
+then issues the loads of its unrolled copies together instead of one after
+another.
+
 Memory loads, stack loads and atomics complete asynchronously. A ``wait`` is
 inserted before the first instruction that reads or overwrites a pending
 result, before barriers and at the end of each block.
@@ -609,6 +629,11 @@ Supported:
   with a Newton-Raphson step (omitted with ``arcp``/``afn`` and for
   ``half``); ``sin``/``cos`` reduce to quadrants for ``sin_pt_1`` and
   ``sin_pt_2``; ``exp``, ``log`` and ``pow`` go through ``exp2``/``log2``.
+  ``llvm.agx.sin``, ``llvm.agx.cos``, ``llvm.agx.exp2`` and ``llvm.agx.log2``
+  are the code of ``llvm.sin`` and the others (with the same IEEE lowering),
+  which LLVM does not evaluate on the host for a constant argument: a
+  constant gives the bits of the hardware approximation, as a variable does
+  (``llvm.agx.rcp`` and ``llvm.agx.rsqrt.special`` likewise).
   Conversions between 64-bit integers and ``float`` are expanded.
 * Device memory loads and stores of 8 to 64 bits with folded base, scaled
   index and constant offsets; threadgroup and stack memory; memory

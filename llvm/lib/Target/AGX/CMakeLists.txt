@@ -24,6 +24,7 @@ add_llvm_target(AGXCodeGen
   AGXFoldOperands.cpp
   AGXHoistFromElseFlow.cpp
   AGXFrameLowering.cpp
+  AGXHoistGuardedLoads.cpp
   AGXISelDAGToDAG.cpp
   AGXISelLowering.cpp
   AGXInsertWaits.cpp
@@ -39,6 +40,7 @@ add_llvm_target(AGXCodeGen
   AGXSelectionDAGInfo.cpp
   AGXExpandWideAtomics.cpp
   AGXSinkAddresses.cpp
+  AGXThreadgroupAddresses.cpp
   AGXSoftF64.cpp
   AGXStrictFP.cpp
   AGXSubtarget.cpp

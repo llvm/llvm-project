@@ -1,13 +1,16 @@
 ; RUN: llc -mtriple=agx -mcpu=agx-g14c -verify-machineinstrs < %s | FileCheck %s
 
 ; 32-bit division by a variable: a reciprocal estimate, one Newton step with
-; multiply-highs and a correction loop that a zero divisor skips; no loop
-; over the quotient bits. 64-bit division checks at run time whether both
-; operands fit in 32 bits.
+; multiply-highs and two corrections, without control flow; no loop over the
+; quotient bits. 64-bit division checks at run time whether both operands fit
+; in 32 bits.
 
 ; CHECK-LABEL: udiv32:
+; CHECK-NOT:     while_
 ; CHECK:         rcp
 ; CHECK:         imadd {{r[0-9]+_r[0-9]+}}
+; CHECK-NOT:     while_
+; CHECK-NOT:     jmp_exec_any
 ; CHECK:         stop
 define agx_kernel void @udiv32(ptr addrspace(1) %p, i32 %a, i32 %b) {
   %q = udiv i32 %a, %b
@@ -17,6 +20,7 @@ define agx_kernel void @udiv32(ptr addrspace(1) %p, i32 %a, i32 %b) {
 
 ; CHECK-LABEL: srem32:
 ; CHECK:         rcp
+; CHECK-NOT:     jmp_exec
 ; CHECK:         stop
 define agx_kernel void @srem32(ptr addrspace(1) %p, i32 %a, i32 %b) {
   %r = srem i32 %a, %b

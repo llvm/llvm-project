@@ -96,6 +96,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   for (MVT VT : {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v2f32, MVT::v3f32,
                  MVT::v4f32})
     setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+  // and naturally aligned device loads of 2 or 4 bytes become one access of
+  // the byte format (ReplaceNodeResults)
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::v2i8, MVT::v4i8}, Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -145,8 +148,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, VT, Custom);
     setOperationAction({ISD::FSUB, ISD::SELECT_CC,
                         ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FSINCOS, ISD::FROUND},
+                        ISD::FMAXNUM_IEEE, ISD::FSINCOS},
                        VT, Expand);
+    setOperationAction(ISD::FROUND, VT, Custom);
     // Conditions without a direct hardware condition.
     setCondCodeAction({ISD::SETONE, ISD::SETUEQ, ISD::SETO, ISD::SETUO}, VT,
                       Expand);
@@ -512,6 +516,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerFREM(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
+  case ISD::FROUND:
+    return lowerFROUND(Op, DAG);
   case ISD::FSIN:
   case ISD::FCOS:
     return lowerTrig(Op, DAG);
@@ -579,6 +585,29 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Sample.getValue(4));
     return;
   }
+  // Byte vector loads: one access of the byte format, a 16-bit result per
+  // byte. The PTX alignment of ld.v2.u8 / ld.v4.u8 is the vector's size.
+  if (auto *L = dyn_cast<LoadSDNode>(N);
+      L && L->getExtensionType() == ISD::NON_EXTLOAD && !L->isIndexed() &&
+      L->isSimple() && L->getAddressSpace() == AGX::DEVICE_ADDRESS &&
+      (L->getValueType(0) == MVT::v2i8 || L->getValueType(0) == MVT::v4i8) &&
+      L->getAlign() >= Align(L->getValueType(0).getStoreSize())) {
+    SDLoc DL(N);
+    EVT VT = L->getValueType(0);
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<EVT, 5> VTs(NumElts, MVT::i16);
+    VTs.push_back(MVT::Other);
+    SDValue Load = DAG.getMemIntrinsicNode(
+        NumElts == 2 ? AGXISD::LOAD_V2_I8 : AGXISD::LOAD_V4_I8, DL,
+        DAG.getVTList(VTs), {L->getChain(), L->getBasePtr()},
+        L->getMemoryVT(), L->getMemOperand());
+    SmallVector<SDValue, 4> Elts;
+    for (unsigned I = 0; I < NumElts; ++I)
+      Elts.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Load.getValue(I)));
+    Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+    Results.push_back(Load.getValue(NumElts));
+    return;
+  }
   // Vector loads: one access with a 32-bit result per element.
   auto *L = dyn_cast<LoadSDNode>(N);
   if (!L || L->getExtensionType() != ISD::NON_EXTLOAD || L->isIndexed() ||
@@ -613,14 +642,37 @@ bool AGXTargetLowering::allowsMisalignedMemoryAccesses(
   return OK;
 }
 
+static cl::opt<bool> AGXByteVectorStores(
+    "agx-byte-vector-stores", cl::init(true), cl::Hidden,
+    cl::desc("Store 2 or 4 bytes with one device_store of the byte format"));
+
 SDValue AGXTargetLowering::lowerVectorStore(SDValue Op,
                                             SelectionDAG &DAG) const {
   auto *S = cast<StoreSDNode>(Op);
   SDValue Val = S->getValue();
   EVT VT = Val.getValueType();
+  SDLoc DL(Op);
+  // 2 or 4 bytes, naturally aligned (PTX st.v2.u8 / st.v4.u8): one access of
+  // the byte format from 16-bit values
+  if (AGXByteVectorStores && (VT == MVT::v2i8 || VT == MVT::v4i8) &&
+      !S->isTruncatingStore() &&
+      !S->isIndexed() && S->isSimple() &&
+      S->getAddressSpace() == AGX::DEVICE_ADDRESS &&
+      S->getAlign() >= Align(VT.getStoreSize())) {
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallVector<SDValue, 6> Ops{S->getChain()};
+    for (unsigned I = 0; I < NumElts; ++I)
+      Ops.push_back(DAG.getNode(
+          ISD::ANY_EXTEND, DL, MVT::i16,
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Val,
+                      DAG.getVectorIdxConstant(I, DL))));
+    Ops.push_back(S->getBasePtr());
+    return DAG.getMemIntrinsicNode(
+        NumElts == 2 ? AGXISD::STORE_V2_I8 : AGXISD::STORE_V4_I8, DL,
+        DAG.getVTList(MVT::Other), Ops, S->getMemoryVT(), S->getMemOperand());
+  }
   if (S->isTruncatingStore() || S->isIndexed() || !isVectorAccess(VT, S))
     return SDValue();
-  SDLoc DL(Op);
   SmallVector<SDValue, 6> Ops{S->getChain()};
   for (unsigned I = 0; I < VT.getVectorNumElements(); ++I)
     Ops.push_back(DAG.getBitcast(
@@ -687,6 +739,17 @@ SDValue AGXTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (!VReg)
       return DAG.getUNDEF(MVT::i32);
     return DAG.getCopyFromReg(DAG.getEntryNode(), DL, VReg, MVT::i32);
+  }
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos:
+  case Intrinsic::agx_exp2:
+  case Intrinsic::agx_log2: {
+    // the nodes of llvm.sin and the others, which the DAG does not fold
+    unsigned Opc = IID == Intrinsic::agx_sin   ? ISD::FSIN
+                   : IID == Intrinsic::agx_cos ? ISD::FCOS
+                   : IID == Intrinsic::agx_exp2 ? ISD::FEXP2
+                                                : ISD::FLOG2;
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1));
   }
   case Intrinsic::agx_simd_ballot:
   case Intrinsic::agx_quad_ballot: {
@@ -1173,6 +1236,25 @@ SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
   SDValue S = DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, Sign),
                           DAG.getConstant(SignMask, DL, IntVT));
   return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, IntVT, M, S));
+}
+
+/// round(x), half away from zero (no libm on AGX): t = trunc(x), plus one
+/// away from zero when |x - t| >= 0.5, with the sign of x (round(-0.3) and
+/// round(-0) are -0). x - t is exact, and so is t + 1 for every x that is not
+/// an integer; infinities give x - t = NaN, so t, and NaN stays NaN.
+SDValue AGXTargetLowering::lowerFROUND(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue X = Op.getOperand(0);
+  SDValue T = DAG.getNode(ISD::FTRUNC, DL, VT, X);
+  SDValue D =
+      DAG.getNode(ISD::FABS, DL, VT, DAG.getNode(ISD::FSUB, DL, VT, X, T));
+  SDValue One = DAG.getNode(ISD::FCOPYSIGN, DL, VT,
+                            DAG.getConstantFP(1.0, DL, VT), X);
+  SDValue Step = DAG.getSelectCC(DL, D, DAG.getConstantFP(0.5, DL, VT), One,
+                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETOGE);
+  return DAG.getNode(ISD::FCOPYSIGN, DL, VT,
+                     DAG.getNode(ISD::FADD, DL, VT, T, Step), X);
 }
 
 /// float to bfloat bits, rounded to nearest even: (x + 0x7fff + lsb) >> 16,

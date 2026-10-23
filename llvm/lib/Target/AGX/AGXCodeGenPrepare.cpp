@@ -232,13 +232,12 @@ static bool isCheapDivision(const BinaryOperator &BO) {
   return BO.getType()->isIntegerTy(32);
 }
 
-/// A 32-bit division or remainder without a loop over the quotient bits, as
-/// AMDGPU expands them (AMDGPUCodeGenPrepare::expandDivRem32): an estimate of
-/// 2^32 / y from the f32 reciprocal (within one ulp, Sail AGX model), one
-/// Newton-Raphson step in integers, then corrections; the last one loops, so
-/// a less accurate reciprocal only costs iterations. The estimate never
-/// exceeds the quotient. Division by zero gives all ones (remainder: x), as on
-/// NVIDIA GPUs.
+/// A 32-bit division or remainder without a loop, as AMDGPU expands them
+/// (AMDGPUCodeGenPrepare::expandDivRem32): an estimate of 2^32 / y from the
+/// f32 reciprocal, one Newton-Raphson step in integers, then two corrections,
+/// which is exact when the reciprocal is within 1 ulp. The hardware's rcp is
+/// within 0.75 ulp for every mantissa (Apple-M2-Playground 2026-10-20-fdiv32).
+/// Division by zero gives all ones (remainder: x), as on NVIDIA GPUs.
 static Value *expandDivRem32(BinaryOperator &BO) {
   IRBuilder<> B(&BO);
   Instruction::BinaryOps Op = BO.getOpcode();
@@ -265,37 +264,12 @@ static Value *expandDivRem32(BinaryOperator &BO) {
   Z = B.CreateAdd(Z, MulHi(Z, B.CreateMul(B.CreateNeg(Y), Z)));
   Value *Q = MulHi(X, Z);
   Value *R = B.CreateSub(X, B.CreateMul(Q, Y));
-  Value *C = B.CreateICmpUGE(R, Y);
-  Q = B.CreateSelect(C, B.CreateAdd(Q, B.getInt32(1)), Q);
-  R = B.CreateSelect(C, B.CreateSub(R, Y), R);
-
-  // The remaining correction, normally none or one step.
-  BasicBlock *Pre = B.GetInsertBlock();
-  BasicBlock *Done = SplitBlock(Pre, &BO);
-  BasicBlock *Fix = BasicBlock::Create(BO.getContext(), "divrem.fix",
-                                       Pre->getParent(), Done);
-  Pre->getTerminator()->eraseFromParent();
-  B.SetInsertPoint(Pre);
-  // A zero divisor (result chosen below) would never leave the loop.
-  Value *Enter = B.CreateAnd(B.CreateICmpUGE(R, Y),
-                             B.CreateICmpNE(Y, B.getInt32(0)));
-  B.CreateCondBr(Enter, Fix, Done);
-  B.SetInsertPoint(Fix);
-  PHINode *QF = B.CreatePHI(I32, 2), *RF = B.CreatePHI(I32, 2);
-  QF->addIncoming(Q, Pre);
-  RF->addIncoming(R, Pre);
-  Value *QN = B.CreateAdd(QF, B.getInt32(1)), *RN = B.CreateSub(RF, Y);
-  QF->addIncoming(QN, Fix);
-  RF->addIncoming(RN, Fix);
-  B.CreateCondBr(B.CreateICmpUGE(RN, Y), Fix, Done);
-  B.SetInsertPoint(Done, Done->begin());
-  PHINode *QD = B.CreatePHI(I32, 2), *RD = B.CreatePHI(I32, 2);
-  QD->addIncoming(Q, Pre);
-  QD->addIncoming(QN, Fix);
-  RD->addIncoming(R, Pre);
-  RD->addIncoming(RN, Fix);
-  B.SetInsertPoint(&BO);
-  Value *Res = IsRem ? static_cast<Value *>(RD) : QD;
+  for (int I = 0; I < 2; ++I) {
+    Value *C = B.CreateICmpUGE(R, Y);
+    Q = B.CreateSelect(C, B.CreateAdd(Q, B.getInt32(1)), Q);
+    R = B.CreateSelect(C, B.CreateSub(R, Y), R);
+  }
+  Value *Res = IsRem ? R : Q;
   if (IsSigned)
     Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
   Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
@@ -607,6 +581,10 @@ static bool isFPArithmetic(const Instruction &I) {
   case Intrinsic::log2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::agx_exp2:
+  case Intrinsic::agx_log2:
+  case Intrinsic::agx_sin:
+  case Intrinsic::agx_cos:
   case Intrinsic::floor:
   case Intrinsic::ceil:
   case Intrinsic::trunc:

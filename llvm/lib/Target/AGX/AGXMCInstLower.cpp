@@ -77,11 +77,29 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       MI->getOpcode() == AGX::DEVICE_ATOMIC_NORET)
     OutMI.addOperand(MCOperand::createReg(MCRegister()));
 
+  // Bytes into 16-bit halves: the destination is the first low half of the
+  // register (pair) they fill.
+  unsigned HalvesOp = MI->getOpcode() == AGX::DEVICE_LOAD_32_H16 ||
+                              MI->getOpcode() == AGX::DEVICE_LOAD_64_H16
+                          ? 0
+                      : MI->getOpcode() == AGX::DEVICE_STORE_32_H16 ||
+                              MI->getOpcode() == AGX::DEVICE_STORE_64_H16
+                          ? 3
+                          : ~0u;
+  bool Pair = MI->getOpcode() == AGX::DEVICE_LOAD_64_H16 ||
+              MI->getOpcode() == AGX::DEVICE_STORE_64_H16;
   unsigned Idx = 0;
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
     if (!lowerOperand(MO, MCOp))
       continue;
+    if (Idx == HalvesOp) {
+      const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+      MCRegister R = MCOp.getReg();
+      if (Pair)
+        R = TRI->getSubReg(R, AGX::sub0);
+      MCOp = MCOperand::createReg(TRI->getSubReg(R, AGX::lo16));
+    }
     OutMI.addOperand(MCOp);
     if (Idx++ == 0 && InsertCache)
       OutMI.addOperand(MCOperand::createImm(0));
