@@ -24,6 +24,10 @@
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -32,6 +36,10 @@
 
 #  ifdef __cpp_lib_adaptor_iterator_pair_constructor
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_containers_ranges
@@ -44,6 +52,10 @@
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -52,6 +64,10 @@
 
 #  ifdef __cpp_lib_adaptor_iterator_pair_constructor
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_containers_ranges
@@ -65,6 +81,10 @@
 #  endif
 #  if __cpp_lib_adaptor_iterator_pair_constructor != 202106L
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_stack
+#    error "__cpp_lib_constexpr_stack should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_containers_ranges
@@ -83,6 +103,19 @@
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_stack != 202502L
+#      error "__cpp_lib_constexpr_stack should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++26"
 #  endif
@@ -97,6 +130,19 @@
 #  endif
 #  if __cpp_lib_adaptor_iterator_pair_constructor != 202106L
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_stack != 202502L
+#      error "__cpp_lib_constexpr_stack should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_stack
+#      error "__cpp_lib_constexpr_stack should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_containers_ranges

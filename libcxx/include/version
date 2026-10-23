@@ -72,11 +72,15 @@ __cpp_lib_constexpr_bitset                              202207L <bitset>
 __cpp_lib_constexpr_charconv                            202207L <charconv>
 __cpp_lib_constexpr_cmath                               202202L <cmath> <cstdlib>
 __cpp_lib_constexpr_complex                             201711L <complex>
+__cpp_lib_constexpr_deque                               202502L <deque>
 __cpp_lib_constexpr_dynamic_alloc                       201907L <memory>
+__cpp_lib_constexpr_exceptions                          202502L <exception> <expected> <format>
+                                                                <optional> <stdexcept> <variant>
 __cpp_lib_constexpr_flat_map                            202502L <flat_map>
 __cpp_lib_constexpr_flat_set                            202502L <flat_set>
 __cpp_lib_constexpr_forward_list                        202502L <forward_list>
 __cpp_lib_constexpr_functional                          201907L <functional>
+__cpp_lib_constexpr_inplace_vector                      202502L <inplace_vector>
 __cpp_lib_constexpr_iterator                            201811L <iterator>
 __cpp_lib_constexpr_list                                202502L <list>
 __cpp_lib_constexpr_map                                 202502L <map>
@@ -86,10 +90,13 @@ __cpp_lib_constexpr_new                                 202406L <new>
 __cpp_lib_constexpr_numeric                             201911L <numeric>
 __cpp_lib_constexpr_queue                               202502L <queue>
 __cpp_lib_constexpr_set                                 202502L <set>
+__cpp_lib_constexpr_stack                               202502L <stack>
 __cpp_lib_constexpr_string                              201907L <string>
 __cpp_lib_constexpr_string_view                         201811L <string_view>
 __cpp_lib_constexpr_tuple                               201811L <tuple>
 __cpp_lib_constexpr_typeinfo                            202106L <typeinfo>
+__cpp_lib_constexpr_unordered_map                       202502L <unordered_map>
+__cpp_lib_constexpr_unordered_set                       202502L <unordered_set>
 __cpp_lib_constexpr_utility                             201811L <utility>
 __cpp_lib_constexpr_vector                              201907L <vector>
 __cpp_lib_constrained_equality                          202411L <expected> <optional> <tuple>
@@ -98,6 +105,7 @@ __cpp_lib_containers_ranges                             202202L <deque> <forward
                                                                 <map> <queue> <set>
                                                                 <stack> <string> <unordered_map>
                                                                 <unordered_set> <vector>
+__cpp_lib_contracts                                     202502L <contracts>
 __cpp_lib_copyable_function                             202306L <functional>
 __cpp_lib_coroutine                                     201902L <coroutine>
 __cpp_lib_debugging                                     202403L <debugging>
@@ -138,11 +146,32 @@ __cpp_lib_gcd_lcm                                       201606L <numeric>
 __cpp_lib_generate_random                               202403L <random>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
 __cpp_lib_generic_unordered_lookup                      201811L <unordered_map> <unordered_set>
+__cpp_lib_hardened_array                                202502L <array>
+__cpp_lib_hardened_basic_stacktrace                     202506L <stacktrace>
+__cpp_lib_hardened_basic_string                         202502L <string>
+__cpp_lib_hardened_basic_string_view                    202502L <string_view>
+__cpp_lib_hardened_bitset                               202502L <bitset>
+__cpp_lib_hardened_common_iterator                      202506L <iterator>
+__cpp_lib_hardened_counted_iterator                     202506L <iterator>
+__cpp_lib_hardened_deque                                202502L <deque>
+__cpp_lib_hardened_expected                             202502L <expected>
+__cpp_lib_hardened_forward_list                         202502L <forward_list>
+__cpp_lib_hardened_inplace_vector                       202502L <inplace_vector>
+__cpp_lib_hardened_list                                 202502L <list>
+__cpp_lib_hardened_mdspan                               202502L <mdspan>
+__cpp_lib_hardened_optional                             202502L <optional>
+__cpp_lib_hardened_shared_ptr_array                     202506L <memory>
+__cpp_lib_hardened_span                                 202502L <span>
+__cpp_lib_hardened_valarray                             202502L <valarray>
+__cpp_lib_hardened_vector                               202502L <vector>
+__cpp_lib_hardened_view_interface                       202506L <ranges>
 __cpp_lib_hardware_interference_size                    201703L <new>
 __cpp_lib_has_unique_object_representations             201606L <type_traits>
 __cpp_lib_hazard_pointer                                202306L <hazard_pointer>
+__cpp_lib_hive                                          202502L <hive>
 __cpp_lib_hypot                                         201603L <cmath>
 __cpp_lib_incomplete_container_elements                 201505L <forward_list> <list> <vector>
+__cpp_lib_indirect                                      202502L <memory>
 __cpp_lib_initializer_list                              202511L <initializer_list>
 __cpp_lib_inplace_vector                                202406L <inplace_vector>
 __cpp_lib_int_pow2                                      202002L <bit>
@@ -206,6 +235,7 @@ __cpp_lib_out_ptr                                       202311L <memory>
 __cpp_lib_parallel_algorithm                            201603L <algorithm> <numeric>
 __cpp_lib_philox_engine                                 202406L <random>
 __cpp_lib_pointer_tag_pair                              202606L <memory>
+__cpp_lib_polymorphic                                   202502L <memory>
 __cpp_lib_polymorphic_allocator                         201902L <memory_resource>
 __cpp_lib_print                                         202207L <ostream> <print>
 __cpp_lib_quoted_string_io                              201304L <iomanip>
@@ -213,6 +243,7 @@ __cpp_lib_ranges                                        202406L <algorithm> <fun
                                                                 <memory> <ranges>
                                                         202110L // C++20
 __cpp_lib_ranges_as_const                               202207L <ranges>
+__cpp_lib_ranges_as_input                               202502L <ranges>
 __cpp_lib_ranges_as_rvalue                              202207L <ranges>
 __cpp_lib_ranges_chunk                                  202202L <ranges>
 __cpp_lib_ranges_chunk_by                               202202L <ranges>
@@ -225,6 +256,7 @@ __cpp_lib_ranges_indices                                202506L <ranges>
 __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
+__cpp_lib_ranges_reserve_hint                           202502L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
 __cpp_lib_ranges_stride                                 202207L <ranges>
@@ -543,6 +575,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_ranges
 # define __cpp_lib_ranges                               202406L
 // # define __cpp_lib_ranges_as_const                      202207L
+// # define __cpp_lib_ranges_as_input                      202502L
 # define __cpp_lib_ranges_as_rvalue                     202207L
 // # define __cpp_lib_ranges_chunk                         202202L
 # define __cpp_lib_ranges_chunk_by                      202202L
@@ -583,17 +616,24 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constant_wrapper                     202606L
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
+// # define __cpp_lib_constexpr_deque                      202502L
+// # define __cpp_lib_constexpr_exceptions                 202502L
 # define __cpp_lib_constexpr_flat_map                   202502L
 # define __cpp_lib_constexpr_flat_set                   202502L
 # define __cpp_lib_constexpr_forward_list               202502L
+// # define __cpp_lib_constexpr_inplace_vector             202502L
 # define __cpp_lib_constexpr_list                       202502L
 # define __cpp_lib_constexpr_map                        202502L
 # if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   define __cpp_lib_constexpr_new                      202406L
 # endif
-# define __cpp_lib_constexpr_queue                      202502L
+// # define __cpp_lib_constexpr_queue                      202502L
 # define __cpp_lib_constexpr_set                        202502L
+// # define __cpp_lib_constexpr_stack                      202502L
+// # define __cpp_lib_constexpr_unordered_map              202502L
+// # define __cpp_lib_constexpr_unordered_set              202502L
 # define __cpp_lib_constrained_equality                 202411L
+// # define __cpp_lib_contracts                            202502L
 // # define __cpp_lib_copyable_function                    202306L
 # if _LIBCPP_AVAILABILITY_HAS_DEBUGGING
 #   define __cpp_lib_debugging                          202403L
@@ -613,7 +653,28 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # endif
 # define __cpp_lib_function_ref                         202603L
 // # define __cpp_lib_generate_random                      202403L
+// # define __cpp_lib_hardened_array                       202502L
+// # define __cpp_lib_hardened_basic_stacktrace            202506L
+// # define __cpp_lib_hardened_basic_string                202502L
+// # define __cpp_lib_hardened_basic_string_view           202502L
+// # define __cpp_lib_hardened_bitset                      202502L
+// # define __cpp_lib_hardened_common_iterator             202506L
+// # define __cpp_lib_hardened_counted_iterator            202506L
+// # define __cpp_lib_hardened_deque                       202502L
+// # define __cpp_lib_hardened_expected                    202502L
+// # define __cpp_lib_hardened_forward_list                202502L
+// # define __cpp_lib_hardened_inplace_vector              202502L
+// # define __cpp_lib_hardened_list                        202502L
+// # define __cpp_lib_hardened_mdspan                      202502L
+// # define __cpp_lib_hardened_optional                    202502L
+// # define __cpp_lib_hardened_shared_ptr_array            202506L
+// # define __cpp_lib_hardened_span                        202502L
+// # define __cpp_lib_hardened_valarray                    202502L
+// # define __cpp_lib_hardened_vector                      202502L
+// # define __cpp_lib_hardened_view_interface              202506L
 // # define __cpp_lib_hazard_pointer                       202306L
+// # define __cpp_lib_hive                                 202502L
+// # define __cpp_lib_indirect                             202502L
 // # define __cpp_lib_inplace_vector                       202406L
 # undef  __cpp_lib_integer_sequence
 # define __cpp_lib_integer_sequence                     202511L
@@ -637,8 +698,10 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_out_ptr
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
+// # define __cpp_lib_polymorphic                          202502L
 # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ranges_indices                       202506L
+// # define __cpp_lib_ranges_reserve_hint                  202502L
 # define __cpp_lib_ratio                                202306L
 # undef  __cpp_lib_raw_memory_algorithms
 # define __cpp_lib_raw_memory_algorithms                202411L

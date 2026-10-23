@@ -32,6 +32,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -64,6 +68,10 @@
 
 #  ifdef __cpp_lib_associative_heterogeneous_insertion
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_containers_ranges
@@ -101,6 +109,10 @@
 
 #  ifdef __cpp_lib_associative_heterogeneous_insertion
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_containers_ranges
@@ -144,6 +156,10 @@
 
 #  ifdef __cpp_lib_associative_heterogeneous_insertion
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_containers_ranges
@@ -202,6 +218,10 @@
 
 #  ifdef __cpp_lib_associative_heterogeneous_insertion
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_unordered_set
+#    error "__cpp_lib_constexpr_unordered_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_containers_ranges
@@ -274,6 +294,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_unordered_set != 202502L
+#      error "__cpp_lib_constexpr_unordered_set should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++26"
 #  endif
@@ -341,6 +374,19 @@
 #  else
 #    ifdef __cpp_lib_associative_heterogeneous_insertion
 #      error "__cpp_lib_associative_heterogeneous_insertion should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_unordered_set != 202502L
+#      error "__cpp_lib_constexpr_unordered_set should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_set
+#      error "__cpp_lib_constexpr_unordered_set should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
