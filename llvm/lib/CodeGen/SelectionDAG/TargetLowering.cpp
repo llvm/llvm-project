@@ -11518,8 +11518,18 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   auto [Mask, StepVector] = getLegalMaskAndStepVector(
       DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
 
-  // TODO: Handle the step vector needing to be split.
-  assert(StepVector && "Step vector needs splitting");
+  // No legal step vector: split the mask in half and recombine the results.
+  // Lo = get_active_lane_mask Start, End
+  // Hi = get_active_lane_mask (uaddsat Start, LoNumElts), End
+  if (!StepVector) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+    SDValue Lo = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, LoVT, Start, End);
+    SDValue LoNumElts =
+        DAG.getElementCount(DL, OpVT, LoVT.getVectorElementCount());
+    SDValue HiStart = DAG.getNode(ISD::UADDSAT, DL, OpVT, Start, LoNumElts);
+    SDValue Hi = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, HiVT, HiStart, End);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
 
   // Rebase and saturate the termination value.
   SDValue Max =
