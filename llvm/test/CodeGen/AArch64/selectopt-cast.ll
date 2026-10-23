@@ -996,9 +996,215 @@ exit:
   ret void
 }
 
+; GEP(P, zext(C)) is select(C, GEP(P, 1), P). The pointer updates are on the
+; loop's critical path, %value is not.
+define void @test_gep_zext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr %right.end, ptr %out.begin, ptr %nodes) !prof !1 {
+; CHECK-LABEL: @test_gep_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[LEFT]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[RIGHT]], align 4
+; CHECK-NEXT:    [[LI:%.*]] = zext i32 [[L]] to i64
+; CHECK-NEXT:    [[RI:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[LP:%.*]] = getelementptr inbounds i32, ptr [[NODES:%.*]], i64 [[LI]]
+; CHECK-NEXT:    [[RP:%.*]] = getelementptr inbounds i32, ptr [[NODES]], i64 [[RI]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LP]], align 4
+; CHECK-NEXT:    [[RV:%.*]] = load i32, ptr [[RP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[RV]], [[LV]]
+; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    [[RIGHT_STEP:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[RIGHT_NEXT]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 [[RIGHT_STEP]]
+; CHECK-NEXT:    [[OTHER:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[LEFT_STEP:%.*]] = zext i1 [[OTHER]] to i64
+; CHECK-NEXT:    [[LEFT_NEXT]] = getelementptr inbounds i32, ptr [[LEFT]], i64 [[LEFT_STEP]]
+; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
+; CHECK-NEXT:    [[LEFT_MORE:%.*]] = icmp ne ptr [[LEFT_NEXT]], [[LEFT_END:%.*]]
+; CHECK-NEXT:    [[RIGHT_MORE:%.*]] = icmp ne ptr [[RIGHT_NEXT]], [[RIGHT_END:%.*]]
+; CHECK-NEXT:    [[MORE:%.*]] = select i1 [[LEFT_MORE]], i1 [[RIGHT_MORE]], i1 false, !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %left = phi ptr [ %left.begin, %entry ], [ %left.next, %loop ]
+  %right = phi ptr [ %right.begin, %entry ], [ %right.next, %loop ]
+  %out = phi ptr [ %out.begin, %entry ], [ %out.next, %loop ]
+  %l = load i32, ptr %left, align 4
+  %r = load i32, ptr %right, align 4
+  %li = zext i32 %l to i64
+  %ri = zext i32 %r to i64
+  %lp = getelementptr inbounds i32, ptr %nodes, i64 %li
+  %rp = getelementptr inbounds i32, ptr %nodes, i64 %ri
+  %lv = load i32, ptr %lp, align 4
+  %rv = load i32, ptr %rp, align 4
+  %cmp = icmp ult i32 %rv, %lv
+  %value = select i1 %cmp, i32 %r, i32 %l, !prof !2
+  %right.step = zext i1 %cmp to i64
+  %right.next = getelementptr inbounds i32, ptr %right, i64 %right.step
+  %other = xor i1 %cmp, true
+  %left.step = zext i1 %other to i64
+  %left.next = getelementptr inbounds i32, ptr %left, i64 %left.step
+  store i32 %value, ptr %out, align 4
+  %out.next = getelementptr inbounds i32, ptr %out, i64 1
+  %left.more = icmp ne ptr %left.next, %left.end
+  %right.more = icmp ne ptr %right.next, %right.end
+  %more = select i1 %left.more, i1 %right.more, i1 false, !prof !0
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret void
+}
+
+; GEP(P, sext(C)) is select(C, GEP(P, -1), P).
+define void @test_gep_sext(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr %right.end, ptr %out.begin, ptr %nodes) !prof !1 {
+; CHECK-LABEL: @test_gep_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[LEFT]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[RIGHT]], align 4
+; CHECK-NEXT:    [[LI:%.*]] = zext i32 [[L]] to i64
+; CHECK-NEXT:    [[RI:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[LP:%.*]] = getelementptr inbounds i32, ptr [[NODES:%.*]], i64 [[LI]]
+; CHECK-NEXT:    [[RP:%.*]] = getelementptr inbounds i32, ptr [[NODES]], i64 [[RI]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LP]], align 4
+; CHECK-NEXT:    [[RV:%.*]] = load i32, ptr [[RP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[RV]], [[LV]]
+; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]], !prof [[PROF3]]
+; CHECK-NEXT:    [[RIGHT_STEP:%.*]] = sext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[RIGHT_NEXT]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 [[RIGHT_STEP]]
+; CHECK-NEXT:    [[OTHER:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[LEFT_STEP:%.*]] = sext i1 [[OTHER]] to i64
+; CHECK-NEXT:    [[LEFT_NEXT]] = getelementptr inbounds i32, ptr [[LEFT]], i64 [[LEFT_STEP]]
+; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
+; CHECK-NEXT:    [[LEFT_MORE:%.*]] = icmp ne ptr [[LEFT_NEXT]], [[LEFT_END:%.*]]
+; CHECK-NEXT:    [[RIGHT_MORE:%.*]] = icmp ne ptr [[RIGHT_NEXT]], [[RIGHT_END:%.*]]
+; CHECK-NEXT:    [[MORE:%.*]] = select i1 [[LEFT_MORE]], i1 [[RIGHT_MORE]], i1 false, !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %left = phi ptr [ %left.begin, %entry ], [ %left.next, %loop ]
+  %right = phi ptr [ %right.begin, %entry ], [ %right.next, %loop ]
+  %out = phi ptr [ %out.begin, %entry ], [ %out.next, %loop ]
+  %l = load i32, ptr %left, align 4
+  %r = load i32, ptr %right, align 4
+  %li = zext i32 %l to i64
+  %ri = zext i32 %r to i64
+  %lp = getelementptr inbounds i32, ptr %nodes, i64 %li
+  %rp = getelementptr inbounds i32, ptr %nodes, i64 %ri
+  %lv = load i32, ptr %lp, align 4
+  %rv = load i32, ptr %rp, align 4
+  %cmp = icmp ult i32 %rv, %lv
+  %value = select i1 %cmp, i32 %r, i32 %l, !prof !2
+  %right.step = sext i1 %cmp to i64
+  %right.next = getelementptr inbounds i32, ptr %right, i64 %right.step
+  %other = xor i1 %cmp, true
+  %left.step = sext i1 %other to i64
+  %left.next = getelementptr inbounds i32, ptr %left, i64 %left.step
+  store i32 %value, ptr %out, align 4
+  %out.next = getelementptr inbounds i32, ptr %out, i64 1
+  %left.more = icmp ne ptr %left.next, %left.end
+  %right.more = icmp ne ptr %right.next, %right.end
+  %more = select i1 %left.more, i1 %right.more, i1 false, !prof !0
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret void
+}
+
+; The zexts have a second use, so the GEPs are not select-like.
+define void @test_gep_zext_multiuse(ptr %left.begin, ptr %left.end, ptr %right.begin, ptr %right.end, ptr %out.begin, ptr %nodes, ptr %cnt) !prof !1 {
+; CHECK-LABEL: @test_gep_zext_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LEFT:%.*]] = phi ptr [ [[LEFT_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[LEFT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RIGHT:%.*]] = phi ptr [ [[RIGHT_BEGIN:%.*]], [[ENTRY]] ], [ [[RIGHT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[OUT_BEGIN:%.*]], [[ENTRY]] ], [ [[OUT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[LEFT]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[RIGHT]], align 4
+; CHECK-NEXT:    [[LI:%.*]] = zext i32 [[L]] to i64
+; CHECK-NEXT:    [[RI:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[LP:%.*]] = getelementptr inbounds i32, ptr [[NODES:%.*]], i64 [[LI]]
+; CHECK-NEXT:    [[RP:%.*]] = getelementptr inbounds i32, ptr [[NODES]], i64 [[RI]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[LP]], align 4
+; CHECK-NEXT:    [[RV:%.*]] = load i32, ptr [[RP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[RV]], [[LV]]
+; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]], !prof [[PROF3]]
+; CHECK-NEXT:    [[RIGHT_STEP:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[RIGHT_NEXT]] = getelementptr inbounds i32, ptr [[RIGHT]], i64 [[RIGHT_STEP]]
+; CHECK-NEXT:    [[OTHER:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[LEFT_STEP:%.*]] = zext i1 [[OTHER]] to i64
+; CHECK-NEXT:    [[LEFT_NEXT]] = getelementptr inbounds i32, ptr [[LEFT]], i64 [[LEFT_STEP]]
+; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[STEPS:%.*]] = add i64 [[RIGHT_STEP]], [[LEFT_STEP]]
+; CHECK-NEXT:    store i64 [[STEPS]], ptr [[CNT:%.*]], align 8
+; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i32, ptr [[OUT]], i64 1
+; CHECK-NEXT:    [[LEFT_MORE:%.*]] = icmp ne ptr [[LEFT_NEXT]], [[LEFT_END:%.*]]
+; CHECK-NEXT:    [[RIGHT_MORE:%.*]] = icmp ne ptr [[RIGHT_NEXT]], [[RIGHT_END:%.*]]
+; CHECK-NEXT:    [[MORE:%.*]] = select i1 [[LEFT_MORE]], i1 [[RIGHT_MORE]], i1 false, !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %left = phi ptr [ %left.begin, %entry ], [ %left.next, %loop ]
+  %right = phi ptr [ %right.begin, %entry ], [ %right.next, %loop ]
+  %out = phi ptr [ %out.begin, %entry ], [ %out.next, %loop ]
+  %l = load i32, ptr %left, align 4
+  %r = load i32, ptr %right, align 4
+  %li = zext i32 %l to i64
+  %ri = zext i32 %r to i64
+  %lp = getelementptr inbounds i32, ptr %nodes, i64 %li
+  %rp = getelementptr inbounds i32, ptr %nodes, i64 %ri
+  %lv = load i32, ptr %lp, align 4
+  %rv = load i32, ptr %rp, align 4
+  %cmp = icmp ult i32 %rv, %lv
+  %value = select i1 %cmp, i32 %r, i32 %l, !prof !2
+  %right.step = zext i1 %cmp to i64
+  %right.next = getelementptr inbounds i32, ptr %right, i64 %right.step
+  %other = xor i1 %cmp, true
+  %left.step = zext i1 %other to i64
+  %left.next = getelementptr inbounds i32, ptr %left, i64 %left.step
+  store i32 %value, ptr %out, align 4
+  %steps = add i64 %right.step, %left.step
+  store i64 %steps, ptr %cnt, align 8
+  %out.next = getelementptr inbounds i32, ptr %out, i64 1
+  %left.more = icmp ne ptr %left.next, %left.end
+  %right.more = icmp ne ptr %right.next, %right.end
+  %more = select i1 %left.more, i1 %right.more, i1 false, !prof !0
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1000, i32 1}
+!1 = !{!"function_entry_count", i64 1000}
+!2 = !{!"branch_weights", i32 1, i32 1}
 
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1000, i32 1}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1000}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1}
 ;.
