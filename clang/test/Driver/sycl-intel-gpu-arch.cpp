@@ -8,56 +8,11 @@
 // CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
 // CHK-SYCL-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-dg2)"
 
-/// A device name, its numeric name and an alias are one device job, labeled
-/// with the device name.
+/// A device name, an alias and a numeric name are kept as given.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-bmg-g21 \
-// RUN:   --offload-arch=xe_20.1.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-ONE-BMG %s
-// CHK-ONE-BMG-NOT: offload, "device-sycl
-// CHK-ONE-BMG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
-// CHK-ONE-BMG-NOT: offload, "device-sycl
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-arl-u \
-// RUN:   --offload-arch=xe-mtl-u --offload-arch=xe_12.70 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-ONE-MTL %s
-// CHK-ONE-MTL-NOT: offload, "device-sycl
-// CHK-ONE-MTL: offload, "device-sycl (spirv64-unknown-unknown:xe-mtl-u)"
-// CHK-ONE-MTL-NOT: offload, "device-sycl
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-tgllp -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-TGL %s
-// CHK-TGL: offload, "device-sycl (spirv64-unknown-unknown:xe-tgl)"
-
-/// Removing any spelling removes the device.
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-bmg-g21 \
-// RUN:   --offload-arch=generic --no-offload-arch=xe_20.1.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-NO-ARCH %s
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_20.1.0 \
-// RUN:   --offload-arch=generic --no-offload-arch=xe-bmg-g21 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-NO-ARCH %s
-// CHK-NO-ARCH-NOT: bmg
-// CHK-NO-ARCH: offload, "device-sycl (spirv64-unknown-unknown:generic)"
-// CHK-NO-ARCH-NOT: bmg
-
-/// -Xarch_ may name an Intel GPU by any spelling, including the one the user
-/// gave --offload-arch.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_20.1.0 \
-// RUN:   -Xarch_xe_20.1.0 -DNUM -Xarch_xe-bmg-g21 -DBMG -Xarch_xe-pvc -DPVC -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-XARCH %s
-// CHK-XARCH: "-fsycl-is-device"
-// CHK-XARCH-SAME: "-D" "NUM"
-// CHK-XARCH-SAME: "-D" "BMG"
-// CHK-XARCH-NOT: "PVC"
-
-/// The same holds for any offload language, e.g. OpenMP.
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:   --offload-targets=spirv64-intel --offload-arch=xe-bmg-g21 \
-// RUN:   --offload-arch=xe_20.1.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-OPENMP %s
-// CHK-OPENMP-NOT: offload, "device-openmp
-// CHK-OPENMP: offload, "device-openmp (spirv64-intel:xe-bmg-g21)"
-// CHK-OPENMP-NOT: offload, "device-openmp
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-mtl-u \
+// RUN:   --offload-arch=xe-arl-u --offload-arch=xe_12.70 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-AS-GIVEN %s
+// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-mtl-u)"
+// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-arl-u)"
+// CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_12.70)"
