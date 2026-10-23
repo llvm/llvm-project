@@ -120,3 +120,98 @@ entry:
   %result = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y
   ret <vscale x 4 x i32> %result
 }
+
+define <4 x i32> @not_setcc_with_multiple_uses_v4i32(ptr %a, ptr %b, <4 x i32> %index, i32 %limit, i32 %evl) {
+; RV32-LABEL: not_setcc_with_multiple_uses_v4i32:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a2
+; RV32-NEXT:    vmsltu.vx v9, v8, a2
+; RV32-NEXT:    vmsleu.vv v8, v10, v8
+; RV32-NEXT:    vmv.v.v v0, v9
+; RV32-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
+; RV32-NEXT:    vle32.v v10, (a0), v0.t
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vle32.v v8, (a1), v0.t
+; RV32-NEXT:    vmv1r.v v0, v9
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: not_setcc_with_multiple_uses_v4i32:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a2
+; RV64-NEXT:    vmsltu.vx v9, v8, a2
+; RV64-NEXT:    vmsleu.vv v8, v10, v8
+; RV64-NEXT:    vmv.v.v v0, v9
+; RV64-NEXT:    slli a3, a3, 32
+; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
+; RV64-NEXT:    vle32.v v10, (a0), v0.t
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vle32.v v8, (a1), v0.t
+; RV64-NEXT:    vmv1r.v v0, v9
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %insert = insertelement <4 x i32> poison, i32 %limit, i64 0
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
+  %mask = icmp ult <4 x i32> %index, %splat
+  %not = xor <4 x i1> %mask, splat (i1 true)
+  %x = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %a, <4 x i1> %mask, i32 %evl)
+  %y = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %b, <4 x i1> %not, i32 %evl)
+  %result = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %result
+}
+
+; VP comparisons can use full length while loads retain their distinct EVLs.
+define <4 x i32> @not_setcc_with_different_load_vl_v4i32(ptr %a, ptr %b, <4 x i32> %index, i32 %limit, i32 %evl, i32 %other_evl) {
+; RV32-LABEL: not_setcc_with_different_load_vl_v4i32:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a2
+; RV32-NEXT:    vmsltu.vx v9, v8, a2
+; RV32-NEXT:    vmsleu.vv v8, v10, v8
+; RV32-NEXT:    vmv.v.v v0, v9
+; RV32-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
+; RV32-NEXT:    vle32.v v10, (a0), v0.t
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetvli zero, a4, e32, m1, ta, ma
+; RV32-NEXT:    vle32.v v8, (a1), v0.t
+; RV32-NEXT:    vmv1r.v v0, v9
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: not_setcc_with_different_load_vl_v4i32:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a2
+; RV64-NEXT:    vmsltu.vx v9, v8, a2
+; RV64-NEXT:    vmsleu.vv v8, v10, v8
+; RV64-NEXT:    vmv.v.v v0, v9
+; RV64-NEXT:    slli a3, a3, 32
+; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
+; RV64-NEXT:    vle32.v v10, (a0), v0.t
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    slli a4, a4, 32
+; RV64-NEXT:    srli a4, a4, 32
+; RV64-NEXT:    vsetvli zero, a4, e32, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a1), v0.t
+; RV64-NEXT:    vmv1r.v v0, v9
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %insert = insertelement <4 x i32> poison, i32 %limit, i64 0
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
+  %mask = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> %index, <4 x i32> %splat, metadata !"ult", <4 x i1> splat (i1 true), i32 %evl)
+  %not = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> %index, <4 x i32> %splat, metadata !"uge", <4 x i1> splat (i1 true), i32 %other_evl)
+  %x = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %a, <4 x i1> %mask, i32 %evl)
+  %y = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %b, <4 x i1> %not, i32 %other_evl)
+  %result = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %result
+}
