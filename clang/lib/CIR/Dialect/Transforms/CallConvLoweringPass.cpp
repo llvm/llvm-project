@@ -322,6 +322,12 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
         return cir::VectorType::getFixed(
             elemCIR, vecTy->getNumElements().getFixedValue());
       })
+      .Case([&](const llvm::abi::ArrayType *arrTy) -> mlir::Type {
+        mlir::Type elemCIR = abiTypeToCIR(arrTy->getElementType(), ctx);
+        if (!elemCIR)
+          return nullptr;
+        return cir::ArrayType::get(elemCIR, arrTy->getNumElements());
+      })
       .Case([&](const llvm::abi::RecordType *recTy) -> mlir::Type {
         SmallVector<mlir::Type> fieldTypes;
         fieldTypes.reserve(recTy->getFields().size());
@@ -566,7 +572,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// follows the classifier's CanBeFlattened, so the rewriter splits a
 /// multi-field coerced struct into individual wire arguments unless the
 /// classifier asked to keep it intact.  Any other scalar passes in its
-/// natural CIR type, which a null coercion denotes.  A coercion this bridge
+/// natural CIR type, which a null coercion denotes.  A multi-field struct with
+/// a null coercion is its own coerced type, so the rewriter splits it into one
+/// wire argument per field as classic codegen does.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
 /// silently passing the value unchanged.
 ///
@@ -588,11 +596,20 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
+    if (!coerceAbi) {
+      auto recTy = dyn_cast_if_present<cir::RecordType>(origTy);
+      if (!recTy || !recTy.isStruct() || !info.getCanBeFlattened())
+        return ArgClassification::getDirect();
+      ArgClassification classified =
+          ArgClassification::getDirect(recTy, /*offset=*/0);
+      classified.canFlatten = true;
+      return classified;
+    }
     bool isAggregate = isa_and_present<cir::RecordType, cir::ArrayType>(origTy);
     // For a _Complex or a vector the classifier's coerce is only sometimes the
     // natural type, so it has to be read rather than assumed.
     bool comparesAgainstCoerce =
-        coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
+        isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
     // A tuple coercion cannot be read at an offset, so refuse the pair rather

@@ -498,6 +498,10 @@ __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __built
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
 __packed_binary_builtin(mulqr_i32, int32_t, __builtin_riscv_mulqr_i32)
 
+/* Scalar "Q-format" Multiply with Widening Accumulate */
+__packed_ternary_builtin_mixed(mqwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqwacc_i64)
+__packed_ternary_builtin_mixed(mqrwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqrwacc_i64)
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)
