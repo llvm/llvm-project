@@ -1061,6 +1061,9 @@ static bool doNotCSE(SDNode *N) {
   case ISD::HANDLENODE:
   case ISD::EH_LABEL:
     return true;   // Never CSE these nodes.
+  case ISD::FREEZE:
+    // Each freeze of undef may have its own value.
+    return N->getOperand(0).isUndef();
   }
 
   // Check that remaining values produced are not flags.
@@ -1382,7 +1385,8 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
 /// node already exists with these operands, the slot will be non-null.
 SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op,
                                            FoldingSetInsertToken &InsertToken) {
-  if (doNotCSE(N))
+  // Whether a freeze is CSE'd depends on its operand, so check the new one.
+  if (N->getOpcode() == ISD::FREEZE ? Op.isUndef() : doNotCSE(N))
     return nullptr;
 
   SDValue Ops[] = { Op };
@@ -1418,7 +1422,8 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
 /// node already exists with these operands, the slot will be non-null.
 SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
                                            FoldingSetInsertToken &InsertToken) {
-  if (doNotCSE(N))
+  // Whether a freeze is CSE'd depends on its operand, so check the new one.
+  if (N->getOpcode() == ISD::FREEZE ? Ops[0].isUndef() : doNotCSE(N))
     return nullptr;
 
   SDNodeKey ID(N->getOpcode(), N->getVTList(), Ops);
@@ -7633,7 +7638,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   SDNode *N;
   SDVTList VTs = getVTList(VT);
   SDValue Ops[] = {N1};
-  if (VT != MVT::Glue) { // Don't CSE glue producing nodes
+  // Don't CSE glue producing nodes or freezes of undef.
+  if (VT != MVT::Glue && !(Opcode == ISD::FREEZE && N1.isUndef())) {
     SDNodeKey ID(Opcode, VTs, Ops);
     FoldingSetInsertToken InsertToken;
     if (SDNode *E = lookupNode(ID, DL, InsertToken)) {
@@ -12537,9 +12543,9 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
   }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
-  if (InsertToken)
-    if (!RemoveNodeFromCSEMaps(N))
-      InsertToken = {};
+  // doNotCSE still sees the old operands here.
+  if (!doNotCSE(N) && !RemoveNodeFromCSEMaps(N))
+    InsertToken = {};
 
   // Now we update the operands.
   N->OperandList[0].set(Op);
@@ -12621,9 +12627,9 @@ UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops) {
   }
 
   // Nope it doesn't.  Remove the node from its current place in the maps.
-  if (InsertToken)
-    if (!RemoveNodeFromCSEMaps(N))
-      InsertToken = {};
+  // doNotCSE still sees the old operands here.
+  if (!doNotCSE(N) && !RemoveNodeFromCSEMaps(N))
+    InsertToken = {};
 
   // Now we update the operands.
   for (unsigned i = 0; i != NumOps; ++i)
