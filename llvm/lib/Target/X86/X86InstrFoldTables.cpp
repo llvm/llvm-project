@@ -219,7 +219,7 @@ struct X86MemUnfoldTable {
       addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
 
     // Sort the memory->reg unfold table.
-    array_pod_sort(Table.begin(), Table.end());
+    llvm::sort(Table);
 
     // Now that it's sorted, ensure its unique.
     assert(std::adjacent_find(Table.begin(), Table.end()) == Table.end() &&
@@ -308,7 +308,7 @@ struct X86BroadcastFoldTable {
     }
 
     // Sort the memory->broadcast fold table.
-    array_pod_sort(Table.begin(), Table.end());
+    llvm::stable_sort(Table);
   }
 };
 } // namespace
