@@ -246,7 +246,6 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -270,10 +269,9 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
-  if (!TT.isOSDarwin() &&
-      (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+  // instructions. CFIInstrInserter self-skips targets that do not use DWARF
+  // CFI.
+  if (!TT.isOSDarwin())
     addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 
   if (TT.isOSWindows()) {
