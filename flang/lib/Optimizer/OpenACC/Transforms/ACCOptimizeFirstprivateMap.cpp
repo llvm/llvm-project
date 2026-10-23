@@ -36,6 +36,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -87,6 +88,22 @@ static bool mayBeOptionalVariable(Value var) {
   return true;
 }
 
+/// Returns true if `op` is in the then region of an enclosing fir.if whose
+/// condition is the presence of `var`. The users of the result of `op` are
+/// dominated by it, so they are guarded too.
+static bool isGuardedByPresence(Operation *op, Value var) {
+  Value varDef = fir::acc::getOriginalDef(var);
+  for (auto ifOp = op->getParentOfType<fir::IfOp>(); ifOp;
+       op = ifOp, ifOp = ifOp->getParentOfType<fir::IfOp>()) {
+    if (!ifOp.getThenRegion().isAncestor(op->getParentRegion()))
+      continue;
+    auto isPresentOp = ifOp.getCondition().getDefiningOp<fir::IsPresentOp>();
+    if (isPresentOp && fir::acc::getOriginalDef(isPresentOp.getVal()) == varDef)
+      return true;
+  }
+  return false;
+}
+
 /// Returns true if the type is a reference to a trivial type.
 /// Note that this does not allow fir.heap, fir.ptr, or fir.llvm_ptr
 /// types - since we would need to check if the load is valid via
@@ -98,18 +115,33 @@ static bool isRefToTrivialType(Type type) {
 }
 
 /// Attempts to hoist loads from accVar to before firstprivateInitOp.
-/// Returns true if all uses of accVar are loads and they were hoisted.
+/// If `foldPresenceChecks` is true, the variable is known to be present at
+/// firstprivateInitOp, and presence checks of accVar are replaced with true.
+/// Returns true if all uses of accVar are loads, or presence checks when
+/// `foldPresenceChecks` is true, and the loads were hoisted.
 static bool hoistLoads(acc::FirstprivateMapInitialOp firstprivateInitOp,
-                       Value var, Value accVar) {
-  // Check if all uses are loads - only hoist if we can optimize all uses.
-  bool allLoads = llvm::all_of(accVar.getUsers(), [](Operation *user) {
-    return isa<fir::LoadOp>(user);
-  });
-  if (!allLoads)
+                       Value var, Value accVar, bool foldPresenceChecks) {
+  // Check if all uses are loads or foldable presence checks - only hoist if
+  // we can optimize all uses.
+  bool allUsesOptimizable =
+      llvm::all_of(accVar.getUsers(), [&](Operation *user) {
+        return isa<fir::LoadOp>(user) ||
+               (foldPresenceChecks && isa<fir::IsPresentOp>(user));
+      });
+  if (!allUsesOptimizable)
     return false;
 
-  // Hoist all loads before the firstprivate_map operation.
+  // Replace presence checks with true and hoist all loads before the
+  // firstprivate_map operation.
   for (Operation *user : llvm::make_early_inc_range(accVar.getUsers())) {
+    if (auto isPresentOp = dyn_cast<fir::IsPresentOp>(user)) {
+      OpBuilder builder(isPresentOp);
+      Value trueValue = arith::ConstantOp::create(builder, isPresentOp.getLoc(),
+                                                  builder.getBoolAttr(true));
+      isPresentOp.replaceAllUsesWith(trueValue);
+      isPresentOp.erase();
+      continue;
+    }
     auto loadOp = cast<fir::LoadOp>(user);
     loadOp.getMemrefMutable().assign(var);
     loadOp->moveBefore(firstprivateInitOp);
@@ -177,12 +209,16 @@ private:
     if (!isRefToTrivialType(var.getType()))
       return false;
 
-    // Avoid hoisting optional variables as they may be
-    // null and thus not safe to access.
-    if (mayBeOptionalVariable(var))
-      return false;
+    // Avoid hoisting optional variables as they may be null and thus not safe
+    // to access, unless they are known to be present at this point.
+    bool guardedByPresence = false;
+    if (mayBeOptionalVariable(var)) {
+      guardedByPresence = isGuardedByPresence(firstprivateInitOp, var);
+      if (!guardedByPresence)
+        return false;
+    }
 
-    return hoistLoads(firstprivateInitOp, var, accVar);
+    return hoistLoads(firstprivateInitOp, var, accVar, guardedByPresence);
   }
 };
 

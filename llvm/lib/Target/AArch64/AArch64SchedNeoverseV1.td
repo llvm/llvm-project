@@ -115,10 +115,8 @@ def V1Write_1c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 1; }
 def V1Write_2c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 2; }
 def V1Write_3c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 3; }
 def V1Write_5c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 5; }
-def V1Write_12c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 12;
-                                                      let ReleaseAtCycles = [5]; }
-def V1Write_20c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 20;
-                                                      let ReleaseAtCycles = [5]; }
+def V1Write_7c7_1M0    : SchedWriteRes<[V1UnitM0]>  { let Latency = 7;
+                                                      let ReleaseAtCycles = [7]; }
 def V1Write_2c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 2; }
 def V1Write_3c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 3; }
 def V1Write_4c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 4; }
@@ -253,6 +251,8 @@ let Latency = 8, NumMicroOps = 3 in
 def V1Write_8c_1L_2V        : SchedWriteRes<[V1UnitL, V1UnitV, V1UnitV]>;
 let Latency = 6, NumMicroOps = 3 in
 def V1Write_6c_3L           : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
+let Latency = 1, NumMicroOps = 3 in
+def V1Write_1c_1I_1L01_1D: SchedWriteRes<[V1UnitI, V1UnitL01, V1UnitD]>;
 let Latency = 2, NumMicroOps = 3 in
 def V1Write_2c_1L01_1S_1V   : SchedWriteRes<[V1UnitL01, V1UnitS, V1UnitV]>;
 let Latency = 4, NumMicroOps = 3 in
@@ -666,8 +666,8 @@ def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
 // -----------------------------------------------------------------------------
 
 // Divide
-def : SchedAlias<WriteID32, V1Write_12c5_1M0>;
-def : SchedAlias<WriteID64, V1Write_20c5_1M0>;
+def : SchedAlias<WriteID32, V1Write_7c7_1M0>;
+def : SchedAlias<WriteID64, V1Write_7c7_1M0>;
 
 def : SchedAlias<WriteIM32, V1Write_2c_1M>;
 def : SchedAlias<WriteIM64, V1Write_2c_1M>;
@@ -741,6 +741,13 @@ def : SchedAlias<WriteLD, V1Write_4c_1L>;
 def : SchedAlias<WriteLDIdx, V1Write_4c_1L>;
 def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 
+// Load register, register offset, extend, scale by 2
+// Load register, register offset, extend
+def V1WriteLDRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_5c_1I_1L]>,
+  SchedVar<NoSchedPred,	  [V1Write_4c_1L]>]>;
+def : InstRW<[V1WriteLDRH, ReadAdrBase], (instregex "^LDRS?H[HWX]ro[WX]$")>;
+
 // Load pair, immed offset
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
@@ -763,6 +770,13 @@ def : SchedAlias<WriteST, V1Write_1c_1L01_1D>;
 
 // Store register, immed offset, index
 def : SchedAlias<WriteSTIdx, V1Write_1c_1L01_1D>;
+
+// Store register, register offset, scaled by 2
+// Store register, register offset, extend, scale by 1
+def V1WriteSTRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_1c_1I_1L01_1D]>,
+  SchedVar<NoSchedPred,	  [V1Write_1c_1L01_1D]>]>;
+def : InstRW<[V1WriteSTRH], (instregex "^STRS?H[HWX]ro[WX]$")>;
 
 // Store pair, immed offset
 def : SchedAlias<WriteSTP, V1Write_1c_1L01_1D>;
@@ -1026,7 +1040,7 @@ def : InstRW<[V1Write_4c_1V], (instregex "^FCADD(v[48]f16|v[24]f32|v2f64)$")>;
 def : InstRW<[V1Wr_FCMA, V1Rd_FCMA], (instregex "^FCMLAv")>;
 
 // ASIMD FP multiply
-def : InstRW<[V1Wr_FPM], (instregex "^FMULX?v")>;
+def : InstRW<[V1Wr_FPM], (instregex "^FMULX?v", "^FMULX(16|32|64)$")>;
 
 // ASIMD FP multiply accumulate
 def : InstRW<[V1Wr_FPMA, V1Rd_FPMA], (instregex "^FML[AS]v")>;

@@ -23,6 +23,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SROA.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -75,7 +76,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -116,12 +116,6 @@ STATISTIC(
     "Number of stores rewritten into predicated stores to allow promotion");
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
-
-namespace llvm {
-/// Disable running mem2reg during SROA in order to test or debug SROA.
-static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
-                                     cl::Hidden);
-} // namespace llvm
 
 namespace {
 
@@ -228,22 +222,51 @@ class SROA {
   /// allocas.
   SmallMapVector<SelectInst *, RewriteableMemOps, 8> SelectsToRewrite;
 
-  /// Select instructions that use an alloca and are subsequently loaded can be
-  /// rewritten to load both input pointers and then select between the result,
-  /// allowing the load of the alloca to be promoted.
-  /// From this:
-  ///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
-  ///   %V = load <type>, ptr %P2
+  /// Check whether the loads and stores of the select can be speculatively
+  /// executed or predicated (if \p PreserveCFG is false).
+  ///
+  /// Speculation converts a load like
+  ///
+  ///   %P = select i1 %cond, ptr %Alloca, ptr %Other
+  ///   %V = load <type>, ptr %P
+  ///
   /// to:
+  ///
   ///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
   ///   %V2 = load <type>, ptr %Other
   ///   %V = select i1 %cond, <type> %V1, <type> %V2
   ///
-  /// We can do this to a select if its only uses are loads
-  /// and if either the operand to the select can be loaded unconditionally,
-  ///        or if we are allowed to perform CFG modifications.
+  /// For stores and some kinds of loads that can't be speculated, we need to
+  /// predicate. Predication changes the CFG, so it requires \p PreserveCFG to
+  /// be false. Predication converts a store like:
+  ///
+  ///   block:
+  ///     %P = select i1 %cond, ptr %Alloca, ptr %Other
+  ///     store <type> %Value, ptr %P
+  ///
+  /// to:
+  ///
+  ///   block:
+  ///     br i1 %cond, label %block.then, label %block.else
+  ///
+  ///   block.then:
+  ///     store <type> %Value, ptr %Alloca
+  ///     br label %block.cont
+  ///
+  ///   block.else:
+  ///     store <type> %Value, ptr %Other
+  ///     br label %block.cont
+  ///
+  /// Returns `std::nullopt` when
+  /// - the select has users other than loads or stores, or
+  /// - at least one of the loads and stores is volatile, or
+  /// - the loads and stores can't be speculated and can't be predicated because
+  ///   we're not allowed to modify the CFG. (\p PreserveCFG is true)
+  ///
+  /// Otherwise the stores and loads in the returned vector can either be
+  /// speculated or predicated.
   static std::optional<RewriteableMemOps>
-  isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
+  isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG);
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
@@ -514,7 +537,7 @@ public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name),
                                            InsertPt);
   }
@@ -1675,7 +1698,7 @@ static StoreInst *getPHIStoreToRewrite(PHINode &PN, bool PreserveCFG,
 
   BasicBlock *BB = PN.getParent();
   // TODO: Allow a harmless prefix between the PHIs and the store.
-  if (&*BB->getFirstNonPHIOrDbg() != SI)
+  if (&*BB->getFirstNonPHIOrPseudoProbe() != SI)
     return nullptr;
 
   Value *StoredValue = SI->getValueOperand();
@@ -1854,14 +1877,12 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
 }
 
 std::optional<RewriteableMemOps>
-SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
     if (auto *Store = dyn_cast<StoreInst>(U)) {
-      // Note that atomic stores can be transformed; atomic semantics do not
-      // have any meaning for a local alloca. Stores are not speculatable,
-      // however, so if we can't turn it into a predicated store, we are done.
+      // We don't care about atomicity of stores as they're always predicated.
       if (Store->isVolatile() || PreserveCFG)
         return {}; // Give up on this `select`.
       Ops.emplace_back(Store);
@@ -1870,15 +1891,18 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
 
     auto *LI = dyn_cast<LoadInst>(U);
 
-    // Note that atomic loads can be transformed;
-    // atomic semantics do not have any meaning for a local alloca.
     if (!LI || LI->isVolatile())
       return {}; // Give up on this `select`.
 
     PossiblySpeculatableLoad Load(LI);
-    if (!LI->isSimple()) {
-      // If the `load` is not simple, we can't speculatively execute it,
-      // but we could handle this via a CFG modification. But can we?
+
+    // Atomic loads need to be predicated: speculation emits plain loads, which
+    // would drop the atomicity of the load when one of the hands is non-local,
+    // introducing a race.
+    // We could allow this when both hands are allocas (atomicity doesn't mean
+    // anything on allocas), but for now we give up if we're not allowed to
+    // predicate.
+    if (!LI->isSimple()) { // or `LI->isAtomic()`, `isVolatile` already checked
       if (PreserveCFG)
         return {}; // Give up on this `select`.
       Ops.emplace_back(Load);
@@ -2897,7 +2921,7 @@ public:
         ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
                           : 0),
         PHIUsers(PHIUsers), SelectUsers(SelectUsers),
-        IRB(NewAI.getContext(), ConstantFolder()) {
+        IRB(*NewAI.getModule(), ConstantFolder()) {
     if (VecTy) {
       assert((DL.getTypeSizeInBits(ElementTy).getFixedValue() % 8) == 0 &&
              "Only multiple-of-8 sized vector elements are viable");
@@ -3578,7 +3602,7 @@ private:
       // after the load, so that variable values referring to the load are
       // dominated by it.
       LIIt.setHeadBit(true);
-      IRB.SetInsertPoint(LI.getParent(), LIIt);
+      IRB.SetInsertPoint(LIIt);
       // Create a placeholder value with the same type as LI to use as the
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
@@ -4215,8 +4239,7 @@ private:
     // dominate the PHI.
     IRBuilderBase::InsertPointGuard Guard(IRB);
     if (isa<PHINode>(OldPtr))
-      IRB.SetInsertPoint(OldPtr->getParent(),
-                         OldPtr->getParent()->getFirstInsertionPt());
+      IRB.SetInsertPoint(OldPtr->getParent()->getFirstInsertionPt());
     else
       IRB.SetInsertPoint(OldPtr);
     IRB.SetCurrentDebugLocation(OldPtr->getDebugLoc());
@@ -5559,14 +5582,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     if (S.isDead())
       return true;
     auto *U = S.getUse();
-    if (!U)
-      return true;
-
-    User *Usr = U->getUser();
-    if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      return true;
-
-    return isa<MemIntrinsic>(Usr);
+    return !U || isa<LifetimeIntrinsic, MemIntrinsic>(U->getUser());
   };
 
   for (const Slice &S : P)
@@ -5820,7 +5836,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   NewSelectsToRewrite.reserve(SelectUsers.size());
   for (SelectInst *Sel : SelectUsers) {
     std::optional<RewriteableMemOps> Ops =
-        isSafeSelectToSpeculate(*Sel, PreserveCFG);
+        isSafeSelectToSpeculateOrPredicate(*Sel, PreserveCFG);
     if (!Ops) {
       Promotable = false;
       break;
@@ -6035,7 +6051,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   unsigned NumPartitions = 0;
   bool Changed = false;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // First try to pre-split loads and stores.
   Changed |= presplitLoadsAndStores(AI, AS);
@@ -6483,7 +6499,7 @@ bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
-  if (SROASkipMem2Reg) {
+  if (C->getLibraryOptions().get<ScalarOptions>().sroa_skip_mem2reg) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");

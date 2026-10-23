@@ -174,6 +174,9 @@ TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
 }
 
 TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Undo is not supported for Emscripten builds";
+#endif
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   cantFail(Interp->Parse("struct Kept {};"));
@@ -469,6 +472,21 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+TEST_F(InterpreterTest, ValueOfVoidCallExecutesTheCall) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("int calls = 0; void bump() { ++calls; }"));
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("bump()", &V));
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getKind(), Value::K_Void);
+
+  Value Calls;
+  llvm::cantFail(Interp->ParseAndExecute("calls", &Calls));
+  EXPECT_EQ(Calls.getInt(), 1);
+}
+
 // Regression: Value::setRawBits's NBytes parameter must be interpreted as a
 // byte count end-to-end. Before this was fixed, the parameter was named
 // NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
@@ -505,6 +523,11 @@ TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
 // Earlier the move ctor called Release() on the just-moved-into storage,
 // double-releasing on the next read.
 TEST_F(InterpreterTest, ValueMoveSemantics) {
+  // FIXME: Emscripten cannot resolve MoveT's destructor symbol
+  // `_ZN5MoveTD2Ev` from the incrementally loaded Wasm side module.
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Unresolved destructor symbol: _ZN5MoveTD2Ev";
+#endif
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
@@ -571,6 +594,21 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
 
   EXPECT_EQ(TU,
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
+TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
+#ifndef __EMSCRIPTEN__
+  GTEST_SKIP() << "This test only applies to Emscripten builds.";
+#endif
+
+  using Args = std::vector<const char *>;
+  Args ExtraArgs = {"-std=c++23", "-v", "-fwasm-exceptions", "-mllvm",
+                    "-wasm-enable-sjlj"};
+
+  std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
 } // end anonymous namespace

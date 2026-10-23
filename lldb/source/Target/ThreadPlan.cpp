@@ -311,10 +311,7 @@ llvm::Expected<std::vector<addr_t>> lldb_private::GetStepUntilAddresses(
   std::vector<addr_t> until_addrs;
   auto add_if_in_scope = [&](const Address &addr) {
     addr_t load_addr = addr.GetLoadAddress(target_sp.get());
-    AddressRange unused;
-    if (load_addr != LLDB_INVALID_ADDRESS &&
-        frame_sc.function->GetRangeContainingLoadAddress(load_addr, *target_sp,
-                                                         unused))
+    if (load_addr != LLDB_INVALID_ADDRESS && frame.IsAddressInFrameScope(addr))
       until_addrs.push_back(load_addr);
   };
 

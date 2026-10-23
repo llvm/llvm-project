@@ -1179,14 +1179,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -3707,7 +3710,9 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
       if (derivedType->IsVectorType()) {
         messages_.Say(arg.name(),
             "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,

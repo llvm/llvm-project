@@ -331,7 +331,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() !dbg !47 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:100:3: loop not vectorized: Cannot vectorize early exit loop
 entry:
   %p1 = alloca [1024 x i8]
@@ -489,8 +489,8 @@ loop.end:
 
 define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceable(40) %array, ptr readonly align 2 dereferenceable(40) %pred) !dbg !57 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'exit_conditions_combined_in_single_branch'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot vectorize uncountable loop.
-; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Cannot vectorize uncountable loop
+; CHECK-DEBUG: LV: Not vectorizing: Auto-vectorization of loops with uncountable early exit and side effects is not enabled.
+; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Auto-vectorization of loops with uncountable early exit and side effects is not enabled
 entry:
   br label %for.body, !dbg !58
 
@@ -660,7 +660,7 @@ loop.end:
 ; exit count (loop is infinite without early exits).
 define void @uncountable_exits_invariant_conditions(ptr %p, i1 %cond1, i1 %cond2, i1 %cond3) !dbg !67 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exits_invariant_conditions'
-; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-DEBUG:       LV: Not vectorizing: Cannot determine symbolic max exit count for latch block.
 ; CHECK-REMARK:      foo.c:200:3: loop not vectorized: Cannot vectorize early exit loop
 ; CHECK-REMARK-NEXT: foo.c:200:3: loop not vectorized: could not determine number of loop iterations
 entry:

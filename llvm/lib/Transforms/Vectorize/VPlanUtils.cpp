@@ -324,7 +324,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             const SCEV *AddRec =
                 SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
-            if (R->getTruncInst())
+            if (R->isTruncated())
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
@@ -511,8 +511,9 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       .Case([](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
-        // uniform.
-        return R->isSingleScalar() &&
+        // uniform. Each alloca creates a distinct allocation, so allocas are
+        // never uniform.
+        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
@@ -628,36 +629,32 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
+    Type *ResultTy, VPValue *StartV, VPValue *Step, DebugLoc DL,
     VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV =
+  VPValue *BaseIV =
       Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, Flags);
 
-  // Truncate base induction if needed.
-  Type *ResultTy = BaseIV->getScalarType();
-  if (TruncI) {
-    Type *TruncTy = TruncI->getType();
-    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
-    ResultTy = TruncTy;
-  }
-
-  // Truncate step if needed.
-  Type *StepTy = Step->getScalarType();
-  if (ResultTy != StepTy) {
-    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
-           "Not truncating.");
-    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
+  // Truncate BaseIV and Step to ResultTy.
+  if (ResultTy->isIntegerTy()) {
+    [[maybe_unused]] Type *BaseIVTy = BaseIV->getScalarType();
+    assert(BaseIVTy->isIntegerTy() && "Integral BaseIV type expected");
+    assert(BaseIVTy->getPrimitiveSizeInBits() >=
+               ResultTy->getPrimitiveSizeInBits() &&
+           "BaseIV's type must be at least as large as ResultTy");
+    BaseIV = Builder.createScalarZExtOrTrunc(BaseIV, ResultTy, DL);
+    [[maybe_unused]] Type *StepTy = Step->getScalarType();
+    assert(StepTy->isIntegerTy() && "Integral Step type expected");
+    assert(StepTy->getPrimitiveSizeInBits() >=
+               ResultTy->getPrimitiveSizeInBits() &&
+           "Step's type must be at least as large as ResultTy");
     auto *VecPreheader =
         cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
+    Step = Builder.createScalarZExtOrTrunc(Step, ResultTy, DL);
   }
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
                                      &Plan.getVF(), DL);
@@ -671,7 +668,7 @@ vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-      nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
+      StartV->getScalarType(), StartV, StepV, PtrIV->getDebugLoc(), Builder);
 
   return Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
                               PtrIV->getDebugLoc(), "next.gep");
@@ -867,8 +864,10 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
 
     // The legacy cost model only supports scalarization loads/stores with phi
     // addresses, if the phi is directly used as load/store address. Don't
-    // traverse further for Blends.
-    if (Blend)
+    // traverse further for Blends and first-order recurrence splices.
+    if (Blend ||
+        match(Cur,
+              m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>()))
       continue;
 
     // Only traverse further through users that also define a value (and can
@@ -905,6 +904,9 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
       return Plan.getOrAddLiveIn(V);
     if (!SE.DT.dominates(I->getParent(), PH))
       continue;
+    Loop *IL = SE.LI.getLoopFor(I->getParent());
+    if (IL && !IL->contains(PH))
+      continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
       continue;
@@ -913,6 +915,15 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
     return Plan.getOrAddLiveIn(V);
   }
   return nullptr;
+}
+
+VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
+  VPValue *Base = expand(SE.getPointerBase(S));
+  VPValue *Offset = expand(SE.removePointerBase(S));
+  GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
+                                ? GEPNoWrapFlags::noUnsignedWrap()
+                                : GEPNoWrapFlags::none();
+  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
 }
 
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
@@ -933,14 +944,8 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
 
     // Expand pointer SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
-    if (S->getType()->isPointerTy()) {
-      VPValue *Base = expand(SE.getPointerBase(S));
-      VPValue *Offset = expand(SE.removePointerBase(S));
-      GEPNoWrapFlags GEPFlags = WrapFlags.HasNUW
-                                    ? GEPNoWrapFlags::noUnsignedWrap()
-                                    : GEPNoWrapFlags::none();
-      return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
-    }
+    if (S->getType()->isPointerTy())
+      return expandAsPtrAdd(AddE);
 
     // Non-constant-negative add operands are expanded negated and subtracted
     // from the running result below, instead of being negated and added.
@@ -1037,8 +1042,10 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       llvm_unreachable("Unhandled cast SCEV");
     }
 
-    // When expanding ptrtoaddr, first check if there's an existing ptrtoint we
-    // can reuse.
+    // For ptrtoaddr of an IR value, reuse an existing cast dominating the
+    // entry if there is one. Otherwise leave it to SCEVExpander, which places
+    // the cast right after the IR value's definition, so all users can share
+    // it.
     if (Opcode == Instruction::PtrToAddr) {
       VPlan &Plan = Builder.getPlan();
       BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
@@ -1049,6 +1056,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                   return SE.DT.dominates(CI->getParent(), PH);
                 }))
           return Plan.getOrAddLiveIn(CI);
+        return vputils::getOrCreateVPValueForSCEVExpr(Plan, S);
       }
     }
 
@@ -1102,45 +1110,73 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                             ResultTy, DL);
+    for (VPValue *Op : drop_begin(Ops)) {
+      if (!ResultTy->isPointerTy()) {
+        Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                               ResultTy, DL);
+        continue;
+      }
+      // The min/max intrinsics don't support pointer operands, so expand
+      // pointer-typed min/max as cmp + select, matching SCEVExpander.
+      VPValue *Cmp = Builder.createICmp(
+          MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
+      Result = Builder.createSelect(Cmp, Result, Op, DL);
+      Function &F = *Builder.getPlan().getIRFunction();
+      if (MDNode *MD =
+              getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
+        cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
+    }
     return Result;
   }
   case scAddRecExpr: {
     auto *AR = cast<SCEVAddRecExpr>(S);
     VPlan &Plan = Builder.getPlan();
-    [[maybe_unused]] BasicBlock *PH =
-        cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+    BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
     assert(SE.DT.dominates(AR->getLoop()->getHeader(), PH) &&
            "can only expand AddRecs for loops outside VPlan's scope");
 
-    // Try to expand AR by re-using an existing canonical IV in the Plan's
-    // entry. A canonical IV must be affine and integer typed.
-    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
-    auto FoundCanIV =
-        find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
-          if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
-            return false;
-          const SCEV *Candidate = SE.getSCEV(&cast<VPIRPhi>(R).getIRPhi());
-          return match(Candidate,
-                       m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(),
-                                           m_SpecificLoop(AR->getLoop()))) &&
-                 Candidate->getType() == AR->getType();
-        });
-    if (FoundCanIV == Plan.getEntry()->phis().end())
+    Type *Ty = AR->getType();
+    if (auto [LCSSAPhi, Diff] = SCEVExpander::findReusableLCSSAPhi(SE, AR, PH);
+        LCSSAPhi) {
+      VPValue *DiffV = expand(Diff);
+      VPValue *BaseV = Plan.getOrAddLiveIn(LCSSAPhi);
+      if (LCSSAPhi->getType()->isPointerTy()) {
+        if (Ty->isPointerTy())
+          return Builder.createPtrAdd(BaseV, DiffV, DL);
+        BaseV = Builder.createScalarCast(Instruction::PtrToAddr, BaseV, Ty, DL);
+      }
+      return Builder.createAdd(BaseV, DiffV, DL);
+    }
+
+    // Mirror SCEVExpander::visitAddRecExpr, but only expand the canonical IV
+    // {0,+,1} and non-affine AddRecs to IR (which will be created outside the
+    // scope of VPlan). The AddRec is then scaled and offset using
+    // VPInstructions.
+    const Loop *L = AR->getLoop();
+    auto m_scev_CanonicalIV = // NOLINT
+        m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
+    if (!AR->isAffine() || match(AR, m_scev_CanonicalIV))
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
-    // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
-    // Compute Offset = IV * Step.
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    // {0,+,F} --> {0,+,1} * F
+    if (AR->getStart()->isZero()) {
+      const SCEV *CanIV =
+          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone);
+      return Builder.createOverflowingOp(
+          Instruction::Mul, {expand(CanIV), expand(Step)},
+          {SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, CanIV, Step),
+           SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, CanIV, Step)},
+          DL);
+    }
+
+    // {X,+,F} --> X + {0,+,F}
+    if (Ty->isPointerTy())
+      return expandAsPtrAdd(AR);
     VPValue *Start = expand(AR->getStart());
-    Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
-    VPValue *Offset = expand(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
-
-    // Compute Start + Offset with nuw from the AddRec.
-    return Builder.createAdd(Start, Offset, DL, "",
+    VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, L,
+                                            AR->getNoWrapFlags(SCEV::FlagNW)));
+    return Builder.createAdd(Start, Rest, DL, "",
                              {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:
@@ -1355,6 +1391,36 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::ExtractElement:
       assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
       return Ops[0];
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::WideActiveLaneMask: {
+      uint64_t Multiplier = 1;
+      if (Opcode == VPInstruction::WideActiveLaneMask) {
+        // Optimizing WideALM can only happen after the Plan is unrolled.
+        if (!Plan.isUnrolled())
+          return nullptr;
+        Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+        Ops.pop_back();
+      }
+
+      // We rely on the fact that different VPlans are created for the
+      // fixed-vector and scalable-vector cases.
+      ElementCount MaxVF =
+          *max_element(Plan.vectorFactors(), ElementCount::isKnownLT) *
+          Multiplier;
+
+      Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+      if (auto *C = dyn_cast_if_present<Constant>(Folder.FoldIntrinsic(
+              Intrinsic::get_active_lane_mask, Ops,
+              VectorType::get(I1Ty, MaxVF), {}, Plan.getIRFunction()))) {
+        // We cannot handle vector constants that are not all-true or all-false,
+        // because they would not be collapsable to a scalar constant, that
+        // would be necessary for live-in simplification.
+        if (C->isOneValue())
+          return ConstantInt::getTrue(I1Ty);
+        if (C->isNullValue())
+          return ConstantInt::getFalse(I1Ty);
+      }
+    }
     }
     return nullptr;
   };
@@ -1391,8 +1457,7 @@ void vputils::detail::pullOutPermutationsImpl(
 
       VPSingleDefRecipe *Res = BuildPerm(&Def);
       Res->insertAfter(&Def);
-      Def.replaceUsesWithIf(
-          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+      Def.replaceUsesWithIf(Res, not_equal_to(Res));
     }
   }
 }

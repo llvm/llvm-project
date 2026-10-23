@@ -150,6 +150,10 @@ CodeGenPassBuilder::CodeGenPassBuilder(TargetMachine &TM,
   if (Opt.EnableGlobalISelAbort)
     TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
+  if (Opt.EnableRegAllocFastTied != cl::boolOrDefault::BOU_UNSET)
+    TM.setEnableTiedFastRegAlloc(Opt.EnableRegAllocFastTied ==
+                                 cl::boolOrDefault::BOU_TRUE);
+
   // An explicit RegAlloc choice implies its pipeline: only the fast
   // allocator uses the unoptimized one.
   if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET) {
@@ -224,12 +228,13 @@ void CodeGenPassBuilder::flushFPMsToMPM(PassManagerWrapper &PMW,
 Error CodeGenPassBuilder::buildPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
     raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo = TargetPassConfig::getStartStopInfo(TM, *PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
-  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  CompletesPipeline = StartStopInfo->StopPass.empty();
+  bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);
@@ -270,8 +275,9 @@ Error CodeGenPassBuilder::buildPipeline(
   if (auto Err = addMachinePasses(PMW))
     return Err;
 
-  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
-    addMachineFunctionPass(MachineVerifierPass(), PMW);
+  if (PrintAsm ? !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier
+               : Opt.VerifyMachineCode == MachineVerifierMode::End)
+    addMachineFunctionPass(MachineVerifierPass(), PMW, /*Force=*/!PrintAsm);
 
   // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
   // final output so that -stop-before=<target>-asm-printer works. When printing
@@ -842,7 +848,8 @@ CodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
 /// register allocation. No coalescing or scheduling.
 Error CodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  if (!TM.enableTiedFastRegAlloc())
+    addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   return addRegAssignAndRewriteFast(PMW);
 }
 
@@ -856,31 +863,28 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(ProcessImplicitDefsPass(), PMW);
 
-  // LiveVariables currently requires pure SSA form.
-  //
-  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-  // LiveVariables can be removed completely, and LiveIntervals can be directly
-  // computed. (We still either need to regenerate kill flags after regalloc, or
-  // preferably fix the scavenger to not depend on them).
-  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
-  // When LiveVariables is removed this has to be removed/moved either.
+  // LiveIntervals requires pure SSA form and no unreachable blocks.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
   addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
+
+  // If enabled, run the SSA machine scheduler just before PHI elimination.
+  if (Opt.EnableSSAMachineScheduler) {
+    addMachineFunctionPass(
+        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+    addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
+  }
+
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
   addMachineFunctionPass(
-      RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   // Edge splitting is smarter with machine loop info.
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
-  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);
