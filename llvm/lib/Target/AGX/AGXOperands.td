@@ -346,6 +346,14 @@ def AGXBrTarget : Operand<OtherVT> {
   let ParserMatchClass = AGXBrTargetAsm;
 }
 
+// CALL_REG and RET encode a 32-bit GPR number, not its 16-bit half index.
+def AGXCallReg : Operand<i32> {
+  let PrintMethod = "printMemReg";
+  let EncoderMethod = "getCallRegEncoding";
+  let DecoderMethod = "decodeCallReg";
+  let ParserMatchClass = AGXMemRegAsm;
+}
+
 // The implicit nesting counter operand of execution mask instructions. The
 // immediate is its cache hint; it is printed as r0l.
 def AGXNestCounter : Operand<i32> {

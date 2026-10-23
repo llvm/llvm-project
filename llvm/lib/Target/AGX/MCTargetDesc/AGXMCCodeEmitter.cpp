@@ -76,6 +76,7 @@ public:
   AGX_ENCODER(LocalIndex)
   AGX_ENCODER(AtomicSrc)
   AGX_ENCODER(BrTarget)
+  AGX_ENCODER(CallReg)
   AGX_ENCODER(TexOffset)
   AGX_ENCODER(TexSampler)
   AGX_ENCODER(TexCoords)
@@ -430,6 +431,16 @@ void AGXMCCodeEmitter::getBrTargetEncoding(const MCInst &MI, unsigned OpNo,
                                    MCFixupKind(AGX::fixup_agx_branch32),
                                    /*PCRel=*/true));
   setOp(Op, 0);
+}
+
+void AGXMCCodeEmitter::getCallRegEncoding(const MCInst &MI, unsigned OpNo,
+                                          APInt &Op,
+                                          SmallVectorImpl<MCFixup> &,
+                                          const MCSubtargetInfo &) const {
+  AGX::RegInfo Info = regInfo(MI.getOperand(OpNo));
+  if (Info.Kind != AGX::RegKind::GPR32 || Info.HalfIndex & 1)
+    report(MI, "call/return target must be a 32-bit general register");
+  setOp(Op, Info.HalfIndex / 2);
 }
 
 void AGXMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,

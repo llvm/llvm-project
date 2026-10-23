@@ -734,6 +734,32 @@ def JMP_EXEC_NONE_g13 : AGXReal<"jmp_exec_none", (outs),
   let Inst{15-0} = 0xC020;
   let Inst{47-16} = target;
 }
+
+let isCall = 1, hasSideEffects = 1, Defs = [R1] in
+def CALL_g13 : AGXReal<"call", (outs),
+                         (ins AGXBrTarget:$target), "$target", 6> {
+  bits<32> target;
+  let Inst{15-0} = 0xC010;
+  let Inst{47-16} = target;
+}
+}
+
+let isCall = 1, hasSideEffects = 1, Defs = [R1] in
+def CALL_REG_g13 : AGXReal<"call_reg", (outs),
+                             (ins AGXCallReg:$target), "$target", 2> {
+  bits<7> target;
+  let Inst{6-0} = 0x04;
+  let Inst{8-7} = 0;
+  let Inst{15-9} = target;
+}
+
+let isTerminator = 1, isReturn = 1, hasSideEffects = 1 in
+def RET_g13 : AGXReal<"ret", (outs),
+                        (ins AGXCallReg:$target), "$target", 2> {
+  bits<7> target;
+  let Inst{6-0} = 0x14;
+  let Inst{8-7} = 0;
+  let Inst{15-9} = target;
 }
 
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in

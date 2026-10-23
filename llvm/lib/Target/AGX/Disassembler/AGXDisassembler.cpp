@@ -247,6 +247,11 @@ static DecodeStatus decodeMemReg(MCInst &MI, uint64_t V, uint64_t,
                 D);
 }
 
+static DecodeStatus decodeCallReg(MCInst &MI, uint64_t V, uint64_t,
+                                  const MCDisassembler *D) {
+  return addReg(MI, AGX::RegKind::GPR32, V * 2, D);
+}
+
 static DecodeStatus decodeTexOffset(MCInst &MI, uint64_t V, uint64_t,
                                     const MCDisassembler *D) {
   return addReg(MI, AGX::RegKind::GPR32, V & 0xff, D);
