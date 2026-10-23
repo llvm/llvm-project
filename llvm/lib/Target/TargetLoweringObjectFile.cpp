@@ -213,6 +213,12 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
     auto *Name = cast<MDString>(MD->getOperand(2));
+    // Descriptors in older IR have no attributes operand.
+    uint64_t Attributes = 0;
+    if (MD->getNumOperands() > 3)
+      if (auto *AttrCI =
+              mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(3)))
+        Attributes = AttrCI->getZExtValue();
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
         TM->getFunctionSections() ? Name->getString() : StringRef(),
         Hash->getZExtValue());
@@ -224,7 +230,9 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
       COMDATSymEmitter(Streamer);
 
     Streamer.emitInt64(GUID->getZExtValue());
-    Streamer.emitInt64(Hash->getZExtValue());
+    // [0:59] - function hash
+    // [60:63] - attributes
+    Streamer.emitInt64(Hash->getZExtValue() | (Attributes << 60));
     Streamer.emitULEB128IntValue(Name->getString().size());
     Streamer.emitBytes(Name->getString());
   }
