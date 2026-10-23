@@ -12,6 +12,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <cstdint>
 
 namespace llvm {
@@ -35,7 +36,7 @@ class BaseIndexOffset {
 private:
   SDValue Base;
   SDValue Index;
-  std::optional<int64_t> Offset;
+  std::optional<StackOffset> Offset;
   bool IsIndexSignExt = false;
 
 public:
@@ -43,6 +44,10 @@ public:
   BaseIndexOffset(SDValue Base, SDValue Index, bool IsIndexSignExt)
       : Base(Base), Index(Index), IsIndexSignExt(IsIndexSignExt) {}
   BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
+                  bool IsIndexSignExt)
+      : BaseIndexOffset(Base, Index, StackOffset::getFixed(Offset),
+                        IsIndexSignExt) {}
+  BaseIndexOffset(SDValue Base, SDValue Index, StackOffset Offset,
                   bool IsIndexSignExt)
       : Base(Base), Index(Index), Offset(Offset),
         IsIndexSignExt(IsIndexSignExt) {}
@@ -52,16 +57,24 @@ public:
   SDValue getIndex() { return Index; }
   SDValue getIndex() const { return Index; }
   void addToOffset(int64_t VectorOff) {
-    Offset = Offset.value_or(0) + VectorOff;
+    Offset = Offset.value_or(StackOffset::getFixed(0)) +
+             StackOffset::getFixed(VectorOff);
   }
   bool hasValidOffset() const { return Offset.has_value(); }
-  int64_t getOffset() const { return *Offset; }
+  int64_t getOffset() const {
+    assert(Offset->getScalable() == 0 && "Expected a fixed offset");
+    return Offset->getFixed();
+  }
 
   // Returns true if `Other` and `*this` are both some offset from the same base
   // pointer. In that case, `Off` is set to the offset between `*this` and
   // `Other` (negative if `Other` is before `*this`).
   LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
                                const SelectionDAG &DAG, int64_t &Off) const;
+
+  /// Like the above, but also allows a scalable offset between the pointers.
+  LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
+                               const SelectionDAG &DAG, StackOffset &Off) const;
 
   bool equalBaseIndex(const BaseIndexOffset &Other,
                       const SelectionDAG &DAG) const {
@@ -89,9 +102,11 @@ public:
                                        const LocationSize NumBytes1,
                                        const SelectionDAG &DAG, bool &IsAlias);
 
-  /// Parses tree in N for base, index, offset addresses.
+  /// Parses tree in N for base, index, offset addresses. By default, scalable
+  /// offsets remain part of the base or index.
   LLVM_ABI static BaseIndexOffset match(const SDNode *N,
-                                        const SelectionDAG &DAG);
+                                        const SelectionDAG &DAG,
+                                        bool MatchScalableOffsets = false);
 
   LLVM_ABI void print(raw_ostream &OS) const;
   LLVM_ABI void dump() const;

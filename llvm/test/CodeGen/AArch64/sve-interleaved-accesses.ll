@@ -1616,32 +1616,16 @@ define void @store_bfloat_factor2(ptr %ptr, <16 x bfloat> %v0, <16 x bfloat> %v1
 
 ; Ensure vscale_range property does not affect scalable vector types.
 define void @deinterleave_nxptr_factor2(ptr %ptr) #2 {
-; CHECK-IAENABLED-LABEL: deinterleave_nxptr_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_nxptr_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    uzp1 z4.d, z1.d, z0.d
-; CHECK-IADISABLED-NEXT:    uzp2 z0.d, z1.d, z0.d
-; CHECK-IADISABLED-NEXT:    uzp2 z5.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    uzp1 z1.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_nxptr_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8
   %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)
   %extract1 = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } %ldN, 0
@@ -1780,27 +1764,23 @@ define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %
 define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i64> %v0, <8 x i64> %v1) #0 {
 ; CHECK-LABEL: store_factor2_wide_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
-; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov v17.16b, v6.16b
+; CHECK-NEXT:    mov v19.16b, v4.16b
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
-; CHECK-NEXT:    splice z4.d, p0, z4.d, z5.d
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
-; CHECK-NEXT:    zip2 z1.d, z2.d, z6.d
-; CHECK-NEXT:    zip1 z2.d, z2.d, z6.d
-; CHECK-NEXT:    zip2 z3.d, z0.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z4.d
-; CHECK-NEXT:    str z1, [x0, #3, mul vl]
-; CHECK-NEXT:    str z2, [x0, #2, mul vl]
-; CHECK-NEXT:    str z3, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov v16.16b, v2.16b
+; CHECK-NEXT:    mov v18.16b, v0.16b
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z7.d
+; CHECK-NEXT:    splice z19.d, p0, z19.d, z5.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z3.d
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z1.d
+; CHECK-NEXT:    st2d { z16.d, z17.d }, p1, [x0, x8, lsl #3]
+; CHECK-NEXT:    st2d { z18.d, z19.d }, p1, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.vec = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> %v0, <8 x i64> %v1)
   store <16 x i64> %interleaved.vec, ptr %ptr, align 4
