@@ -9,6 +9,13 @@
 // CHECK-BUILTIN-BC: "-triple" "spirv64-unknown-unknown"
 // CHECK-BUILTIN-BC: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}spirv64-unknown-unknown{{[/\\]+}}libclang_rt.builtins.bc"
 
+// A short --offload-targets= spelling finds the same per-target directory.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64 -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SHORT-TRIPLE
+// CHECK-SHORT-TRIPLE: "-triple" "spirv64"
+// CHECK-SHORT-TRIPLE: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}spirv64-unknown-unknown{{[/\\]+}}libclang_rt.builtins.bc"
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-OFFLOADLIB

@@ -232,9 +232,13 @@ SYCLToolChain::getDeviceLibs(
                           true))
     return {};
   // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: lib/<triple>/libclang_rt.builtins.bc
+  // compiler-rt installs under the three-part triple, so normalize short
+  // spellings like --offload-targets=spirv64 before building the path.
   SmallString<128> BCPath(getDriver().ResourceDir);
-  llvm::sys::path::append(BCPath, "lib", getTriple().str(),
-                          "libclang_rt.builtins.bc");
+  llvm::sys::path::append(
+      BCPath, "lib",
+      getTriple().normalize(llvm::Triple::CanonicalForm::THREE_IDENT),
+      "libclang_rt.builtins.bc");
   if (!getDriver().getVFS().exists(BCPath)) {
     // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF:
     // lib/<os>/libclang_rt.builtins-spirv64.bc
