@@ -3225,6 +3225,10 @@ class SubClassOfCache {
   const Record *Class;
   DenseMap<const Record *, bool> SuperClassResults;
 
+public:
+  explicit SubClassOfCache(const Record *Class) : Class(Class) {}
+
+  // Return true if SC is Class or a subclass of it.
   bool isSuperClassSubClassOf(const Record *SC) {
     if (SC == Class)
       return true;
@@ -3236,9 +3240,6 @@ class SubClassOfCache {
     SuperClassResults.try_emplace(SC, Result);
     return Result;
   }
-
-public:
-  explicit SubClassOfCache(const Record *Class) : Class(Class) {}
 
   bool isSubClassOf(const Record *R) {
     for (const Record *SC : make_first_range(R->getDirectSuperClasses())) {
@@ -3264,14 +3265,24 @@ RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
     Classes.emplace_back(Class);
   }
 
-  // The iteration order of Defs doesn't matter since the result is sorted.
-  for (const auto &OneDef : Defs) {
-    const Record *Def = OneDef.second.get();
-    if (all_of(Classes,
-               [Def](SubClassOfCache &C) { return C.isSubClassOf(Def); }))
-      Derived.push_back(Def);
+  // Find the defs derived from the first class through their direct
+  // superclasses, which there are far fewer of than defs. The iteration order
+  // doesn't matter since the result is sorted.
+  for (const auto &[SC, SCDefs] : DefsByDirectSuperClass) {
+    if (!Classes.front().isSuperClassSubClassOf(SC))
+      continue;
+
+    for (const Record *Def : SCDefs) {
+      if (all_of(drop_begin(Classes),
+                 [Def](SubClassOfCache &C) { return C.isSubClassOf(Def); }))
+        Derived.push_back(Def);
+    }
   }
+
+  // A def is found once for each of its direct superclasses derived from the
+  // first class.
   llvm::sort(Derived, LessRecord());
+  Derived.erase(llvm::unique(Derived), Derived.end());
   return Derived;
 }
 
