@@ -812,17 +812,29 @@ void AccStructureChecker::CheckAtomicStmt(
 
   if (lhs) {
     if (lhs->Rank() != 0) {
-      context_.Say(expr.source,
+      context_.Say(var.GetSource(),
           "LHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // TODO: Check if lhs is intrinsic type.
+    // Restriction - atomic variables must be of intrinsic type.
+    if (const auto type{lhs->GetType()};
+        type && type->category() == TypeCategory::Derived) {
+      context_.Say(var.GetSource(),
+          "LHS of atomic %s statement must be of intrinsic type"_err_en_US,
+          construct);
+    }
   }
   if (rhs) {
     if (rhs->Rank() != 0) {
-      context_.Say(var.GetSource(),
+      context_.Say(expr.source,
           "RHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // TODO: Check if rhs is intrinsic type.
+    // Restriction - atomic variables must be of intrinsic type.
+    if (const auto type{rhs->GetType()};
+        type && type->category() == TypeCategory::Derived) {
+      context_.Say(expr.source,
+          "RHS of atomic %s statement must be of intrinsic type"_err_en_US,
+          construct);
+    }
   }
 }
 
