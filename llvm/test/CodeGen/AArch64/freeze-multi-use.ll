@@ -7,8 +7,9 @@
 define i32 @ashr_mul(i32 %x) {
 ; CHECK-LABEL: ashr_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr w8, w8, #3
-; CHECK-NEXT:    mul w0, w8, w8
+; CHECK-NEXT:    // freeze: $w0
+; CHECK-NEXT:    asr w8, w0, #3
+; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
   %p = ashr i32 %x, 32
   %w = freeze i32 %p
@@ -21,11 +22,12 @@ define i32 @ashr_mul(i32 %x) {
 define i8 @fshr(i32 %x) {
 ; CHECK-LABEL: fshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    mov w9, #2 // =0x2
-; CHECK-NEXT:    lsr w10, w0, w8
-; CHECK-NEXT:    lsl w8, w9, w8
-; CHECK-NEXT:    orr w0, w8, w10
+; CHECK-NEXT:    // freeze: $w8
+; CHECK-NEXT:    mvn w9, w8
+; CHECK-NEXT:    mov w10, #2 // =0x2
+; CHECK-NEXT:    lsr w8, w0, w8
+; CHECK-NEXT:    lsl w9, w10, w9
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %w = freeze i32 poison
   %f = call i32 @llvm.fshr.i32(i32 1, i32 %x, i32 %w)
@@ -37,10 +39,11 @@ define i8 @fshr(i32 %x) {
 define i64 @select_zext(i64 %a, i64 %b) {
 ; CHECK-LABEL: select_zext:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // freeze: $w8
 ; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    csel x8, x0, x1, ne
-; CHECK-NEXT:    and x9, x8, #0x1
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    csel x9, x0, x1, ne
+; CHECK-NEXT:    and x8, x8, #0x1
+; CHECK-NEXT:    add x0, x9, x8
 ; CHECK-NEXT:    ret
   %w = freeze i1 poison
   %s = select i1 %w, i64 %a, i64 %b
@@ -53,9 +56,11 @@ define i64 @select_zext(i64 %a, i64 %b) {
 define i32 @float_bits() {
 ; CHECK-LABEL: float_bits:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // freeze: $s0
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    and w8, w8, #0x7fffffff
 ; CHECK-NEXT:    mov w9, #2139095040 // =0x7f800000
+; CHECK-NEXT:    and w8, w8, #0x7fffffff
 ; CHECK-NEXT:    cset w10, vs
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w8, hi
@@ -75,9 +80,11 @@ define i32 @float_bits() {
 define i32 @vector_lane_and_whole(<4 x i32> %x) {
 ; CHECK-LABEL: vector_lane_and_whole:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    sub w0, w8, w8
+; CHECK-NEXT:    // freeze: $q1
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    sub w0, w9, w8
 ; CHECK-NEXT:    ret
   %w = freeze <4 x i32> poison
   %e0 = extractelement <4 x i32> %w, i32 0
@@ -91,9 +98,12 @@ define i32 @vector_lane_and_whole(<4 x i32> %x) {
 define i32 @across_call() nounwind {
 ; CHECK-LABEL: across_call:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    // freeze: $w19
+; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %w = freeze i32 poison
   call void @use(i32 %w)
@@ -104,9 +114,14 @@ define i32 @across_call() nounwind {
 define <4 x i32> @vec_across_call() nounwind {
 ; CHECK-LABEL: vec_across_call:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    // freeze: $q0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl usev
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %w = freeze <4 x i32> poison
   call void @usev(<4 x i32> %w)
