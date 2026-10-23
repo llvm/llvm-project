@@ -75,8 +75,11 @@ public:
     return Index;
   }
   void addOffset(IndexType Offset) {
-    if (*this)
+    if (*this) {
+      assert(InIndex < std::numeric_limits<IndexType>::max() - Offset &&
+             "Hit maximum index limit!");
       Index += Offset;
+    }
   }
 
   friend inline hash_code hash_value(const FLIndex<IndexedType> &Idx) {
@@ -224,10 +227,11 @@ template <> struct DenseMapInfo<FLScope> {
 class MDFunctionLocalContext : public MDNode {
   MDFunctionLocalContext(LLVMContext &C, StorageType Storage, bool NonDebug)
       : MDNode(C, MDFunctionLocalContextKind, Storage, {}) {
-    // NonDebug
-    SubclassData1 = NonDebug;
-    // MaxAtomGroup (starts at 0 and mutates in-place)
-    SubclassData16 = 0;
+    // NonDebug: Identifies this context as belonging to a function without
+    // debug information; see `isNonDebug()` below for more details.
+    setNonDebug(NonDebug);
+    // MaxAtomGroup: Transient/non-serialized field, starts at 0 and mutates
+    // in-place.
   }
   ~MDFunctionLocalContext() = default;
 
