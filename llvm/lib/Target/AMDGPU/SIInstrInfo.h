@@ -1057,6 +1057,12 @@ public:
 
   bool isXDL(const MachineInstr &MI) const;
 
+  /// On gfx1250, an XDL instruction whose destination spans at least eight
+  /// VGPRs decrements VA_VDST only after every earlier-issued VALU instruction,
+  /// of any type, has decremented it. Nothing is implied about the order
+  /// relative to instructions issued after it.
+  bool isVAVDSTOrderedXDL(const MachineInstr &MI) const;
+
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 
   static bool isLDSDIR(const MachineInstr &MI) {
