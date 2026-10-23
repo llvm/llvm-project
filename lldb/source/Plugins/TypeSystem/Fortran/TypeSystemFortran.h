@@ -234,7 +234,7 @@ public:
   }
 
   // Returns -1 if this isn't a function or if the function doesn't have a
-  // prototype Returns a value >= 0 if there is a prototype.
+  // prototype. Returns a value >= 0 if there is a prototype.
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,

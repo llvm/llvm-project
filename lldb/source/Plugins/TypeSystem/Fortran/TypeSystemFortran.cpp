@@ -90,40 +90,32 @@ bool TypeSystemFortran::IsFunctionType(opaque_compiler_type_t type) {
   if (!type)
     return false;
 
-  if (static_cast<FortranType *>(type)->GetKind() == FortranType::KIND_FUNCTION)
-    return true;
-
-  return false;
+  return static_cast<FortranType *>(type)->GetKind() ==
+         FortranType::KIND_FUNCTION;
 }
 
 size_t TypeSystemFortran::GetNumberOfFunctionArguments(
     lldb::opaque_compiler_type_t type) {
-  if (!type)
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
     return 0;
 
-  FortranType *fortran_type = static_cast<FortranType *>(type);
-  if (fortran_type->GetKind() != FortranType::KIND_FUNCTION)
-    return 0;
-
-  return static_cast<FortranFunction *>(fortran_type)->GetNumberOfParameters();
+  return function_type->GetNumParams();
 }
 
 CompilerType
 TypeSystemFortran::GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
                                               const size_t index) {
-  if (!type)
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
     return CompilerType();
 
-  FortranType *fortran_type = static_cast<FortranType *>(type);
-  if (fortran_type->GetKind() != FortranType::KIND_FUNCTION)
+  llvm::ArrayRef<lldb_private::CompilerType> param_types =
+      function_type->GetParamTypes();
+  if (index >= param_types.size())
     return CompilerType();
 
-  auto parameters =
-      static_cast<FortranFunction *>(fortran_type)->GetParameters();
-  if (index >= parameters.size())
-    return CompilerType();
-
-  return parameters[index];
+  return param_types[index];
 }
 
 bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
@@ -159,7 +151,7 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_UNSIGNED:
     return fortran_type->GetName();
   case FortranType::KIND_FUNCTION:
-    return static_cast<FortranFunction *>(fortran_type)->GetFunctionSignature();
+    return static_cast<FortranFunction *>(fortran_type)->GetSignature();
   case FortranType::KIND_UNKNOWN:
     return ConstString("Unsupported");
   }
@@ -233,19 +225,18 @@ CompilerType TypeSystemFortran::CreateFortranFunction(
   FortranFunction::Profile(id, name, parameters, return_type);
   FoldingSetInsertToken token;
 
-  FortranFunction *fortran_function = m_functions.lookup(id, token);
-
-  if (fortran_function)
-    return CompilerType(weak_from_this(), (void *)fortran_function);
+  FortranFunction *function_type = m_functions.lookup(id, token);
+  if (function_type)
+    return CompilerType(weak_from_this(), (void *)function_type);
 
   auto new_type_up = std::make_unique<FortranFunction>(
       name, parameters, parameter_names, return_type);
-  fortran_function = new_type_up.get();
+  function_type = new_type_up.get();
 
-  m_functions.insert(fortran_function, token);
+  m_functions.insert(function_type, token);
   m_types.push_back(std::move(new_type_up));
 
-  return CompilerType(weak_from_this(), (void *)fortran_function);
+  return CompilerType(weak_from_this(), (void *)function_type);
 }
 
 lldb::TypeClass
@@ -262,35 +253,22 @@ TypeSystemFortran::GetCanonicalType(lldb::opaque_compiler_type_t type) {
 
 int TypeSystemFortran::GetFunctionArgumentCount(
     lldb::opaque_compiler_type_t type) {
-  if (!type)
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
     return -1;
 
-  FortranType *fortran_type = static_cast<FortranType *>(type);
-  int kind = fortran_type->GetKind();
-  if (kind != FortranType::KIND_FUNCTION)
-    return -1;
-
-  FortranFunction *fortran_function =
-      static_cast<FortranFunction *>(fortran_type);
-  return fortran_function->GetNumberOfParameters();
+  return function_type->GetNumParams();
 }
 
 CompilerType
 TypeSystemFortran::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
-  if (!type)
+  FortranFunction *function_type = FortranFunction::GetFunctionType(type);
+  if (!function_type)
     return CompilerType();
 
-  FortranType *fortran_type = static_cast<FortranType *>(type);
-  if (fortran_type->GetKind() != FortranType::KIND_FUNCTION)
-    return CompilerType();
+  CompilerType return_type = function_type->GetReturnType();
 
-  CompilerType return_type =
-      static_cast<FortranFunction *>(fortran_type)->GetReturnType();
-
-  if (!return_type.IsValid())
-    return CompilerType();
-
-  return return_type;
+  return return_type.IsValid() ? return_type : CompilerType();
 }
 
 Expected<uint64_t>

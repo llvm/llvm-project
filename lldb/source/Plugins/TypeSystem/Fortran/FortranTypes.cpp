@@ -12,40 +12,52 @@ using namespace lldb_private;
 using namespace lldb_private::plugin::fortran;
 
 char FortranType::ID;
+char FortranFunction::ID;
 
 FortranType::~FortranType() = default;
 
-static ConstString CreateFortranFunctionSignature(
-    ConstString func_name,
-    const llvm::SmallVectorImpl<CompilerType> &parameters,
-    const llvm::SmallVectorImpl<llvm::StringRef> &parameter_names,
-    CompilerType return_type) {
-  std::string name_buffer;
-  llvm::raw_string_ostream name_stream(name_buffer);
+static ConstString
+CreateFuncSignature(ConstString func_name,
+                    const llvm::SmallVectorImpl<CompilerType> &param_types,
+                    const llvm::SmallVectorImpl<llvm::StringRef> &param_names,
+                    CompilerType return_type) {
+  std::string buf;
+  llvm::raw_string_ostream ss(buf);
 
   if (return_type.IsValid())
-    name_stream << return_type.GetTypeName().AsCString("") << " ";
+    ss << return_type.GetTypeName().AsCString("") << " ";
 
-  name_stream << func_name.AsCString("<unnamed function>") << "(";
+  ss << func_name.AsCString("<unnamed function>") << "(";
 
-  for (size_t idx = 0; idx < parameters.size(); idx++) {
-    if (idx != 0)
-      name_stream << ", ";
-    name_stream << parameters[idx].GetTypeName().AsCString("") << " ";
-    name_stream << parameter_names[idx].str();
+  for (size_t i = 0; i < param_types.size(); i++) {
+    if (i)
+      ss << ", ";
+    ss << param_types[i].GetTypeName().AsCString("") << " ";
+    ss << param_names[i];
   }
-  name_stream << ")";
-  name_stream.flush();
-  return ConstString(name_buffer);
+  ss << ")";
+  ss.flush();
+  return ConstString(buf);
 }
 
 FortranFunction::FortranFunction(
     ConstString func_name,
-    const llvm::SmallVectorImpl<CompilerType> &parameters,
-    const llvm::SmallVectorImpl<llvm::StringRef> &parameter_names,
+    const llvm::SmallVectorImpl<CompilerType> &param_types,
+    const llvm::SmallVectorImpl<llvm::StringRef> &param_names,
     CompilerType return_type)
     : FortranType(FortranType::KIND_FUNCTION, 0, func_name),
-      m_parameters(parameters.begin(), parameters.end()),
+      m_param_types(param_types.begin(), param_types.end()),
       m_return_type(return_type),
-      m_function_signature(CreateFortranFunctionSignature(
-          func_name, parameters, parameter_names, return_type)) {}
+      m_func_signature(CreateFuncSignature(func_name, param_types, param_names,
+                                           return_type)) {}
+
+FortranFunction *FortranFunction::GetFunctionType(void *type) {
+  if (!type)
+    return nullptr;
+
+  FortranType *base_type = static_cast<FortranType *>(type);
+  if (base_type->GetKind() != FortranType::KIND_FUNCTION)
+    return nullptr;
+
+  return llvm::cast<FortranFunction>(base_type);
+}
