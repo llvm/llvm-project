@@ -223,6 +223,31 @@ define <vscale x 4 x i32> @matching_commuted(<vscale x 4 x i32> %a, <vscale x 4 
   ret <vscale x 4 x i32> %and
 }
 
+; Poison NOT passthrough permits BIC even when the predicates differ.
+
+define <vscale x 4 x i32> @different_predicates_poison(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %pg, <vscale x 4 x i1> %not_pg) {
+; SVE-LABEL: different_predicates_poison:
+; SVE:       // %bb.0:
+; SVE-NEXT:    not z1.s, p1/m, z1.s
+; SVE-NEXT:    and z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2P2-LABEL: different_predicates_poison:
+; SVE2P2:       // %bb.0:
+; SVE2P2-NEXT:    not z1.s, p1/z, z1.s
+; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
+; SVE2P2-NEXT:    ret
+;
+; SME-LABEL: different_predicates_poison:
+; SME:       // %bb.0:
+; SME-NEXT:    not z1.s, p1/m, z1.s
+; SME-NEXT:    and z0.d, z0.d, z1.d
+; SME-NEXT:    ret
+  %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %not_pg, <vscale x 4 x i32> %b)
+  %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
+  ret <vscale x 4 x i32> %and
+}
+
 define <vscale x 4 x i32> @all_not_partial_and(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
 ; SVE-LABEL: all_not_partial_and:
 ; SVE:       // %bb.0:
