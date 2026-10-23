@@ -110,7 +110,7 @@ jobs:
           path: ${{ fromJSON(inputs.external_repo_config).checkout_path }}
 
       - name: Submodule PR update (covers parameterised and PR creation)
-        uses: ROCm/llvm-project/.github/actions/rock-ci-deps/submodule-pr-update@amd-staging
+        uses: ROCm/llvm-project/.github/actions/rock-ci-deps/submodule-pr-update@amd-staging # zizmor: ignore[unpinned-uses] amd-staging is the reviewed moving ref; a commit pin would need an update on every change
 
       - name: "Map Current Directory to L Drive"
         id: subst
@@ -161,7 +161,7 @@ jobs:
           python build_tools/health_status.py
 
       - name: Windows build and test hot fixes
-        uses: ROCm/llvm-project/.github/actions/rock-ci-deps/windows-patches@amd-staging
+        uses: ROCm/llvm-project/.github/actions/rock-ci-deps/windows-patches@amd-staging # zizmor: ignore[unpinned-uses] amd-staging is the reviewed moving ref; a commit pin would need an update on every change
         with:
           stage_name: ${{ inputs.stage_name }}
 

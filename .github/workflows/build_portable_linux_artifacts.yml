@@ -103,7 +103,7 @@ jobs:
       - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
         if: ${{ github.event_name == 'workflow_dispatch' }}
         continue-on-error: true 
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: multiple-pr-build-params
           path: .

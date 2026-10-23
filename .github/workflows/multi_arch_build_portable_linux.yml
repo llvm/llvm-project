@@ -309,7 +309,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all stage submodule commit
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: submodule-commit-*
           merge-multiple: true
@@ -323,7 +323,7 @@ jobs:
 
           cat submodule-commit-*.txt | sort -u > manifest.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: submodule-commit-all
           path: manifest.txt 

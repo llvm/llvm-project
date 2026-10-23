@@ -54,7 +54,7 @@ jobs:
     name: Build ${{ inputs.native_package_type }} packages
     runs-on: ${{ github.repository_owner == 'ROCm' && 'aws-linux-scale-rocm-large' || 'ubuntu-24.04' }}
     container:
-      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04:latest
+      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04:latest # zizmor: ignore[unpinned-images] TheRock reviews and publishes :latest; a digest pin would need an update on every image publish
       options: -v /runner/config:/home/awsconfig/
     outputs:
       package_repository_url: ${{ steps.upload-packages.outputs.package_repository_url }}

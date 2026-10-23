@@ -120,7 +120,7 @@ jobs:
       id-token: write
 
   invoke-teams-notifier:
-    uses: ROCm/llvm-project/.github/workflows/teams_notifier.yml@amd-staging
+    uses: ROCm/llvm-project/.github/workflows/teams_notifier.yml@amd-staging # zizmor: ignore[unpinned-uses] amd-staging is the reviewed moving ref; a commit pin would need an update on every change
     if: always() && github.ref == 'refs/heads/amd-staging'
     needs:
       - windows_build_and_test

@@ -11,7 +11,7 @@
 
 name: RockCI SHA PR monitor
 
-on:
+on: # zizmor: ignore[dangerous-triggers] does not checkout head SHA; runs only for automation SHA-gate branches
   workflow_run:
     workflows:
       - Multi-Arch CI amd-staging
