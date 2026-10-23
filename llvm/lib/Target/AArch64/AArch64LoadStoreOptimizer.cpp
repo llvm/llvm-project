@@ -218,14 +218,14 @@ struct AArch64LoadStoreOpt {
 
   // Try to reuse the ADDXri produced by a preceding base-adjust pair when
   // consecutive pairs share the same 4096-aligned base. Walks backwards from
-  // FirstMI, skipping instructions that do not clobber Scratch (e.g. prior
-  // pair instructions that reused the same ADDXri), until the first
-  // instruction that modifies Scratch. If that is an ADDXri defining Scratch
-  // from BaseReg with an immediate matching EncodableBase, returns Scratch;
-  // otherwise returns NoRegister.
-  Register tryReusePrevPairBaseAdjust(MachineInstr &FirstMI,
-                                      MCPhysReg BaseReg, MCPhysReg Scratch,
-                                      int64_t EncodableBase);
+  // FirstMI (bounded by load_store_scan_limit), skipping instructions that
+  // do not clobber Scratch or BaseReg, until the first instruction that
+  // modifies Scratch. If that is an ADDXri defining Scratch from BaseReg
+  // with an immediate matching EncodableBase, returns Scratch; otherwise
+  // returns NoRegister.  A redefinition of BaseReg before the ADDXri is
+  // found aborts the search: the ADDXri would have used a stale value.
+  Register tryReusePrevPairBaseAdjust(MachineInstr &FirstMI, MCPhysReg BaseReg,
+                                      MCPhysReg Scratch, int64_t EncodableBase);
 
   // Promote the load that reads directly from the address stored to.
   MachineBasicBlock::iterator
@@ -1266,12 +1266,14 @@ Register AArch64LoadStoreOpt::tryReusePrevPairBaseAdjust(
     return AArch64::NoRegister;
 
   // Walk backwards from FirstMI, skipping instructions that do not clobber
-  // Scratch (e.g. preceding pair instructions that already reused the same
-  // ADDXri).  The first instruction that modifies Scratch is either the
-  // ADDXri we want to reuse (if it matches) or a clobber that makes reuse
-  // impossible.
+  // Scratch or BaseReg (e.g. preceding pair instructions that already reused
+  // the same ADDXri).  The first instruction that modifies Scratch is either
+  // the ADDXri we want to reuse (if it matches) or a clobber that makes reuse
+  // impossible.  Bounded by the same scan limit used elsewhere in this pass
+  // to avoid quadratic behaviour in blocks with many base-adjust pairs.
+  unsigned Limit = Subtarget->getCLOpts().load_store_scan_limit;
   auto It = prev_nodbg(FirstMI.getIterator(), MBB->instr_begin());
-  while (true) {
+  for (unsigned Count = 0; Count < Limit; ++Count) {
     MachineInstr &MI = *It;
     if (MI.modifiesRegister(Scratch, TRI)) {
       // Scratch is defined here.  Reuse is possible only if this is an ADDXri
@@ -1286,11 +1288,18 @@ Register AArch64LoadStoreOpt::tryReusePrevPairBaseAdjust(
         return Scratch;
       return AArch64::NoRegister;
     }
-    // Scratch not clobbered; keep walking backwards.
+    // If BaseReg is redefined before we find a matching ADDXri, any earlier
+    // ADDXri computed Scratch from a stale BaseReg value.  Reuse would
+    // compute the wrong address even though EncodableBase (a purely static
+    // function of the immediate offset) happens to match.
+    if (MI.modifiesRegister(BaseReg, TRI))
+      return AArch64::NoRegister;
+    // Neither Scratch nor BaseReg clobbered; keep walking backwards.
     if (It == MBBBegin)
       return AArch64::NoRegister;
     It = prev_nodbg(It, MBB->instr_begin());
   }
+  return AArch64::NoRegister;
 }
 
 MachineBasicBlock::iterator
@@ -2709,8 +2718,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // MI's write ahead of those interleaved uses. Skip it entirely when
         // base-adjust is active; the MergeForward=false path above already
         // checked RtNotUsed.
-        if (!Flags.getRequiresBaseAdjust() &&
-            RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
+        if (!Flags.getRequiresBaseAdjust() && RtNotModified &&
+            !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
             Flags.clearRenameReg();

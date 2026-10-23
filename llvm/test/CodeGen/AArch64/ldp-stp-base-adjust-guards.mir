@@ -169,3 +169,31 @@ body:             |
 # DISABLED-LABEL: name: d7_x16_excluded_scavenged
 # DISABLED-NOT: LDPXi
 ...
+
+---
+# BaseReg redefined between two pairs -> tryReusePrevPairBaseAdjust must not
+# reuse the first pair's ADDXri (stale value -> wrong address).
+name: reuse_basereg_clobber
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x3' }
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x3
+
+    STRXui $xzr, renamable $x0, 1000 :: (store (s64))
+    STRXui $xzr, killed renamable $x0, 1001 :: (store (s64))
+    $x0 = ORRXrs $xzr, killed renamable $x3, 0
+    STRXui $xzr, renamable $x0, 1000 :: (store (s64))
+    STRXui $xzr, renamable $x0, 1001 :: (store (s64))
+    STRXui killed renamable $x1, renamable $x0, 0 :: (store (s64))
+    RET undef $lr
+
+# ENABLED-LABEL: name: reuse_basereg_clobber
+# Two ADDXri instructions: one for each pair (no reuse across BaseReg clobber).
+# ENABLED-COUNT-2: ADDXri
+# DISABLED-LABEL: name: reuse_basereg_clobber
+# DISABLED-NOT: ADDXri
+...
