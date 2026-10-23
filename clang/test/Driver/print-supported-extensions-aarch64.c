@@ -76,6 +76,7 @@
 // CHECK-NEXT:     sme                 FEAT_SME                                               Enable Scalable Matrix Extension (SME)
 // CHECK-NEXT:     sme-b16b16          FEAT_SME_B16B16                                        Enable SME2.1 ZA-targeting non-widening BFloat16 instructions
 // CHECK-NEXT:     sme-f16f16          FEAT_SME_F16F16                                        Enable SME non-widening Float16 instructions
+// CHECK-NEXT:     sme-f16f8f16        FEAT_SME_F16F8F16                                      Enable SME half-precision and FP8 sum-of-products accumulating to half-precision instructions
 // CHECK-NEXT:     sme-f64f64          FEAT_SME_F64F64                                        Enable Scalable Matrix Extension (SME) F64F64 instructions
 // CHECK-NEXT:     sme-f8f16           FEAT_SME_F8F16                                         Enable Scalable Matrix Extension (SME) F8F16 instructions
 // CHECK-NEXT:     sme-f8f32           FEAT_SME_F8F32                                         Enable Scalable Matrix Extension (SME) F8F32 instructions
