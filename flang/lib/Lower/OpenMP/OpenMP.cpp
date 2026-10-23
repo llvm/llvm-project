@@ -188,6 +188,39 @@ static bool hasPrivatizedArrayElementReduction(
   return false;
 }
 
+/// Obtain the list of clauses of the given OpenMP block, loop or sections
+/// construct evaluation. If it's not an OpenMP construct, no modifications
+/// are made to the \c clauses output argument.
+void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses,
+                    semantics::SemanticsContext &semaCtx) {
+  const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
+  if (!ompEval)
+    return;
+
+  const parser::OmpClauseList *beginClauseList{nullptr};
+  const parser::OmpClauseList *endClauseList{nullptr};
+  common::visit(
+      [&](const auto &construct) {
+        using Type = llvm::remove_cvref_t<decltype(construct)>;
+        if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
+                      std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
+                      std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
+          beginClauseList = &construct.BeginDir().Clauses();
+          if (auto &endSpec{construct.EndDir()})
+            endClauseList = &endSpec->Clauses();
+        }
+      },
+      ompEval->u);
+
+  if (!beginClauseList)
+    return;
+
+  clauses.append(makeClauses(*beginClauseList, semaCtx));
+
+  if (endClauseList)
+    clauses.append(makeClauses(*endClauseList, semaCtx));
+}
+
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to a single clause during OpenMP lowering.
 struct ObjectEntryBlockArgsEntry {
@@ -430,36 +463,6 @@ protected:
   virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
                                                llvm::omp::Directive dir) = 0;
 
-  /// Obtain the list of clauses of the given OpenMP block, loop or sections
-  /// construct evaluation. If it's not an OpenMP construct, no modifications
-  /// are made to the \c clauses output argument.
-  void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses) {
-    const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
-    if (!ompEval)
-      return;
-
-    const parser::OmpClauseList *beginClauseList{nullptr};
-    const parser::OmpClauseList *endClauseList{nullptr};
-    common::visit(
-        [&](const auto &construct) {
-          using Type = llvm::remove_cvref_t<decltype(construct)>;
-          if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
-            beginClauseList = &construct.BeginDir().Clauses();
-            if (auto &endSpec{construct.EndDir()})
-              endClauseList = &endSpec->Clauses();
-          }
-        },
-        ompEval->u);
-
-    assert(beginClauseList && "expected begin directive");
-    clauses.append(makeClauses(*beginClauseList, semaCtx));
-
-    if (endClauseList)
-      clauses.append(makeClauses(*endClauseList, semaCtx));
-  }
-
 private:
   /// Decide whether an evaluation must be visited as part of the pattern.
   ///
@@ -554,7 +557,7 @@ protected:
 
   bool hasOmpxBareClause(lower::pft::Evaluation &eval) {
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
 
     return llvm::find_if(clauses, [](const Clause &clause) {
              return std::holds_alternative<clause::OmpxBare>(clause.u);
@@ -599,7 +602,7 @@ protected:
     using namespace llvm::omp;
 
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
     ClauseProcessor cp{converter, semaCtx, clauses};
 
     // Currently, we deal differently with e.g. `target parallel workshare` to
@@ -784,7 +787,7 @@ protected:
 private:
   bool canPromoteSPMDToNoLoop(lower::pft::Evaluation &eval) {
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
 
     // First make sure the proper module attributes are present in order to
     // perform this optimization.
@@ -2193,7 +2196,13 @@ static void genBodyOfTargetOp(
   // Materialize region-local copies for the private list items of inner leaf
   // constructs (e.g. distribute) of a combined/composite target directive,
   // with the intent of replacing a host to device data-mapping (map info
-  // emission). Teams already performs this materialization itself.
+  // emission). Teams already performs this materialization itself as it opts
+  // out of the regular delayed privatization path for the moment, but there
+  // are plans to change this in the future. When this occurs, we must adjust
+  // this.
+  // TODO: When teams undergoes its delayed privatization update we will need
+  // to remove this edge case handling and let it proceed like all of the other
+  // cases.
   if (!targetNestedPrivateInfo.innermostLeafIsTeams)
     for (const semantics::Symbol *sym : targetNestedPrivateInfo.syms)
       converter.createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
@@ -2222,7 +2231,7 @@ static void genBodyOfTargetOp(
     genNestedEvaluations(converter, eval);
   }
 
-  // When materializing arrays inside of the target region for composite
+  // When materializing arrays inside of the target region for compound
   // directives with leaf-bound private clauses, we can end up with the
   // constants populating the shape being bound to constants external to the
   // target region. Perform a final clone-only repair to resolve these without
@@ -4058,36 +4067,6 @@ findInnermostPrivateLeaf(ConstructQueue::const_iterator begin,
   return queue.end();
 }
 
-static List<Clause>
-getOpenMPConstructClauses(const parser::OpenMPConstruct &ompEval,
-                          semantics::SemanticsContext &semaCtx) {
-  List<Clause> clauses;
-  const parser::OmpClauseList *beginClauseList{nullptr};
-  const parser::OmpClauseList *endClauseList{nullptr};
-
-  common::visit(
-      [&](const auto &construct) {
-        using Type = llvm::remove_cvref_t<decltype(construct)>;
-        if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                      std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
-          beginClauseList = &construct.BeginDir().Clauses();
-          if (auto &endSpec{construct.EndDir()})
-            endClauseList = &endSpec->Clauses();
-        }
-      },
-      ompEval.u);
-
-  if (!beginClauseList)
-    return clauses;
-
-  clauses.append(makeClauses(*beginClauseList, semaCtx));
-
-  if (endClauseList)
-    clauses.append(makeClauses(*endClauseList, semaCtx));
-
-  return clauses;
-}
-
 static bool isSymbolUsedInClauseRange(const semantics::Symbol &target,
                                       ConstructQueue::const_iterator begin,
                                       ConstructQueue::const_iterator end,
@@ -4132,14 +4111,13 @@ static bool isSymbolUsedInClauseRange(const semantics::Symbol &target,
 // region. Types that still need a map just to populate the initial state are
 // allocatables, derived types with allocatable or pointer ultimate components,
 // assumed-shape arrays, automatic arrays, and common block members. Currently
-// we leave these as they were before, but in the future we can minimize the
-// mapping by sending across exactly what is required to be specification
-// compliant.
-static bool isTargetLocalCloneable(const semantics::Symbol &sym,
-                                   semantics::SemanticsContext &semaCtx) {
-  const semantics::Symbol &ult = sym.GetUltimate();
+// we still initialize these, but in the future we can minimize the mapping by
+// sending across exactly what is required to be specification compliant.
+static bool isTargetValueLocalCloneable(const semantics::Symbol &valueSymbol,
+                                        semantics::SemanticsContext &semaCtx) {
+  const semantics::Symbol &ult = valueSymbol.GetUltimate();
 
-  if (Fortran::semantics::FindCommonBlockContaining(ult))
+  if (semantics::FindCommonBlockContaining(ult))
     return false;
 
   if (semantics::IsAllocatable(ult))
@@ -4166,16 +4144,16 @@ static bool isTargetLocalCloneable(const semantics::Symbol &sym,
   return true;
 }
 
-static bool isExplicitlyMapped(const semantics::Symbol &sym,
-                               llvm::ArrayRef<Object> mapObjects) {
+static bool objectListContainsSymbol(const semantics::Symbol &sym,
+                                     llvm::ArrayRef<Object> objects) {
   const semantics::Symbol &ult = sym.GetUltimate();
-  return llvm::any_of(mapObjects, [&](const Object &object) {
+  return llvm::any_of(objects, [&](const Object &object) {
     return object.sym() && object.sym()->GetUltimate() == ult;
   });
 }
 
-static bool isAlreadyPrivatizedOnTarget(const semantics::Symbol &sym,
-                                        const DataSharingProcessor &dsp) {
+static bool isAlreadyPrivatized(const semantics::Symbol &sym,
+                                const DataSharingProcessor &dsp) {
   const semantics::Symbol &ult = sym.GetUltimate();
   return llvm::any_of(dsp.getAllSymbolsToPrivatize(),
                       [&](const semantics::Symbol *priv) {
@@ -4196,14 +4174,14 @@ static void collectTargetNestedPrivateSymsFromLeaf(
         const semantics::Symbol *sym = object.sym();
         if (!sym)
           continue;
-        if (isExplicitlyMapped(*sym, mapObjects))
+        if (objectListContainsSymbol(*sym, mapObjects))
           continue;
-        if (excludePrivatizedSyms && isAlreadyPrivatizedOnTarget(*sym, dsp))
+        if (excludePrivatizedSyms && isAlreadyPrivatized(*sym, dsp))
           continue;
         if (isSymbolUsedInClauseRange(*sym, begin, end,
                                       /*ignorePrivateAndMap=*/true))
           continue;
-        if (!isTargetLocalCloneable(*sym, semaCtx))
+        if (!isTargetValueLocalCloneable(*sym, semaCtx))
           continue;
         result.syms.push_back(sym);
       }
@@ -4250,10 +4228,15 @@ static TargetNestedPrivateInfo collectTargetNestedPrivateSyms(
   if (!nestedEval)
     return result;
 
+  while (lower::pft::Evaluation *nextEval =
+             extractOnlyOmpNestedEval(*nestedEval))
+    nestedEval = nextEval;
+
   const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
   parser::OmpDirectiveName nestedName =
       parser::omp::GetOmpDirectiveName(ompEval);
-  List<Clause> nestedClauses = getOpenMPConstructClauses(ompEval, semaCtx);
+  List<lower::omp::Clause> nestedClauses;
+  extractClauses(*nestedEval, nestedClauses, semaCtx);
   if (!llvm::any_of(nestedClauses, [](const Clause &clause) {
         return std::holds_alternative<clause::Private>(clause.u);
       }))
