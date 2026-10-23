@@ -13,6 +13,10 @@ lldb_tablegen(ObjectFilePECOFFPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesEnumGen)
 
+lldb_tablegen(ObjectFilePECOFFEnums.inc -gen-lldb-option-enum-defs
+  SOURCE ObjectFilePECOFFEnums.td
+  TARGET LLDBPluginObjectFilePECOFFEnumsGen)
+
 lldb_tablegen(ObjectFilePECOFFProperties.json -dump-json
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesJsonGen)
@@ -36,4 +40,5 @@ add_lldb_library(lldbPluginObjectFilePECOFF PLUGIN
 
 add_dependencies(lldbPluginObjectFilePECOFF
   LLDBPluginObjectFilePECOFFPropertiesGen
-  LLDBPluginObjectFilePECOFFPropertiesEnumGen)
+  LLDBPluginObjectFilePECOFFPropertiesEnumGen
+  LLDBPluginObjectFilePECOFFEnumsGen)

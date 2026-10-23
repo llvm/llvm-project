@@ -59,24 +59,8 @@ enum EnableJITLoaderGDB {
   eEnableJITLoaderGDBOff,
 };
 
-static constexpr OptionEnumValueElement g_enable_jit_loader_gdb_enumerators[] =
-    {
-        {
-            eEnableJITLoaderGDBDefault,
-            "default",
-            "Enable JIT compilation interface for all platforms except macOS",
-        },
-        {
-            eEnableJITLoaderGDBOn,
-            "on",
-            "Enable JIT compilation interface",
-        },
-        {
-            eEnableJITLoaderGDBOff,
-            "off",
-            "Disable JIT compilation interface",
-        },
-};
+#define LLDB_ENUMS_enable_jit_loader_gdb_enumerators
+#include "JITLoaderGDBEnums.inc"
 
 #define LLDB_PROPERTIES_jitloadergdb
 #include "JITLoaderGDBProperties.inc"

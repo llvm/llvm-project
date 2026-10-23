@@ -28,6 +28,7 @@ enum ActionType {
   GenOptionDefs,
   GenPropertyDefs,
   GenPropertyEnumDefs,
+  GenOptionEnumDefs,
 };
 
 static cl::opt<ActionType> Action(
@@ -38,6 +39,8 @@ static cl::opt<ActionType> Action(
                           "Dump all records as machine-readable JSON"),
                clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
                           "Generate lldb option definitions"),
+               clEnumValN(GenOptionEnumDefs, "gen-lldb-option-enum-defs",
+                          "Generate lldb option enum definitions"),
                clEnumValN(GenPropertyDefs, "gen-lldb-property-defs",
                           "Generate lldb property definitions"),
                clEnumValN(GenPropertyEnumDefs, "gen-lldb-property-enum-defs",
@@ -53,6 +56,9 @@ static bool LLDBTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenOptionDefs:
     EmitOptionDefs(Records, OS);
+    break;
+  case GenOptionEnumDefs:
+    EmitOptionEnumDefs(Records, OS);
     break;
   case GenPropertyDefs:
     EmitPropertyDefs(Records, OS);

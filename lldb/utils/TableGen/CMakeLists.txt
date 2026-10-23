@@ -11,6 +11,7 @@ if (NOT DEFINED LLDB_TABLEGEN_EXE)
       DESTINATION "${CMAKE_INSTALL_BINDIR}"
       EXPORT LLDB
       LLDBOptionDefEmitter.cpp
+      LLDBOptionEnumDefEmitter.cpp
       LLDBPropertyDefEmitter.cpp
       LLDBTableGen.cpp
       LLDBTableGenUtils.cpp
