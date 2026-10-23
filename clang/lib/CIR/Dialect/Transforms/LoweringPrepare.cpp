@@ -2894,12 +2894,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                  /*isConstant=*/true, {},
                                  GlobalLinkageKind::PrivateLinkage);
-    if (isHIP) {
-      const unsigned HIPCodeObjectAlign = 4096;
-      fatbinStr.setAlignment(HIPCodeObjectAlign);
-    } else {
-      fatbinStr.setAlignment(8);
-    }
+    constexpr unsigned HIPCodeObjectAlign = 4096;
+    fatbinStr.setAlignment(isHIP ? HIPCodeObjectAlign : 8);
 
     fatbinStr.setInitialValueAttr(
         cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
