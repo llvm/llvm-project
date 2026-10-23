@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -8488,7 +8489,7 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
 
   MachineInstr *DefMI = MRI.getVRegDef(R);
   assert(DefMI && "Expected a definition in generic SSA MIR");
-  if (!isa<GAnd>(DefMI) && !isa<GOr>(DefMI))
+  if (!isa<GLogicalBinOp>(DefMI))
     return Register();
 
   unsigned Opcode = DefMI->getOpcode();
@@ -8498,39 +8499,78 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
   assert(MRI.getType(LHS) == Ty && MRI.getType(RHS) == Ty &&
          "Logical operands must match the result type");
 
-  auto LookThrough = [&](Register X, Register CReg) -> Register {
-    std::optional<APInt> C = getConstantOrConstantSplatVector(CReg);
-    if (!C || C->getBitWidth() != DemandedBits.getBitWidth())
+  // Preserve recursive constant bypasses independently of KnownBits depth.
+  if (Opcode != TargetOpcode::G_XOR) {
+    auto LookThrough = [&](Register X, Register CReg) -> Register {
+      std::optional<APInt> C = getConstantOrConstantSplatVector(CReg);
+      if (!C || C->getBitWidth() != DemandedBits.getBitWidth())
+        return Register();
+      bool BypassToX = Opcode == TargetOpcode::G_AND
+                           ? DemandedBits.isSubsetOf(*C)
+                           : DemandedBits.isSubsetOf(~*C);
+      if (BypassToX) {
+        if (Register Deeper =
+                simplifyMultipleUseDemandedBits(X, DemandedBits, Depth + 1))
+          return Deeper;
+        return X;
+      }
+      bool BypassToC = Opcode == TargetOpcode::G_AND
+                           ? DemandedBits.isSubsetOf(~*C)
+                           : DemandedBits.isSubsetOf(*C);
+      if (BypassToC)
+        return CReg;
       return Register();
-    bool BypassToX = Opcode == TargetOpcode::G_AND
-                         ? DemandedBits.isSubsetOf(*C)
-                         : DemandedBits.isSubsetOf(~*C);
-    if (BypassToX) {
-      if (Register Deeper =
-              simplifyMultipleUseDemandedBits(X, DemandedBits, Depth + 1))
-        return Deeper;
-      return X;
-    }
-    bool BypassToC = Opcode == TargetOpcode::G_AND
-                         ? DemandedBits.isSubsetOf(~*C)
-                         : DemandedBits.isSubsetOf(*C);
-    if (BypassToC)
-      return CReg;
-    return Register();
-  };
+    };
 
-  if (Register Repl = LookThrough(LHS, RHS))
-    return Repl;
-  return LookThrough(RHS, LHS);
+    if (Register Repl = LookThrough(LHS, RHS))
+      return Repl;
+    if (Register Repl = LookThrough(RHS, LHS))
+      return Repl;
+  }
+
+  APInt DemandedElts =
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+  // SelectionDAG recognizes scalar constants before its KnownBits depth limit.
+  auto GetKnownBits = [&](Register Reg) {
+    if (auto C = getConstantOrConstantSplatVector(Reg))
+      return KnownBits::makeConstant(*C);
+    return VT->getKnownBits(Reg, DemandedElts, Depth + 1);
+  };
+  KnownBits LHSKnown = GetKnownBits(LHS);
+  KnownBits RHSKnown = GetKnownBits(RHS);
+  switch (Opcode) {
+  case TargetOpcode::G_AND:
+    if (DemandedBits.isSubsetOf(LHSKnown.Zero | RHSKnown.One))
+      return LHS;
+    if (DemandedBits.isSubsetOf(RHSKnown.Zero | LHSKnown.One))
+      return RHS;
+    break;
+  case TargetOpcode::G_OR:
+    if (DemandedBits.isSubsetOf(LHSKnown.One | RHSKnown.Zero))
+      return LHS;
+    if (DemandedBits.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
+      return RHS;
+    break;
+  case TargetOpcode::G_XOR:
+    if (DemandedBits.isSubsetOf(RHSKnown.Zero))
+      return LHS;
+    if (DemandedBits.isSubsetOf(LHSKnown.Zero))
+      return RHS;
+    break;
+  }
+  return Register();
 }
 
 bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
                                               const APInt &DemandedBits,
                                               KnownBits &Known, unsigned Depth,
-                                              bool DoRewrite) const {
+                                              bool DoRewrite,
+                                              bool IsRoot) const {
   Known = KnownBits(DemandedBits.getBitWidth());
-  assert(MI.getOperand(OpNo).isReg() && !MI.getOperand(OpNo).isDef() &&
-         "Expected a register use");
+  assert(MI.getOperand(OpNo).isReg() &&
+         (IsRoot || !MI.getOperand(OpNo).isDef()) &&
+         "Expected a register use or root definition");
+  assert((!IsRoot || OpNo == 0) && "Expected the root result");
   Register OpReg = MI.getOperand(OpNo).getReg();
   assert(OpReg.isVirtual() && "Expected a virtual register");
   LLT OpTy = MRI.getType(OpReg);
@@ -8558,7 +8598,8 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     if (!DoRewrite || Repl == OpReg)
       return Repl != OpReg;
     DropPoisonFlags();
-    if (DefMI->getNumExplicitDefs() == 1 && MRI.hasOneNonDBGUse(OpReg)) {
+    if (IsRoot ||
+        (DefMI->getNumExplicitDefs() == 1 && MRI.hasOneNonDBGUse(OpReg))) {
       InvalidateDebugUses(DemandedBits);
       replaceRegWith(MRI, OpReg, Repl);
       eraseInst(*DefMI);
@@ -8591,6 +8632,12 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
 
   unsigned BW = DemandedBits.getBitWidth();
   auto GiveUp = [&]() {
+    // Like SelectionDAG, retain scalar constant facts at the depth limit.
+    if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      Known =
+          KnownBits::makeConstant(DefMI->getOperand(1).getCImm()->getValue());
+      return false;
+    }
     APInt DemandedElts = OpTy.isFixedVector()
                              ? APInt::getAllOnes(OpTy.getNumElements())
                              : APInt(1, 1);
@@ -8614,8 +8661,226 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     Demanded = APInt::getAllOnes(BW);
   }
 
+  auto BuildReplacement = [&](function_ref<Register()> Build) {
+    if (!DoRewrite)
+      return true;
+    MachineBasicBlock &SaveMBB = Builder.getMBB();
+    MachineBasicBlock::iterator SavePt = Builder.getInsertPt();
+    DebugLoc SaveDL = Builder.getDL();
+    Builder.setInstrAndDebugLoc(*DefMI);
+    Register Repl = Build();
+    Builder.setInsertPt(SaveMBB, SavePt);
+    Builder.setDebugLoc(SaveDL);
+    return Rewrite(Repl);
+  };
+  auto Legal = [&](unsigned Opc, std::initializer_list<LLT> Types) {
+    return isPreLegalize() || !LI || isLegal({Opc, Types});
+  };
+  auto LegalConstant = [&](LLT Ty) {
+    return isPreLegalize() || !LI ||
+           LI->isLegalOrCustom({TargetOpcode::G_CONSTANT, {Ty}});
+  };
+  auto FoldKnown = [&]() {
+    if (!Demanded.isSubsetOf(Known.Zero | Known.One) || !LegalConstant(OpTy))
+      return false;
+    return BuildReplacement(
+        [&]() { return Builder.buildConstant(OpTy, Known.One).getReg(0); });
+  };
+
   unsigned Opcode = DefMI->getOpcode();
   switch (Opcode) {
+  case TargetOpcode::G_TRUNC: {
+    Register Src = DefMI->getOperand(1).getReg();
+    unsigned SrcBW = MRI.getType(Src).getScalarSizeInBits();
+    APInt SrcDemand = Demanded.zext(SrcBW);
+    KnownBits SrcKnown(SrcBW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, SrcDemand,
+                                            SrcKnown, Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
+    Known = SrcKnown.trunc(BW);
+    if (Changed)
+      return true;
+
+    if (Register NewSrc =
+            simplifyMultipleUseDemandedBits(Src, SrcDemand, Depth + 1))
+      return BuildReplacement(
+          [&]() { return Builder.buildTrunc(OpTy, NewSrc).getReg(0); });
+
+    MachineInstr *Shift = MRI.getVRegDef(Src);
+    const TargetLowering &TLI = getTargetLowering();
+    if (Shift->getOpcode() == TargetOpcode::G_LSHR &&
+        MRI.hasOneNonDBGUse(Src) &&
+        (isPreLegalize() ||
+         TLI.isTypeDesirableForLogicalShift(
+             /*IsShl=*/false, getApproximateEVTForLLT(OpTy, getContext())))) {
+      // Keep trunc(lshr) when only truncating the shift itself is free.
+      if (TLI.isTruncateFreeForRightShift(
+              getApproximateEVTForLLT(MRI.getType(Src), getContext()),
+              getApproximateEVTForLLT(OpTy, getContext())) &&
+          !TLI.isTruncateFree(MRI.getType(Src), OpTy, getContext()))
+        return FoldKnown();
+
+      std::optional<unsigned> Amt;
+      if (auto C =
+              getConstantOrConstantSplatVector(Shift->getOperand(2).getReg()))
+        Amt = detail::getValidShiftAmount(*C, BW);
+      if (!Amt) {
+        APInt DemandedElts = OpTy.isFixedVector()
+                                 ? APInt::getAllOnes(OpTy.getNumElements())
+                                 : APInt(1, 1);
+        KnownBits AmtKnown = VT->getKnownBits(Shift->getOperand(2).getReg(),
+                                              DemandedElts, Depth + 2);
+        Amt = detail::getValidShiftAmount(
+            detail::getValidShiftAmountRange(AmtKnown, BW));
+      }
+      LLT AmtTy = MRI.getType(Shift->getOperand(2).getReg());
+      if (Amt &&
+          !(APInt::getHighBitsSet(SrcBW, SrcBW - BW).lshr(*Amt).trunc(BW) &
+            Demanded) &&
+          Legal(TargetOpcode::G_TRUNC, {OpTy, MRI.getType(Src)}) &&
+          Legal(TargetOpcode::G_LSHR, {OpTy, AmtTy}) && LegalConstant(AmtTy))
+        return BuildReplacement([&]() {
+          auto X = Builder.buildTrunc(OpTy, Shift->getOperand(1).getReg());
+          auto ShiftAmt = Builder.buildConstant(AmtTy, *Amt);
+          return Builder.buildLShr(OpTy, X, ShiftAmt).getReg(0);
+        });
+    }
+    return FoldKnown();
+  }
+  case TargetOpcode::G_XOR: {
+    Register LHS = DefMI->getOperand(1).getReg();
+    Register RHS = DefMI->getOperand(2).getReg();
+    KnownBits LHSKnown(BW), RHSKnown(BW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, Demanded,
+                                            RHSKnown, Depth + 1, DoRewrite);
+    if (!Changed)
+      Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, Demanded, LHSKnown,
+                                         Depth + 1, DoRewrite);
+    Known = LHSKnown ^ RHSKnown;
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+      return true;
+    }
+
+    if (Demanded.isSubsetOf(RHSKnown.Zero)) {
+      Known = LHSKnown;
+      return Rewrite(LHS);
+    }
+    if (Demanded.isSubsetOf(LHSKnown.Zero)) {
+      Known = RHSKnown;
+      return Rewrite(RHS);
+    }
+
+    const TargetLowering &TLI = getTargetLowering();
+    if (OpTy.isScalar() && MRI.hasOneNonDBGUse(OpReg)) {
+      for (unsigned SmallBW = llvm::bit_ceil(Demanded.getActiveBits());
+           SmallBW < BW; SmallBW = NextPowerOf2(SmallBW)) {
+        LLT SmallTy = OpTy.changeElementSize(SmallBW);
+        if (TLI.isTruncateFree(OpTy, SmallTy, getContext()) &&
+            TLI.isZExtFree(SmallTy, OpTy, getContext()) &&
+            Legal(TargetOpcode::G_TRUNC, {SmallTy, OpTy}) &&
+            Legal(TargetOpcode::G_XOR, {SmallTy}) &&
+            Legal(TargetOpcode::G_ANYEXT, {OpTy, SmallTy}))
+          return BuildReplacement([&]() {
+            auto X = Builder.buildTrunc(SmallTy, LHS);
+            auto Y = Builder.buildTrunc(SmallTy, RHS);
+            auto V = Builder.buildXor(SmallTy, X, Y);
+            return Builder.buildAnyExt(OpTy, V).getReg(0);
+          });
+      }
+    }
+
+    if (Demanded.isSubsetOf(LHSKnown.Zero | RHSKnown.Zero) &&
+        Legal(TargetOpcode::G_OR, {OpTy}))
+      return BuildReplacement(
+          [&]() { return Builder.buildOr(OpTy, LHS, RHS).getReg(0); });
+
+    if (std::optional<APInt> C = getConstantOrConstantSplatVector(RHS);
+        C && LegalConstant(OpTy)) {
+      if (*C == LHSKnown.One && Legal(TargetOpcode::G_AND, {OpTy}))
+        return BuildReplacement([&]() {
+          auto Mask = Builder.buildConstant(OpTy, ~*C & Demanded);
+          return Builder.buildAnd(OpTy, LHS, Mask).getReg(0);
+        });
+
+      // Preserve the canonical NOT form instead of shrinking its constant.
+      if (!C->isAllOnes() && Demanded.isSubsetOf(*C))
+        return BuildReplacement([&]() {
+          auto Ones = Builder.buildConstant(OpTy, APInt::getAllOnes(BW));
+          return Builder.buildXor(OpTy, LHS, Ones).getReg(0);
+        });
+
+      MachineInstr *Shift = MRI.getVRegDef(LHS);
+      unsigned ShiftOpc = Shift->getOpcode();
+      if ((ShiftOpc == TargetOpcode::G_SHL ||
+           ShiftOpc == TargetOpcode::G_LSHR) &&
+          MRI.hasOneNonDBGUse(LHS)) {
+        std::optional<unsigned> Amt;
+        if (auto ShiftC =
+                getConstantOrConstantSplatVector(Shift->getOperand(2).getReg()))
+          Amt = detail::getValidShiftAmount(*ShiftC, BW);
+        if (Amt) {
+          APInt Ones = APInt::getAllOnes(BW);
+          Ones = ShiftOpc == TargetOpcode::G_SHL ? Ones.shl(*Amt)
+                                                 : Ones.lshr(*Amt);
+          if ((Demanded & *C) == (Demanded & Ones) &&
+              TLI.isDesirableToCommuteXorWithShift(
+                  ShiftOpc == TargetOpcode::G_SHL, *C, *Amt, OpTy.isVector()))
+            return BuildReplacement([&]() {
+              auto Mask = Builder.buildConstant(OpTy, APInt::getAllOnes(BW));
+              auto Not =
+                  Builder.buildXor(OpTy, Shift->getOperand(1).getReg(), Mask);
+              return Builder
+                  .buildInstr(ShiftOpc, {OpTy},
+                              {Not, Shift->getOperand(2).getReg()})
+                  .getReg(0);
+            });
+        }
+      }
+      if (!C->isAllOnes()) {
+        std::optional<APInt> TargetC;
+        if (!isPreLegalize() && OpTy.isScalar())
+          TargetC = TLI.getDemandedXorConstant(*C, Demanded);
+        APInt NewC = TargetC.value_or(*C & Demanded);
+        if (NewC != *C)
+          return BuildReplacement([&]() {
+            auto Mask = Builder.buildConstant(OpTy, NewC);
+            return Builder.buildXor(OpTy, LHS, Mask).getReg(0);
+          });
+      }
+    }
+    if (!Demanded.isAllOnes()) {
+      Register NewLHS =
+          simplifyMultipleUseDemandedBits(LHS, Demanded, Depth + 1);
+      Register NewRHS =
+          simplifyMultipleUseDemandedBits(RHS, Demanded, Depth + 1);
+      if (NewLHS || NewRHS)
+        return BuildReplacement([&]() {
+          return Builder
+              .buildXor(OpTy, NewLHS ? NewLHS : LHS, NewRHS ? NewRHS : RHS)
+              .getReg(0);
+        });
+    }
+    return FoldKnown();
+  }
+  case TargetOpcode::G_SELECT: {
+    KnownBits TrueKnown(BW), FalseKnown(BW);
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/3, Demanded,
+                                            FalseKnown, Depth + 1, DoRewrite);
+    if (!Changed)
+      Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, Demanded,
+                                         TrueKnown, Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
+    Known = TrueKnown.intersectWith(FalseKnown);
+    return Changed || FoldKnown();
+  }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR: {
     auto *Logic = cast<GLogicalBinOp>(DefMI);
@@ -8690,6 +8955,19 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     }
     Known = Opcode == TargetOpcode::G_AND ? LHSKnown & RHSKnown
                                           : LHSKnown | RHSKnown;
+    if (!Changed && !Demanded.isAllOnes()) {
+      Register NewLHS =
+          simplifyMultipleUseDemandedBits(LHS, Demanded, Depth + 1);
+      Register NewRHS =
+          simplifyMultipleUseDemandedBits(RHS, Demanded, Depth + 1);
+      if (NewLHS || NewRHS)
+        return BuildReplacement([&]() {
+          return Builder
+              .buildInstr(Opcode, {OpTy},
+                          {NewLHS ? NewLHS : LHS, NewRHS ? NewRHS : RHS})
+              .getReg(0);
+        });
+    }
     return Changed;
   }
   default:
@@ -8716,8 +8994,19 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
   APInt RootDemand = APInt::getAllOnes(Ty.getScalarSizeInBits());
   auto Probe = [&](unsigned OpNo, const APInt &OpDemand, KnownBits &Known) {
     if (!simplifyDemandedBitsImpl(MI, OpNo, OpDemand, Known, /*Depth=*/0,
-                                  /*DoRewrite=*/false))
-      return false;
+                                  /*DoRewrite=*/false)) {
+      Register R = MI.getOperand(OpNo).getReg();
+      Register Repl = simplifyMultipleUseDemandedBits(R, OpDemand, /*Depth=*/0);
+      if (!Repl)
+        return false;
+      MatchInfo = [this, &MI, OpNo, Repl](MachineIRBuilder &) {
+        Observer.changingInstr(MI);
+        MI.clearFlags(MachineInstr::getPoisonGeneratingFlags());
+        MI.getOperand(OpNo).setReg(Repl);
+        Observer.changedInstr(MI);
+      };
+      return true;
+    }
 
     MatchInfo = [this, &MI, OpNo, OpDemand](MachineIRBuilder &) {
       KnownBits K(OpDemand.getBitWidth());
@@ -8728,6 +9017,22 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
 
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_XOR:
+  case TargetOpcode::G_SELECT: {
+    KnownBits Known(RootDemand.getBitWidth());
+    if (!simplifyDemandedBitsImpl(MI, /*OpNo=*/0, RootDemand, Known,
+                                  /*Depth=*/0, /*DoRewrite=*/false,
+                                  /*IsRoot=*/true))
+      return false;
+    MatchInfo = [this, &MI, RootDemand](MachineIRBuilder &) {
+      KnownBits Known(RootDemand.getBitWidth());
+      simplifyDemandedBitsImpl(MI, /*OpNo=*/0, RootDemand, Known,
+                               /*Depth=*/0, /*DoRewrite=*/true,
+                               /*IsRoot=*/true);
+    };
+    return true;
+  }
   default:
     return false;
   case TargetOpcode::G_AND:

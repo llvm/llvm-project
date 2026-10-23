@@ -3262,6 +3262,13 @@ public:
                           getApproximateEVTForLLT(ToTy, Ctx));
   }
 
+  /// Return true if truncating a logical or arithmetic right shift is free.
+  /// This may be true even when truncating an arbitrary value is not free,
+  /// for example when the target has a narrowing right-shift instruction.
+  virtual bool isTruncateFreeForRightShift(EVT FromVT, EVT ToVT) const {
+    return isTruncateFree(FromVT, ToVT);
+  }
+
   /// Return true if truncating the specific node Val to type VT2 is free.
   virtual bool isTruncateFree(SDValue Val, EVT VT2) const {
     // Fallback to type matching.
@@ -4455,6 +4462,15 @@ public:
   bool ShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
                               TargetLoweringOpt &TLO) const;
 
+  /// Choose a scalar XOR constant that agrees with C on DemandedBits.
+  /// Called after legalization. A result equal to C preserves the target's
+  /// preferred constant and prevents generic shrinking from undoing it.
+  /// Return std::nullopt to use the generic constant-shrinking policy.
+  virtual std::optional<APInt>
+  getDemandedXorConstant(const APInt &C, const APInt &DemandedBits) const {
+    return std::nullopt;
+  }
+
   // Target hook to do target-specific const optimization, which is called by
   // ShrinkDemandedConstant. This function should return true if the target
   // doesn't want ShrinkDemandedConstant to further optimize the constant.
@@ -4866,7 +4882,13 @@ public:
   /// to create a logical shift of NOT. This transformation may not be desirable
   /// if it disrupts a particularly auspicious target-specific tree (e.g.
   /// BIC on ARM/AArch64). By default, it returns true.
-  virtual bool isDesirableToCommuteXorWithShift(const SDNode *N) const {
+  /// IsShl selects left shift; otherwise the shift is logical right.
+  /// ShiftAmt must be less than the bit width of XorMask. IsVector describes
+  /// the XOR result type.
+  virtual bool isDesirableToCommuteXorWithShift(bool IsShl,
+                                                const APInt &XorMask,
+                                                unsigned ShiftAmt,
+                                                bool IsVector) const {
     return true;
   }
 
@@ -4882,6 +4904,12 @@ public:
   /// Overload that takes the specific node being optimized.
   virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
     return isTypeDesirableForOp(N->getOpcode(), VT);
+  }
+
+  /// Return whether VT is desirable for a logical shift. IsShl selects left
+  /// shift; otherwise the shift is logical right.
+  bool isTypeDesirableForLogicalShift(bool IsShl, EVT VT) const {
+    return isTypeDesirableForOp(IsShl ? ISD::SHL : ISD::SRL, VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating

@@ -9,14 +9,14 @@ define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_and_b32_e32 v3, 0xff, v2
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 8, v3
-; LOOP-NEXT:    v_or_b32_e32 v4, v3, v4
-; LOOP-NEXT:    v_lshlrev_b32_e32 v5, 16, v3
-; LOOP-NEXT:    v_or_b32_e32 v4, v4, v5
+; LOOP-NEXT:    v_or_b32_e32 v5, v3, v4
+; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 16, v3
+; LOOP-NEXT:    v_or_b32_e32 v4, v5, v4
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
 ; LOOP-NEXT:    v_or_b32_e32 v3, v4, v3
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; LOOP-NEXT:    v_bfe_u32 v5, v3, 8, 8
+; LOOP-NEXT:    v_lshrrev_b32_e32 v5, 8, v5
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v6, 24, v3
@@ -65,19 +65,19 @@ define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-NEXT:    v_or_b32_e32 v3, v2, v3
 ; LOOP-NEXT:    s_waitcnt expcnt(1)
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
-; LOOP-NEXT:    v_or_b32_e32 v3, v3, v4
+; LOOP-NEXT:    v_or_b32_e32 v4, v3, v4
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
-; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; LOOP-NEXT:    v_or_b32_e32 v2, v4, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
+; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 8, v3
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:32
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:33
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:33
 ; LOOP-NEXT:    s_waitcnt expcnt(1)
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
-; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:34
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:34
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:35
 ; LOOP-NEXT:    s_endpgm
 ;

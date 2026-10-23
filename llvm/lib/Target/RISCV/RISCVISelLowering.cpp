@@ -2598,18 +2598,21 @@ bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 }
 
 bool RISCVTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
-  EVT SrcVT = Val.getValueType();
-  // free truncate from vnsrl and vnsra
-  if (Subtarget.hasVInstructions() &&
-      (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) &&
-      SrcVT.isVector() && VT2.isVector()) {
-    unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
-    unsigned DestBits = VT2.getVectorElementType().getSizeInBits();
-    if (SrcBits == DestBits * 2) {
-      return true;
-    }
-  }
+  if (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA)
+    return isTruncateFreeForRightShift(Val.getValueType(), VT2);
   return TargetLowering::isTruncateFree(Val, VT2);
+}
+
+bool RISCVTargetLowering::isTruncateFreeForRightShift(EVT SrcVT,
+                                                      EVT DstVT) const {
+  // Free truncate from vnsrl and vnsra.
+  if (Subtarget.hasVInstructions() && SrcVT.isVector() && DstVT.isVector()) {
+    unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
+    unsigned DestBits = DstVT.getVectorElementType().getSizeInBits();
+    if (SrcBits == DestBits * 2)
+      return true;
+  }
+  return isTruncateFree(SrcVT, DstVT);
 }
 
 bool RISCVTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {

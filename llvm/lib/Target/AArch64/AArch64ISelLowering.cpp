@@ -2710,18 +2710,16 @@ static bool isOpcWithIntImmediate(const SDNode *N, unsigned Opc,
          isIntImmediate(N->getOperand(1).getNode(), Imm);
 }
 
-static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
-                               const APInt &Demanded,
-                               TargetLowering::TargetLoweringOpt &TLO,
-                               unsigned NewOpc) {
-  uint64_t OldImm = Imm, NewImm, Enc;
-  uint64_t Mask = ((uint64_t)(-1LL) >> (64 - Size)), OrigMask = Mask;
+static std::optional<uint64_t>
+getOptimizedLogicalImm(unsigned Size, uint64_t Imm, const APInt &Demanded) {
+  uint64_t OldImm = Imm, NewImm;
+  uint64_t Mask = ((uint64_t)(-1LL) >> (64 - Size));
 
   // Return if the immediate is already all zeros, all ones, a bimm32 or a
   // bimm64.
   if (Imm == 0 || Imm == Mask ||
       AArch64_AM::isLogicalImmediate(Imm & Mask, Size))
-    return false;
+    return std::nullopt;
 
   unsigned EltSize = Size;
   uint64_t DemandedBits = Demanded.getZExtValue();
@@ -2755,7 +2753,7 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
 
     // We cannot shrink the element size any further if it is 2-bits.
     if (EltSize == 2)
-      return false;
+      return std::nullopt;
 
     EltSize /= 2;
     Mask >>= EltSize;
@@ -2763,14 +2761,12 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
 
     // Return if there is mismatch in any of the demanded bits of Imm and Hi.
     if (((Imm ^ Hi) & (DemandedBits & DemandedBitsHi) & Mask) != 0)
-      return false;
+      return std::nullopt;
 
     // Merge the upper and lower halves of Imm and DemandedBits.
     Imm |= Hi;
     DemandedBits |= DemandedBitsHi;
   }
-
-  ++NumOptimizedImms;
 
   // Replicate the element across the register width.
   while (EltSize < Size) {
@@ -2783,6 +2779,20 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
          "demanded bits should never be altered");
   assert(OldImm != NewImm && "the new imm shouldn't be equal to the old imm");
 
+  return NewImm;
+}
+
+static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
+                               const APInt &Demanded,
+                               TargetLowering::TargetLoweringOpt &TLO,
+                               unsigned NewOpc) {
+  std::optional<uint64_t> Optimized =
+      getOptimizedLogicalImm(Size, Imm, Demanded);
+  if (!Optimized)
+    return false;
+  ++NumOptimizedImms;
+  uint64_t NewImm = *Optimized;
+  uint64_t OrigMask = UINT64_MAX >> (64 - Size);
   // Create the new constant immediate node.
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
@@ -2793,16 +2803,35 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
   if (NewImm == 0 || NewImm == OrigMask) {
     New = TLO.DAG.getNode(Op.getOpcode(), DL, VT, Op.getOperand(0),
                           TLO.DAG.getConstant(NewImm, DL, VT));
-  // Otherwise, create a machine node so that target independent DAG combine
-  // doesn't undo this optimization.
+    // Otherwise, create a machine node so that target independent DAG combine
+    // doesn't undo this optimization.
   } else {
-    Enc = AArch64_AM::encodeLogicalImmediate(NewImm, Size);
+    uint64_t Enc = AArch64_AM::encodeLogicalImmediate(NewImm, Size);
     SDValue EncConst = TLO.DAG.getTargetConstant(Enc, DL, VT);
     New = SDValue(
         TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst), 0);
   }
 
   return TLO.CombineTo(Op, New);
+}
+
+std::optional<APInt>
+AArch64TargetLowering::getDemandedXorConstant(const APInt &C,
+                                              const APInt &DemandedBits) const {
+  unsigned Size = C.getBitWidth();
+  if (!Subtarget->getCLOpts().enable_logical_imm ||
+      (Size != 32 && Size != 64) || DemandedBits.isAllOnes())
+    return std::nullopt;
+
+  // Canonicalize from the demanded bits, so repeated combines cannot alternate
+  // between generic shrinking and the target's encodable immediate.
+  // SelectionDAG instead protects the optimized constant by building a machine
+  // node.
+  APInt Shrunk = C & DemandedBits;
+  if (auto Imm =
+          getOptimizedLogicalImm(Size, Shrunk.getZExtValue(), DemandedBits))
+    return APInt(Size, *Imm);
+  return Shrunk;
 }
 
 bool AArch64TargetLowering::targetShrinkDemandedConstant(
@@ -20615,27 +20644,14 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
 }
 
 bool AArch64TargetLowering::isDesirableToCommuteXorWithShift(
-    const SDNode *N) const {
-  assert(N->getOpcode() == ISD::XOR &&
-         (N->getOperand(0).getOpcode() == ISD::SHL ||
-          N->getOperand(0).getOpcode() == ISD::SRL) &&
-         "Expected XOR(SHIFT) pattern");
+    bool IsShl, const APInt &XorMask, unsigned ShiftAmt, bool IsVector) const {
+  assert(ShiftAmt < XorMask.getBitWidth() && "Expected valid shift amount");
 
-  // Only commute if the entire NOT mask is a hidden shifted mask.
-  auto *XorC = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  auto *ShiftC = dyn_cast<ConstantSDNode>(N->getOperand(0).getOperand(1));
-  if (XorC && ShiftC) {
-    unsigned MaskIdx, MaskLen;
-    if (XorC->getAPIntValue().isShiftedMask(MaskIdx, MaskLen)) {
-      unsigned ShiftAmt = ShiftC->getZExtValue();
-      unsigned BitWidth = N->getValueType(0).getScalarSizeInBits();
-      if (N->getOperand(0).getOpcode() == ISD::SHL)
-        return MaskIdx == ShiftAmt && MaskLen == (BitWidth - ShiftAmt);
-      return MaskIdx == 0 && MaskLen == (BitWidth - ShiftAmt);
-    }
-  }
-
-  return false;
+  // Only commute scalar shifts whose entire NOT mask is a hidden shifted mask.
+  if (IsVector)
+    return false;
+  APInt Ones = APInt::getAllOnes(XorMask.getBitWidth());
+  return XorMask == (IsShl ? Ones.shl(ShiftAmt) : Ones.lshr(ShiftAmt));
 }
 
 bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(

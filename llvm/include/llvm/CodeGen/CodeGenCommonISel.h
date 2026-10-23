@@ -14,14 +14,48 @@
 #ifndef LLVM_CODEGEN_CODEGENCOMMONISEL_H
 #define LLVM_CODEGEN_CODEGENCOMMONISEL_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/IR/ConstantRange.h"
 #include <cassert>
+#include <optional>
 namespace llvm {
 
 class BasicBlock;
 class Instruction;
 class MDNode;
+struct KnownBits;
 enum FPClassTest : unsigned;
+
+namespace detail {
+
+/// Return the constant shift amount as a range if it is less than BitWidth.
+LLVM_ABI std::optional<ConstantRange>
+getValidShiftAmountRange(const APInt &Amt, unsigned BitWidth);
+
+/// Return the unsigned shift range if every possible amount is valid.
+LLVM_ABI std::optional<ConstantRange>
+getValidShiftAmountRange(const KnownBits &KnownAmt, unsigned BitWidth);
+
+/// Find the range of demanded constant lanes, falling back to KnownBits.
+/// GetConstant returns a pointer to a lane's APInt, or nullptr if it is not a
+/// constant. Pass zero NumElements when there is no explicit vector to inspect.
+/// ComputeKnownBits must account for DemandedElts and the analysis depth.
+LLVM_ABI std::optional<ConstantRange>
+getValidShiftAmountRange(unsigned BitWidth, const APInt &DemandedElts,
+                         unsigned NumElements,
+                         function_ref<const APInt *(unsigned)> GetConstant,
+                         function_ref<KnownBits()> ComputeKnownBits);
+
+/// Return a single shift amount from a previously validated range.
+LLVM_ABI std::optional<unsigned>
+getValidShiftAmount(const std::optional<ConstantRange> &AmtRange);
+
+/// Return a constant shift amount if it is less than BitWidth.
+LLVM_ABI std::optional<unsigned> getValidShiftAmount(const APInt &Amt,
+                                                     unsigned BitWidth);
+
+} // namespace detail
 
 /// Encapsulates all of the information needed to generate a stack protector
 /// check, and signals to isel when initialized that one needs to be generated.
