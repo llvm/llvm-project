@@ -11,6 +11,7 @@ add_bolt_unittest(CoreTests
   BinaryContext.cpp
   Relocation.cpp
   ClusteredRows.cpp
+  JITLinkLinker.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp
   DynoStats.cpp

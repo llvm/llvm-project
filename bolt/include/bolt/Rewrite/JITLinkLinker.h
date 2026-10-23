@@ -47,6 +47,7 @@ public:
   static SmallVector<jitlink::Block *, 2>
   orderedBlocks(const jitlink::Section &Section);
   static size_t sectionSize(const jitlink::Section &Section);
+  static void assignBlockAddresses(jitlink::Section &Section, uint64_t Address);
 };
 
 } // namespace bolt
