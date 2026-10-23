@@ -29753,7 +29753,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
                                 OptimizationRemarkEmitter *ORE_) {
-  Opts = &F.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(F);
   if (!Opts->vectorize_slp)
     return false;
   SE = SE_;

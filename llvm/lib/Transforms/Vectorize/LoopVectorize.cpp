@@ -7275,8 +7275,7 @@ static void preparePlanForEpilogueVectorLoop(
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  const VectorizeOptions &Opts =
-      L->getHeader()->getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(*L);
   assert((Opts.enable_vplan_native_path || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
@@ -7840,8 +7839,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // and can invalidate iterators across the loops.
   SmallVector<Loop *, 8> Worklist;
 
-  const VectorizeOptions &Opts =
-      F.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(F);
   for (Loop *L : *LI)
     collectSupportedLoops(Opts, *L, LI, ORE, Worklist);
 
