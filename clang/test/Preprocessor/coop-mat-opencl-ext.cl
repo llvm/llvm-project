@@ -3,23 +3,23 @@
 // Test if extension macro is predefined when the extension is enabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
-// RUN:   -finclude-default-header -E -dM %s \
+// RUN:   -finclude-default-header -fdeclare-opencl-builtins -E -dM %s \
 // RUN:   | FileCheck %s --check-prefix=EXT
 
-// EXT: cl_khr_cooperative_matrix
+// EXT: #define cl_khr_cooperative_matrix 1
 
 // Test if extension is NOT predefined when explicitly disabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=-cl_khr_cooperative_matrix \
-// RUN:   -finclude-default-header -E %s \
+// RUN:   -finclude-default-header -fdeclare-opencl-builtins -E -dM %s \
 // RUN:   | FileCheck %s --check-prefix=NOEXT
 
-// NOEXT-NOT: cl_khr_cooperative_matrix
+// NOEXT-NOT: #define cl_khr_cooperative_matrix
 
 // Enum constants are visible when extension is enabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
-// RUN:   -finclude-default-header -fsyntax-only -verify %s
+// RUN:   -finclude-default-header -fdeclare-opencl-builtins -fsyntax-only -verify %s
 
 // expected-no-diagnostics
 
@@ -42,11 +42,16 @@ void test_enum_constants(void) {
 
 // Enum constant values match the spec
 void test_enum_values(void) {
-    _Static_assert(memory_scope_sub_group                    == 4, "scope subgroup");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_A                  == 0, "use A");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_B                  == 1, "use B");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_ACCUMULATOR        == 2, "use ACC");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR   == 0, "row major");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR== 1, "col major");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_NONE       == 0, "operand none");
+    _Static_assert(memory_scope_sub_group                                       == 4, "scope subgroup");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_A                                     == 0, "use A");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_B                                     == 1, "use B");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_ACCUMULATOR                           == 2, "use ACC");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR                      == 0, "row major");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR                   == 1, "col major");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_NONE                          == 0, "operand none");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED               == 0x1, "A signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED               == 0x2, "A signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED               == 0x4, "A signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED          == 0x8, "A signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_SATURATING_ACCUMULATION       == 0x10, "saturating accumulation");
 }
