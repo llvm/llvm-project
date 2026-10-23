@@ -6535,9 +6535,13 @@ bool Sema::BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
     return true;
 
   if (BuiltinID == Builtin::BI__builtin_isunordered &&
-      TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs())
-    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << 0 << TheCall->getSourceRange();
+      TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs()) {
+    if (getLangOpts().HLSL)
+      HLSL().deferFPNaNInfDiagnostic(TheCall, /*IsNaN=*/true);
+    else
+      Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+          << 1 << 0 << TheCall->getSourceRange();
+  }
 
   ExprResult OrigArg0 = TheCall->getArg(0);
   ExprResult OrigArg1 = TheCall->getArg(1);
@@ -6578,14 +6582,22 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   FPOptions FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
   if (FPO.getNoHonorInfs() && (BuiltinID == Builtin::BI__builtin_isfinite ||
                                BuiltinID == Builtin::BI__builtin_isinf ||
-                               BuiltinID == Builtin::BI__builtin_isinf_sign))
-    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 0 << 0 << TheCall->getSourceRange();
+                               BuiltinID == Builtin::BI__builtin_isinf_sign)) {
+    if (getLangOpts().HLSL)
+      HLSL().deferFPNaNInfDiagnostic(TheCall, /*IsNaN=*/false);
+    else
+      Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+          << 0 << 0 << TheCall->getSourceRange();
+  }
 
   if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
-                               BuiltinID == Builtin::BI__builtin_isunordered))
-    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << 0 << TheCall->getSourceRange();
+                               BuiltinID == Builtin::BI__builtin_isunordered)) {
+    if (getLangOpts().HLSL)
+      HLSL().deferFPNaNInfDiagnostic(TheCall, /*IsNaN=*/true);
+    else
+      Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+          << 1 << 0 << TheCall->getSourceRange();
+  }
 
   bool IsFPClass = NumArgs == 2;
 
@@ -10821,8 +10833,11 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
   if (FPO.getNoHonorNaNs() &&
       (IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered") ||
        IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN))) {
-    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << 0 << Call->getSourceRange();
+    if (getLangOpts().HLSL)
+      HLSL().deferFPNaNInfDiagnostic(Call, /*IsNaN=*/true);
+    else
+      Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+          << 1 << 0 << Call->getSourceRange();
     return;
   }
 
@@ -10830,8 +10845,11 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
       (IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite") ||
        IsInfinityFunction(FDecl) ||
        IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf))) {
-    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 0 << 0 << Call->getSourceRange();
+    if (getLangOpts().HLSL)
+      HLSL().deferFPNaNInfDiagnostic(Call, /*IsNaN=*/false);
+    else
+      Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+          << 0 << 0 << Call->getSourceRange();
   }
 }
 
