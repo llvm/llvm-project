@@ -186,6 +186,7 @@ add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
+add_header(struct_FTW HDR struct_FTW.h)
 add_header(
   struct_ipc_perm
   HDR struct_ipc_perm.h
