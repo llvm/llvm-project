@@ -12,6 +12,7 @@
 
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__type_traits/desugars_to.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,6 +33,9 @@ struct compare_three_way {
 
   using is_transparent = void;
 };
+
+template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__compare_three_way_tag, compare_three_way, _Tp, _Up> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
