@@ -17231,6 +17231,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto *SrcVecTy = getWidenedType(SrcScalarTy, VL.size());
     unsigned Opcode = ShuffleOrOp;
     unsigned VecOpcode = Opcode;
+    // zext and uitofp cannot absorb the sign extension of a signed demoted
+    // operand and inttoptr needs the original type, so extend it back first.
+    std::optional<std::pair<uint64_t, bool>> ExtBackBW;
+    if (SrcIt != MinBWs.end() &&
+        (Opcode == Instruction::IntToPtr ||
+         (SrcIt->second.second &&
+          (Opcode == Instruction::UIToFP || Opcode == Instruction::ZExt)))) {
+      ExtBackBW = SrcIt->second;
+      SrcIt = MinBWs.end();
+    }
     if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
         (SrcIt != MinBWs.end() || It != MinBWs.end())) {
       // Check if the values are candidates to demote.
@@ -17259,8 +17269,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                !SrcIt->second.second) {
       VecOpcode = Instruction::UIToFP;
     }
-    const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
-                            SrcIt != MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17268,12 +17276,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    TTI::getCastContextHint(VL0), CostKind, VL0);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
+      TTI::CastContextHint CCH = GetCastContextHint(VL0->getOperand(0));
+      if (ExtBackBW)
+        CommonCost += TTI->getCastInstrCost(
+            ExtBackBW->second ? Instruction::SExt : Instruction::ZExt, SrcVecTy,
+            SrcVecTy->getWithNewBitWidth(ExtBackBW->first), CCH, CostKind);
       // Do not count cost here if minimum bitwidth is in effect and it is just
       // a bitcast (here it is just a noop).
       if (VecOpcode != Opcode && VecOpcode == Instruction::BitCast)
         return CommonCost;
       auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
-      TTI::CastContextHint CCH = GetCastContextHint(VL0->getOperand(0));
 
       bool IsArithmeticExtendedReduction =
           E->Idx == 0 && UserIgnoreList &&
@@ -17288,12 +17300,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
-      if (IsSExtBack) {
-        auto *DemotedVecTy = getWidenedType(
-            IntegerType::get(F->getContext(), SrcIt->second.first), VL.size());
-        CommonCost += TTI->getCastInstrCost(Instruction::SExt, SrcVecTy,
-                                            DemotedVecTy, CCH, CostKind);
-      }
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -24641,6 +24647,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Instruction::CastOps VecOpcode = CI->getOpcode();
       Type *SrcScalarTy = cast<VectorType>(InVec->getType())->getElementType();
       auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+      if (SrcIt != MinBWs.end() &&
+          (VecOpcode == Instruction::IntToPtr ||
+           (SrcIt->second.second && (VecOpcode == Instruction::UIToFP ||
+                                     VecOpcode == Instruction::ZExt)))) {
+        InVec = Builder.CreateIntCast(
+            InVec, getWidenedType(CI->getSrcTy(), E->Scalars.size()),
+            SrcIt->second.second);
+        SrcScalarTy = CI->getSrcTy()->getScalarType();
+        SrcIt = MinBWs.end();
+      }
       if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
           (SrcIt != MinBWs.end() || It != MinBWs.end() ||
            SrcScalarTy != CI->getOperand(0)->getType()->getScalarType())) {
@@ -24671,11 +24687,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
-      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
-                 SrcIt->second.second) {
-        auto *OrigSrcVectorTy =
-            getWidenedType(CI->getSrcTy(), E->Scalars.size());
-        InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
