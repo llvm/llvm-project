@@ -28,8 +28,27 @@ bbl2:
   ret ptr null
 }
 
+define i32 @test2(i1 %cond, i1 %sel_c, i32 %a, i32 %b) !prof !0 {
+; CHECK-LABEL: define i32 @test2(
+; CHECK-SAME: i1 [[COND:%.*]], i1 [[SEL_C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V1:%.*]] = select i1 [[SEL_C]], i32 [[A]], i32 [[B]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+if.true:
+  %v1 = select i1 %sel_c, i32 %a, i32 %b, !prof !2
+  ret i32 %v1
+if.false:
+  %v2 = select i1 %sel_c, i32 %a, i32 %b, !prof !3
+  ret i32 %v2
+}
+
 !0 = !{!"function_entry_count", i32 62163}
 !1 = !{!"unknown", !"simple-loop-unswitch"}
+!2 = !{!"branch_weights", i32 2, i32 3}
+!3 = !{!"branch_weights", i32 5, i32 7}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 62163}
 ; CHECK: [[PROF1]] = !{!"unknown", !"simplifycfg"}
