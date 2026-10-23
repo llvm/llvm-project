@@ -456,8 +456,6 @@ SystemZTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     return TypeSize::getFixed(ST->hasVector() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
-  case TargetTransformInfo::RGK_AnyVector:
-    break;
   }
 
   llvm_unreachable("Unsupported register kind");

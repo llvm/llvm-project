@@ -446,8 +446,6 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
          ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
             ? LMUL * RISCV::RVVBitsPerBlock
             : 0);
-  case TargetTransformInfo::RGK_AnyVector:
-    break;
   }
 
   llvm_unreachable("Unsupported register kind");
