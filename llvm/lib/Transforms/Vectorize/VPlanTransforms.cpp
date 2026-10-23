@@ -5954,9 +5954,11 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
         MemIntrinsicCostAttributes(MaskedMemID, DataTy, Alignment,
                                    AddressSpace),
         CostCtx.CostKind);
-    InstructionCost SplitCost =
-        2 * MaskedMemCost + CostCtx.TTI.getArithmeticInstrCost(
-                                Instruction::Xor, MaskTy, CostCtx.CostKind);
+    InstructionCost AddressCost = CostCtx.TTI.getAddressComputationCost(
+        GEP->getType(), nullptr, nullptr, CostCtx.CostKind);
+    InstructionCost SplitCost = 2 * (AddressCost + MaskedMemCost) +
+                                CostCtx.TTI.getArithmeticInstrCost(
+                                    Instruction::Xor, MaskTy, CostCtx.CostKind);
     if (IsLoad)
       SplitCost += CostCtx.TTI.getCmpSelInstrCost(
           Instruction::Select, DataTy, MaskTy, CmpInst::BAD_ICMP_PREDICATE,
