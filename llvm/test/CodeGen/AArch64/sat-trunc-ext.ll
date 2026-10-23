@@ -4,26 +4,10 @@
 ; A saturating truncate whose wide source type is not legal, but whose clamped
 ; value is an extension of a legal narrower value, saturates that value.
 
-; TODO: This should be a single sqxtn.
 define <4 x i16> @ssat_s_sext(<4 x i32> %x) {
 ; CHECK-LABEL: ssat_s_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    sshll2 v1.2d, v0.4s, #0
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    cmgt v3.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmgt v4.2d, v1.2d, v2.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i32> %x to <4 x i64>
   %c1 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %e, <4 x i64> splat (i64 -32768))
@@ -32,26 +16,10 @@ define <4 x i16> @ssat_s_sext(<4 x i32> %x) {
   ret <4 x i16> %t
 }
 
-; TODO: This should be a single sqxtn.
 define <4 x i16> @ssat_s_sext_minfirst(<4 x i32> %x) {
 ; CHECK-LABEL: ssat_s_sext_minfirst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    sshll2 v1.2d, v0.4s, #0
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    mov x8, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i32> %x to <4 x i64>
   %c1 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %e, <4 x i64> splat (i64 32767))
@@ -60,20 +28,10 @@ define <4 x i16> @ssat_s_sext_minfirst(<4 x i32> %x) {
   ret <4 x i16> %t
 }
 
-; TODO: This should be a single sqxtun.
 define <8 x i8> @ssat_u_sext(<8 x i16> %x) {
 ; CHECK-LABEL: ssat_u_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    movi v3.2d, #0x0000ff000000ff
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    smax v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    smin v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    sqxtun v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %e = sext <8 x i16> %x to <8 x i32>
   %c1 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %e, <8 x i32> zeroinitializer)
@@ -82,20 +40,10 @@ define <8 x i8> @ssat_u_sext(<8 x i16> %x) {
   ret <8 x i8> %t
 }
 
-; TODO: This should be a single sqxtun.
 define <8 x i8> @ssat_u_sext_umin(<8 x i16> %x) {
 ; CHECK-LABEL: ssat_u_sext_umin:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    sshll2 v2.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    movi v3.2d, #0x0000ff000000ff
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    smax v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    smin v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    sqxtun v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %e = sext <8 x i16> %x to <8 x i32>
   %c1 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %e, <8 x i32> zeroinitializer)
@@ -104,20 +52,10 @@ define <8 x i8> @ssat_u_sext_umin(<8 x i16> %x) {
   ret <8 x i8> %t
 }
 
-; TODO: This should be a single uqxtn.
 define <2 x i32> @usat_u_zext(<2 x i64> %x) {
 ; CHECK-LABEL: usat_u_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csel x9, x9, x8, lo
-; CHECK-NEXT:    cmp x10, x8
-; CHECK-NEXT:    csel x8, x10, x8, lo
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    uqxtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
   %e = zext <2 x i64> %x to <2 x i128>
   %c = call <2 x i128> @llvm.umin.v2i128(<2 x i128> %e, <2 x i128> splat (i128 4294967295))
@@ -125,19 +63,10 @@ define <2 x i32> @usat_u_zext(<2 x i64> %x) {
   ret <2 x i32> %t
 }
 
-; TODO: This should be a single uqxtn.
 define <4 x i16> @usat_u_zext_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: usat_u_zext_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0x0000000000ffff
-; CHECK-NEXT:    ushll v2.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    cmhi v3.2d, v1.2d, v0.2d
-; CHECK-NEXT:    cmhi v1.2d, v1.2d, v2.2d
-; CHECK-NEXT:    orn v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    orn v1.16b, v2.16b, v1.16b
-; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %e = zext <4 x i32> %x to <4 x i64>
   %c = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %e, <4 x i64> splat (i64 65535))
@@ -145,20 +74,13 @@ define <4 x i16> @usat_u_zext_v4i32(<4 x i32> %x) {
   ret <4 x i16> %t
 }
 
-; Negative: a zero extension under a signed clamp is not a signed saturation of
-; the narrow value.
+; A zero extension under a signed clamp is not a signed saturation of the narrow
+; value, but the clamp still narrows to an unsigned one.
 define <4 x i16> @ssat_s_zext(<4 x i32> %x) {
 ; CHECK-LABEL: ssat_s_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    ushll v1.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %e = zext <4 x i32> %x to <4 x i64>
@@ -168,28 +90,10 @@ define <4 x i16> @ssat_s_zext(<4 x i32> %x) {
   ret <4 x i16> %t
 }
 
-; Negative: the extended value is no wider than the result, so the clamp is
-; not a saturating truncate of it.
+; The extended value is no wider than the result, so the clamp does nothing.
 define <4 x i16> @ssat_s_sext_from_result_width(<4 x i16> %x) {
 ; CHECK-LABEL: ssat_s_sext_from_result_width:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mov x8, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    sshll2 v1.2d, v0.4s, #0
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    cmgt v3.2d, v0.2d, v2.2d
-; CHECK-NEXT:    cmgt v4.2d, v1.2d, v2.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i16> %x to <4 x i64>
   %c1 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %e, <4 x i64> splat (i64 -32768))

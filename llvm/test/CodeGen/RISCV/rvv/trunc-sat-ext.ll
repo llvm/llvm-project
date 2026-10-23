@@ -5,19 +5,12 @@
 ; elements), but whose clamped value is an extension of a legal narrower value,
 ; saturates that value.
 
-; TODO: This should be a single vnclip.
 define <vscale x 16 x i16> @ssat_s_sext_nxv16(<vscale x 16 x i32> %x) {
 ; CHECK-LABEL: ssat_s_sext_nxv16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vsext.vf2 v16, v12
-; CHECK-NEXT:    vsext.vf2 v24, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnclip.wi v12, v24, 0
-; CHECK-NEXT:    vnclip.wi v24, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnclip.wi v8, v12, 0
-; CHECK-NEXT:    vnclip.wi v10, v24, 0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vnclip.wi v16, v8, 0
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %e = sext <vscale x 16 x i32> %x to <vscale x 16 x i64>
   %c1 = call <vscale x 16 x i64> @llvm.smax.nxv16i64(<vscale x 16 x i64> %e, <vscale x 16 x i64> splat (i64 -32768))
@@ -26,19 +19,12 @@ define <vscale x 16 x i16> @ssat_s_sext_nxv16(<vscale x 16 x i32> %x) {
   ret <vscale x 16 x i16> %t
 }
 
-; TODO: This should be a single vnclipu.
 define <vscale x 16 x i16> @usat_u_zext_nxv16(<vscale x 16 x i32> %x) {
 ; CHECK-LABEL: usat_u_zext_nxv16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v12
-; CHECK-NEXT:    vzext.vf2 v24, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnclipu.wi v12, v24, 0
-; CHECK-NEXT:    vnclipu.wi v24, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v12, 0
-; CHECK-NEXT:    vnclipu.wi v10, v24, 0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vnclipu.wi v16, v8, 0
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %e = zext <vscale x 16 x i32> %x to <vscale x 16 x i64>
   %c = call <vscale x 16 x i64> @llvm.umin.nxv16i64(<vscale x 16 x i64> %e, <vscale x 16 x i64> splat (i64 65535))
@@ -46,42 +32,12 @@ define <vscale x 16 x i16> @usat_u_zext_nxv16(<vscale x 16 x i32> %x) {
   ret <vscale x 16 x i16> %t
 }
 
-; TODO: This should be a single vnclip.
 define <2 x i32> @ssat_s_sext_v2i128(<2 x i64> %x) {
 ; CHECK-LABEL: ssat_s_sext_v2i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    lui a2, 524288
-; CHECK-NEXT:    bge a2, a0, .LBB2_6
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    bge a2, a1, .LBB2_7
-; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    addiw a2, a2, -1
-; CHECK-NEXT:    bge a1, a2, .LBB2_8
-; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    blt a0, a2, .LBB2_5
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB2_5:
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vnclip.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_6:
-; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    blt a2, a1, .LBB2_2
-; CHECK-NEXT:  .LBB2_7:
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    addiw a2, a2, -1
-; CHECK-NEXT:    blt a1, a2, .LBB2_3
-; CHECK-NEXT:  .LBB2_8:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:    bge a0, a2, .LBB2_4
-; CHECK-NEXT:    j .LBB2_5
   %e = sext <2 x i64> %x to <2 x i128>
   %c1 = call <2 x i128> @llvm.smax.v2i128(<2 x i128> %e, <2 x i128> splat (i128 -2147483648))
   %c2 = call <2 x i128> @llvm.smin.v2i128(<2 x i128> %c1, <2 x i128> splat (i128 2147483647))
@@ -89,26 +45,17 @@ define <2 x i32> @ssat_s_sext_v2i128(<2 x i64> %x) {
   ret <2 x i32> %t
 }
 
-; Negative: a zero extension under a signed clamp is not a signed saturation of
-; the narrow value.
+; A zero extension under a signed clamp is not a signed saturation of the narrow
+; value, but the clamp still narrows to an unsigned one.
 define <vscale x 16 x i16> @ssat_s_zext_nxv16(<vscale x 16 x i32> %x) {
 ; CHECK-LABEL: ssat_s_zext_nxv16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8
-; CHECK-NEXT:    vzext.vf2 v24, v12
-; CHECK-NEXT:    vmin.vx v8, v16, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v16, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vmin.vx v8, v24, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v20, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vminu.vx v16, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v16, 0
-; CHECK-NEXT:    vnsrl.wi v10, v20, 0
 ; CHECK-NEXT:    ret
   %e = zext <vscale x 16 x i32> %x to <vscale x 16 x i64>
   %c1 = call <vscale x 16 x i64> @llvm.smax.nxv16i64(<vscale x 16 x i64> %e, <vscale x 16 x i64> splat (i64 -32768))

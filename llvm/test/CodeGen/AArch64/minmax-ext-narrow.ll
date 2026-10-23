@@ -8,9 +8,9 @@
 define <4 x i32> @umin_sext_neg(<4 x i16> %x) {
 ; CHECK-LABEL: umin_sext_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.4s, #1
+; CHECK-NEXT:    mvni v1.4h, #1
+; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %e, <4 x i32> splat (i32 -2))
@@ -20,9 +20,9 @@ define <4 x i32> @umin_sext_neg(<4 x i16> %x) {
 define <4 x i32> @umin_sext_min(<4 x i16> %x) {
 ; CHECK-LABEL: umin_sext_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.4s, #127, msl #8
+; CHECK-NEXT:    movi v1.4h, #128, lsl #8
+; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %e, <4 x i32> splat (i32 -32768))
@@ -32,9 +32,9 @@ define <4 x i32> @umin_sext_min(<4 x i16> %x) {
 define <4 x i32> @umax_sext_max(<4 x i16> %x) {
 ; CHECK-LABEL: umax_sext_max:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-NEXT:    umax v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %e, <4 x i32> splat (i32 32767))
@@ -44,9 +44,9 @@ define <4 x i32> @umax_sext_max(<4 x i16> %x) {
 define <4 x i32> @smin_sext(<4 x i16> %x) {
 ; CHECK-LABEL: smin_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.4s, #99
+; CHECK-NEXT:    mvni v1.4h, #99
+; CHECK-NEXT:    smin v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = sext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %e, <4 x i32> splat (i32 -100))
@@ -82,10 +82,9 @@ define <4 x i32> @umax_sext_above_max(<4 x i16> %x) {
 define <4 x i32> @umax_zext(<4 x i16> %x) {
 ; CHECK-LABEL: umax_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65534 // =0xfffe
+; CHECK-NEXT:    mvni v1.4h, #1
+; CHECK-NEXT:    umax v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    umax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = zext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %e, <4 x i32> splat (i32 65534))
@@ -97,9 +96,9 @@ define <4 x i32> @smax_zext_nonneg(<4 x i16> %x) {
 ; CHECK-LABEL: smax_zext_nonneg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1000 // =0x3e8
+; CHECK-NEXT:    dup v1.4h, w8
+; CHECK-NEXT:    umax v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = zext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %e, <4 x i32> splat (i32 1000))
@@ -109,10 +108,9 @@ define <4 x i32> @smax_zext_nonneg(<4 x i16> %x) {
 define <4 x i32> @smin_zext_nonneg(<4 x i16> %x) {
 ; CHECK-LABEL: smin_zext_nonneg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #65534 // =0xfffe
+; CHECK-NEXT:    mvni v1.4h, #1
+; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = zext <4 x i16> %x to <4 x i32>
   %r = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %e, <4 x i32> splat (i32 65534))
