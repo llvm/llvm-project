@@ -4209,10 +4209,26 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     unsigned AS = getLoadStoreAddressSpace(I);
 
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
-    return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
-                                         Config.CostKind) +
-           TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS,
-                               Config.CostKind, OpInfo, I);
+
+    // FIXME: For vector VFs, the addressing cost of consecutive accesses is
+    // ignored, so it's only fair to do the same for VF=1.
+    // This is especially important for REVEC to ensure that the initial vectors
+    // accesses are estimated the same way as the re-vectorised wider vector
+    // accesses.
+    // FIXME: VPlan needs updating as well.
+    std::optional<int64_t> Stride =
+        getPtrStride(PSE, ValTy, getLoadStorePointerOperand(I), TheLoop,
+                     *Legal->getDominatorTree());
+    bool IsConsecutive = Stride == 1 || Stride == -1;
+    InstructionCost AddressingCost =
+        IsConsecutive && ValTy->isVectorTy()
+            ? 0
+            : TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                            Config.CostKind);
+
+    return AddressingCost + TTI.getMemoryOpCost(I->getOpcode(), ValTy,
+                                                Alignment, AS, Config.CostKind,
+                                                OpInfo, I);
   }
   return getWideningCost(I, VF);
 }
