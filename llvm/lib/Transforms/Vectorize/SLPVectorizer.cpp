@@ -19255,11 +19255,11 @@ struct ValueSelect {
 /// Does the analysis of the provided shuffle masks and performs the requested
 /// actions on the vectors with the given shuffle masks. It tries to do it in
 /// several steps.
-/// 1. If the Base vector is not undef vector, resizing the very first mask to
-/// have common VF and perform action for 2 input vectors (including non-undef
+/// 1. If the Base vector is not poison vector, resizing the very first mask to
+/// have common VF and perform action for 2 input vectors (including non-poison
 /// Base). Other shuffle masks are combined with the resulting after the 1 stage
 /// and processed as a shuffle of 2 elements.
-/// 2. If the Base is undef vector and have only 1 shuffle mask, perform the
+/// 2. If the Base is poison vector and have only 1 shuffle mask, perform the
 /// action only for 1 vector with the given mask, if it is not the identity
 /// mask.
 /// 3. If > 2 masks are used, perform the remaining shuffle actions for 2
@@ -19276,12 +19276,13 @@ static T *performExtractsShuffleAction(
   T *Prev = nullptr;
   SmallBitVector UseMask =
       buildUseMask(Mask.size(), Mask, UseMask::UndefsAsMask);
-  SmallBitVector IsBaseUndef = isUndefVector(Base, UseMask);
-  if (!IsBaseUndef.all()) {
-    // Base is not undef, need to combine it with the next subvectors.
+  // The undef elements of the base must be preserved, only the poison base can
+  // be dropped.
+  SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
+  if (!IsBasePoison.all()) {
+    // Base is not poison, need to combine it with the next subvectors.
     std::pair<T *, bool> Res =
         ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
-    SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
       if (Mask[Idx] == PoisonMaskElem)
         Mask[Idx] = IsBasePoison.test(Idx) ? PoisonMaskElem : Idx;
@@ -19293,8 +19294,8 @@ static T *performExtractsShuffleAction(
            "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
   } else if (ShuffleMask.size() == 1) {
-    // Base is undef and only 1 vector is shuffled - perform the action only for
-    // single vector, if the mask is not the identity mask.
+    // Base is poison and only 1 vector is shuffled - perform the action only
+    // for single vector, if the mask is not the identity mask.
     std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask,
                                             /*ForSingleMask=*/true);
     if (Res.second)
@@ -19303,7 +19304,7 @@ static T *performExtractsShuffleAction(
     else
       Prev = Action(Mask, {ShuffleMask.begin()->first});
   } else {
-    // Base is undef and at least 2 input vectors shuffled - perform 2 vectors
+    // Base is poison and at least 2 input vectors shuffled - perform 2 vectors
     // shuffles step by step, combining shuffle between the steps.
     unsigned Vec1VF = GetVF(ShuffleMask.begin()->first);
     unsigned Vec2VF = GetVF(VMIt->first);
@@ -19339,7 +19340,7 @@ static T *performExtractsShuffleAction(
     }
     VMIt = std::next(VMIt);
   }
-  [[maybe_unused]] bool IsBaseNotUndef = !IsBaseUndef.all();
+  [[maybe_unused]] bool IsBaseNotPoison = !IsBasePoison.all();
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
@@ -19348,7 +19349,7 @@ static T *performExtractsShuffleAction(
     ArrayRef<int> SecMask = VMIt->second;
     for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
       if (SecMask[I] != PoisonMaskElem) {
-        assert((Mask[I] == PoisonMaskElem || IsBaseNotUndef) &&
+        assert((Mask[I] == PoisonMaskElem || IsBaseNotPoison) &&
                "Multiple uses of scalars.");
         Mask[I] = (Res.second ? I : SecMask[I]) + VF;
       } else if (Mask[I] != PoisonMaskElem) {
@@ -29013,6 +29014,15 @@ bool BoUpSLP::collectValuesToDemote(
         ToDemote.push_back(E.Idx);
         return IsProfitableToDemote;
       };
+  // The operand count is not always two: a flattened node has one entry per
+  // reassociated column. Collect the entries by the actual number of operand
+  // columns.
+  auto GetOperandEntries = [&]() {
+    return map_to_vector(seq<unsigned>(E.getNumOperands()),
+                         [&](unsigned Idx) -> const TreeEntry * {
+                           return getOperandEntry(&E, Idx);
+                         });
+  };
 
   if (E.State == TreeEntry::SplitVectorize)
     return TryProcessInstruction(
@@ -29065,11 +29075,7 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return TryProcessInstruction(
-        BitWidth, map_to_vector(seq<unsigned>(E.getNumOperands()),
-                                [&](unsigned Idx) -> const TreeEntry * {
-                                  return getOperandEntry(&E, Idx);
-                                }));
+    return TryProcessInstruction(BitWidth, GetOperandEntries());
   }
   case Instruction::Freeze:
     return TryProcessInstruction(BitWidth, getOperandEntry(&E, 0));
@@ -29087,8 +29093,7 @@ bool BoUpSLP::collectValuesToDemote(
         return AmtKnownBits.getMaxValue().ult(BitWidth);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), ShlChecker);
   }
   case Instruction::LShr: {
     // If this is a truncate of a logical shr, we can truncate it to a smaller
@@ -29108,9 +29113,7 @@ bool BoUpSLP::collectValuesToDemote(
                                  SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        LShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), LShrChecker);
   }
   case Instruction::AShr: {
     // If this is a truncate of an arithmetic shr, we can truncate it to a
@@ -29130,9 +29133,7 @@ bool BoUpSLP::collectValuesToDemote(
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
-        AShrChecker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), AShrChecker);
   }
   case Instruction::UDiv:
   case Instruction::URem: {
@@ -29148,8 +29149,7 @@ bool BoUpSLP::collectValuesToDemote(
                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
       });
     };
-    return TryProcessInstruction(
-        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, Checker);
+    return TryProcessInstruction(BitWidth, GetOperandEntries(), Checker);
   }
 
   // We can demote selects if we can demote their true and false values.
@@ -33672,9 +33672,11 @@ public:
           // the root node, which may be reordered, split or have copyable
           // elements. Place each counter at the lane the matching candidate is
           // vectorized to, so the counter is applied to the correct lane.
-          ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
-          SmallVector<Value *> RootTrackedToOrig(RootVL.size());
+          // The lanes, which are not matched to any candidate (e.g. padding),
+          // remain nullptr.
+          SmallVector<Value *> RootTrackedToOrig(
+              getNumElements(VectorizedRoot->getType()));
           for (auto [Idx, Val] : enumerate(CandSlice))
             RootTrackedToOrig[V.findRootLaneForValue(Val)] =
                 TrackedToOrig[Pos + Idx];
@@ -35212,25 +35214,29 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
-    ArrayRef<Value *> VL = R.getRootNodeScalars();
+    Type *ScalarTy = R.getRootNodeScalars().front()->getType();
     auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
-    if (VTy->getElementType() != VL.front()->getType()) {
+    if (VTy->getElementType() != ScalarTy) {
       VectorizedValue = Builder.CreateIntCast(
-          VectorizedValue,
-          getWidenedType(VL.front()->getType(), VTy->getNumElements()),
+          VectorizedValue, getWidenedType(ScalarTy, VTy->getNumElements()),
           R.isSignedMinBitwidthRootNode());
     }
+    assert(TrackedToOrig.size() == VTy->getNumElements() &&
+           "Expected the original value for each lane.");
+    // The lanes without the original value (e.g. padding) are kept as is.
+    auto GetCount = [&](Value *OrigV) -> unsigned {
+      return OrigV ? SameValuesCounter.lookup(OrigV) : 1;
+    };
     switch (RdxKind) {
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
       SmallVector<Constant *> Vals;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
+      for (Value *OrigV : TrackedToOrig) {
         // The repeat count may not fit the element type (e.g. i1); the
         // modular reduction arithmetic keeps the truncated count equivalent.
         Vals.push_back(ConstantInt::get(
-            V->getType(), APInt(V->getType()->getIntegerBitWidth(), Cnt,
-                                /*isSigned=*/false, /*implicitTrunc=*/true)));
+            ScalarTy, APInt(ScalarTy->getIntegerBitWidth(), GetCount(OrigV),
+                            /*isSigned=*/false, /*implicitTrunc=*/true)));
       }
       auto *Scale = ConstantVector::get(Vals);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
@@ -35265,10 +35271,9 @@ private:
           PoisonMaskElem);
       std::iota(Mask.begin(), Mask.end(), 0);
       bool NeedShuffle = false;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
-        if (Cnt % 2 == 0) {
-          Mask[Idx] = VL.size();
+      for (auto [Lane, OrigV] : enumerate(TrackedToOrig)) {
+        if (GetCount(OrigV) % 2 == 0) {
+          Mask[Lane] = Mask.size();
           NeedShuffle = true;
         }
       }
@@ -35285,10 +35290,8 @@ private:
     case RecurKind::FAdd: {
       // root = fmul prev_root, <1.0, 1.0, n.0, 1.0>
       SmallVector<Constant *> Vals;
-      for (const auto [Idx, V] : enumerate(VL)) {
-        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
-        Vals.push_back(ConstantFP::get(V->getType(), Cnt));
-      }
+      for (Value *OrigV : TrackedToOrig)
+        Vals.push_back(ConstantFP::get(ScalarTy, GetCount(OrigV)));
       auto *Scale = ConstantVector::get(Vals);
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
