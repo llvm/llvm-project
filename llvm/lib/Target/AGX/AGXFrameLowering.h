@@ -20,16 +20,18 @@ class AGXSubtarget;
 /// stack_adjust at kernel entry.
 class AGXFrameLowering : public TargetFrameLowering {
 public:
-  // Experimental, non-nested call ABI: caller and callee occupy disjoint
-  // regions of one per-thread scratch allocation.
+  // Experimental call ABI: each static call depth has a separate region of
+  // the kernel's per-thread scratch allocation.
   static constexpr unsigned CallFrameRegionBytes = 4096;
+
+  static unsigned getCallDepth(const MachineFunction &MF);
 
   explicit AGXFrameLowering(const AGXSubtarget &ST)
       : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(4), 0,
                             Align(4)) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override {}
+  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   /// Size of the stack in the 32-bit units of stack_adjust, or zero.
   static unsigned getStackAdjustUnits(const MachineFunction &MF);

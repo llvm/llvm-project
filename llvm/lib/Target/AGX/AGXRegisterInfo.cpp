@@ -57,6 +57,8 @@ BitVector AGXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     ReserveWithAliases(AGX::R1);
     for (unsigned I = 2; I < 30; ++I)
       ReserveWithAliases(AGX::GPR32RegClass.getRegister(I));
+    for (unsigned I = 30; I <= 36; ++I)
+      ReserveWithAliases(AGX::GPR32RegClass.getRegister(I));
   }
 
   // Registers beyond the subtarget's register file.
@@ -109,7 +111,8 @@ bool AGXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int64_t Offset = MF.getFrameInfo().getObjectOffset(FI);
   if (agxExperimentalLeafCallsEnabled() &&
       MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL)
-    Offset += AGXFrameLowering::CallFrameRegionBytes;
+    Offset += AGXFrameLowering::getCallDepth(MF) *
+              AGXFrameLowering::CallFrameRegionBytes;
   if (Offset < 0 || Offset > 0x7fff)
     report_fatal_error("AGX stack frame too large");
   FIOp.ChangeToImmediate(Offset);

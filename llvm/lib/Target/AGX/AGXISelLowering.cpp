@@ -476,9 +476,7 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
   const MCRegisterInfo &MRI = *ST.getRegisterInfo();
   bool ABIShape = canUseCallRegisters(CLI.Outs, MRI) &&
                   canUseCallRegisters(CLI.Ins, MRI);
-  if (ExperimentalLeafCalls && ABIShape &&
-      DAG.getMachineFunction().getFunction().getCallingConv() ==
-          CallingConv::AGX_KERNEL) {
+  if (ExperimentalLeafCalls && ABIShape) {
     if (auto *G = dyn_cast<GlobalAddressSDNode>(CLI.Callee)) {
       if (const auto *F = dyn_cast<Function>(G->getGlobal())) {
         const Function &Caller = DAG.getMachineFunction().getFunction();
@@ -488,23 +486,22 @@ SDValue AGXTargetLowering::LowerCall(CallLoweringInfo &CLI,
             if (const auto *CB = dyn_cast<CallBase>(&I))
               if (CB->getCalledFunction() == F)
                 HasCall = true;
-        bool Leaf = true;
+        bool Supported = true;
         unsigned Returns = 0;
         for (const BasicBlock &BB : *F)
           for (const Instruction &I : BB)
             if (isa<ReturnInst>(I))
               ++Returns;
             else if (const auto *AI = dyn_cast<AllocaInst>(&I))
-              Leaf &= AI->isStaticAlloca();
+              Supported &= AI->isStaticAlloca();
             else if (const auto *CB = dyn_cast<CallBase>(&I))
-              Leaf &= CB->getCalledFunction() &&
-                      CB->getCalledFunction()->isIntrinsic();
+              Supported &= CB->getCalledFunction() != nullptr;
         bool Signature = !F->isVarArg() && !CLI.IsVarArg &&
                          !CLI.IsTailCall &&
                          CLI.Outs.empty() == F->arg_empty() &&
                          CLI.Ins.empty() == F->getReturnType()->isVoidTy() &&
                          !F->hasStructRetAttr();
-        if (!F->isDeclaration() && Returns == 1 && HasCall && Leaf &&
+        if (!F->isDeclaration() && Returns == 1 && HasCall && Supported &&
             Signature && F->hasFnAttribute(Attribute::NoInline)) {
           SDValue Chain = CLI.Chain;
           unsigned Slot = 0;

@@ -10,7 +10,7 @@
 //
 //  * AGXAlwaysInline normally marks every non-kernel function always_inline
 //    (and internal, so it disappears once inlined). The opt-in call path keeps
-//    eligible leaves out of this expansion and removes unused functions.
+//    eligible functions out of this expansion and removes unused functions.
 //  * AGXCodeGenPrepare expands what the hardware has no instruction or
 //    library for: integer division, and memory intrinsics that are not
 //    small enough to be expanded by instruction selection. There is no
@@ -110,7 +110,7 @@ static bool allocateExperimentalCallType(Type *Ty, unsigned &Slots) {
   return Slots <= 28;
 }
 
-static bool canKeepExperimentalLeaf(const Function &F) {
+static bool canKeepExperimentalCall(const Function &F) {
   if (F.isDeclaration() || F.hasFnAttribute(Attribute::AlwaysInline) ||
       F.isVarArg() || F.hasStructRetAttr() || AGX::usesGlobalData(F))
     return false;
@@ -133,11 +133,12 @@ static bool canKeepExperimentalLeaf(const Function &F) {
         ++Returns;
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         const Function *Callee = CB->getCalledFunction();
-        if (!Callee || !Callee->isIntrinsic() ||
-            Callee->getIntrinsicID() == Intrinsic::agx_texture_sample ||
-            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_x ||
-            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_y ||
-            Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_z)
+        if (!Callee ||
+            (Callee->isIntrinsic() &&
+             (Callee->getIntrinsicID() == Intrinsic::agx_texture_sample ||
+              Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_x ||
+              Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_y ||
+              Callee->getIntrinsicID() == Intrinsic::agx_threadgroups_per_grid_z)))
           return false;
       }
     }
@@ -201,6 +202,56 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
     return F.getCallingConv() == CallingConv::AGX_KERNEL;
   });
 
+  // Compute a conservative static frame depth before inlining wrappers.
+  // A shared callee uses its deepest path, leaving every active ancestor's
+  // scratch and saved return address in a different region/register.
+  DenseMap<const Function *, unsigned> Depth;
+  bool CallsWithinLimit = true;
+  if (agxExperimentalLeafCallsEnabled()) {
+    for (Function &F : M)
+      if (!F.isDeclaration() &&
+          (F.getCallingConv() == CallingConv::AGX_KERNEL ||
+           (!HasKernels && !F.hasLocalLinkage())))
+        Depth[&F] = 0;
+    for (unsigned Iter = 0; Iter != 8; ++Iter) {
+      bool Updated = false;
+      for (Function &F : M) {
+        auto It = Depth.find(&F);
+        if (It == Depth.end())
+          continue;
+        for (const Instruction &I : instructions(F)) {
+          const auto *CB = dyn_cast<CallBase>(&I);
+          const Function *Callee = CB ? CB->getCalledFunction() : nullptr;
+          if (!Callee || Callee->isDeclaration() || Callee->isIntrinsic())
+            continue;
+          unsigned Next = It->second + 1;
+          if (Next > Depth.lookup(Callee)) {
+            Depth[Callee] = Next;
+            Updated = true;
+          }
+        }
+      }
+      if (!Updated)
+        break;
+    }
+    unsigned MaxDepth = 0;
+    for (auto [F, D] : Depth)
+      MaxDepth = std::max(MaxDepth, D);
+    CallsWithinLimit = MaxDepth <= 7;
+    if (CallsWithinLimit) {
+      for (Function &F : M)
+        if (auto It = Depth.find(&F); It != Depth.end()) {
+          F.addFnAttr("agx-call-depth", Twine(It->second).str());
+          Changed = true;
+        }
+      for (Function &F : M)
+        if (F.getCallingConv() == CallingConv::AGX_KERNEL) {
+          F.addFnAttr("agx-max-call-depth", Twine(MaxDepth).str());
+          Changed = true;
+        }
+    }
+  }
+
   SmallVector<Function *, 8> Dead;
   for (Function &F : M) {
     if (F.isDeclaration() || F.getCallingConv() == CallingConv::AGX_KERNEL)
@@ -221,7 +272,8 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
     }
     if (F.hasFnAttribute(Attribute::NoInline))
       continue;
-    if (agxExperimentalLeafCallsEnabled() && canKeepExperimentalLeaf(F)) {
+    if (agxExperimentalLeafCallsEnabled() && CallsWithinLimit &&
+        canKeepExperimentalCall(F)) {
       F.addFnAttr(Attribute::NoInline);
       Changed = true;
       continue;
