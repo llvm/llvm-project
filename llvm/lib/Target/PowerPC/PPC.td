@@ -158,15 +158,6 @@ def FeatureVSX       : SubtargetFeature<"vsx","HasVSX", "true",
 def FeatureTwoConstNR :
   SubtargetFeature<"two-const-nr", "NeedsTwoConstNR", "true",
                    "Requires two constant Newton-Raphson computation">;
-def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
-                                        "Enable POWER8 Altivec instructions",
-                                        [FeatureAltivec]>;
-def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
-                                       "Enable POWER8 Crypto instructions",
-                                       [FeatureP8Altivec]>;
-def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
-                                        "Enable POWER8 vector instructions",
-                                        [FeatureVSX, FeatureP8Altivec]>;
 def FeatureDirectMove :
   SubtargetFeature<"direct-move", "HasDirectMove", "true",
                    "Enable Power8 direct move instructions",
@@ -284,21 +275,32 @@ def FeatureISAFuture : SubtargetFeature<"isa-future-instructions",
                                         "IsISAFuture", "true",
                                         "Enable instructions for Future ISA.",
                                         [FeatureISA3_1]>;
-def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
+
+def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8AltivecDoNotUse", "true",
+                                        "Enable POWER8 Altivec instructions",
+                                        [FeatureISA2_07, FeatureAltivec]>;
+def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8CryptoDoNotUse", "true",
+                                       "Enable POWER8 Crypto instructions",
+                                       [FeatureP8Altivec]>;
+def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8VectorDoNotUse", "true",
+                                        "Enable POWER8 vector instructions",
+                                        [FeatureVSX, FeatureP8Altivec]>;
+def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9AltivecDoNotUse", "true",
                                         "Enable POWER9 Altivec instructions",
                                         [FeatureISA3_0, FeatureP8Altivec]>;
-def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
+def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9VectorDoNotUse", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
-                                         FeatureP9Altivec]>;
-def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
+                                         FeatureP9Altivec, FeatureVSX]>;
+def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10VectorDoNotUse",
                                          "true",
                                          "Enable POWER10 vector instructions",
                                          [FeatureISA3_1, FeatureP9Vector]>;
-def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVector",
+def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVectorDoNotUse",
                                            "true",
                                            "Enable Future vector instructions",
                                            [FeatureISAFuture, FeatureP10Vector]>;
+
 // A separate feature for this even though it is equivalent to P9Vector
 // because this is a feature of the implementation rather than the architecture
 // and may go away with future CPU's.

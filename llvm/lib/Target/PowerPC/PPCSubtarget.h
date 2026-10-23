@@ -183,6 +183,28 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "PPCGenSubtargetInfo.inc"
 
+  bool hasP8Altivec() const {
+    return isISA2_07() && hasAltivec();
+  }
+  bool hasP8Crypto() const {
+    return HasP8CryptoDoNotUse;
+  }
+  bool hasP8Vector() const {
+    return isISA2_07() && hasVSX();
+  }
+  bool hasP9Altivec() const {
+    return isISA3_0() && hasAltivec();
+  }
+  bool hasP9Vector() const {
+    return isISA3_0() && hasVSX();
+  }
+  bool hasP10Vector() const {
+    return isISA3_1() && hasVSX();
+  }
+  bool hasFutureVector() const {
+    return isISAFuture() && hasVSX();
+  }
+
   Align getPlatformStackAlignment() const {
     return Align(16);
   }
