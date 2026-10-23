@@ -618,7 +618,8 @@ LLVM_ABI int rewriteLoopExitValues(Loop *L, LoopInfo *LI,
                                    const TargetTransformInfo *TTI,
                                    SCEVExpander &Rewriter, DominatorTree *DT,
                                    ReplaceExitVal ReplaceExitValue,
-                                   SmallVector<WeakTrackingVH, 16> &DeadInsts);
+                                   SmallVector<WeakTrackingVH, 16> &DeadInsts,
+                                   bool CanDeleteLoop = true);
 
 /// Utility that implements appending of loops onto a worklist given a range.
 /// We want to process loops in postorder, but the worklist is a LIFO data

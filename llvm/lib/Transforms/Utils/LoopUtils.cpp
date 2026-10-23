@@ -1850,7 +1850,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 const TargetTransformInfo *TTI,
                                 SCEVExpander &Rewriter, DominatorTree *DT,
                                 ReplaceExitVal ReplaceExitValue,
-                                SmallVector<WeakTrackingVH, 16> &DeadInsts) {
+                                SmallVector<WeakTrackingVH, 16> &DeadInsts,
+                                bool CanDeleteLoop) {
   // Check a pre-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "Caller did not preserve LCSSA!");
@@ -1980,7 +1981,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // calculate the cost of other SCEV's after expanding SCEV 'A', thus
   // potentially giving cost bonus to those other SCEV's?
 
-  bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
+  bool LoopCanBeDel = CanDeleteLoop && canLoopBeDeleted(L, RewritePhiSet);
   int NumReplaced = 0;
 
   // Transformation.

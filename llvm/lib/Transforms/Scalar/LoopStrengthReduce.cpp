@@ -7171,8 +7171,10 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   if (L->isRecursivelyLCSSAForm(DT, LI) && L->getExitBlock()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     SCEVExpander Rewriter(SE, "lsr", true);
-    int Rewrites = rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
-                                         UnusedIndVarInLoop, DeadInsts);
+    int Rewrites =
+        rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
+                              UnusedIndVarInLoop, DeadInsts,
+                              /*CanDeleteLoop=*/false);
     Rewriter.clear();
     if (Rewrites) {
       Changed = true;

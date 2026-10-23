@@ -7,25 +7,22 @@ define i64 @expand_reuses_existing_ptrtoint(ptr %begin, ptr %end, ptr %cap) {
 ; CHECK-LABEL: define i64 @expand_reuses_existing_ptrtoint(
 ; CHECK-SAME: ptr [[BEGIN:%.*]], ptr [[END:%.*]], ptr [[CAP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BEGIN2:%.*]] = ptrtoaddr ptr [[BEGIN]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq ptr [[BEGIN]], [[END]]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[DONE:.*]], label %[[COUNT_PH:.*]]
 ; CHECK:       [[COUNT_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BEGIN2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP1]], -8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 8
 ; CHECK-NEXT:    br label %[[COUNT:.*]]
 ; CHECK:       [[COUNT]]:
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[BEGIN]], %[[COUNT_PH]] ], [ [[PN:%.*]], %[[COUNT]] ]
+; CHECK-NEXT:    [[N:%.*]] = phi i64 [ 0, %[[COUNT_PH]] ], [ [[NN:%.*]], %[[COUNT]] ]
 ; CHECK-NEXT:    [[PN]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[NN]] = add i64 [[N]], 8
 ; CHECK-NEXT:    [[D:%.*]] = icmp eq ptr [[PN]], [[END]]
 ; CHECK-NEXT:    br i1 [[D]], label %[[DONE_LOOPEXIT:.*]], label %[[COUNT]]
 ; CHECK:       [[DONE_LOOPEXIT]]:
+; CHECK-NEXT:    [[NN_LCSSA1:%.*]] = phi i64 [ [[NN]], %[[COUNT]] ]
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[DONE]]:
-; CHECK-NEXT:    [[USED:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP4]], %[[DONE_LOOPEXIT]] ]
+; CHECK-NEXT:    [[USED:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NN_LCSSA1]], %[[DONE_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[CAPI:%.*]] = ptrtoint ptr [[CAP]] to i64
 ; CHECK-NEXT:    [[ENDI:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[SLACK:%.*]] = sub i64 [[CAPI]], [[ENDI]]
