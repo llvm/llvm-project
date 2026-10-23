@@ -57,8 +57,8 @@ func.func @conv_rescale(%input: tensor<1x3x3x1xi16>, %weight: tensor<1x1x1x1xi8>
 // Recurse into nested attributes even when operand and result types are unchanged.
 // CHECK-LABEL: func.func @attributes_only
 func.func @attributes_only(%arg: tensor<2xi32>) -> tensor<2xi32> {
-  // CHECK: tosa.identity %arg0 {test.nested = [{signed = -140737488355328 : si64, type = tensor<2xi64>, unsigned = 281474976710655 : ui64}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
-  %0 = tosa.identity %arg {test.nested = [{signed = -140737488355328 : si48, type = tensor<2xi48>, unsigned = 281474976710655 : ui48}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
+  // CHECK: tosa.identity %arg0 {test.nested = [{min = -140737488355328 : i64, top_bits = -1 : i64, type = tensor<2xi64>}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
+  %0 = tosa.identity %arg {test.nested = [{min = -140737488355328 : i48, top_bits = -1 : i48, type = tensor<2xi48>}], test.unchanged = 48 : i32} : (tensor<2xi32>) -> tensor<2xi32>
   return %0 : tensor<2xi32>
 }
 
@@ -66,18 +66,18 @@ func.func @attributes_only(%arg: tensor<2xi32>) -> tensor<2xi32> {
 
 // Mixed types and multiple results; preserve function and call attributes.
 // CHECK-LABEL: func.func private @mixed(
-// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xui64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xui64>, tensor<?xi64>, tensor<2xi32>)
-func.func private @mixed(%a: tensor<?xi48>, %b: tensor<*xui48>, %c: tensor<2xi32>) -> (tensor<*xui48>, tensor<?xi48>, tensor<2xi32>) {
-  // CHECK: return %[[B]], %[[A]], %[[C]] : tensor<*xui64>, tensor<?xi64>, tensor<2xi32>
-  return %b, %a, %c : tensor<*xui48>, tensor<?xi48>, tensor<2xi32>
+// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xi64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>)
+func.func private @mixed(%a: tensor<?xi48>, %b: tensor<*xi48>, %c: tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>) {
+  // CHECK: return %[[B]], %[[A]], %[[C]] : tensor<*xi64>, tensor<?xi64>, tensor<2xi32>
+  return %b, %a, %c : tensor<*xi48>, tensor<?xi48>, tensor<2xi32>
 }
 // CHECK-LABEL: func.func @mixed_caller(
-// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xui64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xui64>, tensor<?xi64>, tensor<2xi32>) attributes {test.marker = "function"}
-func.func @mixed_caller(%a: tensor<?xi48>, %b: tensor<*xui48>, %c: tensor<2xi32>) -> (tensor<*xui48>, tensor<?xi48>, tensor<2xi32>) attributes {test.marker = "function"} {
-  // CHECK: %[[CALL:.*]]:3 = call @mixed(%[[A]], %[[B]], %[[C]]) {test.marker = "call"} : (tensor<?xi64>, tensor<*xui64>, tensor<2xi32>) -> (tensor<*xui64>, tensor<?xi64>, tensor<2xi32>)
-  %0:3 = func.call @mixed(%a, %b, %c) {test.marker = "call"} : (tensor<?xi48>, tensor<*xui48>, tensor<2xi32>) -> (tensor<*xui48>, tensor<?xi48>, tensor<2xi32>)
-  // CHECK: return %[[CALL]]#0, %[[CALL]]#1, %[[CALL]]#2 : tensor<*xui64>, tensor<?xi64>, tensor<2xi32>
-  return %0#0, %0#1, %0#2 : tensor<*xui48>, tensor<?xi48>, tensor<2xi32>
+// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xi64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>) attributes {test.marker = "function"}
+func.func @mixed_caller(%a: tensor<?xi48>, %b: tensor<*xi48>, %c: tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>) attributes {test.marker = "function"} {
+  // CHECK: %[[CALL:.*]]:3 = call @mixed(%[[A]], %[[B]], %[[C]]) {test.marker = "call"} : (tensor<?xi64>, tensor<*xi64>, tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>)
+  %0:3 = func.call @mixed(%a, %b, %c) {test.marker = "call"} : (tensor<?xi48>, tensor<*xi48>, tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>)
+  // CHECK: return %[[CALL]]#0, %[[CALL]]#1, %[[CALL]]#2 : tensor<*xi64>, tensor<?xi64>, tensor<2xi32>
+  return %0#0, %0#1, %0#2 : tensor<*xi48>, tensor<?xi48>, tensor<2xi32>
 }
 
 // -----
@@ -122,37 +122,35 @@ func.func @nested_tosa() {
 
 // Only the selected i4 and i48 widths change. Arbitrary widths such as i3
 // remain unchanged.
-// CHECK: func.func private @types(i1, i3, i8, i7, i8, i9, i16, i24, i32, i64, i64, i128) -> (si3, ui3)
-func.func private @types(i1, i3, i4, i7, i8, i9, i16, i24, i32, i48, i64, i128) -> (si3, ui3)
+// CHECK: func.func private @types(i1, i3, i8, i7, i8, i9, i16, i24, i32, i64, i64, i128) -> (i3, i7)
+func.func private @types(i1, i3, i4, i7, i8, i9, i16, i24, i32, i48, i64, i128) -> (i3, i7)
 
 // -----
 
 // Constant payloads and resource storage.
 
 // CHECK-LABEL: func.func @subbyte_constants()
-// CHECK-SAME: -> (tensor<5xi8>, tensor<2x3xi8>, tensor<3xui8>)
-func.func @subbyte_constants() -> (tensor<5xi4>, tensor<2x3xi4>, tensor<3xui4>) {
-  // CHECK: tosa.const values(dense<[-7, -1, 0, 1, 7]> : tensor<5xi8>)
-  %a = tosa.const values(dense<[-7, -1, 0, 1, 7]> : tensor<5xi4>) : () -> tensor<5xi4>
+// CHECK-SAME: -> (tensor<6xi8>, tensor<2x3xi8>)
+func.func @subbyte_constants() -> (tensor<6xi4>, tensor<2x3xi4>) {
+  // CHECK: tosa.const values(dense<[-8, -7, -1, 0, 1, 7]> : tensor<6xi8>)
+  %a = tosa.const values(dense<[-8, -7, -1, 0, 1, 7]> : tensor<6xi4>) : () -> tensor<6xi4>
   // CHECK: tosa.const values(dense<-7> : tensor<2x3xi8>)
   %b = tosa.const values(dense<-7> : tensor<2x3xi4>) : () -> tensor<2x3xi4>
-  // CHECK: tosa.const values(dense<[0, 8, 15]> : tensor<3xui8>)
-  %c = tosa.const values(dense<[0, 8, 15]> : tensor<3xui4>) : () -> tensor<3xui4>
-  return %a, %b, %c : tensor<5xi4>, tensor<2x3xi4>, tensor<3xui4>
+  return %a, %b : tensor<6xi4>, tensor<2x3xi4>
 }
 
 // -----
 
-// Widen scalar and dense attributes, including explicitly signed types.
+// Widen scalar and dense attributes, including nested scalar values.
 // CHECK-LABEL: func.func @attributes(
 // CHECK-SAME: tensor<2xi8, {type = i8}>) -> tensor<2xi8, {type = i8}>
 func.func @attributes(%arg: tensor<2xi4, {type = i4}>) -> tensor<2xi4, {type = i4}> {
   // CHECK: tosa.identity %arg0
-  // CHECK-SAME: test.nested = [{signed = -7 : si8, signless = -1 : i8, unsigned = 15 : ui8}]
-  // CHECK-SAME: test.signed = dense<[-7, -1, 7]> : tensor<3xsi8>
+  // CHECK-SAME: test.nested = [{min = -7 : i8, negative = -1 : i8}]
+  // CHECK-SAME: test.values = dense<[-7, -1, 7]> : tensor<3xi8>
   %0 = tosa.identity %arg {
-    test.nested = [{signed = -7 : si4, signless = -1 : i4, unsigned = 15 : ui4}],
-    test.signed = dense<[-7, -1, 7]> : tensor<3xsi4>
+    test.nested = [{min = -7 : i4, negative = -1 : i4}],
+    test.values = dense<[-7, -1, 7]> : tensor<3xi4>
   } : (tensor<2xi4, {type = i4}>) -> tensor<2xi4, {type = i4}>
   return %0 : tensor<2xi4, {type = i4}>
 }
@@ -161,35 +159,31 @@ func.func @attributes(%arg: tensor<2xi4, {type = i4}>) -> tensor<2xi4, {type = i
 
 // i4 resources use one byte per element. Preserve the original blob for an i8
 // view, share the widened resource, and retain storage for repeated values.
-// CHECK: module attributes {test.bytes = dense_resource<signed_data> : tensor<5xi8>, test.original = dense_resource<[[SIGNED:[a-zA-Z0-9_]+]]> : tensor<5xi8>}
+// CHECK: module attributes {test.bytes = dense_resource<values> : tensor<6xi8>, test.original = dense_resource<[[VALUES:[a-zA-Z0-9_]+]]> : tensor<6xi8>}
 module attributes {
-  test.bytes = dense_resource<signed_data> : tensor<5xi8>,
-  test.original = dense_resource<signed_data> : tensor<5xi4>
+  test.bytes = dense_resource<values> : tensor<6xi8>,
+  test.original = dense_resource<values> : tensor<6xi4>
 } {
   // CHECK: func.func @resources()
-  // CHECK-SAME: attributes {test.signed = dense_resource<[[REPEATED:[a-zA-Z0-9_]+]]> : tensor<3xsi8>}
-  func.func @resources() attributes {test.signed = dense_resource<repeated> : tensor<3xsi4>} {
-    // CHECK: tosa.const values(dense_resource<[[SIGNED]]> : tensor<5xi8>)
-    %a = tosa.const values(dense_resource<signed_data> : tensor<5xi4>) : () -> tensor<5xi4>
-    // CHECK: tosa.const values(dense_resource<[[UNSIGNED:[a-zA-Z0-9_]+]]> : tensor<3xui8>)
-    %b = tosa.const values(dense_resource<unsigned_data> : tensor<3xui4>) : () -> tensor<3xui4>
+  // CHECK-SAME: attributes {test.repeated = dense_resource<[[REPEATED:[a-zA-Z0-9_]+]]> : tensor<3xi8>}
+  func.func @resources() attributes {test.repeated = dense_resource<repeated> : tensor<3xi4>} {
+    // CHECK: tosa.const values(dense_resource<[[VALUES]]> : tensor<6xi8>)
+    %a = tosa.const values(dense_resource<values> : tensor<6xi4>) : () -> tensor<6xi4>
     return
   }
   // CHECK: func.func @shared_resource()
   func.func @shared_resource() {
-    // CHECK: tosa.const values(dense_resource<[[SIGNED]]> : tensor<5xi8>)
-    %0 = tosa.const values(dense_resource<signed_data> : tensor<5xi4>) : () -> tensor<5xi4>
+    // CHECK: tosa.const values(dense_resource<[[VALUES]]> : tensor<6xi8>)
+    %0 = tosa.const values(dense_resource<values> : tensor<6xi4>) : () -> tensor<6xi4>
     return
   }
 }
 {-# dialect_resources: { builtin: {
-  // Alignment 1 followed by [-7, -1, 0, 1, 7], [0, 8, 15], and [-1, -1, -1].
-  // CHECK-DAG: signed_data: "0x01000000090F000107"
-  signed_data: "0x01000000090F000107",
-  unsigned_data: "0x0100000000080F",
+  // Alignment 1 followed by [-8, -7, -1, 0, 1, 7] and [-1, -1, -1].
+  // CHECK-DAG: values: "0x0100000008090F000107"
+  values: "0x0100000008090F000107",
   repeated: "0x010000000F0F0F"
-  // CHECK-DAG: [[SIGNED]]: "0x01000000F9FF000107"
-  // CHECK-DAG: [[UNSIGNED]]: "0x0100000000080F"
+  // CHECK-DAG: [[VALUES]]: "0x01000000F8F9FF000107"
   // CHECK-DAG: [[REPEATED]]: "0x01000000FFFFFF"
 } } #-}
 
@@ -233,31 +227,18 @@ func.func @constants() -> (tensor<5xi48>, tensor<2x3xi48>, tensor<i48>) {
 
 // -----
 
-// CHECK-LABEL: func.func @unsigned_constants
-func.func @unsigned_constants() -> tensor<3xui48> {
-  // CHECK: tosa.const values(dense<[0, 140737488355328, 281474976710655]> : tensor<3xui64>) : () -> tensor<3xui64>
-  %0 = tosa.const values(dense<[0, 140737488355328, 281474976710655]> : tensor<3xui48>) : () -> tensor<3xui48>
-  return %0 : tensor<3xui48>
-}
-
-// -----
-
 // Widen packed dense arrays without reinterpreting their six-byte elements.
-// Cover signedness, empty arrays and repeated values that must remain arrays.
+// Cover boundary values, empty arrays and repeated values that remain arrays.
 // CHECK-LABEL: func.func @dense_arrays(
 func.func @dense_arrays(%arg: tensor<2xi48>) -> tensor<2xi48> {
   // CHECK: tosa.identity %arg0
   // CHECK-SAME: test.empty = array<i64>
   // CHECK-SAME: test.repeated = array<i64: -1, -1, -1>
-  // CHECK-SAME: test.signed = array<si64: -140737488355328, -1, 140737488355327>
-  // CHECK-SAME: test.signless = array<i64: 1, -1, 2>
-  // CHECK-SAME: test.unsigned = array<ui64: 0, 140737488355328, 281474976710655>
+  // CHECK-SAME: test.values = array<i64: -140737488355328, -1, 0, 1, 2, 140737488355327>
   %0 = tosa.identity %arg {
     test.empty = array<i48>,
     test.repeated = array<i48: -1, -1, -1>,
-    test.signed = array<si48: -140737488355328, -1, 140737488355327>,
-    test.signless = array<i48: 1, -1, 2>,
-    test.unsigned = array<ui48: 0, 140737488355328, 281474976710655>
+    test.values = array<i48: -140737488355328, -1, 0, 1, 2, 140737488355327>
   } : (tensor<2xi48>) -> tensor<2xi48>
   return %0 : tensor<2xi48>
 }
@@ -302,26 +283,20 @@ func.func @dynamic_resource() -> tensor<?xi48> {
 // The module attribute and both functions must share the widened resource.
 // An i8 view of the same blob must retain the original bytes.
 // CHECK-LABEL: module attributes
-// CHECK-SAME: {test.bytes = dense_resource<signed_data> : tensor<30xi8>, test.original = dense_resource<[[SIGNED:[a-zA-Z0-9_]+]]> : tensor<5xi64>}
-module attributes {test.bytes = dense_resource<signed_data> : tensor<30xi8>, test.original = dense_resource<signed_data> : tensor<5xi48>} {
-  // CHECK: func.func @signed_resource
-  func.func @signed_resource() {
-    // CHECK: tosa.const values(dense_resource<[[SIGNED]]> : tensor<5xi64>) : () -> tensor<5xi64>
-    %0 = tosa.const values(dense_resource<signed_data> : tensor<5xi48>) : () -> tensor<5xi48>
+// CHECK-SAME: {test.bytes = dense_resource<values> : tensor<30xi8>, test.original = dense_resource<[[VALUES:[a-zA-Z0-9_]+]]> : tensor<5xi64>}
+module attributes {test.bytes = dense_resource<values> : tensor<30xi8>, test.original = dense_resource<values> : tensor<5xi48>} {
+  // CHECK: func.func @resource_values
+  func.func @resource_values() {
+    // CHECK: tosa.const values(dense_resource<[[VALUES]]> : tensor<5xi64>) : () -> tensor<5xi64>
+    %0 = tosa.const values(dense_resource<values> : tensor<5xi48>) : () -> tensor<5xi48>
     // CHECK: tosa.const values(dense<-1> : tensor<2xi64>) : () -> tensor<2xi64>
     %dense = tosa.const values(dense<-1> : tensor<2xi48>) : () -> tensor<2xi48>
     return
   }
   // CHECK: func.func @shared_resource
   func.func @shared_resource() {
-    // CHECK: tosa.const values(dense_resource<[[SIGNED]]> : tensor<5xi64>) : () -> tensor<5xi64>
-    %0 = tosa.const values(dense_resource<signed_data> : tensor<5xi48>) : () -> tensor<5xi48>
-    return
-  }
-  // CHECK: func.func @unsigned_resource
-  func.func @unsigned_resource() {
-    // CHECK: tosa.const values(dense_resource<[[UNSIGNED:[a-zA-Z0-9_]+]]> : tensor<3xui64>) : () -> tensor<3xui64>
-    %0 = tosa.const values(dense_resource<unsigned_data> : tensor<3xui48>) : () -> tensor<3xui48>
+    // CHECK: tosa.const values(dense_resource<[[VALUES]]> : tensor<5xi64>) : () -> tensor<5xi64>
+    %0 = tosa.const values(dense_resource<values> : tensor<5xi48>) : () -> tensor<5xi48>
     return
   }
 }
@@ -331,15 +306,12 @@ module attributes {test.bytes = dense_resource<signed_data> : tensor<30xi8>, tes
     builtin: {
       // Each blob starts with a four-byte little-endian alignment header.
       // 01000000 means byte alignment; the remaining bytes are packed i48s.
-      // Signed values: [-140737488355328, -1, 0, 1, 140737488355327].
-      // CHECK-DAG: signed_data: "0x01000000000000000080FFFFFFFFFFFF000000000000010000000000FFFFFFFFFF7F"
-      signed_data: "0x01000000000000000080FFFFFFFFFFFF000000000000010000000000FFFFFFFFFF7F",
-      // Unsigned values: [0, 140737488355328, 281474976710655].
-      unsigned_data: "0x01000000000000000000000000000080FFFFFFFFFFFF"
+      // Values: [-140737488355328, -1, 0, 1, 140737488355327].
+      // CHECK-DAG: values: "0x01000000000000000080FFFFFFFFFFFF000000000000010000000000FFFFFFFFFF7F"
+      values: "0x01000000000000000080FFFFFFFFFFFF000000000000010000000000FFFFFFFFFF7F"
       // Widened blobs have alignment 8 (08000000) and the same numeric values
-      // stored as eight-byte little-endian integers, sign- or zero-extended.
-      // CHECK-DAG: [[SIGNED]]: "0x08000000000000000080FFFFFFFFFFFFFFFFFFFF00000000000000000100000000000000FFFFFFFFFF7F0000"
-      // CHECK-DAG: [[UNSIGNED]]: "0x0800000000000000000000000000000000800000FFFFFFFFFFFF0000"
+      // stored as eight-byte little-endian integers, sign-extended.
+      // CHECK-DAG: [[VALUES]]: "0x08000000000000000080FFFFFFFFFFFFFFFFFFFF00000000000000000100000000000000FFFFFFFFFF7F0000"
     }
   }
 #-}
@@ -351,12 +323,10 @@ module attributes {test.bytes = dense_resource<signed_data> : tensor<30xi8>, tes
 // CHECK-SAME: test.array = array<i128: -1>
 // CHECK-SAME: test.resource = dense_resource<missing> : tensor<2xi128>
 // CHECK-SAME: test.scalar = -1 : i128
-// CHECK-SAME: test.signed = dense<[-4, -1, 0, 3]> : tensor<4xi3>
-// CHECK-SAME: test.unsigned = dense<[0, 4, 7]> : tensor<3xui3>
+// CHECK-SAME: test.values = dense<[-4, -1, 0, 3]> : tensor<4xi3>
 module @constants attributes {
   test.array = array<i128: -1>,
   test.resource = dense_resource<missing> : tensor<2xi128>,
   test.scalar = -1 : i128,
-  test.signed = dense<[-4, -1, 0, 3]> : tensor<4xi3>,
-  test.unsigned = dense<[0, 4, 7]> : tensor<3xui3>
+  test.values = dense<[-4, -1, 0, 3]> : tensor<4xi3>
 } {}

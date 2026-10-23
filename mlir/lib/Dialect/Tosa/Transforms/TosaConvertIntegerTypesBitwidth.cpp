@@ -1,4 +1,4 @@
-//===- TosaConvertIntegerTypes.cpp - Convert TOSA integers ----------------===//
+//===- TosaConvertIntegerTypesBitwidth.cpp - Convert TOSA integers --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +51,7 @@ public:
 } // namespace llvm::cl
 
 namespace mlir::tosa {
-#define GEN_PASS_DEF_TOSACONVERTINTEGERTYPESPASS
+#define GEN_PASS_DEF_TOSACONVERTINTEGERTYPESBITWIDTHPASS
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 } // namespace mlir::tosa
 
@@ -59,8 +59,7 @@ using namespace mlir;
 
 namespace {
 APInt convertValue(const APInt &value, Type type, unsigned width) {
-  return type.isUnsignedInteger() ? value.zextOrTrunc(width)
-                                  : value.sextOrTrunc(width);
+  return value.sextOrTrunc(width);
 }
 
 // Convert a validated byte-aligned payload, retaining storage for every
@@ -93,8 +92,7 @@ public:
       auto mapping = mappings.find(type.getWidth());
       if (mapping == mappings.end())
         return std::nullopt;
-      return IntegerType::get(type.getContext(), mapping->second,
-                              type.getSignedness());
+      return IntegerType::get(type.getContext(), mapping->second);
     });
     addReplacement(
         [this](IntegerAttr attr) { return skip(convertInteger(attr)); });
@@ -206,8 +204,8 @@ private:
   bool conversionFailed = false;
 };
 
-struct TosaConvertIntegerTypes
-    : tosa::impl::TosaConvertIntegerTypesPassBase<TosaConvertIntegerTypes> {
+struct TosaConvertIntegerTypesBitwidth
+    : tosa::impl::TosaConvertIntegerTypesBitwidthPassBase<TosaConvertIntegerTypesBitwidth> {
   using Base::Base;
 
   void runOnOperation() override {

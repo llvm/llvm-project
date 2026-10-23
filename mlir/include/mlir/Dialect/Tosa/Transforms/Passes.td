@@ -217,8 +217,8 @@ def TosaGatherScatterHardeningPass
   }];
 }
 
-def TosaConvertIntegerTypesPass : Pass<"tosa-convert-integer-types-bitwidth", "ModuleOp"> {
-  let summary = "Convert selected TOSA integer types";
+def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwidth", "ModuleOp"> {
+  let summary = "Convert selected TOSA integer types bitwidth";
   let description = [{
     Converts integer types using `bitwidth-mappings`, a required list of
     `<source>:<destination>` bitwidth pairs.

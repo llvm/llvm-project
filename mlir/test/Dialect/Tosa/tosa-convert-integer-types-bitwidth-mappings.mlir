@@ -4,33 +4,33 @@
 
 // Each mapping applies once to the original width, including cycles and
 // destinations that are also sources. Reversing the list must have no effect.
-// CHECK: "func.func"() <{function_type = (i4, si4, ui4, i8, i4, i16, i1, i32, i24, i64, i48, i128, i65) -> (), sym_name = "types", sym_visibility = "private"}>
-func.func private @types(i3, si3, ui3, i4, i8, i13, i16, i24, i40, i48, i56, i65, i128)
+// CHECK: "func.func"() <{function_type = (i4, i8, i4, i16, i1, i32, i24, i64, i48, i128, i65) -> (), sym_name = "types", sym_visibility = "private"}>
+func.func private @types(i3, i4, i8, i13, i16, i24, i40, i48, i56, i65, i128)
 
 // -----
 
 // Narrow scalar, dense, sparse and array payloads, including i1.
 // CHECK-LABEL: "builtin.module"() <{sym_name = "narrow_constants"}>
-// CHECK: test.a_scalar = -7 : si4
-// CHECK-SAME: test.b_unsigned = 15 : ui4
+// CHECK: test.a_scalar = -7 : i4
+// CHECK-SAME: test.b_all_ones = -1 : i4
 // CHECK-SAME: test.c_array = array<i24: -8388608, 8388607, -1, 0>
-// CHECK-SAME: test.d_splat = dense<-7> : tensor<3xsi4>
-// CHECK-SAME: test.e_unsigned = dense<[8, 7, 15, 0]> : tensor<4xui4>
+// CHECK-SAME: test.d_splat = dense<-7> : tensor<3xi4>
+// CHECK-SAME: test.e_high_bits = dense<[-8, 7, -1, 0]> : tensor<4xi4>
 // CHECK-SAME: test.f_sparse = sparse<{{\[\[}}1], [3]], [-1, 0]> : tensor<4xi48>
 // CHECK-SAME: test.g_i1_array = array<i1: true, false, true>
 // CHECK-SAME: test.h_i1_dense = dense<[true, false, true]> : tensor<3xi1>
-// CHECK-SAME: test.i_types = [i24, si48, ui65]
+// CHECK-SAME: test.i_types = [i24, i48, i65]
 // CHECK-SAME: test.j_wide_sparse = sparse<{{\[\[}}1], [3]], [-1, 18446744073709551615]> : tensor<4xi65>
 module @narrow_constants attributes {
-  test.a_scalar = 25 : si8,
-  test.b_unsigned = 255 : ui8,
+  test.a_scalar = 25 : i8,
+  test.b_all_ones = 255 : i8,
   test.c_array = array<i40: 8388608, 25165823, -1, -16777216>,
-  test.d_splat = dense<25> : tensor<3xsi8>,
-  test.e_unsigned = dense<[8, 23, 255, 16]> : tensor<4xui8>,
+  test.d_splat = dense<25> : tensor<3xi8>,
+  test.e_high_bits = dense<[8, 23, 255, 16]> : tensor<4xi8>,
   test.f_sparse = sparse<[[1], [3]], [-1, 281474976710656]> : tensor<4xi56>,
   test.g_i1_array = array<i16: -1, 2, 3>,
   test.h_i1_dense = dense<[-1, 2, 3]> : tensor<3xi16>,
-  test.i_types = [i40, si56, ui128],
+  test.i_types = [i40, i56, i128],
   test.j_wide_sparse = sparse<[[1], [3]], [-1, 18446744073709551615]> : tensor<4xi128>
 } {}
 
@@ -39,26 +39,26 @@ module @narrow_constants attributes {
 // Widen sub-byte, non-power-of-two and greater-than-64-bit payloads.
 // CHECK-LABEL: "builtin.module"() <{sym_name = "widen_constants"}>
 // CHECK: test.array = array<i32: -8388608, 8388607>
-// CHECK-SAME: test.array_unsigned = array<ui32: 16777215>
+// CHECK-SAME: test.array_ones = array<i32: -1>
 // CHECK-SAME: test.dense = dense<[-4, -1, 0, 3]> : tensor<4xi4>
-// CHECK-SAME: test.mid_signed = dense<[-4096, 4095]> : tensor<2xi16>
-// CHECK-SAME: test.mid_unsigned = 8191 : ui16
-// CHECK-SAME: test.scalar = -4 : si4
+// CHECK-SAME: test.mid_bounds = dense<[-4096, 4095]> : tensor<2xi16>
+// CHECK-SAME: test.mid_ones = -1 : i16
+// CHECK-SAME: test.scalar = -4 : i4
 // CHECK-SAME: test.sparse = sparse<{{\[\[}}1], [3]], [-2, 1]> : tensor<4xi4>
-// CHECK-SAME: test.unsigned = 7 : ui4
+// CHECK-SAME: test.top_bits = -1 : i4
 // CHECK-SAME: test.wide = dense<[-1, 18446744073709551615]> : tensor<2xi128>
-// CHECK-SAME: test.wide_unsigned = 36893488147419103231 : ui128
+// CHECK-SAME: test.wide_ones = -1 : i128
 module @widen_constants attributes {
   test.array = array<i24: -8388608, 8388607>,
-  test.array_unsigned = array<ui24: 16777215>,
+  test.array_ones = array<i24: 16777215>,
   test.dense = dense<[-4, -1, 0, 3]> : tensor<4xi3>,
-  test.mid_signed = dense<[-4096, 4095]> : tensor<2xi13>,
-  test.mid_unsigned = 8191 : ui13,
-  test.scalar = -4 : si3,
+  test.mid_bounds = dense<[-4096, 4095]> : tensor<2xi13>,
+  test.mid_ones = 8191 : i13,
+  test.scalar = -4 : i3,
   test.sparse = sparse<[[1], [3]], [-2, 1]> : tensor<4xi3>,
-  test.unsigned = 7 : ui3,
+  test.top_bits = 7 : i3,
   test.wide = dense<[-1, 18446744073709551615]> : tensor<2xi65>,
-  test.wide_unsigned = 36893488147419103231 : ui65
+  test.wide_ones = 36893488147419103231 : i65
 } {}
 
 // -----
@@ -109,13 +109,11 @@ module @narrow_resources attributes {
 // CHECK-SAME: test.b_i16 = dense_resource<[[I16:[a-zA-Z0-9_]+]]> : tensor<2xi16>
 // CHECK-SAME: test.c_i32 = dense_resource<[[I32:[a-zA-Z0-9_]+]]> : tensor<2xi32>
 // CHECK-SAME: test.d_i128 = dense_resource<[[I128:[a-zA-Z0-9_]+]]> : tensor<2xi128>
-// CHECK-SAME: test.e_unsigned = dense_resource<[[UNSIGNED:[a-zA-Z0-9_]+]]> : tensor<3xui4>
 module @widen_resources attributes {
   test.a_subbyte = dense_resource<subbyte> : tensor<4xi3, {test.widths = [i3, i4, i8]}>,
   test.b_i16 = dense_resource<to16> : tensor<2xi13>,
   test.c_i32 = dense_resource<to32> : tensor<2xi24>,
-  test.d_i128 = dense_resource<to128> : tensor<2xi65>,
-  test.e_unsigned = dense_resource<unsigned_data> : tensor<3xui3>
+  test.d_i128 = dense_resource<to128> : tensor<2xi65>
 } {}
 
 {-# dialect_resources: { builtin: {
@@ -126,12 +124,9 @@ module @widen_resources attributes {
   // [-8388608, 8388607], with three bytes per i24 value.
   to32: "0x01000000000080FFFF7F",
   // [-1, 2^64 - 1], with nine bytes per i65 value.
-  to128: "0x01000000FFFFFFFFFFFFFFFF01FFFFFFFFFFFFFFFF00",
-  // [0, 4, 7].
-  unsigned_data: "0x01000000000407"
+  to128: "0x01000000FFFFFFFFFFFFFFFF01FFFFFFFFFFFFFFFF00"
   // CHECK-DAG: [[SUBBYTE]]: "0x010000000C0F0003"
   // CHECK-DAG: [[I16]]: "0x0200000000F0FF0F"
   // CHECK-DAG: [[I32]]: "0x04000000000080FFFFFF7F00"
   // CHECK-DAG: [[I128]]: "0x10000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000"
-  // CHECK-DAG: [[UNSIGNED]]: "0x01000000000407"
 } } #-}
