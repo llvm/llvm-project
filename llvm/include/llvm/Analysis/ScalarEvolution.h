@@ -27,9 +27,9 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -149,6 +149,11 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
+
+  /// Return a SCEVUse that can replace both \p A and \p B. Both must be
+  /// operands of the same poison-propagating expression, so the use flags of
+  /// both hold for either.
+  static SCEVUseT getCommon(SCEVUseT A, SCEVUseT B);
 
   /// Return the flags for this SCEVUse, which is the union of the use-specific
   /// flags and the underlying SCEV's flags, masked by \p Mask.
@@ -599,7 +604,7 @@ public:
   /// and the given predicate \p N.
   SCEVUnionPredicate getUnionWith(const SCEVPredicate *N,
                                   ScalarEvolution &SE) const {
-    SCEVUnionPredicate Result(Preds, SE);
+    SCEVUnionPredicate Result = *this;
     Result.add(N, SE);
     return Result;
   }
@@ -1577,9 +1582,17 @@ public:
     SmallDenseSet<std::pair<const SCEV *, const SCEV *>> NotEqual;
     bool PreserveNUW = false;
     bool PreserveNSW = false;
+    /// The loop to collect guards for on first use by applyLoopGuards, if not
+    /// collected yet.
+    const Loop *PendingLoop = nullptr;
     ScalarEvolution &SE;
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
+
+    friend class ScalarEvolution;
+
+    /// Collect the guards for PendingLoop.
+    void collectPending();
 
     /// Recursively collect loop guards in \p Guards, starting from
     /// block \p Block with predecessor \p Pred. The intended starting point
@@ -1601,9 +1614,12 @@ public:
         unsigned Depth);
 
   public:
-    /// Collect rewrite map for loop guards for loop \p L, together with flags
-    /// indicating if NUW and NSW can be preserved during rewriting.
-    LLVM_ABI static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
+    /// Return loop guards for loop \p L, which are collected on first use.
+    static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {
+      LoopGuards Guards(SE);
+      Guards.PendingLoop = L;
+      return Guards;
+    }
 
     /// Try to apply the collected loop guards to \p Expr.
     LLVM_ABI const SCEV *rewrite(const SCEV *Expr) const;
@@ -1611,8 +1627,7 @@ public:
 
   /// Try to apply information from loop guards for \p L to \p Expr.
   LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
-  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr,
-                                       const LoopGuards &Guards);
+  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, LoopGuards &Guards);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -1718,8 +1733,7 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueSetVector = SmallSetVector<Value *, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
+  using ExprValueMapType = DenseMap<const SCEV *, TinyPtrVector<Value *>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -2114,7 +2128,7 @@ private:
   /// Variant of getSmallConstantTripMultiple taking pre-collected loop
   /// \p Guards. \p ExitCount must be computable.
   unsigned getSmallConstantTripMultiple(const SCEV *ExitCount,
-                                        const LoopGuards &Guards);
+                                        LoopGuards &Guards);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if it exits via the specified block. If AllowPredicates is set,
@@ -2312,6 +2326,14 @@ private:
                                       const SCEV *RHS, CmpPredicate FoundPred,
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.
@@ -2612,6 +2634,9 @@ private:
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
   SCEVUnknown *FirstUnknown = nullptr;
+
+  /// OrderID to assign to the next SCEVUnknown created.
+  unsigned NextUnknownOrderID = 0;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.
@@ -2791,6 +2816,17 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 
 template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
   return getPointer()->getCanonical();
+}
+
+template <>
+inline SCEVUse SCEVUseT<const SCEV *>::getCommon(SCEVUse A, SCEVUse B) {
+  if (A.getPointer() == B.getPointer()) {
+    A.setInt(A.getInt() | B.getInt());
+    return A;
+  }
+  if (A.getCanonical() == B.getCanonical())
+    return A.getCanonical();
+  return SCEVUse();
 }
 
 template <typename SCEVPtrT>

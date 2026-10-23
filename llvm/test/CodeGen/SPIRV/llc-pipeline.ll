@@ -83,6 +83,7 @@
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-O0-NEXT:      Stack Frame Layout Analysis
+; SPIRV-O0-NEXT:      SPIRV prepare module analysis
 ; SPIRV-O0-NEXT:    SPIRV module analysis
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
@@ -223,6 +224,7 @@
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      Stack Frame Layout Analysis
+; SPIRV-Opt-NEXT:      SPIRV prepare module analysis
 ; SPIRV-Opt-NEXT:    SPIRV module analysis
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis

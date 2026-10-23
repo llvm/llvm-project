@@ -5,8 +5,13 @@
 define void @backward_dep_i8_btc_stride_256(ptr %a) {
 ; CHECK-LABEL: 'backward_dep_i8_btc_stride_256'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %l.a = load i8, ptr %gep.a, align 1 ->
+; CHECK-NEXT:            store i8 %l.a, ptr %gep.a.next, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -35,8 +40,13 @@ exit:
 define void @backward_dep_i8_btc_stride_255(ptr %a) {
 ; CHECK-LABEL: 'backward_dep_i8_btc_stride_255'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %l.a = load i8, ptr %gep.a, align 1 ->
+; CHECK-NEXT:            store i8 %l.a, ptr %gep.a.next, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -101,8 +111,12 @@ exit:
 define void @backward_dep_i8_btc_product_wraps(ptr %a, i8 %n) {
 ; CHECK-LABEL: 'backward_dep_i8_btc_product_wraps'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %l.a = load i32, ptr %gep.a, align 4 ->
+; CHECK-NEXT:            store i32 %l.a, ptr %gep.a.256, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

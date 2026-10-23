@@ -952,14 +952,17 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<InvokeInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<InvokeInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
   if (const CallBrInst *CI = dyn_cast<CallBrInst>(I1))
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallBrInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
@@ -1000,13 +1003,21 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }
 
 bool Instruction::isIdenticalTo(const Instruction *I) const {
-  return isIdenticalToWhenDefined(I) &&
-         SubclassOptionalData == I->SubclassOptionalData;
+  if (!isIdenticalToWhenDefined(I) ||
+      SubclassOptionalData != I->SubclassOptionalData)
+    return false;
+
+  if (isa<FPMathOperator>(this))
+    return getFastMathFlags() == I->getFastMathFlags();
+
+  return true;
 }
 
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
@@ -1385,10 +1396,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
