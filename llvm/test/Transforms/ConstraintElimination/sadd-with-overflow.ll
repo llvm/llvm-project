@@ -524,10 +524,8 @@ define void @sadd_smax_clamp(i8 %start, i8 %end) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[START]], [[M]]
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i8 [[TMP0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[LT]])
-; CHECK-NEXT:    [[GT:%.*]] = icmp slt i8 [[END]], [[TMP0]]
-; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -556,8 +554,7 @@ define void @sadd_smax_clamp_unordered(i8 %start, i8 %end) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[START]], [[M]]
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i8 [[TMP0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[LT]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[GT:%.*]] = icmp slt i8 [[END]], [[TMP0]]
 ; CHECK-NEXT:    call void @use(i1 [[GT]])
 ; CHECK-NEXT:    ret void
@@ -634,8 +631,7 @@ define void @sadd_smax_clamp_samesign(i64 %v, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[START]], [[M]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[GT:%.*]] = icmp slt i64 [[END]], [[TMP0]]
-; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
