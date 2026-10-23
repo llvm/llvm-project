@@ -255,9 +255,17 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITNONHINTED))
           .setMIFlag(MachineInstr::FrameSetup);
 
+    int SigningOpc;
+    // If shrink-wrapping moved the prologue, we should use the address signing
+    // opcodes which are not a branch target to prevent an implicit BTI in the
+    // middle of the prologue.
+    if (&MBB == &MF.front())
+      SigningOpc = UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC;
+    else
+      SigningOpc = UseBKey ? AArch64::PACNBIBSPPC : AArch64::PACNBIASPPC;
+
     decoratePACWithCFI(MBB, MBBI, EmitCFI, [&]() {
-      BuildMI(MBB, MBBI, DL,
-              TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))
+      BuildMI(MBB, MBBI, DL, TII->get(SigningOpc))
           .setMIFlag(MachineInstr::FrameSetup)
           ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
     });
