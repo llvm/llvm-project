@@ -3208,10 +3208,13 @@ public:
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
       IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, RetTy,
                                          {RetTy, RetTy});
-      InstructionCost MulCost =
-          thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
-
       int Iterations = Log2_32_Ceil(BW);
+      // Expansion of CLMUL(Mk, ~0) is lot cheaper
+      InstructionCost GenericClmulCost =
+          thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
+      InstructionCost AllOnesClmulCost = Iterations * (ShiftCost + XorCost);
+      InstructionCost MulCost = std::min(GenericClmulCost, AllOnesClmulCost);
+
       InstructionCost Cost = AndCost + ShiftCost; // Prefix cost
       Cost += Iterations *
               (MulCost + 2 * AndCost + 2 * ShiftCost + OrCost + 2 * XorCost);
