@@ -2257,6 +2257,7 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
   mlir::Value v =
       builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
   auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
@@ -2272,12 +2273,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    cir::PointerType vtableI8PtrTy = builder.getUInt8PtrTy();
-    vtablePtr = builder.createBitcast(vtablePtr, vtableI8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, vtableI8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
