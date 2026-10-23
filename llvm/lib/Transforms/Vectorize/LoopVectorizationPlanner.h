@@ -969,6 +969,10 @@ public:
   /// interleaving should be avoided up-front, no plans are generated.
   void plan(ElementCount UserVF, unsigned UserIC);
 
+  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
+  /// should be avoided up-front, no tail-folded plans are generated.
+  bool planForEpilogueTF();
+
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
@@ -1037,9 +1041,13 @@ public:
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
   /// Create a check to \p Plan to see if the vector loop should be executed
-  /// based on its trip count.
+  /// based on its trip count. When \p TailFoldedEpilogue is true, the
+  /// tail-folded vector epilogue executes all iterations not executed by
+  /// the main vector loop, so the check never needs to branch to the scalar
+  /// loop.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                                ElementCount MinProfitableTripCount) const;
+                                ElementCount MinProfitableTripCount,
+                                bool TailFoldedEpilogue) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
