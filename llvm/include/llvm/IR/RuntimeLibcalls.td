@@ -2356,12 +2356,8 @@ def AArch64OutlineAtomics : LibcallLibrary<"compiler-rt",
   (add AArch64LibcallImpls),
   isAArch64_ExceptArm64EC>;
 
-def AArch64SystemLibrary : SystemRuntimeLibrary<
-  isAArch64_ExceptArm64EC,
-  (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-       AArch64Libm, AArch64OutlineAtomics,
-       AArch64SMERuntime, SafeStackRuntime)
->;
+def AArch64SystemLibrary : SystemRuntimeLibrary<isAArch64_ExceptArm64EC,
+  ["compiler-rt", "libm", "libc", "unwind", "sme"]>;
 
 // The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
 defvar Arm64ECCompilerRtImpls =
@@ -2430,9 +2426,7 @@ def Arm64ECRuntime : LibcallLibrary<"compiler-rt",
 
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
-                           (add Arm64ECRuntime,
-                                Arm64ECLibc,
-                                Arm64ECExceptionRuntime)>;
+                           ["compiler-rt", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
@@ -2448,7 +2442,7 @@ def AMDGPUProfileRt : LibcallLibrary<"compiler-rt-profile",
   (add __llvm_profile_instrument_gpu, __llvm_profile_sampling_gpu), isAMDGPU>;
 
 def AMDGPUSystemLibrary
-    : SystemRuntimeLibrary<isAMDGPU, (add AMDGPUProfileRt)>;
+    : SystemRuntimeLibrary<isAMDGPU, ["compiler-rt-profile"]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
@@ -2917,19 +2911,18 @@ def ARMLibm : LibcallLibrary<"libm",
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      // ARM excludes the Darwin bzero and unlocked stdio functions.
-      (add LibraryRef<CompilerRtLibgcc, ARMDefaultOptOut>, Libm,
-           LibraryRef<Libc, [bzero, getc_unlocked, getchar_unlocked,
-                                putc_unlocked, putchar_unlocked]>,
-           ExceptionRuntime,
-           ARMCompilerRt,
-           SafeStackRuntime)> {
+      ["compiler-rt", "libm", "libc", "unwind"]> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
                                     : CallingConv::ARM_AAPCS)
   }]>;
 }
+
+def : LibraryExclusion<"compiler-rt", isARMOrThumb, ARMDefaultOptOut>;
+// ARM excludes the Darwin bzero and unlocked stdio functions.
+def : LibraryExclusion<"libc", isARMOrThumb,
+  [bzero, getc_unlocked, getchar_unlocked, putc_unlocked, putchar_unlocked]>;
 
 //===----------------------------------------------------------------------===//
 // AVR Runtime Libcalls
@@ -2968,12 +2961,10 @@ defvar AVRCompilerRtOptOut = [
 defvar AVRLibmOptOut = [sin, cos, sinf, cosf, sincos, sincosf];
 
 def AVRSystemLibrary
-    : SystemRuntimeLibrary<
-          isAVR,
-          (add LibraryRef<CompilerRtLibgcc, AVRCompilerRtOptOut>,
-              LibraryRef<Libm, AVRLibmOptOut>,
-              Libc,
-              ExceptionRuntime)>;
+    : SystemRuntimeLibrary<isAVR, ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isAVR, AVRCompilerRtOptOut>;
+def : LibraryExclusion<"libm", isAVR, AVRLibmOptOut>;
 
 //===----------------------------------------------------------------------===//
 // DXIL Runtime Libcalls
@@ -2982,7 +2973,7 @@ def AVRSystemLibrary
 def isDXIL : RuntimeLibcallAvailability<(all_of IsDXIL)>;
 
 // No calls
-def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, (add)>;
+def DXILSystemLibrary : SystemRuntimeLibrary<isDXIL, []>;
 
 //===----------------------------------------------------------------------===//
 // Hexagon Runtime Libcalls
@@ -3036,8 +3027,7 @@ def HexagonCompilerRt
 
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
-    (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime, HexagonCompilerRt,
-    SafeStackRuntime)>;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -3048,7 +3038,7 @@ def isLanai : RuntimeLibcallAvailability<(all_of IsLanai)>;
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
     : SystemRuntimeLibrary<isLanai,
-      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime)> {
+                           ["compiler-rt", "libm", "libc", "unwind"]> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -3321,10 +3311,10 @@ def MSP430CompilerRt : LibcallLibrary<"compiler-rt", (add
 
 def MSP430SystemLibrary
     : SystemRuntimeLibrary<isMSP430,
-    (add LibraryRef<CompilerRtLibgcc, MSP430DefaultOptOut>,
-      LibraryRef<Libm, [sincos, sincosf]>, Libc, ExceptionRuntime
-  )
->;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isMSP430, MSP430DefaultOptOut>;
+def : LibraryExclusion<"libm", isMSP430, [sincos, sincosf]>;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Runtime Libcalls
@@ -3333,7 +3323,7 @@ def MSP430SystemLibrary
 def isNVPTX : RuntimeLibcallAvailability<(all_of IsNVPTX)>;
 
 // No calls.
-def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, (add)>;
+def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, []>;
 
 //===----------------------------------------------------------------------===//
 // PPC Runtime Libcalls
@@ -3444,10 +3434,10 @@ defvar PPCReplacedCompilerRtF128 = [
     __powitf2_f128, __trunctfhf2_f128];
 
 def PPCSystemLibrary
-    : SystemRuntimeLibrary<isPPC,
-      (add LibraryRef<CompilerRtLibgcc, PPCReplacedCompilerRtF128>,
-           LibraryRef<Libc, [memcpy]>, PPCStackProtectorLibc,
-           Libm, ExceptionRuntime)>;
+    : SystemRuntimeLibrary<isPPC, ["compiler-rt", "libc", "libm", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isPPC, PPCReplacedCompilerRtF128>;
+def : LibraryExclusion<"libc", isPPC, [memcpy]>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -3460,8 +3450,7 @@ def RISCVLibc : LibcallLibrary<"libc", (add __riscv_flush_icache), isRISCV>;
 
 def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
-      (add CompilerRtLibgcc, Libm, Libc, RISCVLibc, ExceptionRuntime,
-           SafeStackRuntime)>;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3535,10 +3524,9 @@ def SPARCStackProtectorLibc : LibcallLibrary<"libc",
 
 def SPARCSystemLibrary
     : SystemRuntimeLibrary<isSPARC,
-      (add LibraryRef<CompilerRtLibgcc, SPARC64_MulDivCalls>,
-            Libm, Libc, SPARCStackProtectorLibc, SparcCompilerRt,
-            ExceptionRuntime, SafeStackRuntime)
->;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isSPARC, SPARC64_MulDivCalls>;
 
 //===----------------------------------------------------------------------===//
 // SPIRV Runtime Libcalls
@@ -3554,7 +3542,7 @@ def SPIRVLibc : LibcallLibrary<"libc", (add memset, memcpy), isSPIRV> {
   let Isolated = true;
 }
 
-def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, ["libc"]>;
 
 //===----------------------------------------------------------------------===//
 // Windows Runtime Libcalls
@@ -3634,14 +3622,13 @@ def X86Libm : LibcallLibrary<"libm",
        LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128>), isX86>;
 
 def X86SystemLibrary
-    : SystemRuntimeLibrary<isX86,
-      (add LibraryRef<CompilerRtLibgcc,
-                      !listconcat(WindowsDivRemMulLibcallOverrides,
-                                  [__powitf2_f128])>,
-           // x86 has no fp128 sincosl, only the x87 one.
-           LibraryRef<Libm, [sincosl_f128]>,
-           LibraryRef<Libc, !listconcat(MemChkLibcalls, [bzero])>,
-           ExceptionRuntime, SafeStackRuntime)>;
+    : SystemRuntimeLibrary<isX86, ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"compiler-rt", isX86,
+  !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
+// x86 has no fp128 sincosl, only the x87 one.
+def : LibraryExclusion<"libm", isX86, [sincosl_f128]>;
+def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
@@ -3661,10 +3648,9 @@ def XCoreLibm : LibcallLibrary<"libm",
 
 def XCoreSystemLibrary
     : SystemRuntimeLibrary<isXCore,
-    // XCore does not use the stack protector.
-    (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf]>, Libc,
-         ExceptionRuntime,
-         XCoreLibc, XCoreLibm)>;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"libm", isXCore, [sincos, sincosf]>;
 
 //===----------------------------------------------------------------------===//
 // ZOS Runtime Libcalls
@@ -3783,9 +3769,8 @@ def isSystemZZOS : RuntimeLibcallAvailability<(all_of IsSystemZ, IsOSzOS)>;
 def ZOSLibc : LibcallLibrary<"libc", (add ZOSRuntimeLibcalls), isSystemZZOS>;
 
 def SystemZZOSSystemLibrary
-    : SystemRuntimeLibrary<
-          isSystemZZOS, (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-                            ZOSLibc)>;
+    : SystemRuntimeLibrary<isSystemZZOS,
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls
@@ -3816,10 +3801,9 @@ def WasmExceptionRuntime : LibcallLibrary<"unwind",
   (add _Unwind_GetWasmLPadContext), isWasm>;
 
 def WasmSystemLibrary
-    : SystemRuntimeLibrary<isWasm,
-      (add CompilerRtLibgcc, LibraryRef<Libm, [sincos, sincosf, sincosl_f128]>,
-           Libc, WasmLibc, WasmCompilerRt,
-           ExceptionRuntime, WasmExceptionRuntime)>;
+    : SystemRuntimeLibrary<isWasm, ["compiler-rt", "libm", "libc", "unwind"]>;
+
+def : LibraryExclusion<"libm", isWasm, [sincos, sincosf, sincosl_f128]>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls
@@ -3833,9 +3817,7 @@ def isDefaultLibcallArch : RuntimeLibcallAvailability<
 
 def LegacyDefaultSystemLibrary
     : SystemRuntimeLibrary<isDefaultLibcallArch,
-      (add CompilerRtLibgcc, Libm, Libc, ExceptionRuntime,
-         SafeStackRuntime
-)>;
+                           ["compiler-rt", "libm", "libc", "unwind"]>;
 
 //===----------------------------------------------------------------------===//
 // Vector math libraries
