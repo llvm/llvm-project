@@ -3,7 +3,7 @@
 
 ; ABI of i64-element vector types without the vector facility.
 
-define void @v1i64_arg(<1 x i64> %arg, ptr %out) {
+define void @v1i64_arg(<1 x i64> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v1i64_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    stg %r2, 0(%r3)
@@ -12,7 +12,7 @@ define void @v1i64_arg(<1 x i64> %arg, ptr %out) {
   ret void
 }
 
-define void @v3i64_arg(<3 x i64> %arg, ptr %out) {
+define void @v3i64_arg(<3 x i64> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v3i64_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    lg %r0, 0(%r2)
@@ -26,7 +26,7 @@ define void @v3i64_arg(<3 x i64> %arg, ptr %out) {
   ret void
 }
 
-define void @v4i64_arg(<4 x i64> %arg, ptr %out) {
+define void @v4i64_arg(<4 x i64> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v4i64_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    lg %r0, 0(%r2)
@@ -42,7 +42,7 @@ define void @v4i64_arg(<4 x i64> %arg, ptr %out) {
   ret void
 }
 
-define void @v2f64_arg(<2 x double> %arg, ptr %out) {
+define void @v2f64_arg(<2 x double> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v2f64_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    std %f2, 8(%r2)
@@ -52,7 +52,7 @@ define void @v2f64_arg(<2 x double> %arg, ptr %out) {
   ret void
 }
 
-define void @v4i32_arg(<4 x i32> %arg, ptr %out) {
+define void @v4i32_arg(<4 x i32> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v4i32_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    st %r5, 12(%r6)
@@ -64,7 +64,7 @@ define void @v4i32_arg(<4 x i32> %arg, ptr %out) {
   ret void
 }
 
-define void @i64_i64_i64_i64_v2i64_arg(i64 %a, i64 %b, i64 %c, i64 %d, <2 x i64> %arg, ptr %out) {
+define void @i64_i64_i64_i64_v2i64_arg(i64 %a, i64 %b, i64 %c, i64 %d, <2 x i64> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: i64_i64_i64_i64_v2i64_arg:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    lg %r0, 0(%r6)
@@ -77,7 +77,7 @@ define void @i64_i64_i64_i64_v2i64_arg(i64 %a, i64 %b, i64 %c, i64 %d, <2 x i64>
   ret void
 }
 
-define <1 x i64> @v1i64_ret(ptr %in) {
+define <1 x i64> @v1i64_ret(ptr %in) nounwind {
 ; LINUX-LABEL: v1i64_ret:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    lg %r2, 0(%r2)
@@ -86,7 +86,7 @@ define <1 x i64> @v1i64_ret(ptr %in) {
   ret <1 x i64> %v
 }
 
-define <2 x double> @v2f64_ret(ptr %in) {
+define <2 x double> @v2f64_ret(ptr %in) nounwind {
 ; LINUX-LABEL: v2f64_ret:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    ld %f0, 0(%r2)
@@ -96,7 +96,7 @@ define <2 x double> @v2f64_ret(ptr %in) {
   ret <2 x double> %v
 }
 
-define <4 x i32> @v4i32_ret(ptr %in) {
+define <4 x i32> @v4i32_ret(ptr %in) nounwind {
 ; LINUX-LABEL: v4i32_ret:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    l %r0, 0(%r2)
@@ -111,14 +111,11 @@ define <4 x i32> @v4i32_ret(ptr %in) {
 
 declare void @vararg_callee(i64, ...)
 
-define void @call_vararg_v2i64(ptr %in) {
+define void @call_vararg_v2i64(ptr %in) nounwind {
 ; LINUX-LABEL: call_vararg_v2i64:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-NEXT:    .cfi_offset %r14, -48
-; LINUX-NEXT:    .cfi_offset %r15, -40
 ; LINUX-NEXT:    aghi %r15, -176
-; LINUX-NEXT:    .cfi_def_cfa_offset 336
 ; LINUX-NEXT:    lg %r0, 0(%r2)
 ; LINUX-NEXT:    lg %r1, 8(%r2)
 ; LINUX-NEXT:    lghi %r2, 0
@@ -136,14 +133,11 @@ define void @call_vararg_v2i64(ptr %in) {
 declare void @v1i64_callee(<1 x i64>)
 declare void @v4i64_callee(<4 x i64>)
 
-define void @call_v1i64(ptr %in) {
+define void @call_v1i64(ptr %in) nounwind {
 ; LINUX-LABEL: call_v1i64:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-NEXT:    .cfi_offset %r14, -48
-; LINUX-NEXT:    .cfi_offset %r15, -40
 ; LINUX-NEXT:    aghi %r15, -160
-; LINUX-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-NEXT:    lg %r2, 0(%r2)
 ; LINUX-NEXT:    brasl %r14, v1i64_callee@PLT
 ; LINUX-NEXT:    lmg %r14, %r15, 272(%r15)
@@ -153,14 +147,11 @@ define void @call_v1i64(ptr %in) {
   ret void
 }
 
-define void @call_v4i64(ptr %in) {
+define void @call_v4i64(ptr %in) nounwind {
 ; LINUX-LABEL: call_v4i64:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-NEXT:    .cfi_offset %r14, -48
-; LINUX-NEXT:    .cfi_offset %r15, -40
 ; LINUX-NEXT:    aghi %r15, -192
-; LINUX-NEXT:    .cfi_def_cfa_offset 352
 ; LINUX-NEXT:    lg %r0, 0(%r2)
 ; LINUX-NEXT:    lg %r1, 8(%r2)
 ; LINUX-NEXT:    lg %r3, 16(%r2)
@@ -180,15 +171,11 @@ define void @call_v4i64(ptr %in) {
 
 declare <4 x i64> @v4i64_ret_callee()
 
-define void @call_ret_v4i64(ptr %out) {
+define void @call_ret_v4i64(ptr %out) nounwind {
 ; LINUX-LABEL: call_ret_v4i64:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    stmg %r13, %r15, 104(%r15)
-; LINUX-NEXT:    .cfi_offset %r13, -56
-; LINUX-NEXT:    .cfi_offset %r14, -48
-; LINUX-NEXT:    .cfi_offset %r15, -40
 ; LINUX-NEXT:    aghi %r15, -160
-; LINUX-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-NEXT:    lgr %r13, %r2
 ; LINUX-NEXT:    brasl %r14, v4i64_ret_callee@PLT
 ; LINUX-NEXT:    stg %r5, 24(%r13)

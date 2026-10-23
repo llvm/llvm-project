@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=s390x-ibm-zos -mcpu=z13 < %s | FileCheck -check-prefixes=ZOS,ZOS-Z13 %s
 
 
-define <2 x i64> @ret_v2i64(ptr %ptr) {
+define <2 x i64> @ret_v2i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_v2i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r2)
@@ -27,7 +27,7 @@ define <2 x i64> @ret_v2i64(ptr %ptr) {
   ret <2 x i64> %insertelement.1
 }
 
-define { <2 x i64>, <2 x i64> } @ret_v2i64_x2(ptr %ptr) {
+define { <2 x i64>, <2 x i64> } @ret_v2i64_x2(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_v2i64_x2:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r2)
@@ -61,7 +61,7 @@ define { <2 x i64>, <2 x i64> } @ret_v2i64_x2(ptr %ptr) {
   ret { <2 x i64>, <2 x i64> } %insertval.1
 }
 
-define { <2 x i64>, <2 x i64>, <2 x i64> } @ret_v2i64_x3(ptr %ptr) {
+define { <2 x i64>, <2 x i64>, <2 x i64> } @ret_v2i64_x3(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_v2i64_x3:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r3)
@@ -109,7 +109,7 @@ define { <2 x i64>, <2 x i64>, <2 x i64> } @ret_v2i64_x3(ptr %ptr) {
   ret { <2 x i64>, <2 x i64>, <2 x i64> } %insertval.2
 }
 
-define { <2 x i64>, i64 } @ret_v2i64_i64(ptr %ptr) {
+define { <2 x i64>, i64 } @ret_v2i64_i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_v2i64_i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r2)
@@ -134,7 +134,7 @@ define { <2 x i64>, i64 } @ret_v2i64_i64(ptr %ptr) {
   ret { <2 x i64>, i64 } %insertval.1
 }
 
-define { i64, <2 x i64> } @ret_i64_v2i64(ptr %ptr) {
+define { i64, <2 x i64> } @ret_i64_v2i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_i64_v2i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r3, 0(%r2)
@@ -158,7 +158,7 @@ define { i64, <2 x i64> } @ret_i64_v2i64(ptr %ptr) {
   ret { i64, <2 x i64> } %insertval.1
 }
 
-define { i64, <2 x i64>, i64 } @ret_i64_v2i64_i64(ptr %ptr) {
+define { i64, <2 x i64>, i64 } @ret_i64_v2i64_i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_i64_v2i64_i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r3, 0(%r2)
@@ -188,7 +188,7 @@ define { i64, <2 x i64>, i64 } @ret_i64_v2i64_i64(ptr %ptr) {
   ret { i64, <2 x i64>, i64 } %insertval.2
 }
 
-define <3 x i64> @ret_v3i64(ptr %ptr) {
+define <3 x i64> @ret_v3i64(ptr %ptr) nounwind {
 ; LINUX-LABEL: ret_v3i64:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    lg %r0, 0(%r2)
@@ -206,7 +206,7 @@ define <3 x i64> @ret_v3i64(ptr %ptr) {
   ret <3 x i64> %insertelement.2
 }
 
-define <4 x i64> @ret_v4i64(ptr %ptr) {
+define <4 x i64> @ret_v4i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_v4i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r2)
@@ -235,7 +235,7 @@ define <4 x i64> @ret_v4i64(ptr %ptr) {
   ret <4 x i64> %insertelement.3
 }
 
-define { i64, i64, i64, <2 x i64> } @ret_i64_i64_i64_v2i64(ptr %ptr) {
+define { i64, i64, i64, <2 x i64> } @ret_i64_i64_i64_v2i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_i64_i64_i64_v2i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r3)
@@ -273,12 +273,10 @@ define { i64, i64, i64, <2 x i64> } @ret_i64_i64_i64_v2i64(ptr %ptr) {
   ret { i64, i64, i64, <2 x i64> } %insertval.3
 }
 
-define { i64, i64, i64, i64, <2 x i64> } @ret_i64_i64_i64_i64_v2i64(ptr %ptr) {
+define { i64, i64, i64, i64, <2 x i64> } @ret_i64_i64_i64_i64_v2i64(ptr %ptr) nounwind {
 ; LINUX-BASE-LABEL: ret_i64_i64_i64_i64_v2i64:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r3)
 ; LINUX-BASE-NEXT:    lg %r1, 0(%r3)
 ; LINUX-BASE-NEXT:    lg %r4, 0(%r3)

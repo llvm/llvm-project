@@ -9,7 +9,7 @@
 @gv.v2i64 = external global <2 x i64>
 @gv.i64 = external global i64
 
-define void @v2i64_arg(<2 x i64> %arg.v2i64) {
+define void @v2i64_arg(<2 x i64> %arg.v2i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 8(%r2)
@@ -28,7 +28,7 @@ define void @v2i64_arg(<2 x i64> %arg.v2i64) {
   ret void
 }
 
-define void @v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64) {
+define void @v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 8(%r2)
@@ -53,12 +53,10 @@ define void @v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64) {
   ret void
 }
 
-define void @v2i64_v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64, <2 x i64> %arg2.v2i64) {
+define void @v2i64_v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64, <2 x i64> %arg2.v2i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_v2i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r4)
 ; LINUX-BASE-NEXT:    lg %r1, 8(%r4)
 ; LINUX-BASE-NEXT:    lg %r4, 8(%r2)
@@ -88,7 +86,7 @@ define void @v2i64_v2i64_v2i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64,
   ret void
 }
 
-define void @i64_v2i64_arg(i64 %arg0.i64, <2 x i64> %arg1.v2i64) {
+define void @i64_v2i64_arg(i64 %arg0.i64, <2 x i64> %arg1.v2i64) nounwind {
 ; LINUX-BASE-LABEL: i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 8(%r3)
@@ -112,7 +110,7 @@ define void @i64_v2i64_arg(i64 %arg0.i64, <2 x i64> %arg1.v2i64) {
   ret void
 }
 
-define void @v2i64_i64_arg(<2 x i64> %arg0.v2i64, i64 %arg1.i64) {
+define void @v2i64_i64_arg(<2 x i64> %arg0.v2i64, i64 %arg1.i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    lg %r0, 8(%r2)
@@ -136,12 +134,10 @@ define void @v2i64_i64_arg(<2 x i64> %arg0.v2i64, i64 %arg1.i64) {
   ret void
 }
 
-define void @v2i64_v2i64_i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64, i64 %arg2.i64) {
+define void @v2i64_v2i64_i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64, i64 %arg2.i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_v2i64_i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    lg %r0, 8(%r2)
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r5, 0(%r3)
@@ -170,12 +166,10 @@ define void @v2i64_v2i64_i64_arg(<2 x i64> %arg0.v2i64, <2 x i64> %arg1.v2i64, i
   ret void
 }
 
-define void @v2i64_i64_v2i64_arg(<2 x i64> %arg0.v2i64, i64 %arg1.i64, <2 x i64> %arg2.v2i64) {
+define void @v2i64_i64_v2i64_arg(<2 x i64> %arg0.v2i64, i64 %arg1.i64, <2 x i64> %arg2.v2i64) nounwind {
 ; LINUX-BASE-LABEL: v2i64_i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r4)
 ; LINUX-BASE-NEXT:    lg %r1, 8(%r2)
 ; LINUX-BASE-NEXT:    lgrl %r5, gv.v2i64@GOT

@@ -3,7 +3,7 @@
 
 ; Operations on <2 x i64> without the vector facility.
 
-define void @load_store(ptr %in, ptr %out) {
+define void @load_store(ptr %in, ptr %out) nounwind {
 ; CHECK-LABEL: load_store:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -16,7 +16,7 @@ define void @load_store(ptr %in, ptr %out) {
   ret void
 }
 
-define void @load_store_far(ptr %in, ptr %out) {
+define void @load_store_far(ptr %in, ptr %out) nounwind {
 ; CHECK-LABEL: load_store_far:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lay %r1, 524280(%r2)
@@ -33,7 +33,7 @@ define void @load_store_far(ptr %in, ptr %out) {
   ret void
 }
 
-define void @add(ptr %a, ptr %b, ptr %out) {
+define void @add(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -50,7 +50,7 @@ define void @add(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @and(ptr %a, ptr %b, ptr %out) {
+define void @and(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -67,7 +67,7 @@ define void @and(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @mul(ptr %a, ptr %b, ptr %out) {
+define void @mul(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: mul:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -84,7 +84,7 @@ define void @mul(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @shl_splat(ptr %a, i64 %amt, ptr %out) {
+define void @shl_splat(ptr %a, i64 %amt, ptr %out) nounwind {
 ; CHECK-LABEL: shl_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -102,7 +102,7 @@ define void @shl_splat(ptr %a, i64 %amt, ptr %out) {
   ret void
 }
 
-define void @select_icmp(ptr %a, ptr %b, ptr %out) {
+define void @select_icmp(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: select_icmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -124,7 +124,7 @@ define void @select_icmp(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @sext_icmp(ptr %a, ptr %b, ptr %out) {
+define void @sext_icmp(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: sext_icmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -150,7 +150,7 @@ define void @sext_icmp(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @shuffle_swap(ptr %a, ptr %out) {
+define void @shuffle_swap(ptr %a, ptr %out) nounwind {
 ; CHECK-LABEL: shuffle_swap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -164,7 +164,7 @@ define void @shuffle_swap(ptr %a, ptr %out) {
   ret void
 }
 
-define void @shuffle_two(ptr %a, ptr %b, ptr %out) {
+define void @shuffle_two(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: shuffle_two:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -179,7 +179,7 @@ define void @shuffle_two(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @build_vector(i64 %x, i64 %y, ptr %out) {
+define void @build_vector(i64 %x, i64 %y, ptr %out) nounwind {
 ; CHECK-LABEL: build_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stg %r3, 8(%r4)
@@ -191,7 +191,7 @@ define void @build_vector(i64 %x, i64 %y, ptr %out) {
   ret void
 }
 
-define void @build_vector_const(ptr %out) {
+define void @build_vector_const(ptr %out) nounwind {
 ; CHECK-LABEL: build_vector_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mvghi 8(%r2), -2
@@ -201,7 +201,7 @@ define void @build_vector_const(ptr %out) {
   ret void
 }
 
-define void @build_vector_zero(ptr %out) {
+define void @build_vector_zero(ptr %out) nounwind {
 ; CHECK-LABEL: build_vector_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mvghi 8(%r2), 0
@@ -211,7 +211,7 @@ define void @build_vector_zero(ptr %out) {
   ret void
 }
 
-define i64 @extract_0(ptr %a) {
+define i64 @extract_0(ptr %a) nounwind {
 ; CHECK-LABEL: extract_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r2, 0(%r2)
@@ -221,7 +221,7 @@ define i64 @extract_0(ptr %a) {
   ret i64 %r
 }
 
-define i64 @extract_1(ptr %a) {
+define i64 @extract_1(ptr %a) nounwind {
 ; CHECK-LABEL: extract_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r2, 8(%r2)
@@ -231,7 +231,7 @@ define i64 @extract_1(ptr %a) {
   ret i64 %r
 }
 
-define i64 @extract_var(ptr %a, i64 %idx) {
+define i64 @extract_var(ptr %a, i64 %idx) nounwind {
 ; CHECK-LABEL: extract_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    risbgn %r1, %r3, 60, 188, 3
@@ -242,7 +242,7 @@ define i64 @extract_var(ptr %a, i64 %idx) {
   ret i64 %r
 }
 
-define void @insert_1(ptr %a, i64 %x, ptr %out) {
+define void @insert_1(ptr %a, i64 %x, ptr %out) nounwind {
 ; CHECK-LABEL: insert_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -255,11 +255,10 @@ define void @insert_1(ptr %a, i64 %x, ptr %out) {
   ret void
 }
 
-define void @insert_var(ptr %a, i64 %x, i64 %idx, ptr %out) {
+define void @insert_var(ptr %a, i64 %x, i64 %idx, ptr %out) nounwind {
 ; CHECK-LABEL: insert_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    aghi %r15, -176
-; CHECK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-NEXT:    lg %r1, 8(%r2)
 ; CHECK-NEXT:    lg %r0, 0(%r2)
 ; CHECK-NEXT:    stg %r1, 168(%r15)
@@ -278,7 +277,7 @@ define void @insert_var(ptr %a, i64 %x, i64 %idx, ptr %out) {
   ret void
 }
 
-define i128 @bitcast_to_i128(ptr %a) {
+define i128 @bitcast_to_i128(ptr %a) nounwind {
 ; CHECK-LABEL: bitcast_to_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r3)
@@ -291,7 +290,7 @@ define i128 @bitcast_to_i128(ptr %a) {
   ret i128 %r
 }
 
-define void @bitcast_from_i128(i128 %x, ptr %out) {
+define void @bitcast_from_i128(i128 %x, ptr %out) nounwind {
 ; CHECK-LABEL: bitcast_from_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -304,7 +303,7 @@ define void @bitcast_from_i128(i128 %x, ptr %out) {
   ret void
 }
 
-define void @bitcast_v4i32(ptr %a, ptr %out) {
+define void @bitcast_v4i32(ptr %a, ptr %out) nounwind {
 ; CHECK-LABEL: bitcast_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r1, 8(%r2)
@@ -321,7 +320,7 @@ define void @bitcast_v4i32(ptr %a, ptr %out) {
   ret void
 }
 
-define void @trunc_v2i32(ptr %a, ptr %out) {
+define void @trunc_v2i32(ptr %a, ptr %out) nounwind {
 ; CHECK-LABEL: trunc_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -335,7 +334,7 @@ define void @trunc_v2i32(ptr %a, ptr %out) {
   ret void
 }
 
-define void @zext_v2i32(ptr %a, ptr %out) {
+define void @zext_v2i32(ptr %a, ptr %out) nounwind {
 ; CHECK-LABEL: zext_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgf %r0, 0(%r2)
@@ -349,7 +348,7 @@ define void @zext_v2i32(ptr %a, ptr %out) {
   ret void
 }
 
-define void @sitofp_v2f64(ptr %a, ptr %out) {
+define void @sitofp_v2f64(ptr %a, ptr %out) nounwind {
 ; CHECK-LABEL: sitofp_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -365,7 +364,7 @@ define void @sitofp_v2f64(ptr %a, ptr %out) {
   ret void
 }
 
-define void @fcmp_v2f64(ptr %a, ptr %b, ptr %out) {
+define void @fcmp_v2f64(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: fcmp_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
@@ -393,7 +392,7 @@ define void @fcmp_v2f64(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define i64 @reduce_add(ptr %a) {
+define i64 @reduce_add(ptr %a) nounwind {
 ; CHECK-LABEL: reduce_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -405,7 +404,7 @@ define i64 @reduce_add(ptr %a) {
   ret i64 %r
 }
 
-define void @v1i64_add(ptr %a, ptr %b, ptr %out) {
+define void @v1i64_add(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: v1i64_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 0(%r2)
@@ -419,7 +418,7 @@ define void @v1i64_add(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @v4i64_add(ptr %a, ptr %b, ptr %out) {
+define void @v4i64_add(ptr %a, ptr %b, ptr %out) nounwind {
 ; CHECK-LABEL: v4i64_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 24(%r2)
@@ -442,7 +441,7 @@ define void @v4i64_add(ptr %a, ptr %b, ptr %out) {
   ret void
 }
 
-define void @phi(ptr %a, ptr %b, i1 %c, ptr %out) {
+define void @phi(ptr %a, ptr %b, i1 %c, ptr %out) nounwind {
 ; CHECK-LABEL: phi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    tmll %r4, 1
@@ -472,7 +471,7 @@ end:
   ret void
 }
 
-define void @merge_i64_stores(i64 %x, i64 %y, ptr %out) {
+define void @merge_i64_stores(i64 %x, i64 %y, ptr %out) nounwind {
 ; CHECK-LABEL: merge_i64_stores:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stg %r2, 0(%r4)
@@ -484,11 +483,10 @@ define void @merge_i64_stores(i64 %x, i64 %y, ptr %out) {
   ret void
 }
 
-define i64 @extract_var_volatile(ptr %a, i64 %idx) {
+define i64 @extract_var_volatile(ptr %a, i64 %idx) nounwind {
 ; CHECK-LABEL: extract_var_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    aghi %r15, -176
-; CHECK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-NEXT:    lg %r0, 0(%r2)
 ; CHECK-NEXT:    lg %r1, 8(%r2)
 ; CHECK-NEXT:    stg %r1, 168(%r15)
@@ -502,7 +500,7 @@ define i64 @extract_var_volatile(ptr %a, i64 %idx) {
   ret i64 %r
 }
 
-define i64 @extract_oob_volatile(ptr %a) {
+define i64 @extract_oob_volatile(ptr %a) nounwind {
 ; CHECK-LABEL: extract_oob_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lg %r0, 8(%r2)
@@ -513,7 +511,7 @@ define i64 @extract_oob_volatile(ptr %a) {
   ret i64 %r
 }
 
-define <2 x i64> @insert_oob(ptr %a, i64 %x) {
+define <2 x i64> @insert_oob(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: insert_oob:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    br %r14

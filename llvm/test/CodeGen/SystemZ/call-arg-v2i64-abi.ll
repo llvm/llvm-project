@@ -17,14 +17,11 @@ declare void @v2i64_i64_arg(<2 x i64>, i64)
 declare void @v2i64_v2i64_i64_arg(<2 x i64>, <2 x i64>, i64)
 declare void @v2i64_i64_v2i64_arg(<2 x i64>, i64, <2 x i64>)
 
-define void @call_v2i64_arg() {
+define void @call_v2i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -176
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 336
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
 ; LINUX-BASE-NEXT:    lg %r1, 8(%r1)
@@ -38,10 +35,7 @@ define void @call_v2i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
 ; LINUX-Z13-NEXT:    brasl %r14, v2i64_arg@PLT
@@ -52,14 +46,11 @@ define void @call_v2i64_arg() {
   ret void
 }
 
-define void @call_v2i64_v2i64_arg() {
+define void @call_v2i64_v2i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -192
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 352
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
 ; LINUX-BASE-NEXT:    lg %r2, 8(%r1)
@@ -78,10 +69,7 @@ define void @call_v2i64_v2i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_v2i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
 ; LINUX-Z13-NEXT:    vl %v26, 0(%r1), 3
@@ -94,14 +82,11 @@ define void @call_v2i64_v2i64_arg() {
   ret void
 }
 
-define void @call_i64_v2i64_arg() {
+define void @call_i64_v2i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -176
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 336
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.i64@GOT
 ; LINUX-BASE-NEXT:    lgrl %r3, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r2, 0(%r1)
@@ -117,10 +102,7 @@ define void @call_i64_v2i64_arg() {
 ; LINUX-Z13-LABEL: call_i64_v2i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.i64@GOT
 ; LINUX-Z13-NEXT:    lg %r2, 0(%r1)
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
@@ -134,14 +116,11 @@ define void @call_i64_v2i64_arg() {
   ret void
 }
 
-define void @call_v2i64_i64_arg() {
+define void @call_v2i64_i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -176
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 336
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lgrl %r2, gv.i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
@@ -157,10 +136,7 @@ define void @call_v2i64_i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.i64@GOT
@@ -174,14 +150,11 @@ define void @call_v2i64_i64_arg() {
   ret void
 }
 
-define void @call_v2i64_v2i64_v2i64_arg() {
+define void @call_v2i64_v2i64_v2i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_v2i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -208
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 368
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
 ; LINUX-BASE-NEXT:    lg %r2, 8(%r1)
@@ -205,10 +178,7 @@ define void @call_v2i64_v2i64_v2i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_v2i64_v2i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
 ; LINUX-Z13-NEXT:    vl %v26, 0(%r1), 3
@@ -223,14 +193,11 @@ define void @call_v2i64_v2i64_v2i64_arg() {
   ret void
 }
 
-define void @call_v2i64_v2i64_i64_arg() {
+define void @call_v2i64_v2i64_i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_v2i64_i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -192
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 352
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
 ; LINUX-BASE-NEXT:    lg %r2, 8(%r1)
@@ -251,10 +218,7 @@ define void @call_v2i64_v2i64_i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_v2i64_i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
 ; LINUX-Z13-NEXT:    vl %v26, 0(%r1), 3
@@ -270,14 +234,11 @@ define void @call_v2i64_v2i64_i64_arg() {
   ret void
 }
 
-define void @call_v2i64_i64_v2i64_arg() {
+define void @call_v2i64_i64_v2i64_arg() nounwind {
 ; LINUX-BASE-LABEL: call_v2i64_i64_v2i64_arg:
 ; LINUX-BASE:       # %bb.0:
 ; LINUX-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-BASE-NEXT:    .cfi_offset %r14, -48
-; LINUX-BASE-NEXT:    .cfi_offset %r15, -40
 ; LINUX-BASE-NEXT:    aghi %r15, -192
-; LINUX-BASE-NEXT:    .cfi_def_cfa_offset 352
 ; LINUX-BASE-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-BASE-NEXT:    lgrl %r2, gv.i64@GOT
 ; LINUX-BASE-NEXT:    lg %r0, 0(%r1)
@@ -298,10 +259,7 @@ define void @call_v2i64_i64_v2i64_arg() {
 ; LINUX-Z13-LABEL: call_v2i64_i64_v2i64_arg:
 ; LINUX-Z13:       # %bb.0:
 ; LINUX-Z13-NEXT:    stmg %r14, %r15, 112(%r15)
-; LINUX-Z13-NEXT:    .cfi_offset %r14, -48
-; LINUX-Z13-NEXT:    .cfi_offset %r15, -40
 ; LINUX-Z13-NEXT:    aghi %r15, -160
-; LINUX-Z13-NEXT:    .cfi_def_cfa_offset 320
 ; LINUX-Z13-NEXT:    lgrl %r1, gv.v2i64@GOT
 ; LINUX-Z13-NEXT:    lgrl %r2, gv.i64@GOT
 ; LINUX-Z13-NEXT:    vl %v24, 0(%r1), 3
