@@ -228,6 +228,13 @@ class Context {
   const DataLayout &DL;
   const TargetLibraryInfoImpl TLIImpl;
 
+  std::optional<uint64_t>
+  isSupportedType(raw_ostream &OS, DenseMap<Type *, uint64_t> &ValidAggTys,
+                  Type *Ty) const;
+  bool isSupportedConstantExpression(raw_ostream &OS,
+                                     DenseMap<Type *, uint64_t> &ValidAggTys,
+                                     ConstantExpr *CE) const;
+
   // Configuration
   uint64_t MaxMem = 0;
   uint32_t VScale = 4;
@@ -380,6 +387,11 @@ public:
   /// computed as if the vector has getEVL(ElementCount) elements.
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
+
+  /// Check if the input module is compatible with the current setting.
+  /// Otherwise the interpreter might crash on some untrusted inputs, even if it
+  /// passes IRVerifier.
+  bool isValid(raw_ostream &OS) const;
 
   /// Returns a pointer to an evaluated constant \p C. If it cannot be
   /// evaluated, returns nullptr. Note that it returns a pointer to a temporary

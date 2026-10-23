@@ -1297,6 +1297,235 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+/// Check whether \p Ty is small enough to be emulated. Return the total bits
+/// the type (we use the allocation size as a overestimation) if it is
+/// supported. Otherwise, return std::nullopt.
+/// In fact it duplicates the logic from DL.getTypeAllocSizeInBits, with careful
+/// handling of overflows.
+std::optional<uint64_t> Context::isSupportedType(
+    raw_ostream &OS, DenseMap<Type *, uint64_t> &ValidAggTys, Type *Ty) const {
+  constexpr uint64_t MaxNumBits = UINT32_MAX;
+  uint32_t MaxNumBitsPerElement = MaxNumBits;
+
+  switch (Ty->getTypeID()) {
+  case Type::X86_AMXTyID:
+  case Type::TargetExtTyID:
+  case Type::TokenTyID:
+    OS << "Unsupported type " << *Ty << '\n';
+    return std::nullopt;
+  case Type::ScalableVectorTyID:
+    assert(isPowerOf2_32(VScale) && "VScale must be a power of two.");
+    MaxNumBitsPerElement /= VScale;
+    [[fallthrough]];
+  case Type::FixedVectorTyID: {
+    ElementCount EC = cast<VectorType>(Ty)->getElementCount();
+    MaxNumBitsPerElement /= EC.getKnownMinValue();
+    auto ElementBits = isSupportedType(OS, ValidAggTys,
+                                       cast<VectorType>(Ty)->getElementType());
+    if (!ElementBits)
+      return std::nullopt;
+    if (*ElementBits > MaxNumBitsPerElement) {
+      OS << *Ty << " is too large!\n";
+      return std::nullopt;
+    }
+    // Now the multiplication never overflows.
+    return alignTo(*ElementBits * getEVL(EC),
+                   DL.getABITypeAlign(Ty).value() * 8);
+  }
+  case Type::ArrayTyID: {
+    if (uint64_t Size = ValidAggTys.lookup(Ty))
+      return Size;
+    uint64_t Scale =
+        std::max(cast<ArrayType>(Ty)->getNumElements(), (uint64_t)1);
+    MaxNumBitsPerElement /= Scale;
+    auto ElementBits =
+        isSupportedType(OS, ValidAggTys, cast<ArrayType>(Ty)->getElementType());
+    if (!ElementBits)
+      return std::nullopt;
+    if (*ElementBits > MaxNumBitsPerElement) {
+      OS << *Ty << " is too large!\n";
+      return std::nullopt;
+    }
+    // Now the multiplication never overflows.
+    return ValidAggTys.insert({Ty, *ElementBits * Scale}).first->second;
+  }
+  case Type::StructTyID: {
+    auto *STy = cast<StructType>(Ty);
+    if (STy->isOpaque()) {
+      OS << "Unsupported opaque struct type %" << STy->getName() << '\n';
+      return std::nullopt;
+    }
+    if (uint64_t Size = ValidAggTys.lookup(Ty))
+      return Size;
+    uint64_t Size = 0, Alignment = 8;
+    for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+      Type *ElementType = STy->getElementType(I);
+      auto ElementBits = isSupportedType(OS, ValidAggTys, ElementType);
+      if (!ElementBits)
+        return std::nullopt;
+      if (!STy->isPacked() && ElementType->isSized()) {
+        uint64_t ElementAlignment = DL.getABITypeAlign(ElementType).value() * 8;
+        Size = alignTo(Size, ElementAlignment);
+        Alignment = std::max(Alignment, ElementAlignment);
+      }
+      // The addition never overflows.
+      Size += *ElementBits;
+    }
+    Size = std::max(Size, (uint64_t)1);
+    if (!STy->isPacked() && STy->isSized()) {
+      // If it is not packed, we need to respect StructABIAlignment specified in
+      // the DL string.
+      Alignment = std::max(Alignment, DL.getABITypeAlign(STy).value() * 8);
+    }
+    Size = alignTo(Size, Alignment);
+    if (Size > MaxNumBits) {
+      OS << *Ty << " is too large!\n";
+      return std::nullopt;
+    }
+    return ValidAggTys.insert({Ty, Size}).first->second;
+  }
+  default:
+    // All scalar single value types are known smaller than MaxNumBits.
+    if (Ty->isSingleValueType())
+      return DL.getTypeAllocSizeInBits(Ty);
+    // void/metadata/label/function types are always supported.
+    return 0;
+  }
+}
+
+bool Context::isSupportedConstantExpression(
+    raw_ostream &OS, DenseMap<Type *, uint64_t> &ValidAggTys,
+    ConstantExpr *CE) const {
+  switch (CE->getOpcode()) {
+  case Instruction::ExtractElement:
+  case Instruction::BitCast:
+  case Instruction::ShuffleVector:
+  case Instruction::Trunc:
+  case Instruction::PtrToAddr:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::AddrSpaceCast:
+    if (!isSupportedType(OS, ValidAggTys, CE->getOperand(0)->getType()))
+      return false;
+    [[fallthrough]];
+  default:
+    // Now we know all types in the expression is valid. Check operands
+    // recursively.
+    return all_of(CE->operands(), [&](Use &U) {
+      if (auto *OpCE = dyn_cast<ConstantExpr>(U))
+        return isSupportedConstantExpression(OS, ValidAggTys, OpCE);
+      return true;
+    });
+  }
+}
+
+bool Context::isValid(raw_ostream &OS) const {
+  StringRef ModuleFileName = M.getModuleIdentifier();
+
+  auto DumpFunction = [&](Function *F) {
+    OS << "  at ";
+    F->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getFunctionLocation(F))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpArg = [&](Argument *Arg) {
+    OS << "  " << *Arg << " at ";
+    Arg->getParent()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Arg))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpInst = [&](Instruction *Inst) {
+    OS << *Inst << " at ";
+    Inst->getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Inst))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpGlobal = [&](GlobalObject *GO) {
+    OS << "  at ";
+    GO->printAsOperand(errs(), /*PrintType=*/false);
+    OS << '\n';
+
+    return false;
+  };
+
+  DenseMap<Type *, uint64_t> ValidAggTys;
+#define CHECK(TYPE, LOC)                                                       \
+  if (!isSupportedType(OS, ValidAggTys, TYPE))                                 \
+    return LOC;
+
+  for (auto &F : M) {
+    CHECK(F.getReturnType(), DumpFunction(&F));
+    for (auto &Arg : F.args())
+      CHECK(Arg.getType(), DumpArg(&Arg));
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        CHECK(I.getType(), DumpInst(&I));
+        switch (I.getOpcode()) {
+        case Instruction::Alloca:
+          CHECK(cast<AllocaInst>(I).getAllocatedType(), DumpInst(&I));
+          break;
+        case Instruction::Call:
+        case Instruction::Invoke:
+          for (auto &Op : I.operands())
+            CHECK(Op->getType(), DumpInst(&I));
+          break;
+        case Instruction::Store:
+        case Instruction::ExtractElement:
+        case Instruction::ExtractValue:
+        case Instruction::BitCast:
+        case Instruction::ShuffleVector:
+        case Instruction::Trunc:
+        case Instruction::ICmp:
+        case Instruction::FCmp:
+        case Instruction::PtrToAddr:
+        case Instruction::PtrToInt:
+        case Instruction::IntToPtr:
+        case Instruction::FPTrunc:
+        case Instruction::AddrSpaceCast:
+          CHECK(I.getOperand(0)->getType(), DumpInst(&I));
+          break;
+        default:
+          break;
+        }
+        for (auto &Op : I.operands())
+          if (auto *CE = dyn_cast<ConstantExpr>(Op))
+            if (!isSupportedConstantExpression(OS, ValidAggTys, CE))
+              return DumpInst(&I);
+      }
+  }
+
+  for (auto &G : M.globals()) {
+    CHECK(G.getValueType(), DumpGlobal(&G));
+    if (G.hasInitializer()) {
+      if (auto *CE = dyn_cast_or_null<ConstantExpr>(G.getInitializer()))
+        if (!isSupportedConstantExpression(OS, ValidAggTys, CE))
+          return DumpGlobal(&G);
+    }
+  }
+
+#undef CHECK
+
+  return true;
+}
+
 RoundingMode Context::getCurrentRoundingMode() const {
   return CurrentRoundingMode;
 }
