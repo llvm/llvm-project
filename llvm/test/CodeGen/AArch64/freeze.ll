@@ -588,3 +588,17 @@ define i32 @freeze_ucmp(i32 %a0) nounwind {
   %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
   ret i32 %z
 }
+
+define i128 @freeze_i128() {
+; CHECK-SD-LABEL: freeze_i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    fmov x1, d0
+; CHECK-GI-NEXT:    ret
+  %y1 = freeze i128 poison
+  ret i128 %y1
+}
