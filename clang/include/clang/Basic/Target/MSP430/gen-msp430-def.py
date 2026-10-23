@@ -11,6 +11,26 @@ Script to generate MSP430 definitions from TI's devices.csv
 
 Download the devices.csv from [1] using the link "Header and Support Files".
 
+CPUS and MULTIPLIERS map the numeric CPU_TYPE and MPY_TYPE codes of the CSV
+to the CPU and hwmult names used by clang. The codes are defined in the
+legend at the top of devices.csv:
+
+CPU_TYPE:
+  0: MSP430 CPU
+  1: MSP430X CPU
+  2: MSP430XV2 CPU
+
+MPY_TYPE:
+  0: No hardware multiplier
+  1: 16 bit hardware multiplier
+  2: 16 bit hardware multiplier with sign extension (2xx devices)
+  4: 32 bit hardware multiplier
+  8: 32 bit hardware multiplier (5xx devices)
+
+Code 2 maps to "16bit" because there is no separate hwmult option for it.
+Code 8 maps to "f5series" because the 5xx/6xx multiplier uses different
+register addresses than the other 32 bit multiplier.
+
 [1]: https://www.ti.com/tool/MSP430-GCC-OPENSOURCE#downloads
 """
 import csv
@@ -43,6 +63,27 @@ PREFIX = """//===--- MSP430Target.def - MSP430 Feature/Processor Database----*- 
 // Target/MSP430/gen-msp430-def.py - use this tool rather than adding
 // new MCUs by hand.
 //
+// You can download the devices.csv from https://www.ti.com/tool/MSP430-GCC-OPENSOURCE#overview
+// by downloading the support and header files.
+//
+// This script exports the "Device Name", "CPU_TYPE" and "MPY_TYPE" columns from the
+// devices script.
+//
+// CPU_TYPE codes:
+//   0: MSP430 CPU          -> "msp430"
+//   1: MSP430X CPU         -> "msp430x"
+//   2: MSP430XV2 CPU       -> "msp430xv2"
+//
+// MPY_TYPE codes:
+//   0: No hardware multiplier                         -> "none"
+//   1: 16 bit hardware multiplier                     -> "16bit"
+//   2: 16 bit hardware multiplier with sign extension -> "16bit"
+//   4: 32 bit hardware multiplier                     -> "32bit"
+//   8: 32 bit hardware multiplier (5xx devices)       -> "f5series"
+//
+// Code 2 maps to "16bit" because there is no separate hwmult option for it.
+// Code 8 maps to "f5series" because the 5xx/6xx multiplier uses different
+// register addresses than the other 32 bit multiplier.
 //===----------------------------------------------------------------------===//
 
 #ifndef MSP430_MCU
@@ -59,7 +100,7 @@ MSP430_MCU("msp430i2xxgeneric", "msp430", "none")
 """
 
 
-def csv2def(csv_path, def_path):
+def csv2def(csv_path: str, def_path: str):
     """
     Parse the devices.csv file at the given path, generate the definitions and
     write them to the given path.
