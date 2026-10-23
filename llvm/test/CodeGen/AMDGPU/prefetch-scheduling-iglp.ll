@@ -3,7 +3,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck %s
 
 ; In a sched_group_barrier region (2 VMEM reads, 1 VALU, 2 VMEM reads, 2 VALU,
-; 1 VMEM write), the prefetch stays ahead of the two loads that follow it.
+; 1 VMEM write), the prefetch stays after the two loads before it and ahead of
+; the two loads after it.
 define amdgpu_kernel void @sched_group_barrier_prefetch(ptr addrspace(1) noalias %a, ptr addrspace(1) noalias %q, ptr addrspace(1) noalias %out) {
 ; CHECK-LABEL: sched_group_barrier_prefetch:
 ; CHECK:       ; %bb.0:
@@ -13,31 +14,29 @@ define amdgpu_kernel void @sched_group_barrier_prefetch(ptr addrspace(1) noalias
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
 ; CHECK-NEXT:    ; kill: killed $sgpr0_sgpr1
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_prefetch_b8 v1, s[2:3] scope:SCOPE_SE
-; CHECK-NEXT:    s_clause 0x3
-; CHECK-NEXT:    global_load_b32 v4, v0, s[0:1] scale_offset
-; CHECK-NEXT:    global_load_b32 v5, v0, s[0:1] offset:1024 scale_offset
-; CHECK-NEXT:    global_load_b32 v2, v0, s[0:1] offset:2048 scale_offset
-; CHECK-NEXT:    global_load_b32 v3, v0, s[0:1] offset:3072 scale_offset
-; CHECK-NEXT:    s_wait_xcnt 0x0
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    global_load_b32 v1, v0, s[0:1] scale_offset
+; CHECK-NEXT:    global_load_b32 v2, v0, s[0:1] offset:1024 scale_offset
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; CHECK-NEXT:    global_prefetch_b8 v3, s[2:3] scope:SCOPE_SE
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    global_load_b32 v4, v0, s[0:1] offset:2048 scale_offset
+; CHECK-NEXT:    global_load_b32 v5, v0, s[0:1] offset:3072 scale_offset
 ; CHECK-NEXT:    ; sched_group_barrier mask(0x00000020) size(2) SyncID(0)
 ; CHECK-NEXT:    ; sched_group_barrier mask(0x00000002) size(1) SyncID(0)
 ; CHECK-NEXT:    ; sched_group_barrier mask(0x00000020) size(2) SyncID(0)
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
-; CHECK-NEXT:    v_add_f32_e32 v4, v4, v5
+; CHECK-NEXT:    v_add_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    ; sched_group_barrier mask(0x00000002) size(2) SyncID(0)
 ; CHECK-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
+; CHECK-NEXT:    v_add_f32_e32 v2, v4, v5
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e32 v2, v4, v2
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
+; CHECK-NEXT:    v_add_f32_e32 v1, v1, v2
+; CHECK-NEXT:    global_store_b32 v0, v1, s[6:7] scale_offset
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p0 = getelementptr inbounds float, ptr addrspace(1) %a, i32 %tid

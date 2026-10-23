@@ -1,4 +1,4 @@
-//===- AMDGPUPrefetchOrdering.h - Order prefetches before loads -*- C++ -*-===//
+//===- AMDGPUPrefetchOrdering.h - Order prefetches and loads ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-/// Orders every prefetch before the loads that follow it. Add it before the
+/// Keeps prefetches in program order with respect to loads. Add it before the
 /// IGroupLP mutation, so that sched_group_barrier pipelines keep the order.
 std::unique_ptr<ScheduleDAGMutation> createAMDGPUPrefetchOrderingDAGMutation();
 

@@ -1,4 +1,4 @@
-//===--- AMDGPUPrefetchOrdering.cpp - Order prefetches before loads -------===//
+//===--- AMDGPUPrefetchOrdering.cpp - Order prefetches and loads ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// A DAG mutation that keeps each VMEM and SMEM prefetch ahead of the loads
-/// that follow it in program order. Prefetches are otherwise not ordered
-/// against memory accesses, so earlier accesses and later stores can move
-/// across them. Prefetches are chained in program order and each load is
-/// ordered after the closest preceding prefetch, so every prefetch precedes
-/// every later load.
+/// A DAG mutation that keeps VMEM and SMEM prefetches in program order with
+/// respect to loads: each prefetch stays after the loads before it and ahead
+/// of the loads after it. Prefetches are otherwise not ordered against memory
+/// accesses, so stores can move across them. Prefetches are chained in program
+/// order, each load is ordered after the closest preceding prefetch, and each
+/// prefetch after the loads since the previous one.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,14 +50,24 @@ void PrefetchOrdering::apply(ScheduleDAGInstrs *DAG) {
   // Prefetches that every later load has to follow. Normally this is only the
   // last prefetch, which itself follows the earlier ones.
   SmallVector<SUnit *, 4> Pending;
+  // Loads since the last prefetch, which the next prefetch has to follow.
+  SmallVector<SUnit *, 8> Loads;
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr &MI = *SU.getInstr();
-    if (!Pending.empty() && anyInBundle(MI, isNonPrefetchLoad))
+    bool IsLoad = anyInBundle(MI, isNonPrefetchLoad);
+    if (IsLoad)
       for (SUnit *Pf : Pending)
         DAG->addEdge(&SU, SDep(Pf, SDep::Artificial));
 
-    if (!anyInBundle(MI, SIInstrInfo::isPrefetch))
+    if (!anyInBundle(MI, SIInstrInfo::isPrefetch)) {
+      if (IsLoad)
+        Loads.push_back(&SU);
       continue;
+    }
+
+    for (SUnit *L : Loads)
+      DAG->addEdge(&SU, SDep(L, SDep::Artificial));
+    Loads.clear();
 
     // A pending prefetch that cannot be ordered before SU without creating a
     // cycle stays pending, so that it is still ordered before later loads.

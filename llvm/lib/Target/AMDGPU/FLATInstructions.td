@@ -527,8 +527,8 @@ class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VGPROp_64:$vaddr), str
   let has_vdst = 0;
   let has_data = 0;
   // mayStore keeps a prefetch from being treated as dead and is required by its
-  // patterns. Ordering against later loads comes from AMDGPUPrefetchOrdering,
-  // not from side effects.
+  // patterns. Ordering against loads comes from AMDGPUPrefetchOrdering, not
+  // from side effects.
   let mayLoad = 1;
   let mayStore = 1;
   let VM_CNT = 0;
