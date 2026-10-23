@@ -35,6 +35,22 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     assert(N->getOperand(2).getOpcode() == ISD::TargetConstant &&
            "Expected index to be a target constant!");
     break;
+  case RISCVISD::TUPLE_CAST: {
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(VT.isRISCVVectorTuple() && OpVT.isRISCVVectorTuple() &&
+           "Expected input and output of TUPLE_CAST to be vector tuples");
+    unsigned NF = VT.getRISCVVectorTupleNumFields();
+    unsigned OpNF = OpVT.getRISCVVectorTupleNumFields();
+    unsigned LMUL = divideCeil(VT.getSizeInBits().getKnownMinValue(),
+                               NF * RISCV::RVVBitsPerBlock);
+    unsigned OpLMUL = divideCeil(OpVT.getSizeInBits().getKnownMinValue(),
+                                 OpNF * RISCV::RVVBitsPerBlock);
+    assert(NF == OpNF && LMUL == OpLMUL &&
+           "Expected input and output of TUPLE_CAST to have the same "
+           "factor and LMUL");
+    break;
+  }
   case RISCVISD::VDOT4A_VL:
   case RISCVISD::VDOT4AU_VL:
   case RISCVISD::VDOT4ASU_VL: {
@@ -50,6 +66,22 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
            MaskVT.getVectorElementCount() == VT.getVectorElementCount() &&
            "Expected mask VT to be an i1 scalable vector with same number of "
            "elements as the result");
+    break;
+  }
+  case RISCVISD::PNCLIPP:
+  case RISCVISD::PNCLIPUP: {
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(VT.isVector() && "Expected vector result");
+    assert(VT.getSizeInBits() == OpVT.getSizeInBits() &&
+           "Expected result and operands to have the same size!");
+    assert(N->getOperand(1).getValueType() == OpVT &&
+           "Expected operands to have the same type");
+    assert(((!OpVT.isVector() && VT.getVectorNumElements() == 2) ||
+            (OpVT.isVector() &&
+             OpVT.getVectorNumElements() * 2 == VT.getVectorNumElements())) &&
+           "Expected operands to be scalar or a vector with half the number of "
+           "elements");
     break;
   }
   }

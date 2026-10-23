@@ -101,7 +101,10 @@ static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   if constexpr (checkLiveness) {
     __kmpc_impl_lanemask_t Liveness = mapping::activemask();
     // Check for partial warp with non-contiguous lanes.
-    if (Liveness == lanes::All) {
+    // Consider that Liveness::ALL is a 64-bit value, so compare the actual
+    // number of set bits to handle 32bit waves correctly.
+    const uint64_t Full = ~uint64_t(0) >> (64 - mapping::getWarpSize());
+    if (Liveness == Full) {
       gpu_regular_warp_reduce(reduce_data, shflFct);
     } else if (!(Liveness & (Liveness + 1))) {
       // Partial warp but contiguous lanes.
@@ -287,15 +290,22 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
 
   // Make sure that global buffer is fresh.
   fence::kernel(atomic::acquire);
+
+  // Use a loop with a constant stride for the single-thread case, so that it
+  // can be unrolled.
+  if (NumThreads == 1) {
+    glcpyFct(GlobalBuffer, 0, reduce_data);
+    for (uint32_t I = 1; I < NumTeams; ++I)
+      glredFct(GlobalBuffer, I, reduce_data);
+    return 1;
+  }
+
   // Get the team values from the global buffer.
   glcpyFct(GlobalBuffer, ThreadId, reduce_data);
   // In case we have more teams than threads, we need to iterate over the
   // remaining teams.
   for (uint32_t I = NumThreads + ThreadId; I < NumTeams; I += NumThreads)
     glredFct(GlobalBuffer, I, reduce_data);
-
-  if (NumThreads == 1)
-    return 1;
 
   return gpu_block_reduce<false>(reduce_data, shflFct, cpyFct, NumThreads,
                                  ThreadId);

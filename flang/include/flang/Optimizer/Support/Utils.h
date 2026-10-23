@@ -13,7 +13,6 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -22,22 +21,38 @@
 #include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Path.h"
 #include <string>
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 namespace fir {
-/// Return the line of a location, or 1 if it does not carry one.
+/// Return the line of a location, or 1 if it does not carry one. The location
+/// can be a fused one, e.g. for something read from an INCLUDE'd file, so
+/// search it rather than expecting a bare FileLineColLoc.
 inline uint32_t getLineFromLoc(mlir::Location loc) {
   uint32_t line = 1;
-  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>())
     line = fileLoc.getLine();
   return line;
+}
+
+/// Return the file that \p loc names, or \p fallback if it names none.
+inline mlir::LLVM::DIFileAttr
+getFileAttrFromLoc(mlir::Location loc, mlir::LLVM::DIFileAttr fallback) {
+  auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>();
+  if (!fileLoc)
+    return fallback;
+  llvm::StringRef path = fileLoc.getFilename().getValue();
+  return mlir::LLVM::DIFileAttr::get(loc.getContext(),
+                                     llvm::sys::path::filename(path),
+                                     llvm::sys::path::parent_path(path));
 }
 
 /// Return the integer value of a arith::ConstantOp.
@@ -86,16 +101,15 @@ inline std::optional<int> mlirFloatTypeToKind(mlir::Type type) {
   return std::nullopt;
 }
 
-inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
-                                              mlir::Type type,
+inline std::string mlirTypeToIntrinsicFortran(mlir::Type type,
                                               mlir::Location loc,
                                               const llvm::Twine &name) {
   if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(type))
-      return "REAL(KIND="s + std::to_string(*kind) + ")";
+      return "REAL(KIND=" + std::to_string(*kind) + ")";
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
-      return "COMPLEX(KIND="s + std::to_string(*kind) + ")";
+      return "COMPLEX(KIND=" + std::to_string(*kind) + ")";
   } else if (type.isUnsignedInteger()) {
     if (type.isInteger(8))
       return "UNSIGNED(KIND=1)";
@@ -117,37 +131,34 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
     return "INTEGER(KIND=8)";
   else if (type.isInteger(128))
     return "INTEGER(KIND=16)";
-  else if (type == fir::LogicalType::get(builder.getContext(), 1))
+  else if (type == fir::LogicalType::get(type.getContext(), 1))
     return "LOGICAL(KIND=1)";
-  else if (type == fir::LogicalType::get(builder.getContext(), 2))
+  else if (type == fir::LogicalType::get(type.getContext(), 2))
     return "LOGICAL(KIND=2)";
-  else if (type == fir::LogicalType::get(builder.getContext(), 4))
+  else if (type == fir::LogicalType::get(type.getContext(), 4))
     return "LOGICAL(KIND=4)";
-  else if (type == fir::LogicalType::get(builder.getContext(), 8))
+  else if (type == fir::LogicalType::get(type.getContext(), 8))
     return "LOGICAL(KIND=8)";
 
   fir::emitFatalError(loc, "unsupported type in " + name + ": " +
                                fir::mlirTypeToString(type));
 }
 
-inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
-                              mlir::Location loc,
+inline void intrinsicTypeTODO(mlir::Type type, mlir::Location loc,
                               const llvm::Twine &intrinsicName) {
-  TODO(loc,
-       "intrinsic: " +
-           fir::mlirTypeToIntrinsicFortran(builder, type, loc, intrinsicName) +
-           " in " + intrinsicName);
+  TODO(loc, "intrinsic: " +
+                fir::mlirTypeToIntrinsicFortran(type, loc, intrinsicName) +
+                " in " + intrinsicName);
 }
 
-inline void intrinsicTypeTODO2(fir::FirOpBuilder &builder, mlir::Type type1,
-                               mlir::Type type2, mlir::Location loc,
+inline void intrinsicTypeTODO2(mlir::Type type1, mlir::Type type2,
+                               mlir::Location loc,
                                const llvm::Twine &intrinsicName) {
-  TODO(loc,
-       "intrinsic: {" +
-           fir::mlirTypeToIntrinsicFortran(builder, type2, loc, intrinsicName) +
-           ", " +
-           fir::mlirTypeToIntrinsicFortran(builder, type2, loc, intrinsicName) +
-           "} in " + intrinsicName);
+  TODO(loc, "intrinsic: {" +
+                fir::mlirTypeToIntrinsicFortran(type1, loc, intrinsicName) +
+                ", " +
+                fir::mlirTypeToIntrinsicFortran(type2, loc, intrinsicName) +
+                "} in " + intrinsicName);
 }
 
 inline std::pair<Fortran::common::TypeCategory, KindMapping::KindTy>

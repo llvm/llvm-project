@@ -29,7 +29,7 @@ static OptBisect &getOptBisector() {
 }
 
 static cl::opt<int> OptBisectLimit(
-    "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
+    "opt-bisect-limit", cl::Hidden, cl::init(-1),
     cl::cb<void, int>([](int Limit) {
       if (Limit == -1)
         // -1 means run all passes.
@@ -49,7 +49,7 @@ static cl::opt<int> OptBisectLimit(
         "Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));
 
 static cl::opt<std::string> OptBisectIntervals(
-    "opt-bisect", cl::Hidden, cl::Optional,
+    "opt-bisect", cl::Hidden,
     cl::cb<void, const std::string &>([](const std::string &IntervalStr) {
       if (IntervalStr == "-1") {
         // -1 means run all passes.
@@ -77,14 +77,24 @@ static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
     cl::desc(
         "Show verbose output when opt-bisect-limit and/or opt-disable are set"),
-    cl::Hidden, cl::init(true), cl::Optional);
+    cl::Hidden, cl::init(true));
 
 static cl::list<std::string> OptDisablePasses(
-    "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
+    "opt-disable", cl::Hidden, cl::CommaSeparated,
     cl::cb<void, std::string>([](const std::string &Pass) {
       getOptBisector().setDisabled(Pass);
     }),
     cl::desc("Optimization pass(es) to disable (comma-separated list)"));
+
+static cl::list<std::string> OptBisectFuncsList(
+    "opt-bisect-funcs", cl::value_desc("function names"), cl::CommaSeparated,
+    cl::cb<void, std::string>([](const std::string &FuncName) {
+      getOptBisector().setEnabledFunc(FuncName);
+    }),
+    cl::Hidden,
+    cl::desc(
+        "Only perform opt bisect on functions in this list. Passes on all "
+        "other functions run as usual. If empty, apply to all functions."));
 
 static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
                              bool Running) {
@@ -93,9 +103,15 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
-bool OptBisect::shouldRunPass(StringRef PassName,
-                              StringRef IRDescription) const {
+bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
+                              StringRef FuncName) const {
   assert(isEnabled());
+
+  // -opt-bisect-funcs restricts bisection to the listed functions. Excluded
+  // passes behave as if bisection were off, i.e. always run.
+  if (!FuncName.empty() && !OptBisectFuncNames.empty() &&
+      !OptBisectFuncNames.contains(FuncName))
+    return true;
 
   int CurBisectNum = ++LastBisectNum;
 

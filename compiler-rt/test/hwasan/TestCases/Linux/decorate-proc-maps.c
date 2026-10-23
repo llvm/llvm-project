@@ -22,10 +22,9 @@
 #include <unistd.h>
 
 void CopyFdToFd(int in_fd, int out_fd) {
-  const size_t kBufSize = 0x10000;
-  static char buf[kBufSize];
+  static char buf[0x10000];
   while (1) {
-    ssize_t got = read(in_fd, buf, kBufSize);
+    ssize_t got = read(in_fd, buf, sizeof(buf));
     if (got > 0) {
       write(out_fd, buf, got);
     } else if (got == 0) {

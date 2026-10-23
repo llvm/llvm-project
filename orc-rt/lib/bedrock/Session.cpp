@@ -52,7 +52,7 @@ private:
 Session::ControllerAccess::~ControllerAccess() = default;
 
 Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
-                 ErrorReporterFn ReportError)
+                 ErrorReporterFn ReportError) noexcept
     : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {
@@ -69,6 +69,12 @@ Session::~Session() {
     return CurrentState == State::Shutdown && TargetState == State::None;
   });
   ORC_RT_LOG(Info, Session, "Session %p destructor complete", this);
+}
+
+SymbolLookupResult
+Session::lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept {
+  std::scoped_lock<std::mutex> Lock(M);
+  return InstanceSymbols.lookup(LS);
 }
 
 void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
@@ -252,6 +258,17 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   // We've already shutdown. Run in-place.
   OnShutdown();
 }
+
+#if ORC_RT_LOG_ENABLED(Error)
+void Session::logErrors(Session &S, Error Err) noexcept {
+  // Take the message outside ORC_RT_LOG: the os_log backend only evaluates
+  // log arguments if the log type is enabled at runtime, which would leave
+  // Err unchecked otherwise.
+  auto ErrMsg = toString(std::move(Err));
+  ORC_RT_LOG(Error, Session, "Session %p error: " ORC_RT_LOG_PUB_S, &S,
+             ErrMsg.c_str());
+}
+#endif // ORC_RT_LOG_ENABLED(Error)
 
 void Session::appendService(std::unique_ptr<Service> Srv) {
 

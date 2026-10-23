@@ -332,7 +332,9 @@ namespace llvm {
                                        const SelectionDAG &DAG,
                                        unsigned Depth = 0) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
@@ -568,8 +570,8 @@ namespace llvm {
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     unsigned getJumpTableEncoding() const override;
     bool isJumpTableRelative() const override;

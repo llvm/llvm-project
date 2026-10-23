@@ -31,6 +31,7 @@
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
@@ -47,7 +48,6 @@
 ; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
 ; CHECK-NEXT:       Fast Register Allocator
