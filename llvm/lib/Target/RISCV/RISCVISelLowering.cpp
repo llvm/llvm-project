@@ -19503,6 +19503,39 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Expose the two scalar accumulates instead of a dot-product pair and PADD.DW.
+static SDValue combineAddPackedByteDot(SDNode *N, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP() || Subtarget.is64Bit() ||
+      N->getValueType(0) != MVT::v2i32)
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Lo, Hi;
+    if (!sd_match(N->getOperand(I), m_OneUse(m_Node(ISD::BUILD_VECTOR,
+                                                    m_Value(Lo), m_Value(Hi)))))
+      continue;
+    unsigned Opc = Lo.getOpcode();
+    if (Opc != Hi.getOpcode() ||
+        (Opc != RISCVISD::PM4ADD && Opc != RISCVISD::PM4ADDU &&
+         Opc != RISCVISD::PM4ADDSU))
+      continue;
+    // Splitting is profitable if at least one dot can fold into its add.
+    if (!Lo.hasOneUse() && !Hi.hasOneUse())
+      continue;
+
+    SDLoc DL(N);
+    SDValue Acc = N->getOperand(1 - I);
+    SDValue AccLo = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 0);
+    SDValue AccHi = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 1);
+    SDValue SumLo = DAG.getNode(ISD::ADD, DL, MVT::i32, AccLo, Lo);
+    SDValue SumHi = DAG.getNode(ISD::ADD, DL, MVT::i32, AccHi, Hi);
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, SumLo, SumHi);
+  }
+  return SDValue();
+}
+
 static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
   // Recognize the RV64 decompositions listed for the 32-bit packed widening
@@ -19724,6 +19757,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineAddPackedByteDot(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
