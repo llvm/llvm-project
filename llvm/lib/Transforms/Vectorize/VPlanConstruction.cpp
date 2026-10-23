@@ -2229,6 +2229,12 @@ static bool handleFirstArgMinOrMax(
   bool IsNonCanonicalSelReduction =
       !WideIV->isCanonical() || WideIVScalarTy != Ty;
   if (IsNonCanonicalSelReduction) {
+    // TODO: Support tailfolding when the select's type doesn't
+    // match the canonical type.
+    bool HasNonCanonicalSelType = FindIVSelectR->getScalarType() != Ty;
+    if (HasNonCanonicalSelType && HeaderMask)
+      return false;
+
     VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
     auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
@@ -2241,7 +2247,7 @@ static bool handleFirstArgMinOrMax(
     // The select's type might differ from the canonical IV's type. In that
     // case rewrite the find-iv reduction chain to match the canonical
     // IV type.
-    if (FindIVSelectR->getScalarType() != Ty) {
+    if (HasNonCanonicalSelType) {
       VPBuilder Builder(FindIVSelectR);
       auto *CanonicalFindIVPhiR = FindLastIVPhiR->cloneWithOperands(
           Plan.getPoison(Ty), Plan.getPoison(Ty));
@@ -2258,20 +2264,7 @@ static bool handleFirstArgMinOrMax(
       }
       VPSingleDefRecipe *CanonicalSelectR =
           Builder.createSelect(Cond, TrueVal, FalseVal);
-
-      // If the tail is folded also create the header-mask select with the
-      // new type.
-      VPValue *CanonicalBackedgeVal = CanonicalSelectR;
-      if (HeaderMask) {
-        VPRecipeBase *PredSelect = BackedgeVal->getDefiningRecipe();
-        CanonicalBackedgeVal = VPBuilder::getToInsertAfter(PredSelect)
-                                   .createSelect(HeaderMask, CanonicalSelectR,
-                                                 CanonicalFindIVPhiR);
-        BackedgeVal->replaceAllUsesWith(
-            Plan.getPoison(BackedgeVal->getScalarType()));
-        PredSelect->eraseFromParent();
-      }
-      CanonicalFindIVPhiR->setOperand(1, CanonicalBackedgeVal);
+      CanonicalFindIVPhiR->setOperand(1, CanonicalSelectR);
 
       // Erase the previous select reduction.
       FindIVSelectR->replaceAllUsesWith(
