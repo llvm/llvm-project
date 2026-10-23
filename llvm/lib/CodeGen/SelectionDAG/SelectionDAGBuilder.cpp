@@ -85,6 +85,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -2625,8 +2626,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   if (BPI != nullptr) {
     // See if we are either likely to get an early out or compute both lhs/rhs
     // of the condition.
-    BasicBlock *IfFalse = I.getSuccessor(0);
-    BasicBlock *IfTrue = I.getSuccessor(1);
+    BasicBlock *IfTrue = I.getSuccessor(0);
+    BasicBlock *IfFalse = I.getSuccessor(1);
+    if (ProfcheckDisableMetadataFixes)
+      std::swap(IfTrue, IfFalse);
 
     std::optional<bool> Likely;
     if (BPI->isEdgeHot(I.getParent(), IfTrue))
