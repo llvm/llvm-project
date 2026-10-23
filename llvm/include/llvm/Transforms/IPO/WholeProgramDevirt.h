@@ -227,14 +227,11 @@ struct WholeProgramDevirtPass
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;
-  bool DevirtSpeculatively = false;
   WholeProgramDevirtPass()
       : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                         const ModuleSummaryIndex *ImportSummary,
-                         bool DevirtSpeculatively = false)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DevirtSpeculatively(DevirtSpeculatively) {
+                         const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
     assert(!(ExportSummary && ImportSummary));
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
