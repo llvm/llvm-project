@@ -1193,8 +1193,7 @@ define amdgpu_ps bfloat @clamp_bf16(bfloat %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, 0 op_sel:[0,1]
-; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, 1.0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
 ; GFX1250-NEXT:    ; return to shader part epilog
   %max = call nnan bfloat @llvm.maxnum.bf16(bfloat %a, bfloat 0.0)
   %min = call nnan bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
@@ -1238,7 +1237,8 @@ define amdgpu_ps bfloat @clamp_bf16_half_one_bits(bfloat %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, 0 op_sel:[0,1]
+; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, 0x3c00
 ; GFX1250-NEXT:    ; return to shader part epilog
   %max = call nnan bfloat @llvm.maxnum.bf16(bfloat %a, bfloat 0.0)
   %min = call nnan bfloat @llvm.minnum.bf16(bfloat %max, bfloat 0xR3C00)

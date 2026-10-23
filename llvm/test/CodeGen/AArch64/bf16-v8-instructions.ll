@@ -15442,13 +15442,6 @@ define bfloat @test_reduce_fmul_fast(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-GI-NEXT:    add w9, w9, w8
-; CHECK-CVT-GI-NEXT:    add w9, w9, w10
-; CHECK-CVT-GI-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-GI-NEXT:    fmov s0, w9
-; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8
 ; CHECK-CVT-GI-NEXT:    add w8, w8, w10
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16

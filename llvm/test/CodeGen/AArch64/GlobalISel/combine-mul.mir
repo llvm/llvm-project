@@ -112,7 +112,9 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(bf16) = COPY $h0
-    ; CHECK-NEXT: $h0 = COPY [[COPY]](bf16)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(bf16) = G_FCONSTANT bfloat 7.812500e-03
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(bf16) = G_FMUL [[COPY]], [[C]]
+    ; CHECK-NEXT: $h0 = COPY [[FMUL]](bf16)
     %0:_(bf16) = COPY $h0
     %1:_(bf16) = G_FCONSTANT bfloat 0xR3C00
     %2:_(bf16) = G_FMUL %0, %1(bf16)
@@ -129,8 +131,9 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(bf16) = COPY $h0
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(bf16) = G_FNEG [[COPY]]
-    ; CHECK-NEXT: $h0 = COPY [[FNEG]](bf16)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(bf16) = G_FCONSTANT bfloat -7.812500e-03
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(bf16) = G_FMUL [[COPY]], [[C]]
+    ; CHECK-NEXT: $h0 = COPY [[FMUL]](bf16)
     %0:_(bf16) = COPY $h0
     %1:_(bf16) = G_FCONSTANT bfloat 0xRBC00
     %2:_(bf16) = G_FMUL %0, %1(bf16)
@@ -146,9 +149,7 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(bf16) = COPY $h0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(bf16) = G_FCONSTANT bfloat 1.000000e+00
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(bf16) = G_FMUL [[COPY]], [[C]]
-    ; CHECK-NEXT: $h0 = COPY [[FMUL]](bf16)
+    ; CHECK-NEXT: $h0 = COPY [[COPY]](bf16)
     %0:_(bf16) = COPY $h0
     %1:_(bf16) = G_FCONSTANT bfloat 1.0
     %2:_(bf16) = G_FMUL %0, %1(bf16)
