@@ -54,26 +54,39 @@ class TargetCharacteristics;
 
 // Specific intrinsic types are represented by specializations of
 // this class template Type<CATEGORY>.
-// This used to be Type<CATEGORY,KIND>, but now KIND is passed at runtime.
-// TODO: Since they are functionally the same, replace all occurances of Type
-// with TypeCategory.
+//
+// TODO: This used to be Type<CATEGORY,KIND>, but now KIND is passed at runtime.
+//       Since they are functionally the same, replace all occurances of Type
+//       with TypeCategory.
 template <TypeCategory CATEGORY> class Type;
 
+// The type and kind used for array subscripts.
+// Be aware that SubscriptInteger alone matches INTEGER of any kind.
 using SubscriptInteger = Type<TypeCategory::Integer>;
 inline constexpr int SubscriptIntegerKind{8};
 
+// The type and kind used for int arguments in the C ABI.
+// Be aware that CInteger alone matches INTEGER of any kind.
 using CInteger = Type<TypeCategory::Integer>;
 inline constexpr int CIntegerKind{4};
 
+// The type and kind of the largest supported integer.
+// Be aware that LargestInt alone matches INTEGER of any kind.
 using LargestInt = Type<TypeCategory::Integer>;
 inline constexpr int LargestIntKind{16};
 
+// The type and kind of the result of logical iterations.
+// Be aware that LogicalResult alone matches INTEGER of any kind.
 using LogicalResult = Type<TypeCategory::Logical>;
 inline constexpr int LogicalResultKind{4};
 
+// The type and kind of the largest supported real.
+// Be aware that LargestInt alone matches REAL of any kind.
 using LargestReal = Type<TypeCategory::Real>;
 inline constexpr int LargestRealKind{16};
 
+// The type and kind of ASCII character strings.
+// Be aware that Ascii alone matches CHARACTER of any kind.
 using Ascii = Type<TypeCategory::Character>;
 inline constexpr int AsciiKind{1};
 
