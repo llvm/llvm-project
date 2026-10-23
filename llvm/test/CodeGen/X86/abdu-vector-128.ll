@@ -802,24 +802,15 @@ define <4 x i64> @abd_select_v4i64_pr233087(<4 x i64> %a, <4 x i64> %b) nounwind
 ; SSE2-NEXT:    pxor %xmm1, %xmm3
 ; SSE2-NEXT:    psubq %xmm3, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    psubq %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: abd_select_v4i64_pr233087:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [1,9223372036854775808]
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm4
-; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE42-NEXT:    movdqa %xmm4, %xmm5
-; SSE42-NEXT:    pxor %xmm1, %xmm5
-; SSE42-NEXT:    pxor %xmm2, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    psubq %xmm1, %xmm2
-; SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE42-NEXT:    pxor %xmm0, %xmm5
 ; SSE42-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; SSE42-NEXT:    pxor %xmm3, %xmm1
@@ -827,7 +818,7 @@ define <4 x i64> @abd_select_v4i64_pr233087(<4 x i64> %a, <4 x i64> %b) nounwind
 ; SSE42-NEXT:    psubq %xmm5, %xmm3
 ; SSE42-NEXT:    pxor %xmm1, %xmm3
 ; SSE42-NEXT:    psubq %xmm3, %xmm1
-; SSE42-NEXT:    movapd %xmm2, %xmm0
+; SSE42-NEXT:    pxor %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: abd_select_v4i64_pr233087:
@@ -837,18 +828,15 @@ define <4 x i64> @abd_select_v4i64_pr233087(<4 x i64> %a, <4 x i64> %b) nounwind
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpsubq %xmm2, %xmm4, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm1, %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpsubq %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm5
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vpsubq %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpxor %xmm0, %xmm3, %xmm3
+; AVX1-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_select_v4i64_pr233087:

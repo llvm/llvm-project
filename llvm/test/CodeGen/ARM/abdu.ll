@@ -8,17 +8,12 @@ define i32 @abd_select_known_order_i32(i32 %a, i32 %b) nounwind {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    orr r1, r1, #-2147483648
 ; ARM-NEXT:    sub r0, r1, r0, lsr #1
-; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    rsbmi r0, r0, #0
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: abd_select_known_order_i32:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    orr r1, r1, #-2147483648
 ; THUMB-NEXT:    sub.w r0, r1, r0, lsr #1
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    it mi
-; THUMB-NEXT:    rsbmi r0, r0, #0
 ; THUMB-NEXT:    bx lr
   %l = lshr i32 %a, 1
   %r = or i32 %b, -2147483648
