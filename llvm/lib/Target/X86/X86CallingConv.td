@@ -1250,3 +1250,43 @@ def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               
                                                (sequence "XMM%u", 8, 15))>;
+
+// LFI reserves R14 and R15 as sandbox base and context registers. They must
+// never be saved or restored by a callee, since the LFI rewriter rejects any
+// instruction that modifies them, but they are still preserved across calls.
+// Every callee-saved register list that can be selected on 64-bit non-Windows
+// targets needs an LFI variant that excludes them.
+def CSR_64_LFI : CalleeSavedRegs<(sub CSR_64, R14, R15)>;
+def CSR_64_LFI_EHRet : CalleeSavedRegs<(sub CSR_64EHRet, R14, R15)>;
+def CSR_64_LFI_SwiftError : CalleeSavedRegs<(sub CSR_64_SwiftError, R14, R15)>;
+def CSR_64_LFI_SwiftTail : CalleeSavedRegs<(sub CSR_64_SwiftTail, R14, R15)>;
+def CSR_64_LFI_TLS_Darwin : CalleeSavedRegs<(sub CSR_64_TLS_Darwin, R14, R15)>;
+def CSR_64_LFI_CXX_TLS_Darwin_ViaCopy
+    : CalleeSavedRegs<(sub CSR_64_CXX_TLS_Darwin_ViaCopy, R14, R15)>;
+def CSR_64_LFI_RT_MostRegs : CalleeSavedRegs<(sub CSR_64_RT_MostRegs, R14, R15)>;
+def CSR_64_LFI_RT_AllRegs : CalleeSavedRegs<(sub CSR_64_RT_AllRegs, R14, R15)>;
+def CSR_64_LFI_RT_AllRegs_AVX
+    : CalleeSavedRegs<(sub CSR_64_RT_AllRegs_AVX, R14, R15)>;
+def CSR_64_LFI_MostRegs : CalleeSavedRegs<(sub CSR_64_MostRegs, R14, R15)>;
+def CSR_64_LFI_AllRegs : CalleeSavedRegs<(sub CSR_64_AllRegs, R14, R15)>;
+def CSR_64_LFI_AllRegs_NoSSE
+    : CalleeSavedRegs<(sub CSR_64_AllRegs_NoSSE, R14, R15)>;
+def CSR_64_LFI_AllRegs_AVX : CalleeSavedRegs<(sub CSR_64_AllRegs_AVX, R14, R15)>;
+def CSR_64_LFI_AllRegs_AVX512
+    : CalleeSavedRegs<(sub CSR_64_AllRegs_AVX512, R14, R15)>;
+def CSR_64_LFI_Intel_OCL_BI
+    : CalleeSavedRegs<(sub CSR_64_Intel_OCL_BI, R14, R15)>;
+def CSR_64_LFI_Intel_OCL_BI_AVX
+    : CalleeSavedRegs<(sub CSR_64_Intel_OCL_BI_AVX, R14, R15)>;
+def CSR_64_LFI_Intel_OCL_BI_AVX512
+    : CalleeSavedRegs<(sub CSR_64_Intel_OCL_BI_AVX512, R14, R15)>;
+def CSR_SysV64_LFI_RegCall
+    : CalleeSavedRegs<(sub CSR_SysV64_RegCall, R14, R15)>;
+def CSR_SysV64_LFI_RegCall_NoSSE
+    : CalleeSavedRegs<(sub CSR_SysV64_RegCall_NoSSE, R14, R15)>;
+
+// The explicit Win64 calling convention is also available on non-Windows
+// targets, so it needs LFI variants as well.
+def CSR_Win64_LFI : CalleeSavedRegs<(sub CSR_Win64, R14, R15)>;
+def CSR_Win64_LFI_NoSSE : CalleeSavedRegs<(sub CSR_Win64_NoSSE, R14, R15)>;
+def CSR_Win64_LFI_APX : CalleeSavedRegs<(sub CSR_Win64_APX, R14, R15)>;

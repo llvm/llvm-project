@@ -1,5 +1,6 @@
 ; RUN: split-file %s %t
 ; RUN: llc -mtriple=x86_64_lfi -exception-model=sjlj < %t/sjlj.ll | FileCheck -check-prefix=SJLJ %s
+; RUN: llc -mtriple=x86_64_lfi -exception-model=sjlj -filetype=obj -o /dev/null < %t/sjlj.ll
 ; RUN: llc -mtriple=x86_64_lfi < %t/dwarf.ll | FileCheck -check-prefix=DWARF %s
 
 ; The SJLJ dispatch block jumps indirectly to the landing pad through a jump
@@ -24,6 +25,23 @@ define void @invoke_aligns_landing_pad() personality ptr @__gxx_personality_sj0 
 ; SJLJ-NEXT:  .Ltmp2:
 ; SJLJ:       .LJTI0_0:
 ; SJLJ-NEXT:    .quad .LBB0_2
+entry:
+  invoke void @may_throw() to label %cont unwind label %lpad
+
+cont:
+  ret void
+
+lpad:
+  %l = landingpad { ptr, i32 } catch ptr null
+  ret void
+}
+
+; Reserved registers must not be treated as callee-saved by the dispatch block
+; for a function with a non-default calling convention either.
+define coldcc void @invoke_coldcc() personality ptr @__gxx_personality_sj0 {
+; SJLJ-LABEL: invoke_coldcc:
+; SJLJ-NOT:     %r14
+; SJLJ-NOT:     %r15
 entry:
   invoke void @may_throw() to label %cont unwind label %lpad
 
