@@ -10,6 +10,10 @@ lldb_tablegen(JITLoaderGDBEnums.inc -gen-lldb-option-enum-defs
   SOURCE JITLoaderGDBEnums.td
   TARGET LLDBPluginJITLoaderGDBEnumsGen)
 
+lldb_tablegen(JITLoaderGDBEnums.json -dump-json
+  SOURCE JITLoaderGDBEnums.td
+  TARGET LLDBPluginJITLoaderGDBEnumsJsonGen)
+
 lldb_tablegen(JITLoaderGDBProperties.json -dump-json
   SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesJsonGen)
