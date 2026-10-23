@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Exhaustive test for the log1pf16 function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/optimization.h"
 #include "src/math/log1pf16.h"

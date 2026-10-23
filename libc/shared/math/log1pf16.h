@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Shared header for the log1pf16 function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_LOG1PF16_H
 #define LLVM_LIBC_SHARED_MATH_LOG1PF16_H
