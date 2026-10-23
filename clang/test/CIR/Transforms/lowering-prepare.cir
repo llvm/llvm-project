@@ -3,16 +3,17 @@
 // RUN:   | cir-opt --cir-lowering-prepare | FileCheck %s --check-prefix=UNSAFE
 
 // The guard lowering depends on threadsafe_statics, read from
-// #cir.lowering_lang_options rather than from an ASTContext.
+// #cir.lowering_options rather than from an ASTContext.
 
 !s32i = !cir.int<s, 32>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
-  cir.lowering_lang_options = #cir.lowering_lang_options<
+  cir.lowering_options = #cir.lowering_options<
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false,
-    openmp_is_target_device = false, clang_abi_compat = 16>
+    openmp_is_target_device = false, clang_abi_compat = 16,
+    enable_noundef_attrs = true>
 } {
   cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ1gvE1x"> @_ZZ1gvE1x = #cir.int<0> : !s32i align(4) dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
 

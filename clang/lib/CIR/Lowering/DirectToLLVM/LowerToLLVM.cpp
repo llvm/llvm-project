@@ -2399,9 +2399,9 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
   mlir::Attribute langOpts =
-      module->getAttr(cir::CIRDialect::getLoweringLangOptionsAttrName());
+      module->getAttr(cir::CIRDialect::getLoweringOptionsAttrName());
   auto loweringLangOps =
-      dyn_cast_if_present<cir::LoweringLangOptionsAttr>(langOpts);
+      dyn_cast_if_present<cir::LoweringOptionsAttr>(langOpts);
 
   bool isForHLSL = loweringLangOps ? loweringLangOps.getHlsl() : false;
   if (isForHLSL && mlir::isa<cir::MatrixType>(op.getAllocaType()) &&
