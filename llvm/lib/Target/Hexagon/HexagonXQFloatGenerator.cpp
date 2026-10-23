@@ -819,7 +819,7 @@ bool HexagonXQFloatGenerator::checkIfInputFromMult16(Register Reg) {
     return llvm::is_contained(XQFPMult16, Def->getOpcode());
 }
 
-// Generates sf = qf32 instruction or hf = qf16 intruction
+// Generates sf = qf32 instruction or hf = qf16 instruction
 void HexagonXQFloatGenerator::createConvertInstr(MachineInstr *UseMI,
                                                  Register &NewR, Register &OldR,
                                                  bool is32bit) {

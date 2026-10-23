@@ -1078,7 +1078,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
-  // Use call cost for frem intructions that have platform specific vector math
+  // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {

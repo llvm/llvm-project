@@ -5505,7 +5505,7 @@ mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
       result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
     } else
       return parser.emitError(parser.getCurrentLocation(),
-                              "Expected either intruction or data keyword");
+                              "Expected either instruction or data keyword");
 
     if (parser.parseComma())
       return mlir::failure();
