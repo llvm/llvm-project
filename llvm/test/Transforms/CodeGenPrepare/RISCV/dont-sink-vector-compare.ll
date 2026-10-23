@@ -32,8 +32,7 @@ define i64 @dont_sink_vector_compare_into_exit(ptr %a) {
 ; CHECK-NEXT:    [[DONE:%.*]] = or i1 [[ANY]], [[EXIT_COND]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[FIRST:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[FIRST:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[COND]], i1 false)
 ; CHECK-NEXT:    [[RES:%.*]] = add i64 [[IV]], [[FIRST]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
