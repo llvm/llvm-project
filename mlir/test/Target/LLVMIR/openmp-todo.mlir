@@ -339,6 +339,42 @@ llvm.func @scan_reduction_multidim(%lb : i32, %ub : i32, %step : i32, %x : !llvm
 
 // -----
 
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+omp.private {type = linear} @lin.i32 : i32
+llvm.func @scan_reduction_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr, %lin : !llvm.ptr) {
+  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
+  omp.parallel {
+    // expected-error@below {{not yet implemented: Unhandled clause inscan reduction with linear clause in omp.wsloop operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
+    omp.wsloop linear(@lin.i32 %lin -> %larg : !llvm.ptr = %step : i32) linear_var_types([i32]) reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.scan inclusive(%prv : !llvm.ptr)
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @single_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.single operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.single}}

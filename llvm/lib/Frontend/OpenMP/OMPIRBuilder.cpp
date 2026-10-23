@@ -5782,6 +5782,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     llvm::Value *SpanGuard = Builder.CreateICmpUGT(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
+    // The reduction combiner emitted in the seed block above may span multiple
+    // basic blocks, so the edge into LoopBB originates from whatever block the
+    // builder currently sits in, not necessarily SeedBB. Capture it for the
+    // loop-carried PHIs below.
+    llvm::BasicBlock *SeedContinuationBB = Builder.GetInsertBlock();
     Builder.CreateCondBr(SpanGuard, LoopBB, ExitBB);
     emitBlock(LoopBB, CurFn);
     Builder.SetInsertPoint(LoopBB);
@@ -5789,11 +5794,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     // size pow2k = 1;
     PHINode *Pow2K = Builder.CreatePHI(IndexTy, 2);
-    // The loop is now entered from the seed block (guarded by Span > 0), not
-    // directly from InputBB.
+    // The loop is entered from the seed path (guarded by Span > 1).
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
-                         SeedBB);
-    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), SeedBB);
+                         SeedContinuationBB);
+    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), SeedContinuationBB);
     // for (size i = n - 1; i >= 2 ^ k; --i)
     //   tmp[i] op= tmp[i-pow2k];
     llvm::BasicBlock *InnerLoopBB =

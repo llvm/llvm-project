@@ -572,14 +572,19 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         if (!op->template getParentOfType<omp::ParallelOp>())
           result = todo("inscan reduction on an orphaned worksharing loop "
                         "(no enclosing parallel region)");
-        // Scan reductions are only implemented for a single loop; a collapsed
-        // (multi-dimensional) loop nest is not yet supported.
-        if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation()))
+        if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation())) {
+          // Linear clauses are not yet supported together with scan
+          // reductions.
+          if (!wsloopOp.getLinearVars().empty())
+            result = todo("inscan reduction with linear clause");
+          // Scan reductions are only implemented for a single loop; a collapsed
+          // (multi-dimensional) loop nest is not yet supported.
           if (auto loopNest =
                   dyn_cast_or_null<omp::LoopNestOp>(wsloopOp.getWrappedLoop()))
             if (loopNest.getNumLoops() > 1)
               result = todo("inscan reduction on a collapsed "
                             "(multi-dimensional) loop nest");
+        }
       }
     }
   };
@@ -5077,10 +5082,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
   bool isSimd = wsloopOp.getScheduleSimd();
   bool loopNeedsBarrier = !wsloopOp.getNowait();
-  // TODO: Linear clause support needs to be enabled for scan reduction.
-  if (isInScanRegion)
-    assert(wsloopOp.getLinearVars().empty() &&
-           "Linear clause support is not enabled with scan reduction");
 
   // The only legal way for the direct parent to be omp.distribute is that this
   // represents 'distribute parallel do'. Otherwise, this is a regular

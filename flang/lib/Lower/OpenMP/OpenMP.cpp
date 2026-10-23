@@ -3585,7 +3585,26 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // TODO: Nested loops are not handled.
   mlir::Region &region = loopNestOp->getRegion(0);
   mlir::Value indexVal = fir::getBase(region.getArgument(0));
+  // The scan directive's immediate parent is not necessarily the DO construct
+  // it binds to: other constructs (for example a BLOCK) may be nested between
+  // the scan directive and the DO loop. Walk up the parent-construct chain to
+  // the nearest enclosing DO construct, whose induction variable is the scan
+  // loop's index.
   lower::pft::Evaluation *doConstructEval = eval.parentConstruct;
+  bool crossesBlockConstruct = false;
+  while (doConstructEval && !doConstructEval->isA<parser::DoConstruct>()) {
+    if (doConstructEval->isA<parser::BlockConstruct>())
+      crossesBlockConstruct = true;
+    doConstructEval = doConstructEval->parentConstruct;
+  }
+  assert(doConstructEval &&
+         "Expected an enclosing DO construct for the scan directive");
+  // A BLOCK construct brackets its body with stacksave/stackrestore. Since the
+  // scan directive splits the loop body into separate input- and scan-phase
+  // loops, that bracket would be torn across the two loops and produce invalid
+  // IR (the stacksave would not dominate the stackrestore), so reject it.
+  if (crossesBlockConstruct)
+    TODO(loc, "Scan directive nested inside a BLOCK construct");
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // Fetch the associated DO loop's induction variable symbol.
   // getIterationVariableSymbol safely handles a missing loop control or a
