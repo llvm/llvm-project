@@ -7,11 +7,10 @@ Clang provides built-in compile-time source fortification diagnostics under
 string truncations, and invalid arguments in calls to supported C and POSIX
 library functions.
 
-`-Wfortify-source` runs in the frontend (`Sema`) and diagnoses calls when
-buffer sizes and access lengths (or argument values) can be constant-evaluated
-without optimizations. It does not flag cases where proving an overflow
-requires optimizations (such as inlining, constant propagation of non-`const`
-local variables, or value-range analysis).
+`-Wfortify-source` diagnoses calls when buffer sizes and access lengths (or
+argument values) can be constant-evaluated. It does not flag cases where
+proving an overflow requires optimizations (such as inlining, constant
+propagation, or value-range analysis).
 
 ## Supported Checks
 
@@ -32,7 +31,7 @@ local variables, or value-range analysis).
    - `<sys/socket.h>`: `recv`, `recvfrom`.
 
 2. **Source buffer overreads**: When a constant-evaluated byte count exceeds
-   the frontend-known size of the source buffer:
+   the known size of the source buffer:
    - `<stdio.h>`: `fwrite`.
 
 3. **Invalid constant arguments**:
@@ -52,8 +51,7 @@ diagnostic groups:
   constant-evaluated destination object size.
 - {ref}`-Wstringop-overread`: Diagnoses when a constant-evaluated byte count
   passed to memory functions (such as `memcpy`, `memmove`, `mempcpy`, `bcopy`,
-  `memchr`, `memcmp`, and `bcmp`) exceeds the frontend-known size of the source
-  buffer.
+  `memchr`, `memcmp`, and `bcmp`) exceeds the known size of the source buffer.
 
 ## Differences from `_FORTIFY_SOURCE`
 
@@ -69,20 +67,18 @@ bounds checks. Clang's `-Wfortify-source` flag differs from
    `-Wfortify-source` is purely a compile-time diagnostic flag; it checks
    direct calls to recognized library functions (as well as
    `__builtin___*_chk` builtins) without altering generated code. By contrast,
-   `-D_FORTIFY_SOURCE` also inserts runtime bounds-checking calls (`__*_chk`)
-   that abort on overflow when sizes cannot be proven safe at compile time.
+   `-D_FORTIFY_SOURCE` can also insert runtime bounds checks that abort if an
+   overflow is detected at runtime.
 
-2. **Frontend constant evaluation vs. optimization-dependent checks**:
-   `-Wfortify-source` runs in the Clang frontend (`Sema`) and is enabled by
-   default even at `-O0` and without `-D_FORTIFY_SOURCE` or C library header
-   fortification, making diagnostics fast, consistent across optimization
-   levels, and free of false positives from middle-end control-flow
+2. **Constant evaluation vs. post-optimization checks**:
+   `-Wfortify-source` is enabled by default even at `-O0` and without
+   `-D_FORTIFY_SOURCE`, making warnings fast, consistent across build
+   configurations, and free of false positives from control-flow
    transformations (such as jump threading or loop unrolling). Conversely,
-   because it runs before inlining and optimization, it only diagnoses calls
-   whose buffer and access sizes can be constant-evaluated directly in the
-   frontend, whereas `-D_FORTIFY_SOURCE` (when enabled with optimization) can
-   catch additional overflows at runtime or after inlining (for example, via
-   `warning`/`error` function attributes, or middle-end passes in GCC).
+   `-Wfortify-source` only diagnoses calls whose buffer and access sizes can be
+   constant-evaluated directly, whereas `-D_FORTIFY_SOURCE` (when compiled with
+   `-O1` or higher) can diagnose additional overflows at compile time after
+   optimizations (for example, via `warning` or `error` function attributes).
 
 3. **Function coverage**:
    `-Wfortify-source` does not yet cover the full set of functions that
