@@ -92,11 +92,11 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("xe-tgllp"), IntelGPU::GK_XE_TGLLP);
 
   // A numeric name names the device with that GPU IP version. The revision
-  // takes no part in the lookup and may be left out.
+  // must be given but takes no part in the lookup.
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7"), IntelGPU::GK_XE_PVC);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.0"), IntelGPU::GK_XE_PVC);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60"), IntelGPU::GK_XE_PVC);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.70"), IntelGPU::GK_XE_MTL_U);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.70.4"), IntelGPU::GK_XE_MTL_U);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60"), IntelGPU::GK_NONE);
   // A numeric name for a device this build does not know names no device.
   EXPECT_EQ(IntelGPU::parseArch("xe_40.11.0"), IntelGPU::GK_NONE);
 
@@ -111,7 +111,7 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7.1"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60."), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe_12."), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_012.60"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_012.60.0"), IntelGPU::GK_NONE);
 
   // The revision must fit its 6-bit GPU IP version field.
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.63"), IntelGPU::GK_XE_PVC);
