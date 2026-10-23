@@ -1443,8 +1443,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             // The available comparison must not introduce poison that the
             // original comparison does not, e.g. through samesign.
             if (Cmp->hasSameSign() || !cast<ICmpInst>(V)->hasSameSign()) {
-              LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
-                                << '\n');
+              LLVM_DEBUG(dbgs()
+                         << "EarlyCSE CSE: " << Inst << "  to: " << *V << '\n');
               if (!DebugCounter::shouldExecute(CSECounter)) {
                 LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
                 continue;
