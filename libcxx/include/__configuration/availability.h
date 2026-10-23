@@ -260,11 +260,6 @@
 
 #endif
 
-// This control the availability of PSTL.
-// TODO: expland on this
-#define _LIBCPP_AVAILABILITY_HAS_PSTL _LIBCPP_INTRODUCED_IN_LLVM_24
-#define _LIBCPP_AVAILABILITY_PSTL _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
-
 // This controls the availability of the free function std::__thread_hardware_concurrency().
 // It has the same semantics as std::[j]thread::hardware_concurrency(), but allows to query this information
 // without depending on std::thread itself.
