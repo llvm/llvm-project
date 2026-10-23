@@ -557,6 +557,22 @@ bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   return true;
 }
 
+/// Returns true if an access through \p A precedes an access through \p B in
+/// program order, and at least one of them is a write.
+static bool hasConflictingAccessBefore(const MemoryDepChecker &DC, Value *A,
+                                       Value *B) {
+  for (bool AIsWrite : {false, true}) {
+    ArrayRef<unsigned> AOrder = DC.getOrderForAccess(A, AIsWrite);
+    for (bool BIsWrite : {false, true}) {
+      ArrayRef<unsigned> BOrder = DC.getOrderForAccess(B, BIsWrite);
+      if ((AIsWrite || BIsWrite) && !AOrder.empty() && !BOrder.empty() &&
+          AOrder.front() < BOrder.back())
+        return true;
+    }
+  }
+  return false;
+}
+
 bool RuntimePointerChecking::tryToCreateDiffCheck(
     const RuntimeCheckingPtrGroup &CGI, const RuntimeCheckingPtrGroup &CGJ) {
   // If either group contains multiple different pointers, bail out.
@@ -574,19 +590,6 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
       !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty())
     return false;
 
-  ArrayRef<unsigned> AccSrc =
-      DC.getOrderForAccess(Src->PointerValue, Src->IsWritePtr);
-  ArrayRef<unsigned> AccSink =
-      DC.getOrderForAccess(Sink->PointerValue, Sink->IsWritePtr);
-  // If either pointer is accessed multiple times, there may not be a clear
-  // src/sink relation. Bail out for now.
-  if (AccSrc.size() != 1 || AccSink.size() != 1)
-    return false;
-
-  // If the sink is accessed before src, swap src/sink.
-  if (AccSink[0] < AccSrc[0])
-    std::swap(Src, Sink);
-
   const SCEVConstant *Step;
   const SCEV *SrcStart;
   const SCEV *SinkStart;
@@ -599,27 +602,43 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
                                  m_SpecificLoop(InnerLoop))))
     return false;
 
-  SmallVector<Instruction *, 4> SrcInsts =
-      DC.getInstructionsForAccess(Src->PointerValue, Src->IsWritePtr);
-  SmallVector<Instruction *, 4> SinkInsts =
-      DC.getInstructionsForAccess(Sink->PointerValue, Sink->IsWritePtr);
-  Type *SrcTy = getLoadStoreType(SrcInsts[0]);
-  Type *DstTy = getLoadStoreType(SinkInsts[0]);
-  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
-    return false;
-
+  uint64_t AbsStep = Step->getAPInt().abs().getLimitedValue();
   const DataLayout &DL = InnerLoop->getHeader()->getDataLayout();
-  unsigned AllocSize =
-      std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
+  uint64_t AllocSize = 0;
+  bool CoversStep = true;
+  unsigned NumAccesses = 0;
+  for (const PointerInfo *P : {Src, Sink}) {
+    for (bool IsWrite : {false, true}) {
+      for (Instruction *I :
+           DC.getInstructionsForAccess(P->PointerValue, IsWrite)) {
+        TypeSize Size = DL.getTypeAllocSize(getLoadStoreType(I));
+        if (Size.isScalable())
+          return false;
+        AllocSize = std::max(AllocSize, Size.getFixedValue());
+        CoversStep &= Size.getFixedValue() == AbsStep;
+        ++NumAccesses;
+      }
+    }
+  }
 
-  // Only matching constant steps matching the AllocSize are supported at the
-  // moment. This simplifies the difference computation. Can be extended in the
-  // future.
-  if (Step->getAPInt().abs() != AllocSize)
+  // Only matching constant steps matching the largest AllocSize are supported
+  // at the moment. This simplifies the difference computation. Can be extended
+  // in the future. With more than one access through Src or Sink, all accesses
+  // must cover the step, so they are consecutive and stay in program order.
+  if (AllocSize != AbsStep || (!CoversStep && NumAccesses > 2))
     return false;
 
-  // When counting down, the dependence distance needs to be swapped.
-  if (Step->getValue()->isNegative())
+  // All accesses through Src must precede the accesses through Sink they may
+  // conflict with. Bail out if there are conflicting accesses in both orders.
+  bool SrcFirst =
+      hasConflictingAccessBefore(DC, Src->PointerValue, Sink->PointerValue);
+  bool SinkFirst =
+      hasConflictingAccessBefore(DC, Sink->PointerValue, Src->PointerValue);
+  if (SrcFirst && SinkFirst)
+    return false;
+  // Swap if Sink is accessed first, and again when counting down, which swaps
+  // the dependence distance.
+  if (SinkFirst != Step->getAPInt().isNegative())
     std::swap(SinkStart, SrcStart);
 
   const SCEV *SinkStartInt = SE->getPtrToAddrExpr(SinkStart);
