@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the log1pf16 function, which computes log(1 + x) for float16.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG1PF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG1PF16_H

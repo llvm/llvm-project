@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for the log1pf16 function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
