@@ -581,7 +581,7 @@ TableGenTextFile::buildHoverForRecord(const Record *record,
       // Check that the record actually has the given field, and that it's a
       // string.
       const RecordVal *value = record->getValue(fieldName);
-      if (!value || !value->getValue())
+      if (!value)
         return;
       auto *stringValue = dyn_cast<llvm::StringInit>(value->getValue());
       if (!stringValue)
