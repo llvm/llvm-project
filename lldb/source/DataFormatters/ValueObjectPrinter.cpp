@@ -346,7 +346,7 @@ void ValueObjectPrinter::PrintDecl() {
     if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
     else if (ShouldShowName())
-      m_stream->Printf(" =");
+      m_stream->PutCString(" =");
   }
 }
 
@@ -447,7 +447,7 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       // combination means "could not resolve a type" and the default failure
       // mode is quite ugly
       if (!m_compiler_type.IsValid()) {
-        m_stream->Printf(" <could not resolve type>");
+        m_stream->PutCString(" <could not resolve type>");
         return false;
       }
 

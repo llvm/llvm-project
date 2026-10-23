@@ -43,8 +43,8 @@
 ; ASM-LABEL: .short	0x1203                          # Record kind: LF_FIELDLIST
 ; ASM-NEXT:  .short	0x1502                          # Member kind: Enumerator ( LF_ENUMERATE )
 ; ASM-NEXT:  .short	0x3                             # Attrs: Public
-; ASM-NEXT:  .short	0x800a
-; ASM-NEXT:  .quad	0xffffffffffffffff              # EnumValue
+; ASM-NEXT:  .short	0x8009
+; ASM-NEXT:  .quad	0x8000000000000000              # EnumValue
 ; ASM-NEXT:  .asciz	"sigval"                        # Name
 
 ; ------------------------------------------------------------------------------

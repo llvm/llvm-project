@@ -28,7 +28,7 @@ func.func private @dump(!fir.box<!fir.array<2x!fir.char<1>>>)
 // CHECK-LABEL:   llvm.func @substring_dyn_base(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-SAME:                                  %[[VAL_1:.*]]: i64) {
-// CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           llvm.mlir.constant(1 : i64) : i64
 // CHECK:           llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_30:.*]] = llvm.mlir.constant(1 : i64) : i64

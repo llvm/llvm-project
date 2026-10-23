@@ -10,4 +10,5 @@
 
 #include "src/math/lrintf.h"
 
-LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(float, long, LIBC_NAMESPACE::lrintf)
+LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Lrintf, float, long,
+                                       LIBC_NAMESPACE::lrintf)

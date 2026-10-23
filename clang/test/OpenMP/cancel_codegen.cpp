@@ -300,7 +300,7 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 8 dereferenceable(8) [[ARGV:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -539,7 +539,7 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined.3
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -935,7 +935,7 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@main..omp_par
-// CHECK3-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  omp.par.entry:
 // CHECK3-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[LOADGEP_ARGC_ADDR:%.*]] = load ptr, ptr [[GEP_ARGC_ADDR]], align 8, !align [[META2:![0-9]+]]
@@ -1195,7 +1195,7 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@main.omp_outlined.2
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR5]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[ARGC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR5]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

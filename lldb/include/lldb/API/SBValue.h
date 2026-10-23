@@ -122,7 +122,16 @@ public:
   /// constant or variable value that was reconstructed from debug
   /// info as the result of a computation). A true result does not
   /// guarantee a write will succeed.
+  LLDB_DEPRECATED_FIXME("Use variant that reports the reason", "CanSet()")
   bool CanSetValue();
+
+  /// Returns an error describing why this value cannot be modified
+  /// through SetValueFromCString() or SetData(), for instance because
+  /// it exists in the target, but has no writable storage (for example
+  /// a constant or variable value that was reconstructed from debug
+  /// info as the result of a computation). A success result does not
+  /// guarantee a write will succeed.
+  lldb::SBError CanSet();
 
   lldb::SBTypeFormat GetTypeFormat();
 
@@ -156,6 +165,12 @@ public:
   LLDB_DEPRECATED("Use the expression evaluator to perform type casting")
   lldb::SBValue Cast(lldb::SBType type);
 
+  /// Create an SBValue with the given name by evaluating the expression, with
+  /// the execution context inherited from the current SBValue.
+  /// Data Inspection Language (DIL) attempts to evaluate the expression first
+  /// (can be disabled by target.experimental.use-DIL-for-creating-values)
+  /// If DIL is not called or fails, the evaluation falls back to
+  /// UserExpression.
   lldb::SBValue CreateValueFromExpression(const char *name,
                                           const char *expression);
 
@@ -532,7 +547,7 @@ protected:
              bool use_synthetic, const char *name);
 
 protected:
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
 private:
   typedef std::shared_ptr<lldb_private::ValueImpl> ValueImplSP;

@@ -50,8 +50,8 @@ Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
     bool success = false;
     bool value = OptionArgParser::ToBoolean(value_str, false, &success);
     if (success) {
-      m_value_was_set = true;
-      m_current_value = value;
+      SetOptionWasSet();
+      SetValueAs(value);
       NotifyValueChanged();
     } else {
       if (value_str.size() == 0)

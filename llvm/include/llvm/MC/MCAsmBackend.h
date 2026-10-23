@@ -60,6 +60,7 @@ protected: // Can only create subclasses.
 
   bool AllowAutoPadding = false;
   bool AllowEnhancedRelaxation = false;
+  bool AllowBundling = false;
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
@@ -79,6 +80,9 @@ public:
   /// emitted into RelaxableFragment and then we can increase its size in a
   /// tricky way for optimization.
   bool allowEnhancedRelaxation() const { return AllowEnhancedRelaxation; }
+  /// Return true if this target implements `.bundle_align_mode`. Other targets
+  /// reject the directive instead of emitting unbundled code.
+  bool allowBundling() const { return AllowBundling; }
 
   /// lifetime management
   virtual void reset() {}

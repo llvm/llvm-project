@@ -863,11 +863,11 @@ define i16 @test_v64i16_v64i8(<64 x i8> %a0) nounwind {
 ;
 ; AVX512F-LABEL: test_v64i16_v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpsadbw %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsadbw %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512F-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512F-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -879,11 +879,11 @@ define i16 @test_v64i16_v64i8(<64 x i8> %a0) nounwind {
 ;
 ; AVX512VL-LABEL: test_v64i16_v64i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpsadbw %ymm2, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpsadbw %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512VL-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

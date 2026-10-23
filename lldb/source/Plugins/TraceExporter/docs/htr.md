@@ -21,11 +21,6 @@ The humongous amount of data processor traces like the ones obtained with Intel 
 **Pass:** A transformation applied to a *layer* that generates a new *layer* that is a more summarized, consolidated representation of the trace data.
 A pass merges instructions/blocks based on its specific purpose - for example, a pass designed to summarize a processor trace by function calls would merge all the blocks of a function into a single block representing the entire function.
 
-The image below illustrates the transformation of a trace's representation (HTR)
-
-```{image} media/htr-example.png
-```
-
 ## Passes
 
 A *pass* is applied to a *layer* to extract useful information (summarization) and compress the trace representation into a new *layer*. The idea is to have a series of passes where each pass specializes in extracting certain information about the trace. Some examples of potential passes include: identifying functions, identifying loops, or a more general purpose such as identifying long sequences of instructions that are repeated (i.e. Basic Super Block). Below you will find a description of each pass currently implemented in lldb.
@@ -33,11 +28,6 @@ A *pass* is applied to a *layer* to extract useful information (summarization) a
 **Basic Super Block Reduction**
 
 A “basic super block” is the longest sequence of blocks that always occur in the same order. (The concept is akin to “Basic Block'' in compiler theory, but refers to dynamic occurrences rather than CFG nodes).
-
-The image below shows the "basic super blocks" of the sequence. Each unique "basic super block" is marked with a different color
-
-```{image} media/basic_super_block_pass.png
-```
 
 *Procedure to find all super blocks:*
 

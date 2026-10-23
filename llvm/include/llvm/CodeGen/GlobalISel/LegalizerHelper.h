@@ -134,12 +134,12 @@ public:
   LLVM_ABI LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                              LLT MoreTy);
 
-  /// Cast the given value to an LLT::scalar with an equivalent size. Returns
+  /// Cast the given value to an LLT::integer with an equivalent size. Returns
   /// the register to use if an instruction was inserted. Returns the original
   /// register if no coercion was necessary.
   //
   // This may also fail and return Register() if there is no legal way to cast.
-  LLVM_ABI Register coerceToScalar(Register Val);
+  LLVM_ABI Register coerceToInteger(Register Val);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by extending the operand's type to \p WideTy using the specified \p
@@ -526,7 +526,6 @@ public:
   LLVM_ABI LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerRotate(MachineInstr &MI);
 
-  LLVM_ABI LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerUITOFP(MachineInstr &MI);
@@ -536,8 +535,12 @@ public:
   LLVM_ABI LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
   LLVM_ABI LegalizeResult lowerFPExtAndTruncMem(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerFPEXT(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerFPEXT_BF16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI);
+  LLVM_ABI Register lowerRoundInexactToOdd(LLT ResultTy, Register Op);
+  LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_BF16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPOWI(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMODF(MachineInstr &MI);
@@ -571,6 +574,7 @@ public:
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerTruncSat(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBswap(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBitreverse(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerReadWriteRegister(MachineInstr &MI);

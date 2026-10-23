@@ -146,9 +146,9 @@ define <4 x i32> @cmp_sel_0_or_minus1_vec(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @sel_1_or_0_vec(<4 x i1> %cond) {
 ; CHECK-LABEL: sel_1_or_0_vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %add = select <4 x i1> %cond, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i32> %add

@@ -163,6 +163,8 @@ public:
     S_IEEEsingle,
     S_IEEEdouble,
     S_IEEEquad,
+    // TODO: Documentation is missing.
+    S_x87DoubleExtended,
     // The IBM double-double semantics. Such a number consists of a pair of
     // IEEE 64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
     // (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
@@ -256,9 +258,13 @@ public:
     // types, there are no infinity or NaN values. The format is detailed in
     // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
     S_Float4E2M1FN,
-    // TODO: Documentation is missing.
-    S_x87DoubleExtended,
-    S_MaxSemantics = S_x87DoubleExtended,
+    // 8-bit floating point number mostly following IEEE-754 conventions with
+    // bit layout S0E5M3 as described in PTX ISA page.
+    // https://docs.nvidia.com/cuda/developer-preview/13.4/parallel-thread-execution/index.html#alternate-floating-point-data-formats
+    // Unlike IEEE-754 types, there are no infinity values, and NaN is
+    // represented with the exponent and mantissa bits set to all 1s.
+    S_Float8E5M3FNU,
+    S_MaxSemantics = S_Float8E5M3FNU,
   };
 
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
@@ -270,6 +276,9 @@ private:
   LLVM_ABI static const fltSemantics semIEEEsingle;
   LLVM_ABI static const fltSemantics semIEEEdouble;
   LLVM_ABI static const fltSemantics semIEEEquad;
+  LLVM_ABI static const fltSemantics semX87DoubleExtended;
+  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
+  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
   LLVM_ABI static const fltSemantics semFloat8E5M2;
   LLVM_ABI static const fltSemantics semFloat8E5M2FNUZ;
   LLVM_ABI static const fltSemantics semFloat8E4M3;
@@ -279,13 +288,11 @@ private:
   LLVM_ABI static const fltSemantics semFloat8E3M4;
   LLVM_ABI static const fltSemantics semFloatTF32;
   LLVM_ABI static const fltSemantics semFloat8E8M0FNU;
+  LLVM_ABI static const fltSemantics semFloat8E5M3FNU;
   LLVM_ABI static const fltSemantics semFloat6E3M2FN;
   LLVM_ABI static const fltSemantics semFloat6E2M3FN;
   LLVM_ABI static const fltSemantics semFloat4E2M1FN;
-  LLVM_ABI static const fltSemantics semX87DoubleExtended;
   LLVM_ABI static const fltSemantics semBogus;
-  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
-  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
 
   friend class detail::IEEEFloat;
   friend class detail::DoubleAPFloat;
@@ -297,6 +304,9 @@ public:
   static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
   static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
   static const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static const fltSemantics &x87DoubleExtended() {
+    return semX87DoubleExtended;
+  }
   static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
   static const fltSemantics &PPCDoubleDoubleLegacy() {
     return semPPCDoubleDoubleLegacy;
@@ -312,12 +322,10 @@ public:
   static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
   static const fltSemantics &FloatTF32() { return semFloatTF32; }
   static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
+  static const fltSemantics &Float8E5M3FNU() { return semFloat8E5M3FNU; }
   static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
   static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
   static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
-  static const fltSemantics &x87DoubleExtended() {
-    return semX87DoubleExtended;
-  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
@@ -328,6 +336,14 @@ public:
   // the value of fltNonfiniteBehavior, hasZero, hasSignedRepr.
   LLVM_ABI static bool isRepresentableBy(const fltSemantics &A,
                                          const fltSemantics &B);
+
+  /// Returns whether converting a value from \p From to \p To is known to
+  /// preserve all information. If \p IgnoreNaNs is true, differences between
+  /// NaN representations are ignored, but NaNs must remain NaNs and infinities
+  /// must remain infinities.
+  LLVM_ABI static bool isLosslesslyConvertibleTo(const fltSemantics &From,
+                                                 const fltSemantics &To,
+                                                 bool IgnoreNaNs = false);
 
   /// @}
 
@@ -778,6 +794,7 @@ private:
   APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
   APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
+  APInt convertFloat8E5M3FNUAPFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
   APInt convertFloat4E2M1FNAPFloatToAPInt() const;
@@ -799,6 +816,7 @@ private:
   void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
   void initFromFloat8E8M0FNUAPInt(const APInt &api);
+  void initFromFloat8E5M3FNUAPInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
   void initFromFloat4E2M1FNAPInt(const APInt &api);

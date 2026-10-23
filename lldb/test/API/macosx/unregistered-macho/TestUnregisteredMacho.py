@@ -14,7 +14,7 @@ class TestUnregisteredMacho(TestBase):
     # newer debugserver required for jGetLoadedDynamicLibrariesInfos
     # to support this
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

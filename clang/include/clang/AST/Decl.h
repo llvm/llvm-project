@@ -37,6 +37,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -70,6 +71,7 @@ class Module;
 class NamespaceDecl;
 class ParmVarDecl;
 class RecordDecl;
+class SemaProxy;
 class Stmt;
 class StringLiteral;
 class TagDecl;
@@ -1438,6 +1440,7 @@ public:
 
 private:
   const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   SemaProxy *SProxy,
                                    bool IsConstantInitialization) const;
 
 public:
@@ -1453,6 +1456,15 @@ public:
   /// \return \c true if this variable has constant destruction, \c false if
   ///         not.
   bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+
+  /// Evaluate the destruction of a variable that is required by the language to
+  /// have constant destruction.
+  ///
+  /// \pre hasConstantInitialization()
+  /// \return \c true if this variable has constant destruction, \c false if
+  ///         not.
+  bool evaluateConstantDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                   SemaProxy &SProxy) const;
 
   /// Determine whether this variable has constant initialization.
   ///
@@ -1470,8 +1482,9 @@ public:
   /// Evaluate the initializer of this variable to determine whether it's a
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
-  bool checkForConstantInitialization(
-      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+  bool
+  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 SemaProxy &SProxy) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;
@@ -2014,6 +2027,35 @@ enum class MultiVersionKind {
   TargetVersion
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+/// Kinds of defaulted comparison operator functions.
+enum class DefaultedComparisonKind : unsigned char {
+  /// This is not a defaultable comparison operator.
+  None,
+  /// This is an operator== that should be implemented as a series of
+  /// subobject comparisons.
+  Equal,
+  /// This is an operator<=> that should be implemented as a series of
+  /// subobject comparisons.
+  ThreeWay,
+  /// This is an operator!= that should be implemented as a rewrite in terms
+  /// of a == comparison.
+  NotEqual,
+  /// This is an <, <=, >, or >= that should be implemented as a rewrite in
+  /// terms of a <=> comparison.
+  Relational,
+};
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -2089,6 +2131,54 @@ public:
     void setDeletedMessage(StringLiteral *Message);
   };
 
+  /// For a defaulted function, the kind of defaulted function that it is.
+  class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
+
+  public:
+    DefaultedFunctionKind()
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(DefaultedComparisonKind Comp)
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
+
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
+    bool isComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison) !=
+             DefaultedComparisonKind::None;
+    }
+
+    explicit operator bool() const {
+      return isSpecialMember() || isComparison();
+    }
+
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
+    }
+    DefaultedComparisonKind asComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison);
+    }
+
+    /// Get the index of this function kind for use in diagnostics.
+    unsigned getDiagnosticIndex() const {
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
+                    "invalid should have highest index");
+      static_assert((unsigned)DefaultedComparisonKind::None == 0,
+                    "none should be equal to zero");
+      return SpecialMember + Comparison;
+    }
+  };
+
 private:
   /// A new[]'d array of pointers to VarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
@@ -2151,7 +2241,7 @@ private:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -2163,8 +2253,8 @@ private:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
+      TemplateArgumentList *TemplateArgs,
+      llvm::FoldingSetInsertToken InsertToken, TemplateSpecializationKind TSK,
       const TemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation PointOfInstantiation);
 
@@ -2372,6 +2462,19 @@ public:
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
   DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
+
+  /// Determine the kind of defaulting that would be done for a given function.
+  ///
+  /// If the function is both a default constructor and a copy / move
+  /// constructor (due to having a default argument for the first parameter),
+  /// this picks CXXSpecialMemberKind::DefaultConstructor.
+  ///
+  /// FIXME: Check that case is properly handled by all callers.
+  DefaultedFunctionKind getDefaultedFunctionKind() const;
+
+  DefaultedComparisonKind getDefaultedComparisonKind() const {
+    return getDefaultedFunctionKind().asComparison();
+  }
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -2834,6 +2937,10 @@ public:
   /// created.
   unsigned getNumParams() const;
 
+  /// Return the number of parameters, including the implicit 'this' parameter
+  /// if this function has one.
+  unsigned getNumParamsIncludingThis() const;
+
   const ParmVarDecl *getParamDecl(unsigned i) const {
     assert(i < getNumParams() && "Illegal param #");
     return ParamInfo[i];
@@ -3101,7 +3208,7 @@ public:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -3113,12 +3220,12 @@ public:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
+      llvm::FoldingSetInsertToken InsertToken,
       TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
       TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
       SourceLocation PointOfInstantiation = SourceLocation()) {
     setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      InsertToken, TSK, TemplateArgsAsWritten,
                                       PointOfInstantiation);
   }
 
@@ -4682,6 +4789,8 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
 
   Stmt *Statement = nullptr;
   bool IsSemiMissing = false;
+  /// Position among all top-level statements of the session, in parse order.
+  unsigned Ordinal = 0;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
       : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
@@ -4698,6 +4807,7 @@ public:
   void setStmt(Stmt *S);
   bool isSemiMissing() const { return IsSemiMissing; }
   void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
+  unsigned getOrdinal() const { return Ordinal; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
@@ -5378,6 +5488,9 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
          "setPreviousDecl on a decl already in a redeclaration chain");
 
   if (PrevDecl) {
+    // Linking this declaration to a previous one may change its linkage.
+    static_cast<decl_type *>(this)->invalidateCachedLinkage();
+
     // Point to previous. Make sure that this is actually the most recent
     // redeclaration, or we can build invalid chains. If the most recent
     // redeclaration is invalid, it won't be PrevDecl, but we want it anyway.

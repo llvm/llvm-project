@@ -14,7 +14,9 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 // RUN: clang-scan-deps -compilation-database %t/compile-commands.json \
 // RUN:   -j 1 -format experimental-full > %t/deps.db
-// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=modules.is-in-stable-directories,modules.name,modules.command-line \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:   "modules": [
 // CHECK-NEXT:     {

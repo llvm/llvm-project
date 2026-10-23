@@ -211,6 +211,19 @@ public:
   static void bindDerived(ClassTy &c);
 };
 
+/// Floating Point Type subclass - Float8E5M3FNUType.
+class MLIR_PYTHON_API_EXPORTED PyFloat8E5M3FNUType
+    : public PyConcreteType<PyFloat8E5M3FNUType, PyFloatType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E5M3FNU;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloat8E5M3FNUTypeGetTypeID;
+  static constexpr const char *pyClassName = "Float8E5M3FNUType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c);
+};
+
 /// Floating Point Type subclass - BF16Type.
 class MLIR_PYTHON_API_EXPORTED PyBF16Type
     : public PyConcreteType<PyBF16Type, PyFloatType> {

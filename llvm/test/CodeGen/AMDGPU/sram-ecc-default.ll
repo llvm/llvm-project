@@ -1,10 +1,10 @@
+; Flag is ignored on targets without sramecc support (like gfx900)
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgpu9.00 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgpu9.00 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgpu9.02 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgpu9.04 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
-; RUN: llc -mtriple=amdgpu9.06 -mattr=+sramecc < %s | FileCheck -check-prefixes=GCN,ECC %s
-; RUN: llc -mtriple=amdgpu9.06 -mattr=-sramecc < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgpu9.00 -amdgpu-sramecc=1 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+; RUN: llc -mtriple=amdgpu9.00 -amdgpu-sramecc=0 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
+
+; RUN: llc -mtriple=amdgpu9.06 -amdgpu-sramecc=1 < %s | FileCheck -check-prefixes=GCN,ECC %s
+; RUN: llc -mtriple=amdgpu9.06 -amdgpu-sramecc=0 < %s | FileCheck -check-prefixes=GCN,NO-ECC %s
 ; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck -check-prefixes=GCN,ECC %s
 
 ; Make sure the correct set of targets are marked with

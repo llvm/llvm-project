@@ -33,7 +33,7 @@ entry:
 !2 = !{!3}
 !3 = !{!"_ZTSFicE"}
 !4 = !{!5}
-!5 = !{!"_ZTSFPvS_"}
+!5 = !{!"_ZTSFPvS_E"}
 
 ; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version
@@ -55,4 +55,4 @@ entry:
 ;; Indirect type IDs.
 ; CHECK-NEXT: .quad   6588678392271548388
 ; CHECK-NEXT: .quad   142272631118516422
-; CHECK-NEXT: .quad   -8699916632982952153
+; CHECK-NEXT: .quad   -8308188386355579584

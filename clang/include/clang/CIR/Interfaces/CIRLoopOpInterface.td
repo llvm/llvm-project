@@ -59,6 +59,27 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
       /*defaultImplementation=*/"return nullptr;"
     >,
     InterfaceMethod<[{
+        Returns the cleanup-kind attribute for the loop's per-iteration
+        cleanup region, or a null attribute if the loop has no cleanup kind
+        (e.g. do-while, or a for/while without a cleanup region).
+      }],
+      /*retTy=*/"::cir::CleanupKindAttr",
+      /*methodName=*/"maybeGetCleanupKind",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Returns the loop's `#cir.loop_hint` attribute, or a null attribute if
+        the loop has none.
+      }],
+      /*retTy=*/"::cir::LoopHintAttr",
+      /*methodName=*/"getLoopHintsAttr",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
         Returns the first region to be executed in the loop.
       }],
       /*retTy=*/"mlir::Region &",

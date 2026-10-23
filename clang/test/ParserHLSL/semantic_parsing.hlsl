@@ -7,6 +7,10 @@ void Entry(int GI : ) { }
 // expected-error@+1 {{unknown HLSL semantic 'SV_IWantAPony'}}
 void Pony(int GI : SV_IWantAPony) { }
 
+// A lowercase SV_ prefix must not turn an unknown name into a user semantic.
+// expected-error@+1 {{unknown HLSL semantic 'sv_iwantapony'}}
+void IndexedPony(int GI : sv_iwantapony1) { }
+
 // expected-error@+3 {{expected HLSL Semantic identifier}}
 // expected-error@+2 {{expected ')'}}
 // expected-note@+1 {{to match this '('}}
@@ -36,9 +40,9 @@ void UnicodePony(int GI : ℮) { }
 // mentioned in N3337.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1949r7.html
 
-// expected-error@+2 {{unexpected character <U+1F60A>}}
+// expected-error@+2 {{unexpected character '😊' U+1F60A}}
 // expected-error@+1 {{expected HLSL Semantic identifier}}
 void UTFPony(int GI : 😊) { }
 
-// expected-error@+1 {{character <U+1F60A> not allowed in an identifier}}
+// expected-error@+1 {{character '😊' U+1F60A not allowed in an identifier}}
 void SmilingPony(int GI : PonyWithA😊) { }

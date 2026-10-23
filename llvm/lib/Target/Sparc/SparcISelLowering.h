@@ -64,14 +64,16 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override {
       return SP::I0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override {
       return SP::I1;
     }
 
@@ -168,8 +170,8 @@ namespace llvm {
 
     bool isFNegFree(EVT VT) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     bool isCtlzFast() const override;
 

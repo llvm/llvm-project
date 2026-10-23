@@ -30,7 +30,7 @@ try.cont:                                         ; preds = %catch.start, %entry
 }
 
 declare void @foo()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nocallback nofree nosync nounwind willreturn
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nocallback nofree nosync nounwind willreturn

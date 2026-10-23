@@ -13,7 +13,6 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -22,7 +21,6 @@
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
-#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 namespace omp {
@@ -35,6 +33,7 @@ namespace lower {
 class AbstractConverter;
 } // namespace lower
 namespace semantics {
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 } // namespace Fortran
@@ -82,10 +81,9 @@ public:
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
   /// Map a clause-level intrinsic operator to the parser-level one, so callers
-  /// can build the operator's mangled reduction name
-  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
-  /// user-defined intrinsic-operator reduction under. Only the operators a user
-  /// reduction may use are handled.
+  /// can build the operator's mangled reduction name (MakeNameFromOperator)
+  /// that semantics stores a user-defined intrinsic-operator reduction under.
+  /// Only the operators a user reduction may use are handled.
   static parser::DefinedOperator::IntrinsicOperator
   toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
 
@@ -94,6 +92,14 @@ public:
 
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
+
+  /// Return the user-defined reduction that processReductionArguments would
+  /// bind instead of \p reductionIntrinsic for \p type in \p scope, or null if
+  /// it would bind the supported intrinsic.
+  static const semantics::Symbol *findUserDefinedReductionForIntrinsic(
+      const semantics::Scope &scope,
+      const omp::clause::ProcedureDesignator &reductionIntrinsic,
+      const semantics::DeclTypeSpec *type);
 
   static const semantics::SourceName
   getRealName(const semantics::Symbol *symbol);
@@ -185,17 +191,9 @@ public:
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-      llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
       semantics::SemanticsContext *semaCtx = nullptr,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
           *reductionVarCache = nullptr);
-
-  /// Check if an expression is lowered as a Reduction object. This ensures
-  /// reductions such as Array Elements are properly represented, rather than
-  /// reducing the full array.
-  // TODO support more types of objects
-  // to avoid Reduction clauses being represented in FIR as full arrays.
-  static bool isExpressionLoweredAsReductionObject(const Object *object);
 };
 
 template <typename FloatOp, typename IntegerOp>

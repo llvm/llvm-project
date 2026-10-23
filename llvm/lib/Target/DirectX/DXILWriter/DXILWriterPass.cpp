@@ -12,8 +12,7 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
-#include "llvm/ADT/DenseMap.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -36,14 +35,7 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-extern cl::opt<bool> EmbedDebug;
-extern cl::opt<bool> StripDebug;
-cl::opt<std::string> PdbDebugPath(
-    "dx-pdb-path",
-    cl::desc("Write debug information to the given file, or automatically "
-             "named file in directory when ending in '/'"),
-    cl::value_desc("filename"));
-cl::opt<bool> SourceInDebugModule(
+cl::opt<bool> dxil::SourceInDebugModule(
     "dx-source-in-debug-module",
     cl::desc("Embed source code into debug module on DirectX target"),
     cl::init(false));
@@ -65,8 +57,7 @@ public:
   StringRef getPassName() const override { return "Bitcode Writer"; }
 
   bool runOnModule(Module &M) override {
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return false;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -209,8 +200,7 @@ class EmbedDXILPass : public llvm::ModulePass {
           "Shader modules with debug info must have !DICompileUnit metadata.");
 #endif
     }
-    const auto DIMap = DXILDebugInfoPass::run(M);
-    WriteDXILToFile(M, OS, DIMap);
+    WriteDXILToFile(M, OS);
     return Data;
   }
 
@@ -242,17 +232,11 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
-    if (StripDebug && EmbedDebug)
-      StripDebug = false;
-    // Enable EmbedDebug if there is debug info, but it is not being stripped
-    // or written to a PDB file.
-    if (HasDebugInfo && !StripDebug && !EmbedDebug && PdbDebugPath.empty())
-      EmbedDebug = true;
+    if (SlimDebug && EmbedDebug)
+      reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(
           "Missing debug info for embedding into the container");
-    // TODO: move this check to DXContainerPDB.cpp when /Zs is implemented.
     if (!HasDebugInfo && !PdbDebugPath.empty())
       reportFatalUsageError("Missing debug info for writing to the PDB file");
 

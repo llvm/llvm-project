@@ -55,6 +55,8 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
+  c.PTO = PipelineTuningOptions(c.LibraryOptions);
 
   // LLD supports the new relocations and address-significance tables.
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -231,6 +233,11 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
+void BitcodeCompiler::waitForLTOCleanup() {
+  if (ltoObj)
+    ltoObj->waitForCleanup();
+}
+
 void BitcodeCompiler::add(BitcodeFile &f) {
   lto::InputFile &obj = *f.obj;
   bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
@@ -336,7 +343,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.arg.thinLTOCacheDir.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             createAddBufferFn(files, filenames)));
+                             createAddBufferFn(files, filenames),
+                             !ctx.arg.dtltoDistributor.empty()));
 
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(
@@ -377,12 +385,6 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     check(
         pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
-  if (!ctx.arg.ltoObjPath.empty()) {
-    saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
-  }
-
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
   const char *ext = ctx.arg.ltoEmitAsm ? ".s" : ".o";
@@ -401,6 +403,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       objBuf = buf[i].second;
       bitcodeFilePath = buf[i].first;
     }
+    if (!ctx.arg.ltoObjPath.empty())
+      saveBuffer(objBuf, ctx.arg.ltoObjPath + (i == 0 ? "" : Twine(i)));
     if (objBuf.empty())
       continue;
 

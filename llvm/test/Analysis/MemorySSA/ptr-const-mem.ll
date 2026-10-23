@@ -1,5 +1,5 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>' -verify-memoryssa -disable-output -memssa-check-limit=0 < %s 2>&1 | FileCheck %s
-target triple = "amdgcn"
+target triple = "amdgpu6.00"
 
 @g4 = external unnamed_addr constant i8, align 1
 

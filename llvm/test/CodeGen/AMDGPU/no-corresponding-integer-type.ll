@@ -9,15 +9,10 @@ define void @no_corresponding_integer_type(i8 %arg, ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    global_load_ushort v1, v[2:3], off
-; CHECK-NEXT:    global_load_ubyte v4, v[2:3], off offset:2
-; CHECK-NEXT:    s_mov_b32 s0, 0xc0c0400
-; CHECK-NEXT:    s_mov_b32 s1, 0xc0c0000
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_lshl_or_b32 v1, v4, 16, v1
-; CHECK-NEXT:    v_perm_b32 v1, v0, v1, s0
-; CHECK-NEXT:    v_perm_b32 v0, v0, v0, s1
-; CHECK-NEXT:    v_dot4_u32_u8 v0, v0, v1, 1
-; CHECK-NEXT:    s_nop 2
+; CHECK-NEXT:    v_mul_lo_u16_e32 v1, v1, v0
+; CHECK-NEXT:    v_or_b32_e32 v1, 1, v1
+; CHECK-NEXT:    v_mad_legacy_u16 v0, v0, v0, v1
 ; CHECK-NEXT:    global_store_byte v[2:3], v0, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

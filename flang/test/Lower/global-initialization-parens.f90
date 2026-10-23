@@ -1,20 +1,21 @@
 ! Test lowering of parenthesized initial values in fir.global initializer
 ! regions.
 !
-! This test baselines the *current* lowering behavior of parenthesized
-! initializers, which an upcoming change to the initializer-lowering path will
-! modify: today a parenthesized scalar or derived constant survives folding as
-! a Parentheses node and is lowered to a fir.no_reassoc operation inside the
-! global init region. The forms whose parentheses are stripped before lowering
+! Initial values are lowered through ConvertConstant, which folds a
+! parenthesized scalar or derived constant to a plain constant: no
+! fir.no_reassoc operation is emitted inside the global init region. (An earlier
+! baseline of this test pinned the previous behavior, where a parenthesized
+! constant survived folding as a Parentheses node and lowered to a
+! fir.no_reassoc.) The forms whose parentheses are stripped before lowering
 ! (character, array named-constant, and parenthesized structure-constructor
-! components) are pinned here belt-and-braces so the follow-up change is shown
-! to leave them untouched.
+! components) are unaffected and pinned here belt-and-braces.
 !
 ! Each case is a SAVE'd local in its own subroutine so that the fir.global for
 ! it is emitted in source order, keeping every CHECK block next to the Fortran
-! it checks.
+! it checks. The --implicit-check-not on the RUN line asserts that no
+! fir.no_reassoc is emitted for any of the parenthesized initializers.
 
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --implicit-check-not=fir.no_reassoc
 
 module types
   type t
@@ -31,24 +32,30 @@ subroutine scalar_int()
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFscalar_intEi : i32 {
 ! CHECK:         %[[C:.*]] = arith.constant 42 : i32
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %[[C]] : i32
-! CHECK:         fir.has_value %[[NR]] : i32
+! CHECK:         fir.has_value %[[C]] : i32
+
+subroutine nested_parens()
+  ! Stacked parentheses: exercises the recursive descent through nested
+  ! Parentheses<T> nodes.
+  integer, save :: n2 = ((42))
+end subroutine
+! CHECK-LABEL: fir.global internal @_QFnested_parensEn2 : i32 {
+! CHECK:         %[[C:.*]] = arith.constant 42 : i32
+! CHECK:         fir.has_value %[[C]] : i32
 
 subroutine scalar_real()
   real, save :: r = (3.5)
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFscalar_realEr : f32 {
 ! CHECK:         %[[C:.*]] = arith.constant 3.500000e+00 : f32
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %[[C]] : f32
-! CHECK:         fir.has_value %[[NR]] : f32
+! CHECK:         fir.has_value %[[C]] : f32
 
 subroutine scalar_logical()
   logical, save :: l = (.true.)
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFscalar_logicalEl : !fir.logical<4> {
 ! CHECK:         %[[C:.*]] = arith.constant true
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %[[C]] : i1
-! CHECK:         %[[CV:.*]] = fir.convert %[[NR]] : (i1) -> !fir.logical<4>
+! CHECK:         %[[CV:.*]] = fir.convert %[[C]] : (i1) -> !fir.logical<4>
 ! CHECK:         fir.has_value %[[CV]] : !fir.logical<4>
 
 subroutine scalar_complex()
@@ -58,31 +65,41 @@ subroutine scalar_complex()
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFscalar_complexEz : complex<f32> {
 ! CHECK:         fir.insert_value
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %{{.*}} : complex<f32>
-! CHECK:         fir.has_value %[[NR]] : complex<f32>
+! CHECK:         %[[IV:.*]] = fir.insert_value
+! CHECK:         fir.has_value %[[IV]] : complex<f32>
 
 subroutine paren_ctor()
   use types
-  ! Parenthesized structure constructor: the parentheses survive folding and
-  ! wrap the insert_value chain in a fir.no_reassoc.
+  ! Parenthesized structure constructor: folded to a plain insert_value chain.
   type(t), save :: x = (t(7))
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFparen_ctorEx : !fir.type<_QMtypesTt{n:i32}> {
 ! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %{{.*}}, ["n", !fir.type<_QMtypesTt{n:i32}>]
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %[[IV]] : !fir.type<_QMtypesTt{n:i32}>
-! CHECK:         fir.has_value %[[NR]] : !fir.type<_QMtypesTt{n:i32}>
+! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt{n:i32}>
+
+subroutine paren_derived_named_const()
+  use types
+  ! Parenthesized derived named constant: the parentheses wrap a
+  ! Constant<SomeDerived> rather than a structure constructor.
+  type(t), parameter :: tp = t(3)
+  type(t), save :: pt2 = (tp)
+end subroutine
+! (The named constant tp also gets its own constant global; its position
+! relative to pt2's global is unpinned.)
+! CHECK-LABEL: fir.global internal @_QFparen_derived_named_constEpt2 : !fir.type<_QMtypesTt{n:i32}> {
+! CHECK:         %[[C:.*]] = arith.constant 3 : i32
+! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %[[C]], ["n", !fir.type<_QMtypesTt{n:i32}>]
+! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt{n:i32}>
 
 subroutine comp_default()
   use types
   ! Default-initialized object exercising the parenthesized component default:
-  ! the parentheses wrap the component value in a fir.no_reassoc before it is
-  ! inserted.
+  ! folded to a plain component value.
   type(t2), save :: w
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFcomp_defaultEw : !fir.type<_QMtypesTt2{n:i32}> {
 ! CHECK:         %[[C:.*]] = arith.constant 5 : i32
-! CHECK:         %[[NR:.*]] = fir.no_reassoc %[[C]] : i32
-! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %[[NR]], ["n", !fir.type<_QMtypesTt2{n:i32}>]
+! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %[[C]], ["n", !fir.type<_QMtypesTt2{n:i32}>]
 ! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt2{n:i32}>
 
 subroutine char_paren()
@@ -91,7 +108,6 @@ subroutine char_paren()
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFchar_parenEc : !fir.char<1,2> {
 ! CHECK:         %[[S:.*]] = fir.string_lit "ab"(2) : !fir.char<1,2>
-! CHECK-NOT:     fir.no_reassoc
 ! CHECK:         fir.has_value %[[S]] : !fir.char<1,2>
 
 subroutine array_named_const()
@@ -104,10 +120,9 @@ end subroutine
 subroutine paren_ctor_comp()
   use types
   ! Parenthesized structure-constructor component: parentheses stripped, plain
-  ! insert_value chain with no fir.no_reassoc.
+  ! insert_value chain.
   type(t), save :: y = t((5))
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFparen_ctor_compEy : !fir.type<_QMtypesTt{n:i32}> {
 ! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %{{.*}}, ["n", !fir.type<_QMtypesTt{n:i32}>]
-! CHECK-NOT:     fir.no_reassoc
 ! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt{n:i32}>

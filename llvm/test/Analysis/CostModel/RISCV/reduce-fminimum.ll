@@ -6,13 +6,13 @@
 
 define float @reduce_fmaximum_f32(float %arg) {
 ; CHECK-LABEL: 'reduce_fmaximum_f32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call float @llvm.vector.reduce.fminimum.v2f32(<2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4 = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16 = call float @llvm.vector.reduce.fminimum.v16f32(<16 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V32 = call float @llvm.vector.reduce.fminimum.v32f32(<32 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V64 = call float @llvm.vector.reduce.fminimum.v64f32(<64 x float> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V128 = call float @llvm.vector.reduce.fminimum.v128f32(<128 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2 = call float @llvm.vector.reduce.fminimum.v2f32(<2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4 = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V16 = call float @llvm.vector.reduce.fminimum.v16f32(<16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V32 = call float @llvm.vector.reduce.fminimum.v32f32(<32 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V64 = call float @llvm.vector.reduce.fminimum.v64f32(<64 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V128 = call float @llvm.vector.reduce.fminimum.v128f32(<128 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float undef
 ;
 ; SIZE-LABEL: 'reduce_fmaximum_f32'
@@ -37,12 +37,12 @@ ret float undef
 
 define double @reduce_fmaximum_f64(double %arg) {
 ; CHECK-LABEL: 'reduce_fmaximum_f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call double @llvm.vector.reduce.fminimum.v2f64(<2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4 = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V8 = call double @llvm.vector.reduce.fminimum.v8f64(<8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16 = call double @llvm.vector.reduce.fminimum.v16f64(<16 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32 = call double @llvm.vector.reduce.fminimum.v32f64(<32 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64 = call double @llvm.vector.reduce.fminimum.v64f64(<64 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2 = call double @llvm.vector.reduce.fminimum.v2f64(<2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4 = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8 = call double @llvm.vector.reduce.fminimum.v8f64(<8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16 = call double @llvm.vector.reduce.fminimum.v16f64(<16 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V32 = call double @llvm.vector.reduce.fminimum.v32f64(<32 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V64 = call double @llvm.vector.reduce.fminimum.v64f64(<64 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double undef
 ;
 ; SIZE-LABEL: 'reduce_fmaximum_f64'

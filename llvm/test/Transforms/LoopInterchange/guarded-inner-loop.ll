@@ -23,19 +23,21 @@ define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_I_PREHEADER:.*]]
-; CHECK:       [[FOR_I_PREHEADER]]:
+; CHECK:       [[FOR_I_PREHEADER1:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_I:.*]]
 ; CHECK:       [[FOR_I]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 0, %[[FOR_I_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[FOR_J_INC_SPLIT:.*]] ], [ 0, %[[FOR_I_PREHEADER1]] ]
 ; CHECK-NEXT:    [[I_IS_ZERO:%.*]] = icmp eq i32 [[I]], 0
 ; CHECK-NEXT:    [[XBASE:%.*]] = getelementptr [9 x i32], ptr @x, i32 [[I]]
 ; CHECK-NEXT:    [[WBASE:%.*]] = getelementptr [9 x i32], ptr @w, i32 [[I]]
 ; CHECK-NEXT:    [[YBASE:%.*]] = getelementptr [3 x i32], ptr @y, i32 [[I]]
 ; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK:       [[FOR_I_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_INC_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[EXIT:.*]] ], [ 0, %[[FOR_I_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[FOR_I_PREHEADER1]]
+; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br i1 [[I_IS_ZERO]], label %[[FOR_J_INC:.*]], label %[[FOR_K_PH:.*]]
 ; CHECK:       [[FOR_K_PH]]:
 ; CHECK-NEXT:    [[XP:%.*]] = getelementptr i32, ptr [[XBASE]], i32 [[J]]
@@ -60,15 +62,15 @@ define i32 @main() {
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[J_CMP:%.*]] = icmp eq i32 [[J]], 0
 ; CHECK-NEXT:    br label %[[FOR_J_INC_SPLIT]]
-; CHECK:       [[FOR_J_INC_SPLIT]]:
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[J]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[FOR_I_INC]]
-; CHECK:       [[FOR_I_INC]]:
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[FOR_I_INC:.*]]
+; CHECK:       [[FOR_J_INC_SPLIT]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[I_DONE:%.*]] = icmp eq i32 [[I_NEXT]], 3
-; CHECK-NEXT:    br i1 [[I_DONE]], label %[[EXIT:.*]], label %[[FOR_I]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br i1 [[I_DONE]], label %[[EXIT]], label %[[FOR_I]]
+; CHECK:       [[FOR_I_INC]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

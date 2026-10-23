@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Multiplexer.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -27,12 +28,16 @@ constexpr llvm::StringLiteral kServerName = "lldb-mcp";
 /// @{
 constexpr llvm::StringLiteral kToolCommand = "command";
 constexpr llvm::StringLiteral kToolSessionsList = "sessions_list";
+constexpr llvm::StringLiteral kToolSessionCreate = "session_create";
+constexpr llvm::StringLiteral kToolSessionClose = "session_close";
 /// @}
 
 /// Backend tool names, as exposed by the LLDB MCP server.
 /// @{
 constexpr llvm::StringLiteral kBackendToolCommand = "command";
 constexpr llvm::StringLiteral kBackendToolDebuggerList = "debugger_list";
+constexpr llvm::StringLiteral kBackendToolDebuggerCreate = "debugger_create";
+constexpr llvm::StringLiteral kBackendToolDebuggerDelete = "debugger_delete";
 /// @}
 
 /// Backend-local URI prefixes.
@@ -118,18 +123,23 @@ Multiplexer::Multiplexer(std::unique_ptr<MCPTransport> client_transport,
   });
 }
 
-void Multiplexer::AddBackend(lldb::pid_t pid, std::unique_ptr<Client> backend) {
-  // A backend that disconnects or errors mid-request will never answer its
-  // forwarded requests. Fail them so the client sees an error instead of
-  // waiting forever, since there is no request timeout.
-  Client *client = backend.get();
-  client->SetDisconnectHandler(
-      [client] { client->CancelPendingRequests("backend disconnected"); });
-  client->SetErrorHandler([client](llvm::Error error) {
+void Multiplexer::InstallBackendHandlers(lldb::pid_t pid, Client &backend) {
+  backend.SetDisconnectHandler([this, pid]() { RetireBackend(pid); });
+  backend.SetErrorHandler([this, pid](llvm::Error error) {
     consumeError(std::move(error));
-    client->CancelPendingRequests("backend transport error");
+    RetireBackend(pid);
   });
-  m_backends.push_back(Backend{pid, std::move(backend)});
+}
+
+void Multiplexer::AddBackend(lldb::pid_t pid, std::unique_ptr<Client> backend) {
+  InstallBackendHandlers(pid, *backend);
+  m_backends.push_back(Backend{pid, std::move(backend), /*local=*/false});
+}
+
+void Multiplexer::AddLocalBackend(lldb::pid_t pid,
+                                  std::unique_ptr<Client> backend) {
+  InstallBackendHandlers(pid, *backend);
+  m_backends.push_back(Backend{pid, std::move(backend), /*local=*/true});
 }
 
 llvm::Error Multiplexer::Run() {
@@ -146,24 +156,49 @@ llvm::Error Multiplexer::Run() {
   return m_client_transport->RegisterMessageHandler(*m_client_binder);
 }
 
-void Multiplexer::SetDisconnectHandler(llvm::unique_function<void()> handler) {
-  m_disconnect_handler = std::move(handler);
-}
-
 void Multiplexer::Shutdown() {
   for (Backend &backend : m_backends)
     backend.client->CancelPendingRequests("lldb-mcp is shutting down");
 }
 
+void Multiplexer::SetDisconnectHandler(llvm::unique_function<void()> handler) {
+  m_disconnect_handler = std::move(handler);
+}
+
 Client *Multiplexer::RouteToPid(lldb::pid_t pid) {
   for (Backend &backend : m_backends)
-    if (backend.pid == pid)
+    if (backend.pid == pid && backend.alive)
       return backend.client.get();
   return nullptr;
 }
 
-Client *Multiplexer::First() {
-  return m_backends.empty() ? nullptr : m_backends.front().client.get();
+Multiplexer::Backend *Multiplexer::LocalBackend() {
+  for (Backend &backend : m_backends)
+    if (backend.local && backend.alive)
+      return &backend;
+  return nullptr;
+}
+
+llvm::SmallVector<Multiplexer::Backend *> Multiplexer::LiveBackends() {
+  llvm::SmallVector<Backend *> live;
+  for (Backend &backend : m_backends)
+    if (backend.alive)
+      live.push_back(&backend);
+  return live;
+}
+
+void Multiplexer::RetireBackend(lldb::pid_t pid) {
+  for (Backend &backend : m_backends) {
+    if (backend.pid != pid)
+      continue;
+    if (!backend.alive)
+      return;
+    backend.alive = false;
+    // Fail any in-flight requests so a fanned-out aggregation or a routed call
+    // completes with an error instead of hanging.
+    backend.client->CancelPendingRequests("backend disconnected");
+    return;
+  }
 }
 
 Expected<InitializeResult>
@@ -196,7 +231,7 @@ Expected<ListToolsResult> Multiplexer::HandleToolsList() {
                 {"description",
                  "The debugger URI selecting the debug session, as reported by "
                  "sessions_list, e.g. lldb-mcp://instance/{pid}/debugger/{id}. "
-                 "Defaults to the first session."}}},
+                 "Defaults to the local session."}}},
        }},
       {"required", json::Array{"command"}},
   };
@@ -209,6 +244,30 @@ Expected<ListToolsResult> Multiplexer::HandleToolsList() {
   sessions_list.inputSchema = json::Object{{"type", "object"}};
   result.tools.push_back(std::move(sessions_list));
 
+  ToolDefinition session_create;
+  session_create.name = kToolSessionCreate;
+  session_create.description =
+      "Create a new in-process debug session and return its URI.";
+  session_create.inputSchema = json::Object{{"type", "object"}};
+  result.tools.push_back(std::move(session_create));
+
+  ToolDefinition session_close;
+  session_close.name = kToolSessionClose;
+  session_close.description =
+      "Close a debug session previously created with session_create.";
+  session_close.inputSchema = json::Object{
+      {"type", "object"},
+      {"properties",
+       json::Object{
+           {"session", json::Object{{"type", "string"},
+                                    {"description",
+                                     "The session URI to close, as returned by "
+                                     "session_create or sessions_list."}}},
+       }},
+      {"required", json::Array{"session"}},
+  };
+  result.tools.push_back(std::move(session_close));
+
   return result;
 }
 
@@ -218,6 +277,10 @@ void Multiplexer::HandleToolsCall(const CallToolParams &params,
     return HandleCommand(params, std::move(reply));
   if (params.name == kToolSessionsList)
     return HandleSessionsList(std::move(reply));
+  if (params.name == kToolSessionCreate)
+    return HandleSessionCreate(std::move(reply));
+  if (params.name == kToolSessionClose)
+    return HandleSessionClose(params, std::move(reply));
   reply(createStringError(formatv("no tool \"{0}\"", params.name)));
 }
 
@@ -234,8 +297,9 @@ void Multiplexer::HandleCommand(const CallToolParams &params,
 
   Client *backend = nullptr;
   if (debugger_arg.empty()) {
-    // Default to the first session, letting the backend pick its debugger.
-    backend = First();
+    // Default to the local session, letting the backend pick its debugger.
+    Backend *local = LocalBackend();
+    backend = local ? local->client.get() : nullptr;
     args.erase("debugger");
   } else {
     std::optional<RoutedURI> routed = ParseGlobalURI(debugger_arg);
@@ -256,7 +320,8 @@ void Multiplexer::HandleCommand(const CallToolParams &params,
 }
 
 void Multiplexer::HandleSessionsList(Reply<CallToolResult> reply) {
-  if (m_backends.empty())
+  llvm::SmallVector<Backend *> live = LiveBackends();
+  if (live.empty())
     return reply(makeTextResult(""));
 
   // All backends share the multiplexer's MainLoop, so these reply callbacks run
@@ -265,34 +330,31 @@ void Multiplexer::HandleSessionsList(Reply<CallToolResult> reply) {
     size_t remaining;
     // Keyed by pid so the aggregated output is deterministic.
     std::map<lldb::pid_t, std::string> texts;
-    std::string error;
     Reply<CallToolResult> reply;
   };
   auto state = std::make_shared<State>();
-  state->remaining = m_backends.size();
+  state->remaining = live.size();
   state->reply = std::move(reply);
 
-  for (Backend &backend : m_backends) {
-    lldb::pid_t pid = backend.pid;
+  for (Backend *backend : live) {
+    lldb::pid_t pid = backend->pid;
     CallToolParams params;
     params.name = kBackendToolDebuggerList;
-    backend.client->ToolsCall(
+    backend->client->ToolsCall(
         params, [state, pid](Expected<CallToolResult> result) {
+          // Best effort: a backend that fails or disconnected is simply omitted
+          // from the aggregate rather than failing the whole listing.
           if (result) {
             std::string text;
             for (const TextContent &content : result->content)
               text += RewriteURIsToGlobal(content.text, pid);
             state->texts[pid] = std::move(text);
-          } else if (state->error.empty()) {
-            state->error = toString(result.takeError());
           } else {
             consumeError(result.takeError());
           }
 
           if (--state->remaining != 0)
             return;
-          if (!state->error.empty())
-            return state->reply(createStringError(state->error));
           std::string combined;
           for (const auto &entry : state->texts)
             combined += entry.second;
@@ -301,8 +363,55 @@ void Multiplexer::HandleSessionsList(Reply<CallToolResult> reply) {
   }
 }
 
+void Multiplexer::HandleSessionCreate(Reply<CallToolResult> reply) {
+  Backend *local = LocalBackend();
+  if (!local)
+    return reply(createStringError("no in-process session host available"));
+
+  lldb::pid_t pid = local->pid;
+  CallToolParams params;
+  params.name = kBackendToolDebuggerCreate;
+  local->client->ToolsCall(
+      params,
+      [reply = std::move(reply), pid](Expected<CallToolResult> result) mutable {
+        if (!result)
+          return reply(result.takeError());
+        for (TextContent &content : result->content)
+          content.text = RewriteURIsToGlobal(content.text, pid);
+        reply(std::move(*result));
+      });
+}
+
+void Multiplexer::HandleSessionClose(const CallToolParams &params,
+                                     Reply<CallToolResult> reply) {
+  json::Object args;
+  if (params.arguments)
+    if (const json::Object *object = params.arguments->getAsObject())
+      args = *object;
+
+  std::optional<StringRef> session = args.getString("session");
+  if (!session || session->empty())
+    return reply(createStringError("session_close requires a \"session\" uri"));
+
+  std::optional<RoutedURI> routed = ParseGlobalURI(*session);
+  if (!routed)
+    return reply(
+        createStringError(formatv("malformed session uri \"{0}\"", *session)));
+
+  Backend *local = LocalBackend();
+  if (!local || routed->pid != local->pid)
+    return reply(
+        createStringError("can only close sessions that lldb-mcp created"));
+
+  CallToolParams delete_params;
+  delete_params.name = kBackendToolDebuggerDelete;
+  delete_params.arguments = json::Object{{"debugger", routed->local}};
+  local->client->ToolsCall(delete_params, std::move(reply));
+}
+
 void Multiplexer::HandleResourcesList(Reply<ListResourcesResult> reply) {
-  if (m_backends.empty())
+  llvm::SmallVector<Backend *> live = LiveBackends();
+  if (live.empty())
     return reply(ListResourcesResult{});
 
   // These reply callbacks run serially on the shared MainLoop thread, so this
@@ -310,17 +419,18 @@ void Multiplexer::HandleResourcesList(Reply<ListResourcesResult> reply) {
   struct State {
     size_t remaining;
     std::map<lldb::pid_t, std::vector<Resource>> resources;
-    std::string error;
     Reply<ListResourcesResult> reply;
   };
   auto state = std::make_shared<State>();
-  state->remaining = m_backends.size();
+  state->remaining = live.size();
   state->reply = std::move(reply);
 
-  for (Backend &backend : m_backends) {
-    lldb::pid_t pid = backend.pid;
-    backend.client->ResourcesList(
+  for (Backend *backend : live) {
+    lldb::pid_t pid = backend->pid;
+    backend->client->ResourcesList(
         [state, pid](Expected<ListResourcesResult> result) {
+          // Best effort: a failed or disconnected backend contributes no
+          // resources rather than failing the whole listing.
           if (result) {
             std::vector<Resource> rewritten;
             for (Resource resource : result->resources) {
@@ -328,16 +438,12 @@ void Multiplexer::HandleResourcesList(Reply<ListResourcesResult> reply) {
               rewritten.push_back(std::move(resource));
             }
             state->resources[pid] = std::move(rewritten);
-          } else if (state->error.empty()) {
-            state->error = toString(result.takeError());
           } else {
             consumeError(result.takeError());
           }
 
           if (--state->remaining != 0)
             return;
-          if (!state->error.empty())
-            return state->reply(createStringError(state->error));
           ListResourcesResult combined;
           for (auto &entry : state->resources)
             for (Resource &resource : entry.second)

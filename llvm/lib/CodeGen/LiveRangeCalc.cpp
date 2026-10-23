@@ -283,13 +283,14 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
     assert(TheVNI != nullptr && TheVNI != &UndefVNI);
     LiveRangeUpdater Updater(&LR);
     for (unsigned BN : WorkList) {
+      MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
       SlotIndex Start, End;
-      std::tie(Start, End) = Indexes->getMBBRange(BN);
+      std::tie(Start, End) = Indexes->getMBBRange(MBB);
       // Trim the live range in UseMBB.
       if (BN == UseMBBNum && Use.isValid())
         End = Use;
       else
-        Map[MF->getBlockNumbered(BN)] = LiveOutPair(TheVNI, nullptr);
+        Map[MBB] = LiveOutPair(TheVNI, nullptr);
       Updater.add(Start, End, TheVNI);
     }
     return true;

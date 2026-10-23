@@ -45,6 +45,7 @@ class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Value;
+struct VectorizeOptions;
 class WeakTrackingVH;
 
 /// A private "module" namespace for types and utilities used by this pass.
@@ -62,6 +63,7 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using GEPListMap = MapVector<Value *, GEPList>;
   using InstSetVector = SmallSetVector<Instruction *, 8>;
 
+  const VectorizeOptions *Opts = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
   TargetLibraryInfo *TLI = nullptr;
@@ -94,10 +96,12 @@ private:
 
   /// Try to vectorize a list of operands.
   /// \param MaxVFOnly Vectorize only using maximal allowed register size.
+  /// \param StandaloneSeeds \p VL are the standalone seeds: the vector factor
+  /// is limited by a single register and the windows, overlapping with the
+  /// rejected ones, are not retried.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool MaxVFOnly = false,
-                          bool LimitToRegisterVF = false);
+                          bool MaxVFOnly = false, bool StandaloneSeeds = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
@@ -111,6 +115,30 @@ private:
 
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
+
+  /// Vectorize the poor-throughput instruction groups of \p BB that the store
+  /// chains cannot cover completely.
+  bool vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
+                                              slpvectorizer::BoUpSLP &R);
+
+  /// Try to vectorize the poor-throughput instructions \p Candidates as the
+  /// standalone seeds. If \p Filter is provided, only the groups accepted by
+  /// it are tried.
+  bool vectorizePoorThroughputSeeds(
+      ArrayRef<Instruction *> Candidates, slpvectorizer::BoUpSLP &R,
+      function_ref<bool(ArrayRef<Value *>)> Filter = nullptr);
+
+  /// Try to vectorize the standalone seeds \p Seeds in the groups of the
+  /// compatible instructions, \p IsLessGroup orders the groups. If \p Filter
+  /// is provided, only the groups accepted by it are tried.
+  bool vectorizeSeeds(SmallVectorImpl<Value *> &Seeds,
+                      function_ref<bool(Value *, Value *)> IsLessGroup,
+                      slpvectorizer::BoUpSLP &R,
+                      function_ref<bool(ArrayRef<Value *>)> Filter = nullptr);
+
+  /// Try to vectorize the instructions with the single user in \p BB as the
+  /// standalone seeds.
+  bool vectorizeOnceUsedSeeds(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
   /// Vectorize the index computations of the getelementptr instructions
   /// collected in GEPs.
@@ -164,8 +192,10 @@ private:
                         SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Scan the basic block and look for patterns that are likely to start
-  /// a vectorization chain.
-  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
+  /// a vectorization chain. The FMA candidates are collected in
+  /// \p FMACandidates for the retry after all the blocks of the function.
+  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+                              SmallSetVector<Instruction *, 8> &FMACandidates);
 
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
