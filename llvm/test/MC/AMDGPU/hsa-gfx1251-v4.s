@@ -1,8 +1,8 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM,W32 %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu12.51-amd-amdhsa --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM,W32 %s
+// RUN: llvm-mc -triple=amdgpu12.51-amd-amdhsa --amdhsa-code-object-version=4 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s -filetype=null 2>&1 | FileCheck --check-prefix=W64-ERR %s
+// RUN: not llvm-mc -triple=amdgpu12.51-amd-amdhsa -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s -filetype=null 2>&1 | FileCheck --check-prefix=W64-ERR %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
@@ -64,37 +64,55 @@
 
 .text
 
-.amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1251"
+.amdgcn_target "amdgpu12.51-amd-amdhsa--gfx1251"
+// ASM: .amdgcn_target "amdgpu12.51-amd-amdhsa-unknown-gfx1251"
 
 .p2align 8
 .type minimal,@function
 minimal:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type complete,@function
 complete:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type disabled_user_sgpr,@function
 disabled_user_sgpr:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
+  s_mov_b64 s[64:65], 0
+  v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .rodata
@@ -264,16 +282,16 @@ max_vgprs:
 // ASM: .byte 1
 
 .byte .amdgcn.next_free_vgpr
-// ASM: .byte 0
+// ASM: .byte 1
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 0
+// ASM: .byte 66
 
 v_mov_b32_e32 v16, s3
 
 .byte .amdgcn.next_free_vgpr
 // ASM: .byte 17
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 4
+// ASM: .byte 66
 
 .set .amdgcn.next_free_vgpr, 0
 .set .amdgcn.next_free_sgpr, 0

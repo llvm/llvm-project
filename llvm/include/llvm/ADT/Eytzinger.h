@@ -16,9 +16,12 @@
 #ifndef LLVM_ADT_EYTZINGER_H
 #define LLVM_ADT_EYTZINGER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include <cassert>
 #include <cstddef>
 #include <optional>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -26,10 +29,15 @@ namespace llvm {
 /// Eytzinger (breadth-first) order.
 template <typename T> class EytzingerTableSpan {
 public:
+  using iterator = const T *;
+  using const_iterator = const T *;
+
   EytzingerTableSpan() = default;
   EytzingerTableSpan(const T *Data, size_t NumEntries)
       : Data(Data), NumEntries(NumEntries) {}
 
+  [[nodiscard]] iterator begin() const { return Data; }
+  [[nodiscard]] iterator end() const { return Data + NumEntries; }
   [[nodiscard]] const T *data() const { return Data; }
   [[nodiscard]] bool empty() const { return !Data || NumEntries == 0; }
   [[nodiscard]] size_t size() const { return NumEntries; }
@@ -108,6 +116,71 @@ public:
 private:
   const T *Data = nullptr;
   size_t NumEntries = 0;
+};
+
+/// Owning container that stores elements in a complete binary search tree
+/// formatted in Eytzinger (breadth-first) order.
+template <typename T> class EytzingerTable {
+  std::vector<T> Storage;
+
+  explicit EytzingerTable(std::vector<T> Buffer) : Storage(std::move(Buffer)) {}
+
+public:
+  using iterator = typename std::vector<T>::const_iterator;
+  using const_iterator = typename std::vector<T>::const_iterator;
+
+  EytzingerTable() = default;
+
+  /// Construct an Eytzinger search tree from a vector of keys by sorting,
+  /// deduplicating, and reordering elements into breadth-first layout.
+  /// KeyT may differ from T (e.g., creating EytzingerTable<ulittle64_t> from
+  /// a vector of uint64_t).
+  template <typename KeyT = T>
+  static EytzingerTable<T> create(std::vector<KeyT> Keys) {
+    llvm::sort(Keys);
+    Keys.erase(llvm::unique(Keys), Keys.end());
+
+    std::vector<T> Eytzinger(Keys.size());
+    size_t InIdx = 0;
+    auto EytzingerInOrder = [&](auto &Self, size_t K) -> void {
+      if (K > Keys.size())
+        return;
+      Self(Self, 2 * K);
+      Eytzinger[K - 1] = T(std::move(Keys[InIdx++]));
+      Self(Self, 2 * K + 1);
+    };
+    EytzingerInOrder(EytzingerInOrder, 1);
+    return EytzingerTable<T>(std::move(Eytzinger));
+  }
+
+  [[nodiscard]] EytzingerTableSpan<T> asSpan() const {
+    return EytzingerTableSpan<T>(Storage.data(), Storage.size());
+  }
+
+  template <typename KeyT = T>
+  [[nodiscard]] std::optional<size_t> findIndex(const KeyT &Target) const {
+    return asSpan().findIndex(Target);
+  }
+
+  template <typename KeyT = T>
+  [[nodiscard]] bool contains(const KeyT &Target) const {
+    return asSpan().contains(Target);
+  }
+
+  [[nodiscard]] bool isSorted() const { return asSpan().isSorted(); }
+
+  [[nodiscard]] iterator begin() { return Storage.begin(); }
+  [[nodiscard]] const_iterator begin() const { return Storage.begin(); }
+  [[nodiscard]] iterator end() { return Storage.end(); }
+  [[nodiscard]] const_iterator end() const { return Storage.end(); }
+
+  [[nodiscard]] const T *data() const { return Storage.data(); }
+  [[nodiscard]] size_t size() const { return Storage.size(); }
+  [[nodiscard]] bool empty() const { return Storage.empty(); }
+  [[nodiscard]] const T &operator[](size_t Idx) const {
+    assert(Idx < Storage.size() && "Index out of bounds");
+    return Storage[Idx];
+  }
 };
 
 } // namespace llvm

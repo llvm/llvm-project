@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
@@ -17,7 +19,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -54,6 +60,8 @@ bool DXContainerPDB::shouldSkipSection(StringRef SectionName,
                                        size_t SectionSize) {
   if (MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize))
     return true;
+  if (dxil::SlimDebug && SectionName == "ILDB")
+    return true;
 
   // Skip sections that are irrelevant for debug info.
   static const StringSet<> DebugSections{"ILDB", "ILDN", "HASH", "PDBI",
@@ -85,10 +93,22 @@ ArrayRef<MCDXContainerPart> DXContainerPDB::collectParts() {
   return Parts;
 }
 
+static GlobalVariable *createPrivateDataGlobal(Module &M, StringRef Data) {
+  Constant *Content =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  auto *GV =
+      new GlobalVariable(M, Content->getType(), true,
+                         GlobalValue::PrivateLinkage, Content, "dx.priv");
+  GV->setSection("PRIV");
+  GV->setAlignment(Align(1));
+  return GV;
+}
+
 bool DXContainerPDB::runOnModule(Module &M) {
+  llvm::scope_exit Cleanup([&]() { reset(); });
   this->M = &M;
 
-  StringRef DebugFileName;
+  SmallString<128> DebugFileName;
   ArrayRef<char> ModuleHash;
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.getSection() == PdbFileNameSectionName) {
@@ -102,10 +122,22 @@ bool DXContainerPDB::runOnModule(Module &M) {
   }
 
   // PDB emission was not requested.
-  if (DebugFileName.empty())
+  if (DebugFileName.empty() && !dxil::PdbInPrivate)
     return false;
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
+
+  bool DeleteAfterRead = false;
+  if (DebugFileName.empty()) {
+    if (std::error_code EC =
+            sys::fs::createTemporaryFile("dxil", "pdb", DebugFileName))
+      reportFatalInternalError("Failed to create temporary PDB file");
+    DeleteAfterRead = true;
+  }
+  llvm::scope_exit FileCleanup([&]() {
+    if (DeleteAfterRead)
+      sys::fs::remove(DebugFileName);
+  });
 
   BumpPtrAllocator Allocator;
   pdb::PDBFileBuilder Builder(Allocator);
@@ -144,16 +176,28 @@ bool DXContainerPDB::runOnModule(Module &M) {
   write(OS, M.getTargetTriple());
 
   // Write PDB file.
-  // FIXME(sandboxing): Remove this by routing PDB output through the VFS.
-  auto BypassSandbox = sys::sandbox::scopedDisable();
   codeview::GUID IgnoredOutGuid;
-  if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
-    reportFatalUsageError("Couldn't write to PDB file: " +
-                          Twine(toString(std::move(Err))));
+  {
+    // FIXME(sandboxing): Remove this by routing output through OutputBackend.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
+      reportFatalUsageError("Couldn't write to PDB file: " +
+                            Twine(toString(std::move(Err))));
+  }
 
-  reset();
+  if (!dxil::PdbInPrivate)
+    return false;
 
-  return false;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      M.getContext().getVirtualFileSystem().getBufferForFile(
+          DebugFileName, /*FileSize=*/-1, /*RequiresNullTerminator=*/false,
+          /*IsVolatile=*/false, /*IsText=*/false);
+  if (!Buf)
+    reportFatalInternalError("Failed to read PDB for PRIV embedding");
+
+  appendToCompilerUsed(M, createPrivateDataGlobal(M, (*Buf)->getBuffer()));
+
+  return true;
 }
 
 char DXContainerPDB::ID = 0;

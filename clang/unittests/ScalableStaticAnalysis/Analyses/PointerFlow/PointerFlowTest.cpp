@@ -13,6 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
@@ -173,6 +174,36 @@ protected:
       }
     }
 
+    if (!Extractor) {
+      ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
+      return false;
+    }
+    Extractor->HandleTranslationUnit(AST->getASTContext());
+    return true;
+  }
+
+  // Variant that mounts a virtual `<sys.h>` header (with
+  // `#pragma clang system_header` prepended) on an `-isystem` path,
+  // letting tests exercise the system-header contributor gate.
+  // Returns true on AST build + extractor instantiation success.
+  bool setUpTestWithSystemHeader(StringRef Code, StringRef SysHeaderCode,
+                                 bool ExtractFromSystemHeaders) {
+    Opts.ExtractFromSystemHeaders = ExtractFromSystemHeaders;
+    std::string SysWithPragma =
+        ("#pragma clang system_header\n" + SysHeaderCode).str();
+    tooling::FileContentMappings VirtFiles = {{"/sysinc/sys.h", SysWithPragma}};
+    AST = tooling::buildASTFromCodeWithArgs(
+        Code,
+        {"-Wno-unused-value", "-Wno-int-to-pointer-cast", "-isystem/sysinc"},
+        "input.cc", "clang-tool", std::make_shared<PCHContainerOperations>(),
+        tooling::getClangStripDependencyFileAdjuster(), VirtFiles);
+
+    for (auto &E : clang::ssaf::TUSummaryExtractorRegistry::entries()) {
+      if (E.getName() == PointerFlowEntitySummary::Name) {
+        Extractor = E.instantiate(Builder);
+        break;
+      }
+    }
     if (!Extractor) {
       ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
       return false;
@@ -720,7 +751,10 @@ TEST_F(PointerFlowTest, LocalVarDeclInit2) {
   auto *Sum = getEntitySummary("foo");
 
   ASSERT_NE(Sum, nullptr);
-  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"p", 1U}, {"arr", 1U}}}));
+  // 'p' and 'arr' are both 'int (*)[10]' (max level 2: pointer + array), so the
+  // base edge (p, 1) -> (arr, 1) is elaborated with (p, 2) -> (arr, 2).
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"p", 1U}, {"arr", 1U}},
+                                       {{"p", 2U}, {"arr", 2U}}}));
 }
 
 TEST_F(PointerFlowTest, FieldInit) {
@@ -1082,6 +1116,26 @@ TEST_F(PointerFlowTest, MultipleReturnEdges) {
                                       }));
 }
 
+// A function returning a reference to a multi-level pointer.  The return
+// type `int **&` has two pointer levels once the reference is stripped, so the
+// (foo_ret, n) -> (gpp, m) edge should be elaborated up to level 2.
+TEST_F(PointerFlowTest, ReturnRefToMultiLevelPointer) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int **gpp;
+    int **&foo() {
+      return gpp;
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {
+                                          {{"foo", 1U, true}, {"gpp", 1U}},
+                                          {{"foo", 2U, true}, {"gpp", 2U}},
+                                      }));
+}
+
 TEST_F(PointerFlowTest, NoReturnEdgeForNonPointerReturnType) {
   ASSERT_EQ(setUpTest(R"cpp(
     int foo(int *p, int x) {
@@ -1359,9 +1413,13 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
   testing::internal::CaptureStderr();
 
   ASSERT_TRUE(setUpTest(Code));
-  // Verify the warning was logged
+  // Verify the warning was logged:
+  // The structured-binding initializer is an ArrayInitLoopExpr (an element-wise
+  // array copy), which the translator does not support. It is reported as a
+  // warning rather than crashing, and no summary is produced for 'foo'.
   ASSERT_TRUE(StringRef(testing::internal::GetCapturedStderr())
-                  .contains("failed to create EntityId for Decomposition"));
+                  .contains("attempt to translate ArrayInitLoopExpr to "
+                            "EntityPointerLevels"));
 }
 #endif
 
@@ -1409,7 +1467,10 @@ TEST_F(PointerFlowTest, ArgToRefParamLevel2) {
   auto *Sum = getEntitySummary("caller");
 
   ASSERT_TRUE(Sum);
-  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"pp", 1U}}}));
+  // Both 'rp' and 'pp' are 'int**' (max level 2), so the base edge
+  // (rp, 1) -> (pp, 1) is elaborated with the higher-level (rp, 2) -> (pp, 2).
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"pp", 1U}},
+                                       {{"rp", 2U}, {"pp", 2U}}}));
 }
 
 TEST_F(PointerFlowTest, InitRefPtr) {
@@ -1512,7 +1573,10 @@ TEST_F(PointerFlowTest, RefBindMultiLevel) {
   auto *Sum = getEntitySummary<VarDecl>("r");
 
   ASSERT_NE(Sum, nullptr);
-  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"gpp", 1U}}}));
+  // Both 'r' and 'gpp' are 'int**' (max level 2), so the base edge
+  // (r, 1) -> (gpp, 1) is elaborated with the higher-level (r, 2) -> (gpp, 2).
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"gpp", 1U}},
+                                       {{"r", 2U}, {"gpp", 2U}}}));
 }
 
 TEST_F(PointerFlowTest, RefBindTernaryInit) {
@@ -1617,5 +1681,40 @@ TEST_F(PointerFlowTest, LocalPointerReportedWhenIncluded) {
             makeEdges(__LINE__, {{{"local_ptr", 1U}, {"param", 1U}}}));
 
   EXPECT_TRUE(getEntitySummary("foo"));
+}
+
+//////////////////////////////////////////////////////////////
+//          System-header contributor opt-out gate.         //
+//          Spec: tu-summary-extraction,                    //
+//          "System-header contributor opt-out flag".       //
+//////////////////////////////////////////////////////////////
+
+// Default: ExtractFromSystemHeaders == true. A function decl in a
+// `#pragma clang system_header`-marked included header IS enumerated
+// as a contributor and produces an EntitySummary.
+TEST_F(PointerFlowTest, ExtractFromSystemHeadersByDefault) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/true));
+  EXPECT_TRUE(getEntitySummary("sys_fn"));
+  EXPECT_TRUE(getEntitySummary("user_fn"));
+}
+
+TEST_F(PointerFlowTest, DontExtractFromSystemHeadersWhenOverridden) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/false));
+  EXPECT_FALSE(getEntitySummary("sys_fn")); // 'sys_fn' is skipped.
+  EXPECT_TRUE(getEntitySummary("user_fn")); // 'user_fn' is still present.
 }
 } // namespace

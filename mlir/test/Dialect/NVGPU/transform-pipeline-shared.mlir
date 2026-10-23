@@ -24,7 +24,7 @@ module attributes {transform.with_named_sequence} {
     %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
     // expected-error @below {{irreversible pipelining failure}}
     // expected-note @below {{try setting "peel_epilogue"}}
-    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop depth = 2 : (!t) -> !t
     transform.yield
   }
 }
@@ -69,7 +69,7 @@ func.func @simple_depth_2_peeled(%global: memref<?xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop depth = 2 peel_epilogue : (!t) -> !t
     transform.yield
   }
 }
@@ -100,7 +100,7 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>, %alloc_size: index) 
   scf.for %i = %c0 to %c98 step %c4 {
     // Condition for the predication "select" below.
     // CHECK:   %[[CMP0:.+]] = arith.cmpi slt, %[[I]], %[[C90]]
-    // CHECK:   nvgpu.device_async_wait %[[ITER_ARG0]] {numGroups = 1
+    // CHECK:   nvgpu.device_async_wait %[[ITER_ARG0]] numGroups = 1
     // Original "select" with updated induction variable.
     // CHECK:   %[[I_PLUS_8:.+]] = arith.addi %[[I]], %[[C8]]
     // CHECK:   %[[CMP1:.+]] = arith.cmpi slt, %[[I_PLUS_8]], %[[C96]]
@@ -138,7 +138,7 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>, %alloc_size: index) 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop depth = 2 : (!t) -> !t
     transform.yield
   }
 }
@@ -156,12 +156,12 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
   // CHECK: nvgpu.device_async_copy
   // CHECK: nvgpu.device_async_copy
   // CHECK: scf.for
-  // CHECK:   nvgpu.device_async_wait %{{.*}} {numGroups = 1
+  // CHECK:   nvgpu.device_async_wait %{{.*}} numGroups = 1
   // CHECK:   arith.select
   // CHECK:   nvgpu.device_async_copy
   // CHECK:   scf.yield
-  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 1
-  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 0
+  // CHECK: nvgpu.device_async_wait %{{.*}} numGroups = 1
+  // CHECK: nvgpu.device_async_wait %{{.*}} numGroups = 0
   scf.for %i = %c0 to %c98 step %c4 {
     %c96 = arith.constant 96 : index
     %cond = arith.cmpi slt, %i, %c96 : index
@@ -180,7 +180,7 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop depth = 2 peel_epilogue : (!t) -> !t
     transform.yield
   }
 }

@@ -53,3 +53,39 @@ define void @keep_nsw_non_intmin(ptr %p, i32 %x, i32 %y) {
   store i32 %b, ptr %p1, align 4
   ret void
 }
+
+; shl nsw X, BW-1 is converted to mul X, INT_MIN. shl nsw does not poison at
+; X = -1 (shifted-out bits match the sign bit), but mul nsw does, so the
+; converted lane is no longer nsw and the vector op must not be nsw.
+define void @shl_bw1_converted_to_mul(ptr %p, i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_bw1_converted_to_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP2]], <i32 3, i32 -2147483648>
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %a = mul nsw i32 %x, 3
+  %b = shl nsw i32 %y, 31
+  store i32 %a, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %b, ptr %p1, align 4
+  ret void
+}
+
+; Non-BW-1 shl converted to mul preserves nsw.
+define void @keep_nsw_shl_non_bw1(ptr %p, i32 %x, i32 %y) {
+; CHECK-LABEL: @keep_nsw_shl_non_bw1(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP2]], <i32 3, i32 4>
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %a = mul nsw i32 %x, 3
+  %b = shl nsw i32 %y, 2
+  store i32 %a, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %b, ptr %p1, align 4
+  ret void
+}

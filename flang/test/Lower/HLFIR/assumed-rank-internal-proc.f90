@@ -17,7 +17,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_assumed_rankEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QFtest_assumed_rankEx") fortran_attrs<internal_assoc> : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.box<!fir.array<*:f32>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.box<!fir.array<*:f32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<*:f32>>>
@@ -33,7 +33,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<tuple<!fir.box<!fir.array<*:f32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<*:f32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<*:f32>>>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<host_assoc>, uniq_name = "_QFtest_assumed_rankEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFtest_assumed_rankEx") fortran_attrs<host_assoc> : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPsome_sub(%[[VAL_5]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -55,7 +55,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank_optional(
 ! CHECK-SAME:                                             %[[VAL_0:.*]]: !fir.class<!fir.array<*:none>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional, internal_assoc>, uniq_name = "_QFtest_assumed_rank_optionalEx"} : (!fir.class<!fir.array<*:none>>, !fir.dscope) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QFtest_assumed_rank_optionalEx") fortran_attrs<optional, internal_assoc> : (!fir.class<!fir.array<*:none>>, !fir.dscope) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.class<!fir.array<*:none>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.class<!fir.array<*:none>>>>, i32) -> !fir.ref<!fir.class<!fir.array<*:none>>>
@@ -85,7 +85,7 @@ end subroutine
 ! CHECK:           %[[VAL_8:.*]] = arith.cmpi ne, %[[VAL_6]], %[[VAL_7]] : i64
 ! CHECK:           %[[VAL_9:.*]] = fir.absent !fir.class<!fir.array<*:none>>
 ! CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_8]], %[[VAL_4]], %[[VAL_9]] : !fir.class<!fir.array<*:none>>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = #fir.var_attrs<optional, host_assoc>, uniq_name = "_QFtest_assumed_rank_optionalEx"} : (!fir.class<!fir.array<*:none>>) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFtest_assumed_rank_optionalEx") fortran_attrs<optional, host_assoc> : (!fir.class<!fir.array<*:none>>) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
 ! CHECK:           fir.call @_QPsome_sub2(%[[VAL_11]]#0) fastmath<contract> : (!fir.class<!fir.array<*:none>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -107,7 +107,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_assumed_rank_ptr(
 ! CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer, internal_assoc>, uniq_name = "_QFtest_assumed_rank_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QFtest_assumed_rank_ptrEx") fortran_attrs<pointer, internal_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>
@@ -122,7 +122,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest_assumed_rank_ptrEx"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFtest_assumed_rank_ptrEx") fortran_attrs<pointer, host_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
 ! CHECK:           fir.call @_QPsome_sub3(%[[VAL_5]]#0) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }

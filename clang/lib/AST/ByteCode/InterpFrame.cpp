@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -24,19 +23,17 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
-    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr) {}
+    : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
+      ArgSize(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
-    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize) {
+  assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
-
-  if (!Func)
-    return;
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;
@@ -50,10 +47,10 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
 
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      new (localBlock(Local.Offset)) Block(S.EvalID, Local.Desc);
+      Block *B = localBlock(Local.Offset);
+      new (B) Block(S.EvalID, Local.Desc, Block::InlineDescMD);
       // Note that we are NOT calling invokeCtor() here, since that is done
-      // via the InitScope op.
-      new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
+      // lazily when accessing the local.
     }
   }
 }
@@ -77,33 +74,19 @@ InterpFrame::~InterpFrame() {
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     S.deallocate(argBlock(I));
 
-  // When destroying the InterpFrame, call the Dtor for all block
+  // When destroying the InterpFrame, call the Dtor for all blocks
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  destroyScopes();
-}
-
-void InterpFrame::destroyScopes() {
-  if (!Func || Func->getFrameSize() == 0)
-    return;
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      S.deallocate(localBlock(Local.Offset));
+      Block *B = localBlock(Local.Offset);
+      if (B->isInitialized())
+        S.deallocate(B);
     }
   }
 }
 
-void InterpFrame::initScope(unsigned Idx) {
-  if (!Func)
-    return;
-
-  for (auto &Local : Func->getScope(Idx).locals()) {
-    assert(!localBlock(Local.Offset)->isInitialized());
-    localBlock(Local.Offset)->invokeCtor();
-  }
-}
-
-void InterpFrame::enableLocal(unsigned Idx) {
+void InterpFrame::enableLocal(unsigned Offset) {
   assert(Func);
 
   // FIXME: This is a little dirty, but to avoid adding a flag to
@@ -111,12 +94,14 @@ void InterpFrame::enableLocal(unsigned Idx) {
   // variables, we reuse the IsActive flag for the enabled state. We should
   // probably use a different struct than InlineDescriptor for the block-level
   // inline descriptor of local varaibles.
-  localInlineDesc(Idx)->IsActive = true;
+  getLocalBlock(Offset)->getBlockDesc<InlineDescriptor>().IsActive = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {
   for (auto &Local : Func->getScope(Idx).locals_reverse()) {
-    S.deallocate(localBlock(Local.Offset));
+    Block *B = localBlock(Local.Offset);
+    if (B->isInitialized())
+      S.deallocate(B);
   }
 }
 
@@ -161,7 +146,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 
@@ -217,8 +202,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+    if (SourceRange NullRange = S.getSource({}).getRange(); NullRange.isValid())
       return NullRange;
+
     return S.EvalLocation;
   }
 
@@ -227,7 +213,7 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        S.getRange(C->Caller->Func, C->getRetOpPC() - sizeof(uintptr_t));
+        C->Caller->Func->getSource(C->getRetOpPC()).getRange();
     if (CallRange.isValid())
       return CallRange;
   }
@@ -238,15 +224,6 @@ const FunctionDecl *InterpFrame::getCallee() const {
   if (!Func)
     return nullptr;
   return Func->getDecl();
-}
-
-Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
-  assert(Offset < Func->getFrameSize() && "Invalid local offset.");
-  return Pointer(localBlock(Offset));
-}
-
-Block *InterpFrame::getLocalBlock(unsigned Offset) const {
-  return localBlock(Offset);
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Index) {
@@ -277,39 +254,26 @@ static bool funcHasUsableBody(const Function *F) {
 }
 
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
+  if (!Func)
+    return S.getSource(PC);
+
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(getRetOpPC());
 
+  // If we have a frame for an invalid function, check the caller.
+  // This happens for the fake function frame we create in TrivialCopy.
+  if (Func && !Func->isValid())
+    return Caller->getSource(getRetOpPC());
+
   // Similarly, if the resulting source location is invalid anyway,
   // point to the caller instead.
-  SourceInfo Result = S.getSource(Func, PC);
+  SourceInfo Result = Func->getSource(PC);
   if (Result.getLoc().isInvalid() && Caller)
     return Caller->getSource(getRetOpPC());
 
   return Result;
-}
-
-const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(getRetOpPC());
-
-  return S.getExpr(Func, PC);
-}
-
-SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(getRetOpPC());
-
-  return S.getLocation(Func, PC);
-}
-
-SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(getRetOpPC());
-
-  return S.getRange(Func, PC);
 }
 
 bool InterpFrame::isStdFunction() const {

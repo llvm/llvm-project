@@ -28,14 +28,14 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body.split:
 ; INITIAL-NEXT:      CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.a>, ir<1>
+; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.a>, ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.b>, ir<1>
+; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.b>, ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP7]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
 ; INITIAL-NEXT:      CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.c>, ir<1>
+; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.c>, ir<1>
 ; INITIAL-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; INITIAL-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>
@@ -55,12 +55,12 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Live-in ir<%n> = original trip-count
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  ir-bb<entry>:
-; FINAL-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoaddr ir<%c> to i64
-; FINAL-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoaddr ir<%b> to i64
+; FINAL-NEXT:    IR   %c2 = ptrtoaddr ptr %c to i64
+; FINAL-NEXT:    IR   %b1 = ptrtoaddr ptr %b to i64
 ; FINAL-NEXT:  Successor(s): vector.clamped.vf.check
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.clamped.vf.check:
-; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(vp<[[VP3]]>, vp<[[VP2]]>, ir<1>)
+; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(ir<%b1>, ir<%c2>, ir<1>)
 ; FINAL-NEXT:    EMIT vp<%num.active.lanes> = num-active-lanes vp<[[VP4]]>
 ; FINAL-NEXT:    EMIT vp<%vf.is.scalar> = icmp ule vp<%num.active.lanes>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub ir<-1>, ir<%n>

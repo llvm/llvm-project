@@ -14,11 +14,15 @@
 
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
+#include "ScriptedCommandPythonInterface.h"
 #include "ScriptedFrameProviderPythonInterface.h"
 #include "ScriptedFramePythonInterface.h"
 #include "ScriptedHookPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
+#include "ScriptedStackFrameRecognizerPythonInterface.h"
+#include "ScriptedStringSummaryPythonInterface.h"
+#include "ScriptedSyntheticChildrenPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
 

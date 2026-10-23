@@ -1,89 +1,40 @@
-! Each sub-file exercises a different unstructured-CFG pattern inside a
-! combined `acc parallel loop` construct (default parallelism is
-! `independent`).
+! A combined `acc parallel loop` whose default parallelism resolves to
+! `independent` and whose body branching keeps it unstructured.
+!
+! The GOTO jumps backwards, so the body reaches the GOTO again from its own
+! target and the loop is not proven to terminate. It stays unstructured and the
+! directive cannot take it over. The patterns that do keep their branching
+! confined live in ../acc-unstructured-combined-construct.f90.
+!
+! A GOTO leaving the loop would not serve here: it is rejected on both paths,
+! as is EXIT or RETURN in a combined construct.
 
-! RUN: split-file %s %t
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefix=CBACK-OK
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %s -o - 2>&1 | FileCheck %s --check-prefix=CBACK
 
-! By default (--emit-independent-loops-as-unstructured=true), the loops are
-! lowered to combined `acc.parallel` + `acc.loop` operations.
-! RUN: bbc -fopenacc -emit-hlfir %t/stop_collapse1.f90 -o - | FileCheck %s --check-prefix=STOP1-OK
-! RUN: bbc -fopenacc -emit-hlfir %t/cycle_collapse2.f90 -o - | FileCheck %s --check-prefix=CYCLE2-OK
-! RUN: bbc -fopenacc -emit-hlfir %t/stop_collapse3.f90 -o - | FileCheck %s --check-prefix=STOP3-OK
-
-! With --emit-independent-loops-as-unstructured=false, the TODO is emitted.
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/stop_collapse1.f90 -o - 2>&1 | FileCheck %s --check-prefix=STOP1
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/cycle_collapse2.f90 -o - 2>&1 | FileCheck %s --check-prefix=CYCLE2
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/stop_collapse3.f90 -o - 2>&1 | FileCheck %s --check-prefix=STOP3
-
-!--- stop_collapse1.f90
-
-! `acc parallel loop` with STOP in the body. Loop defaults to `independent`.
-subroutine test_unstructured2(a, b, c)
-  integer :: i, j, k
-  real :: a(:,:,:), b(:,:,:), c(:,:,:)
+subroutine test_combined_backward_goto(a, n)
+  integer :: n, i
+  real :: a(n)
 
   !$acc parallel loop
-  do i = 1, 10
-    do j = 1, 10
-      do k = 1, 10
-        if (a(1,2,3) > 10) stop 'just to be unstructured'
-      end do
-    end do
-  end do
-
-end subroutine
-
-! STOP1: not yet implemented: unstructured do loop in combined acc construct
-
-! STOP1-OK-LABEL: func.func @_QPtest_unstructured2
-! STOP1-OK: acc.parallel combined(loop)
-! STOP1-OK: acc.loop combined(parallel)
-
-!--- cycle_collapse2.f90
-
-! `acc parallel loop collapse(2)` with an early-exit (CYCLE).
-subroutine test_unstructured_collapse_cycle(a)
-  integer :: i, j, jdiag
-  real(8) :: a(:,:)
-  jdiag = 4
-  !$acc parallel loop collapse(2) copy(a)
-  do j = 1, 8
-    do i = 1, 8
-      if (i == jdiag) then
-        a(i, j) = 0.0d0
-        cycle
-      end if
-      a(i, j) = real(i + j, 8)
-    end do
-  end do
-  !$acc end parallel loop
-end subroutine
-
-! CYCLE2: not yet implemented: unstructured do loop in combined acc construct
-
-! CYCLE2-OK-LABEL: func.func @_QPtest_unstructured_collapse_cycle
-! CYCLE2-OK: acc.parallel combined(loop)
-! CYCLE2-OK: acc.loop combined(parallel)
-
-!--- stop_collapse3.f90
-
-! `acc parallel loop collapse(3)` with STOP - the collapse=3 form of the
-! STOP scenario above.
-subroutine test_unstructured_collapse_stop(a)
-  integer :: i, j, k
-  real :: a(:,:,:)
-  !$acc parallel loop collapse(3)
-  do i = 1, 10
-    do j = 1, 10
-      do k = 1, 10
-        if (a(1,2,3) > 10) stop 'just to be unstructured'
-      end do
-    end do
+  do i = 1, n
+20  continue
+    a(i) = a(i) * 2.0
+    if (a(i) < 100.0) goto 20
   end do
 end subroutine
 
-! STOP3: not yet implemented: unstructured do loop in combined acc construct
+! CBACK: not yet implemented: unstructured do loop in combined acc construct
 
-! STOP3-OK-LABEL: func.func @_QPtest_unstructured_collapse_stop
-! STOP3-OK: acc.parallel combined(loop)
-! STOP3-OK: acc.loop combined(parallel)
+! By default the loop still lowers, but without its bounds on the op: the
+! directive did not take it over. The branching stays raw in the loop's own
+! region rather than being folded into one, which is what a loop that is
+! unstructured throughout gets.
+! CBACK-OK-LABEL: func.func @_QPtest_combined_backward_goto
+! CBACK-OK:         acc.parallel combined(loop)
+! CBACK-OK:           acc.loop combined(parallel) private({{.*}}) {
+! CBACK-OK-NOT:         control(
+! CBACK-OK-NOT:         scf.execute_region
+! CBACK-OK:             cf.cond_br
+! CBACK-OK-NOT:         scf.execute_region
+! CBACK-OK:           } independent  unstructured

@@ -3,18 +3,23 @@
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp-version=60 %openmp_flags %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 SUBROUTINE test_interop_01()
-  !$OMP INTEROP DEVICE(1)
+  INTEGER(8) :: obj
+  !$OMP INTEROP INIT(TARGETSYNC: obj) DEVICE(1)
   PRINT *,'pass'
 END SUBROUTINE test_interop_01
 
 !UNPARSE: SUBROUTINE test_interop_01
-!UNPARSE: !$OMP INTEROP  DEVICE(1_4)
+!UNPARSE:  INTEGER(KIND=8_4) obj
+!UNPARSE: !$OMP INTEROP INIT(TARGETSYNC: obj) DEVICE(1_4)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_01
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interop
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
+!PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
+!PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | Flags = {}
 
@@ -22,14 +27,14 @@ END SUBROUTINE test_interop_01
 SUBROUTINE test_interop_02()
   USE omp_lib
   INTEGER(OMP_INTEROP_KIND) :: obj1, obj2, obj3
-  !$OMP INTEROP INIT(TARGETSYNC: obj) USE(obj1) DESTROY(obj3)
+  !$OMP INTEROP INIT(TARGETSYNC: obj2) USE(obj1) DESTROY(obj3)
   PRINT *,'pass'
 END SUBROUTINE test_interop_02
 
 !UNPARSE: SUBROUTINE test_interop_02
 !UNPARSE:  USE :: omp_lib
 !UNPARSE:  INTEGER(KIND=8_4) obj1, obj2, obj3
-!UNPARSE: !$OMP INTEROP  INIT(TARGETSYNC: obj) USE(obj1) DESTROY(obj3)
+!UNPARSE: !$OMP INTEROP  INIT(TARGETSYNC: obj2) USE(obj1) DESTROY(obj3)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_02
 
@@ -37,7 +42,7 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
-!PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj2'
 !PARSE-TREE: | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
 !PARSE-TREE: | Flags = {}

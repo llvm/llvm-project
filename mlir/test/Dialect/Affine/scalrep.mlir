@@ -988,7 +988,7 @@ func.func @scf_for_if(%arg0: memref<?xi32>, %arg1: i32) -> i32 attributes {llvm.
 func.func @zero_d_memrefs() {
   // CHECK: %[[C0:.*]] = arith.constant 0
   %c0_i32 = arith.constant 0 : i32
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<i32>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<i32>
   affine.store %c0_i32, %alloc_0[] : memref<i32>
   affine.for %arg0 = 0 to 9 {
     %2 = affine.load %alloc_0[] : memref<i32>

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -27,13 +27,14 @@ namespace {
 struct BranchProbabilityInfoTest : public testing::Test {
   std::unique_ptr<BranchProbabilityInfo> BPI;
   std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<CycleInfo> CI;
   LLVMContext C;
 
   BranchProbabilityInfo &buildBPI(Function &F) {
     DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
-    BPI.reset(new BranchProbabilityInfo(F, *LI));
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI));
     return *BPI;
   }
 

@@ -31,9 +31,9 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <optional>
 
@@ -111,7 +111,8 @@ static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
 /// when its register either (a) has not been redefined by any preceding
 /// non-debug instruction (i.e. it still holds the caller-passed value), or
 /// (b) was most recently loaded from the stack via $r11 (a stack-passed
-/// argument beyond the first five register args).
+/// argument beyond the first five register args). For each argument only the
+/// first eligible DBG_VALUE is recorded, since that is its entry location.
 ///
 /// There is another case where DBG_VALUE is not emitted due to
 /// AssignmentTrackingAnalysis which determines that a variable is
@@ -157,7 +158,7 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
 
       if (!DefinedRegs.contains(MO.getReg()) ||
           StackLoadRegs.contains(MO.getReg()))
-        EntryRegMap[Arg] = MO.getReg();
+        EntryRegMap.try_emplace(Arg, MO.getReg());
       continue;
     }
 
@@ -1369,10 +1370,8 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
-  auto LoadFile = [](StringRef FileName) {
-    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
-    auto BypassSandbox = sys::sandbox::scopedDisable();
-    return MemoryBuffer::getFile(FileName);
+  auto LoadFile = [&File](StringRef FileName) {
+    return File->getContext().getVirtualFileSystem().getBufferForFile(FileName);
   };
 
   std::unique_ptr<MemoryBuffer> Buf;

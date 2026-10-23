@@ -46,18 +46,21 @@ define i32 @remove_redundant_cmp_ugt_tzcnt_i32(i32 %0) {
 define i32 @remove_redundant_cmp_ne_tzcnt_i32(i32 %0) {
 ; X64-LABEL: remove_redundant_cmp_ne_tzcnt_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    tzcntl %edi, %ecx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $1, %edi
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_ne_tzcnt_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    tzcntl %ecx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    tzcntl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl $1, %ecx
 ; X86-NEXT:    setne %al
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
   %2 = tail call i32 @llvm.cttz.i32(i32 %0, i1 false)
   %3 = icmp ne i32 %0, 1

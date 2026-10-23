@@ -482,3 +482,49 @@ namespace SubobjectCompare {
                                                     // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
   static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
 }
+
+namespace SubPtr {
+  struct A {};
+  struct B : A { int n; int m; };
+  B a[3][3];
+
+  constexpr int diff1 = &a[2] - &a[0];
+  constexpr int diff2 = &a[1][3] - &a[1][0];
+  constexpr int diff3 = &a[2][0] - &a[1][0]; // both-error {{constant expression}} \
+                                             // both-note {{subtracted pointers are not elements of the same array}}
+  // static_assert(&a[2][0] == &a[1][3], ""); FIXME
+  constexpr int diff4 = (&b + 1) - &b;
+  constexpr int diff5 = &a[1][2].n - &a[1][0].n; // both-error {{constant expression}} \
+                                                 // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr int diff6 = &a[1][2].n - &a[1][2].n;
+  constexpr int diff7 = (A*)&a[0][1] - (A*)&a[0][0]; // both-error {{constant expression}} \
+                                                     // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
+}
+
+namespace ConstexprForRangeVar {
+  void f() {
+    int arr[] = {1, 2, 3};
+    for (constexpr int a : arr) {} // both-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                                   // both-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+}
+
+namespace OpaqueArrayIndex {
+
+  int n;
+  int a[1];
+  constexpr int *r = &(&n + 1)[(unsigned __int128)-1]; // both-error {{constant expression}} \
+                                                       // both-note {{456 of non-array object}}
+  constexpr int *r2 = &a[(unsigned __int128)-1]; // both-error {{constant expression}} \
+                                                 // both-note {{455 of array of 1 element}}
+  constexpr int *r3 = &a[2];  // both-error {{constant expression}} \
+                              // both-note {{2 of array of 1 element}}
+  constexpr int *r4 = &a[-1];  // both-error {{constant expression}} \
+                               // both-note {{-1 of array of 1 element}}
+  constexpr int *q = (&n + 1) - (unsigned __int128)-1; // both-error {{constant expression}} \
+                                                       // both-note {{cannot refer to element -3402}}
+  constexpr int *f = &a[0] + 1 + (unsigned long)-1; // both-error {{constant expression}} \
+                                                    // both-note {{cannot refer to element 1844}}
+
+}

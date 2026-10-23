@@ -28,7 +28,8 @@ class Shard_Op<string mnemonic, list<Trait> traits = []> :
     Op<Shard_Dialect, mnemonic, traits> {
 }
 
-def Shard_GridOp : Shard_Op<"grid", [Symbol, Pure]> {
+def Shard_GridOp
+    : Shard_Op<"grid", [SymbolName, SymbolVisibility, Symbol, Pure]> {
   let summary = "Description of a device/process grid.";
   let description = [{
     The shard.grid operation is a symbol operation that identifies a specific
@@ -67,10 +68,12 @@ def Shard_GridOp : Shard_Op<"grid", [Symbol, Pure]> {
   }];
   let arguments = (ins
     SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     DenseI64ArrayAttr:$shape
   );
   let assemblyFormat = [{
-    $sym_name `(` `shape` `=` custom<DimensionList>($shape) `)`
+    ($sym_visibility^)? $sym_name
+      `(` `shape` `=` custom<DimensionList>($shape) `)`
       attr-dict
   }];
   let extraClassDeclaration = [{
@@ -573,7 +576,8 @@ def Shard_AllReduceOp : Shard_CollectiveCommunicationOpBase<"all_reduce", [
     AnyTypeOf<[AnyMemRef, AnyRankedTensor]>:$result
   );
   let assemblyFormat = [{
-    $input `on` $grid (`grid_axes` `=` $grid_axes^)? (`reduction` `=` $reduction^)?
+    $input `on` $grid (`grid_axes` `=` $grid_axes^)?
+    (`reduction` `=` enum($reduction)^)?
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasCanonicalizer = 1;
@@ -885,7 +889,7 @@ def Shard_ReduceOp : Shard_CollectiveCommunicationOpBase<"reduce", [
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
-    (`reduction` `=` $reduction^)?
+    (`reduction` `=` enum($reduction)^)?
     `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
     attr-dict `:` functional-type(operands, results)
   }];
@@ -949,7 +953,7 @@ def Shard_ReduceScatterOp : Shard_CollectiveCommunicationOpBase<"reduce_scatter"
   );
   let assemblyFormat = [{
     $input `on` $grid (`grid_axes` `=` $grid_axes^)?
-    (`reduction` `=` $reduction^)?
+    (`reduction` `=` enum($reduction)^)?
     `scatter_dim` `=` $scatter_dim
     attr-dict `:` type($input) `->` type($result)
   }];

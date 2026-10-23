@@ -1532,6 +1532,17 @@ TEST_F(PatternMatchTest, VectorOps) {
       SP2, m_Shuffle(m_InsertElt(m_Undef(), m_Value(A), m_Zero()),
                      m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
+
+  // Repeat the above with m_Splat.
+  EXPECT_TRUE(match(SI1, m_Splat(m_SpecificInt(1))));
+  EXPECT_FALSE(match(SI2, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI3, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI4, m_Splat(m_Value())));
+
+  A = nullptr;
+  EXPECT_TRUE(match(SP1, m_Splat(m_SpecificInt(2))));
+  EXPECT_TRUE(match(SP2, m_Splat(m_Value(A))));
+  EXPECT_TRUE(A == Val);
 }
 
 TEST_F(PatternMatchTest, UndefPoisonMix) {
@@ -1606,6 +1617,15 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(ScalarZero, m_Zero()));
   EXPECT_TRUE(match(VectorZero, m_Zero()));
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(ScalarPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(ScalarZero, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(VectorZero, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroPoison, m_ZeroForbidPoison()));
 
   const APInt *C;
   // Regardless of whether poison is allowed,
@@ -2756,6 +2776,29 @@ TEST_F(PatternMatchTest, ShiftOrSelf) {
   EXPECT_TRUE(match(Add, m_AShrOrSelf(m_Value(A), ShAmtC)));
   EXPECT_EQ(A, Add);
   EXPECT_EQ(ShAmtC, 0U);
+}
+
+TEST_F(PatternMatchTest, SpecificType) {
+  Type *I32 = IRB.getInt32Ty();
+  Type *I64 = IRB.getInt64Ty();
+  Value *X = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
+  Value *Y = IRB.CreateZExt(X, I64);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32)));
+  EXPECT_FALSE(match(X, m_SpecificType(I64)));
+
+  Value *Bound = nullptr;
+  EXPECT_TRUE(match(X, m_SpecificType(I32, Bound)));
+  EXPECT_EQ(X, Bound);
+  Bound = nullptr;
+  EXPECT_FALSE(match(X, m_SpecificType(I64, Bound)));
+
+  Bound = nullptr;
+  EXPECT_TRUE(match(Y, m_ZExt(m_SpecificType(I32, Bound))));
+  EXPECT_EQ(X, Bound);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32, m_Add(m_Value(), m_Value()))));
+  EXPECT_FALSE(match(X, m_SpecificType(I64, m_Add(m_Value(), m_Value()))));
 }
 
 TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {

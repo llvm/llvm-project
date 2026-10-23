@@ -21,7 +21,7 @@ define void @test_phi_not_in_loop_header() {
 ; CHECK-NEXT:    call void @use(i1 [[C]])
 ; CHECK-NEXT:    br label [[INNER_HEADER]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ;
 entry:

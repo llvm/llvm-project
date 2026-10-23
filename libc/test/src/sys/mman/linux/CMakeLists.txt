@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_mman_unittests)
+add_libc_testsuite(libc-sys-mman-tests)
 
-add_libc_unittest(
+add_libc_test(
   mmap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mmap_test.cpp
   DEPENDS
@@ -18,10 +18,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mremap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mremap_test.cpp
   DEPENDS
@@ -35,11 +35,11 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-if (NOT LLVM_USE_SANITIZER)
-  add_libc_unittest(
+if(NOT LLVM_USE_SANITIZER)
+  add_libc_test(
     mprotect_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       mprotect_test.cpp
     DEPENDS
@@ -54,12 +54,12 @@ if (NOT LLVM_USE_SANITIZER)
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
-  madvise_test.cpp
+    madvise_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
@@ -74,11 +74,11 @@ add_libc_unittest(
 # Disable sanitizers for pkey_test.
 # This test intentionally triggers segfaults to verify pkey_mprotect behavior,
 # and sanitizers register signal handlers that interfere with death testing.
-if (NOT LLVM_USE_SANITIZER)
-  add_libc_unittest(
+if(NOT LLVM_USE_SANITIZER)
+  add_libc_test(
     pkey_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       pkey_test.cpp
     DEPENDS
@@ -98,12 +98,12 @@ if (NOT LLVM_USE_SANITIZER)
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   posix_madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
-  posix_madvise_test.cpp
+    posix_madvise_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
@@ -115,10 +115,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mincore_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mincore_test.cpp
   DEPENDS
@@ -132,15 +132,15 @@ add_libc_unittest(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mlock_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mlock_test.cpp
   DEPENDS
@@ -159,16 +159,16 @@ add_libc_unittest(
     libc.src.sys.mman.munlockall
     libc.hdr.sys_resource_macros
     libc.src.sys.resource.getrlimit
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.src.__support.OSUtil.osutil
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   msync_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     msync_test.cpp
   DEPENDS
@@ -182,7 +182,7 @@ add_libc_unittest(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
+    libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -192,31 +192,31 @@ if(CMAKE_CROSSCOMPILING_EMULATOR)
     message(STATUS "Skipping remap_file_pages_test under emulator.")
   endif()
 else()
-add_libc_unittest(
-  remap_file_pages_test
-  SUITE
-    libc_sys_mman_unittests
-  SRCS
-    remap_file_pages_test.cpp
-  DEPENDS
-    libc.hdr.sys_mman_macros
-    libc.hdr.sys_stat_macros
-    libc.test.UnitTest.ErrnoCheckingTest
-    libc.test.UnitTest.ErrnoSetterMatcher
-    libc.src.sys.mman.remap_file_pages
-    libc.src.errno.errno
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
-    libc.src.fcntl.open
-    libc.src.unistd.close
-    libc.src.unistd.sysconf
-)
+  add_libc_test(
+    remap_file_pages_test
+    SUITE
+      libc-sys-mman-tests
+    SRCS
+      remap_file_pages_test.cpp
+    DEPENDS
+      libc.hdr.sys_mman_macros
+      libc.hdr.sys_stat_macros
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.src.sys.mman.remap_file_pages
+      libc.src.errno.errno
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.fcntl.open
+      libc.src.unistd.close
+      libc.src.unistd.getpagesize
+  )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   shm_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     shm_test.cpp
   DEPENDS
@@ -237,10 +237,10 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   memfd_create_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     memfd_create_test.cpp
   DEPENDS

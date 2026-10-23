@@ -159,12 +159,20 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddDependentTemplateName(*Name.getAsDependentTemplateName());
     break;
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    AddTemplateName(PI->getPattern());
+    AddStmt(PI->getIndexExpr());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
+    break;
   case TemplateName::UsingTemplate:
+    AddDecl(Name.getAsUsingShadowDecl()->getTargetDecl());
     break;
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
@@ -220,6 +228,11 @@ void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
   for (auto *ND : TPL->asArray()) {
     AddSubDecl(ND);
   }
+
+  const Expr *RequiresClause = TPL->getRequiresClause();
+  AddBoolean(RequiresClause);
+  if (RequiresClause)
+    AddStmt(RequiresClause);
 }
 
 void ODRHash::clear() {
@@ -421,28 +434,21 @@ public:
     for (auto Param : Method->parameters())
       Hash.AddSubDecl(Param);
 
-    if (Method->hasBody()) {
-      const bool IsDefinition = Method->isThisDeclarationADefinition();
-      Hash.AddBoolean(IsDefinition);
-      if (IsDefinition) {
-        Stmt *Body = Method->getBody();
-        Hash.AddBoolean(Body);
-        if (Body)
-          AddStmt(Body);
+    const bool IsDefinition = Method->isThisDeclarationADefinition();
+    Hash.AddBoolean(IsDefinition);
+    if (IsDefinition) {
+      AddStmt(Method->getBody());
 
-        // Filter out sub-Decls which will not be processed in order to get an
-        // accurate count of Decl's.
-        llvm::SmallVector<const Decl *, 16> Decls;
-        for (Decl *SubDecl : Method->decls())
-          if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
-            Decls.push_back(SubDecl);
+      // Filter out sub-Decls which will not be processed in order to get an
+      // accurate count of Decl's.
+      llvm::SmallVector<const Decl *, 16> Decls;
+      for (Decl *SubDecl : Method->decls())
+        if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
+          Decls.push_back(SubDecl);
 
-        ID.AddInteger(Decls.size());
-        for (auto SubDecl : Decls)
-          Hash.AddSubDecl(SubDecl);
-      }
-    } else {
-      Hash.AddBoolean(false);
+      ID.AddInteger(Decls.size());
+      for (auto SubDecl : Decls)
+        Hash.AddSubDecl(SubDecl);
     }
 
     Inherited::VisitObjCMethodDecl(Method);
@@ -471,6 +477,26 @@ public:
       AddDecl(D->getFriendDecl());
     }
     Hash.AddBoolean(D->isPackExpansion());
+  }
+
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
+      Hash.AddTemplateParameterList(TPL);
+
+    bool IsTemplateFriend =
+        D->getFriendKind() ==
+        FriendTemplateDecl::FriendTemplateEntityKind::Template;
+    Hash.AddBoolean(!IsTemplateFriend);
+    if (!IsTemplateFriend) {
+      VisitFriendDecl(D);
+      if (D->getFriendKind() ==
+              FriendTemplateDecl::FriendTemplateEntityKind::Type &&
+          !D->getFriendTemplateName().isNull())
+        Hash.AddTemplateName(D->getFriendTemplateName());
+    } else {
+      Hash.AddTemplateName(D->getFriendTemplateName());
+      Hash.AddBoolean(D->isPackExpansion());
+    }
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
@@ -557,6 +583,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::EnumConstant: // Only found in EnumDecl's.
     case Decl::Field:
     case Decl::Friend:
+    case Decl::FriendTemplate:
     case Decl::FunctionTemplate:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
@@ -922,6 +949,15 @@ public:
   }
 
   void Visit(const Type *T) {
+    if (const auto *UsingT = dyn_cast<UsingType>(T)) {
+      // A using-declaration changes lookup, not the referenced entity. Preserve
+      // the keyword and qualifier at the use, not at the using-declaration.
+      const auto *Target = cast<TypeDecl>(UsingT->getDecl()->getTargetDecl());
+      T = Target->getASTContext()
+              .getTypeDeclType(UsingT->getKeyword(), UsingT->getQualifier(),
+                               Target)
+              .getTypePtr();
+    }
     if (handleTypedef(T))
       return;
     ID.AddInteger(T->getTypeClass());
@@ -1011,7 +1047,7 @@ public:
     ID.AddInteger((unsigned)T->getKeyword());
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
+      Hash.AddTemplateName(T->getTypeConstraintConcept());
       ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);

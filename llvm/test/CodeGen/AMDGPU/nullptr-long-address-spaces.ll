@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; REQUIRES: asserts
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 < %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s
 
 ; This is a temporary xfail, as the assembly printer is broken when dealing with
 ; lowerConstant() trying to return a value of size greater than 8 bytes.

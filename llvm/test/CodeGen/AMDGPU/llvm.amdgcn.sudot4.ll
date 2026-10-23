@@ -8,7 +8,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function test_llvm_amdgcn_sudot4_uu i32 (i32, i32, i32): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @test_llvm_amdgcn_sudot4_uu i32 (i32, i32, i32): llvm.amdgcn.sudot4 requires target feature 'dot8-insts'
 
 declare i32 @llvm.amdgcn.sudot4(i1 %asign, i32 %a, i1 %bsign, i32 %b, i32 %c, i1 %clamp)
 

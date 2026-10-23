@@ -22,9 +22,9 @@ entry:
   ret void
 }
 
-!0 = !{!"_ZTSFvPFviEE.generalized"}
-!1 = !{!"_ZTSFivE.generalized"}
-!2 = !{!"_ZTSFviE.generalized"}
+!0 = !{!"_ZTSFvPFviEE"}
+!1 = !{!"_ZTSFivE"}
+!2 = !{!"_ZTSFviE"}
 
 ; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version
@@ -33,6 +33,6 @@ entry:
 ; CHECK-NEXT: .byte   1
 ;; Function Entry PC
 ; CHECK-NEXT: .long _ZL10myCallbacki
-;; Function type ID -5212364466660467813
-; CHECK-NEXT: .long	1154849691
-; CHECK-NEXT: .long	3081369122
+;; Function type ID -8738933900360652027
+; CHECK-NEXT: .long 560098053
+; CHECK-NEXT: .long 2260275691

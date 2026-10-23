@@ -112,40 +112,38 @@ PrintedStmtObjCMatches(StringRef Code, const T &NodeMatch,
 
 TEST(StmtPrinter, TestIntegerLiteral) {
   ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
-    "void A() {"
-    "  1, -1, 1U, 1u,"
-    "  1L, 1l, -1L, 1UL, 1ul,"
-    "  1LL, -1LL, 1ULL;"
-    "}",
-    FunctionBodyMatcher("A"),
-    "1 , -1 , 1U , 1U , "
-    "1L , 1L , -1L , 1UL , 1UL , "
-    "1LL , -1LL , 1ULL"));
-    // Should be: with semicolon
+                                    "void A() {"
+                                    "  1, -1, 1U, 1u,"
+                                    "  1L, 1l, -1L, 1UL, 1ul,"
+                                    "  1LL, -1LL, 1ULL;"
+                                    "}",
+                                    FunctionBodyMatcher("A"),
+                                    "1, -1, 1U, 1U, "
+                                    "1L, 1L, -1L, 1UL, 1UL, "
+                                    "1LL, -1LL, 1ULL"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestMSIntegerLiteral) {
-  ASSERT_TRUE(PrintedStmtMSMatches(
-    "void A() {"
-    "  1i8, -1i8, 1ui8, "
-    "  1i16, -1i16, 1ui16, "
-    "  1i32, -1i32, 1ui32, "
-    "  1i64, -1i64, 1ui64;"
-    "}",
-    FunctionBodyMatcher("A"),
-    "1i8 , -1i8 , 1Ui8 , "
-    "1i16 , -1i16 , 1Ui16 , "
-    "1 , -1 , 1U , "
-    "1LL , -1LL , 1ULL"));
-    // Should be: with semicolon
+  ASSERT_TRUE(PrintedStmtMSMatches("void A() {"
+                                   "  1i8, -1i8, 1ui8, "
+                                   "  1i16, -1i16, 1ui16, "
+                                   "  1i32, -1i32, 1ui32, "
+                                   "  1i64, -1i64, 1ui64;"
+                                   "}",
+                                   FunctionBodyMatcher("A"),
+                                   "1i8, -1i8, 1Ui8, "
+                                   "1i16, -1i16, 1Ui16, "
+                                   "1, -1, 1U, "
+                                   "1LL, -1LL, 1ULL"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestFloatingPointLiteral) {
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
-    "void A() { 1.0f, -1.0f, 1.0, -1.0, 1.0l, -1.0l; }",
-    FunctionBodyMatcher("A"),
-    "1.F , -1.F , 1. , -1. , 1.L , -1.L"));
-    // Should be: with semicolon
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX98, "void A() { 1.0f, -1.0f, 1.0, -1.0, 1.0l, -1.0l; }",
+      FunctionBodyMatcher("A"), "1.F, -1.F, 1., -1., 1.L, -1.L"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Pack) {

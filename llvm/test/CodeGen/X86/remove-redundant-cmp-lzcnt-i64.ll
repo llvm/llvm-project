@@ -31,8 +31,9 @@ define i64 @remove_redundant_cmp_ugt_lzcnt_i64(i64 %0) {
 define i64 @remove_redundant_cmp_ne_lzcnt_i64(i64 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_ne_lzcnt_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    lzcntq %rdi, %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq

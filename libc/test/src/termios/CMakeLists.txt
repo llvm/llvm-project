@@ -1,13 +1,15 @@
-add_custom_target(libc_termios_unittests)
+add_libc_testsuite(libc-termios-tests)
 
-add_libc_unittest(
+add_libc_test(
   termios_test
   SUITE
-    libc_termios_unittests
+    libc-termios-tests
   SRCS
     termios_test.cpp
   DEPENDS
     libc.include.termios
+    libc.hdr.termios_macros
+    libc.hdr.types.struct_termios
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.cfgetispeed
@@ -18,6 +20,44 @@ add_libc_unittest(
     libc.src.termios.tcgetsid
     libc.src.termios.tcsetattr
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  tcgetwinsize_test
+  SUITE
+    libc-termios-tests
+  SRCS
+    tcgetwinsize_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_winsize
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.termios.tcgetwinsize
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  tcsetwinsize_test
+  SUITE
+    libc-termios-tests
+  SRCS
+    tcsetwinsize_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_winsize
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.termios.tcsetwinsize
+    libc.src.unistd.close
+    libc.src.unistd.pipe
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

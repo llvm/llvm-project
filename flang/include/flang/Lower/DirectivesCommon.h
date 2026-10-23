@@ -21,7 +21,6 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
@@ -76,15 +75,15 @@ getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
 
 namespace detail {
 template <typename T> //
-static T &&AsRvalueRef(T &&t) {
+T &&AsRvalueRef(T &&t) {
   return std::move(t);
 }
 template <typename T> //
-static T AsRvalueRef(T &t) {
+T AsRvalueRef(T &t) {
   return t;
 }
 template <typename T> //
-static T AsRvalueRef(const T &t) {
+T AsRvalueRef(const T &t) {
   return t;
 }
 

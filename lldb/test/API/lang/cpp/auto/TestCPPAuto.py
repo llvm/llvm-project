@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class CPPAutoTestCase(TestBase):
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""

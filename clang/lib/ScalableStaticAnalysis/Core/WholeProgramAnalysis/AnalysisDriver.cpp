@@ -102,30 +102,16 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
 
 llvm::Error AnalysisDriver::executeSummaryAnalysis(SummaryAnalysisBase &Summary,
                                                    WPASuite &Suite) const {
-  SummaryName SN = Summary.getSummaryName();
-  auto DataIt = LU->Data.find(SN);
-  if (DataIt == LU->Data.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                "no data for analysis '{0}' in LUSummary",
-                                Summary.getAnalysisName())
-        .build();
-  }
-
-  if (auto Err = Summary.initialize()) {
+  if (auto Err = Summary.initialize())
     return Err;
-  }
 
-  for (auto &[Id, EntitySummary] : DataIt->second) {
-    if (auto Err = Summary.add(Id, *EntitySummary)) {
-      return Err;
-    }
+  auto DataIt = LU->Data.find(Summary.getSummaryName());
+  if (DataIt != LU->Data.end()) {
+    for (auto &[Id, EntitySummary] : DataIt->second)
+      if (auto Err = Summary.add(Id, *EntitySummary))
+        return Err;
   }
-
-  if (auto Err = Summary.finalize()) {
-    return Err;
-  }
-
-  return llvm::Error::success();
+  return Summary.finalize();
 }
 
 llvm::Error AnalysisDriver::executeDerivedAnalysis(DerivedAnalysisBase &Derived,

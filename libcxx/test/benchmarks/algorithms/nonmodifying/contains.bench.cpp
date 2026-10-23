@@ -17,6 +17,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   // Benchmark ranges::contains where we process the whole sequence, which is the
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name) {
       benchmark::RegisterBenchmark(
           name,
-          [](auto& st) {
+          [](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

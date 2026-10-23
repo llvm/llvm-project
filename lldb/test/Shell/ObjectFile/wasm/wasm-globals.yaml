@@ -1,0 +1,162 @@
+# REQUIRES: webassembly
+
+# WebAssembly globals live in an index space of their own and hold values rather
+# than bytes in the module, so they have no address to be named or read by. Give
+# them a synthetic address space in which the offset is the global index, and
+# serve the initializer when there is no process to ask for the current value.
+
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: %lldb %t.wasm \
+# RUN:   -o "target modules dump sections" \
+# RUN:   -o "target modules dump symtab" \
+# RUN:   -o "image lookup -s g_answer" \
+# RUN:   -o "target modules load --file %t.wasm --slide 0x0000000400000000" \
+# RUN:   -o "target modules dump sections" \
+# RUN:   -o "memory read -s 4 -c 1 -f x 0x8000000400000001" \
+# RUN:   -o "memory read -s 8 -c 1 -f x 0x8000000400000002" \
+# RUN:   -o "memory read -s 8 -c 1 -f x 0x8000000400000004" \
+# RUN:   -o "memory read -s 4 -c 1 -f x 0x8000000400000005" \
+# RUN:   -o "memory read -s 1 -c 1 -f x 0x8000000400000001" \
+# RUN:   -o exit 2>&1 | FileCheck %s
+
+# The global section spans the whole index space, imported globals included, and
+# has a range of its own so that an index is not also a code or data address.
+# CHECK: Dumping sections
+# CHECK: wasm-global {{.*}}[0x8000000000000000-0x8000000000000006)
+
+# Each named global becomes a data symbol spanning the one index it occupies.
+# CHECK: Dumping symbol table
+# CHECK: Data 0x8000000000000001 0x0000000000000001 {{.*}}g_answer
+# CHECK: Data 0x8000000000000002 0x0000000000000001 {{.*}}g_double
+# CHECK: Data 0x8000000000000004 0x0000000000000001 {{.*}}g_wide
+
+# A global resolves to its index within that space.
+# CHECK: 1 symbols match 'g_answer'
+# CHECK: (wasm-globals.yaml.tmp.wasm.global + 1)
+
+# Loading the module keeps the globals in their own space, with the module id.
+# CHECK: Dumping sections
+# CHECK: wasm-global {{.*}}[0x8000000400000000-0x8000000400000006)
+
+# With no process to ask, a global reads back as the value it is initialized
+# with, in the byte order WebAssembly gives its memory.
+# CHECK: 0x8000000400000001: 0x0000002a
+# CHECK: 0x8000000400000002: 0x3ff8000000000000
+# CHECK: 0x8000000400000004: 0x00000000deadbeef
+
+# All ones is a value like any other, not the absence of one.
+# CHECK: 0x8000000400000005: 0xffffffff
+
+# A type narrower than the global holding it reads the low bytes, which is how a
+# char or short global is read.
+# CHECK: 0x8000000400000001: 0x2a
+
+# An imported global is declared by another module, so this one has neither a
+# value type to size it nor an initializer to read, and gets no symbol.
+# RUN: %lldb %t.wasm -o "image lookup -s g_imported" -o exit 2>&1 \
+# RUN:   | FileCheck --check-prefix=NOSYMBOL %s
+# NOSYMBOL-NOT: symbols match 'g_imported'
+
+# A read a global cannot serve fails rather than returning something plausible:
+# an imported global has no initializer, an initializer that is not a constant
+# has no value here, and reading past a global would have to come from somewhere
+# else, because the next index is not adjacent storage.
+# RUN: %lldb %t.wasm -o "memory read -s 4 -c 1 -f x 0x8000000000000000" -o exit 2>&1 \
+# RUN:   | FileCheck --check-prefix=NOVALUE %s
+# RUN: %lldb %t.wasm -o "memory read -s 4 -c 1 -f x 0x8000000000000003" -o exit 2>&1 \
+# RUN:   | FileCheck --check-prefix=NOVALUE %s
+# RUN: %lldb %t.wasm -o "memory read -s 8 -c 1 -f x 0x8000000000000001" -o exit 2>&1 \
+# RUN:   | FileCheck --check-prefix=NOVALUE %s
+# NOVALUE: error reading data from section global
+
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes:
+          - I32
+  - Type: IMPORT
+    Imports:
+    # An imported global occupies index 0, so the module's own globals start at
+    # index 1. It has no initializer here to read back.
+      - Module: env
+        Field: g_imported
+        Kind: GLOBAL
+        GlobalType: I32
+        GlobalMutable: false
+    # A tag import is what a module built with C++ exceptions carries. Its
+    # descriptor has a shape of its own, which the import section has to know in
+    # order to find where the next import starts.
+      - Module: env
+        Field: __cpp_exception
+        Kind: TAG
+        SigIndex: 0
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: MEMORY
+    Memories:
+      - Minimum: 0x1
+  - Type: GLOBAL
+    Globals:
+      - Index: 1
+        Type: I32
+        Mutable: false
+        InitExpr:
+          Opcode: I32_CONST
+          Value: 42
+      # The bits of 1.5, a wider constant than the one before it, so the globals
+      # after this one only parse if this one was read at its own width.
+      - Index: 2
+        Type: F64
+        Mutable: false
+        InitExpr:
+          Opcode: F64_CONST
+          Value: 0x3FF8000000000000
+      # Initialized from another global rather than from a constant, so its value
+      # is only known once the module has been instantiated.
+      - Index: 3
+        Type: I32
+        Mutable: false
+        InitExpr:
+          Opcode: GLOBAL_GET
+          Index: 0
+      - Index: 4
+        Type: I64
+        Mutable: true
+        InitExpr:
+          Opcode: I64_CONST
+          Value: 3735928559
+      - Index: 5
+        Type: I32
+        Mutable: false
+        InitExpr:
+          Opcode: I32_CONST
+          Value: -1
+  - Type: CODE
+    Functions:
+      - Index: 0
+        Locals: []
+        Body: 412A0F0B
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+      - Index: 0
+        Name: get_42
+    GlobalNames:
+      - Index: 0
+        Name: g_imported
+      - Index: 1
+        Name: g_answer
+      - Index: 2
+        Name: g_double
+      - Index: 3
+        Name: g_derived
+      - Index: 4
+        Name: g_wide
+      - Index: 5
+        Name: g_all_ones
+...

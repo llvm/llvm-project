@@ -211,8 +211,8 @@ TargetStats::ToJSON(Target &target,
     target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
 
     if (process_sp->GetCoreFile())
-      target_metrics_json.try_emplace("coreFile",
-                                      process_sp->GetCoreFile().GetFilename());
+      target_metrics_json.try_emplace(
+          "coreFile", process_sp->GetCoreFile().GetFilename().str());
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
@@ -415,9 +415,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
-      if (ConstString object_name = module->GetObjectName()) {
+      if (llvm::StringRef object_name = module->GetObjectName();
+          !object_name.empty()) {
         module_stat.path.append(1, '(');
-        module_stat.path.append(object_name.GetStringRef().str());
+        module_stat.path.append(object_name.str());
         module_stat.path.append(1, ')');
       }
       module_stat.uuid = module->GetUUID().GetAsString();

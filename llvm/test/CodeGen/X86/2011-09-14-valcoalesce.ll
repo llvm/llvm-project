@@ -27,6 +27,9 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-LABEL: BZ2_compressBlock:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    subl $24, %esp
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_24
@@ -38,15 +41,12 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:  .LBB0_3: # %for.cond19.preheader.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %if.then35.i
 ; CHECK-NEXT:  .LBB0_5: # %if.end36.i
-; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $24, %esp
-; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_6: # %while.body.i188
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_8 Depth 2
@@ -69,6 +69,7 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:  # %bb.9: # %while.body85.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_8 Depth=2
+; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  .LBB0_10: # %while.end.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
@@ -76,9 +77,11 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:    jne .LBB0_14
 ; CHECK-NEXT:  # %bb.11: # %land.lhs.true.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
+; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_14
 ; CHECK-NEXT:  # %bb.12: # %land.lhs.true103.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
+; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_14
 ; CHECK-NEXT:  # %bb.13: # %if.then108.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
@@ -104,9 +107,6 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:  # %bb.17: # %for.cond182.preheader.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esp
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    jne .LBB0_18
 ; CHECK-NEXT:    jmp .LBB0_19
 ; CHECK-NEXT:  .LBB0_18: # %for.inc220.us.i
@@ -124,6 +124,9 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:  # %bb.22: # %if.then2748.i
 ; CHECK-NEXT:  .LBB0_23: # %for.body2778.i
 ; CHECK-NEXT:  .LBB0_24: # %if.end85
+; CHECK-NEXT:    addl $24, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
 entry:
   br i1 undef, label %if.then68, label %if.end85

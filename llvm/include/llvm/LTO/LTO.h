@@ -439,6 +439,14 @@ public:
   /// Cache) for each task identifier.
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {});
 
+  /// Wait for cleanup work started by run() to finish.
+  ///
+  /// A client may delay this call to overlap asynchronous cleanup with later
+  /// linking work, but must call it before finalizing time trace data because
+  /// cleanup may emit time trace events. Most LTO implementations have no
+  /// asynchronous cleanup.
+  virtual void waitForCleanup() {}
+
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
   static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);

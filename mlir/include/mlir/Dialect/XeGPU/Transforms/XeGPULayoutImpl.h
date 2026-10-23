@@ -41,6 +41,10 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
+/// Sink `xegpu.convert_layout` ops past the elementwise operations they feed,
+/// so that an elementwise op runs in the coarser layout.
+void sinkElementwiseConversions(OpBuilder &builder, Operation *target);
+
 /// Callable returning the propagated layout for a given Value, used by the
 /// layout-propagation helpers below.
 using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
@@ -52,6 +56,16 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 /// inits), and on tensor descriptor block argument types.
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
+
+/// Propagate layouts from a region branch terminator's forwarded operands to
+/// the matching region results / successor block arguments. For each operand
+/// that a terminator (e.g. scf.yield) forwards to a successor input, the
+/// operand's layout is obtained via `getLayoutOfValue` and recorded on the
+/// successor input when it is an op result. Returns failure if a forwarded
+/// operand has no assigned layout.
+LogicalResult propagateYieldOperandsToRegionResults(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue);
 
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
@@ -82,6 +96,19 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 /// Updates the NamedAttribute sequence by dropping inst-data information from
 /// any DistributeLayoutAttr found.
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
+/// Drops inst-data information from DistributeLayoutAttrs stored as inherent
+/// attributes on the operation.
+void dropInstDataOnInherentAttrs(Operation *op);
+
+//===----------------------------------------------------------------------===//
+// Backward layout inference (result layout -> source layout)
+//===----------------------------------------------------------------------===//
+//
+// The infer*SourceLayout helpers below derive the layout of an operation's
+// source operand from the layout of its result. They implement the per-op
+// transfer functions used by the backward layout propagation analysis, which
+// flows layouts from anchor ops (dpas, store_nd, ...) back to their producers.
 
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, and source shape.
@@ -147,17 +174,45 @@ DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
                                               ArrayRef<int64_t> resShape,
                                               ArrayRef<int64_t> srcShape);
 
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-DistributeLayoutAttr
-inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
-                                  int chunkSize);
-
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
 DistributeLayoutAttr
 inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
                                           DistributeLayoutAttr resLayout);
+
+//===----------------------------------------------------------------------===//
+// Forward layout inference (source layout -> result layout)
+//===----------------------------------------------------------------------===//
+//
+// The infer*ResultLayout helpers below are the forward counterparts of the
+// infer*SourceLayout helpers above: given the layout of an operation's source
+// operand they derive the layout of its result. They are used by the local
+// forward-fill step in XeGPUPropagateLayout that assigns layouts to values not
+// reached by the backward propagation analysis (e.g. loop-carried values whose
+// only consumer is the next iteration).
+
+/// Infers the result layout attribute for a transpose operation given the
+/// source layout attribute and permutation. Inverse of
+/// inferTransposeSourceLayout.
+DistributeLayoutAttr inferTransposeResultLayout(DistributeLayoutAttr srcLayout,
+                                                ArrayRef<int64_t> permutation);
+
+/// Infers the result layout attribute for a shape cast operation given the
+/// source layout attribute, source shape, and result shape. Inverse of
+/// inferShapeCastSourceLayout. Returns nullptr for shape-cast patterns whose
+/// forward direction is ambiguous (e.g. unit-dim expansion).
+DistributeLayoutAttr inferShapeCastResultLayout(DistributeLayoutAttr srcLayout,
+                                                ArrayRef<int64_t> srcShape,
+                                                ArrayRef<int64_t> resShape);
+
+/// Infers the result layout attribute for a non-anchor operation from the
+/// layouts of its source operands (the forward counterpart of
+/// inferSourceLayoutFromResultForNonAnchorOp). `operandLayouts` is indexed by
+/// operand number; entries may be null for operands without a known layout.
+/// Returns nullptr when no forward rule applies (the result is then left
+/// un-laid-out).
+DistributeLayoutAttr inferResultLayoutFromSourceForNonAnchorOp(
+    Operation *op, ArrayRef<DistributeLayoutAttr> operandLayouts);
 
 /// Note on the `consumerLayout` argument used by the consumer-driven setup* /
 /// complete* helpers below:
@@ -216,6 +271,46 @@ DistributeLayoutAttr setupInterleaveResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
+/// Sets up the result layout for a shape cast that splits one source dim into
+/// several consecutive result dims, so that the source layout can be safely
+/// derived by collapsing each split group.
+///
+/// Within a group, the leading dims the lanes do not split and the first dim
+/// they do split may stay partial. Every dim after that is stretched to full:
+/// lane_data becomes dim_size / lane_layout, and inst_data the dim size.
+///
+/// Example:
+///   shape_cast: vector<16x1024xf32> -> vector<16x32x32xf32>
+///   Consumer layout: inst_data = [1, 2, 8], lane_layout = [1, 2, 8],
+///                    lane_data = [1, 1, 1]
+///   Adjusted:        inst_data = [1, 2, 32], lane_layout = [1, 2, 8],
+///                    lane_data = [1, 1, 4]
+///   The adjusted layout collapses to inst_data = [1, 64],
+///   lane_layout = [1, 16], lane_data = [1, 4] on the source, whereas the
+///   unadjusted one would have collapsed to a strided inst_data = [1, 16].
+///
+/// Stretching does not guarantee the result layout is collapsible: collapsing
+/// also requires each lane to own one contiguous run of the source dim, which
+/// the consumer's lane_layout can rule out. This function checks that
+/// restriction on the stretched layout and returns nullptr when it does not
+/// hold, rejecting the consumer layout.
+///
+/// Example of a rejected layout:
+///   shape_cast: vector<16x128xf32> -> vector<16x2x4x16xf32>
+///   Consumer layout: inst_data = [1, 2, 2, 4], lane_layout = [1, 2, 2, 4],
+///                    lane_data = [1, 1, 1, 1]
+///   Adjusted:        inst_data = [1, 2, 4, 16], lane_layout = [1, 2, 2, 4],
+///                    lane_data = [1, 1, 2, 4]
+///   Each lane owns two runs of 4 elements, 16 apart, instead of the 8
+///   contiguous source elements the collapsed lane_data = [1, 8] claims.
+///
+/// Only the inst_data and lane phases are handled; a subgroup-level layout is
+/// returned unchanged.
+DistributeLayoutAttr
+setupShapeCastResultLayout(LayoutKind layoutKind, VectorType srcVectorTy,
+                           VectorType resVectorTy,
+                           DistributeLayoutAttr consumerLayout);
+
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
@@ -224,6 +319,8 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
@@ -234,6 +331,8 @@ DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 /// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,

@@ -16,8 +16,8 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm5
 ; CHECK-NEXT:    vpsubd %zmm2, %zmm0, %zmm6
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm7
-; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm8
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %zmm0, %zmm0, %zmm8
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm9 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    movw $-2, %cx
 ; CHECK-NEXT:    kmovd %ecx, %k1
@@ -69,7 +69,8 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 allocas:
   %"internal_mask&function_mask7208" = and <16 x i1> %__mask, <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>

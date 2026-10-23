@@ -31,6 +31,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
@@ -293,6 +294,9 @@ static bool sinkMinMaxInBB(BasicBlock &BB,
       // x < max(a, b) -> x < a || x < b
       Replacement = Builder.CreateLogicalOr(LHS, RHS);
 
+    if (SelectInst *ReplacementInst = dyn_cast<SelectInst>(Replacement))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*ReplacementInst, DEBUG_TYPE);
+
     ICmp->replaceAllUsesWith(Replacement);
 
     Instruction *ToRemove[] = {ICmp, Info.ZExt, Info.SExt, MinMax};
@@ -439,7 +443,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     return NewGEP;
   }
 
-  IRBuilder IB(F->getContext());
+  IRBuilder IB(*F->getParent());
   if (Instruction *InsnPtr = dyn_cast<Instruction>(ToWrap))
     IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
   else

@@ -8,7 +8,6 @@
 # the problematic move.
 
 --- |
-  target triple = "amdgcn-unknown-amdhsa"
   define amdgpu_kernel void @rock_attention(ptr addrspace(1) inreg %0, ptr addrspace(1) inreg %1, ptr addrspace(1) inreg %2, ptr addrspace(1) inreg %3, ptr addrspace(1) inreg %4, ptr addrspace(1) inreg %5) #0 {
     ret void
   }

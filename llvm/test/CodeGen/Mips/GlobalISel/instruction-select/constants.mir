@@ -18,11 +18,11 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0xABCD0000
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi 43981
-    ; MIPS32: $v0 = COPY [[LUi]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LUi]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = G_CONSTANT i32 -1412628480
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -34,12 +34,12 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0x00008000
-    ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 32768
-    ; MIPS32: $v0 = COPY [[ORi]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi $r0, 32768
+    ; MIPS32: $r2 = COPY [[ORi]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = G_CONSTANT i32 32768
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -51,12 +51,12 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: _0xFFFFFFF6
-    ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 65526
-    ; MIPS32: $v0 = COPY [[ADDiu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 65526
+    ; MIPS32: $r2 = COPY [[ADDiu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = G_CONSTANT i32 -10
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -70,11 +70,11 @@ body:             |
     ; MIPS32-LABEL: name: _0x0A0B0C0D
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi 2571
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi]], 3085
-    ; MIPS32: $v0 = COPY [[ORi]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ORi]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = G_CONSTANT i32 168496141
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
 ...
 

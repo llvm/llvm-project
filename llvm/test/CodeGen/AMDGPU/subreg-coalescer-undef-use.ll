@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=amdgpu6.00 -amdgpu-codegenprepare-break-large-phis=0 -amdgpu-dce-in-ra=0 -o - %s | FileCheck %s
 ; Don't crash when the use of an undefined value is only detected by the
 ; register coalescer because it is hidden with subregister insert/extract.
-target triple="amdgcn--"
 
 ; NOTE: breaking large PHIs is disabled here else this example is completely optimized out
 ;  before reaching codegen.

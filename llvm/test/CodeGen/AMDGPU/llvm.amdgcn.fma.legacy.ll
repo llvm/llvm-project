@@ -13,7 +13,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function v_fma float (float, float, float): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @v_fma float (float, float, float): llvm.amdgcn.fma.legacy requires target feature 'fma-legacy32-insts'
 
 define float @v_fma(float %a, float %b, float %c)  {
 ; GFX10-LABEL: v_fma:
@@ -87,7 +87,7 @@ define float @v_fma_imm(float %a, float %c)  {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v0, v1
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, 0x41200000, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 10.0, float %c)
   ret float %fma
