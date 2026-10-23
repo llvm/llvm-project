@@ -6567,7 +6567,8 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
                                       CandidateSet,
                                       /*ExplicitArgs=*/nullptr,
                                       /*SuppressUserConversions=*/false,
-                                      /*PartialOverloading=*/true);
+                                      /*PartialOverloading=*/true,
+                                      /*FirstArgumentIsBase=*/true);
       }
     } else {
       // Lastly we check whether expression's type is function pointer or
