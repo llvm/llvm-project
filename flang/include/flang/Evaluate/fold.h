@@ -67,8 +67,8 @@ auto UnwrapConstantValue(int kind, EXPR &expr)
     -> common::Constify<Constant<T>, EXPR> * {
   if (auto *c{UnwrapConstantValue<T>(expr)}) {
     if (c->kind() == kind) {
-    return c;
-}
+      return c;
+    }
   }
   return nullptr;
 }
