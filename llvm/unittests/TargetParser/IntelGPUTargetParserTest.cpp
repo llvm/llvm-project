@@ -87,23 +87,19 @@ TEST(IntelGPUTargetParserTest, IGCATargetBehavior) {
   EXPECT_EQ(C.getFeatureSet(), IGCAFeatureSet::ComputeExact);
   EXPECT_TRUE(C.isExact());
   // An exact feature set is still of its class:
-  EXPECT_TRUE(C.hasCompute());
+  EXPECT_TRUE(C.isAnyCompute());
   EXPECT_TRUE(C.isComputeExact());
   EXPECT_FALSE(C.isCore());
-  EXPECT_FALSE(C.isCompute());
-  EXPECT_FALSE(C.isRender());
-  EXPECT_FALSE(C.hasRender());
+  EXPECT_FALSE(C.isAnyRender());
   EXPECT_FALSE(C.isRenderExact());
   EXPECT_EQ(IGCATarget::unpack(C.pack()), C);
   EXPECT_NE(C, IGCATarget(20, IGCAFeatureSet::Compute));
   // A feature set that is not exact:
   IGCATarget R{60, IGCAFeatureSet::Render};
-  EXPECT_TRUE(R.isRender());
   EXPECT_FALSE(R.isRenderExact());
   EXPECT_FALSE(R.isExact());
-  EXPECT_FALSE(R.isCompute());
-  EXPECT_TRUE(R.hasRender());
-  EXPECT_FALSE(R.hasCompute());
+  EXPECT_TRUE(R.isAnyRender());
+  EXPECT_FALSE(R.isAnyCompute());
   EXPECT_EQ(IGCATarget::unpack(R.pack()), R);
   IGCATarget Core{60, IGCAFeatureSet::Core};
   EXPECT_TRUE(Core.isCore());

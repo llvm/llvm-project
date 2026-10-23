@@ -105,7 +105,7 @@ public:
   /// \return the feature set, including whether it is exact.
   ///
   /// To check if a target has a feature set regardless of exactness, use
-  /// hasCompute() or hasRender() instead of raw comparison between
+  /// isAnyCompute() or isAnyRender() instead of raw comparison between
   /// IGCAFeatureSet enums.
   constexpr IGCAFeatureSet getFeatureSet() const {
     return IGCAFeatureSet(V & FeatureSetMask);
@@ -119,14 +119,6 @@ public:
     // invalid() has the same feature set bits as Core, so we check explicitly.
     return isValid() && getFeatureSet() == IGCAFeatureSet::Core;
   }
-  /// \return true if the target has a non-exact Compute feature set.
-  constexpr bool isCompute() const {
-    return getFeatureSet() == IGCAFeatureSet::Compute;
-  }
-  /// \return true if the target has a non-exact Render feature set.
-  constexpr bool isRender() const {
-    return getFeatureSet() == IGCAFeatureSet::Render;
-  }
   constexpr bool isComputeExact() const {
     return getFeatureSet() == IGCAFeatureSet::ComputeExact;
   }
@@ -134,12 +126,12 @@ public:
     return getFeatureSet() == IGCAFeatureSet::RenderExact;
   }
   /// \return true if target has either Compute or ComputeExact feature set.
-  constexpr bool hasCompute() const {
+  constexpr bool isAnyCompute() const {
     return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
            llvm::to_underlying(IGCAFeatureSet::Compute);
   }
   /// \return true if target has either Render or RenderExact feature set.
-  constexpr bool hasRender() const {
+  constexpr bool isAnyRender() const {
     return (llvm::to_underlying(getFeatureSet()) & ~IsExactMask) ==
            llvm::to_underlying(IGCAFeatureSet::Render);
   }
