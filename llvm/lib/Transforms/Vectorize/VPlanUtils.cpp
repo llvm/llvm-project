@@ -14,7 +14,6 @@
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -521,72 +520,74 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
+static bool isUniformAcrossVFsAndUFsImpl(
+    const VPValue *V, function_ref<bool(const VPValue *)> AddToWorklist) {
+  // Live-ins, symbolic and canonical-IV region values are uniform.
+  if (auto *RV = dyn_cast<VPRegionValue>(V))
+    return RV == RV->getDefiningRegion()->getCanonicalIV();
+  if (isa<VPIRValue, VPSymbolicValue>(V))
+    return true;
+
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+    if (match(R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
+        match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
+      return false;
+    return all_of(R->operands(), AddToWorklist);
+  }
+
+  return TypeSwitch<const VPRecipeBase *, bool>(R)
+      .Case([](const VPDerivedIVRecipe *) { return true; })
+      .Case([&](const VPReplicateRecipe *R) {
+        // Be conservative about side-effects, except for the
+        // known-side-effecting assumes and stores, which we know will be
+        // uniform. Each alloca creates a distinct allocation, so allocas are
+        // never uniform.
+        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
+               (!R->mayHaveSideEffects() ||
+                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
+               all_of(R->operands(), AddToWorklist);
+      })
+      .Case([&](const VPWidenRecipe *R) {
+        return preservesUniformity(R->getOpcode()) &&
+               all_of(R->operands(), AddToWorklist);
+      })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
+      })
+      .Case([&](const VPInstruction *VPI) {
+        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+                preservesUniformity(VPI->getOpcode())) &&
+               all_of(VPI->operands(), AddToWorklist);
+      })
+      .Case([&](const VPWidenCastRecipe *R) {
+        // A cast is uniform according to its operand.
+        return AddToWorklist(R->getOperand(0));
+      })
+      .Default([](const VPRecipeBase *) {
+        // A value is considered non-uniform unless proven otherwise.
+        return false;
+      });
+}
+
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
-  SmallPtrSet<const VPValue *, 8> Visited;
-  SmallVector<const VPValue *> Worklist;
-  Worklist.push_back(V);
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(V);
+
+  auto AddToWorklist = [&Worklist](const VPValue *Op) {
+    Worklist.insert(Op);
+    return true;
+  };
 
   // All dependency checks are conjunctive, so each value needs checking once.
-  while (!Worklist.empty()) {
-    const VPValue *Current = Worklist.pop_back_val();
-    if (!Visited.insert(Current).second)
-      continue;
-
-    // Live-ins, symbolic and canonical-IV region values are uniform.
-    if (auto *RV = dyn_cast<VPRegionValue>(Current)) {
-      if (RV != RV->getDefiningRegion()->getCanonicalIV())
-        return false;
-      continue;
-    }
-    if (isa<VPIRValue, VPSymbolicValue>(Current))
-      continue;
-
-    const VPRecipeBase *R = Current->getDefiningRecipe();
-    const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
-    const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-    if (VPBB &&
-        (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-      if (match(
-              R,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
-          match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
-        return false;
-    } else {
-      if (isa<VPDerivedIVRecipe>(R))
-        continue;
-      bool PreservesUniformity =
-          TypeSwitch<const VPRecipeBase *, bool>(R)
-              .Case([](const VPReplicateRecipe *R) {
-                // Be conservative about side-effects, except for the
-                // known-side-effecting assumes and stores, which we know will
-                // be uniform. Each alloca creates a distinct allocation, so
-                // allocas are never uniform.
-                return R->isSingleScalar() &&
-                       R->getOpcode() != Instruction::Alloca &&
-                       (!R->mayHaveSideEffects() ||
-                        isa<AssumeInst, StoreInst>(R->getUnderlyingInstr()));
-              })
-              .Case([](const VPWidenRecipe *R) {
-                return preservesUniformity(R->getOpcode());
-              })
-              .Case([](const VPPhi *) {
-                // Bail out on VPPhi, as we can end up in infinite cycles.
-                return false;
-              })
-              .Case([](const VPInstruction *VPI) {
-                return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-                       preservesUniformity(VPI->getOpcode());
-              })
-              .Case([](const VPWidenCastRecipe *) { return true; })
-              .Default([](const VPRecipeBase *) {
-                // A value is considered non-uniform unless proven otherwise.
-                return false;
-              });
-      if (!PreservesUniformity)
-        return false;
-    }
-    for (const VPValue *Op : R->operands())
-      Worklist.push_back(Op);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isUniformAcrossVFsAndUFsImpl(Worklist[I], AddToWorklist))
+      return false;
   }
   return true;
 }
