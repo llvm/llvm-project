@@ -4258,6 +4258,97 @@ func.func @constant_UItoFP_vector() -> vector<4xf32> {
 }
 
 // -----
+// f32 exactly represents signed i25, but not every signed i26.
+// CHECK-LABEL: @int_fp_roundtrip_signed_boundary(
+func.func @int_fp_roundtrip_signed_boundary(%x: i25, %y: i26) -> (i25, i26) {
+  // CHECK-SAME: %[[X:[^:]+]]: i25, %[[Y:[^:]+]]: i26
+  // CHECK-NEXT: %[[F:.*]] = arith.sitofp %[[Y]] : i26 to f32
+  // CHECK-NEXT: %[[R:.*]] = arith.fptosi %[[F]] : f32 to i26
+  // CHECK-NEXT: return %[[X]], %[[R]] : i25, i26
+  %fx = arith.sitofp %x : i25 to f32
+  %rx = arith.fptosi %fx : f32 to i25
+  %fy = arith.sitofp %y : i26 to f32
+  %ry = arith.fptosi %fy : f32 to i26
+  return %rx, %ry : i25, i26
+}
+
+// f32 exactly represents unsigned i24, but not every unsigned i25.
+// CHECK-LABEL: @int_fp_roundtrip_unsigned_boundary(
+func.func @int_fp_roundtrip_unsigned_boundary(%x: i24, %y: i25) -> (i24, i25) {
+  // CHECK-SAME: %[[X:[^:]+]]: i24, %[[Y:[^:]+]]: i25
+  // CHECK-NEXT: %[[F:.*]] = arith.uitofp %[[Y]] : i25 to f32
+  // CHECK-NEXT: %[[R:.*]] = arith.fptoui %[[F]] : f32 to i25
+  // CHECK-NEXT: return %[[X]], %[[R]] : i24, i25
+  %fx = arith.uitofp %x : i24 to f32
+  %rx = arith.fptoui %fx : f32 to i24
+  %fy = arith.uitofp %y : i25 to f32
+  %ry = arith.fptoui %fy : f32 to i25
+  return %rx, %ry : i24, i25
+}
+
+// Other precisions and a finite-only FP6 format use the same proof.
+// CHECK-LABEL: @int_fp_roundtrip_other_formats(
+func.func @int_fp_roundtrip_other_formats(%x: i12, %y: i53, %z: i3) -> (i12, i53, i3) {
+  // CHECK-SAME: %[[X:[^:]+]]: i12, %[[Y:[^:]+]]: i53, %[[Z:[^:]+]]: i3
+  // CHECK-NEXT: return %[[X]], %[[Y]], %[[Z]] : i12, i53, i3
+  %fx = arith.sitofp %x : i12 to f16
+  %rx = arith.fptosi %fx : f16 to i12
+  %fy = arith.uitofp %y : i53 to f64
+  %ry = arith.fptoui %fy : f64 to i53
+  %fz = arith.uitofp %z : i3 to f6E2M3FN
+  %rz = arith.fptoui %fz : f6E2M3FN to i3
+  return %rx, %ry, %rz : i12, i53, i3
+}
+
+// -----
+// FP6 precision suffices for i4, but its range excludes signed -8 and unsigned 15.
+// CHECK-LABEL: @int_fp_roundtrip_exponent(
+func.func @int_fp_roundtrip_exponent(%x: i4) -> (i4, i4) {
+  // CHECK-SAME: %[[X:[^:]+]]: i4
+  // CHECK-NEXT: %[[SF:.*]] = arith.sitofp %[[X]] : i4 to f6E2M3FN
+  // CHECK-NEXT: %[[SR:.*]] = arith.fptosi %[[SF]] : f6E2M3FN to i4
+  // CHECK-NEXT: %[[UF:.*]] = arith.uitofp %[[X]] : i4 to f6E2M3FN
+  // CHECK-NEXT: %[[UR:.*]] = arith.fptoui %[[UF]] : f6E2M3FN to i4
+  // CHECK-NEXT: return %[[SR]], %[[UR]] : i4, i4
+  %sf = arith.sitofp %x : i4 to f6E2M3FN
+  %sr = arith.fptosi %sf : f6E2M3FN to i4
+  %uf = arith.uitofp %x : i4 to f6E2M3FN
+  %ur = arith.fptoui %uf : f6E2M3FN to i4
+  return %sr, %ur : i4, i4
+}
+
+// Zero is required; signed inputs require negatives; unsigned FP can serve unsigned inputs.
+// CHECK-LABEL: @int_fp_roundtrip_special_formats(
+func.func @int_fp_roundtrip_special_formats(%x: i1, %y: i2, %z: i4) -> (i1, i2, i4) {
+  // CHECK-SAME: %[[X:[^:]+]]: i1, %[[Y:[^:]+]]: i2, %[[Z:[^:]+]]: i4
+  // CHECK-NEXT: %[[XF:.*]] = arith.uitofp %[[X]] : i1 to f8E8M0FNU
+  // CHECK-NEXT: %[[XR:.*]] = arith.fptoui %[[XF]] : f8E8M0FNU to i1
+  // CHECK-NEXT: %[[YF:.*]] = arith.sitofp %[[Y]] : i2 to f8E5M3FNU
+  // CHECK-NEXT: %[[YR:.*]] = arith.fptosi %[[YF]] : f8E5M3FNU to i2
+  // CHECK-NEXT: return %[[XR]], %[[YR]], %[[Z]] : i1, i2, i4
+  %xf = arith.uitofp %x : i1 to f8E8M0FNU
+  %xr = arith.fptoui %xf : f8E8M0FNU to i1
+  %yf = arith.sitofp %y : i2 to f8E5M3FNU
+  %yr = arith.fptosi %yf : f8E5M3FNU to i2
+  %zf = arith.uitofp %z : i4 to f8E5M3FNU
+  %zr = arith.fptoui %zf : f8E5M3FNU to i4
+  return %xr, %yr, %zr : i1, i2, i4
+}
+
+// -----
+// Folding uses element types for both vectors and tensors.
+// CHECK-LABEL: @int_fp_roundtrip_shaped(
+func.func @int_fp_roundtrip_shaped(%x: vector<4xi32>, %y: tensor<2x3xi16>) -> (vector<4xi32>, tensor<2x3xi16>) {
+  // CHECK-SAME: %[[X:[^:]+]]: vector<4xi32>, %[[Y:[^:]+]]: tensor<2x3xi16>
+  // CHECK-NEXT: return %[[X]], %[[Y]] : vector<4xi32>, tensor<2x3xi16>
+  %xf = arith.sitofp %x : vector<4xi32> to vector<4xf64>
+  %xr = arith.fptosi %xf : vector<4xf64> to vector<4xi32>
+  %yf = arith.uitofp %y : tensor<2x3xi16> to tensor<2x3xf32>
+  %yr = arith.fptoui %yf : tensor<2x3xf32> to tensor<2x3xi16>
+  return %xr, %yr : vector<4xi32>, tensor<2x3xi16>
+}
+
+// -----
 
 // Tests rewritten from https://github.com/llvm/llvm-project/blob/main/llvm/test/Transforms/InstCombine/2008-11-08-FCmp.ll
 // When inst combining an FCMP with the LHS coming from a arith.uitofp instruction, we
