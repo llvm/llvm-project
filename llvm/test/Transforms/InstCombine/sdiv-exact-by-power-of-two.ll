@@ -110,8 +110,8 @@ define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
 
 define i8 @select_pow2(i8 %x, i1 %c) {
 ; CHECK-LABEL: @select_pow2(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i8 4, i8 16
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 2, i8 4
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %d = select i1 %c, i8 4, i8 16
@@ -132,9 +132,8 @@ define i8 @select_pow2_signmask(i8 %x, i1 %c) {
 
 define i16 @zext_shl1(i16 %x, i8 %y) {
 ; CHECK-LABEL: @zext_shl1(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[S]] to i16
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i16 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i16 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[DIV]]
 ;
   %s = shl nuw i8 1, %y
@@ -145,8 +144,8 @@ define i16 @zext_shl1(i16 %x, i8 %y) {
 
 define i8 @shl4_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl4_nsw(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i8 4, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %s = shl nsw i8 4, %y
@@ -156,8 +155,8 @@ define i8 @shl4_nsw(i8 %x, i8 %y) {
 
 define <2 x i8> @shl4_nsw_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl4_nsw_vec(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw <2 x i8> splat (i8 4), [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %s = shl nsw <2 x i8> splat (i8 4), %y
@@ -167,8 +166,8 @@ define <2 x i8> @shl4_nsw_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @lshr_exact_pow2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_exact_pow2(
-; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 64, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 6, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %s = lshr exact i8 64, %y
