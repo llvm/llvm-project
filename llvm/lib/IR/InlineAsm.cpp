@@ -340,3 +340,19 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
   // We don't have access to labels here, NumLabels will be checked separately.
   return Error::success();
 }
+
+bool InlineAsm::modMemory() const {
+  if (hasSideEffects())
+    return true;
+  for (const InlineAsm::ConstraintInfo &Constraint : ParseConstraints()) {
+    if (Constraint.Type == InlineAsm::isOutput && Constraint.isIndirect)
+      return true;
+    if (Constraint.Type == InlineAsm::isClobber) {
+      for (const std::string &Code : Constraint.Codes) {
+        if (Code == "{memory}")
+          return true;
+      }
+    }
+  }
+  return false;
+}
