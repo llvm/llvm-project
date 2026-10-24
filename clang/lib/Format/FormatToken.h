@@ -2132,6 +2132,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
                                  const FormatToken *MinColumnToken) {
   if (!Previous || !MinColumnToken)
     return false;
+  // Do not continue a comment section across a formatting-disabled boundary.
+  if (FormatTok.Finalized != Previous->Finalized)
+    return false;
   unsigned MinContinueColumn =
       MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);
   return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
