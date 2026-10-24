@@ -45,3 +45,10 @@ subroutine f05
 !ERROR: 'context-selector' modifier is required
   !$omp & when(nothing)
 end
+
+subroutine f06
+  !$omp metadirective &
+  !$omp & otherwise(nothing)
+!ERROR: A NOWAIT clause may only appear on TASKWAIT if a DEPEND clause is present
+  !$omp taskwait nowait
+end

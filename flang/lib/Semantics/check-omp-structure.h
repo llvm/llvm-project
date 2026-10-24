@@ -472,6 +472,7 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+  void CheckDeclareReduction(const parser::OmpDirectiveSpecification &x);
 
   void CheckUsesAllocatorsSpec(
       const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
@@ -490,10 +491,12 @@ private:
       const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
-  void CheckReductionObjects(
-      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   void CheckSubstring(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  void CheckReductionObjects(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  bool CheckReductionIntrinsicOperator(
+      parser::DefinedOperator::IntrinsicOperator op, parser::CharBlock source);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
       parser::CharBlock source, llvm::omp::Clause clauseId);
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
