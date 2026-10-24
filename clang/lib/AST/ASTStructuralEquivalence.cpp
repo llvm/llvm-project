@@ -1669,8 +1669,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     // the purposes of C where they simply need to have the same values, not
     // the same token sequences.
     bool Diagnose = false;
-    if (!IsStructurallyEquivalent(Context, Field1->getBitWidth(), Field2->getBitWidth()))
-        Diagnose = true;
+    if (!IsStructurallyEquivalent(Context, Field1->getBitWidth(),
+                                  Field2->getBitWidth()))
+      Diagnose = true;
     if (Context.LangOpts.C23 && Field1->isBitField() && Field2->isBitField())
       Diagnose = Field1->getBitWidthValue() != Field2->getBitWidthValue();
 
