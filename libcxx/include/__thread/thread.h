@@ -22,7 +22,6 @@
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
 #include <__system_error/throw_system_error.h>
-#include <__thread/hardware_concurrency.h>
 #include <__thread/id.h>
 #include <__thread/support.h>
 #include <__type_traits/decay.h>
