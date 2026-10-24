@@ -35,11 +35,6 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
-cl::opt<bool> PollyVectorizeMetadata(
-    "polly-annotate-metadata-vectorize",
-    cl::desc("Append vectorize enable/disable metadata from polly"),
-    cl::init(false), cl::cat(PollyCategory));
-
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
     cl::desc("Scheduling type of parallel OpenMP for loops"),

@@ -108,6 +108,17 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
         "Process scops that are unlikely to benefit from Polly optimizations."),
     cl::location(PollyProcessUnprofitable), cl::cat(PollyCategory));
 
+// This option defines a polly mode that has differences in the polly decisions
+// with a view of vectorizing eventually. This is done by adding a
+// vectorize.enable metadata to the loops analysed and found fit by polly so
+// that the loop vectorizer can handle them.
+bool polly::PollyVectorizeMetadata;
+static cl::opt<bool, true> XPollyVectorizeMetadata(
+    "polly-annotate-metadata-vectorize",
+    cl::desc("Append vectorize enable/disable metadata from polly"),
+    cl::location(PollyVectorizeMetadata), cl::init(false),
+    cl::cat(PollyCategory));
+
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
     cl::desc("Only run on functions that match a regex. "
@@ -1736,7 +1747,7 @@ bool ScopDetection::hasPossiblyDistributableLoop(
 bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  if (PollyProcessUnprofitable)
+  if (PollyVectorizeMetadata || PollyProcessUnprofitable)
     return true;
 
   // We can probably not do a lot on scops that only write or only read
