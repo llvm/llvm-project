@@ -275,6 +275,40 @@ void Positives() {
   auto LogicalEndFromNamespaceAlias = my_std::unique(I.begin(), I.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: use a ranges version of this algorithm
   // CHECK-FIXES: auto LogicalEndFromNamespaceAlias = std::ranges::unique(I).begin();
+
+  std::reverse(I.begin() /*begin*/, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::reverse(I /*begin*/);
+
+  std::reverse(I.begin(),/*end*/I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::reverse(I/*end*/);
+
+#define COMMA ,
+  std::reverse(I.begin() COMMA I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::reverse(I.begin() COMMA I.end());
+#undef COMMA
+
+#define EMPTY(a, b)
+  std::reverse(I.begin() EMPTY(1, 2), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::reverse(I EMPTY(1, 2));
+
+  std::reverse(I.begin() EMPTY((1, 2), 3), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::reverse(I EMPTY((1, 2), 3));
+
+  std::reverse(I.begin(), EMPTY(1, 2) I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::reverse(I EMPTY(1, 2) );
+#undef EMPTY
+
+#define SEP(a, b) ,
+  std::reverse(I.begin() SEP(1, 2) I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::reverse(I.begin() SEP(1, 2) I.end());
+#undef SEP
 }
 
 void Reverse(){
