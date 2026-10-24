@@ -89,6 +89,7 @@ write_cmake_config("config") {
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
     "LLVM_ENABLE_CRASH_DUMPS=",
+    "LLVM_ENABLE_GLIBC_CONDVAR_WORKAROUND=",
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",

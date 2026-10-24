@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Parallel.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/Jobserver.h"
@@ -234,8 +235,10 @@ TaskGroup::TaskGroup()
 TaskGroup::~TaskGroup() {
 #if LLVM_ENABLE_THREADS
   // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
+  // With glibc BZ 25847, a lost wakeup can strand a task while every worker
+  // sleeps, so the root TaskGroup drains the queue as well.
   bool IsNested = threadIndex != UINT_MAX;
-  if (Parallel && IsNested)
+  if (Parallel && (IsNested || LLVM_ENABLE_GLIBC_CONDVAR_WORKAROUND))
     getDefaultExecutor()->helpSync(L);
 #endif
   L.sync();
