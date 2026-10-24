@@ -33,6 +33,10 @@ public:
   void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
+  bool matchFMulToLdexp(MachineInstr &MI,
+                        std::pair<Register, Register> &MatchInfo) const;
+  void applySPIRVLdexp(MachineInstr &MI,
+                       const std::pair<Register, Register> &MatchInfo) const;
   void applyMatrixTranspose(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
 
