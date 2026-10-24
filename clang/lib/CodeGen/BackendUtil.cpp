@@ -1172,6 +1172,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     MPM.addPass(AssignGUIDPass());
   }
 
+  // AMD SPIR-V does not run the AMDGPU pipeline that selects accelerator code.
+  if (LangOpts.HIPStdPar && LangOpts.CUDAIsDevice &&
+      !LangOpts.GPURelocatableDeviceCode && TargetTriple.isSPIRV() &&
+      TargetTriple.getVendor() == llvm::Triple::VendorType::AMD) {
+    MPM.addPass(HipStdParMathFixupPass());
+    MPM.addPass(HipStdParAcceleratorCodeSelectionPass());
+  }
+
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
     MPM.addPass(HipStdParAllocationInterpositionPass());
