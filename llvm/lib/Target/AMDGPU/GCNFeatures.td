@@ -2705,8 +2705,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
-   FeatureXNACKOnOffModes,
-   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

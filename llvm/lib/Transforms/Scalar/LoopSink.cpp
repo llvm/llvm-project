@@ -295,8 +295,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
                                           BlockFrequencyInfo &BFI,
                                           MemorySSA &MSSA,
                                           ScalarEvolution *SE) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   BasicBlock *Preheader = L.getLoopPreheader();
   assert(Preheader && "Expected loop to have preheader");
 

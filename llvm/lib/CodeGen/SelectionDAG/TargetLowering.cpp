@@ -11698,8 +11698,8 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
 
   // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
   // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
-  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
-  bool UseSigned = IsSigned || IsNonNegative;
+  bool UseSigned =
+      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
 
   if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
     SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
