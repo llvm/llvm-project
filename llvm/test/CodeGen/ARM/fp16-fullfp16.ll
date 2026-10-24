@@ -160,7 +160,9 @@ define void @test_sitofp_i64(i64 %a, ptr %p) {
 ; CHECK:         .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    bl __floatdihf
+; CHECK-NEXT:    bl __aeabi_l2f
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vstr.16 s0, [r4]
 ; CHECK-NEXT:    pop {r4, pc}
   %r = sitofp i64 %a to half
@@ -173,7 +175,9 @@ define void @test_uitofp_i64(i64 %a, ptr %p) {
 ; CHECK:         .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    bl __floatundihf
+; CHECK-NEXT:    bl __aeabi_ul2f
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    vstr.16 s0, [r4]
 ; CHECK-NEXT:    pop {r4, pc}
   %r = uitofp i64 %a to half
@@ -760,7 +764,9 @@ define half @sitofp_f16_i64(i64 %x) #0 {
 ; CHECK-LABEL: sitofp_f16_i64:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatdihf
+; CHECK-NEXT:    bl __aeabi_l2f
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
@@ -770,7 +776,9 @@ define half @uitofp_f16_i64(i64 %x) #0 {
 ; CHECK-LABEL: uitofp_f16_i64:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatundihf
+; CHECK-NEXT:    bl __aeabi_ul2f
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
@@ -780,7 +788,8 @@ define half @sitofp_f16_i128(i128 %x) #0 {
 ; CHECK-LABEL: sitofp_f16_i128:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floattihf
+; CHECK-NEXT:    bl __floattisf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call half @llvm.experimental.constrained.sitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
@@ -790,7 +799,8 @@ define half @uitofp_f16_i128(i128 %x) #0 {
 ; CHECK-LABEL: uitofp_f16_i128:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatuntihf
+; CHECK-NEXT:    bl __floatuntisf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val

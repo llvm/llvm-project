@@ -31066,6 +31066,10 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
+  // The generic expansion converts to f16 through f32 without a libcall.
+  if (VT == MVT::f16)
+    return SDValue();
+
   SDValue Arg = Op.getOperand(IsStrict ? 1 : 0);
   EVT ArgVT = Arg.getValueType();
 

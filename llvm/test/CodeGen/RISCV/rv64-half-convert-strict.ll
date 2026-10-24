@@ -76,7 +76,8 @@ define half @sitofp_i128_to_f16(i128 %a) nounwind strictfp {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    addi sp, sp, -16
 ; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __floattihf
+; RV64IZFH-NEXT:    call __floattisf
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
@@ -85,7 +86,8 @@ define half @sitofp_i128_to_f16(i128 %a) nounwind strictfp {
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    addi sp, sp, -16
 ; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __floattihf
+; RV64IZHINX-NEXT:    call __floattisf
+; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    addi sp, sp, 16
 ; RV64IZHINX-NEXT:    ret
@@ -108,7 +110,8 @@ define half @uitofp_i128_to_f16(i128 %a) nounwind strictfp {
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    addi sp, sp, -16
 ; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __floatuntihf
+; RV64IZFH-NEXT:    call __floatuntisf
+; RV64IZFH-NEXT:    fcvt.h.s fa0, fa0
 ; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
@@ -117,7 +120,8 @@ define half @uitofp_i128_to_f16(i128 %a) nounwind strictfp {
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    addi sp, sp, -16
 ; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __floatuntihf
+; RV64IZHINX-NEXT:    call __floatuntisf
+; RV64IZHINX-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    addi sp, sp, 16
 ; RV64IZHINX-NEXT:    ret

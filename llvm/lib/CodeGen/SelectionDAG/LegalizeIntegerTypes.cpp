@@ -6003,6 +6003,25 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
+
+  // Convert through f32: compiler-rt has no integer to f16 libcalls, and libgcc
+  // has them only on some targets. Integers below 2^24 are exact in f32 and
+  // larger ones overflow f16 either way, so this rounds only once.
+  if (DstVT == MVT::f16 && TLI.isTypeLegal(DstVT)) {
+    SDLoc dl(N);
+    SDValue Flt = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
+    if (!IsStrict)
+      return DAG.getNode(ISD::FP_ROUND, dl, DstVT,
+                         DAG.getNode(N->getOpcode(), dl, MVT::f32, Op), Flt);
+    SDValue F32 =
+        DAG.getNode(N->getOpcode(), dl, {MVT::f32, MVT::Other}, {Chain, Op});
+    SDValue Res = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {DstVT, MVT::Other},
+                              {F32.getValue(1), F32, Flt});
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+    ReplaceValueWith(SDValue(N, 0), Res);
+    return SDValue();
+  }
+
   RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(Op.getValueType(), DstVT)
                                : RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&

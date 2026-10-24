@@ -621,7 +621,8 @@ define half @s128_to_half(i128 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __floattihf@PLT
+; X64-NEXT:    callq __floattisf@PLT
+; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -637,7 +638,10 @@ define half @s128_to_half(i128 %x) {
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vmovups 8(%ebp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
-; X86-NEXT:    calll __floattihf
+; X86-NEXT:    calll __floattisf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -712,7 +716,8 @@ define half @u128_to_half(i128 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __floatuntihf@PLT
+; X64-NEXT:    callq __floatuntisf@PLT
+; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -728,7 +733,10 @@ define half @u128_to_half(i128 %x) {
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vmovups 8(%ebp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
-; X86-NEXT:    calll __floatuntihf
+; X86-NEXT:    calll __floatuntisf
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
