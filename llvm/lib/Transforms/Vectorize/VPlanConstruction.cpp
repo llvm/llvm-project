@@ -1867,6 +1867,12 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   if (HasUnsupportedPhi || !Plan.hasScalarTail())
     return false;
 
+  // TODO: Support loops with uncountable early exits; their latch is not
+  // terminated by BranchOnCount.
+  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  if (!match(LatchVPBB->getTerminator(), m_BranchOnCount()))
+    return false;
+
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all
   /// recipes up to early exit point be side-effect free as they are
@@ -1893,7 +1899,6 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     MinOrMaxOp = Freeze;
   }
 
-  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   VPValue *AllNaNLanes = nullptr;
   SmallPtrSet<VPValue *, 2> RdxResults;
