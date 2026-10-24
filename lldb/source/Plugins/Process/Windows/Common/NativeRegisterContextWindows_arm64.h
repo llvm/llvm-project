@@ -13,8 +13,8 @@
 #include "NativeRegisterContextWindows.h"
 
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 
 #include "lldb/Host/windows/windows.h"
 

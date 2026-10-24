@@ -2561,15 +2561,6 @@ LogicalResult tosa::MulOp::verify() {
         return emitOpError(
             "requires the same element type for all operands and results");
     }
-
-    // verify shift has value 0 for non-integer types
-    ElementsAttr shiftElem;
-    if (matchPattern(getShift(), m_Constant(&shiftElem))) {
-      int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
-      if (shift != 0) {
-        return emitOpError() << "require shift to be 0 for float type";
-      }
-    }
   }
 
   // Verify the op has same ranks for all main operands (excludes extra operands
@@ -5356,7 +5347,8 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   return success();
 }
 
-std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ApplyScaleOp::getIterationShapeToUnroll() {
   if (auto vt = llvm::dyn_cast<VectorType>(getType()))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;

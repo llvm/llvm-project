@@ -36,14 +36,11 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-
-namespace {
-class ScalarExprEmitter;
-} // namespace
 
 namespace mlir {
 namespace acc {
@@ -65,7 +62,6 @@ public:
   CIRGenModule &cgm;
 
 private:
-  friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -710,6 +706,8 @@ public:
     PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
+
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
@@ -2055,7 +2053,8 @@ public:
   void emitCallArgs(
       CallArgList &args, PrototypeWrapper prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
-      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0,
+      EvaluationOrder order = EvaluationOrder::Default);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
@@ -2312,10 +2311,12 @@ public:
   RValue emitCoawaitExpr(const CoawaitExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
+  LValue emitCoawaitLValue(const CoawaitExpr *e);
 
   RValue emitCoyieldExpr(const CoyieldExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
+  LValue emitCoyieldLValue(const CoyieldExpr *e);
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);

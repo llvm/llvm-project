@@ -49,24 +49,21 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
 bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -191,7 +188,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                         *VPI, Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPWidenIntOrFpInductionRecipe>(&Ingredient) &&
+        assert(isa<VPWidenInductionRecipe>(&Ingredient) &&
                "inductions must be created earlier");
         continue;
       }
@@ -6275,11 +6272,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
-      // A truncate that is not widened is left to the scalarization decisions
-      // made earlier.
-      if (vputils::onlyFirstLaneUsed(&VPI))
-        continue;
-
       VPValue *Op = VPI.getOperand(0);
       auto *WideIV = getOptimizableIVOf(Op, PSE);
       if (!WideIV)
@@ -6289,6 +6281,11 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // is not handled here.
       // TODO: Also narrow truncates of the incremented IV.
       if (Op != WideIV)
+        continue;
+
+      // A truncate that is not widened is left to the scalarization decisions
+      // made earlier.
+      if (vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
       // Replacing a free truncate would add an induction update instruction to
