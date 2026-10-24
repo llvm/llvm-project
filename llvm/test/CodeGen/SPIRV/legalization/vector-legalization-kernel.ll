@@ -13,6 +13,12 @@
 ; CHECK-DAG: %[[#ptr_func_v3f64:]] = OpTypePointer Function %[[#v3f64]]
 ; CHECK-DAG: %[[#v4f64:]] = OpTypeVector %[[#double]] 4
 
+; CHECK-DAG: OpName %[[#test_load_v9i32:]] "test_load_v9i32"
+; CHECK-DAG: %[[#c9:]] = OpConstant %[[#int]] 9
+; CHECK-DAG: %[[#arr9i32:]] = OpTypeArray %[[#int]] %[[#c9]]
+; CHECK-DAG: %[[#ptr_cwg_arr9i32:]] = OpTypePointer CrossWorkgroup %[[#arr9i32]]
+; CHECK-DAG: %[[#ptr_cwg_i32:]] = OpTypePointer CrossWorkgroup %[[#int]]
+
 define spir_kernel void @test_int32_double_conversion(ptr %G_vec) {
 ; CHECK: %[[#test_int32_double_conversion]] = OpFunction
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#ptr_func_v8i32]]
@@ -64,6 +70,25 @@ entry:
   
   ; CHECK: OpStore %[[#param_v3f64]] %[[#CONSTRUCT3]]
   store <3 x double> %5, ptr %G_vec
+  ret void
+}
+
+define spir_kernel void @test_load_v9i32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CHECK: %[[#test_load_v9i32]] = OpFunction
+; CHECK: %[[#in_param:]] = OpFunctionParameter %[[#ptr_cwg_arr9i32]]
+; CHECK: %[[#out_param:]] = OpFunctionParameter %[[#ptr_cwg_i32]]
+entry:
+  ; CHECK: %[[#gep0:]] = OpInBoundsPtrAccessChain %[[#ptr_cwg_i32]] %[[#in_param]]
+  ; CHECK: %[[#val0:]] = OpLoad %[[#int]] %[[#gep0]] Aligned 4
+  ; CHECK: %[[#gep8:]] = OpInBoundsPtrAccessChain %[[#ptr_cwg_i32]] %[[#in_param]]
+  ; CHECK: %[[#val8:]] = OpLoad %[[#int]] %[[#gep8]] Aligned 4
+  ; CHECK: %[[#sum:]] = OpIAdd %[[#int]] %[[#val0]] %[[#val8]]
+  ; CHECK: OpStore %[[#out_param]] %[[#sum]] Aligned 4
+  %v = load <9 x i32>, ptr addrspace(1) %in, align 4
+  %e0 = extractelement <9 x i32> %v, i32 0
+  %e8 = extractelement <9 x i32> %v, i32 8
+  %sum = add i32 %e0, %e8
+  store i32 %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
