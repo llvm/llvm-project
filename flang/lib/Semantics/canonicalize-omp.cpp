@@ -301,10 +301,28 @@ static const parser::OmpDirectiveSpecification *GetODS(
   return nullptr;
 }
 
-static bool IsConsideredExecutable(const parser::OmpDirectiveSpecification &x) {
+static std::optional<bool> IsConsideredExecutable(
+    const parser::OmpDirectiveSpecification &x) {
   switch (llvm::omp::getDirectiveCategory(x.DirId())) {
   case llvm::omp::Category::Executable:
+    return true;
   case llvm::omp::Category::Utility:
+    if (x.DirId() == llvm::omp::Directive::OMPD_nothing) {
+      return std::nullopt;
+    }
+    if (x.DirId() == llvm::omp::Directive::OMPD_error) {
+      for (const parser::OmpClause &clause : x.Clauses().v) {
+        if (auto *at = parser::Unwrap<parser::OmpAtClause>(clause)) {
+          switch (at->v) {
+            SWITCH_COVERS_ALL_CASES
+          case parser::OmpAtClause::ActionTime::Compilation:
+            return std::nullopt;
+          case parser::OmpAtClause::ActionTime::Execution:
+            return true;
+          }
+        }
+      }
+    }
     return true;
   default:
     return false;
@@ -314,22 +332,24 @@ static bool IsConsideredExecutable(const parser::OmpDirectiveSpecification &x) {
 static bool IsConsideredExecutable(
     const parser::OmpMetadirectiveDirective &md) {
   // NOTHING as a variant by itself should not decide whether the METADIRECTIVE
-  // as a whole executable or not. But when all variants are NOTHING then the
-  // METADIRECTIVE should be treated as executable.
-  bool something = false;
+  // as a whole is executable or not. But when all variants are NOTHING then
+  // the METADIRECTIVE should be treated as executable.
+  // The same applies to ERROR AT(COMPILATION).
+  bool nonExec = false;
   for (const parser::OmpClause &clause : md.v.Clauses().v) {
     if (auto *ods = GetODS(clause)) {
-      if (ods->DirId() != llvm::omp::Directive::OMPD_nothing) {
-        something = true;
-        if (IsConsideredExecutable(*ods)) {
+      if (auto exe = IsConsideredExecutable(*ods)) {
+        if (*exe) {
+          // If it's known to be executable, return true.
           return true;
         }
+        // Known to be non-executable.
+        nonExec = true;
       }
     }
     // If the directive specification is missing, it's NOTHING.
   }
-  // If everything is NOTHING, return true.
-  return !something;
+  return !nonExec;
 }
 
 static bool IsConsideredExecutable(
