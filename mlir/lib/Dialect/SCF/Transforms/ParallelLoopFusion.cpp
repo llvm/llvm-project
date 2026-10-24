@@ -1092,18 +1092,8 @@ struct ParallelLoopFusion
     auto &aa = getAnalysis<AliasAnalysis>();
 
     auto mayAlias = [&](Value val1, Value val2) -> bool {
-      // If the memref is defined in one of the parallel loops body, careful
-      // alias analysis is needed.
-      // TODO: check if this is still needed as a separate check.
-      auto val1Def = val1.getDefiningOp();
-      auto val2Def = val2.getDefiningOp();
-      auto val1Loop =
-          val1Def ? val1Def->getParentOfType<ParallelOp>() : nullptr;
-      auto val2Loop =
-          val2Def ? val2Def->getParentOfType<ParallelOp>() : nullptr;
-      if (val1Loop != val2Loop)
-        return true;
-
+      // Only a proven NoAlias result permits fusion. All conservative alias
+      // results continue to block potentially unsafe memory reordering.
       return !aa.alias(val1, val2).isNo();
     };
 
