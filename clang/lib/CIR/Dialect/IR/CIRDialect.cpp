@@ -2096,31 +2096,33 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // Execution always starts in the body region.
+  // The interface has no branch point for the paths that run the cleanup from
+  // the middle of the body: an unwind out of a call, or a cir.return,
+  // cir.break, cir.continue or cir.goto. The cleanup region is therefore a
+  // potential successor of every branch point in the body as well as of the
+  // parent. The edge from the parent stands in for such a path taken before
+  // the body has any effect, and the edges from body exits for one taken
+  // after some of its effects.
   if (point.isParent()) {
     regions.emplace_back(&getBodyRegion());
+    regions.emplace_back(&getCleanupRegion());
     return;
   }
 
   mlir::Operation *term = point.getTerminatorPredecessorOrNull();
-  assert(term && "expected a terminator predecessor");
-
-  if (term->getParentRegion() == &getBodyRegion()) {
-    // cir.resume unwinds out of the body. Every other terminator, such as
-    // cir.yield or cir.co_return, is a normal exit.
-    cir::CleanupKindAttr kind = getCleanupKindAttr();
-    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
-      regions.emplace_back(&getCleanupRegion());
-      return;
-    }
+  if (term->getParentRegion() == &getCleanupRegion()) {
+    regions.emplace_back(getOperation());
+    return;
   }
 
-  // Exiting the cleanup region, or a body exit that skips it, leaves the
-  // operation. An unwind out of the middle of the body is not a
-  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
-  // cir.goto, so a cleanup region reached only that way has no predecessor
-  // here.
-  regions.emplace_back(getOperation());
+  regions.emplace_back(&getCleanupRegion());
+
+  // cir.resume unwinds out of the body. Every other terminator, such as
+  // cir.yield or cir.co_return, is a normal exit. An exit that the cleanup
+  // kind does not cover can also leave the operation directly.
+  cir::CleanupKindAttr kind = getCleanupKindAttr();
+  if (isa<cir::ResumeOp>(term) ? !kind.isEH() : !kind.isNormal())
+    regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
