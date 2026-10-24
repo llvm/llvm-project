@@ -112,6 +112,8 @@ public:
     VFS[std::string(FilePath)] = std::string(Content);
   }
 
+  void setInvocationWrapper(InvocationWrapper) override {}
+
 private:
   CommonOptionsParser OptionsParser;
   std::string SourcePaths;

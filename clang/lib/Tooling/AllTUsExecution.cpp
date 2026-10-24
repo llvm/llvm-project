@@ -129,6 +129,7 @@ llvm::Error AllTUsToolExecutor::execute(
                            std::make_shared<PCHContainerOperations>(), FS);
             Tool.appendArgumentsAdjuster(Action.second);
             Tool.appendArgumentsAdjuster(getDefaultArgumentsAdjusters());
+            Tool.setInvocationWrapper(InvocationWrap);
             for (const auto &FileAndContent : OverlayFiles)
               Tool.mapVirtualFile(FileAndContent.first(),
                                   FileAndContent.second);

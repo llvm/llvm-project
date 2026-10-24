@@ -5,10 +5,6 @@
 # systems, so that the developer's own user config can't affect the result.
 # UNSUPPORTED: system-windows
 # UNSUPPORTED: system-darwin
-#
-# FIXME: clangd-indexer does not yet find the .clangd file for relative "file"
-# entries, so the REL check below fails. Remove this XFAIL once that is fixed.
-# XFAIL: *
 
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: split-file %s %t.dir
@@ -32,7 +28,7 @@
 # REL: Processing file {{.*}}test.cpp
 # REL-NOT: error: "FROM_CLANGD_FILE not defined
 
-# Absolute "file" entry: same project, same config, and this one works today.
+# Absolute "file" entry: same project, same config.
 # RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
 # RUN:     clangd-indexer --enable-config --executor=all-TUs \
 # RUN:     %t.dir/abs/compile_commands.json > %t.dir/abs.idx 2> %t.dir/abs.log
