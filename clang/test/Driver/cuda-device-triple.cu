@@ -1,4 +1,4 @@
-// RUN: %clang -### -emit-llvm --cuda-device-only \
+// RUN: %clang -### -emit-llvm --cuda-device-only --target=i386-unknown-linux-gnu \
 // RUN:   -nocudalib -nocudainc --offload=spirv32-unknown-unknown -c %s 2>&1 | FileCheck %s
 
 // Make sure there's no sm_* suffix on the output name
