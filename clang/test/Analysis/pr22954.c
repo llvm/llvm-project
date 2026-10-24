@@ -380,9 +380,11 @@ int f20(int i) {
   a20[1].s1[3] = 8;
   a20[1].s2 = strdup("world");
   a20[i].s2 = strdup("hola");
-  char input[] = {'a', 'b', 'c', 'd'};
+  char input[] = {'a', 'b', 'c', 'd'}; // expected-warning{{Potential leak of memory pointed to by field 's2'}}\
+  expected-warning{{Potential leak of memory pointed to by field 's2'}}
   memcpy(a20[0].s1, input, 4);
-  clang_analyzer_eval(a20[0].s1[0] == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(a20[0].s1[0] == 1); // expected-warning{{UNKNOWN}}\
+  expected-warning{{Potential leak of memory pointed to by field 's2'}}
   clang_analyzer_eval(a20[0].s1[1] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a20[0].s1[2] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a20[0].s1[3] == 1); // expected-warning{{UNKNOWN}}
@@ -422,7 +424,8 @@ int f21(int i) {
   a21[i].s1[3] = 4;
   char input[] = {'a', 'b', 'c', 'd'};
   memcpy(a21[i].s1, input, 4);
-  clang_analyzer_eval(a21[0].s1[0] == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(a21[0].s1[0] == 1); // expected-warning{{UNKNOWN}}\
+  expected-warning{{Potential leak of memory pointed to by field 's2'}}
   clang_analyzer_eval(a21[0].s1[1] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a21[0].s1[2] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(a21[0].s1[3] == 1); // expected-warning{{UNKNOWN}}

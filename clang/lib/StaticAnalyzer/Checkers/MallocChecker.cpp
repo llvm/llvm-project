@@ -272,6 +272,9 @@ MallocUpdateRefState(CheckerContext &C, const Expr *E, ProgramStateRef State,
 
 REGISTER_SET_WITH_PROGRAMSTATE(ReallocSizeZeroSymbols, SymbolRef)
 
+/// Symbols to suppress for the current PSK_EscapeOnBind.
+REGISTER_SET_WITH_PROGRAMSTATE(SuppressEscapeOnBind, SymbolRef)
+
 namespace {
 
 /// The state of 'fromPtr' after reallocation is known to have failed.
@@ -388,8 +391,8 @@ struct DynMemFrontend : virtual public CheckerFrontend, public BT_PROVIDERS... {
 class MallocChecker
     : public CheckerFamily<
           check::DeadSymbols, check::PointerEscape, check::ConstPointerEscape,
-          check::PreStmt<ReturnStmt>, check::EndFunction, check::PreCall,
-          check::PostCall, eval::Call, check::NewAllocator,
+          check::Bind, check::PreStmt<ReturnStmt>, check::EndFunction,
+          check::PreCall, check::PostCall, eval::Call, check::NewAllocator,
           check::PostStmt<BlockExpr>, check::PostObjCMessage, check::Location,
           eval::Assume> {
 public:
@@ -451,6 +454,8 @@ public:
                             bool Assumption) const;
   void checkLocation(SVal l, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
 
   ProgramStateRef checkPointerEscape(ProgramStateRef State,
                                     const InvalidatedSymbols &Escaped,
@@ -1183,6 +1188,33 @@ public:
 
   friend class SymbolVisitor;
 };
+
+/// Collect allocated symbols reachable from a bound value.
+class CollectAllocatedOnBindCallback final : public SymbolVisitor {
+  ProgramStateRef State;
+
+public:
+  explicit CollectAllocatedOnBindCallback(ProgramStateRef S)
+      : State(std::move(S)) {}
+  ProgramStateRef getState() const { return State; }
+
+  bool VisitSymbol(SymbolRef Sym) override {
+    if (const RefState *RS = State->get<RegionState>(Sym))
+      if (RS->isAllocated() || RS->isAllocatedOfSizeZero())
+        State = State->add<SuppressEscapeOnBind>(Sym);
+    return true;
+  }
+};
+
+static bool isAllocatedOrZeroAllocated(const RefState *RS) {
+  return RS && (RS->isAllocated() || RS->isAllocatedOfSizeZero());
+}
+
+static ProgramStateRef consumeSuppressEscapeOnBind(ProgramStateRef State) {
+  if (State->get<SuppressEscapeOnBind>().isEmpty())
+    return State;
+  return State->remove<SuppressEscapeOnBind>();
+}
 } // end anonymous namespace
 
 static bool isStandardNew(const FunctionDecl *FD) {
@@ -3898,6 +3930,33 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   return false;
 }
 
+void MallocChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
+                              bool AtDeclInit, CheckerContext &C) const {
+  // Preserve tracking for allocations stored in heap objects that are still
+  // owned by the analyzer. An escaped parent does not provide this guarantee.
+  const MemRegion *MR = Loc.getAsRegion();
+  if (!MR)
+    return;
+
+  ProgramStateRef State = C.getState();
+  if (!MR->hasMemorySpace<HeapSpaceRegion>(State))
+    return;
+
+  const SymbolicRegion *SymBase = MR->getSymbolicBase();
+  if (!SymBase)
+    return;
+
+  const RefState *ParentRS = State->get<RegionState>(SymBase->getSymbol());
+  if (!isAllocatedOrZeroAllocated(ParentRS))
+    return;
+
+  ProgramStateRef NewState =
+      State->scanReachableSymbols<CollectAllocatedOnBindCallback>(Val)
+          .getState();
+  if (NewState != State)
+    C.addTransition(NewState);
+}
+
 ProgramStateRef MallocChecker::checkPointerEscape(ProgramStateRef State,
                                              const InvalidatedSymbols &Escaped,
                                              const CallEvent *Call,
@@ -3924,6 +3983,9 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
     ProgramStateRef State, const InvalidatedSymbols &Escaped,
     const CallEvent *Call, PointerEscapeKind Kind,
     bool IsConstPointerEscape) const {
+  // The suppression set only applies to bind escapes.
+  const bool SuppressOnBind = Kind == PSK_EscapeOnBind;
+
   // If we know that the call does not free memory, or we want to process the
   // call later, keep tracking the top level arguments.
   SymbolRef EscapingSymbol = nullptr;
@@ -3931,11 +3993,14 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
       !mayFreeAnyEscapedMemoryOrIsModeledExplicitly(Call, State,
                                                     EscapingSymbol) &&
       !EscapingSymbol) {
-    return State;
+    return consumeSuppressEscapeOnBind(State);
   }
 
   for (SymbolRef sym : Escaped) {
     if (EscapingSymbol && EscapingSymbol != sym)
+      continue;
+
+    if (SuppressOnBind && State->contains<SuppressEscapeOnBind>(sym))
       continue;
 
     if (const RefState *RS = State->get<RegionState>(sym))
@@ -3943,7 +4008,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
         if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS))
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
-  return State;
+  return consumeSuppressEscapeOnBind(State);
 }
 
 bool MallocChecker::isArgZERO_SIZE_PTR(ProgramStateRef State, CheckerContext &C,
