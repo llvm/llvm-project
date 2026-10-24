@@ -507,6 +507,37 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// Return true if a select may be sunk into the differing argument of two
+/// calls to the given intrinsic. If the differing operands are constants,
+/// this canonicalizes them as needed and rejects the sink where a constant
+/// may enable cheaper lowering (e.g. pow(X, 2.0) -> X * X).
+static bool allowSelectSinkingIntoArg(Intrinsic::ID IID, unsigned ArgNo,
+                                      Value *&TV, Value *&FV) {
+  if (!isa<Constant>(TV) && !isa<Constant>(FV))
+    return true;
+
+  switch (IID) {
+  case Intrinsic::copysign:
+    // Only the sign operand is constant-sensitive: copysign(y, +-C) folds to
+    // fabs/fnabs, so sinking would hide the constant behind a select. A
+    // constant magnitude has no cheaper lowering, so sinking is profitable.
+    // copysign ignores the sign of its magnitude, so canonicalize a negative
+    // constant the way visitCallInst would; that fold no longer applies once
+    // the constant is sunk into a select.
+    if (ArgNo == 1)
+      return false;
+    for (Value **V : {&TV, &FV}) {
+      const APFloat *C;
+      if (match(*V, m_APFloat(C)) && C->isNegative())
+        *V = ConstantFP::get((*V)->getType(), abs(*C));
+    }
+    return true;
+  default:
+    // Conservatively assume a constant may enable cheaper lowering.
+    return false;
+  }
+}
+
 /// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
 static Instruction *
 foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
@@ -536,7 +567,9 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
       !TV->getType()->isVectorTy())
     return nullptr;
   // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
-  if (isa<Constant>(TV) || isa<Constant>(FV))
+  // Sinking the select into the argument would hide the constant, so reject
+  // the sink for argument positions where a constant is beneficial.
+  if (!allowSelectSinkingIntoArg(TII->getIntrinsicID(), *DiffArgNo, TV, FV))
     return nullptr;
 
   SmallVector<Value *> Args(TII->args());
