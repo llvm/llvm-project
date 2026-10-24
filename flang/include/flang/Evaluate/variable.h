@@ -137,7 +137,7 @@ class TypeParamInquiry {
 public:
   using Result = SubscriptInteger;
   static constexpr int ResultKind{SubscriptIntegerKind};
-  constexpr int kind() const { return SubscriptIntegerKind; }
+  static constexpr int kind() { return SubscriptIntegerKind; }
   static constexpr DynamicType GetType() {
     return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};
   }

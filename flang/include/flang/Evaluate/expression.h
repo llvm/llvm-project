@@ -599,7 +599,7 @@ public:
   using Result = SomeDerived;
   using Base = ArrayConstructorValues<Result>;
 
-  constexpr int kind() const { return 0; }
+  static constexpr int kind() { return 0; }
 
   CLASS_BOILERPLATE(ArrayConstructor)
 
@@ -860,7 +860,7 @@ class StructureConstructor {
 public:
   using Result = SomeDerived;
 
-  static int kind() { return 0; }
+  static constexpr int kind() { return 0; }
 
   explicit StructureConstructor(const semantics::DerivedTypeSpec &spec)
       : result_{spec} {}
@@ -968,7 +968,7 @@ template <> class Expr<SomeType> : public ExpressionBase<SomeType> {
 public:
   using Result = SomeType;
 
-  static int kind() { return 0; }
+  static constexpr int kind() { return 0; }
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
