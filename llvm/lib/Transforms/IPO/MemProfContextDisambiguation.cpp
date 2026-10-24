@@ -408,7 +408,7 @@ public:
 
     // List of other calls that can be treated the same as the primary call
     // through cloning. I.e. located in the same function and have the same
-    // (possibly pruned) stack ids. They will be updated the same way as the
+    // (possibly trimmed) stack ids. They will be updated the same way as the
     // primary call when assigning to function clones.
     SmallVector<CallInfo, 0> MatchingCalls;
 
@@ -2081,7 +2081,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // Map of stack id to all calls with that as the last (outermost caller)
-  // callsite id that has a context node (some might not due to pruning
+  // callsite id that has a context node (some might not due to trimming
   // performed during matching of the allocation profile contexts).
   // The CallContextInfo contains the Call and a list of its stack ids with
   // ContextNodes, the function containing Call, and the set of context ids
@@ -2096,7 +2096,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       auto StackIdsWithContextNodes =
           getStackIdsWithContextNodesForCall(Call.call());
       // If there were no nodes created for MIBs on allocs (maybe this was in
-      // the unambiguous part of the MIB stack that was pruned), ignore.
+      // the unambiguous part of the MIB stack that was trimmed), ignore.
       if (StackIdsWithContextNodes.empty())
         continue;
       // Otherwise, record this Call along with the list of ids for the last
@@ -2114,7 +2114,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // duplicated) context ids are saved in the StackIdToMatchingCalls map.
   DenseMap<uint32_t, DenseSet<uint32_t>> OldToNewContextIds;
   // Save a map from each call to any that are found to match it. I.e. located
-  // in the same function and have the same (possibly pruned) stack ids. We use
+  // in the same function and have the same (possibly trimmed) stack ids. We use
   // this to avoid creating extra graph nodes as they can be treated the same.
   DenseMap<CallInfo, CallInfo> CallToMatchingCall;
   for (auto &It : StackIdToMatchingCalls) {
@@ -2130,7 +2130,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // of length, and within each length, lexicographically by stack id. The
     // latter is so that we can specially handle calls that have identical stack
     // id sequences (either due to cloning or artificially because of the MIB
-    // context pruning). Those with the same Ids are then sorted by function to
+    // context trimming). Those with the same Ids are then sorted by function to
     // facilitate efficiently mapping them to the same context node.
     // Because the functions are pointers, to ensure a stable sort first assign
     // each function pointer to its first index in the Calls array, and then use
@@ -2237,7 +2237,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         continue;
 
       // If some of this call's stack ids did not have corresponding nodes (due
-      // to pruning), don't include any context ids for contexts that extend
+      // to trimming), don't include any context ids for contexts that extend
       // beyond these nodes. Otherwise we would be matching part of unrelated /
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
@@ -5233,11 +5233,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
   // Map to keep track of information needed to update calls in function clones
   // when their corresponding callsite node was not itself cloned for that
-  // function clone. Because of call context pruning (i.e. we only keep as much
+  // function clone. Because of call context trimming (i.e. we only keep as much
   // caller information as needed to distinguish hot vs cold), we may not have
   // caller edges coming to each callsite node from all possible function
   // callers. A function clone may get created for other callsites in the
-  // function for which there are caller edges that were not pruned. Any other
+  // function for which there are caller edges that were not trimmed. Any other
   // callsites in that function clone, which were not themselved cloned for
   // that function clone, should get updated the same way as the corresponding
   // callsite in the original function (which may call a clone of its callee).
@@ -5309,7 +5309,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
-      // were either on inlined chains or pruned from the MIBs), or if we did
+      // were either on inlined chains or trimmed from the MIBs), or if we did
       // not create any clones for it.
       if (!Node || Node->Clones.empty())
         continue;
