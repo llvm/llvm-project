@@ -15,6 +15,8 @@
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR15 %s 2>&1 | FileCheck --check-prefix=ERROR15 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR16 %s 2>&1 | FileCheck --check-prefix=ERROR16 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR17 %s 2>&1 | FileCheck --check-prefix=ERROR17 %s
+// This error is caught while generating the op verifier.
+// RUN: not mlir-tblgen -gen-op-defs -I %S/../../include -DERROR18 %s 2>&1 | FileCheck --check-prefix=ERROR18 %s
 
 include "mlir/IR/OpBase.td"
 
@@ -164,5 +166,17 @@ def OpWithLegacyResultSegmentProperty
          [AttrSizedResultSegments]> {
   let arguments = (ins I32Prop:$result_segment_sizes);
   let results = (outs Variadic<AnyType>:$lhs, Variadic<AnyType>:$rhs);
+}
+#endif
+
+#ifdef ERROR18
+// ERROR18: error: trait 'lhs and rhs must have the same type' on operation 'test_dialect.unsubstituted_self' uses $_self in its predicate, but $_self is not bound in trait context
+def UnsubstitutedSelfOp
+    : Op<Test_Dialect, "unsubstituted_self",
+        [PredOpTrait<"lhs and rhs must have the same type",
+                CPred<"$_self.getType() == $_op.getOperand(0).getType()">
+              >
+        ]> {
+  let arguments = (ins AnyType:$a, AnyType:$b);
 }
 #endif

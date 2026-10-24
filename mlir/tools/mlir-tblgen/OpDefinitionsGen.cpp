@@ -3764,10 +3764,20 @@ void OpEmitter::genVerifier() {
 
   for (auto &trait : op.getTraits()) {
     if (auto *t = dyn_cast<tblgen::PredTrait>(&trait)) {
+      // Trait predicates expand against the whole operation, so $_self is not
+      // substituted here; catch it and report at the ODS level instead
+      std::string pred = tgfmt(t->getPredTemplate(), &verifyCtx);
+      if (StringRef(pred).contains("<no-subst-found>"))
+        PrintFatalError(op.getLoc(),
+                        "trait '" + t->getSummary() + "' on operation '" +
+                            op.getOperationName() +
+                            "' uses $_self in its predicate, but $_self is "
+                            "not bound in trait context; use $_op to refer "
+                            "to the operation, or pre-substitute $_self with "
+                            "!subst");
       implBody << tgfmt("  if (!($0))\n    "
                         "return emitOpError(\"failed to verify that $1\");\n",
-                        &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
-                        t->getSummary());
+                        &verifyCtx, pred, t->getSummary());
     }
   }
 
