@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "ByteCode/Floating.h"
 #include "Char.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -582,6 +583,18 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
     Result.copy(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
   else
     Result.copy(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_trunc(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame) {
+  const Floating &Arg = S.Stk.pop<Floating>();
+  Floating Result = S.allocFloat(Arg.getSemantics());
+  APFloat tmp = Arg.getAPFloat();
+  tmp.roundToIntegral(llvm::RoundingMode::TowardZero);
+
+  Result.copy(tmp);
   S.Stk.push<Floating>(Result);
   return true;
 }
@@ -4861,6 +4874,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_fminimum_numf16:
   case Builtin::BI__builtin_fminimum_numf128:
     return interp__builtin_fmin(S, OpPC, Frame, /*IsNumBuiltin=*/true);
+
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128:
+    return interp__builtin_trunc(S, OpPC, Frame);
 
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:

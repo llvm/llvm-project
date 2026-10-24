@@ -60,6 +60,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -20960,6 +20961,20 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
     Result.copySign(RHS);
+    return true;
+  }
+
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncl:
+  case Builtin::BI__builtin_truncf16:
+  case Builtin::BI__builtin_truncf128: {
+    APFloat Arg0(0.);
+    if (!EvaluateFloat(E->getArg(0), Arg0, Info))
+      return false;
+
+    Arg0.roundToIntegral(llvm::RoundingMode::TowardZero);
+    Result = Arg0;
     return true;
   }
 
