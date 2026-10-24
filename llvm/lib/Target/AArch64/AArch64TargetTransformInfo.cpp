@@ -436,15 +436,27 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  // Don't maximize bandwidth for i1s. The legal width of predicates is derived
+  // from the data vectors they are used with. Maximizing the predicate width
+  // will just result in excessive VFs with a lot of unpacking.
+  if (ElementTy && ElementTy->isIntegerTy(1))
+    return false;
 
-  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+  // If we don't know the specific class of vector just return true. Later VF
+  // selection will ask us about fixed or scalable vectors.
+  if (K == TargetTransformInfo::VectorKind::FixedOrScalable)
     return true;
 
-  return K == TargetTransformInfo::RGK_ScalableVector &&
-         ST->isSVEorStreamingSVEAvailable() &&
-         !ST->disableMaximizeScalableBandwidth();
+  if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
+    return true;
+
+  if (K == TargetTransformInfo::VectorKind::Scalable &&
+      ST->isSVEorStreamingSVEAvailable() &&
+      !ST->disableMaximizeScalableBandwidth())
+    return true;
+
+  return false;
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

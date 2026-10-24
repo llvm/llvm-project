@@ -795,10 +795,16 @@ public:
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
 
-  /// \return The size (in bits) of the smallest and widest types in the code
-  /// that need to be vectorized. We ignore values that remain scalar such as
-  /// 64 bit loop indices.
-  std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
+  struct VFSelectionTypeWidths {
+    unsigned SmallestTypeForMaxBandwidth;
+    unsigned WidestType;
+  };
+
+  /// \return The size (in bits) of the of the types used to determine the
+  /// possible VFs. That is the widest type in the loop and the smallest type
+  /// the target wants to maximize vector bandwidth for. We ignore values that
+  /// remain scalar such as 64 bit loop indices.
+  VFSelectionTypeWidths getTypeWidthsForVFSelection() const;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of

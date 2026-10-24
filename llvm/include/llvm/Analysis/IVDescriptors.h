@@ -94,7 +94,7 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy,
+                       Type *MinWidthCastToRecurTy,
                        bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
@@ -308,8 +308,9 @@ public:
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
 
-  /// Returns the minimum width used by the recurrence in bits.
-  unsigned getMinWidthCastToRecurrenceTypeInBits() const {
+  /// Returns the scalar source type of the narrowest cast to the recurrence
+  /// type, or null if there is no such cast.
+  Type *getMinWidthCastToRecurrenceType() const {
     return MinWidthCastToRecurrenceType;
   }
 
@@ -368,8 +369,8 @@ private:
   bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
-  // The minimum width used by the recurrence.
-  unsigned MinWidthCastToRecurrenceType;
+  // The scalar source type of the narrowest cast to the recurrence type.
+  Type *MinWidthCastToRecurrenceType = nullptr;
 };
 
 /// A struct for saving information about induction variables.
