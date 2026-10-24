@@ -168,7 +168,7 @@ class LValueBaseInfo {
 
 public:
   explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type)
-    : AlignSource(Source) {}
+      : AlignSource(Source) {}
   AlignmentSource getAlignmentSource() const { return AlignSource; }
   void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
 
@@ -357,6 +357,12 @@ public:
 
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
+
+  KnownInvariant_t isInvariant() const { return Addr.isInvariant(); }
+  LValue setInvariant(KnownInvariant_t Value) {
+    Addr.setInvariant(Value);
+    return *this;
+  }
 
   KnownNonNull_t isKnownNonNull() const { return Addr.isKnownNonNull(); }
   LValue setKnownNonNull() {
