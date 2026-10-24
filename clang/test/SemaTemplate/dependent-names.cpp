@@ -481,3 +481,12 @@ namespace TransformNestedName {
   template <typename T::template X<N<T>::State::kA>>
   inline void N<T>::F() {}
 } // namespace TransformNestedName
+
+namespace GH204059 {
+  template <class T, class U>
+  auto k(T t) -> decltype(t.U::template B<>::MEM); // expected-note {{candidate template ignored: couldn't infer template argument 'U'}}
+  struct S {};
+  void f() {
+    k<S>(S{}); // expected-error {{no matching function for call to 'k'}}
+  }
+} // namespace GH204059
