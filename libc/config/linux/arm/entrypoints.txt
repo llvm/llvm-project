@@ -277,6 +277,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getresgid
+    libc.src.unistd.getresuid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getgid
