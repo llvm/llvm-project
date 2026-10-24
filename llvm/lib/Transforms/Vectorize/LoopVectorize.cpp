@@ -6415,6 +6415,9 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
                  InterleaveGroups, PlanCM.isEpilogueAllowed());
 
+  RUN_VPLAN_PASS(VPlanTransforms::widenSelectedBaseLoads, *Plan, Range,
+                 CostCtx);
+
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
