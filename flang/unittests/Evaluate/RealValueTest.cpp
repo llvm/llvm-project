@@ -196,7 +196,7 @@ TEST(RealValue, Bits) {
   EXPECT_EQ(16, RealValue::bits(3));
   EXPECT_EQ(32, RealValue::bits(4));
   EXPECT_EQ(64, RealValue::bits(8));
-  EXPECT_EQ(128, RealValue::bits(10)); // 80 significant bits, 128 stored
+  EXPECT_EQ(128, RealValue::bits(10)); // 80-bit extended format, 128 stored
   EXPECT_EQ(128, RealValue::bits(16));
   EXPECT_EQ(32, (RealValue{4, 1.0}.bits()));
 }

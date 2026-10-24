@@ -2,7 +2,7 @@
 ! REQUIRES: target=x86_64{{.*}}
 ! UNSUPPORTED: system-windows
 
-! REAL(10) is the x87 extended format: 80 significant bits held in a 16-byte
+! REAL(10) is the x87 extended format: 80 bits held in a 16-byte
 ! container, so its raw bits occupy 16 bytes rather than 10.  Constant
 ! initialization, TRANSFER and host-library folding all round-trip values
 ! through their raw bytes, so the number of bytes stored must not be

@@ -4,7 +4,7 @@
 ! f18 extension) and return default REAL. MAX1/MIN1 take REAL arguments
 ! (here explicitly KIND=8) and return default INTEGER.
 
-module specific_extremums_kind_mismatch
+module specific_extrema_kind_mismatch
   !WARN: portability: Argument types do not match specific intrinsic 'amax0' requirements; using 'max' generic instead and converting the result to REAL(4) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
   real(4), parameter :: result_amax0 = amax0(1_8, 2_8)
   real(4), parameter :: expected_amax0 = 2.0_4

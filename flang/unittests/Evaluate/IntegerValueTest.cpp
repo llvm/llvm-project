@@ -158,7 +158,7 @@ TEST(IntegerValue, Bits) {
   EXPECT_EQ(16, IntegerValue::bits(3));
   EXPECT_EQ(32, IntegerValue::bits(4));
   EXPECT_EQ(64, IntegerValue::bits(8));
-  EXPECT_EQ(128, IntegerValue::bits(10)); // 80 significant bits, 128 stored
+  EXPECT_EQ(128, IntegerValue::bits(10)); // 80-bit extended format, 128 stored
   EXPECT_EQ(128, IntegerValue::bits(16));
 
   IntegerValue v{4, 0};
