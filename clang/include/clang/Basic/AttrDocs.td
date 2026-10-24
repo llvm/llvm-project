@@ -42,6 +42,47 @@ This page lists the attributes currently supported by Clang.
 }];
 }
 
+def CopyDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `copy(expression)` attribute applies the GNU declaration attributes of the
+entity or type referenced by `expression` to another declaration. The expression
+is unevaluated. For example:
+
+```c
+void *allocate(unsigned long) __attribute__((malloc, alloc_size(1), nothrow));
+extern __typeof__(allocate) allocate_alias
+    __attribute__((alias("allocate"), copy(allocate)));
+```
+
+The argument can name a function or variable, take its address, or refer to a
+type through an expression such as `(struct A *)0`. A function's attributes
+cannot be copied to a variable, or vice versa. Copied attributes are checked
+against the destination just as if they had been written there explicitly.
+
+Attributes controlling linkage, inlining, or visibility, including `alias`,
+`ifunc`, `always_inline`, `noinline`, `gnu_inline`, `visibility`, `weak`,
+`weakref`, `dllimport`, and `dllexport`, are not copied.
+Neither `deprecated` nor `target_clones` is copied. The attribute does not copy
+the source's type; `__typeof__`, as in the example, can be used when the types
+must also match.
+
+Function type attributes, such as calling conventions, can also be copied. For
+example, a captureless lambda can use `copy` to match a callback's calling
+convention:
+
+```cpp
+using Callback = int (__attribute__((ms_abi)) *)(int);
+Callback callback = [](int x) __attribute__((copy((Callback)nullptr))) {
+  return x;
+};
+```
+
+The calling convention is applied to the lambda's call operator and its
+conversion to a function pointer.
+  }];
+}
+
 def SectionDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
