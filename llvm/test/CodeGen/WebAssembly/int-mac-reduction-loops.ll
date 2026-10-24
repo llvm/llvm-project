@@ -7,10 +7,9 @@ target triple = "wasm32"
 define hidden i32 @i32_mac_s8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_s8:
 ; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_s
 ; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_s
-; CHECK:    i32x4.extmul_low_i16x8_s
+; CHECK:    i16x8.extmul_low_i8x16_s
+; CHECK:    i32x4.extend_low_i16x8_s
 ; CHECK:    i32x4.add
 
 ; MAX-BANDWIDTH: v128.load
@@ -307,10 +306,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i32 @i32_mac_u8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_u8:
 ; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_u
 ; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_u
-; CHECK:    i32x4.extmul_low_i16x8_u
+; CHECK:    i16x8.extmul_low_i8x16_u
+; CHECK:    i32x4.extend_low_i16x8_u
 ; CHECK:    i32x4.add
 
 ; MAX-BANDWIDTH: v128.load
