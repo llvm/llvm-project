@@ -719,6 +719,62 @@ is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIt
 }
 
 template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardIterator
+partition(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _BidirectionalIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _BidirectionalIterator stable_partition(
+    _ExecutionPolicy&& __policy, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
+      _BidirectionalIterator, "stable_partition requires BidirectionalIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__stable_partition, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator1,
+          class _ForwardOutIterator2,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] pair<_ForwardOutIterator1, _ForwardOutIterator2> partition_copy(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _ForwardOutIterator1 __out_true,
+    _ForwardOutIterator2 __out_false,
+    _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "partition_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator1, decltype(*__first), "partition_copy requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator2, decltype(*__first), "partition_copy requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__partition_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__out_true),
+      std::move(__out_false),
+      std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
           class _ForwardOutIterator,
