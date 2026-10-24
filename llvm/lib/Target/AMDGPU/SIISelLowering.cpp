@@ -9370,7 +9370,9 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumOps = Op.getNumOperands();
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SmallSet<Register, 8> SGPRInputRegs;
+  SmallSet<Register, 8> TiedSGPRInputRegs;
 
   unsigned NumVals = 0;
   for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;
@@ -9378,18 +9380,20 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
     NumVals = Flags.getNumOperandRegisters();
 
-    unsigned RCID;
-    bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
-                       NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
-                       TRI->isSGPRClass(TRI->getRegClass(RCID));
+    unsigned DefIdx;
+    bool IsTied = Flags.isUseOperandTiedToDef(DefIdx);
+    bool IsRegInput = Flags.isRegUseKind() && NumVals != 0;
 
     for (unsigned J = 0; J < NumVals; ++J) {
       SDValue Val = Op.getOperand(I + 1 + J);
       if (const RegisterSDNode *RegNode =
               dyn_cast<RegisterSDNode>(Val.getNode())) {
         Register Reg = RegNode->getReg();
-        if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
+        if (IsRegInput && TRI->isSGPRReg(MRI, Reg)) {
           SGPRInputRegs.insert(Reg);
+          if (IsTied)
+            TiedSGPRInputRegs.insert(Reg);
+        }
       }
     }
   }
@@ -9405,8 +9409,12 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
     SDValue SrcVal = N->getOperand(2);
 
-    // Insert readfirstlane if copying a divergent value to an SGPR input.
-    if (SrcVal->isDivergent() && SGPRInputRegs.count(Reg)) {
+    // Matched inputs have no register class of their own. Insert
+    // readfirstlane for them even when divergence analysis considers the value
+    // uniform: a uniform value can still be selected into a VGPR. Redundant
+    // readfirstlanes are removed when the source is already scalar.
+    if (SGPRInputRegs.count(Reg) &&
+        (SrcVal->isDivergent() || TiedSGPRInputRegs.count(Reg))) {
       SDValue ReadFirstLaneID =
           DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
       SDValue ReadFirstLane =

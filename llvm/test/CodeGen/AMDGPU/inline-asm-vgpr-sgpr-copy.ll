@@ -281,3 +281,66 @@ entry:
   store i32 %elem, ptr addrspace(1) %gep
   ret void
 }
+
+define amdgpu_kernel void @tied_sgpr_constraint_divergent_value(ptr addrspace(1) %out) {
+; CHECK-LABEL: tied_sgpr_constraint_divergent_value:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK:       v_readfirstlane_b32
+; CHECK-NOT:   illegal copy
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %result = call i32 asm sideeffect "", "=s,0"(i32 %tid)
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %result, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_tuple_v4i32_constraint(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; CHECK-LABEL: tied_sgpr_tuple_v4i32_constraint:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-COUNT-4: v_readfirstlane_b32
+; CHECK-NOT:   illegal copy
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep_in = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 %tid
+  %val = load <4 x i32>, ptr addrspace(1) %gep_in
+  %result = call <4 x i32> asm sideeffect "", "=s,0"(<4 x i32> %val)
+  %elem = extractelement <4 x i32> %result, i32 0
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %elem, ptr addrspace(1) %gep
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_tuple_uniform_vgpr(i32 %divisor) {
+; CHECK-LABEL: tied_sgpr_tuple_uniform_vgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-COUNT-2: v_readfirstlane_b32
+; CHECK-NOT:   illegal copy
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %limited = call i32 @llvm.umin.i32(i32 %divisor, i32 4)
+  %truncated = trunc i32 %limited to i8
+  %nonzero = or i8 %truncated, 1
+  %quotient = sdiv i8 1, %nonzero
+  %extended = sext i8 %quotient to i64
+  %pair = insertelement <2 x i64> zeroinitializer, i64 %extended, i64 0
+  %tuple = bitcast <2 x i64> %pair to <4 x i32>
+  %result = call <4 x i32> asm sideeffect "", "=s,0"(<4 x i32> %tuple)
+  ret void
+}
+
+define amdgpu_kernel void @tied_sgpr_constraint_uniform_sgpr(i32 %value) {
+; CHECK-LABEL: tied_sgpr_constraint_uniform_sgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NOT:   v_readfirstlane_b32
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %result = call i32 asm sideeffect "", "=s,0"(i32 %value)
+  ret void
+}
