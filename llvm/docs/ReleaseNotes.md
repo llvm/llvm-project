@@ -327,6 +327,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added register `r12`, the pointer to the frame of a function in a stack in
   arena. It is reserved.
 
+* Added `-mattr=+arena-cast`: every pointer that is dereferenced is cast with
+  `addr_space_cast`. It is for languages without address spaces whose
+  programs keep their memory in arena.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,

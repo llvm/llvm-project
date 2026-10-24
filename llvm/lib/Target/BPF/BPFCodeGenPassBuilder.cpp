@@ -69,6 +69,8 @@ void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     addModulePass(BPFFuncTablePass(), PMW);
 
   Base::addIRPasses(PMW);
+  if (Subtarget->hasArenaCast())
+    addFunctionPass(BPFArenaCastPass(), PMW);
 }
 
 Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {

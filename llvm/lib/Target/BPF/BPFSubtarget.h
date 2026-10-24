@@ -69,6 +69,9 @@ protected:
   // whether a pointer to a function is an index into a table
   bool HasFuncTable;
 
+  // whether every pointer that is dereferenced is cast to access arena
+  bool HasArenaCast;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
@@ -100,6 +103,7 @@ public:
     return AllowsMisalignedMemAccess;
   }
   bool hasFuncTable() const { return HasFuncTable; }
+  bool hasArenaCast() const { return HasArenaCast; }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }

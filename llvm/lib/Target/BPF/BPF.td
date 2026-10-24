@@ -37,6 +37,9 @@ def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
 def FuncTable : SubtargetFeature<"func-table", "HasFuncTable", "true",
                                  "Call functions through a table">;
 
+def ArenaCast : SubtargetFeature<"arena-cast", "HasArenaCast", "true",
+                                 "Cast pointers to access arena">;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
