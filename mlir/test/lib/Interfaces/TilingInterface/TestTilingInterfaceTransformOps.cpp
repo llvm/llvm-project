@@ -400,7 +400,7 @@ void transform::TestTileUsingForallOp::getEffects(
 template <typename Range>
 static LogicalResult applyTilingToAll(
     RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
-    unsigned numLoops, TransformResults &transformResults,
+    TransformResults &transformResults,
     function_ref<FailureOr<scf::SCFTileAndFuseResult>(TilingInterface)>
         applyFn) {
   SmallVector<Operation *> tiledLinalgOps;
@@ -431,9 +431,8 @@ static LogicalResult applyTilingToAll(
     // Report back the relevant handles to the transform op.
     tiledLinalgOps.push_back(tiledResults->tiledAndFusedOps.front());
     assert(tiledResults->loops.size() == 1 &&
-           cast<scf::ForallOp>(tiledResults->loops[0]).getRank() == numLoops &&
-           "Mismatched number of loops, tile and fuse transform should have "
-           "failed");
+           isa<scf::ForallOp>(tiledResults->loops[0]) &&
+           "expected a single scf.forall op");
     loopOps[0] = {tiledResults->loops[0]};
   }
 
@@ -463,7 +462,7 @@ transform::TestFuseUsingForallOp::apply(TransformRewriter &rewriter,
   tileAndFuseOptions.tilingOptions = std::move(tilingOptions);
   LogicalResult result = applyTilingToAll(
       rewriter, getOperation(), state.getPayloadOps(getRootOp()),
-      tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
+      transformResults,
       [&](TilingInterface tilingInterfaceOp)
           -> FailureOr<scf::SCFTileAndFuseResult> {
         return tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
